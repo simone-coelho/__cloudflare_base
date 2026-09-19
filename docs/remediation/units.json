@@ -1165,7 +1165,7 @@
     "id": "W19.F1.01",
     "w": "W19",
     "criterion": "F1",
-    "outcome": "One fixture piece carrying every field of kit 03 \"The content piece\" (id, customerContentId, type, title, subtitle, excerpt, runtime, tags, slotTypes, lifecycle, window, art, renderUrl, merchandising, journeyStageFit, freshnessDate, featuredProductIds, inStock) is stored with identical values through JSON import, CSV import on the documented column names, the pull source and direct PUT; a field (JSON) or column (CSV) the published contract does not list is named on the answer of EVERY write path — import, pull and direct PUT — as `{ code: 'ignored_field', pieceIndex, field }`, never dropped without a word. The code is request-derived, so it appears on a write answer and never on a read: a later GET of the same catalogue reports exactly the stored-catalogue codes.",
+    "outcome": "One fixture piece carrying every field of kit 03 \"The content piece\" (id, customerContentId, type, title, subtitle, excerpt, runtime, tags, slotTypes, lifecycle, window, art, renderUrl, merchandising, journeyStageFit, freshnessDate, featuredProductIds, inStock) is stored with identical values through JSON import, CSV import on the documented column names, the pull source and direct PUT; a field (JSON) or column (CSV) the published contract does not list is named on the answer of EVERY write path — import, pull and direct PUT — as `{ code: 'ignored_field', recordIndex (pieceIndex until W19-B3, R84(d)), field }`, never dropped without a word. The code is request-derived, so it appears on a write answer and never on a read: a later GET of the same catalogue reports exactly the stored-catalogue codes.",
     "legs": [
       "host"
     ],
