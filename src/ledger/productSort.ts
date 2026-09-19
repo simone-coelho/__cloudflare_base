@@ -4,13 +4,19 @@ import type { ReflexConfig } from '@/reflex/core';
 import type { SearchResult, StructuredIntent } from '@/reflex/searchCandidates';
 import type { SortResult, SortWeights } from '@/reflex/sortCandidates';
 import type { Env } from '@/types/env';
-import { admitOwnedRecovery } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, durableRecoveryEnabled } from '@/identity/sessionAuthority';
+import { prepareManaged, sendManaged, type LedgerDeliveryReceipt } from './enqueue';
 import { captureRetention, externalRetentionBirths } from '@/retention';
 import type { RecoveryReceipt } from './recovery';
 import { isProductSortRecord, PRODUCT_SORT_MAX_BYTES, ts36, type ProductSortRecord } from './records';
 import type { R2Like } from './writer';
 
 export type ProductSortPersistence = { status: 'durable'; recordId: string; receipt: RecoveryReceipt }
+  /** Captured on the ledger's own delivery path where the deployment has not
+   * enabled durable owner recovery: the queue ACKNOWLEDGED it, or the canonical
+   * object store stored it. Not a weaker promise than `durable`, a different
+   * sink; a delivery that did neither is `not_scheduled`, never this. */
+  | { status: 'queued'; recordId: string; delivery: LedgerDeliveryReceipt }
   | { status: 'not_scheduled'; reason: 'tracking_refused' | 'storage_unavailable' | 'context_unavailable' | 'invalid_record' | 'record_too_large' | 'capture_unavailable' };
 
 /** Mint before profile resolution, so a pending read cannot move the erasure cutoff. */
@@ -60,6 +66,25 @@ export async function scheduleProductSort(
 
   try {
     if (!authorityEnv || authorityEnv.STORAGE !== storage) throw new Error('Product-sort authority unavailable');
+    // Durable owner recovery is ONE capture path, not the only one. A deployment
+    // that has not enabled it has no recovery to admit, and asking for one there
+    // registered an owner effect that was then rejected, which failed the whole
+    // owner operation and surfaced on a read path as an untyped 500. The record
+    // goes instead on the ledger's own delivery path, exactly as the decision set
+    // does when recovery is off (src/routes/decisions.ts:472), with the canonical
+    // object store as that delivery's own fallback.
+    //
+    // The label follows WHAT HAPPENED, never the path taken: `queued` means the
+    // queue acknowledged the record or the canonical write stored it, and a
+    // delivery that did neither is not a capture — it reports
+    // `capture_unavailable`, so the caller refuses with the same 503 it gave
+    // before this path existed. The delivery receipt rides along either way, so
+    // the queue or object-store outage is legible to the caller and the logs.
+    if (!durableRecoveryEnabled(authorityEnv)) {
+      const delivery = await sendManaged(authorityEnv, prepareManaged('product-sort', [record]), 1);
+      if (delivery.code !== 'accepted' && !delivery.capture?.ok) return { status: 'not_scheduled', reason: 'capture_unavailable' };
+      return { status: 'queued', recordId: record.record_id, delivery };
+    }
     const receipt = await admitOwnedRecovery({ kind: 'product-sort', tenant: record.tenant, subject: record.visitor_id, brand: record.tenant, record });
     if (receipt.source.state === 'suppressed_erased' || receipt.source.state === 'expired_unrecovered') {
       return { status: 'not_scheduled', reason: 'capture_unavailable' };

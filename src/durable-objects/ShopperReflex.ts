@@ -73,6 +73,7 @@ import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
+import { PublicationError } from '@/config/publication';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -599,6 +600,14 @@ export class ShopperReflex {
         }
         const consent = await this.consentNow();
         assertSessionTarget(p);
+        let tenant: TenantId;
+        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
+        // An owned read is an answer from THIS tenant's configured runtime, so
+        // the configuration authority is required before any answer is served,
+        // including the necessary refusal below: an absent, invalid or
+        // unreadable publication refuses here with its own typed error rather
+        // than serving a default. A demo scope keeps its compiled identity.
+        await resolveTenantReflexConfig(this.env, tenant, this.surface());
         if (!personalizes(consent)) {
           if (url.pathname === '/segments') return request.method === 'POST'
             ? json({ ok: false, error: 'Shopper consent refused segment assignment' }, 403)
@@ -607,8 +616,6 @@ export class ShopperReflex {
             config: { segments: [], featureVariables: {}, featureFlags: {}, experiments: {} }, cookiesSet: false, timestamp: now });
         }
         requireConsentPurpose(consent, 'personalization');
-        let tenant: TenantId;
-        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
         const connectors = getConnectors(this.env, tenant);
         if (url.pathname === '/segments') {
           if (request.method === 'POST') {
@@ -675,10 +682,15 @@ export class ShopperReflex {
         if (url.searchParams.get('projection') === 'content') {
           if (!principal) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
           const consent = await this.consentNow();
+          // This projection serves decisions, so it is an answer from THIS
+          // tenant's configured runtime and the authority is required before any
+          // answer, including the refusal projection below: an absent, invalid or
+          // unreadable configuration publication refuses here with its own typed
+          // error instead of a default. A demo scope keeps its compiled identity.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           const at = Date.now();
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
@@ -698,10 +710,12 @@ export class ShopperReflex {
           await this.load();
           const consent = await this.consentNow();
           const surface = resolveSurface({ surface: url.searchParams.get('surface') ?? this.surface() });
+          // As above: the sort projection serves decisions, so the configuration
+          // authority is required before any answer, refusal included.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, surface });
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
           requireConsentPurpose(consent, 'personalization');
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           return json({ ok: true, consent, surface, affinity: this.affinity ? { dims: reflexSnapshot(this.affinity.reflex, Date.now(), cfg).dims } : null });
         }
         return this.handleSnapshot(principal?.tenant ?? internal!.tenant, principal);
@@ -1576,9 +1590,14 @@ export class ShopperReflex {
       let cfg: ReflexConfig;
       try { cfg = await resolveTenantReflexConfig(this.env, owner.tenant, surface); }
       catch (error) {
-        if (!(error instanceof ReflexConfigUnavailableError)) throw error;
+        // A configuration refusal must not cost the shopper her retention
+        // guarantee. Re-arm exactly the deadline a successful alarm would have
+        // left, write nothing else, and let the typed refusal stand so the
+        // failure is visible instead of a quiet no-op: either class counts
+        // (ruling R28), and anything untyped was never this timer's to absorb.
+        if (!(error instanceof ReflexConfigUnavailableError) && !(error instanceof PublicationError)) throw error;
         await this.scheduleProjectionAlarm(Math.max(this.affinity.lastSeen + this.retentionMs(), now + MIN_ALARM_DELAY_MS));
-        return;
+        throw error;
       }
       const res = tickReflex(this.affinity.reflex, now, cfg);
       let affinity = { ...this.affinity, reflex: res.state, configVersion: cfg.version };

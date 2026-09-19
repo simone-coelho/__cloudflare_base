@@ -28,7 +28,9 @@ import { searchCandidates, InvalidSearchIntent } from '@/reflex/searchCandidates
 import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
 import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHeaders, SessionAccessError } from '@/identity/sessionCapability';
-import { productSortIdentity, scheduleProductSort } from '@/ledger/productSort';
+import { productSortIdentity, scheduleProductSort, type ProductSortPersistence } from '@/ledger/productSort';
+/** Both capture paths count; only an unscheduled record refuses the answer. */
+const captured = (p: ProductSortPersistence): boolean => p.status === 'durable' || p.status === 'queued';
 
 export const sortRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
@@ -113,7 +115,12 @@ sortRoutes.post('/', requireShopper({ bodyLimit: 2 * 1024 * 1024 }), async (c) =
     const { dims, cfg, consent } = await affinityFor(c, userId, surface, hints);
     const result = sortCandidates(candidates as Candidate[], dims, cfg, weights);
     const persistence = await scheduleProductSort(c.env.STORAGE, () => c.executionCtx, identity, consent, cfg, result, candidates.length, weights, null, c.env);
-    if (consent.tracking && persistence.status !== 'durable') return c.json({ ok: false, error: 'Durable product receipt unavailable', persistence }, 503);
+    // A sorted answer still requires its record to have been captured. Durable
+    // owner recovery and the ledger's own delivery are both captures: where the
+    // deployment has not enabled recovery, the queue acknowledgement (or the
+    // canonical object write behind it) is the receipt. `not_scheduled` with
+    // tracking consent on is still refused, as it always was.
+    if (consent.tracking && !captured(persistence)) return c.json({ ok: false, error: 'Durable product receipt unavailable', persistence }, 503);
     return c.json({
       ok: true,
       tenant: c.get('tenant') ?? DEFAULT_TENANT,
@@ -189,7 +196,7 @@ sortRoutes.post('/intent', requireShopper({ bodyLimit: 256 * 1024, bodyTooLarge:
     const { dims, cfg, consent: effectiveConsent } = await affinityFor(c, userId, surface, hints);
     const result = searchCandidates(candidates, intent, dims, cfg, weights, limit);
     const persistence = await scheduleProductSort(c.env.STORAGE, () => c.executionCtx, identity, effectiveConsent, cfg, result, candidates.length, weights, { filters: intent.filters, limit }, c.env);
-    if (effectiveConsent.tracking && persistence.status !== 'durable') return c.json({ ok: false, error: 'Durable product receipt unavailable', persistence }, 503);
+    if (effectiveConsent.tracking && !captured(persistence)) return c.json({ ok: false, error: 'Durable product receipt unavailable', persistence }, 503);
     return c.json({
       ok: true,
       tenant: c.get('tenant') ?? DEFAULT_TENANT,
