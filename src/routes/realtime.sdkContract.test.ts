@@ -2296,7 +2296,10 @@ describe('W35.02 visit context', () => {
   describe('unit:W06.BASE.01 a cold /realtime/personalization/:subject read on a consent-only owned record serves without write activity instead of answering 500 for a missing retention birth', () => {
   it('carries first-paint and live return context into actual both-host cells without read activity', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
-    const decide = vi.spyOn(MockDecisionProvider.prototype, 'decideAll');
+    // `meridian` is not the legacy demo tenant (src/connectors/config.ts:106), so
+    // getConnectors builds a LiveDecisionProvider (src/connectors/index.ts:29-36).
+    // Spy the provider the request path actually calls.
+    const decide = vi.spyOn(LiveDecisionProvider.prototype, 'decideAll');
     try {
       for (const host of ['session', 'do']) {
         const f = await fixture(host), before = f.state();
@@ -3851,6 +3854,12 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       invalidateCache(); const f = boundary(host); await configured(f);
       const g = await newAnonymousSession(f.env, 'meridian');
       expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200); await f.drain();
+      // Ruling R38: consent handling does not depend on the reflex configuration, so a
+      // tracking-refused action answers 200 whatever the authority's state; only a
+      // tracking-ON shopper reaches the behavioural work the absent authority must refuse.
+      // This shopper records its explicit positive choice while the authority still serves.
+      const tracked = await newAnonymousSession(f.env, g.tenant); await positiveChoice(f, tracked);
+      expect((await f.call('/realtime/action', tracked.capability, event(tracked), tracked.tenant)).status).toBe(200); await f.drain();
       const sessionBefore = [...f.sessions.data], objectBefore = host === 'do' ? structuredClone([...f.objects.get(shopperObjectName(g.tenant, g.subject))!.data]) : null;
       // Configuration publication is the only authority: the outage must be injected
       // there, never into the retained KV copy (src/config/publication.ts:19, :204-206;
@@ -3876,10 +3885,13 @@ describe('W37.04 tenant-owned runtime configuration', () => {
           headers: { [SHOPPER_HEADER]: cold.capability, 'X-Tenant': cold.tenant },
         }))).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:snapshot`);
       }
-      for (const [path, body] of [['/realtime/action', event(g)], ['/realtime/reflex?surface=coach', undefined],
-        ['/sort', { userId: g.subject, candidates: [{ id: 'a', taste: 'red' }] }],
-        [`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`, undefined]] as const) {
-        expect((await f.call(path, g.capability, body, g.tenant)).status, `${host}:${failure}:${path}`).toBeGreaterThanOrEqual(400);
+      // Ruling R38: with tracking ON, every route that processes behaviour or serves
+      // decisions refuses before any behavioural effect when the authority is absent,
+      // invalid or unreadable.
+      for (const [path, body] of [['/realtime/action', event(tracked)], ['/realtime/reflex?surface=coach', undefined],
+        ['/sort', { userId: tracked.subject, candidates: [{ id: 'a', taste: 'red' }] }],
+        [`/v1/${tracked.tenant}/decisions/snapshot?page=home&visitorId=${tracked.subject}&sessionId=${tracked.sessionId}`, undefined]] as const) {
+        expect((await f.call(path, tracked.capability, body, tracked.tenant)).status, `${host}:${failure}:${path}`).toBeGreaterThanOrEqual(400);
       }
       // Ruling R28 as above: either typed class, message naming the unavailable/uninitialized authority.
       await expect(applyHistory(f.env, g.tenant, [{ visitorId: g.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red' } }])).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:applyHistory`);
@@ -3895,8 +3907,14 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       }
       const refused = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}&trackingConsent=false`, g.capability, undefined, g.tenant);
       expect(refused.status).toBeGreaterThanOrEqual(400);
-      if (host === 'do') expect(f.objects.get(shopperObjectName(g.tenant, g.subject))!.data.get('consent')).toMatchObject({ tracking: false });
-      else expect(JSON.parse(f.sessions.data.get(tenantKey(g.tenant, `session:${g.sessionId}`))!).preferences.trackingConsent).toBe(false);
+      // Settled decision D06-W05 (docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json;
+      // src/content/consent.ts:139-152): an explicit choice is the only consent and a
+      // missing or expired record returns to off, so a refusal by a shopper who never
+      // chose mints no record. The projection is off and nothing is written.
+      expect(storedConsent(f.objects.get(shopperObjectName(g.tenant, g.subject))?.data.get('consent'))).toEqual({ tracking: false, personalization: false });
+      expect([...f.sessions.data]).toEqual(sessionBefore);
+      // Ruling R38, positive control: the refused-tracking action still answers 200 with
+      // no behavioural effect while the configuration authority is unavailable.
       expect((await f.call('/realtime/action', g.capability, { ...event(g), data: { consent: { tracking: false } } }, g.tenant)).status).toBe(200);
       expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, { trackingConsent: false, personalizationEnabled: false }, g.tenant)).status).toBe(200);
       await f.drain();
