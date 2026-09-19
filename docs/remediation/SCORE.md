@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 87/88 · W closed 2/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 files · typecheck GREEN
+Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -18,6 +18,7 @@ Units 87/88 · W closed 2/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 
 | W16 | 59 | 59 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
+| W19 | 14 | 12 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -111,18 +112,33 @@ Units 87/88 · W closed 2/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 
 | W18.O4.01 | green | 1 |
 | W18.O4.02 | green | 1 |
 | W18.O4.03 | green | 2 |
+| W19.F1.01 | green | 1 |
+| W19.F1.02 | green | 1 |
+| W19.F1.03 | green | 1 |
+| W19.F2.01 | green | 2 |
+| W19.F2.02 | green | 2 |
+| W19.F2.03 | green | 1 |
+| W19.L1.01 | green | 1 |
+| W19.L1.02 | green | 2 |
+| W19.L1.03 | green | 1 |
+| W19.P1.01 | unspecified | 0 |
+| W19.S1.01 | red | 1 |
+| W19.S1.02 | green | 1 |
+| W19.T1.01 | green | 3 |
+| W19.T1.02 | green | 2 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  W07.05 W04.03 W05.10 native shopper socket capability boundary (retained W04.02 oracles) owns bootstrap, frames and post-upgrade private delivery on session
+-  unit:W19.S1.01 host: a stored piece naming a slot type no page of the tenant's slots document defines is named in the diagnostics of every write answer and of the catalogue read, counted, and compared against the slots document the answer names
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 78b609af4a30e851916d1e5299a645c663944913b1c568ca29494a5042f4772e |
+| units sha256 | b6340dc54b9d951d2e4d823e6f8d9256edf654bd7bbe4c01d246aa940e743ad6 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -133,7 +149,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | suite.json (outside the checkout) |
-| vitest report sha256 | 8706d58b4fadbff1fad86dd36d06a8bafd282f2b7ac2d1f60fd48caf6d6ecfc9 |
-| commit | 05001add8eb55cbd1dfdade879063d0f83ac65e3 |
-| generated | 2026-09-19T17:11:34.848Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | f304e554295688353984068687bf6fff1552f2e3ba3872c514810d09c140fad1 |
+| commit | 2e4dfad43390a702b0b7ed20213fe9fdf453afa5 |
+| generated | 2026-09-19T17:50:05.190Z |
