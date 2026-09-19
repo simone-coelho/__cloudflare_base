@@ -71,9 +71,55 @@ export interface SlotStrategy {
   fatigue?: FatigueRule;
   /** CW33 (BTIE D11): at most `max` pieces sharing one value of `dimension` in this slot; a piece over the limit yields to the next, and is served after all when nothing else is eligible. */
   diversity?: DiversityRule;
+  /**
+   * W16 C3: this slot's contextual seed rule set. Published and versioned with
+   * the slot itself, because a rule's weight and the slot's dimension weight are
+   * arithmetically coupled and must move as one revision. Absent or empty means
+   * the slot has no contextual seeding at all.
+   */
+  seeds?: SeedRule[];
 }
 
 export interface DiversityRule { dimension: string; max: number }
+
+/** The arrival signals a seed rule may read. Each is context, never learned evidence. */
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network';
+
+/**
+ * W16 C3 (document 35 §2 F13): the interest an ARRIVAL is evidence for, before
+ * the shopper has shown any of her own. One rule maps one context signal value
+ * to canonical catalog tags with a weight in the engine's own 0..1 rule range;
+ * a piece carrying such a tag gains `weight × the slot's weight for that tag's
+ * dimension` in its base, before merchandising. The taxonomy lives in the
+ * published document, never in this code.
+ */
+export interface SeedRule {
+  signal: SeedSignal;
+  /**
+   * The value of that signal this rule fires on: one of the six channel words
+   * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
+   * network's registrable domain for `referrer_network`.
+   */
+  value: string;
+  /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
+  tags: Array<{ dimension: string; value: string }>;
+  /** 0..1, the codebase's rule-weight range. */
+  weight: number;
+}
+
+/** What one fired rule contributed to one candidate, itemised as a delta like every other term. */
+export interface SeedDriver {
+  signal: SeedSignal;
+  value: string;
+  dimension: string;
+  tag: string;
+  weight: number;
+  /** The delta this rule caused in the final pre-lift base, after merchandising. */
+  contribution: number;
+}
+
+/** Refused seed configuration, never a fabricated influence, in the pattern of `pinDiagnostics`. */
+export interface SeedDiagnostic { slot: string; reason: 'invalid_rule_set' }
 
 export interface FreshnessRule { weight: number; halfLifeDays: number }
 export interface FatigueRule { weight: number; windowHours: number; cap: number }
@@ -180,6 +226,14 @@ export interface LiftApplied {
   p_hat: number;
   lift: number;
   gamma: number;
+  /**
+   * The score delta the learned lift actually caused, itemised the way every
+   * other term in this engine is. A multiplicative term on an exactly zero base
+   * causes nothing, and the receipt says so rather than claiming influence the
+   * ranking never had (document 35 §3 N20). Absent on records written before
+   * this term was itemised.
+   */
+  applied?: number;
   /** Doc 22 §8: the imported prior this estimate was shrunk toward, when one was in force for the key. */
   prior?: { p: number; n: number };
 }
@@ -316,6 +370,15 @@ export interface DecisionRecord {
     score_base: number;
     /** The population prior's share of the base score, when one applied. */
     regional?: RegionalBlend & { contribution: number };
+    /**
+     * W16 C3/C7: what the arrival's context contributed to this candidate, when
+     * the slot has a seed rule set. `applied` is measured where it lands — in the
+     * final pre-lift base, after merchandising — so a candidate merchandised to
+     * exactly zero records exactly zero. Present with `applied: 0` and no drivers
+     * for a candidate the rules never named, absent when no rule set is
+     * published. The rule-set version is the `slots` revision on `versions`.
+     */
+    contextual?: { applied: number; drivers: SeedDriver[] };
     /** The learned lift and the dial it was applied through; null when nothing has been learned for this item in this cell. */
     lift: LiftApplied | null;
     /** score_base × lift^γ. Equal to score_base while γ is 0. */
@@ -363,4 +426,6 @@ export interface ContentDecisionSet {
   records: DecisionRecord[];
   /** Refused pins have no delivery decision or ledger row. */
   pinDiagnostics?: PinDiagnostic[];
+  /** A slot whose retained seed rule set the current contract refuses: ignored whole, never partially applied. */
+  seedDiagnostics?: SeedDiagnostic[];
 }

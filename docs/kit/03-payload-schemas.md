@@ -210,6 +210,41 @@ Malformed text blocks the whole draft across fields and slot selection. Validati
 feedback. Caches, multi-document atomicity, mixed-binary rollout and customer rendering acceptance
 remain separate: a saved revision is not proof every serving worker already observes its controls.
 
+### Contextual seed rules
+
+```json
+{
+  "pages": { "home": [
+    { "slot": "hero", "take": 4, "weights": { "category": 0.5, "line": 0.3 }, "seeds": [
+      { "signal": "entry_channel", "value": "paid_social", "tags": [{ "dimension": "category", "value": "Handbags" }], "weight": 0.6 },
+      { "signal": "campaign_term", "value": "tabby handbag", "tags": [{ "dimension": "line", "value": "Tabby" }], "weight": 0.4 },
+      { "signal": "referrer_network", "value": "instagram.com", "tags": [{ "dimension": "category", "value": "Small Leather Goods" }], "weight": 0.5 }
+    ] }
+  ] }
+}
+```
+
+`seeds` is an optional per-slot array of at most 100 rules, read on every stored slot regardless of the
+governance marker. A rule maps one arrival signal value to 1–50 canonical `{dimension, value}` tags with a
+`weight` of 0..1. `signal` is `entry_channel`, `campaign_term` or `referrer_network`; `value` is 1–256
+characters and must be one of the six channel words exactly, the campaign term verbatim, or a known
+network's registrable domain exactly (`instagram.com`, never `instagram` or `l.instagram.com`). Every tag
+dimension must be one the same slot weights. Anything else refuses the write, naming
+`pages.<page>[<i>].seeds…`, and a stored rule set the current contract refuses is ignored WHOLE at decision
+time, never partially applied, with `seedDiagnostics: [{ slot, reason: "invalid_rule_set" }]` on the
+decision set. An empty array is the same as none.
+
+A rule that fires adds `weight × the slot's weight for the tag's dimension` to the base score of every
+eligible piece carrying that tag, before merchandising, so a piece no rule names gains exactly nothing and a
+piece merchandised to exactly zero stays exactly zero: seeds are never a floor. The entry-channel signal
+reads the shopper's established owned channel, the network signal matches the arrival's referrer host or a
+host-shaped `utm_source` on the dot-boundary rule, and the campaign term matches `entry.utmTerm`
+case-insensitively. Receipts carry `explain.contextual: { applied, drivers[] }` with the contribution
+measured where it lands — in the final pre-lift base, after merchandising — and the rule-set version is the
+`slots` revision already on `versions`. The learned lift applies after, on the seeded base, and records the
+delta it actually caused in `explain.lift.applied`. Seeds are context, never learned evidence: they change
+no statistic, and the default arm has none. Publication, revisions and rollback are the slots document's own.
+
 ### Content format affinity
 
 `type` remains the rendering kind. For a known `contentId`, both event hosts learn the held tenant

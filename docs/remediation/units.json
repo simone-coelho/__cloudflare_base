@@ -260,6 +260,182 @@
     "residual": "docs/kit/02-api-reference.md has no SDK Core member list today, so the unit asserts the two phrases file-wide rather than inside a member table; if the implementer adds a Core section the assertions still hold."
   },
   {
+    "id": "W06.BASE.02",
+    "w": "W06",
+    "criterion": "retained-data disposal at the end of a retention lifetime",
+    "outcome": "After a profile's retention expiry the shopper object retains no grant naming the subject or session: the grant-authority record may remain as the barrier that keeps a legacy writer out, but its grants map is empty.",
+    "legs": [
+      "host"
+    ],
+    "witness": "src/durable-objects/ShopperReflex.ts:1469-1471 (the retention branch deletes only affinity, pipeline and audienceOwner and never runs eraseWithBarrier); src/retention.ts:24-25, :88-92 (a policy lifetime disposes the record it covers); BASE-1b reviewer probe P5 (a grant naming the subject and session survives the retention erasure). Document 35 §5 W06·G0: \"Server-enforced deletion epoch/replay barrier prevents stale-cookie … resurrection\" and \"Retention and physical progress must be tested\" — a grant naming the subject and session is exactly the stale material the barrier must not leave behind.",
+    "status": "declared",
+    "batch": "BASE-1b",
+    "declared_from": "src/reflex/shopperReflex.test.ts > alarm — lazy re-evaluation, exits pushed, retention deleteAll > retention: idle past N days with no sockets → storage.deleteAll()",
+    "residual": "The same defect is measured a second time by src/reflex/shopperReflex.consent.test.ts 'W05.02 … honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', which is left unwrapped and RED on the same assertion."
+  },
+  {
+    "id": "W05.BASE.05",
+    "w": "W05",
+    "criterion": "explicit consent governs every served personalization surface",
+    "outcome": "The sort route validates the Durable Object consent envelope before it returns a ranked receipt: a reply that is not ok, carries no consent, or carries a consent that is not two real booleans with a live explicit instruction is refused before any receipt; and a real object whose stored choice is absent or refuses personalization contributes no vector, so the receipt scores 0 with no drivers while a consenting object's vector does contribute.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "src/routes/sort.ts:79-88 (the envelope check and the personalizes() gate on the DO host); src/content/consent.ts:139-152, :176 (absence and a bare boolean grant nothing; only a live explicit instruction personalizes); settled decision D06-W05. src/durable-objects/ShopperReflex.ts:648 (the object side of the host leg: `if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, surface })` — the operative line, since the route gate at sort.ts:88 can be removed with the host leg still green).",
+    "status": "specified",
+    "batch": "BASE-1b",
+    "residual": "Measured GREEN-AT-SPEC at c0973ad+rework: the engine already refuses all six malformed envelopes and already withholds the vector from an absent or refusing choice."
+  },
+  {
+    "id": "W16.C3.01",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "A published, versioned, per-slot seed rule set maps a context signal (entry channel, campaign term, referrer network) to canonical customer-neutral tags with a weight; for a cold shopper at gamma zero the decision ranks candidates carrying the seeded tags above equal-base candidates without them.",
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/architecture/tapestry_requirements.txt line 153 Cross-Channel Awareness (\"Ad creative, search keywords, audience segment, influencer style all inform on-site experience from first page\"); src/reflex/contentCompose.ts:258-263. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The campaign-term signal also needs ChannelSignals.utmTerm: the bounded arrival contract carries no search keyword today, so the public route answers 401 for it (src/routes/decisions.ts:403); that boundary widening is bounded by unit W16.C3.09 and is owed to src/services/visit.ts and src/sdk/core.ts."
+  },
+  {
+    "id": "W16.C3.02",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds apply only to the slot they are published for; a slot with no rule set is unaffected by another slot's rules.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2"
+  },
+  {
+    "id": "W16.C3.03",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Absent rule set: no contextual influence, the base order stands; nothing is invented.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16 (\"absent ... rules fail closed\"); the catalogue-order tie rule at src/reflex/contentCompose.ts:149. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The absent-rule-set clauses are assertions of absence, so the unit's discriminating control is in the same `it`: the identical arrival with a published rule set must move the ranking, and that control is the RED assertion."
+  },
+  {
+    "id": "W16.C3.04",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Invalid rule (unknown canonical tag, malformed or out-of-range weight, unknown signal, or a signal VALUE outside its vocabulary): the rule set is refused at publication; a rule set that became invalid after publication is ignored whole at decision time with a diagnostic, never partially applied, and only for the slot that owns it.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; src/content/kinds.ts validateSlotCatalog (publication) versus parseSlotCatalog (retained reads) and its `pages.<page>[<i>]` error addresses; the pinDiagnostics precedent in src/reflex/contentCompose.ts. An unknown canonical tag is a tag whose dimension the slot does not weight, because nothing it names can reach the score (src/reflex/contentCompose.ts:259); R30(5) adds the value vocabularies: the six entry-channel words (src/services/visit.ts entryChannelOf) and a known network's registrable domain (SEARCH_HOSTS/SOCIAL_HOSTS, matched by the dot-boundary rule at src/services/visit.ts:233). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The publication refusal is driven through publishSet, the same library every authoring route writes through (src/config/publication.ts:336); the authoring HTTP route itself is not exercised. The serving half is the public decisions route on both hosts."
+  },
+  {
+    "id": "W16.C3.05",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "A draft or unpublished rule set never influences a decision.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16 (\"unpublished rules fail closed\"); the authored-but-uncommitted state of the publication head (src/config/publication.ts publishSet/finish: the pending set is reserved before the authority recheck commits it) and pinPublication, which serves only head.committed. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The draft is produced through the real publication path by refusing the authority recheck at the commit step, which is the only authored-but-uncommitted state this publication authority has; a console draft store does not exist. The test reads the reserved pending document out of the head object and asserts it carries the drafted rule set before it asserts the served ranking, so the unit cannot degrade into the absent-rule-set case."
+  },
+  {
+    "id": "W16.C3.06",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds are distinct from learned weighting: with gamma above zero the learned lift still applies on top of the seeded base, and seeds never change learned statistics or a receipt's learned-influence field.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/architecture/22-outcome-learning-design.md §6 (lift^gamma on the base score) as implemented at src/content/decide.ts:190-203; the receipt's LiftApplied field (src/content/types.ts:169-185). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2"
+  },
+  {
+    "id": "W16.C3.07",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds are not a global floor: a candidate whose final pre-lift base after merchandising is exactly zero stays exactly zero whatever the seeds.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/handover/HANDOFF-2026-09-18.md §8 D09 (\"do not force a leave-one-out model or global score floor\"); the merchandising multiplier and its explicit minBoost floor (src/reflex/merchandising.ts:110-134, src/content/kinds.ts:224-226). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "R30(2): the unit pins the clause at both ends of the multiplier — a boost of 0 records exactly 0 and a boost of 0.5 records exactly half — so it cannot be satisfied by a special case at zero."
+  },
+  {
+    "id": "W16.C3.08",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Versioning: publishing a new rule-set version takes effect for subsequent decisions, each receipt names the rule-set version it used, and rollback to the previous version restores the previous ranking.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; src/config/publication.ts publishSet and src/config/versionedStore.ts rollback (the rollback republishes the target revision's value under its own new revision, so the restored ranking carries revision 3). R30(4): the version a receipt names is versions.slots, already stamped at src/content/decide.ts:306. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The public payload already carries the same integer as versions.slots, and the host leg asserts it there; the host-internal leg asserts it on the record beside the contribution."
+  },
+  {
+    "id": "W16.C3.09",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "The campaign term is a bounded arrival field and nothing else: a term beyond its bound is refused at the boundary rather than truncated, a term never changes the classified entry channel, and a term is never persisted to the shopper record, the cell key or the ODP payload.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md ruling R30(3) (utmTerm is in scope as a bounded arrival field, bound 256 like utmSource); docs/architecture/tapestry_requirements.txt line 153 (\"search keywords ... inform on-site experience from first page\"); src/services/visit.ts ENTRY_LIMITS/validEntry/snapshotEntry/classifyEntryChannel and ruling R14's evidence rule; doc 22 §5.4's five cell dimensions as built by src/learn/stats.ts levelKeys; src/services/odpLoop.ts:426-443 (the ODP payload is projected from stored affinity dimensions, journey stage and the vuid). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The ODP payload is covered transitively: the unit asserts the keyword is in nothing the host stored, and the ODP projection reads only that stored state. The live ODP call itself is the admitted K3 check, not this unit. The stored-state dump is JSON over the DO storage map, the session KV and the cache KV; a value held only inside a nested Map would not be seen."
+  },
+  {
+    "id": "W16.C7.01",
+    "w": "W16",
+    "criterion": "C7",
+    "outcome": "Contextual influence is computed from the final pre-lift base after merchandising; exactly zero base stays zero; the receipt for such a candidate never claims multiplicative learned influence.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; the order base -> merchandising -> lift at src/content/decide.ts:184-203 and \"each term is itemised as the delta it caused\" at src/content/decide.ts:118; the receipt prose at src/learn/receipts.ts:63-68. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The receipt-honesty clause is asserted on the logic leg through the record and src/learn/receipts.ts; the public host leg asserts only the exactly zero score the route serves. The ruled honest representation is explain.lift.applied, the delta the learned lift actually caused, in the same form as the stage, freshness and fatigue terms; R30(4) also pins the prose, so the candidate the lift moved says \"applied at trust\" and the candidate it could not move never does. Both candidates in the fixture carry a real learned lift (1.5 and 1.2) so the claim is about honesty, not about an absent estimate."
+  },
+  {
+    "id": "W16.C7.02",
+    "w": "W16",
+    "criterion": "C7",
+    "outcome": "Receipts record the contextual contribution and its rule-set version separately from learned lift; a decision with no seed rule and gamma zero records both as absent.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; src/content/types.ts DecisionRecord.explain (regional/external/merchandising/stage/freshness/fatigue are each itemised separately) and src/learn/receipts.ts. R30(4): the rule-set version is versions.slots. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The ranking half is asserted through the mounted route (leg host); the receipt half is host-internal. The absent case is fixtured with no seed rule set, gamma zero AND no lift snapshot, so it does not reopen doc 22 §6's settled shadow receipt, which shows a computed lift at gamma zero and says it was not applied."
+  },
+  {
     "id": "W16.C4.01",
     "w": "W16",
     "criterion": "C4",
