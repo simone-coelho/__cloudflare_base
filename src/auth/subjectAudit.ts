@@ -152,7 +152,12 @@ const importReceipt = z.object({ received: importCount, applied: importCount, sh
 const fixedHistoryReasons: Record<string, z.infer<typeof historySkipReasonSchema>> = {
   'shopperId is not a shopper id': 'invalid_shopper', 'visitorId is not a visitor id': 'invalid_visitor', 'no shopper': 'no_subject',
   'event is at or before subject erasure': 'erased', 'identity selectors disagree': 'selector_conflict',
-  'no registry attribute on the row': 'no_registry_touch', profile_missing: 'profile_missing', consent_missing: 'consent_missing',
+  'no registry attribute on the row': 'no_registry_touch',
+  // W16 C8.11 (R64, R76): the row the tenant's own published catalogue refused.
+  // The operator's receipt and the auditor's record read ONE vocabulary, so the
+  // audited token is the same word the import report answers with.
+  out_of_vocabulary: 'out_of_vocabulary',
+  profile_missing: 'profile_missing', consent_missing: 'consent_missing',
   consent_refused: 'consent_refused', stale_profile: 'stale_profile', replayed_profile: 'replayed_profile',
 };
 /** One acknowledged SQL statement per phase, including a 1000-account resolve. */

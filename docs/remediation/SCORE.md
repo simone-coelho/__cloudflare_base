@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 85/86 · W closed 1/26 (W16–W41) · suite 1880/1959 · residual 79 in 9 files · typecheck GREEN
+Units 85/86 · W closed 1/26 (W16–W41) · suite 1881/1960 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -94,7 +94,7 @@ Units 85/86 · W closed 1/26 (W16–W41) · suite 1880/1959 · residual 79 in 9 
 | W16.C8.08 | green | 1 |
 | W16.C8.09 | green | 1 |
 | W16.C8.10 | green | 1 |
-| W16.C8.11 | green | 1 |
+| W16.C8.11 | green | 2 |
 | W17.L1.01 | green | 1 |
 | W17.L1.02 | green | 1 |
 | W17.L1.02b | green | 1 |
@@ -119,7 +119,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 45981c7952935b5e301bda97f908659d56456744e516f6cac4219e24bc111cb5 |
+| units sha256 | cdba6b6afd6afb1ee271486fcb2453856e26db63848969d52299ca13a016b855 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -130,7 +130,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-2.json (outside the checkout) |
-| vitest report sha256 | f2841d96f2bc98ea048f8e4da7b79987099b4c7d11ee55c92bedf5fa16a6a010 |
-| commit | 1e5087639d9dca4ace9418b896068abfc147138c |
-| generated | 2026-09-19T16:56:26.443Z |
+| vitest report | vitest-3.json (outside the checkout) |
+| vitest report sha256 | 9d40899052928c509207745d7c5d5e8354d101de218ec1a7b916fc60899c20af |
+| commit | 91aa7ad3fe9a09644dbdf6289141fdbd2265cf73 |
+| generated | 2026-09-19T17:11:29.807Z |
