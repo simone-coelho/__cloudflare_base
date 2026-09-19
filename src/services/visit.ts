@@ -57,9 +57,47 @@ export const ENTRY_QUERY_LIMIT = 4096;
 const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 } as const;
 /** The bound on a campaign term, the same one `utm_source` carries. */
 export const ENTRY_TERM_LIMIT: number = ENTRY_LIMITS.utmTerm;
+/** The one place a host string is parsed: a full URL, or a bare authority. Null when unusable. */
+function parsed(value: string): URL | null {
+  try { return new URL(value.includes('://') ? value : `https://${value}`); } catch { return null; }
+}
+/**
+ * The host of an authority a document actually reported: a bare hostname, or the
+ * `hostname[:port]` form `location.host` produces. Returns the ASCII, lower-cased
+ * hostname URL parsing normalizes the name to, or `''` when the value is not that
+ * form — a scheme, a path, a query, a fragment, credentials, whitespace or free
+ * text is not an authority, and a port URL parsing itself refuses is not a port.
+ *
+ * The test is structural rather than a string comparison against the input,
+ * because parsing normalizes: it DROPS the scheme's default port (`host:443`
+ * parses with an empty `port`, so `url.host` is not the input) and rewrites an
+ * internationalized name into its punycode form.
+ */
+function authorityHost(value: string): string {
+  if (value === '' || /[/\\?#@\s]/.test(value)) return '';
+  const url = parsed(value);
+  if (!url) return '';
+  if (url.pathname !== '/' || url.search !== '' || url.hash !== '' || url.username !== '' || url.password !== '') return '';
+  // Whatever follows the authority's port separator must be the port itself, so
+  // a bare trailing colon is not the `hostname[:port]` form. An IPv6 literal
+  // carries its own colons inside brackets.
+  const separator = value.indexOf(':', value.startsWith('[') ? value.indexOf(']') + 1 : 0);
+  if (separator !== -1 && !/^[0-9]+$/.test(value.slice(separator + 1))) return '';
+  return url.hostname;
+}
+/**
+ * A fully-qualified name ends in the empty root label. `www.google.com.` and
+ * `www.google.com` are the same host, so the root label is stripped before any
+ * comparison; it is never stripped from the ACCEPTED value, which is the
+ * spelling the document reported.
+ */
+function rootStripped(host: string): string {
+  return host.endsWith('.') ? host.slice(0, -1) : host;
+}
 /** A hostname and nothing else: a URL, a path or free text does not round-trip. */
 function isHostname(value: string): boolean {
-  return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
+  const host = authorityHost(value);
+  return host !== '' && host.length <= ENTRY_LIMITS.siteHost;
 }
 /**
  * Which fields must carry a host. `siteHost` always does: it is compared with
@@ -92,7 +130,7 @@ export function entryChannelOf(value: unknown): EntryChannel | null {
  * An absent referrer, or an empty or invalid site host, is missing evidence.
  */
 function pageView(entry: ChannelSignals): boolean {
-  return typeof entry.referrer === 'string' && norm(entry.siteHost) !== '';
+  return typeof entry.referrer === 'string' && siteOf(entry.siteHost) !== '';
 }
 
 /**
@@ -199,9 +237,13 @@ export function visitBucket(visitCount: number | null | undefined): VisitBucket 
 // -- Entry channel ----------------------------------------------------------
 
 const PAID_SEARCH_MEDIUMS = new Set(['cpc', 'ppc', 'paidsearch', 'paid_search', 'paid-search', 'sem', 'search_paid']);
-const PAID_SOCIAL_MEDIUMS = new Set(['paid_social', 'paidsocial', 'paid-social', 'social_paid', 'cpm', 'display', 'banner']);
-/** A click declared paid without naming the network; the source decides which paid cell it belongs to. */
-const PAID_MEDIUMS = new Set(['paid']);
+const PAID_SOCIAL_MEDIUMS = new Set(['paid_social', 'paidsocial', 'paid-social', 'social_paid', 'display', 'banner']);
+/**
+ * A click declared paid without naming a cell: the RECOGNIZED NETWORK in the
+ * source decides which paid cell it belongs to, and with no recognized network
+ * there is no paid cell it can honestly join (unit W16.C2.11).
+ */
+const NETWORK_PAID_MEDIUMS = new Set(['paid', 'cpm']);
 const EMAIL_MEDIUMS = new Set(['email', 'e-mail', 'e_mail', 'newsletter', 'crm']);
 const ORGANIC_MEDIUMS = new Set(['organic', 'organic_search']);
 const REFERRAL_MEDIUMS = new Set(['referral', 'affiliate', 'partner']);
@@ -215,37 +257,99 @@ const EMAIL_SOURCES = new Set(['klaviyo', 'mailchimp', 'braze', 'sfmc', 'salesfo
  * it merely contains or begins with it: `www.google.com` and `search.brave.com`
  * are the network, `google.com.evil.example`, `notgoogle.com` and
  * `evilgoogle.co` are not (units W16.C2.01, W16.C2.02).
+ *
+ * A network reached in another market is registered under a DIFFERENT domain,
+ * often on a country-code or multi-label public suffix, so each market is listed
+ * against the network that owns it (unit W16.C2.10). There is deliberately no
+ * generic "strip the last two or three labels" suffix rule anywhere: such a rule
+ * would let anyone who registers `evilgoogle.co.uk` or `google.com.co.evil.example`
+ * look like the network to the matcher. Serving a new market means adding its
+ * suffix to that one network's list.
  */
-const SEARCH_HOSTS = ['google.com', 'bing.com', 'duckduckgo.com', 'yahoo.com', 'ecosia.org', 'baidu.com', 'yandex.com', 'brave.com', 'startpage.com'];
+const SEARCH_HOSTS = [
+  // google, per market
+  'google.com', 'google.ca', 'google.de', 'google.fr', 'google.it', 'google.es', 'google.nl', 'google.be', 'google.ch',
+  'google.at', 'google.se', 'google.no', 'google.dk', 'google.fi', 'google.ie', 'google.pt', 'google.pl', 'google.cz',
+  'google.sk', 'google.hu', 'google.ro', 'google.bg', 'google.gr', 'google.hr', 'google.si', 'google.lt', 'google.lv',
+  'google.ee', 'google.rs', 'google.ru', 'google.cl', 'google.ae',
+  'google.co.uk', 'google.co.in', 'google.co.jp', 'google.co.kr', 'google.co.id', 'google.co.th', 'google.co.nz',
+  'google.co.za', 'google.co.il', 'google.com.au', 'google.com.br', 'google.com.mx', 'google.com.co', 'google.com.ar',
+  'google.com.pe', 'google.com.tr', 'google.com.sa', 'google.com.eg', 'google.com.ng', 'google.com.hk', 'google.com.tw',
+  'google.com.sg', 'google.com.my', 'google.com.ph', 'google.com.vn', 'google.com.ua',
+  // yahoo, per market
+  'yahoo.com', 'yahoo.ca', 'yahoo.de', 'yahoo.es', 'yahoo.fr', 'yahoo.it', 'yahoo.co.jp', 'yahoo.co.uk',
+  'yahoo.com.au', 'yahoo.com.br', 'yahoo.com.mx',
+  // yandex, per market
+  'yandex.com', 'yandex.ru', 'yandex.by', 'yandex.kz', 'yandex.uz', 'yandex.com.tr',
+  // the single-domain networks
+  'bing.com', 'duckduckgo.com', 'ecosia.org', 'baidu.com', 'brave.com', 'startpage.com',
+];
 const SOCIAL_HOSTS = ['facebook.com', 'fb.com', 'fb.me', 'meta.com', 'instagram.com', 'tiktok.com', 'pinterest.com', 'snapchat.com',
   'twitter.com', 'x.com', 't.co', 'linkedin.com', 'lnkd.in', 'reddit.com', 'youtube.com', 'threads.net'];
 /**
  * The same networks as a campaign DECLARES them in `utm_source`: a bare network
- * name rather than a host. Matched exactly, so `tiktok.evil.example` is not
- * TikTok; a source that is itself a host goes through the host rule instead.
+ * name rather than a host. Matched as a whole token, so `tiktok.evil.example` is
+ * not TikTok; a source that is itself a host goes through the host rule instead.
  */
 const SOCIAL_SOURCES = new Set(['facebook', 'fb', 'meta', 'instagram', 'tiktok', 'pinterest', 'snapchat', 'twitter', 'linkedin', 'reddit', 'youtube', 'threads']);
+/** R27(b): the search networks a campaign names in `utm_source`, the same networks as above. */
+const SEARCH_SOURCES = new Set(['google', 'bing', 'yahoo', 'duckduckgo', 'yandex', 'baidu', 'ecosia', 'brave', 'startpage']);
+/**
+ * Abbreviations a campaign builder writes instead of the network's name. An
+ * alias names the NETWORK, so a resolved token is read exactly where the
+ * network's own name is read (R25(a)); the list is explicit, never a prefix or
+ * substring test.
+ */
+const SOURCE_ALIASES: Record<string, string> = { fb: 'facebook', ig: 'instagram', insta: 'instagram', yt: 'youtube', ddg: 'duckduckgo' };
 
 function norm(v: string | null | undefined): string {
   return typeof v === 'string' ? v.trim().toLowerCase() : '';
 }
 
-/** Host of a referrer that may be a full URL or a bare host. Empty when unusable. */
+/**
+ * Host of a referrer that may be a full URL or a bare host, in the form the
+ * network tables are written in: ASCII, lower case, no root label. Empty when
+ * unusable.
+ */
 function hostOf(referrer: string): string {
-  if (referrer === '') return '';
-  try {
-    return new URL(referrer.includes('://') ? referrer : `https://${referrer}`).hostname.toLowerCase();
-  } catch {
-    return '';
-  }
+  const url = referrer === '' ? null : parsed(referrer);
+  return url ? rootStripped(url.hostname.toLowerCase()) : '';
+}
+
+/**
+ * The site's own name, for the same-site comparison. Neither the port a page
+ * reported nor the root label of a fully-qualified name is part of the site's
+ * identity, and an internationalized name is compared in the ASCII form parsing
+ * produces (units W16.C2.13, W16.C2.14).
+ */
+function siteOf(value: string | null | undefined): string {
+  return typeof value === 'string' ? rootStripped(authorityHost(value.trim())) : '';
 }
 
 /** Exact host, or a dot-boundary subdomain of it. Never a substring or a prefix. */
 const matches = (host: string, domains: string[]) =>
   host !== '' && domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
 
-/** A `utm_source` declares a social network by its name or by its own host. */
-const declaresSocial = (source: string) => source !== '' && (SOCIAL_SOURCES.has(source) || matches(source, SOCIAL_HOSTS));
+/**
+ * A `utm_source` is written in one of two forms and R27(a) judges them by
+ * different rules. A HOST form — anything containing a dot — is judged ONLY by
+ * the host rule, so `facebook.attacker.example` is a stranger's host and not
+ * Facebook. A TOKEN form (`facebook_ads`, `TikTok-Ads`, ` meta ads `) names the
+ * network in one of its tokens, split on `_`, `-` and whitespace; `.` is not a
+ * separator.
+ */
+function sourceTokens(source: string): string[] {
+  return source.split(/[\s_-]+/).filter(token => token !== '').map(token => SOURCE_ALIASES[token] ?? token);
+}
+
+/** Does this `utm_source` name one of these networks, by token or by its own host? */
+function declaresNetwork(source: string, names: Set<string>, hosts: string[]): boolean {
+  if (source === '') return false;
+  return source.includes('.') ? matches(hostOf(source), hosts) : sourceTokens(source).some(token => names.has(token));
+}
+
+const declaresSocial = (source: string) => declaresNetwork(source, SOCIAL_SOURCES, SOCIAL_HOSTS);
+const declaresSearch = (source: string) => declaresNetwork(source, SEARCH_SOURCES, SEARCH_HOSTS);
 
 /**
  * The network a value NAMES, canonically; null when it is not one this engine
@@ -293,20 +397,27 @@ export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
 
   if (medium !== '') {
     // Meta's default campaign builder commonly emits utm_medium=cpc, and a bare
-    // `paid` names no network at all. The declared source disambiguates both
-    // BEFORE the generic paid-search table; otherwise a Facebook click poisons
-    // the paid-search cell (unit W16.C2.03).
-    const paid = PAID_SEARCH_MEDIUMS.has(medium) || PAID_MEDIUMS.has(medium);
-    if (paid && declaresSocial(source)) return 'paid_social';
-    if (paid) return 'paid_search';
-    if (PAID_SOCIAL_MEDIUMS.has(medium)) return 'paid_social';
-    if (EMAIL_MEDIUMS.has(medium)) return 'email';
-    if (REFERRAL_MEDIUMS.has(medium)) return 'referral';
-    if (ORGANIC_MEDIUMS.has(medium)) return 'organic';
+    // `paid` or `cpm` names no network at all. The declared source disambiguates
+    // both BEFORE the generic paid-search table; otherwise a Facebook click
+    // poisons the paid-search cell (unit W16.C2.03).
+    if (PAID_SEARCH_MEDIUMS.has(medium) || NETWORK_PAID_MEDIUMS.has(medium)) {
+      if (declaresSocial(source)) return 'paid_social';
+      // R27(b): a medium that declares paid SEARCH names its own cell. A medium
+      // that only says "paid" names none, so a recognized search network in the
+      // source is what puts the click in the paid-search cell; with no
+      // recognized network it belongs in neither paid cell, and the arrival's
+      // own evidence answers instead — which, with nothing observed, is unknown
+      // (R14, unit W16.C2.11).
+      if (PAID_SEARCH_MEDIUMS.has(medium) || declaresSearch(source)) return 'paid_search';
+    }
+    else if (PAID_SOCIAL_MEDIUMS.has(medium)) return 'paid_social';
+    else if (EMAIL_MEDIUMS.has(medium)) return 'email';
+    else if (REFERRAL_MEDIUMS.has(medium)) return 'referral';
+    else if (ORGANIC_MEDIUMS.has(medium)) return 'organic';
     // A bare `social` medium is ambiguous. Treat it as paid when the source is a
     // known ad platform, because that is what a campaign builder almost always
     // means by tagging it at all; otherwise it is a referral from that network.
-    if (SOCIAL_MEDIUMS.has(medium)) return declaresSocial(source) ? 'paid_social' : 'referral';
+    else if (SOCIAL_MEDIUMS.has(medium)) return declaresSocial(source) ? 'paid_social' : 'referral';
   }
 
   if (source !== '' && EMAIL_SOURCES.has(source)) return 'email';
@@ -314,7 +425,7 @@ export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
   const host = hostOf(norm(signals.referrer));
   if (host === '') return 'direct';
 
-  const site = norm(signals.siteHost);
+  const site = siteOf(signals.siteHost);
   // A same-site referrer is internal navigation, not an entry. The visit keeps
   // whatever it was entered on rather than being relabelled mid-visit.
   if (site !== '' && (host === site || host.endsWith(`.${site}`))) return 'direct';

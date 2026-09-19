@@ -1443,8 +1443,28 @@
   var ENTRY_QUERY_LIMIT = 4096;
   var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
   var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
+  function parsed(value) {
+    try {
+      return new URL(value.includes("://") ? value : `https://${value}`);
+    } catch {
+      return null;
+    }
+  }
+  function authorityHost(value) {
+    if (value === "" || /[/\\?#@\s]/.test(value)) return "";
+    const url = parsed(value);
+    if (!url) return "";
+    if (url.pathname !== "/" || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") return "";
+    const separator = value.indexOf(":", value.startsWith("[") ? value.indexOf("]") + 1 : 0);
+    if (separator !== -1 && !/^[0-9]+$/.test(value.slice(separator + 1))) return "";
+    return url.hostname;
+  }
+  function rootStripped(host) {
+    return host.endsWith(".") ? host.slice(0, -1) : host;
+  }
   function isHostname(value) {
-    return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
+    const host = authorityHost(value);
+    return host !== "" && host.length <= ENTRY_LIMITS.siteHost;
   }
   function hostField(key, hostOnly) {
     return key === "siteHost" || hostOnly && key === "referrer";
@@ -1463,12 +1483,8 @@
     return json.length <= ENTRY_QUERY_LIMIT ? json : void 0;
   }
   function hostOf(referrer) {
-    if (referrer === "") return "";
-    try {
-      return new URL(referrer.includes("://") ? referrer : `https://${referrer}`).hostname.toLowerCase();
-    } catch {
-      return "";
-    }
+    const url = referrer === "" ? null : parsed(referrer);
+    return url ? rootStripped(url.hostname.toLowerCase()) : "";
   }
 
   // src/sdk/listen.ts
