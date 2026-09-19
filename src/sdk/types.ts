@@ -119,7 +119,13 @@ export type SdkEventType =
   | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete'
   | 'email_open' | 'form_submit' | 'button_click' | 'custom';
 
-export interface EntrySignals { utmMedium: string; utmSource: string; referrer: string; siteHost: string }
+/**
+ * `utmTerm` is the campaign's search keyword, present only when the page load
+ * carries one within its bound: a keyword is a seeding signal, never evidence of
+ * a channel, and an absent one is absent rather than empty so the arrival every
+ * other page load sends is unchanged.
+ */
+export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; referrer: string; siteHost: string }
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {
