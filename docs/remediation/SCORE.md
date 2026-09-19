@@ -5,16 +5,16 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 16/22 · W closed 0/26 (W16–W41) · suite 1792/1877 · residual 85 in 10 files · typecheck GREEN
+Units 18/22 · W closed 0/26 (W16–W41) · suite 1795/1877 · residual 82 in 9 files · typecheck GREEN
 
 ## W items
 
 | W | Declared | Green | Closed | Review | Review sha |
 |---|---|---|---|---|---|
-| W05 | 2 | 1 | no | — | — |
+| W05 | 2 | 2 | no | — | — |
 | W06 | 2 | 0 | no | — | — |
 | W09 | 1 | 0 | no | — | — |
-| W11 | 1 | 0 | no | — | — |
+| W11 | 1 | 1 | no | — | — |
 | W16 | 15 | 15 | no | — | — |
 | W37 | 1 | 0 | no | — | — |
 
@@ -22,12 +22,12 @@ Units 16/22 · W closed 0/26 (W16–W41) · suite 1792/1877 · residual 85 in 10
 
 | Unit | Status | Tests matched |
 |---|---|---|
-| W05.BASE.01 | red | 1 |
+| W05.BASE.01 | green | 1 |
 | W05.BASE.05 | green | 2 |
 | W06.BASE.01 | red | 1 |
 | W06.BASE.02 | red | 1 |
 | W09.BASE.02 | red | 1 |
-| W11.BASE.01 | red | 2 |
+| W11.BASE.01 | green | 2 |
 | W16.C2.01 | green | 1 |
 | W16.C2.02 | green | 1 |
 | W16.C2.03 | green | 1 |
@@ -54,7 +54,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 4fecac5800319330f6102a490624cf4d9c687c17429bf228a47b25843177c6ce |
+| units sha256 | c4d3bb3f0f17d9e338c3ef77fc58bec77fd32f24987fa4eb172477e8f79cc114 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -65,7 +65,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | f1f9f6ca0662b460cac2f44192a07c40f44325d43e684b1fa5f46f386560e363 |
-| commit | 8eb6e084764ef1c876ae7c98bdb3d40456503b0a |
-| generated | 2026-09-19T03:06:27.551Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | 6d6989155fefe25df050cd4594e84280b936cd9178ec97f227d323373e9ef831 |
+| commit | 920819f47df70b0f27ce1cfae38cc6624a1e23fa |
+| generated | 2026-09-19T04:18:03.819Z |

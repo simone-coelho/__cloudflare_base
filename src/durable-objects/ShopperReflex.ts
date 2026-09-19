@@ -631,10 +631,15 @@ export class ShopperReflex {
         if (url.searchParams.get('projection') === 'content') {
           if (!principal) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
           const consent = await this.consentNow();
+          // This projection serves decisions, so it is an answer from THIS
+          // tenant's configured runtime and the authority is required before any
+          // answer, including the refusal projection below: an absent, invalid or
+          // unreadable configuration publication refuses here with its own typed
+          // error instead of a default. A demo scope keeps its compiled identity.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, Date.now(), cfg) : null,
             journeyStage: await projectedOdpStage(this.env, principal.tenant, this.affinity, this.pipeline?.segments ?? [],
@@ -651,10 +656,12 @@ export class ShopperReflex {
           await this.load();
           const consent = await this.consentNow();
           const surface = resolveSurface({ surface: url.searchParams.get('surface') ?? this.surface() });
+          // As above: the sort projection serves decisions, so the configuration
+          // authority is required before any answer, refusal included.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, surface });
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
           requireConsentPurpose(consent, 'personalization');
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           return json({ ok: true, consent, surface, affinity: this.affinity ? { dims: reflexSnapshot(this.affinity.reflex, Date.now(), cfg).dims } : null });
         }
         return this.handleSnapshot(principal?.tenant ?? internal!.tenant, principal);
