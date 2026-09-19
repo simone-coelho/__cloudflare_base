@@ -24,6 +24,7 @@
 // STAGE_WORDS gives BTIE's names for the same three states.
 
 import type { QualificationContext } from '@/connectors/types';
+import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { isNewVisit } from '@/services/visit';
 
 export type JourneyStage = 'early' | 'mid' | 'late';
@@ -185,12 +186,15 @@ export const DEFAULT_JOURNEY_THRESHOLDS: JourneyThresholds = {
 };
 
 /**
- * The compiled default's own version identity, which a decision and a receipt
- * name at revision 0 so a reader can tell "the engine's default decided this"
- * from "the tenant's revision 3 decided this". It is not a document version:
- * nothing published carries it.
+ * The version a decision names when the compiled default decided (lead ruling,
+ * 2026-09-19): the version of the compiled default CONFIGURATION this threshold
+ * set travels with, because the set is part of that document's defaults exactly
+ * as τ, K and the dimension registry are. Reported at revision 0, so a reader
+ * can always tell "the engine's own default decided this" from "the tenant's
+ * revision 3 decided this" — the tenant's document version is never claimed for
+ * thresholds it did not supply.
  */
-export const DEFAULT_JOURNEY_THRESHOLDS_VERSION = 'journey-default-v1';
+export const DEFAULT_JOURNEY_THRESHOLDS_VERSION: string = DEFAULT_REFLEX_CONFIG.version;
 
 /** A threshold nobody reaches is a tuning mistake, not a policy. */
 const MAX_JOURNEY_THRESHOLD = 1_000_000_000;
@@ -390,7 +394,7 @@ export interface ReportedJourney {
 
 /** R49: the tenant published no block at all, so the engine's own default decided. */
 export const JOURNEY_COMPILED_DEFAULT =
-  `no journey thresholds are published for this tenant, so the engine's compiled default threshold set (${DEFAULT_JOURNEY_THRESHOLDS_VERSION}) decided this stage; publish a journey block on the reflex configuration document to tune it`;
+  `no journey thresholds are published for this tenant, so the compiled default journey thresholds of configuration "${DEFAULT_JOURNEY_THRESHOLDS_VERSION}" decided this stage at revision 0; publish a journey block on the reflex configuration document to tune it`;
 /** A stored block the validator cannot read: fail closed, never substitute another tenant's tuning. */
 export const JOURNEY_BLOCK_UNUSABLE =
   'the journey block published on the reflex document cannot be read, so the engine failed closed to the first stage of the journey and used no threshold version';
