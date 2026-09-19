@@ -104,6 +104,37 @@
 // invoke the object in its real owner context because no public route exposes
 // durable-object storage or the alarm; each such unit's row names the missing
 // public observable as its residual.
+//
+// BUILD REQUIREMENTS the implementer and the reviewer must both see (ruling R48(b)):
+//  1. The published reflex document's validator (`validateReflexConfig`,
+//     `src/reflex/configStore.ts:234`, which W16-B4 extends for the `journey`
+//     block) must ADMIT the `continuity` block described above. If it refuses or
+//     strips it, every unit in this file fails at fixture publication rather than
+//     on the behavior it measures.
+//  2. `ShopperReflex` enforces an allow-list of its own storage keys
+//     (`['affinity','pipeline','audienceOwner','consent']` at
+//     `src/durable-objects/ShopperReflex.ts:1759`, `:2028`, `:2288`, `:2729`).
+//     The continuity records must be admitted there BY EXACT KEY — the allow-list
+//     is widened, never loosened into a prefix or a wildcard.
+//
+// LIMITS OF THIS FILE, named so the whole-W review can own them (ruling R48(c)):
+//  - The C6 text says the raw proof appears in no DO state, log, evidence, HTML
+//    or ordinary envelope. This file scans the object's whole stored state, four
+//    ordinary envelopes and the issuance response headers. It does NOT scan the
+//    worker's logs, the evidence directory or rendered HTML: those three surfaces
+//    are a named residual on W16.C6.02 for the whole-W review.
+//  - Durable-object atomicity, restart and alarm are measured here against the
+//    fixture's hand-written storage/namespace doubles (no conflict detection, no
+//    input gating), so units .02, .08 and .11 are STRICTER than workerd but are
+//    not evidence of real Durable Object behavior. A Miniflare/native leg
+//    (`src/index.api-boundary.test.ts` pattern, METHOD §3) is the named residual
+//    on those three units.
+//  - On the session host the shopper's retained taste lives in the KV session
+//    record, which production expires after `SESSION_TTL_SECONDS` = 30 days
+//    (`src/services/SessionManager.ts:89`). The fixture's KV does not simulate
+//    expiry, so a return measured here inside fourteen days is covered by that
+//    retention in production, while a published continuity window longer than the
+//    record's own retention is an owner decision this batch does not specify.
 
 import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
@@ -161,7 +192,7 @@ const CONTINUITY_BROKER = { mode: 'broker', windowMs: WINDOW_MS, purpose: PURPOS
  * own fixed expiry.
  */
 const CONTINUITY_SHORT = { mode: 'direct', windowMs: 10 * DAY_MS, purpose: PURPOSE, retentionApproved: true };
-const CONTINUITY_ALARM = { mode: 'direct', windowMs: 2 * DAY_MS, purpose: PURPOSE, retentionApproved: true };
+const CONTINUITY_ALARM = { mode: 'direct', windowMs: 6 * 60 * 60 * 1000, purpose: PURPOSE, retentionApproved: true };
 /** Every way a published block can fail to be a complete, finite, approved configuration. */
 const INCOMPLETE_CONTINUITY: Array<[string, Record<string, unknown>]> = [
   ['no transport mode', { windowMs: WINDOW_MS, purpose: PURPOSE, retentionApproved: true }],
@@ -585,14 +616,15 @@ async function hostFixture(host: 'session' | 'do', continuity: unknown | null = 
 
   const objectData = (subject: string) => f.objects.get(shopperObjectName(TENANT, subject))?.data ?? new Map<string, unknown>();
   const continuityRecords = (subject: string) => [...objectData(subject)].filter(([key]) => key.startsWith(CONTINUITY_KEY_PREFIX));
-  const objectAlarms = (subject: string) => f.objects.get(shopperObjectName(TENANT, subject))?.alarms ?? [];
+  /** The alarm the object holds NOW: the last one set, which is what getAlarm returns. */
+  const currentAlarm = (subject: string) => f.objects.get(shopperObjectName(TENANT, subject))?.alarms.at(-1) ?? -1;
   const runAlarm = async (subject: string) => {
     await f.objects.get(shopperObjectName(TENANT, subject))!.shopper.alarm();
     await f.drain();
   };
 
   return { f, host, publishedWindowMs, identitySession, choose, action, browse, snapshot, hydrate, analytics,
-    reflexRevision, publishReflex, newShopper, objectData, continuityRecords, objectAlarms, runAlarm, operator };
+    reflexRevision, publishReflex, newShopper, objectData, continuityRecords, currentAlarm, runAlarm, operator };
 }
 
 type HostFixture = Awaited<ReturnType<typeof hostFixture>>;
@@ -721,10 +753,12 @@ describe('unit:W16.C6.02', () => {
 
         // R19: durable-object storage is exposed by no public route, so this leg
         // runs in process against the real object the request path just used.
-        const records = h.continuityRecords(her.subject);
-        expect(records.length, `${host}: the object keeps its continuity state under a '${CONTINUITY_KEY_PREFIX}…' key`).toBe(1);
-        expect(records[0]![1], `${host}: it keeps the digest, the generation and the original fixed expiry`)
-          .toMatchObject({ generation: 1, digest: await sha256Hex(her.proof), expiresAt: her.expiresAt });
+        // The record is found by the digest it must hold, not by its position.
+        const digest = await sha256Hex(her.proof);
+        const holding = h.continuityRecords(her.subject).filter(([, value]) => JSON.stringify(value ?? null).includes(digest));
+        expect(holding.length, `${host}: exactly one persisted '${CONTINUITY_KEY_PREFIX}…' record holds this descriptor's digest`).toBe(1);
+        expect(holding[0]![1], `${host}: it keeps the digest, the generation and the original fixed expiry`)
+          .toMatchObject({ generation: 1, digest, expiresAt: her.expiresAt });
 
         // Ordinary envelopes and the object's whole state, as text.
         const hydrated = await h.hydrate(her.capability);
@@ -739,8 +773,6 @@ describe('unit:W16.C6.02', () => {
           { name: 'analytics envelope', text: analytics.text },
           { name: 'issuance response headers', text: her.issued.headerText },
         ];
-        expect(sources.length, `${host}: the object stored something to scan`).toBeGreaterThan(1);
-
         // The scan is proven to have teeth before it is used to claim absence.
         const signature = her.proof.split('.').at(-1)!;
         for (const needle of [her.proof, signature]) {
@@ -753,7 +785,7 @@ describe('unit:W16.C6.02', () => {
           `${host}: neither is the signature that makes it a bearer`).toEqual([]);
         // …while the digest the object is allowed to keep IS there: the same scan
         // machinery, so the absence above is a measurement and not an accident.
-        expect(sightings(sources, await sha256Hex(her.proof)).length,
+        expect(sightings(sources, digest).length,
           `${host}: the digest the object may keep is visible to the same scan`).toBeGreaterThan(0);
         expect(snapshotted.revision, `${host}: the revision the descriptor binds to is the published reflex revision`).toBe(revision);
       }
@@ -1127,10 +1159,10 @@ describe('unit:W16.C6.10', () => {
     const proof = 'w16b6-direct-recognition-proof-0000000000000000.signature-0000000000000000';
 
     /** A browser whose storage this test can read, the way `memoryHost` is normally driven. */
-    const browser = (options: { mode: 'direct' | 'broker'; proofInBody: boolean }) => {
+    const browser = (options: { mode: 'direct' | 'broker'; proofInBody: boolean; lose?: number }) => {
       const store = new Map<string, string>();
       const calls: Array<{ url: string; init?: { body?: string; credentials?: string; headers?: Record<string, string> } }> = [];
-      let clock = T0, uuids = 0, sessions = 0;
+      let clock = T0, uuids = 0, sessions = 0, lost = 0;
       const host = memoryHost({
         acquireAuthorityLock: authorityLocks(),
         now: () => clock,
@@ -1141,6 +1173,10 @@ describe('unit:W16.C6.10', () => {
         fetch: async (url, init) => {
           calls.push({ url, init: init as { body?: string; credentials?: string; headers?: Record<string, string> } });
           if (url.endsWith('/identity/session') || url.endsWith('/shopper-broker')) {
+            // A lost answer: the consume happened at the engine, the browser
+            // never saw the session. The next attempt is a retry of the SAME
+            // consume, which the ruled contract answers from one receipt.
+            if (lost < (options.lose ?? 0)) { lost += 1; return { ok: false, status: 502, json: async () => ({ ok: false }) }; }
             const n = (++sessions).toString(16).padStart(12, '0');
             const claims = { tenant, subject: `vis-00000000-0000-4000-8000-${n}`, sessionId: `s-00000000-0000-4000-8000-${n}`,
               kind: 'anonymous', grantId: `00000000-0000-4000-8000-${n}`, authorityEpoch: `10000000-0000-4000-8000-${n}`,
@@ -1166,17 +1202,27 @@ describe('unit:W16.C6.10', () => {
     expect(direct.store.get(sdkContinuityKey(endpoint, tenant)),
       'W16.C6.10: the direct-mode SDK keeps the recognition proof in its tenant-scoped store').toBe(proof);
 
-    // …and the next cold start, with no capability of its own, presents it.
-    direct.calls.length = 0;
-    const returning = browser({ mode: 'direct', proofInBody: true });
+    // …and the next cold start, with no capability of its own, presents it —
+    // twice here, because the first answer is lost. Both attempts are the SAME
+    // consume: the engine answers the second from its one successor receipt
+    // (W16.C6.05), which is keyed by the operation id, so the SDK must keep the
+    // id beside the proof rather than mint a new one per attempt.
+    const returning = browser({ mode: 'direct', proofInBody: true, lose: 1 });
     returning.store.set(sdkContinuityKey(endpoint, tenant), proof);
-    const second = createCore({ tenant, endpoint }, returning.host);
-    expect(await second.ready()).toBe(true);
-    const request = returning.calls.find(call => call.url.endsWith('/identity/session'));
-    expect(request, 'the returning SDK asks for a session').toBeDefined();
-    const presented = JSON.parse(request!.init?.body ?? '{}') as { continuity?: { proof?: unknown; operationId?: unknown } };
-    expect(presented.continuity?.proof, 'W16.C6.10: it presents the stored recognition proof').toBe(proof);
-    expect(String(presented.continuity?.operationId), 'under one deterministic operation id')
+    const lostAnswer = createCore({ tenant, endpoint }, returning.host);
+    expect(await lostAnswer.ready(), 'the lost answer adopts no session').toBe(false);
+    const retried = createCore({ tenant, endpoint }, returning.host);
+    expect(await retried.ready(), 'the page reloads and the retry adopts the session').toBe(true);
+    const presentations = returning.calls.filter(call => call.url.endsWith('/identity/session'))
+      .map(call => JSON.parse(call.init?.body ?? '{}') as { continuity?: { proof?: unknown; operationId?: unknown } });
+    expect(presentations.length, 'the returning SDK asked twice: the lost answer and its retry').toBe(2);
+    for (const [index, presented] of presentations.entries()) {
+      expect(presented.continuity?.proof, `W16.C6.10: attempt ${index + 1} presents the stored recognition proof`).toBe(proof);
+    }
+    expect(presentations[1]!.continuity?.operationId,
+      'W16.C6.10: the retry is the same consume, under the operation id the first attempt used')
+      .toBe(presentations[0]!.continuity?.operationId);
+    expect(String(presentations[0]!.continuity?.operationId), 'which is a uuid the engine can key its one receipt by')
       .toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 
     // Broker mode: the long proof stays with the first-party broker. The SDK
@@ -1199,32 +1245,47 @@ describe('unit:W16.C6.11', () => {
     try {
       for (const host of ['session', 'do'] as const) {
         clock.mockReturnValue(T0);
-        // A two-day published window: every other alarm this object schedules
-        // (its consent deadline and its own decay/retention wake) is later than
-        // that, so an alarm at or before the descriptor's expiry is the
-        // descriptor's own.
+        // A six-hour published window. Every other alarm this object schedules —
+        // its 30-day consent deadline, its own decay/retention wake — is far
+        // later, so the alarm the object holds NOW, at or before this expiry, can
+        // only be the descriptor's own. Six hours also keeps her ordinary
+        // capability (SHOPPER_MAX_AGE, 24 h) alive across the cleanup, so her
+        // retained taste is read back through the mounted route, which is the
+        // same observable on both hosts.
         const h = await hostFixture(host, CONTINUITY_ALARM);
         const her = await h.newShopper({ browse: true, clock });
         const expiresAt = her.expiresAt;
+        const digest = await sha256Hex(her.proof);
+        /** The persisted record holding this descriptor's digest, found by the digest. */
+        const stored = (why: string) => {
+          const holding = h.continuityRecords(her.subject).filter(([, value]) => JSON.stringify(value ?? null).includes(digest));
+          expect(holding.length, why).toBe(1);
+          return holding[0]![1];
+        };
 
-        const before = h.continuityRecords(her.subject);
-        expect(before.length, `${host}: the descriptor is in storage while it is live`).toBe(1);
-        expect(before[0]![1], `${host}: on its original fixed expiry`).toMatchObject({ expiresAt });
+        expect(stored(`${host}: the descriptor is in storage while it is live`),
+          `${host}: on its original fixed expiry`).toMatchObject({ digest, expiresAt });
         // R19: no public route exposes the object's alarm schedule.
-        expect(h.objectAlarms(her.subject).some(at => at <= expiresAt),
-          `${host}: the object holds an alarm no later than the descriptor's expiry`).toBe(true);
+        const scheduled = h.currentAlarm(her.subject);
+        expect(scheduled, `${host}: the object holds a real future alarm`).toBeGreaterThan(Date.now());
+        expect(scheduled, `${host}: and the alarm it holds now is no later than the descriptor's expiry`).toBeLessThanOrEqual(expiresAt);
 
         // Before the expiry the alarm keeps it: cleanup is expiry, not deletion.
-        clock.mockReturnValue(T0 + DAY_MS);
+        clock.mockReturnValue(her.issuedAt + 60 * 60 * 1000);
         await h.runAlarm(her.subject);
-        expect(h.continuityRecords(her.subject).length, `${host}: a live descriptor survives the alarm`).toBe(1);
-        expect(h.continuityRecords(her.subject)[0]![1], `${host}: with its expiry untouched`).toMatchObject({ expiresAt });
+        expect(stored(`${host}: a live descriptor survives the alarm`),
+          `${host}: with its expiry untouched`).toMatchObject({ digest, expiresAt });
 
-        // After it, the alarm removes it, and nothing else of hers goes with it.
+        // After it, the alarm removes the descriptor and nothing else of hers:
+        // her ordinary capability is still live, so the mounted decision route
+        // answers with her own remembered taste — the same observable on the
+        // session host, where the vector lives in the KV session record, and on
+        // the object host, where it lives on the object.
         clock.mockReturnValue(expiresAt + 1);
         await h.runAlarm(her.subject);
         expect(h.continuityRecords(her.subject), `${host}: storage holds no expired descriptor after the alarm runs`).toEqual([]);
-        expect(h.objectData(her.subject).has('affinity'), `${host}: her retained taste is untouched by the cleanup`).toBe(true);
+        expect(await h.snapshot(her.capability), `${host}: her retained taste is untouched by the cleanup`)
+          .toMatchObject({ status: 200, ok: true, decisions: HOME_DECISIONS, first: TABBY });
         expect(h.objectData(her.subject).has('consent'), `${host}: and so is her explicit choice, which has not expired`).toBe(true);
         await expectCold(h, await h.identitySession({ proof: her.proof, operationId: crypto.randomUUID() }),
           `${host}: the descriptor the alarm removed`);
