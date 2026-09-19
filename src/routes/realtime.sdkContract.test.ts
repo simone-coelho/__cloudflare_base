@@ -5815,15 +5815,20 @@ describe('W04.02 owned shopper lane', () => {
           expect(data.persistence).toMatchObject({ status: 'queued', delivery: { code: 'accepted' } });
           expect(ledgerWire.length).toBeGreaterThan(0);
         }
-        // The snapshot payload carries exactly ok, tenant, brand, page, ts, arm, versions,
-        // config_label, decisions and sources (src/routes/decisions.ts:476-480). `visitor_id`
+        // The snapshot payload carries exactly ok, tenant, brand, page, ts, arm, experiment,
+        // versions, config_label, decisions and sources (src/routes/decisions.ts:476-480).
+        // R10/R108(3), precedent R82/R91: `experiment` is the additive provenance member
+        // ruled by unit W21.E1.03 — the experiment id, salt version, assignment and
+        // enrollment-anchor generation behind the `arm` beside it (position 8: arm-tagged
+        // records, the comparison computed on the customer's side). Added here in its
+        // sorted place; nothing else about this key set changes. `visitor_id`
         // and `session_id` are decision-record fields, and the route serves `records` only
         // inside a trusted synthetic operation (src/routes/decisions.ts:478). This fixture
         // publishes an empty catalog and binds no EVENT_QUEUE or DECISION_RING, so no
         // decision record exists in process: the browsing-session attribution is owed a
         // capture leg (the render-offer path this file's W15 fixture drives).
         if (path.includes('/decisions/snapshot')) {
-          expect(Object.keys(data).sort()).toEqual(['arm', 'brand', 'config_label', 'decisions', 'ok', 'page', 'sources', 'tenant', 'ts', 'versions']);
+          expect(Object.keys(data).sort()).toEqual(['arm', 'brand', 'config_label', 'decisions', 'experiment', 'ok', 'page', 'sources', 'tenant', 'ts', 'versions']);
           // The empty decision list is stated positively by the catalog this fixture published:
           // zero pieces, so zero decisions. RESIDUAL for unit W09.BASE.02: the browsing-session
           // attribution (`visitor_id`/`session_id` on the decision record) still has no leg here

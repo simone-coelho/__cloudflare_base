@@ -80,22 +80,19 @@
 //        interval is therefore specified as an exported CALCULATION the customer
 //        (or a later, enrollment-based analysis) can use — not as a number our
 //        reports publish today.
-//  (ii)  TARGETS ARE A TENANT CONFIGURATION, AND THEIR STANDING IS ALWAYS
-//        WITHHELD WHILE INFERENCE IS UNAVAILABLE. Both report answers carry
-//            targets: { version: 1;
-//                       source: 'published' | 'absent';
-//                       values: { minimum: number; target: number; stretch: number } | null;
-//                       standing: 'undecided';
-//                       reasons: Array<'inference_unavailable' | 'no_published_target' | 'source_incomplete'> }
-//        with `reasons` sorted ascending. `values` is the tenant's own published
-//        configuration (`LearnConfig.targets`), never a compiled constant;
-//        `'source_incomplete'` is present exactly when the window was truncated
-//        or any pooled day is incomplete (F25 §7.2), and on a day report when the
-//        day's own counts are truncated or hours are missing;
-//        `'no_published_target'` exactly when the tenant published none;
-//        `'inference_unavailable'` always, because our reports withhold inference
-//        (position 8). `standing` has one admissible value for that reason: the
-//        discrimination between fixtures lives in `reasons` and in `values`.
+//  (ii)  NO TARGET VOCABULARY REACHES A REPORT ANSWER AT ALL (ruling R108(1),
+//        withdrawing this batch's earlier `targets` block). The delivered
+//        containment is stronger than F25 §7.2's forced `undecided`: the day and
+//        window answers carry no `targets`, `confidence`, `verdict`, `relative`,
+//        `neededPerArm`, `"lo"` or `"hi"` member, which `src/learn/report.test.ts:819`
+//        already locks, and they state their coverage instead — `incomplete[]`,
+//        `counts.truncated`, `coverage.status` and `measurement.inference:
+//        'unavailable'`. The per-tenant target rule is therefore LOGIC-level and
+//        lives where a target is actually read: `compareArms`/`readTargets` never
+//        fall back to a compiled customer default — with no targets supplied the
+//        reading is `{ targets: null, relativeLow: null, relativeHigh: null,
+//        standing: 'undecided', reason: 'no_published_target' }`, and with a
+//        caller's own targets supplied the rungs are judged on the Katz low end.
 //  (iii) PER-ARM DENOMINATORS ARE VISITORS, AND THEY ARE VERSIONED (F25 §5.3, §7).
 //        The day answer carries
 //            armVisitors: { version: 1; basis: 'distinct_visitors';
@@ -114,12 +111,21 @@
 //        written once, on first decision, against the shopper's persistent
 //        enrollment anchor and the published salt, and read back afterwards; it
 //        survives an anonymous→recognised link. A shopper without personalization
-//        consent is not randomised at all: she is served the site's own defaults
-//        and recorded with `arm: 'ineligible'`, so the control arm contains only
-//        randomised controls (F07 §1.4, §7).
+//        consent is not randomised at all: she is SERVED the site's own defaults
+//        under the wire-compatible `arm: 'default'` (`src/content/consent.test.ts:222`,
+//        `:223`, `:272` lock that, and the SDK, render offers, replay and receipts
+//        depend on it), and her experimental ASSIGNMENT is `ineligible`, carried on
+//        the provenance block of (v) — so the control arm of a report contains only
+//        randomised controls (F07 §1.4, §7; ruling R108(2)).
 //  (v)   EVERY ARM-TAGGED RECORD NAMES ITS EXPERIMENT. Decision and outcome
 //        records, and the snapshot answer, carry
 //            experiment: { id: string; saltVersion: number; arm: string; anchorGeneration: number }
+//        where `experiment.arm` is the experimental ASSIGNMENT — `'ineligible'` for
+//        a shopper without personalization consent, her enrolled arm once she
+//        grants it — beside the record's own `arm`, which stays the experience
+//        served. A report groups by the assignment wherever a record carries one
+//        (an `ineligible` row, never pooled into `default`) and reads a record
+//        without an `experiment` block by its `arm`, exactly as before.
 //        where `id` is `${tenant}:${brand}:${effective salt}` (the effective salt
 //        is `learn.holdout.salt || brand`, `src/content/service.ts:376`), so a
 //        salt change starts a new experiment id; `saltVersion` is the revision of
@@ -136,6 +142,10 @@
 //        served piece matched it, and `visitors` is the same denominator as
 //        (iii). No rate, no CVR, no RPV and no return-rate metric is defined
 //        here: those are the customer's units (D04, W21.P1.01).
+//
+// TWO PUBLISHED SENTENCES THIS SPECIFICATION RULES for docs/kit/02-api-reference.md
+// (brief reading (d) and ruling R108(2)): the merge policy and the arm/assignment
+// distinction, both asserted verbatim below.
 //
 // RULED MISSING EXPORT (R21), imported by name and RED until it exists. No
 // widening cast is used to hide it, so the app typecheck fails on this one
@@ -197,11 +207,11 @@ const OPERATOR_ORIGIN = 'http://console.test';
 const IDENTITY_SECRET = 'w21-b1-identity-assertion-material';
 
 /**
- * The tenant's OWN published business targets (F25 §5.2). Deliberately none of
- * Tapestry's {0.10, 0.40, 0.60}, so a compiled constant cannot satisfy the
- * assertions below.
+ * A caller's OWN business targets (F25 §5.2). Deliberately none of Tapestry's
+ * {0.10, 0.40, 0.60}, so a compiled constant cannot satisfy the logic leg of
+ * W21.C1.04: the same interval is a different rung under these numbers.
  */
-const PUBLISHED_TARGETS = { minimum: 0.05, target: 0.15, stretch: 0.25 } as const;
+const CALLER_TARGETS = { minimum: 0.05, target: 0.15, stretch: 0.25 } as const;
 
 const piece = (id: string, over: Partial<ContentPiece>): ContentPiece => ({
   id, customerContentId: `CMS-${id.replace(/^cnt-/, '').toUpperCase()}`, type: 'editorial',
@@ -225,14 +235,11 @@ const W21_SLOTS: SlotCatalog = { version: 'w21-b1-coach-slots',
 interface LearnFixture {
   salt?: string;
   share?: number;
-  /** RULED, ABSENT TODAY (R21): the tenant's own business targets (F25 §5.2). */
-  targets?: { minimum: number; target: number; stretch: number };
 }
 const learnDocument = (f: LearnFixture = {}) => ({
   holdout: { share: f.share ?? 0.5, salt: f.salt ?? SALT_A, arms: ['default'] },
   regional: { enabled: false, kBlend: 1, minEvents: 30 },
   slots: {},
-  ...(f.targets ? { targets: f.targets } : {}),
 });
 
 // ===========================================================================
@@ -486,13 +493,6 @@ async function operatorPost(m: Mounted, path: string, body: unknown, authenticat
 }
 
 /** The ruled shape of a report answer, as this specification rules it (R21). */
-interface TargetsBlock {
-  version: number;
-  source: string;
-  values: { minimum: number; target: number; stretch: number } | null;
-  standing: string;
-  reasons: string[];
-}
 interface ArmVisitorsBlock { version: number; basis: string; arms: Array<{ arm: string; visitors: number }> }
 interface VisitorOutcomesBlock { version: number; basis: string; arms: Array<{ arm: string; visitors: number; byType: Record<string, number> }> }
 interface RuledDayReport {
@@ -500,7 +500,8 @@ interface RuledDayReport {
   measurement: { kind: string; unit: string; inference: string };
   counts: { decisions: number; outcomes: number; visitors: number; truncated: boolean };
   holdout: Record<string, Array<{ arm: string; decisions: number; credited: number; creditedPerDecision: number | null }>>;
-  targets?: TargetsBlock;
+  holdoutComparison: Record<string, unknown[]>;
+  coverage?: { status: string; truncated: boolean; missingHours: number[] };
   armVisitors?: ArmVisitorsBlock | null;
   allocation?: { version: number; source: string; share: number; arms: string[] };
   visitorOutcomes?: VisitorOutcomesBlock | null;
@@ -510,8 +511,8 @@ interface RuledWindowReport {
   days: string[]; missing: string[];
   incomplete: Array<{ date: string; truncated: boolean; missingHours: number[] }>;
   measurement: { kind: string; inference: string };
-  slots: Record<string, { arms: Array<{ arm: string; decisions: number; credited: number }> }>;
-  targets?: TargetsBlock;
+  slots: Record<string, { arms: Array<{ arm: string; decisions: number; credited: number }>; comparisons: unknown[] }>;
+  coverage: { status: string };
   armVisitors?: ArmVisitorsBlock | null;
 }
 
@@ -535,6 +536,12 @@ function claimsIn(payload: unknown): string[] {
   const text = JSON.stringify(payload).toLowerCase();
   return FORBIDDEN_CLAIMS.filter(claim => text.includes(claim));
 }
+
+/**
+ * The inference vocabulary a report answer may not carry at all — the delivered
+ * containment `src/learn/report.test.ts:819` already locks, quoted from it.
+ */
+const INFERENCE_VOCABULARY = /UNSUPPORTED|confidence|verdict|targets|neededPerArm|relative|"lo"|"hi"/;
 
 // ── The ledger fixture: real records, written by the real consumer ──────────
 
@@ -673,8 +680,8 @@ describe('unit:W21.C1.01', () => {
     expect(REPORT_MEASUREMENT.inference, 'position 8 — the comparison is computed on the customer\'s side').toBe('unavailable');
   });
 
-  it('host: the day and the window answers of the mounted report routes carry the diagnostic label and no causal or target claim', async () => {
-    const m = await mount('session', { targets: PUBLISHED_TARGETS });
+  it('host: the day and the window answers of the mounted report routes carry the diagnostic label, the withheld comparison, and no causal or target claim', async () => {
+    const m = await mount('session');
     const date = '2026-09-03';
     await seedLedgerDay(m, date, [
       decisionRecord({ visitor: 'vis-w21-b1-control-1', arm: 'default', ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
@@ -685,11 +692,11 @@ describe('unit:W21.C1.01', () => {
 
     const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT });
     expect(built.status, JSON.stringify(built.body)).toBe(200);
-    const day = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${date}`);
-    expect(day.status, JSON.stringify(day.body)).toBe(200);
-    expect(dayReportOf(day.body).measurement.kind, 'document 35 :423 — the day answer is labelled an attribution diagnostic').toBe('attribution_diagnostic');
-    expect(dayReportOf(day.body).measurement.inference, 'F07 §7(a) — the day answer withholds inference').toBe('unavailable');
-    expect(claimsIn(day.body), 'document 35 :423 — the day answer names no incrementality, causal or reached-target claim').toEqual([]);
+    const dayAnswer = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${date}`);
+    expect(dayAnswer.status, JSON.stringify(dayAnswer.body)).toBe(200);
+    expect(dayReportOf(dayAnswer.body).measurement.kind, 'document 35 :423 — the day answer is labelled an attribution diagnostic').toBe('attribution_diagnostic');
+    expect(dayReportOf(dayAnswer.body).measurement.inference, 'F07 §7(a) — the day answer withholds inference').toBe('unavailable');
+    expect(claimsIn(dayAnswer.body), 'document 35 :423 — the day answer names no incrementality, causal or reached-target claim').toEqual([]);
 
     const window = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${date}&to=${date}`);
     expect(window.status, JSON.stringify(window.body)).toBe(200);
@@ -697,11 +704,20 @@ describe('unit:W21.C1.01', () => {
     expect(windowReportOf(window.body).measurement.inference, 'position 8 — the window answer withholds inference').toBe('unavailable');
     expect(claimsIn(window.body), 'document 35 :423 — the window answer names no incrementality, causal or reached-target claim').toEqual([]);
 
-    // The one place a target could be claimed is the ruled targets block, and it
-    // states only that the standing is withheld (representation (ii)).
-    const targets = windowReportOf(window.body).targets;
-    expect(targets?.standing, 'F25 §7.2 with position 8 — a report of ours never states a reached business target')
-      .toBe('undecided');
+    // The withheld comparison is a REPRESENTATION, not an omission: every slot the
+    // report names is present and carries an explicitly empty comparison, so a
+    // reader sees that the platform declines to infer rather than that it forgot
+    // (src/learn/report.ts:629, src/measure/window.ts:109; position 8).
+    const dayReport = dayReportOf(dayAnswer.body);
+    expect(Object.keys(dayReport.holdoutComparison), 'position 8 — the day answer represents every slot it counted').toEqual(['hero']);
+    expect(dayReport.holdoutComparison.hero, 'position 8 — and withholds the comparison for it').toEqual([]);
+    const pooled = windowReportOf(window.body);
+    expect(Object.keys(pooled.slots), 'position 8 — the window answer represents the same slot').toEqual(['hero']);
+    expect(pooled.slots.hero!.comparisons, 'position 8 — and withholds the comparison for it too').toEqual([]);
+    // R108(1): no target vocabulary reaches either answer at all — the delivered
+    // containment src/learn/report.test.ts:819 locks, measured here on the routes.
+    expect(INFERENCE_VOCABULARY.test(JSON.stringify(dayAnswer.body)), 'position 8 — the day answer carries no inference or target vocabulary').toBe(false);
+    expect(INFERENCE_VOCABULARY.test(JSON.stringify(window.body)), 'position 8 — and neither does the window answer').toBe(false);
   });
 });
 
@@ -710,8 +726,8 @@ describe('unit:W21.C1.01', () => {
 // ===========================================================================
 
 describe('unit:W21.C1.02', () => {
-  it('host: a window beyond the readable series is refused with its maximum named, every incomplete pooled day is listed, and the target standing is withheld whenever the window is incomplete', async () => {
-    const m = await mount('session', { targets: PUBLISHED_TARGETS });
+  it('host: a window beyond the readable series is refused with its maximum named, every incomplete pooled day is listed with what is missing, and the answers state their incompleteness instead of a standing', async () => {
+    const m = await mount('session');
 
     // (a) The requested period is never relabelled. F25 §7.1 allows either a
     // refusal that names the maximum or a truncated answer that names what it
@@ -742,35 +758,30 @@ describe('unit:W21.C1.02', () => {
     expect(window.incomplete.find(d => d.date === '2026-03-02')?.truncated, 'F25 §1.2 — the truncated day says so').toBe(true);
     expect(window.incomplete.find(d => d.date === '2026-03-03')?.missingHours.length, 'F25 §1.2 — 21 of 24 hours were never folded into that day').toBe(21);
 
-    // (c) The suppression rule (F25 §7.2), which is the member this unit is RED on.
-    const incompleteTargets = window.targets;
-    expect(incompleteTargets?.standing, 'F25 §7.2 — an incomplete window can never award a target standing').toBe('undecided');
-    expect(incompleteTargets?.reasons, 'F25 §7.2 — and it says the source was incomplete, beside the standing withheld by position 8')
-      .toEqual(['inference_unavailable', 'source_incomplete']);
-    expect(incompleteTargets?.values, 'F25 §5.2 — the targets it would be read against are the tenant\'s own published numbers')
-      .toEqual(PUBLISHED_TARGETS);
+    // (c) The answer states its incompleteness and states no standing at all
+    // (R108(1): the delivered containment src/learn/report.test.ts:819 locks is
+    // stronger than F25 §7.2's forced `undecided`).
+    expect(window.coverage.status, 'F25 §1.2/§7.2 — an incomplete window says so').toBe('incomplete');
+    expect(window.measurement.inference, 'position 8 — and answers no standing, because inference is withheld').toBe('unavailable');
+    expect(INFERENCE_VOCABULARY.test(JSON.stringify(half.body)), 'R108(1) — no target or confidence vocabulary reaches the window answer').toBe(false);
 
-    // (d) The same window over the complete day alone drops the incompleteness
-    // reason: the suppression is a rule about the source, not a constant.
+    // (d) The same window over the complete day alone: the incompleteness is a
+    // statement about the source, not a constant.
     const complete = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=2026-03-01&to=2026-03-01`);
     expect(complete.status, JSON.stringify(complete.body)).toBe(200);
     expect(windowReportOf(complete.body).incomplete, 'F25 §1.2 — a day built from all 24 hours with untruncated counts is not incomplete').toEqual([]);
-    expect(windowReportOf(complete.body).targets?.reasons, 'F25 §7.2 — with a complete source the only reason left is the withheld inference')
-      .toEqual(['inference_unavailable']);
+    expect(windowReportOf(complete.body).coverage.status, 'F25 §1.2 — and the window over it alone is not incomplete either').toBe('unknown');
 
-    // (e) The same suppression rule on a DAY answer, whose own counts are
-    // truncated (representation (ii)). F25 §3 records that this half of the
-    // finding "is not gated on long windows at all: it is reachable today in
-    // the nightly day report".
+    // (e) The day answer carries the same source statement (F25 §3: this half of
+    // the finding "is reachable today in the nightly day report").
     const truncatedDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=2026-03-02`);
     expect(truncatedDay.status, JSON.stringify(truncatedDay.body)).toBe(200);
-    expect(dayReportOf(truncatedDay.body).counts.truncated, 'the fixture day was truncated at the record cap').toBe(true);
-    expect(dayReportOf(truncatedDay.body).targets?.reasons, 'F25 §7.2 — a day report built from a truncated source withholds the standing for that reason too')
-      .toEqual(['inference_unavailable', 'source_incomplete']);
-    const completeDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=2026-03-01`);
-    expect(completeDay.status, JSON.stringify(completeDay.body)).toBe(200);
-    expect(dayReportOf(completeDay.body).targets?.reasons, 'F25 §7.2 — and the complete day beside it does not carry the incompleteness reason')
-      .toEqual(['inference_unavailable']);
+    expect(dayReportOf(truncatedDay.body).counts.truncated, 'F25 §1.2 — the truncated day says so on its own answer').toBe(true);
+    expect(dayReportOf(truncatedDay.body).coverage?.status, 'F25 §1.2 — and its coverage is incomplete').toBe('incomplete');
+    expect(dayReportOf(truncatedDay.body).measurement.inference, 'position 8 — with no standing beside it').toBe('unavailable');
+    const missingHoursDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=2026-03-03`);
+    expect(missingHoursDay.status, JSON.stringify(missingHoursDay.body)).toBe(200);
+    expect(dayReportOf(missingHoursDay.body).coverage?.missingHours.length, 'F25 §1.2 — 21 of 24 hours were never folded into that day, and the answer names them').toBe(21);
   });
 });
 
@@ -780,7 +791,7 @@ describe('unit:W21.C1.02', () => {
 
 describe('unit:W21.C1.03', () => {
   it('host: the day answer stores per-arm visitor counts with a version field and the tenant\'s published allocation, the window pools them as visitor-days, and a report written before the field is read as such', async () => {
-    const m = await mount('session', { share: 0.05, targets: PUBLISHED_TARGETS });
+    const m = await mount('session', { share: 0.05 });
     const first = '2026-04-01', second = '2026-04-02';
 
     // Three control visitors with two decisions each, five treated visitors with
@@ -823,7 +834,7 @@ describe('unit:W21.C1.03', () => {
 
     // A day stored before the field existed is read as unknown, never
     // re-interpreted from the decision counts it does hold.
-    const legacy = await mount('session', { share: 0.05, targets: PUBLISHED_TARGETS });
+    const legacy = await mount('session', { share: 0.05 });
     storeLegacyDayReport(legacy, '2026-04-05', { hero: [{ arm: 'default', decisions: 6, credited: 1 }, { arm: 'personalized', decisions: 15, credited: 4 }] },
       { decisions: 21, outcomes: 5, visitors: 8, truncated: false });
     const old = await operatorGet(legacy, `/v1/${TENANT}/learn/report?date=2026-04-05`);
@@ -840,44 +851,58 @@ describe('unit:W21.C1.03', () => {
 // ===========================================================================
 
 describe('unit:W21.C1.04', () => {
-  it('host: both report routes require an operator credential, and the targets a report is read against are the tenant\'s published configuration', async () => {
-    const m = await mount('session', { targets: PUBLISHED_TARGETS });
+  it('logic: a target reading never falls back to a compiled customer default, and a caller\'s own targets are judged on the Katz low end', () => {
+    // R108(1d) with F25 §5.2: `TAPESTRY_TARGETS` is "the only target definition in
+    // src/", applied by `compareArms` whenever a caller supplies none
+    // (src/measure/holdout.ts:233), so a report for any other tenant reads
+    // "against the pre-set targets (minimum +10 %, target +40 %, stretch +60 %
+    // relative)". A platform that serves more than one customer may not hold one
+    // customer's numbers as its default: with none supplied the reading says so.
+    const unsupplied = measureHoldout.compareArms({ n: 20_000, s: 600 }, { n: 400_000, s: 18_000 }).targets;
+    expect(unsupplied?.standing, 'F25 §5.2 — with no targets supplied there is no rung to award').toBe('undecided');
+    expect(unsupplied?.reason, 'F25 §5.2 — and the reading says why, instead of borrowing another customer\'s numbers')
+      .toBe('no_published_target');
+    expect(unsupplied?.targets, 'F25 §5.2 — no compiled customer default is read in').toBeNull();
+
+    // The caller's own numbers, on the fixture whose Katz low end is +38.46 %
+    // (F25 §5.5; the derivation is beside the logic leg of W21.C1.01). Against
+    // {0.05, 0.15, 0.25} that low end clears the STRETCH rung, where Tapestry's
+    // {0.10, 0.40, 0.60} would answer `reached_minimum` — so a compiled constant
+    // cannot satisfy both this assertion and src/measure/holdout.test.ts:192.
+    const supplied = measureHoldout.compareArms({ n: 20_000, s: 600 }, { n: 400_000, s: 18_000 }, { targets: CALLER_TARGETS }).targets;
+    expect(supplied?.targets, 'F25 §5.2 — the caller\'s own numbers are the ones read against').toEqual(CALLER_TARGETS);
+    expect(supplied?.relativeLow, 'F25 §7.3 — judged on the Katz low end from raw rates').toBeCloseTo(0.3845519698419917, 10);
+    expect(supplied?.standing, 'F25 §5.2 — +38.46 % clears this caller\'s +25 % stretch, which Tapestry\'s +60 % would not be')
+      .toBe('reached_stretch');
+  });
+
+  it('host: building a day report requires an operator credential', async () => {
+    const m = await mount('session');
     const date = '2026-05-04';
     storeLegacyDayReport(m, date, { hero: [{ arm: 'default', decisions: 40, credited: 2 }, { arm: 'personalized', decisions: 760, credited: 61 }] },
       { decisions: 800, outcomes: 63, visitors: 300, truncated: false },
       { source: 'aggregates', built: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], missing: [] });
 
-    // F25 §5.1: the two GETs carry no operator gate, and the console's own error
-    // handler expects 401/403 from them.
-    const anonymousDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${date}`, false);
-    expect(anonymousDay.status, 'F25 §5.1 — the day report GET requires an operator credential').toBe(401);
-    const anonymousWindow = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${date}&to=${date}`, false);
-    expect(anonymousWindow.status, 'F25 §5.1 — the window report GET requires an operator credential').toBe(401);
+    // GREEN-AT-SPEC lock (R108(4)): the build POST is gated in both auth modes
+    // (src/routes/decisions.ts:833, `operatorJwt()`). The two report GETs are
+    // NOT gated (F25 §5.1) and move to their own unit in W21-B2, because closing
+    // them touches src/learn/report.test.ts:255-256,
+    // src/index.api-boundary.test.ts:2941-2947 and the two shipped screens that
+    // read them (public/console/views-measure.js, public/learning.js).
     const anonymousBuild = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT }, false);
-    expect(anonymousBuild.status, 'F25 §5.1 — and so does building a day').toBe(401);
+    expect(anonymousBuild.status, 'F25 §5.1 — building a day report requires an operator credential').toBe(401);
+    const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT });
+    expect(built.status, 'and the operator\'s own credential is accepted').toBe(200);
 
-    // The same reads, with the operator's credential.
+    // What the answers may not carry, whatever the tenant (R108(1), F25 §5.2):
+    // no target vocabulary at all, so no customer's numbers can be printed by
+    // another customer's report.
     const day = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${date}`);
     expect(day.status, JSON.stringify(day.body)).toBe(200);
-    expect(dayReportOf(day.body).targets?.source, 'F25 §5.2 — the targets come from the tenant\'s published configuration').toBe('published');
-    expect(dayReportOf(day.body).targets?.values, 'F25 §5.2 — this tenant\'s own numbers, not the compiled {0.10, 0.40, 0.60}').toEqual(PUBLISHED_TARGETS);
-    expect(dayReportOf(day.body).targets?.reasons, 'position 8 — a complete day still states no standing, because inference is withheld').toEqual(['inference_unavailable']);
-
+    expect(INFERENCE_VOCABULARY.test(JSON.stringify(day.body)), 'F25 §5.2 — the day answer prints no targets at all').toBe(false);
     const window = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${date}&to=${date}`);
     expect(window.status, JSON.stringify(window.body)).toBe(200);
-    expect(windowReportOf(window.body).targets?.values, 'F25 §5.2 — the window is read against the same published numbers').toEqual(PUBLISHED_TARGETS);
-
-    // A tenant that has published no target says so, rather than borrowing another customer's.
-    const unpublished = await mount('session', {});
-    storeLegacyDayReport(unpublished, date, { hero: [{ arm: 'default', decisions: 40, credited: 2 }, { arm: 'personalized', decisions: 760, credited: 61 }] },
-      { decisions: 800, outcomes: 63, visitors: 300, truncated: false },
-      { source: 'aggregates', built: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], missing: [] });
-    const none = await operatorGet(unpublished, `/v1/${TENANT}/learn/report?date=${date}`);
-    expect(none.status, JSON.stringify(none.body)).toBe(200);
-    expect(dayReportOf(none.body).targets?.source, 'F25 §5.2 — with no published target the report says the configuration is absent').toBe('absent');
-    expect(dayReportOf(none.body).targets?.values, 'F25 §5.2 — and reads against no numbers at all').toBeNull();
-    expect(dayReportOf(none.body).targets?.standing, 'F25 §5.2 — the standing is undecided').toBe('undecided');
-    expect(dayReportOf(none.body).targets?.reasons, 'F25 §5.2 — with the reason named').toEqual(['inference_unavailable', 'no_published_target']);
+    expect(INFERENCE_VOCABULARY.test(JSON.stringify(window.body)), 'F25 §5.2 — and neither does the window answer').toBe(false);
   });
 });
 
@@ -918,6 +943,12 @@ const RETURNING_ANON = 'vis-00000021-0b01-4000-8000-000000000008';
  */
 const MERGE_POLICY_SENTENCE =
   'Across an identity link the enrollment recorded first wins; the arm is never re-drawn from the new id.';
+/**
+ * Ruling R108(2): the served experience and the experimental assignment are two
+ * different fields, and the kit says so in these words.
+ */
+const ARM_VOCABULARY_SENTENCE =
+  '`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.';
 /** Buckets 0.032036 (control) and 0.906276 (treated). */
 const OUTCOME_CONTROL = 'vis-00000021-0b01-4000-8000-00000000000b';
 const OUTCOME_TREATED = 'vis-00000021-0b01-4000-8000-000000000001';
@@ -1013,11 +1044,12 @@ describe('unit:W21.E1.01', () => {
 
 describe('unit:W21.E1.02', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): a shopper who declined personalization is served the site's defaults and recorded ineligible, never as a control, and a later grant enrolls her from that moment`, async () => {
+    it(`host (${host}): a shopper who declined personalization is served the site's defaults under the wire-compatible arm while her experimental assignment is ineligible, the report counts her as ineligible and never as control, and a later grant enrolls her from that moment`, async () => {
       const m = await mount(host);
 
       // Her hash says control; her consent says she is not in the experiment at
-      // all. F07 §1.4: today both are written `arm: 'default'`.
+      // all. F07 §1.4: today both are written `arm: 'default'` and the report
+      // "has no way to separate them".
       expect(armFor(DECLINING_SHOPPER, HOLDOUT), 'the declining shopper\'s hash would have drawn the control arm').toBe('default');
       expect(armFor(CONSENTING_SHOPPER, HOLDOUT), 'and the consenting shopper beside her draws the control arm too').toBe('default');
 
@@ -1027,39 +1059,58 @@ describe('unit:W21.E1.02', () => {
       const withoutConsent = await declined.snapshot();
       expect(withoutConsent.status, 'she is served').toBe(200);
       expect(withoutConsent.served.length, 'F07 §1.4 — she is served the site\'s own defaults, one piece in the page\'s only slot').toBe(1);
-      expect(withoutConsent.arm, 'F07 §1.4/§7 — consent-ineligible traffic is recorded ineligible, never as a randomised control')
+      // R108(2): the SERVED arm is the experience, and it stays what every wire
+      // consumer already reads (`src/content/consent.test.ts:222`, `:272`).
+      expect(withoutConsent.arm, 'the experience served is the site\'s own defaults, on the wire-compatible arm').toBe('default');
+      // The distinction F07 §1.4 says is lost is carried on the ASSIGNMENT.
+      expect(withoutConsent.experiment?.arm, 'F07 §1.4/§7 — consent-ineligible traffic is assigned `ineligible`, never a randomised control')
         .toBe('ineligible');
+      expect(withoutConsent.experiment?.id, 'and the assignment names the experiment it is excluded from')
+        .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
 
       const control = await consenting.snapshot();
-      expect(control.arm, 'the randomised control arm still contains the shopper the hash put there').toBe('default');
+      expect(control.arm, 'the randomised control shopper is served the same experience').toBe('default');
+      expect(control.experiment?.arm, 'and her assignment is the control arm the hash drew').toBe('default');
 
-      // The day report, over the ledger, keeps the two populations apart. The
-      // fixture carries forward the arm each shopper was just SERVED under, so
-      // this assertion can only pass once the served vocabulary distinguishes
-      // them. (A public snapshot is an offer and captures no ledger row of its
-      // own, `src/content/service.ts:456-458`; the batch's residual names the
-      // rendered-acknowledgement capture path as unexercised here.)
+      // The day report groups by the ASSIGNMENT wherever a record carries one,
+      // and reads a record written before the block existed by its `arm`.
       const date = '2026-06-02';
       await seedLedgerDay(m, date, [
-        decisionRecord({ visitor: CONSENTING_SHOPPER, arm: control.arm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
-        decisionRecord({ visitor: DECLINING_SHOPPER, arm: withoutConsent.arm, ts: atUtc(date, 10), item: 'cnt-tabby-evening-edit', index: 0 }),
+        { ...decisionRecord({ visitor: CONSENTING_SHOPPER, arm: control.arm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
+          experiment: control.experiment },
+        { ...decisionRecord({ visitor: DECLINING_SHOPPER, arm: withoutConsent.arm, ts: atUtc(date, 10), item: 'cnt-tabby-evening-edit', index: 0 }),
+          experiment: withoutConsent.experiment },
+        // A record from before the provenance block existed: read by its `arm`,
+        // never re-interpreted (the same rule as W21.C1.03's legacy day).
+        decisionRecord({ visitor: 'vis-00000021-0b01-4000-8000-00000000001a', arm: 'default', ts: atUtc(date, 11), item: 'cnt-tabby-evening-edit', index: 0 }),
       ], []);
       const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT });
       expect(built.status, JSON.stringify(built.body)).toBe(200);
       const report = dayReportOf(built.body);
-      expect(report.holdout.hero?.map(r => r.arm), 'F07 §1.4 — the day report separates the ineligible population from the control arm')
+      expect(report.holdout.hero?.map(r => r.arm), 'F07 §1.4 — the report keeps the ineligible population out of the control arm')
         .toEqual(['default', 'ineligible']);
-      expect(report.holdout.hero?.find(r => r.arm === 'default')?.decisions, 'the control arm holds the consenting shopper\'s decision alone').toBe(1);
-      expect(report.holdout.hero?.find(r => r.arm === 'ineligible')?.decisions, 'and the ineligible row holds hers').toBe(1);
+      expect(report.holdout.hero?.find(r => r.arm === 'default')?.decisions,
+        'the control row holds the consenting shopper and the legacy record read by its own arm').toBe(2);
+      expect(report.holdout.hero?.find(r => r.arm === 'ineligible')?.decisions, 'and the ineligible row holds hers alone').toBe(1);
 
-      // She turns personalization on. From that moment she is enrolled, and the
-      // enrollment carries its provenance.
+      const pooled = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${date}&to=${date}`);
+      expect(pooled.status, JSON.stringify(pooled.body)).toBe(200);
+      expect(windowReportOf(pooled.body).slots.hero!.arms.map(a => a.arm), 'F07 §1.4 — and the window pools the two populations separately')
+        .toEqual(['default', 'ineligible']);
+
+      // She turns personalization on. From that decision she is enrolled, and the
+      // assignment says so.
       expect(await declined.choose({ tracking: true, personalization: true }), 'she turns personalization on').toBe(200);
       const enrolled = await declined.snapshot();
-      expect(enrolled.arm, 'F07 §7 — with consent granted she is enrolled from that moment, against her persistent anchor').toBe('default');
-      expect(enrolled.experiment?.arm, 'F07 §7 — and the enrollment names the experiment it belongs to').toBe('default');
-      expect(enrolled.experiment?.id, 'representation (v) — the experiment id names the tenant, brand and published salt')
+      expect(enrolled.arm, 'she is now served the experience her enrolled arm names').toBe('default');
+      expect(enrolled.experiment?.arm, 'F07 §7 — with consent granted her assignment is her enrolled arm, from that decision on').toBe('default');
+      expect(enrolled.experiment?.id, 'representation (v) — under the same published experiment')
         .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+
+      // R108(2): the distinction is PUBLISHED, not only implemented.
+      const kit = readFileSync(new URL('../../../docs/kit/02-api-reference.md', import.meta.url), 'utf8');
+      expect(kit.includes(ARM_VOCABULARY_SENTENCE),
+        `R108(2) — docs/kit/02-api-reference.md must publish the distinction in these words: "${ARM_VOCABULARY_SENTENCE}"`).toBe(true);
     });
   }
 });
