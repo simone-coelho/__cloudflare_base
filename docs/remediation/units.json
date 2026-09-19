@@ -93,5 +93,61 @@
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 09 and ruling R14 (the siteHost hostname contract); docs/architecture/35-verification-reports/F13.md §5.E (the channel is unvalidated free text and becomes a statistics key); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"validate vocabulary and host\"); src/services/visit.ts ENTRY_LIMITS/ENTRY_QUERY_LIMIT",
     "status": "specified",
     "batch": "W16-B1"
+  },
+  {
+    "id": "W05.BASE.01",
+    "w": "W05",
+    "criterion": "BASE",
+    "outcome": "After a link, a browser write under the old cookie lands on the person's record; the consent-scope check honours the linked owner (raw.forwardTo / raw.identity.shopperId), not only raw.userId.",
+    "legs": ["host"],
+    "witness": "_evidence/BASE-2/reviewer/REPORT.md (BASE-2 reviewer verdict, 2026-09-18: \"SessionManager.identity.test.ts:133 fails at :140 (expected '/bags', got undefined); :139 passes, so the engine answers with the person's record and silently drops the write\"; reproduced at src/services/SessionManager.ts:381-382, which compares the instruction subject against raw.userId alone and ignores raw.forwardTo / raw.identity.shopperId, so after a CW25 fold no single subject reaches both the tombstone and the person); docs/remediation/LANE-LOG.md R22 (W05.BASE.01 assigned, confirmed) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W04 (CW25).",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " absorbIntoShopper: the first link the old cookie reads the person, and a write from the browser lands on the person without renaming it"
+  },
+  {
+    "id": "W06.BASE.01",
+    "w": "W06",
+    "criterion": "BASE",
+    "outcome": "A cold GET /realtime/personalization/:subject read on a consent-only owned record serves (200, no write activity) instead of answering 500 for a missing retention birth.",
+    "legs": ["host"],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (1): \":2312 is a PRODUCT GAP: cold /realtime/personalization/:subject on a consent-only owned record answers 500 'Retention policy or retained-data authority unavailable' via readRetention ← requireRetention ← pinProfileRetention (src/identity/sessionAuthority.ts:327) ← RealtimeSegmentEngine.getSessionPersonalizationConfig (:463); src/services/RealtimeSegmentEngine.ts:458-462 mints a retention birth only when !stored; seeding the registry does not change it\"; docs/remediation/LANE-LOG.md R22 (W06.BASE.01, owner W06 with W05) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W06, W05.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W35.02 visit context carries first-paint and live return context into actual both-host cells without read activity"
+  },
+  {
+    "id": "W09.BASE.02",
+    "w": "W09",
+    "criterion": "BASE",
+    "outcome": "Recovery admission while durable recovery is disabled is refused with a typed, visible refusal on the path that requested it, never an untyped 500; /sort serves read-only (200) for a working non-default-tenant owned profile.",
+    "legs": ["host"],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62, Other: \"W04.02 :5695 /sort 500 = 'Durable recovery disabled' at src/ledger/recovery.ts:128 via ShopperReflex.admitRecovery (:2980) while LEDGER_RECOVERY_ENABLED !== 'true', an untyped 500 (owner W09/W35 with W04), owed\"; docs/remediation/LANE-LOG.md R22 (W09.BASE.02) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W09, W35.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W04.02 owned shopper lane preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts"
+  },
+  {
+    "id": "W11.BASE.01",
+    "w": "W11",
+    "criterion": "BASE",
+    "outcome": "A typed owner or consent refusal raised inside a publication storage read propagates as the 401 refusal on both hosts; it is never rewritten into a configuration-authority error.",
+    "legs": ["host"],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (2): \"the do-host 500 is a PRODUCT DEFECT: recheckOwnerInvocation (src/identity/sessionAuthority.ts:318) throws the typed owner refusal inside the R2 read and src/config/publication.ts:100's blanket catch rewrites it as PublicationError 'Configuration publication authority unavailable' → declare W11.BASE.01 (owner W11 with W05): a typed owner/consent refusal raised inside a publication storage read must propagate as the 401\"; the session host already answers 401 'Shopper session unavailable' on the same body; docs/remediation/LANE-LOG.md R22 (W11.BASE.01, replaces the provisional W05.BASE.05) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W11, W05.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W05.10 explicit timed authority on do rechecks the choice at the actual post-config behavioral commit",
+    "declared_from_sibling": " W05.10 explicit timed authority on session rechecks the choice at the actual post-config behavioral commit (the describe.each session twin; it passes today and is renamed by the same wrap, so it is not a baseline entry)"
+  },
+  {
+    "id": "W37.BASE.01",
+    "w": "W37",
+    "criterion": "BASE",
+    "outcome": "With the configuration publication authority absent, invalid or unreadable, every shopper route including /realtime/personalization/:subject and /realtime/action answers a 4xx/5xx refusal; none serves.",
+    "legs": ["host"],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (3): \"W37.04 PASS: injection is authority-level (deletes every config-publication/v2/<owner>/* object, invalid head, throwing reads; remainingOwnerKeys=0); /realtime/personalization/:subject 200 and /realtime/action 200 with no authority while reflex/sort/snapshot answer 500 → W37.BASE.01 confirmed; failing line is :3862\"; the test's own committed authority-level injection (pre-wrap :3850-3859, :3851-3860 in this commit); docs/remediation/LANE-LOG.md R22 (W37.BASE.01 re-scoped and CONFIRMED) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W37, W11. Secondary stale expectation at pre-wrap :3866 (ReflexConfigUnavailableError vs PublicationError 'Coherent configuration publication is uninitialized') is named owed by the same witness and is not part of this row.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W37.04 tenant-owned runtime configuration fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention"
   }
 ]
