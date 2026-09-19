@@ -1181,10 +1181,25 @@ describe('unit:W16.C6.10', () => {
             const claims = { tenant, subject: `vis-00000000-0000-4000-8000-${n}`, sessionId: `s-00000000-0000-4000-8000-${n}`,
               kind: 'anonymous', grantId: `00000000-0000-4000-8000-${n}`, authorityEpoch: `10000000-0000-4000-8000-${n}`,
               iat: Math.floor(clock / 1000), exp: Math.floor(clock / 1000) + 3600 };
-            const choice = { value: true, chosenAt: clock, expiresAt: clock + 30 * 86400 * 1000 };
-            const session = { ...claims, consent: { tracking: true, personalization: true, instruction: { version: 1, tenant,
-              subject: claims.subject, revision: 'w16-b6-explicit', tracking: { ...choice }, personalization: { ...choice } } },
-              capability: `ss1.${btoa(JSON.stringify(claims)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')}.AA` };
+            // The real route answers the consent it actually established, which
+            // intersects the hints the browser sent (`refusalHints` +
+            // `intersectConsent`, src/routes/identity.ts:81-103, then
+            // `anonymousWithConsent`): a browser that says it is in refusal is
+            // answered a refusal, and the SDK refuses any answer that does not
+            // acknowledge it. This fake echoes the hints for the same reason, so
+            // the fixture is never more permissive than production.
+            const hinted = (() => {
+              try { return (JSON.parse(init?.body ?? '{}') as { consent?: { tracking?: unknown; personalization?: unknown } }).consent ?? {}; }
+              catch { return {} as { tracking?: unknown; personalization?: unknown }; }
+            })();
+            const established = { tracking: hinted.tracking !== false, personalization: hinted.personalization !== false };
+            const choice = (value: boolean) => ({ value, chosenAt: clock, expiresAt: clock + 30 * 86400 * 1000 });
+            const session = { ...claims, consent: { ...established,
+              ...(established.tracking && established.personalization
+                ? { instruction: { version: 1, tenant, subject: claims.subject, revision: 'w16-b6-explicit',
+                  tracking: choice(true), personalization: choice(true) } }
+                : {}) },
+              capability: `ss1.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')}.AA` };
             return { ok: true, status: 200, json: async () => ({ ok: true, session, continuity: {
               enabled: true, mode: options.mode, purpose: PURPOSE, generation: 1, expiresAt: clock + WINDOW_MS, revision: 1,
               ...(options.proofInBody ? { proof } : {}) } }) };
