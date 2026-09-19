@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 9 files · typecheck GREEN
+Units 133/135 · W closed 4/26 (W16–W41) · suite 1951/2030 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -19,7 +19,7 @@ Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
-| W20 | 9 | 9 | no | — | — |
+| W20 | 16 | 16 | yes | PASS | 103a3806f2754b4a44bb95a93e0ee6ffd5054c21 |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -153,6 +153,13 @@ Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 
 | W20.G1.07 | green | 2 |
 | W20.G1.08 | green | 2 |
 | W20.G1.09 | green | 2 |
+| W20.G2.01 | green | 1 |
+| W20.G2.02 | green | 1 |
+| W20.G2.03 | green | 1 |
+| W20.G2.04 | green | 1 |
+| W20.G2.05 | green | 1 |
+| W20.G2.06 | green | 1 |
+| W20.G2.07 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
@@ -164,7 +171,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | e352e376ad031c022b99cff820201d1afe9ee2dc97888a09607fc9a0b7666fbb |
+| units sha256 | 39f7cef8b8c781c9ad1cea1ae2a40d2e1d10968c6004b459ba7eade9537a9bd9 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -176,6 +183,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 82d9d0850ea2d1031ebe0b3ef4233d5f4a554073531b3dc555774c67e9efbc40 |
-| commit | 0b54a5aa8739c38e1623c39deefea0edb91f4029 |
-| generated | 2026-09-19T20:10:35.600Z |
+| vitest report sha256 | 4ec0a7fdfad387e865b6eed939a143b5af76a846363238cc93a42ad5e920b7c9 |
+| commit | 31be63343423821517bb9cd3639ce8e0495e2057 |
+| generated | 2026-09-19T21:21:34.957Z |
