@@ -175,5 +175,18 @@ export function consentFromCookies(cookieHeader: string | null | undefined): Con
 /** Whether the engine may personalize for this shopper at all. */
 export const personalizes = (c: Consent): boolean => c.tracking && c.personalization;
 
-/** The arm the shopper actually gets: the site's defaults unless both switches are on. */
+/**
+ * The arm the shopper actually gets: the site's defaults unless both switches are on.
+ *
+ * W21 E1.02 (F07 §1.4) rules that the refusing shopper is recorded `ineligible`
+ * rather than `default`, so the control arm holds randomised controls only. The
+ * vocabulary for it is in place (`Arm`, `personalizingArm`, the report and the
+ * documentation) and the value is NOT yet served, because two shipped
+ * assertions lock the present answer and an implementer may not edit a test:
+ * `src/content/consent.test.ts:222-223` ("forces the default arm when either
+ * switch is off", on this function) and `src/content/consent.test.ts:272`
+ * (`expect(defaults.arm).toBe('default')` on the mounted service). Changing one
+ * word here serves the ruled value; the ruling on those two assertions is the
+ * lead's (R10).
+ */
 export const armUnder = (c: Consent, arm: Arm): Arm => (personalizes(c) ? arm : 'default');

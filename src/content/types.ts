@@ -137,7 +137,34 @@ export interface SlotCatalog {
   pages: Record<string, SlotStrategy[]>;
 }
 
-export type Arm = 'personalized' | 'default' | 'no_learning';
+/**
+ * W21 E1 (F07 §1.4, §7): `ineligible` is not a randomised arm. A shopper who
+ * has not consented to personalization is never drawn into the experiment at
+ * all: she is served the site's own defaults and recorded `ineligible`, so the
+ * `default` arm holds randomised controls only and a reader can tell the two
+ * populations apart. Everything that asks "may this decision personalize?"
+ * asks `personalizingArm`, never `arm !== 'default'`.
+ */
+export type Arm = 'personalized' | 'default' | 'no_learning' | 'ineligible';
+
+/** The arms the engine may personalize under: neither the control nor the ineligible population. */
+export const personalizingArm = (arm: Arm | string): boolean => arm !== 'default' && arm !== 'ineligible';
+
+/**
+ * W21 E1 (F07 §7(b)): the shopper's enrollment in the agreed experiment, written
+ * once against a persistent anchor and read back on every later decision, so the
+ * arm is never redrawn from whatever id the browser is carrying at that moment.
+ */
+export interface EnrollmentProvenance {
+  /** `${tenant}:${brand}:${effective salt}` — a salt change starts a new experiment. */
+  id: string;
+  /** The revision of the published learn document the enrollment was written under. */
+  saltVersion: number;
+  /** The enrolled arm. A string, because the arms are the tenant's published ones. */
+  arm: string;
+  /** 1 for the first anchor; only a replacement of the anchor itself advances it. Recognition does not. */
+  anchorGeneration: number;
+}
 
 /** Doc 22 §10. Assignment is a hash, so it is sticky by construction. */
 export interface HoldoutConfig {
@@ -200,9 +227,19 @@ export interface SlotDials {
   external?: { weight: number };
 }
 
+/**
+ * W21 C1.04 (F25 §5.2): the tenant's OWN pre-set business targets, as relative
+ * lift, published in its learn document. No customer's numbers are compiled
+ * into this platform; a tenant that has published none is reported as having
+ * none.
+ */
+export interface BusinessTargets { minimum: number; target: number; stretch: number }
+
 export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
+  /** F25 §5.2: this tenant's published business targets, when it has published any. */
+  targets?: BusinessTargets;
   regional?: RegionalConfig;
   policy?: LearnPolicyConfig;
   stats?: LearnStatsConfig;
@@ -358,6 +395,15 @@ export interface DecisionRecord {
    */
   journey?: { stage: import('@/services/JourneyStage').JourneyWord; version: string | null };
   arm: Arm;
+  /**
+   * W21 E1.03: the experiment this record's arm belongs to, as the decision
+   * path answered it. Written by the producer and stored and exported
+   * unchanged; never reconstructed later from the then-current learn document,
+   * which would stamp a record decided under an older salt with today's
+   * experiment (F07 §5.7). Absent on records written before enrollment was
+   * persistent, and absent where the shopper was not enrolled.
+   */
+  experiment?: EnrollmentProvenance;
   explored: boolean;
   authority: Authority;
   versions: DecisionVersions;
@@ -426,6 +472,8 @@ export interface ContentDecisionSet {
   identity_anchor: IdentityAnchor;
   ts: number;
   arm: Arm;
+  /** W21 E1.03: the experiment this page's arm belongs to. Absent where the shopper is not enrolled. */
+  experiment?: EnrollmentProvenance;
   cell: Cell;
   versions: DecisionVersions;
   config_label: string;

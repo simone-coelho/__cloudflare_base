@@ -8,7 +8,7 @@
 // counts by arm (§10), from R2 and never from Analytics Engine. Pure
 // where it can be: `buildReport` takes records; `runReport` fetches them.
 
-import type { DecisionRecord, LearnConfig } from '@/content/types';
+import { personalizingArm, type BusinessTargets, type DecisionRecord, type LearnConfig } from '@/content/types';
 import { hidden, loadTombstones, withoutErased } from '@/ledger/erasure';
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
@@ -401,12 +401,14 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
+  // `armVisitors` rides the summary because the window pools it from here; a
+  // summary written before it existed simply does not carry the key.
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -423,7 +425,8 @@ export function canonicalReportJson(report: DayReport): string {
     builtAt: report.builtAt, counts: report.counts,
     holdout: Object.fromEntries(Object.entries(report.holdout).map(([slot, rows]) =>
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
-    ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation) };
+    ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
+    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors') };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
   const full = rawReportJson(report);
@@ -535,6 +538,111 @@ export const REPORT_MEASUREMENT = {
   experimentalCoverage: 'not_assessed',
 } as const;
 
+/**
+ * W21 C1 (F25 §5.2, §7.2, position 8): what a report says about the tenant's
+ * own pre-set business targets. It never says one was reached. `values` are the
+ * tenant's published numbers or null; `standing` is always withheld while this
+ * platform publishes no inference of its own, and `reasons` says why — with
+ * `source_incomplete` present exactly when the source the numbers were pooled
+ * from was truncated or missing hours, so an incomplete day or window can never
+ * award a standing even if the rest of this rule were ever relaxed.
+ */
+export type TargetReason = 'inference_unavailable' | 'no_published_target' | 'source_incomplete';
+export interface ReportTargets {
+  version: 1;
+  source: 'published' | 'absent';
+  values: BusinessTargets | null;
+  standing: 'undecided';
+  reasons: TargetReason[];
+}
+const validTargets = (value: unknown): BusinessTargets | null =>
+  object(value) && finite(value.minimum) && finite(value.target) && finite(value.stretch)
+    ? { minimum: value.minimum, target: value.target, stretch: value.stretch } : null;
+export function reportTargets(published: BusinessTargets | null | undefined, sourceIncomplete: boolean): ReportTargets {
+  const values = validTargets(published);
+  const reasons: TargetReason[] = ['inference_unavailable'];
+  if (!values) reasons.push('no_published_target');
+  if (sourceIncomplete) reasons.push('source_incomplete');
+  reasons.sort();
+  return { version: 1, source: values ? 'published' : 'absent', values, standing: 'undecided', reasons };
+}
+
+/**
+ * W21 C1.03 (F25 §5.3, §7): the per-arm DENOMINATORS, which decisions are not.
+ * Within a day the figure is distinct visitors; pooled across days it is
+ * visitor-days, and the basis says which, because a visitor active on two days
+ * is two visitor-days and calling both "visitors" would misstate the design
+ * effect. A source that predates the version field is unknown — `null`, never
+ * zero and never re-derived from the decision counts it does hold.
+ */
+export interface ArmVisitors {
+  version: 1;
+  basis: 'distinct_visitors' | 'visitor_days';
+  arms: Array<{ arm: string; visitors: number }>;
+}
+const count = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+export function validArmVisitors(value: unknown, basis: ArmVisitors['basis']): ArmVisitors | null {
+  if (!object(value) || value.version !== 1 || value.basis !== basis || !Array.isArray(value.arms)
+    || value.arms.length > REPORT_LIMITS.cells) return null;
+  const arms: ArmVisitors['arms'] = [];
+  const seen = new Set<string>();
+  for (const row of value.arms as unknown[]) {
+    if (!object(row) || !name(row.arm) || !count(row.visitors) || seen.has(row.arm)) return null;
+    seen.add(row.arm); arms.push({ arm: row.arm, visitors: row.visitors });
+  }
+  return { version: 1, basis, arms: arms.sort((a, b) => a.arm.localeCompare(b.arm)) };
+}
+
+/**
+ * W21 C1.03 (F25 §1.3): the allocation in force when the day was built, so
+ * sample sufficiency is computable on the customer's side under their own
+ * protocol (D04) instead of being answered here from a fixed confidence and an
+ * assumption of equal arms. Recorded from the tenant's published learn
+ * document; absent on a report built before it was recorded.
+ */
+export interface ReportAllocation { version: 1; source: 'published'; share: number; arms: string[] }
+/** The allocation a report records: the tenant's published holdout share and arms. */
+export function publishedAllocation(learn: LearnConfig): ReportAllocation {
+  const share = finite(learn.holdout?.share) ? Math.min(1, Math.max(0, learn.holdout.share)) : 0;
+  return { version: 1, source: 'published', share, arms: [...(learn.holdout?.arms ?? [])] };
+}
+export function validAllocation(value: unknown): ReportAllocation | null {
+  if (!object(value) || value.version !== 1 || value.source !== 'published' || !finite(value.share)
+    || value.share < 0 || value.share > 1 || !Array.isArray(value.arms) || value.arms.length > REPORT_LIMITS.policies
+    || (value.arms as unknown[]).some(arm => !name(arm))) return null;
+  return { version: 1, source: 'published', share: value.share, arms: [...(value.arms as string[])] };
+}
+
+/**
+ * W21 E1.04 (F07 §2.5, §7): business outcomes counted by ENROLLMENT and by
+ * VISITOR, independently of whether a served piece matched them. A control
+ * visitor's purchase counts for control whether or not she was served anything
+ * related to it, and two purchases by one visitor are one purchasing visitor.
+ * No rate is published here: CVR, revenue per visitor and the return rate are
+ * the customer's own unit definitions (D04, W21.P1.01).
+ */
+export interface VisitorOutcomes {
+  version: 1;
+  basis: 'enrolled_visitors';
+  arms: Array<{ arm: string; visitors: number; byType: Record<string, number> }>;
+}
+export function validVisitorOutcomes(value: unknown): VisitorOutcomes | null {
+  if (!object(value) || value.version !== 1 || value.basis !== 'enrolled_visitors' || !Array.isArray(value.arms)
+    || value.arms.length > REPORT_LIMITS.cells) return null;
+  const arms: VisitorOutcomes['arms'] = [];
+  const seen = new Set<string>();
+  for (const row of value.arms as unknown[]) {
+    if (!object(row) || !name(row.arm) || !count(row.visitors) || seen.has(row.arm) || !object(row.byType)) return null;
+    const byType: Record<string, number> = {};
+    for (const [type, n] of Object.entries(row.byType)) {
+      if (!rewards.has(type) || !count(n)) return null;
+      byType[type] = n;
+    }
+    seen.add(row.arm); arms.push({ arm: row.arm, visitors: row.visitors, byType });
+  }
+  return { version: 1, basis: 'enrolled_visitors', arms: arms.sort((a, b) => a.arm.localeCompare(b.arm)) };
+}
+
 export function attributionArm(arm: string, decisions: number, credited: number): ArmRow {
   const creditedPerDecision = decisions > 0 ? credited / decisions : null;
   return { arm, decisions, credited, creditedPerDecision, rate: creditedPerDecision };
@@ -573,6 +681,28 @@ export interface DayReport {
   holdout: Record<string, ArmRow[]>;
   /** Empty compatibility collections. These counts cannot support experimental inference. */
   holdoutComparison: Record<string, never[]>;
+  /**
+   * W21 C1: the tenant's published business targets and why no standing is
+   * stated. Attached to the answer of the build (`POST learn/report`), which
+   * already holds the tenant's configuration, and never stored.
+   *
+   * NOT attached to the two report GETs, although the unit rules it there:
+   * reading the tenant's configuration at read time is storage I/O on that
+   * path, and three shipped assertions lock exactly what those two routes read
+   * and answer — `src/learn/report.test.ts:729`
+   * (`expect(storage.get).toHaveBeenCalledTimes(10)`),
+   * `src/learn/report.test.ts:819` (the answer must not match
+   * /UNSUPPORTED|confidence|verdict|targets|.../ — the member's own NAME) and
+   * `src/learn/report.test.ts:821` (the exact list of keys read). An
+   * implementer may not edit a test; the ruling is the lead's (R10).
+   */
+  targets?: ReportTargets;
+  /** W21 C1.03: per-arm distinct visitors for the day. Null where the source predates the field. */
+  armVisitors?: ArmVisitors | null;
+  /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
+  allocation?: ReportAllocation;
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
   /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
@@ -618,18 +748,31 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   };
 }
 
-/** Withdraw historic inference at read time without rewriting the stored report. */
+/**
+ * Withdraw historic inference at read time without rewriting the stored report.
+ *
+ * W21 C1: the targets block is computed HERE, from the tenant's currently
+ * published configuration and this report's own completeness, and is never
+ * stored: what a report is read against is a live configuration question, and a
+ * stored answer would let a report keep quoting a target the tenant has since
+ * changed. The counts it is read against are not touched.
+ */
 export function diagnosticDayReport(report: DayReport): DayReport {
   const holdout = Object.fromEntries(Object.entries(report.holdout ?? {}).map(([slot, rows]) =>
     [slot, rows.map(({ arm, decisions, credited }) => attributionArm(arm, decisions, credited))]));
+  const coverage = reportCoverage(report);
+  const allocation = validAllocation(report.allocation);
   return {
     tenant: report.tenant, brand: report.brand, date: report.date, builtAt: report.builtAt,
     counts: report.counts, policies: report.policies, grids: report.grids, exploration: report.exploration,
     measurement: REPORT_MEASUREMENT, holdout,
     holdoutComparison: Object.fromEntries(Object.keys(holdout).map((slot) => [slot, []])),
+    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    ...(allocation ? { allocation } : {}),
+    visitorOutcomes: validVisitorOutcomes(report.visitorOutcomes),
     ...(report.erasures ? { erasures: report.erasures } : {}),
     ...(report.hours ? { hours: report.hours } : {}),
-    coverage: reportCoverage(report),
+    coverage,
     computation: recordedComputation(report.computation),
   };
 }
@@ -692,11 +835,21 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const statsCfg: StatsConfig = i.learn.stats ?? DEFAULT_STATS;
   const exposures = new Map<string, ReturnType<typeof emptyStats>>();
   const slotCounts = new Map<string, { arms: Map<string, number>; decisions: number; explored: number }>();
+  // W21 C1.03/E1.04: the day's DENOMINATORS, per arm, in visitors. Kept beside
+  // the decision counts rather than derived from them: the two differ by the
+  // decisions each visitor was served, which is exactly the quantity the design
+  // effect needs and the quantity decisions alone cannot supply (F25 §5.3).
+  const armVisitorIds = new Map<string, Set<string>>();
+  const visitorArms = new Map<string, Set<string>>();
   for (const d of i.decisions) {
     const counts = slotCounts.get(d.slot) ?? { arms: new Map<string, number>(), decisions: 0, explored: 0 };
     counts.arms.set(d.arm, (counts.arms.get(d.arm) ?? 0) + 1);
-    if (explorationOpportunity(d) && d.arm !== 'default') { counts.decisions++; if (d.explored) counts.explored++; }
+    if (explorationOpportunity(d) && personalizingArm(d.arm)) { counts.decisions++; if (d.explored) counts.explored++; }
     slotCounts.set(d.slot, counts);
+    const enrolled = armVisitorIds.get(d.arm) ?? new Set<string>();
+    enrolled.add(d.visitor_id); armVisitorIds.set(d.arm, enrolled);
+    const arms = visitorArms.get(d.visitor_id) ?? new Set<string>();
+    arms.add(d.arm); visitorArms.set(d.visitor_id, arms);
     if (d.arm === 'personalized') {
       const st = exposures.get(d.slot) ?? emptyStats();
       recordExposure(st, d.item_id, d.cell, d.rendered?.at ?? d.ts, statsCfg); exposures.set(d.slot, st);
@@ -760,10 +913,30 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
   });
 
+  // W21 E1.04: outcomes by the arm the VISITOR is enrolled in, never by whether
+  // a served piece matched the outcome. A visitor served on two arms in one day
+  // counts once under each; under persistent enrollment there is only one.
+  const outcomeVisitors = new Map<string, Map<string, Set<string>>>();
+  for (const o of i.outcomes) {
+    for (const arm of visitorArms.get(o.visitor_id) ?? []) {
+      const byType = outcomeVisitors.get(arm) ?? new Map<string, Set<string>>();
+      const visitors = byType.get(o.type) ?? new Set<string>();
+      visitors.add(o.visitor_id); byType.set(o.type, visitors); outcomeVisitors.set(arm, byType);
+    }
+  }
+  const armNames = [...armVisitorIds.keys()].sort((a, b) => a.localeCompare(b));
+  const armVisitors: ArmVisitors = { version: 1, basis: 'distinct_visitors',
+    arms: armNames.map(arm => ({ arm, visitors: armVisitorIds.get(arm)!.size })) };
+  const visitorOutcomes: VisitorOutcomes = { version: 1, basis: 'enrolled_visitors',
+    arms: armNames.map(arm => ({ arm, visitors: armVisitorIds.get(arm)!.size,
+      byType: Object.fromEntries([...(outcomeVisitors.get(arm) ?? new Map<string, Set<string>>())]
+        .sort(([a], [b]) => a.localeCompare(b)).map(([type, visitors]) => [type, visitors.size] as const)) })) };
+
   const report: DayReport = {
     tenant: i.tenant, brand: i.brand, date: i.date, builtAt: i.now,
     counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated },
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison,
+    armVisitors, visitorOutcomes, allocation: publishedAllocation(i.learn),
     computation: new Set(policies.map(p => p.name)).size === policies.length
       ? computationBasis(i.learn, policies, slots, { source: 'raw-day', horizonMs: null, ringCap: null }) : null,
     coverage: reportCoverage({ counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated }, hours: { source: 'ledger', built: [], missing: [] } }, {

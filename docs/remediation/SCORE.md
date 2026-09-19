@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 9 files · typecheck GREEN
+Units 136/144 · W closed 3/26 (W16–W41) · suite 1956/2042 · residual 86 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -19,7 +19,8 @@ Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
-| W20 | 9 | 9 | no | — | — |
+| W20 | 16 | 16 | no | — | — |
+| W21 | 9 | 3 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -153,18 +154,40 @@ Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 
 | W20.G1.07 | green | 2 |
 | W20.G1.08 | green | 2 |
 | W20.G1.09 | green | 2 |
+| W20.G2.01 | green | 1 |
+| W20.G2.02 | green | 1 |
+| W20.G2.03 | green | 1 |
+| W20.G2.04 | green | 1 |
+| W20.G2.05 | green | 1 |
+| W20.G2.06 | green | 1 |
+| W20.G2.07 | green | 1 |
+| W21.C1.01 | red | 2 |
+| W21.C1.02 | red | 1 |
+| W21.C1.03 | green | 1 |
+| W21.C1.04 | red | 1 |
+| W21.E1.01 | green | 2 |
+| W21.E1.02 | red | 2 |
+| W21.E1.03 | red | 1 |
+| W21.E1.04 | green | 2 |
+| W21.P1.01 | unspecified | 0 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
+-  unit:W21.C1.01 host: the day and the window answers of the mounted report routes carry the diagnostic label and no causal or target claim
+-  unit:W21.C1.02 host: a window beyond the readable series is refused with its maximum named, every incomplete pooled day is listed, and the target standing is withheld whenever the window is incomplete
+-  unit:W21.C1.04 host: both report routes require an operator credential, and the targets a report is read against are the tenant's published configuration
+-  unit:W21.E1.02 host (do): a shopper who declined personalization is served the site's defaults and recorded ineligible, never as a control, and a later grant enrolls her from that moment
+-  unit:W21.E1.02 host (session): a shopper who declined personalization is served the site's defaults and recorded ineligible, never as a control, and a later grant enrolls her from that moment
+-  unit:W21.E1.03 host: every arm-tagged record names its experiment, salt version, arm and anchor generation, a salt change starts a new experiment, and the authenticated export delivers the window's records
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | e352e376ad031c022b99cff820201d1afe9ee2dc97888a09607fc9a0b7666fbb |
+| units sha256 | b0b1381f70fcd47ff4ee1403292bb41a50b63cbf998292ce39e0af6852b1aa00 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -175,7 +198,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 82d9d0850ea2d1031ebe0b3ef4233d5f4a554073531b3dc555774c67e9efbc40 |
-| commit | 0b54a5aa8739c38e1623c39deefea0edb91f4029 |
-| generated | 2026-09-19T20:10:35.600Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | 5c774c5f90687257a51635e559f4803dc874e4c8de01481122b2b8ca5661129c |
+| commit | 22de02020ec811b5acbbb6c6dcd3f397730857c6 |
+| generated | 2026-09-19T22:14:03.601Z |

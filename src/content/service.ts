@@ -20,7 +20,7 @@ import { projectVisit, validEntry, validVisitContext, entryChannelOf, type Chann
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
-import { armFor } from './holdout';
+import { enrollmentAnchorOf, enrollmentFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
@@ -28,8 +28,8 @@ import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regio
 import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
-import type { ExternalTerm } from './types';
-import type { ContentDecisionSet, ContentPiece, SlotCatalog } from './types';
+import { personalizingArm, type ExternalTerm } from './types';
+import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
 import { captureRetention } from '@/retention';
 import { recoverDecisions } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
@@ -382,8 +382,19 @@ export async function serveContentDecisions(
     // anything it does not recognise as unknown.
     stage: personalizes(consent) && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
   });
-  // CW31: either consent switch off means the site's own defaults, whatever the holdout hash says.
-  const arm = armUnder(consent, armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand }));
+  // W21 E1 (F07 §1.4, §7(b)): consent first, then enrollment. A shopper without
+  // personalization consent is not drawn into the experiment at all; a
+  // consenting shopper is enrolled against her PERSISTENT anchor and the
+  // published salt, so the same draw answers on every later decision and
+  // survives recognition. (`armUnder` labels the refusing shopper `default`
+  // today and the ruled `ineligible` waits on the assertions named there.)
+  const holdoutInForce: HoldoutConfig = { ...learn.holdout, salt: learn.holdout.salt || brand };
+  const enrolled = personalizes(consent)
+    ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion: learnRev?.revision ?? 0,
+      ...(await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId)) })
+    : null;
+  const enrollment: EnrollmentProvenance | null = enrolled?.provenance ?? null;
+  const arm = armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
 
@@ -393,7 +404,7 @@ export async function serveContentDecisions(
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
   let affinity: { dims: Record<string, Record<string, number>> } | null = personalizes(consent) ? shopper.affinity : null;
   let regional: Parameters<typeof decideContent>[0]['regional'] = null;
-  if (regionalCfg.enabled && arm !== 'default') {
+  if (regionalCfg.enabled && personalizingArm(arm)) {
     const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
     if (trend) {
       const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
@@ -413,7 +424,7 @@ export async function serveContentDecisions(
   // Keep the omission explicit on weighted receipts and replayable from them.
   const extCfg = learn.external ?? null;
   const extWeightOf = (slot: string) => learn.slots?.[slot]?.external?.weight ?? 0;
-  const wantsExt = extCfg !== null && arm !== 'default' && activeSlots.some((s) => extWeightOf(s.slot) > 0);
+  const wantsExt = extCfg !== null && personalizingArm(arm) && activeSlots.some((s) => extWeightOf(s.slot) > 0);
   const external: ExternalTerm | null = wantsExt && extCfg
     ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: 'external scoring disabled by deployment policy' }
     : null;
@@ -422,8 +433,8 @@ export async function serveContentDecisions(
   const snapshots: Record<string, LiftSnapshot | null> = {};
   const configOf = slotLearnConfigOf(learn);
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
-  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
-  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot)); }))]);
+  const wantsRing = personalizingArm(arm) && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
+  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(personalizingArm(arm) ? activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot)); }) : [])]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
   lap('lift');
@@ -449,6 +460,10 @@ export async function serveContentDecisions(
   lap('decide');
   if (consent.tracking) for (const record of set.records) record.retention = captureRetention(env, r.tenant, record.ts, now);
   for (const record of set.records) record.measurementBasis = configOf(record.slot).measurementBasis ?? 'served-v1';
+  // W21 E1.03 (position 8): every arm-tagged record names the experiment it was
+  // decided under, as the decision path answered it. The producer writes it so
+  // that nothing downstream has to reconstruct it from a later configuration.
+  if (enrollment) for (const record of set.records) record.experiment = enrollment;
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
@@ -505,6 +520,7 @@ export async function serveContentDecisions(
   }));
   return {
     ...set,
+    ...(enrollment ? { experiment: enrollment } : {}),
     decisions,
     afterResponse,
     write: consent.tracking && servedCapture,

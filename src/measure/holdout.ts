@@ -64,7 +64,12 @@ export type Standing = 'reached_stretch' | 'reached_target' | 'reached_minimum' 
 
 export interface TargetReading {
   targets: Targets;
-  /** The relative lift's interval, from the absolute interval over the control rate. Null when the control rate is zero. */
+  /**
+   * The relative lift's interval: Katz's log interval on the two arms' RAW
+   * rates (F25 §7.3). Null when the control rate is zero, and null when the raw
+   * counts the log interval needs were not supplied — a relative interval is
+   * never reconstructed by dividing an absolute interval by a rounded rate.
+   */
   relativeLow: number | null;
   relativeHigh: number | null;
   /**
@@ -184,12 +189,53 @@ const rel = (r: number) => `${r >= 0 ? '+' : '−'}${(Math.abs(r) * 100).toFixed
 const fmt = (n: number) => n.toLocaleString('en-US');
 const verdictOf = (d: Proportion): Verdict => (d.lo > 0 ? 'treatment_better' : d.hi < 0 ? 'control_better' : 'undecided');
 
-/** Where a relative lift stands against the targets, judged on the interval's low end. */
-export function readTargets(difference: Proportion, controlRate: number, targets: Targets): TargetReading {
-  if (!(controlRate > 0)) return { targets, relativeLow: null, relativeHigh: null, standing: 'undecided' };
-  const relativeLow = r4(difference.lo / controlRate);
-  const relativeHigh = r4(difference.hi / controlRate);
-  const point = difference.p / controlRate;
+/**
+ * The relative difference of two arms with its interval, by Katz's log method:
+ *
+ *   relative = p_t / p_c − 1,
+ *   low/high = exp( ln(p_t/p_c) ∓ z·sqrt( (1−p_t)/s_t + (1−p_c)/s_c ) ) − 1
+ *
+ * computed from the RAW rates. Dividing an absolute difference interval by a
+ * rounded control rate is not this interval and is not used anywhere: at a
+ * small control rate the divisor's own rounding dominates the answer, and at a
+ * large difference the two are simply different intervals.
+ *
+ * Every member is null where the quantity is unreadable rather than zero: a
+ * control rate of zero has no ratio to take, and a treatment arm with no
+ * credited outcome, an empty arm or a count that is not a proportion (credits
+ * may exceed decisions, doc 22 §10) has no log interval.
+ */
+export function katzRelativeInterval(control: ArmCount, treatment: ArmCount, z = Z95): { relative: number | null; low: number | null; high: number | null } {
+  const unreadable = { relative: null, low: null, high: null };
+  const nc = Math.max(0, finite(control?.n)), sc = Math.max(0, finite(control?.s));
+  const nt = Math.max(0, finite(treatment?.n)), st = Math.max(0, finite(treatment?.s));
+  if (!(nc > 0) || !(nt > 0)) return unreadable;
+  const pc = sc / nc, pt = st / nt;
+  if (!(pc > 0) || !Number.isFinite(pc) || !Number.isFinite(pt)) return unreadable;
+  const relative = pt / pc - 1;
+  const variance = (1 - pt) / st + (1 - pc) / sc;
+  if (!(pt > 0) || !Number.isFinite(variance) || variance < 0) return { relative, low: null, high: null };
+  const half = finite(z) * Math.sqrt(variance);
+  const centre = Math.log(pt / pc);
+  return { relative, low: Math.exp(centre - half) - 1, high: Math.exp(centre + half) - 1 };
+}
+
+/**
+ * Where a relative lift stands against the targets, judged on the low end of
+ * the Katz interval. The arms' raw counts are what that interval is computed
+ * from; without them the reading is withheld rather than approximated.
+ */
+export function readTargets(difference: Proportion, controlRate: number, targets: Targets,
+  counts?: { control: ArmCount; treatment: ArmCount; z?: number }): TargetReading {
+  if (!(controlRate > 0) || !counts) return { targets, relativeLow: null, relativeHigh: null, standing: 'undecided' };
+  const katz = katzRelativeInterval(counts.control, counts.treatment, counts.z ?? Z95);
+  if (katz.low === null || katz.high === null || katz.relative === null) return { targets, relativeLow: null, relativeHigh: null, standing: 'undecided' };
+  // Reported unrounded: the rung a target reading turns on is decided a few
+  // parts in ten thousand from the boundary often enough that rounding the
+  // interval's own ends would decide it.
+  const relativeLow = katz.low;
+  const relativeHigh = katz.high;
+  const point = katz.relative;
   const standing: Standing =
     relativeLow >= targets.stretch ? 'reached_stretch'
     : relativeLow >= targets.target ? 'reached_target'
@@ -199,10 +245,12 @@ export function readTargets(difference: Proportion, controlRate: number, targets
   return { targets, relativeLow, relativeHigh, standing };
 }
 
-function targetWords(r: TargetReading): string {
+function targetWords(r: TargetReading, controlRate: number): string {
   const t = r.targets;
   const named = `the pre-set targets (minimum ${rel(t.minimum)}, target ${rel(t.target)}, stretch ${rel(t.stretch)} relative)`;
-  if (r.standing === 'undecided' || r.relativeLow === null) return `${named} cannot be read against a control rate of zero`;
+  if (r.standing === 'undecided' || r.relativeLow === null) {
+    return `${named} cannot be read ${controlRate > 0 ? 'without a relative interval on these counts' : 'against a control rate of zero'}`;
+  }
   const low = `the low end of the interval is ${rel(r.relativeLow)}`;
   switch (r.standing) {
     case 'reached_stretch': return `against ${named}: the stretch target is reached, ${low}`;
@@ -235,12 +283,16 @@ export function compareArms(
   const c: ArmSummary = { arm: control.arm ?? 'default', n: Math.max(0, finite(control.n)), s: Math.max(0, finite(control.s)), rate: wilson(control.s, control.n, z) };
   const t: ArmSummary = { arm: treatment.arm ?? 'personalized', n: Math.max(0, finite(treatment.n)), s: Math.max(0, finite(treatment.s)), rate: wilson(treatment.s, treatment.n, z) };
   const difference = newcombe(t, c, z);
-  const relative = c.rate.p > 0 ? r4((t.rate.p - c.rate.p) / c.rate.p) : null;
+  // The point ratio comes from the RAW rates, never from the rounded ones the
+  // interval is reported at: at a small control rate that rounding is the whole
+  // answer (a genuine lift divided by a divisor rounded to four decimals reads 0).
+  const katz = katzRelativeInterval(c, t, z);
+  const relative = katz.relative === null ? null : r4(katz.relative);
   const verdict = verdictOf(difference);
   const needed = neededPerArm(c, t);
   const otherDiff = newcombe(t, c, zFor(other));
   const alsoAt = { confidence: other, difference: otherDiff, verdict: verdictOf(otherDiff) };
-  const reading = targets ? readTargets(difference, c.rate.p, targets) : undefined;
+  const reading = targets ? readTargets(difference, c.rate.p, targets, { control: c, treatment: t, z }) : undefined;
 
   let words: string;
   const level = `${Math.round(confidence * 100)}% interval`;
@@ -263,7 +315,7 @@ export function compareArms(
     } else {
       words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better, and the holdout is the reason we can say so.${also}`;
     }
-    if (reading) words += ` ${targetWords(reading).replace(/^./, (ch) => ch.toUpperCase())}.`;
+    if (reading) words += ` ${targetWords(reading, c.rate.p).replace(/^./, (ch) => ch.toUpperCase())}.`;
   }
   return { control: c, treatment: t, difference, relative, verdict, neededPerArm: needed, confidence, alsoAt, ...(reading ? { targets: reading } : {}), words };
 }
