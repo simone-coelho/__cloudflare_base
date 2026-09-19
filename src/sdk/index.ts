@@ -39,7 +39,9 @@ export function createClient(config: ClientConfig, host: Host = browserHost(), o
     logout: () => identity.logout(),
     connect: () => core.connect(),
     disconnect: () => core.disconnect(),
-    destroy: () => { listen.destroy(); core.disconnect(); },
+    // Whichever order a page tears down in, nothing of the SDK is left on it:
+    // the listeners and observations this client owns go back too (W17).
+    destroy: () => { listen.destroy(); core.disconnect(); core.bindings.release(); },
     on: (event, fn) => core.on(event, fn),
   };
 }

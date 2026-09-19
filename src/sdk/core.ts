@@ -9,7 +9,7 @@ import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, ro
 import { toWire } from './wire';
 import { isEventNonce, isEventTimestamp } from '../events/actionTypes';
 import type {
-  ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, EngineUpdate, EntrySignals, Host, Paths,
+  ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, DomLike, ElementLike, EngineUpdate, EntrySignals, Host, Paths,
   SdkEventType, SocketLike, SocketStatus, ConsentInstruction, RenderAcknowledgment,
 } from './types';
 
@@ -77,6 +77,68 @@ export function contentInteraction(type: SdkEventType, data: Record<string, unkn
   return [data.action, data.eventName, data.event, type].map(name => typeof name === 'string' ? name.trim() : '')
     .find(name => ['content_impression', 'content_click', 'content_dwell', 'video_complete'].includes(name)) as SdkEventType | undefined;
 }
+/**
+ * What one client owns on the page it was given, so it can hand all of it
+ * back. Every DOM listener the SDK adds is recorded with its element, type and
+ * handler and removed with a real `removeEventListener` on release; an element
+ * is observed once per client however many capture paths name it, so a
+ * declarative scan and a `rendered()` call over the same node produce one
+ * observation and one dwell rather than two (document 35 §5 W17; F34 §2A/§2B/§3).
+ * It is bookkeeping over whatever nodes the page hands the SDK: nothing here
+ * is tenant-, customer- or taxonomy-specific.
+ */
+export interface PageBindings {
+  /** Register a listener this client owns. The release removes it from the element. */
+  addListener(el: ElementLike, type: string, handler: (ev: unknown) => void): () => void;
+  /** Observe an element once per client. Null when this client already observes it. */
+  addObserver(dom: DomLike, el: ElementLike, cb: (visible: boolean) => void): (() => void) | null;
+  /** Whether this client already holds an observation of the element. */
+  observes(el: ElementLike): boolean;
+  /** Hand back every listener and observation this client still holds. */
+  release(): void;
+}
+
+function createPageBindings(): PageBindings {
+  const listeners = new Set<() => void>();
+  const observed = new Map<ElementLike, () => void>();
+  return {
+    addListener(el, type, handler) {
+      let released = false;
+      const off = (): void => {
+        if (released) return;
+        released = true;
+        listeners.delete(off);
+        // A port without the release half leaves the handler registered; the
+        // caller's own inactive guard keeps it from ever reporting again.
+        el.removeEventListener?.(type, handler);
+      };
+      listeners.add(off);
+      el.addEventListener(type, handler);
+      return off;
+    },
+    addObserver(dom, el, cb) {
+      if (observed.has(el)) return null;
+      let released = false;
+      let detach: (() => void) | undefined = undefined;
+      const off = (): void => {
+        if (released) return;
+        released = true;
+        if (observed.get(el) === off) observed.delete(el);
+        // A synchronous observer can release before `observe` has returned its
+        // detacher; the assignment below then runs it immediately.
+        detach?.();
+      };
+      observed.set(el, off);
+      const stop = dom.observe(el, cb);
+      if (released) { stop(); return off; }
+      detach = stop;
+      return off;
+    },
+    observes: (el) => observed.has(el),
+    release() { for (const off of [...listeners]) off(); for (const off of [...observed.values()]) off(); },
+  };
+}
+
 export interface Core {
   readonly generation: number;
   /** Only a current explicit server choice permits collection or personalization. */
@@ -93,6 +155,8 @@ export interface Core {
   adoptSession(session: unknown, generation: number, reason: 'identified' | 'logout'): boolean;
   readonly config: ResolvedConfig;
   readonly host: Host;
+  /** The page listeners and observations this client owns, and their release. */
+  readonly bindings: PageBindings;
   readonly visitorId: string;
   readonly anonId: string;
   readonly sessionId: string;
@@ -131,6 +195,7 @@ export interface Core {
 
 export function createCore(config: ClientConfig, host: Host): Core {
   const cfg = resolveConfig(config, host);
+  const bindings = createPageBindings();
   let visitorId = '', sessionId = '', anonId = '';
   let generation = 0;
   let eventSequence = 0;
@@ -946,7 +1011,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
   });
 
   return {
-    config: cfg, host, get entry() { return entryOf(); },
+    config: cfg, host, bindings, get entry() { return entryOf(); },
     get consent() { return consent(); }, get trackingAllowed() { return trackingAllowed(); }, onConsentChange, capture,
     get anonId() { return anonId; },
     get generation() { return generation; },
