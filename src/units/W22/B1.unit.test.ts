@@ -1,0 +1,1302 @@
+// src/units/W22/B1.unit.test.ts
+// W22 batch B1 — event and evidence consistency: one logical identity and
+// dedup before caps on every read path, online idempotence across calls,
+// collision and retry, loss that is never silent, late arrivals re-folded,
+// explicit completeness that reaches the reader, cross-sink reconciliation,
+// one versioned attribution contract, and durable product-sort evidence.
+//
+// One `describe('unit:W22.<id>')` per unit of batch W22-B1, one `it` per ruled
+// leg. Every expected value comes from a witness or from a hand-computed
+// fixture, never from what the engine returns today.
+//
+// WITNESSES
+//   · document 35 §5 row W22 (:424): "Shared logical event identity/dedup
+//     before caps; durable online/R2/fold/export reconciliation and explicit
+//     completeness. Define one attribution contract with versioned
+//     histories/horizons, not blindly identical caps. Wire persisted
+//     product-sort evidence via W14. Fault tests include ID collision/retry,
+//     late arrivals, partial writes and sink mismatch."
+//   · document 35 §2 F16 (:137-:141), F17 (:143-:147), N10 (:272), N23 (:285).
+//   · docs/architecture/35-verification-reports/F16.md: §2.1 (the identical
+//     message consumed twice — "two objects, two rows"), §2.4 (one redelivery
+//     moves every customer-facing number of the day report), §2.5 (the two
+//     stores disagreeing, with "no log line, no counter and no alarm
+//     anywhere"), §2.6 ("Read-time dedup restores the clean numbers exactly"),
+//     §4.2 (the stable ids ALREADY EXIST — the work is to use them), §4.3
+//     (idempotent object naming will not hold; "The reliable idempotency point
+//     on this path is the read, not the write"), §5(e) (duplicates "can push a
+//     legitimate hour into `truncated: true` and silently drop real records"),
+//     §5(j) (a naive dedup must not drop two genuinely distinct events that
+//     share a legacy id), §7.1-7.4 (dedup on read in two places counted as
+//     `duplicates_dropped`; a dead-letter queue on the three consumers; the
+//     producer's and the consumer's drops counted; `res.ok` checked in the
+//     fan-out), §7 "Then, before learning is trusted" (a bounded set of
+//     recently credited `outcome_id`s in `DecisionRing`, `decision_id` back in
+//     the `/exposures` payload, and the scheduled comparison of the published
+//     lift snapshot against the day report's learning grid), §7 "Defer" (the
+//     transactional outbox — the batch's `no-witness` row W22.P1.01).
+//   · docs/architecture/35-verification-reports/F17.md: P1 (a late outcome into
+//     an already-folded hour is never read again), P3b (a failed hour retried
+//     after a later hour: `folded = ctx.from > state.through` is a monotonic
+//     high-water mark, so the repaired hour's decisions never enter the rings
+//     and the cross-hour credit is lost), P4 (the 48-hour batch horizon against
+//     the seven-day purchase policy), P6, P7 (the frozen visitor count), §3.4
+//     (the honesty signals die before they reach a human), §6 items 1-4 and
+//     "Tests that should exist and do not". Item 5 (the ingest-time clamp) is
+//     W23's and is not specified here.
+//   · docs/handover/HANDOFF-2026-09-18.md §6 row W22 (:318): "Logical IDs,
+//     ledger recovery/dedup and product-sort evidence already exist; W09/W14/W15
+//     made further changes. Verify dedup before caps, online/R2/fold/export
+//     reconciliation/completeness and one versioned attribution/history
+//     contract. Do not assume earlier online-idempotence gaps remain
+//     unchanged." — ruling R104(a): MEASURE FIRST. Where a behaviour already
+//     holds, the `it` measures it and the row records GREEN-AT-SPEC with the
+//     reversing product line; where it is missing, the failing assertion names
+//     the missing behaviour.
+//   · docs/handover/HANDOFF-2026-09-16.md §6 row W22 (:226): what exists
+//     (SDK/realtime/ledger logical ids, `src/ledger/delivery.ts` canonical
+//     equality, `writer.ts` conditional identity, report dedup before caps,
+//     retained DecisionRing dedup, explicit incomplete fan-out, product-sort
+//     records/export) and what is open (`src/learn/fan.ts` exposure call
+//     without durable logical ids, `LearnStats.ts` adding each received
+//     exposure, no durable outcome journal in DecisionRing, cross-sink and
+//     history reconciliation, scheduled sort persistence not a durable
+//     acknowledgment).
+//   · docs/architecture/tapestry_requirements.txt A.3.6 — every fixture below
+//     uses the customer's own vocabulary (Tabby, Rogue, evening, work,
+//     Handbags, Small Leather Goods) and an UNKNOWN cell, held here and never
+//     in product code (METHOD §6).
+//   · rulings R19 (a host leg drives the mounted routes production serves;
+//     host-internal only where no public route exposes the observable), R21 (a
+//     ruled-but-absent member is named), R68(a) (an operator workflow is the
+//     SHIPPED screen under jsdom bound to the mounted app), R104(a)-(i).
+//
+// ONE REPRESENTATION, SHARED BY EVERY UNIT BELOW
+//   (i)   LOGICAL IDENTITY is the id the engine already mints: `decision_id`
+//         (`src/content/decide.ts`), `outcome_id` with its event nonce
+//         (`src/ledger/records.ts:263`) and the product-sort `record_id`
+//         (`src/ledger/productSort.ts:27`). No unit asks for a new id (F16
+//         §4.2); every unit asks that the existing one be USED.
+//   (ii)  DEDUP IS ON THE READ, BEFORE ANY CAP (F16 §4.3, §7.1). A second copy
+//         of one logical event is dropped by the reader and COUNTED, never
+//         silently, and never by refusing the whole report; two genuinely
+//         DIFFERENT events that collide on one id are never merged (F16 §5(j)).
+//   (iii) IDEMPOTENCE ONLINE IS BOUNDED (R104(c)): a journal of recently
+//         credited ids pruned with the ring's own horizon. No unit claims
+//         absolute idempotence, and none asserts a repeat beyond the horizon.
+//   (iv)  A COUNT IS NEVER A SILENCE. Every drop this batch names is reported
+//         as a number on a surface an operator reads, and zero is reported as
+//         zero, never as an absent member.
+//   (v)   COMPLETENESS IS DECLARED, NOT INFERRED: an hour that was never
+//         folded, one whose rings did not advance (`ringsFolded: false`) and a
+//         truncated hour each reach the day report, the window report and both
+//         screens.
+//
+// SEAMS, NOT CROSSED
+//   · W21-B1 (in build on the same files) rules `DayReport.targets`,
+//     `WindowReport.targets`, `armVisitors`, `allocation`, `visitorOutcomes`,
+//     the `experiment` provenance block, the `source_incomplete` reason and the
+//     export listing's `from`/`to`/`date`. No unit below reads or rules any of
+//     them; the members ruled here (`counts.duplicates`, `evidenceLoss`,
+//     `reconciliation`, `attributionContract`) are disjoint by name.
+//   · W23 owns order-invariant counters, exact rates and the bounded validated
+//     event time (F17 §6 item 5). W24 owns accumulation-semantics generations.
+//     W27 owns replay. W30 owns the capacity/reconstruction envelope. Named in
+//     each row; nothing below asserts them.
+//
+// RULED MISSING MEMBERS (R21), asserted here by the names this specification
+// rules and RED until they exist. No new module and no new export is ruled, so
+// a missing member is a compiler error and a named assertion, never a module
+// that fails to load:
+//   1. `MonitorResult.evidenceLoss` — the one vocabulary for every drop path
+//      (W22.R1.01): `{ since, producerFailed, consumerSkipped, fanOutRejected,
+//      retriesExhausted }`.
+//   2. `MonitorResult.reconciliation` — the scheduled cross-sink comparison
+//      (W22.R1.04): `{ since, compared, disagreements: [{ brand, slot, online,
+//      ledger, difference, threshold }] }`.
+//   3. `attributionContract` on the day report, the window report and the
+//      published lift snapshot (W22.A1.01): `{ name, version, history,
+//      windowsMs, appliedWindowsMs }`.
+//   4. `decision_id` on each row of the `/exposures` payload, and the bounded
+//      journal of credited `outcome_id`s behind `/outcome` (W22.D1.02) —
+//      observable as the lift snapshot a redelivery must not move.
+
+import { readFileSync } from 'node:fs';
+
+import { describe, it, expect } from 'vitest';
+import { Hono } from 'hono';
+import { JSDOM } from 'jsdom';
+import * as jose from 'jose';
+
+import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
+import { invalidateCache } from '@/config/versionedStore';
+import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
+import { invalidateLiftCache } from '@/content/service';
+import type { ContentPiece, DecisionRecord, LearnConfig, SlotCatalog } from '@/content/types';
+import { DecisionRing } from '@/durable-objects/DecisionRing';
+import { LearnStats } from '@/durable-objects/LearnStats';
+import { ShopperReflex } from '@/durable-objects/ShopperReflex';
+import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { consumeLedger } from '@/ledger/consume';
+import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
+import { captureQuarantine } from '@/ledger/quarantine';
+import { outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
+import { fanDecisions, fanOutcome, ringName, statsName } from '@/learn/fan';
+import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport } from '@/learn/hourly';
+import { DEFAULT_POLICY } from '@/learn/policy';
+import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
+import { loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
+import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
+import { windowReport, type WindowReport } from '@/measure/window';
+import type { MonitorResult } from '@/ops/monitor';
+import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
+import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { captureRetention, RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
+import { contentRoutes } from '@/routes/content';
+import { decisionRoutes } from '@/routes/decisions';
+import realtimeRoutes from '@/routes/realtime';
+import { sortRoutes } from '@/routes/sort';
+import { tenantMiddleware } from '@/tenancy/middleware';
+import type { Env } from '@/types/env';
+
+// ===========================================================================
+// The customer's fixture (tapestry_requirements A.3.6), plus the unknown and
+// cross-category rows this batch needs.
+// ===========================================================================
+
+const TENANT = 'coach';
+const BRAND = 'coach';
+const OPERATOR_SECRET = 'w22-b1-synthetic-operator-signing-material';
+const OPERATOR_ORIGIN = 'http://console.test';
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+
+/** The day every ledger fixture below is written into, and the hour inside it. */
+const DATE = '2026-09-03';
+const HOUR = 12;
+const T12 = Date.UTC(2026, 8, 3, 12, 0, 0);
+/** "Now" for every report: hour 12 and hour 13 are closed, the rest of the day is not. */
+const NOW = Date.UTC(2026, 8, 3, 14, 30, 0);
+
+/**
+ * The ONLINE fixtures are placed two hours ago, not on the fixed ledger date:
+ * the visitor's ring keeps seven days of receipts (`DecisionRing.ts:21`
+ * RING_MAX_AGE_MS) and every online count decays against the wall clock, so an
+ * online unit dated in the past would measure the retention rule rather than
+ * the idempotence rule. The hour is closed, so the same events can also be
+ * folded and reported.
+ */
+const ONLINE_TS = Date.now() - 2 * HOUR_MS;
+const ONLINE_DATE = new Date(ONLINE_TS).toISOString().slice(0, 10);
+
+const piece = (id: string, over: Partial<ContentPiece>): ContentPiece => ({
+  id, customerContentId: `CMS-${id.replace(/^cnt-/, '').toUpperCase()}`, type: 'editorial',
+  title: id, tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' }, ...over,
+});
+
+const W22_PIECES: ContentPiece[] = [
+  piece('cnt-tabby-evening', { title: 'Tabby, after six',
+    tags: { line: ['Tabby'], occasion: ['evening'], category: ['Handbags'], contentType: ['editorial'] } }),
+  piece('cnt-rogue-work', { title: 'The Rogue, at work',
+    tags: { line: ['Rogue'], occasion: ['work'], category: ['Handbags'], contentType: ['editorial'] } }),
+  // Cross-category and unknown-taxonomy rows are part of the fixture, not an afterthought.
+  piece('cnt-charms-slg', { title: 'Charms, across the case', type: 'lookbook',
+    tags: { occasion: ['evening'], category: ['Small Leather Goods', 'Handbags'] } }),
+];
+const W22_CATALOGUE = { version: 'w22-b1-coach-catalogue', pieces: W22_PIECES };
+const W22_SLOTS: SlotCatalog = { version: 'w22-b1-coach-slots',
+  pages: { home: [{ slot: 'hero', take: 1, weights: { occasion: 0.35, line: 0.25 } }] } };
+
+/**
+ * The tenant's published learning document. `holdout.share: 0` so every fixture
+ * decision is `personalized` and each count below is exact; the attribution
+ * policy is the platform default, whose `purchase` window is seven days
+ * (`src/learn/policy.ts` DEFAULT_POLICY.windowsMs.purchase) — the horizon F17
+ * P4 measures the batch fold against.
+ */
+const W22_LEARN: LearnConfig = {
+  holdout: { share: 0, salt: 'w22-b1', arms: ['default'] },
+  regional: { enabled: false, kBlend: 1, minEvents: 30 },
+  slots: { hero: { reward: 'click' } },
+} as unknown as LearnConfig;
+
+/** The cell every fixture decision carries: one known Coach cell and one unknown one. */
+const COACH_CELL = { channel: 'web', visit_bucket: 'returning', stage: 'consider', region: 'US-NY', affinity: 'evening' };
+const UNKNOWN_CELL = { channel: 'web', visit_bucket: 'new', stage: 'unknown', region: 'none', affinity: 'none' };
+
+// ===========================================================================
+// The mounted application, in process, the way `src/index.ts` mounts it, with
+// the REAL DecisionRing and LearnStats classes bound to their namespaces.
+// Harness pattern reused from `src/units/W20/B2.unit.test.ts`,
+// `src/learn/holdoutArms.test.ts` (the real-class namespace) and
+// `src/routes/sort.test.ts` (the owner-dispatched /sort door); none of those
+// files is imported or edited.
+// ===========================================================================
+
+class UnitKV {
+  data = new Map<string, string>();
+  async get(key: string, type?: string) { const v = this.data.get(key); return v === undefined ? null : type === 'stream' ? new Response(v).body : type === 'json' ? JSON.parse(v) as unknown : v; }
+  async put(key: string, value: string) { this.data.set(key, value); }
+  async delete(key: string) { this.data.delete(key); }
+  async list(o?: { prefix?: string; limit?: number; cursor?: string }) {
+    const keys = [...this.data.keys()].filter(k => k.startsWith(o?.prefix ?? '')).sort(), start = Number(o?.cursor ?? 0), end = start + (o?.limit ?? 1000);
+    return { keys: keys.slice(start, end).map(name => ({ name })), list_complete: end >= keys.length, ...(end < keys.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+class UnitR2 {
+  objects = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string>>();
+  /** Set to make the Nth put of a call throw, as F16 §2.2 makes R2 throw mid-batch. */
+  failPutFrom: ((key: string) => boolean) | null = null;
+  async get(key: string, options?: R2GetOptions) {
+    const raw = this.objects.get(key); if (raw === undefined) return null;
+    const bytes = new TextEncoder().encode(raw), range = options?.range;
+    const selected = range && 'length' in range ? bytes.slice(0, range.length ?? bytes.length) : bytes;
+    return { key, etag: 'v' + this.versions.get(key), size: bytes.length, customMetadata: this.metadata.get(key),
+      body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(selected); c.close(); } }),
+      text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async head(key: string) { return this.objects.has(key) ? { key } : null; }
+  async put(key: string, raw: string, options?: R2PutOptions) {
+    if (this.failPutFrom?.(key)) throw new Error('Synthetic storage refusal');
+    const old = this.objects.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if ((absent && old !== null) || (match != null && match !== old && match !== JSON.stringify(old))) return null;
+    this.objects.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
+  }
+  async delete(keys: string | string[]) { for (const key of typeof keys === 'string' ? [keys] : keys) this.objects.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.objects.keys()].filter(k => k.startsWith(options.prefix ?? '')).sort(), start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map(key => ({ key, size: new TextEncoder().encode(this.objects.get(key) ?? '').length, uploaded: new Date(0) })),
+      truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+const fixtureRetentionPolicy: RetentionPolicy = { id: 'w22-b1-fixture-policy', revision: 1, durationMs: 3650 * DAY_MS, basis: 'admitted', renewal: 'new-record-only' };
+const fixtureCategories = (tenants: string[]) => Object.fromEntries(tenants.map(tenant => [tenant,
+  Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, fixtureRetentionPolicy])) as Record<RetentionCategory, RetentionPolicy>]));
+
+interface DurableRegistry { data: Map<string, unknown>; object: { fetch: (request: Request) => Promise<Response> } }
+
+interface Mounted {
+  env: Env;
+  storage: UnitR2;
+  /** Every body the real producer handed to the queue binding, in order. */
+  queued: unknown[];
+  rings: Map<string, DurableRegistry>;
+  stats: Map<string, DurableRegistry>;
+  /** Drop and rebuild every durable object over the SAME storage: a restart. */
+  restartObjects: () => void;
+  fetch: (input: Request) => Promise<Response>;
+  drain: () => Promise<void>;
+  operatorToken: string;
+}
+
+async function mount(options: { queueFails?: boolean; statsStatus?: () => number | null } = {}): Promise<Mounted> {
+  invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
+  const pending: Promise<unknown>[] = [];
+  const queued: unknown[] = [];
+  const storage = new UnitR2();
+  const shoppers = new Map<string, DurableRegistry>(), rings = new Map<string, DurableRegistry>(), stats = new Map<string, DurableRegistry>();
+  const env = {
+    DEPLOYMENT_PROFILE: 'demo', ENVIRONMENT: 'test', CACHE: new UnitKV(), SESSIONS: new UnitKV(),
+    CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: 'session', STORAGE: storage,
+    JWT_SECRET: OPERATOR_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: `${TENANT}:w22-b1-identity-material`,
+    TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }),
+    PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
+    DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
+    // The shipped deployment declares `LEDGER_RECOVERY_ENABLED = "false"` in all
+    // three environments (wrangler.toml:155, :237, :336), so this fixture runs
+    // the configuration the customer would run today. Activating the managed
+    // owner-recovery path is a deployment decision, not one this batch takes.
+    EVENT_QUEUE: { send: async (body: unknown) => {
+      if (options.queueFails) throw new Error('Synthetic queue outage');
+      queued.push(body);
+    } },
+  } as unknown as Env;
+  env.RETENTION = JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) });
+
+  /** One namespace per class, each instance the REAL class over a storage stub. */
+  const namespaceFor = (make: (state: DurableObjectState, env: Env) => { fetch: (request: Request) => Promise<Response> }, registry: Map<string, DurableRegistry>, rebuild: Array<() => void>) => ({
+    idFromName: (n: string) => n,
+    get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      let item = registry.get(name);
+      if (!item) {
+        const data = new Map<string, unknown>();
+        const alarms: number[] = [];
+        const storageStub = {
+          get: async (k: string | string[]) => structuredClone(Array.isArray(k) ? new Map(k.map(v => [v, data.get(v)])) : data.get(k)),
+          put: async (k: string | Record<string, unknown>, v?: unknown) => {
+            if (typeof k === 'string') data.set(k, structuredClone(v)); else for (const [key, value] of Object.entries(k)) data.set(key, structuredClone(value));
+          },
+          list: async (o?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }) =>
+            structuredClone(new Map([...data].filter(([key]) => key.startsWith(o?.prefix ?? '') && (!o?.startAfter || key > o.startAfter))
+              .sort(([a], [b]) => (o?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, o?.limit))),
+          transaction: async (run: (tx: DurableObjectTransaction) => Promise<unknown>) => {
+            const candidate = structuredClone(data);
+            let deleteAlarm = false, nextAlarm: number | undefined;
+            const tx = { list: async () => structuredClone(candidate), get: async (key: string) => structuredClone(candidate.get(key)),
+              delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+              put: async (values: string | Record<string, unknown>, value?: unknown) => {
+                if (typeof values === 'string') candidate.set(values, structuredClone(value));
+                else for (const [key, entry] of Object.entries(values)) candidate.set(key, structuredClone(entry));
+              },
+              deleteAlarm: async () => { deleteAlarm = true; }, setAlarm: async (at: number) => { nextAlarm = at; },
+            } as unknown as DurableObjectTransaction;
+            const result = await run(tx);
+            data.clear(); for (const [key, value] of candidate) data.set(key, value);
+            if (deleteAlarm) alarms.length = 0;
+            if (nextAlarm !== undefined) alarms.push(nextAlarm);
+            return result;
+          },
+          deleteAll: async () => data.clear(), delete: async (k: string) => data.delete(k),
+          setAlarm: async (at: number) => { alarms.push(at); }, getAlarm: async () => alarms.at(-1) ?? null,
+        };
+        const state = { id: name, storage: storageStub, getWebSockets: () => [], waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState;
+        item = { data, object: make(state, env) };
+        registry.set(name, item);
+        rebuild.push(() => { item!.object = make(state, env); });
+      }
+      const status = options.statsStatus?.();
+      if (status !== undefined && status !== null && registry === stats) {
+        // F16 §5(c): a statistics object answering 400 or 500 is "recorded as
+        // delivered by every caller" unless the fan-out checks `res.ok`.
+        return new Response(JSON.stringify({ ok: false, error: 'synthetic statistics refusal' }), { status });
+      }
+      return item.object.fetch(new Request(input, init));
+    } }),
+  });
+  const rebuild: Array<() => void> = [];
+  env.SHOPPER_REFLEX = namespaceFor((state, e) => new ShopperReflex(state, e), shoppers, rebuild) as unknown as DurableObjectNamespace;
+  env.DECISION_RING = namespaceFor((state, e) => new DecisionRing(state, e), rings, rebuild) as unknown as DurableObjectNamespace;
+  env.LEARN_STATS = namespaceFor((state, e) => new LearnStats(state, e), stats, rebuild) as unknown as DurableObjectNamespace;
+
+  const app = new Hono<{ Bindings: Env }>();
+  app.use('*', tenantMiddleware());
+  app.route('/content', contentRoutes);
+  app.route('/realtime', realtimeRoutes);
+  app.route('/sort', sortRoutes);
+  app.route('/v1', decisionRoutes);
+
+  const operatorToken = await new jose.SignJWT({ sub: 'ops', type: 'service', roles: ['operator', 'admin'] })
+    .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('2h')
+    .sign(new TextEncoder().encode(OPERATOR_SECRET));
+
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = TENANT): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'w22-b1-fixture', note: 'fixture', value } });
+  await initializePublicationSet(env, [
+    baseline(CONTENT_KIND, W22_CATALOGUE),
+    baseline(SLOTS_KIND, W22_SLOTS),
+    baseline(LEARN_KIND, W22_LEARN),
+    // The statistics object reads the tenant's prior document before it can
+    // answer a snapshot at all (`LearnStats.ts:513-514`), so the fixture
+    // publishes the empty one the engine ships.
+    baseline(PRIORS_KIND, EMPTY_PRIORS),
+    baseline(REFLEX_KIND, DEFAULT_REFLEX_CONFIG, reflexScopeForTenant(TENANT)),
+  ], '0:' + crypto.randomUUID());
+  invalidatePublicationCache();
+
+  const fetchOne = async (request: Request): Promise<Response> => app.fetch(request, env, {
+    waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {},
+  } as unknown as ExecutionContext);
+  const drain = async () => { while (pending.length) await Promise.all(pending.splice(0)); await new Promise(r => setTimeout(r, 5)); };
+  return { env, storage, queued, rings, stats, restartObjects: () => { for (const again of rebuild) again(); }, fetch: fetchOne, drain, operatorToken };
+}
+
+async function operatorGet(m: Mounted, path: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, { headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT } }));
+  return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
+async function operatorPost(m: Mounted, path: string, body: unknown = {}): Promise<{ status: number; body: Record<string, unknown> }> {
+  const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, {
+    method: 'POST', headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  }));
+  return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
+// ── the fixture's own records, minted the way the engine mints them ─────────
+
+/**
+ * A served decision. The id is the engine's own carrier shape
+ * (`{tenant}:{ts36}:{visitor}:…`, `src/ledger/writer.ts:40-45`), and the
+ * retention stamp is the one `captureRetention` writes on the request path.
+ */
+function decision(env: Env, visitor: string, ts: number, item: string, over: Partial<DecisionRecord> = {}): DecisionRecord {
+  return {
+    decision_id: `${TENANT}:${ts36(ts)}:${visitor}:home:hero:0`,
+    tenant: TENANT, brand: BRAND, visitor_id: visitor, session_id: `s-${visitor}`, identity_anchor: 'visitor', ts,
+    page: 'home', slot: 'hero', position: 0, item_id: item, customer_item_id: `CMS-${item}`, candidates: [],
+    cell: visitor.startsWith('u-') ? UNKNOWN_CELL : COACH_CELL, arm: 'personalized', explored: false, authority: 'engine',
+    versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'w22-b1',
+    explain: { drivers: [], score_base: 0, lift: null, score_final: 0 },
+    retention: captureRetention(env as never, TENANT, ts, ts),
+    ...over,
+  } as unknown as DecisionRecord;
+}
+
+/** A click on the item a visitor was served, with the engine's own event nonce. */
+function click(env: Env, d: DecisionRecord, ts: number, nonce: string): OutcomeRecord {
+  const outcome = outcomeFromAction({ type: 'content_click', userId: d.visitor_id, sessionId: d.session_id ?? undefined, timestamp: ts,
+    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: 'hero' } } as never, TENANT, BRAND)!;
+  return { ...outcome, retention: captureRetention(env as never, TENANT, ts, ts) } as OutcomeRecord;
+}
+
+/** A purchase: the reward whose policy window is seven days (F17 P4). */
+function purchase(env: Env, d: DecisionRecord, ts: number, nonce: string): OutcomeRecord {
+  const outcome = outcomeFromAction({ type: 'purchase', userId: d.visitor_id, sessionId: d.session_id ?? undefined, timestamp: ts,
+    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: 'hero', value: 795, currency: 'USD' } } as never, TENANT, BRAND)!;
+  return { ...outcome, retention: captureRetention(env as never, TENANT, ts, ts) } as OutcomeRecord;
+}
+
+/** Put the fixture on the queue with the real producer and write it with the real consumer. */
+async function throughTheLedger(m: Mounted, decisions: DecisionRecord[], outcomes: OutcomeRecord[], now = NOW): Promise<unknown[]> {
+  if (decisions.length) await enqueueDecisions(m.env, decisions);
+  for (const outcome of outcomes) await enqueueOutcome(m.env, outcome);
+  const wire = m.queued.splice(0);
+  const result = await consumeLedger(m.env, wire, now);
+  expect(result.error, 'the fixture ledger batch must be written by the real consumer').toBeUndefined();
+  expect(result.ok, 'the fixture ledger batch must be acknowledged by the real consumer').toBe(true);
+  return wire;
+}
+
+/** Every ledger row of one stream in the day, as the objects actually hold them. */
+function ledgerRows(m: Mounted, stream: 'decision' | 'outcome' | 'product-sort'): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  for (const [key, body] of m.storage.objects) {
+    if (!key.startsWith(`${TENANT}/${DATE}/`) || !key.includes(`/${stream}/`)) continue;
+    for (const line of body.split('\n')) if (line) rows.push(JSON.parse(line) as Record<string, unknown>);
+  }
+  return rows;
+}
+
+const dayObjects = (m: Mounted, stream: string): string[] =>
+  [...m.storage.objects.keys()].filter(key => key.startsWith(`${TENANT}/${DATE}/`) && key.includes(`/${stream}/`)).sort();
+
+// ── the ruled-but-absent members, read off the engine's own types (R21) ─────
+
+/** RULED, ABSENT TODAY (R21): W22.R1.01's one vocabulary for every drop path. */
+interface EvidenceLoss { since: number; producerFailed: number; consumerSkipped: number; fanOutRejected: number; retriesExhausted: number }
+const evidenceLossMember = (result: MonitorResult): EvidenceLoss | undefined => result.evidenceLoss;
+
+/** RULED, ABSENT TODAY (R21): W22.R1.04's scheduled cross-sink comparison. */
+interface SinkReconciliation {
+  since: number;
+  /** How many (brand, slot) pairs the run actually compared; zero is never a clean result. */
+  compared: number;
+  disagreements: Array<{ brand: string; slot: string; online: number; ledger: number; difference: number; threshold: number }>;
+}
+const reconciliationMember = (result: MonitorResult): SinkReconciliation | undefined => result.reconciliation;
+
+/** RULED, ABSENT TODAY (R21): W22.A1.01's one named, versioned attribution contract. */
+interface AttributionContract {
+  name: string;
+  version: number;
+  history: { scope: 'session' | 'visitor'; match: 'direct' | 'any'; credit: 'first' | 'last' };
+  /** What the tenant's published policy asks for, per reward. */
+  windowsMs: Record<string, number>;
+  /** What this path could actually read, per reward. Never larger than `windowsMs`. */
+  appliedWindowsMs: Record<string, number>;
+}
+const dayContract = (report: DayReport): AttributionContract | undefined => report.attributionContract;
+const windowContract = (report: WindowReport): AttributionContract | undefined => report.attributionContract;
+const snapshotContract = (snapshot: LiftSnapshot): AttributionContract | undefined => snapshot.attributionContract;
+
+/**
+ * The shipped screens run under jsdom; the repository's tsconfig carries the
+ * Workers lib and no DOM lib, so the handful of browser shapes this file uses
+ * are declared here, as `src/units/W20/B1.unit.test.ts` declares its own.
+ */
+interface ScreenElement { value: string; textContent: string | null; dispatchEvent: (event: unknown) => void }
+interface ScreenWindow extends Record<string, unknown> {
+  document: { body: { textContent: string | null }; getElementById: (id: string) => ScreenElement | null };
+  Event: new (type: string, options: Record<string, unknown>) => unknown;
+  localStorage: { setItem: (key: string, value: string) => void };
+  eval: (code: string) => unknown;
+  close: () => void;
+}
+
+/** The sentence a ruled-but-absent member produces, so the failure names it. */
+const absent = (what: string, carrier: object): string => `absent: ${what} (the answer carries ${Object.keys(carrier).sort().join(', ')})`;
+
+// ===========================================================================
+// unit:W22.D1.01 — dedup before caps, on every read path
+// ===========================================================================
+
+describe('unit:W22.D1.01', () => {
+  /**
+   * F16 §2.1 measured the duplication: the same message consumed twice leaves
+   * "two objects, two rows" with the same `outcome_id`. §2.6 measured the fix:
+   * "Read-time dedup restores the clean numbers exactly". §7.1 rules where the
+   * count goes: "count the skips into the report … so the rate is visible
+   * instead of silent". §5(e) rules that the skip must happen BEFORE the cap,
+   * because duplicates counted against `MAX_HOUR_OBJECTS` / `REPORT_CAP`
+   * "silently drop real records from the fold".
+   */
+  it('logic: the day report, the hourly fold and the window report read the distinct rows of a duplicated ledger and name the count they dropped, and a duplicate never consumes a cap a real row needed', async () => {
+    const m = await mount();
+    const first = [
+      decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
+      decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
+    ];
+    const second = [
+      decision(m.env, 'v-charms', T12 + 180_000, 'cnt-charms-slg'),
+      decision(m.env, 'u-unknown', T12 + 240_000, 'cnt-tabby-evening'),
+    ];
+    const decisions = [...first, ...second];
+    const outcomes = [click(m.env, decisions[0]!, T12 + 300_000, 'w22-b1-click-tabby')];
+    // Two consumer batches, so the hour holds two legitimate decision objects.
+    const wire = await throughTheLedger(m, first, outcomes);
+    await throughTheLedger(m, second, []);
+
+    // The ledger as F16 §2.1 measured it: the same message consumed twice
+    // leaves "two objects, two rows" under a second batch id (`consume.ts:22`,
+    // `writer.ts:60`), and nothing on the write path prevents it.
+    expect((await consumeLedger(m.env, wire, NOW)).ok, 'the redelivery is acknowledged by the real consumer').toBe(true);
+    expect(dayObjects(m, 'decision').length,
+      'the fixture ledger holds the duplicated object F16 §2.1 measured, beside the two legitimate ones').toBe(3);
+
+    // 1. The direct-record recomputation (`runReport`, `report.ts:loadDay`).
+    const fromRecords = await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, m.env as never);
+    expect({ decisions: fromRecords.counts.decisions, outcomes: fromRecords.counts.outcomes, visitors: fromRecords.counts.visitors },
+      'W22.D1.01 — the day report reads the four distinct decisions and the one distinct click of a ledger that holds each of them twice (F16 §2.6)')
+      .toEqual({ decisions: 4, outcomes: 1, visitors: 4 });
+    expect(fromRecords.counts.duplicates,
+      'W22.D1.01 — and it names what it dropped, in the engine\'s own vocabulary `counts.duplicates` (F16 §7.1)')
+      .toEqual({ decisions: 2, outcomes: 1 });
+
+    // 2. The hourly fold (`buildHour` → `loadHourRecords`), then the day from
+    //    its hours, the way the cron publishes it (`src/index.ts:272`).
+    const hour = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, {}, m.env as never);
+    expect({ decisions: hour.brands[BRAND]?.decisions, outcomes: hour.brands[BRAND]?.outcomes },
+      'W22.D1.01 — the hourly fold counts each logical event once (F16 §2.6, hourly.ts:loadHourRecords)')
+      .toEqual({ decisions: 4, outcomes: 1 });
+    expect(hour.brands[BRAND]?.duplicates,
+      'W22.D1.01 — and the hour names what it dropped, in the same vocabulary as the day report')
+      .toEqual({ decisions: 2, outcomes: 1 });
+    const fromHours = await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, {}, m.env as never);
+    expect({ decisions: fromHours.counts.decisions, outcomes: fromHours.counts.outcomes, duplicates: fromHours.counts.duplicates },
+      'W22.D1.01 — the day built from its hours reports the same distinct numbers and the same dropped count')
+      .toEqual({ decisions: 4, outcomes: 1, duplicates: { decisions: 2, outcomes: 1 } });
+
+    // 3. The window report pools the saved day: the duplicated rows must not
+    //    reach the pooled arms either (F16 §2.7 — duplication shrinks the
+    //    interval and can call a win the evidence does not support).
+    const window = await windowReport(m.storage as never, { tenant: TENANT, brand: BRAND, from: DATE, to: DATE });
+    expect(window.slots.hero?.arms.map(row => ({ arm: row.arm, n: row.n, s: row.s })),
+      'W22.D1.01 — the window pools the distinct rows: four personalized decisions and one credit')
+      .toEqual([{ arm: 'personalized', n: 4, s: 1 }]);
+
+    // 4. BEFORE the cap. The day holds four distinct decision rows and four
+    //    duplicates; a reader capped at exactly four records must return the
+    //    four DISTINCT rows, not four of the eight stored ones (F16 §5(e)).
+    const capped = await loadDay<DecisionRecord>(m.storage as never, TENANT, DATE, 'decision', 4);
+    expect(capped.records.map(row => row.decision_id).sort(),
+      'W22.D1.01 — the cap is applied to the distinct rows, after the duplicate is skipped (F16 §5(e), §7.1)')
+      .toEqual(decisions.map(row => row.decision_id).sort());
+    expect(capped.truncated, 'W22.D1.01 — and a day whose distinct rows fit the cap is not reported truncated').toBe(false);
+
+    // 5. The same rule on the hour's OBJECT cap. The hour holds five objects —
+    //    three decision objects (one of them the byte-identical redelivery) and
+    //    two outcome objects (one of them the same redelivery) — read under a
+    //    cap of four. Every distinct row of the hour must still be counted: a
+    //    duplicate object may not consume the cap in place of a real one.
+    expect([...m.storage.objects.keys()].filter(key => key.startsWith(`${TENANT}/${DATE}/${HOUR}/`)).length,
+      'the fixture hour holds five objects, one decision object and one outcome object of them duplicates').toBe(5);
+    const hourCapped = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, { maxObjects: 4 }, m.env as never);
+    expect({ decisions: hourCapped.brands[BRAND]?.decisions, outcomes: hourCapped.brands[BRAND]?.outcomes },
+      'W22.D1.01 — a duplicate object never consumes the hour\'s object cap in place of a real one (F16 §5(e): duplicates "can push a legitimate hour into truncated:true and silently drop real records")')
+      .toEqual({ decisions: 4, outcomes: 1 });
+  });
+
+  it('host: the mounted operator report route answers the distinct numbers over a duplicated ledger and names the dropped count', async () => {
+    const m = await mount();
+    const decisions = [
+      decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
+      decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
+    ];
+    const wire = await throughTheLedger(m, decisions, [click(m.env, decisions[1]!, T12 + 200_000, 'w22-b1-click-rogue')]);
+    expect((await consumeLedger(m.env, wire, NOW)).ok, 'the redelivery is acknowledged by the real consumer').toBe(true);
+
+    const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect(built.status, `the report route answers: ${JSON.stringify(built.body).slice(0, 300)}`).toBe(200);
+    const report = (built.body as { report: DayReport }).report;
+    expect({ decisions: report.counts.decisions, outcomes: report.counts.outcomes, duplicates: report.counts.duplicates },
+      'W22.D1.01 — POST /v1/:tenant/learn/report reports the two distinct decisions, the one distinct outcome, and the copies it dropped')
+      .toEqual({ decisions: 2, outcomes: 1, duplicates: { decisions: 2, outcomes: 1 } });
+
+    const saved = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${DATE}&brand=${BRAND}`);
+    expect(saved.status, `the saved report reads back: ${JSON.stringify(saved.body).slice(0, 300)}`).toBe(200);
+    expect((saved.body as { report: DayReport }).report.counts.duplicates,
+      'W22.D1.01 — and the canonical report an operator reads later carries the same dropped count')
+      .toEqual({ decisions: 2, outcomes: 1 });
+  });
+});
+
+// ===========================================================================
+// unit:W22.D1.02 — online idempotence across calls
+// ===========================================================================
+
+/**
+ * F16 §2.3 measured the online duplication on the real classes: "credits,
+ * outcome delivery #1 / #2 : 1 / 1 (same outcome_id both times)" and an
+ * exposure counted twice because "`fan.ts:81` discards decision IDs from
+ * exposure payloads". §7 rules the fix: "carry a bounded set of recently
+ * credited `outcome_id`s in `DecisionRing`'s stored state … and put
+ * `decision_id` back into the `/exposures` payload so `LearnStats` can do the
+ * same". R104(c): bounded, pruned with the ring's own horizon — this unit
+ * redelivers inside the horizon and never claims a repeat beyond it.
+ *
+ * Leg `host-internal` (R19): the observable is the published lift snapshot of
+ * the statistics object, which no public route exposes for a single slot; the
+ * unit drives the REAL `DecisionRing` and `LearnStats` classes through the real
+ * fan the request path runs (`src/content/service.ts:473` → `fanDecisions`,
+ * `src/learn/route.ts:40` → `fanOutcome`). The row names the missing public
+ * observable.
+ */
+describe('unit:W22.D1.02', () => {
+  const slotConfig = () => ({ reward: 'click' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+
+  const snapshotOf = async (m: Mounted): Promise<LiftSnapshot | null> => {
+    const namespace = m.env.LEARN_STATS!;
+    const response = await namespace.get(namespace.idFromName(statsName(TENANT, BRAND, 'hero'))).fetch('https://learn/snapshot');
+    const body = await response.json() as { snapshot: LiftSnapshot | null };
+    return body.snapshot;
+  };
+  const counts = (snapshot: LiftSnapshot | null) => ({
+    item: snapshot?.items['cnt-tabby-evening']?.['*'] ? { n: snapshot.items['cnt-tabby-evening']!['*']!.n, s: snapshot.items['cnt-tabby-evening']!['*']!.s } : null,
+    slot: snapshot?.slotRates['*'] ? { n: snapshot.slotRates['*']!.n, s: snapshot.slotRates['*']!.s } : null,
+  });
+
+  it('host-internal: a redelivered exposure and a redelivered outcome leave the published lift snapshot exactly where one delivery leaves it, across a restart of both objects', async () => {
+    // The control: one delivery of each, on its own pair of objects.
+    const control = await mount();
+    const d0 = decision(control.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+    const o0 = click(control.env, d0, ONLINE_TS + 60_000, 'w22-b1-online-click');
+    const exposed = await fanDecisions(control.env, { tenant: TENANT, brand: BRAND, visitor_id: d0.visitor_id, records: [d0] }, slotConfig);
+    const credited = await fanOutcome(control.env, TENANT, o0, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await control.drain();
+    expect({ exposures: exposed.exposures.processed, credits: credited.outcome?.credits.processed },
+      'the control pair must have taken exactly one exposure and one credit before anything is compared')
+      .toEqual({ exposures: 1, credits: 1 });
+    const once = counts(await snapshotOf(control));
+    expect(once.item && once.item.n > 0 && once.item.s > 0,
+      `the control snapshot must hold that exposure and that credit: ${JSON.stringify(once)}`).toBe(true);
+
+    // The subject: the same two deliveries, each repeated — the at-least-once
+    // redelivery F16 §2.3 measured — with a restart of both objects between the
+    // first and the second, so the journal has to be durable, not in memory.
+    const subject = await mount();
+    const d1 = decision(subject.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+    const o1 = click(subject.env, d1, ONLINE_TS + 60_000, 'w22-b1-online-click');
+    await fanDecisions(subject.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] }, slotConfig);
+    await fanOutcome(subject.env, TENANT, o1, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await subject.drain();
+    subject.restartObjects();
+    await fanDecisions(subject.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] }, slotConfig);
+    await fanOutcome(subject.env, TENANT, o1, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await subject.drain();
+
+    const twice = counts(await snapshotOf(subject));
+    const why = 'W22.D1.02 — one redelivered exposure and one redelivered outcome must leave the published snapshot where a single delivery leaves it: `LearnStats` counts the exposure once because the `/exposures` payload carries the decision\'s logical id (F16 §7, fan.ts:330), and `DecisionRing` credits the outcome once because a bounded journal of recently credited `outcome_id`s is consulted before `attribute()` (F16 §7, §2.3). One delivery: '
+      + `${JSON.stringify(once)}; after the redelivery: ${JSON.stringify(twice)}`;
+    // The counters decay against the wall clock, so the two snapshots are
+    // compared to five decimals, not to the bit: the difference a second
+    // delivery makes is a whole exposure and a whole credit.
+    expect(twice.item, why).toBeTruthy();
+    expect(twice.item!.n, why).toBeCloseTo(once.item!.n, 5);
+    expect(twice.item!.s, why).toBeCloseTo(once.item!.s, 5);
+    expect(twice.slot!.n, why).toBeCloseTo(once.slot!.n, 5);
+    expect(twice.slot!.s, why).toBeCloseTo(once.slot!.s, 5);
+
+    // The ring itself already refuses a duplicate append; the unit states it so
+    // the two halves of the online path are read as one representation.
+    const ring = subject.env.DECISION_RING!;
+    const recent = await ring.get(ring.idFromName(ringName(TENANT, d1.visitor_id))).fetch('https://ring/recent');
+    const held = await recent.json() as { ring: DecisionRecord[] };
+    expect(held.ring.map(row => row.decision_id),
+      'W22.D1.02 — and the visitor\'s ring holds the served decision exactly once after the redelivery')
+      .toEqual([d1.decision_id]);
+  });
+});
+
+// ===========================================================================
+// unit:W22.D1.03 — collision and retry
+// ===========================================================================
+
+describe('unit:W22.D1.03', () => {
+  /**
+   * Three faults document 35 §5 row W22 names together — "ID collision/retry
+   * … partial writes":
+   *  (a) a retry of the same logical event with the same canonical bytes is a
+   *      no-op on every sink (F16 §2.1 measured the opposite: two objects);
+   *  (b) two DIFFERENT events that collide on one logical id are never merged:
+   *      the second is refused or quarantined and NAMED (F16 §5(j));
+   *  (c) a batch write that fails midway is retried to completeness with no
+   *      duplicate and no lost row (F16 §2.2 measured three objects for two
+   *      outcomes after one mid-batch R2 error).
+   */
+  it('host: an identical retry is a no-op on every sink, a colliding but different event is refused and named, and a batch that failed midway is retried to completeness', async () => {
+    const m = await mount();
+    const d1 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const d2 = decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work');
+    const o1 = click(m.env, d1, T12 + 300_000, 'w22-b1-retry-click');
+    const wire = await throughTheLedger(m, [d1, d2], [o1]);
+    const objectsAfterFirst = [...m.storage.objects.keys()].sort();
+
+    // (a) the identical retry, the same canonical bytes, through the real consumer.
+    const again = await consumeLedger(m.env, wire, NOW);
+    expect(again.ok, 'the retry is acknowledged, not left to loop').toBe(true);
+    expect([...m.storage.objects.keys()].sort(),
+      'W22.D1.03 — a retry of the same logical events writes no new ledger object (canonical equality and conditional identity, src/ledger/delivery.ts, writer.ts)')
+      .toEqual(objectsAfterFirst);
+    expect(ledgerRows(m, 'decision').map(row => row.decision_id as string).sort(),
+      'W22.D1.03 — and no row is stored twice by the retry').toEqual([d1.decision_id, d2.decision_id].sort());
+    const afterRetry = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect((afterRetry.body as { report: DayReport }).report.counts.decisions,
+      'W22.D1.03 — the day report is unmoved by the retry').toBe(2);
+
+    // (b) two DIFFERENT events on one logical id (F16 §5(j)): same
+    //     `outcome_id`, a different item. The engine must never merge them.
+    const collision = { ...o1, item_id: 'cnt-rogue-work' } as OutcomeRecord;
+    const collided = await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW);
+    expect(collided.skipped >= 1 || collided.ok === false,
+      'W22.D1.03 — a second, different event carrying an already-written logical id is refused by the consumer, never written beside the first (canonical equality, src/ledger/delivery.ts)')
+      .toBe(true);
+    expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id),
+      'W22.D1.03 — and the stored ledger still holds exactly the first event under that id')
+      .toEqual([o1.item_id]);
+    const named = await operatorGet(m, `/v1/${TENANT}/ledger/quarantine`);
+    expect(named.status === 200 || named.status === 404,
+      `W22.D1.03 — the refusal is named on an operator surface, not swallowed (the quarantine listing answered ${named.status})`).toBe(true);
+
+    // (c) the partial batch of F16 §2.2: R2 accepts the first object of the
+    //     batch and throws on the second, then the whole batch is retried.
+    const p = await mount();
+    const late = decision(p.env, 'v-charms', T12 + HOUR_MS + 60_000, 'cnt-charms-slg');   // hour 13
+    const early = decision(p.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');          // hour 12
+    await enqueueDecisions(p.env, [early, late]);
+    const partial = p.queued.splice(0);
+    let seen = 0;
+    p.storage.failPutFrom = (key: string) => key.includes('/decision/') && ++seen === 2;
+    const firstRun = await consumeLedger(p.env, partial, NOW);
+    expect(firstRun.ok, 'the interrupted batch is not acknowledged').toBe(false);
+    p.storage.failPutFrom = null;
+    const retry = await consumeLedger(p.env, partial, NOW);
+    expect(retry.ok, 'the retried batch is acknowledged').toBe(true);
+    const stored = [...p.storage.objects.keys()].filter(key => key.includes('/decision/'));
+    const rows = stored.flatMap(key => p.storage.objects.get(key)!.split('\n').filter(Boolean).map(line => JSON.parse(line) as DecisionRecord));
+    expect(rows.map(row => row.decision_id).sort(),
+      'W22.D1.03 — a batch that failed midway is retried to completeness: both rows are stored, neither twice (F16 §2.2 measured three objects for two rows)')
+      .toEqual([early.decision_id, late.decision_id].sort());
+    expect(stored.length,
+      `W22.D1.03 — and the retry does not leave an extra object behind (${stored.join(', ')})`).toBe(2);
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.01 — loss is never silent
+// ===========================================================================
+
+describe('unit:W22.R1.01', () => {
+  /**
+   * N10: "Producer rejection, partial filtering, whole-message discard/ack, and
+   * exhausted consumer retries are not comprehensively reconciled; no DLQ is
+   * declared in the three consumer configurations." F16 §7.2-7.4 rules the
+   * remedy. R104(d): the DLQ is a DECLARATION in the manifest; creating the
+   * queue is provisioning at deployment and is a deployment dependency named in
+   * the row, not something this unit can prove.
+   */
+  it('logic: the manifest declares a dead-letter queue on each of the three event-queue consumers, and the dead-letter queue it names is itself consumed', () => {
+    const manifest = readFileSync('wrangler.toml', 'utf8');
+    const blocks = [...manifest.matchAll(/\[\[(?:env\.[a-z]+\.)?queues\.consumers\]\]([\s\S]*?)(?=\n\[|$)/g)].map(match => match[1]!);
+    const queueOf = (block: string) => /^queue\s*=\s*"([^"]+)"/m.exec(block)?.[1] ?? '';
+    const dlqOf = (block: string) => /^dead_letter_queue\s*=\s*"([^"]+)"/m.exec(block)?.[1] ?? null;
+    const consumed = new Set(blocks.map(queueOf));
+    const sources = blocks.filter(block => !queueOf(block).includes('dead-letter'));
+    expect(sources.map(queueOf),
+      'the manifest declares one event-queue consumer per environment (F16 §5(a): wrangler.toml:29-34, :250-255, :348-353)')
+      .toEqual(['events', 'events-staging', 'events-production']);
+    expect(sources.map(block => `${queueOf(block)} → ${dlqOf(block) ?? 'NO dead_letter_queue'}`),
+      'W22.R1.01 — every event-queue consumer declares a dead-letter queue, so a message whose retries are exhausted stops vanishing (N10; F16 §5(a), §7.2)')
+      .toEqual(['events → events-dead-letter', 'events-staging → events-staging-dead-letter', 'events-production → events-production-dead-letter']);
+    expect(sources.map(block => consumed.has(dlqOf(block) ?? '')),
+      'W22.R1.01 — and each declared dead-letter queue is itself consumed, so a dead-lettered row is read by something')
+      .toEqual([true, true, true]);
+  });
+
+  it('host: a producer send failure, a consumer-skipped row, a non-OK fan-out post and an exhausted retry are each counted in one vocabulary on the operator surface, and a tenant that lost nothing reads zero', async () => {
+    const clean = await mount();
+    const quiet = await operatorPost(clean, `/v1/${TENANT}/monitor`);
+    expect(quiet.status, `the monitor run answers: ${JSON.stringify(quiet.body).slice(0, 300)}`).toBe(200);
+    const quietLoss = evidenceLossMember((quiet.body as { result: MonitorResult }).result) ?? absent('`MonitorResult.evidenceLoss`', (quiet.body as { result: object }).result);
+    expect(typeof quietLoss === 'string' ? quietLoss : { ...quietLoss, since: undefined },
+      'W22.R1.01 — the monitor reports the tenant\'s evidence-loss counters, and a tenant that lost nothing reads zero on every path, never an absent member (ruled member: `MonitorResult.evidenceLoss`)')
+      .toEqual({ since: undefined, producerFailed: 0, consumerSkipped: 0, fanOutRejected: 0, retriesExhausted: 0 });
+
+    // 1. The producer's own failure: an outage on `queue.send`
+    //    (`src/ledger/enqueue.ts` sendAll → `queue_unavailable`).
+    const lossy = await mount({ queueFails: true });
+    const d1 = decision(lossy.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const produced = await enqueueDecisions(lossy.env, [d1]);
+    expect(produced.code, 'the producer reports the outage on its receipt').toBe('queue_unavailable');
+
+    // 2. The consumer's skipped row: an envelope the writer cannot place
+    //    (`src/ledger/consume.ts:20`, `src/index.ts:264`).
+    const skipped = await consumeLedger(lossy.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: { outcome_id: 'not-a-carrier', tenant: TENANT } }], NOW);
+    expect(skipped.skipped, 'the consumer reports the row it could not place').toBe(1);
+
+    // 3. The fan-out post that was not accepted: the statistics object answers
+    //    500 (F16 §5(c) — `post()` never checked `res.ok`).
+    const rejecting = await mount({ statsStatus: () => 500 });
+    const d2 = decision(rejecting.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work');
+    const fan = await fanDecisions(rejecting.env, { tenant: TENANT, brand: BRAND, visitor_id: d2.visitor_id, records: [d2] },
+      () => ({ reward: 'click', stats: DEFAULT_STATS, objective: 'unit', measurementBasis: 'served-v1' }));
+    expect(fan.ok, 'the fan-out reports that the exposure was not accepted').toBe(false);
+
+    // 4. The exhausted retry: the message the dead-letter consumer captured
+    //    (`src/index.ts:332-336` → `captureQuarantine`).
+    await captureQuarantine(lossy.env, 'events-dead-letter', 'w22-b1-dead-letter-1',
+      { kind: 'ledger', type: 'outcome', version: 1, record: click(lossy.env, d1, T12 + 300_000, 'w22-b1-dead-click') });
+
+    for (const [label, host, expected] of [
+      ['the tenant whose producer, consumer and dead-letter path lost rows', lossy, { producerFailed: 1, consumerSkipped: 1, fanOutRejected: 0, retriesExhausted: 1 }],
+      ['the tenant whose statistics object refused the exposure', rejecting, { producerFailed: 0, consumerSkipped: 0, fanOutRejected: 1, retriesExhausted: 0 }],
+    ] as const) {
+      const run = await operatorPost(host, `/v1/${TENANT}/monitor`);
+      expect(run.status, `the monitor run answers: ${JSON.stringify(run.body).slice(0, 300)}`).toBe(200);
+      const loss = evidenceLossMember((run.body as { result: MonitorResult }).result) ?? absent('`MonitorResult.evidenceLoss`', (run.body as { result: object }).result);
+      expect(typeof loss === 'string' ? loss : { producerFailed: loss.producerFailed, consumerSkipped: loss.consumerSkipped, fanOutRejected: loss.fanOutRejected, retriesExhausted: loss.retriesExhausted },
+        `W22.R1.01 — ${label}: every drop path is counted in one named vocabulary an operator reads (F16 §7.3, §7.4; N10). Ruled member: \`MonitorResult.evidenceLoss\``)
+        .toEqual(expected);
+      expect(typeof loss === 'string' ? loss : Number.isSafeInteger(loss.since) && loss.since > 0,
+        'W22.R1.01 — and the counters state the horizon they count from').toBe(true);
+    }
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.02 — late arrivals are re-folded
+// ===========================================================================
+
+describe('unit:W22.R1.02', () => {
+  /**
+   * F17 P1: an outcome delivered into an hour already folded "is durably in R2,
+   * is never read again, is counted nowhere, and no field of the report says a
+   * repair is pending". §6 item 1 rules the cheap close: `HourAggregate`
+   * already stores `objects`, so `catchUp` can list the hour prefix and rebuild
+   * when the count exceeds it. F17 P3b: `folded = ctx.from > state.through`
+   * (`hourly.ts:291`) is a monotonic high-water mark, so a repaired hour can
+   * never put its decisions into the rings; §6 item 2 rules a per-hour set.
+   * F17 P7: the day's distinct-visitor count must survive an out-of-order
+   * repair.
+   *
+   * The fold is the cron's, run exactly as `src/index.ts:270-277` runs it; the
+   * observable is read through the mounted operator report route.
+   */
+  /**
+   * The cron's own call (`src/index.ts:272`), with the lookback narrowed to the
+   * hours this fixture writes. The cron's defaults (26 hours of candidates, two
+   * hours per run) reach the same hours over successive five-minute runs; F17's
+   * own probe narrowed them for the same reason ("my first attempt failed to
+   * reproduce because `catchUp`'s default `maxHours: 2` had not yet reached
+   * hour 12").
+   */
+  const fold = (m: Mounted, now: number) => catchUp(m.storage as never, TENANT, W22_LEARN, now, { lookbackHours: 4, maxHours: 4 }, m.env as never);
+
+  it('host: an hour whose ledger grew after it was folded is folded again, a failed hour repaired after a later hour still credits across the hour boundary, and the day\'s distinct visitors survive an out-of-order repair', async () => {
+    // ── P1: the late arrival ────────────────────────────────────────────────
+    const m = await mount();
+    const d1 = decision(m.env, 'v-tabby', T12 + 10 * 60_000, 'cnt-tabby-evening');
+    await throughTheLedger(m, [d1], []);
+    await fold(m, T12 + HOUR_MS + 5 * 60_000 + 1000);                // 13:05, hour 12 closes
+    expect(m.storage.objects.has(hourKey(TENANT, DATE, HOUR)), 'hour 12 is folded before the late row arrives').toBe(true);
+
+    const lateClick = click(m.env, d1, T12 + 30 * 60_000, 'w22-b1-late-click');   // happened 12:30
+    await throughTheLedger(m, [], [lateClick], T12 + HOUR_MS + 6 * 60_000);       // written at 13:06
+    await fold(m, T12 + HOUR_MS + 10 * 60_000);                                   // 13:10
+
+    const afterLate = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect(afterLate.status, `the report route answers: ${JSON.stringify(afterLate.body).slice(0, 300)}`).toBe(200);
+    const late = (afterLate.body as { report: DayReport }).report;
+    expect({ decisions: late.counts.decisions, outcomes: late.counts.outcomes },
+      'W22.R1.02 — a record delivered into an already-folded hour, inside the maturity window, is counted after the next catch-up: the hour\'s stored object count is compared with the prefix and the hour is rebuilt (F17 P1, §6 item 1)')
+      .toEqual({ decisions: 1, outcomes: 1 });
+    expect(late.policies.find(row => row.role === 'learning')?.credits,
+      'W22.R1.02 — and the credit the late click earns is in the day\'s learning policy').toBe(1);
+
+    // ── P3b: the failed hour repaired after a later hour ────────────────────
+    const r = await mount();
+    const d12 = decision(r.env, 'v-rogue', T12 + 59 * 60_000, 'cnt-rogue-work');            // 12:59
+    const d13 = decision(r.env, 'v-rogue', T12 + HOUR_MS + 5 * 60_000, 'cnt-tabby-evening'); // 13:05
+    const c14 = click(r.env, d12, T12 + 2 * HOUR_MS + 60_000, 'w22-b1-cross-hour');          // 14:01, on the 12:59 item
+    await throughTheLedger(r, [d12, d13], [c14]);
+    const twelve = dayObjects(r, 'decision').find(key => key.startsWith(`${TENANT}/${DATE}/12/`))!;
+    const held = r.storage.objects.get(twelve)!;
+    r.storage.objects.delete(twelve);                                   // hour 12 unreadable on the first run
+    await fold(r, T12 + 3 * HOUR_MS);                                   // folds 13 and 14 without 12
+    r.storage.objects.set(twelve, held);                                // the hour is readable again
+    await fold(r, T12 + 3 * HOUR_MS + 60_000);                          // the repair run
+
+    const repaired = await operatorPost(r, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const repairedReport = (repaired.body as { report: DayReport }).report;
+    expect(repairedReport.counts.decisions,
+      'W22.R1.02 — the repaired hour\'s decisions are counted').toBe(2);
+    expect(repairedReport.policies.find(row => row.role === 'learning')?.credits,
+      'W22.R1.02 — and its cross-hour credit survives the repair: the folded hours are a per-hour set, not a monotonic high-water mark, so a repaired hour still enters the visitor\'s ring (F17 P3b, §6 item 2; hourly.ts:291 `folded = ctx.from > state.through`)')
+      .toBe(1);
+
+    // ── P7: the distinct-visitor count across an out-of-order repair ────────
+    const v = await mount();
+    const previous = Date.UTC(2026, 8, 2, 23, 0, 0);
+    const yesterday = decision(v.env, 'v-charms', previous + 10 * 60_000, 'cnt-charms-slg');
+    const today = [
+      decision(v.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
+      decision(v.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
+      decision(v.env, 'u-unknown', T12 + HOUR_MS + 60_000, 'cnt-tabby-evening'),
+      decision(v.env, 'v-charms', T12 + HOUR_MS + 120_000, 'cnt-charms-slg'),
+    ];
+    await enqueueDecisions(v.env, [yesterday, ...today]);
+    const wire = v.queued.splice(0);
+    const yesterdayKeyMissing = await consumeLedger(v.env, wire, NOW);
+    expect(yesterdayKeyMissing.ok, 'the two-day fixture is written').toBe(true);
+    await buildHour(v.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, T12 + 2 * HOUR_MS, {}, v.env as never);
+    await buildHour(v.storage as never, TENANT, { date: '2026-09-02', hour: 23 }, W22_LEARN, T12 + 2 * HOUR_MS, {}, v.env as never)
+      .catch(() => undefined);   // the out-of-order repair of the previous day
+    await buildHour(v.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W22_LEARN, T12 + 3 * HOUR_MS, {}, v.env as never);
+    const visitors = await runDayReport(v.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, T12 + 3 * HOUR_MS, {}, v.env as never);
+    expect(visitors.counts.visitors,
+      'W22.R1.02 — the day\'s distinct-visitor count survives an out-of-order repair across a date boundary: four visitors were served on this date (F17 P7 measured four where eight were served)')
+      .toBe(4);
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.03 — explicit completeness reaches the reader
+// ===========================================================================
+
+describe('unit:W22.R1.03', () => {
+  /**
+   * F17 §3.4: the honesty signals exist on the aggregate and die before they
+   * reach a human — `windowReport` "drops every honesty signal except missing
+   * days", and neither screen renders `hours.missing` or `hours.horizonMs`.
+   * §6 item 4 rules the fix: the unfolded / `ringsFolded: false` / truncated
+   * hour lists on `DayReport.hours`, the same fields on `WindowReport`, and
+   * both rendered.
+   */
+  /** A day whose hour 12 is folded but whose rings did not advance, and whose hour 13 was never folded. */
+  async function incompleteDay(m: Mounted): Promise<void> {
+    const d12 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const d13 = decision(m.env, 'v-rogue', T12 + HOUR_MS + 60_000, 'cnt-rogue-work');
+    await throughTheLedger(m, [d12, d13], []);
+    // Hour 13 first: the shard's high-water mark then leaves hour 12's fold
+    // with `ringsFolded: false` (hourly.ts:291, :126, :400).
+    await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W22_LEARN, NOW, {}, m.env as never);
+    await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, {}, m.env as never);
+    const twelve = JSON.parse(m.storage.objects.get(hourKey(TENANT, DATE, HOUR))!) as { ringsFolded: boolean };
+    expect(twelve.ringsFolded, 'the fixture exists to carry an hour whose rings did not advance').toBe(false);
+  }
+
+  it('host: the day report and the window report list the hours that were never folded and the hours whose rings did not advance', async () => {
+    const m = await mount();
+    await incompleteDay(m);
+    await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, {}, m.env as never);
+
+    const day = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${DATE}&brand=${BRAND}`);
+    expect(day.status, `the saved day report reads back: ${JSON.stringify(day.body).slice(0, 300)}`).toBe(200);
+    const coverage = (day.body as { report: DayReport }).report.coverage;
+    expect(coverage?.unadvancedHours,
+      'W22.R1.03 — the day report names the hour whose rings did not advance, so `ringsFolded: false` reaches the reader (F17 §6 item 4; P3b measured "report mentions ringsFolded anywhere: false")')
+      .toEqual([HOUR]);
+    expect(coverage?.status,
+      'W22.R1.03 — and such a day is declared incomplete, never final').toBe('incomplete');
+
+    const window = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${DATE}&to=${DATE}&brand=${BRAND}`);
+    expect(window.status, `the window answers: ${JSON.stringify(window.body).slice(0, 300)}`).toBe(200);
+    const pooled = (window.body as { report: WindowReport }).report;
+    expect(pooled.coverage.days.map(entry => ({ date: entry.date, unadvancedHours: entry.coverage.unadvancedHours, truncatedHours: entry.coverage.truncatedHours })),
+      'W22.R1.03 — the window report carries the same honesty signals per day, instead of dropping every one but missing days (F17 §3.4)')
+      .toEqual([{ date: DATE, unadvancedHours: [HOUR], truncatedHours: [] }]);
+    expect(pooled.coverage.status,
+      'W22.R1.03 — and the window over an incomplete day is declared incomplete').toBe('incomplete');
+  });
+
+  it('sdk: neither shipped screen renders a report over an incomplete hour as complete', async () => {
+    const m = await mount();
+    await incompleteDay(m);
+    await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, {}, m.env as never);
+
+    const screens: Array<{ name: string; text: string }> = [];
+    for (const screen of ['console', 'legacy'] as const) {
+      const page = screen === 'console' ? 'console/index.html' : 'legacy/learning.html';
+      const dom = new JSDOM(readFileSync(`public/${page}`, 'utf8'),
+        { url: `${OPERATOR_ORIGIN}/${screen === 'console' ? `console/#/measure?scope=${TENANT}&date=${DATE}` : `legacy/learning.html?scope=${TENANT}&brand=${BRAND}&slot=hero`}`, pretendToBeVisual: true, runScripts: 'outside-only' });
+      const w = dom.window as unknown as ScreenWindow;
+      w.fetch = async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
+        const target = new URL(url, `${OPERATOR_ORIGIN}/`);
+        return m.fetch(new Request(OPERATOR_ORIGIN + target.pathname + target.search, {
+          method: init?.method ?? 'GET', headers: init?.headers ?? {}, ...(init?.body === undefined ? {} : { body: init.body }),
+        }));
+      };
+      w.TextEncoder = TextEncoder;
+      w.setInterval = () => 1;
+      w.localStorage.setItem('operator-session', JSON.stringify({ accessToken: m.operatorToken, refreshToken: 'w22-b1-refresh',
+        exp: Date.now() + 3_600_000, user: { id: 'ops', name: 'Operator', email: 'ops@brand.test', roles: ['admin'], tenants: [TENANT] }, mustChangePassword: false }));
+      const scripts = screen === 'console'
+        ? ['operator-session.js', 'console/shell.js', 'console/views.js', 'console/views-config.js', 'console/views-measure.js', 'console/views-accounts.js', 'console/views-explore.js']
+        : ['operator-session.js', 'learning.js'];
+      for (const script of scripts) w.eval(readFileSync(`public/${script}`, 'utf8'));
+      const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 12)); };
+      await settle();
+      if (screen === 'legacy') {
+        // The retained learning screen builds the day on demand: the operator
+        // picks the date and presses the button the page ships.
+        const date = w.document.getElementById('report-date');
+        expect(date, 'the retained learning screen ships a date control').toBeTruthy();
+        date!.value = DATE;
+        date!.dispatchEvent(new w.Event('change', { bubbles: true }));
+        await settle();
+      }
+      screens.push({ name: page, text: (w.document.body.textContent ?? '').replace(/\s+/g, ' ') });
+      w.close();
+    }
+
+    for (const screen of screens) {
+      expect(screen.text.includes('Ring progress not advanced') || /unfolded|ringsFolded|did not advance/i.test(screen.text),
+        `W22.R1.03 — the shipped screen ${screen.name} must say that this day was built over an hour whose rings did not advance, so an operator cannot read it as complete (F17 §3.4, §6 item 4). It rendered: ${screen.text.slice(0, 400)}`)
+        .toBe(true);
+      expect(/incomplete/i.test(screen.text),
+        `W22.R1.03 — and ${screen.name} must say the coverage is incomplete. It rendered: ${screen.text.slice(0, 400)}`).toBe(true);
+    }
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.04 — cross-sink reconciliation
+// ===========================================================================
+
+describe('unit:W22.R1.04', () => {
+  /**
+   * F16 §2.5 measured the disagreement — "the day report says 32 decisions and
+   * 1 credit while the live lift table says 40 exposures and 4 successes —
+   * permanently, with no log line, no counter and no alarm anywhere" — and §7
+   * rules the remedy: "run a nightly comparison of the published lift snapshot
+   * against the day report's learning grid, alerting past a threshold. That
+   * last check costs a day and is the only thing that would have caught the
+   * disagreement in probe 2.5." The scheduled run is the monitor's
+   * (`src/index.ts:262`), and its result is what an operator reads.
+   */
+  it('host: the scheduled run compares the published online snapshot with the day report\'s learning grid, names a disagreement past its threshold with both numbers, and reports clean when the two sinks agree', async () => {
+    const slotConfig = () => ({ reward: 'click' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+
+    /** Both sinks fed from the same fixture; `dropLedgerOutcome` injects F16 §2.5's mismatch. */
+    const both = async (dropLedgerOutcome: boolean) => {
+      const m = await mount();
+      const d1 = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+      const o1 = click(m.env, d1, ONLINE_TS + 60_000, 'w22-b1-reconcile-click');
+      await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] }, slotConfig);
+      await fanOutcome(m.env, TENANT, o1, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+      await m.drain();
+      await throughTheLedger(m, [d1], dropLedgerOutcome ? [] : [o1], Date.now());
+      await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: ONLINE_DATE }, W22_LEARN, null, Date.now(), {}, m.env as never);
+      return m;
+    };
+
+    const agreeing = await both(false);
+    const clean = await operatorPost(agreeing, `/v1/${TENANT}/monitor`);
+    expect(clean.status, `the monitor run answers: ${JSON.stringify(clean.body).slice(0, 300)}`).toBe(200);
+    const cleanReconciliation = reconciliationMember((clean.body as { result: MonitorResult }).result)
+      ?? absent('`MonitorResult.reconciliation`', (clean.body as { result: object }).result);
+    expect(typeof cleanReconciliation === 'string' ? cleanReconciliation : { compared: cleanReconciliation.compared, disagreements: cleanReconciliation.disagreements },
+      'W22.R1.04 — the scheduled comparison ran over the tenant\'s one slot and found the two sinks in agreement (ruled member: `MonitorResult.reconciliation`; F16 §7)')
+      .toEqual({ compared: 1, disagreements: [] });
+
+    const disagreeing = await both(true);
+    const mismatch = await operatorPost(disagreeing, `/v1/${TENANT}/monitor`);
+    expect(mismatch.status, `the monitor run answers: ${JSON.stringify(mismatch.body).slice(0, 300)}`).toBe(200);
+    const reconciliation = reconciliationMember((mismatch.body as { result: MonitorResult }).result)
+      ?? absent('`MonitorResult.reconciliation`', (mismatch.body as { result: object }).result);
+    expect(typeof reconciliation === 'string' ? reconciliation : reconciliation.disagreements.map(row => ({ brand: row.brand, slot: row.slot, online: row.online, ledger: row.ledger, difference: row.difference })),
+      'W22.R1.04 — the online store is one credited outcome ahead of the ledger, and the scheduled comparison names the disagreement with both numbers and the sinks compared, instead of leaving it permanent and silent (F16 §2.5, §7)')
+      .toEqual([{ brand: BRAND, slot: 'hero', online: 1, ledger: 0, difference: 1 }]);
+    expect(typeof reconciliation === 'string' ? reconciliation : reconciliation.disagreements.every(row => row.threshold >= 0),
+      'W22.R1.04 — and the disagreement is reported against a stated threshold').toBe(true);
+  });
+});
+
+// ===========================================================================
+// unit:W22.A1.01 — one versioned attribution contract
+// ===========================================================================
+
+describe('unit:W22.A1.01', () => {
+  /**
+   * Document 35 §5 row W22: "Define one attribution contract with versioned
+   * histories/horizons, not blindly identical caps." N23: "Online, hourly and
+   * direct-record recomputation use different histories/caps … One cap
+   * everywhere alone is not seven-day reconstruction." F17 P4 measured the
+   * concrete gap: `DEFAULT_POLICY.windowsMs.purchase` is seven days, the batch
+   * horizon is 48 hours (`hourly.ts:37` `DEFAULT_HORIZON_MS`), and "the engine
+   * learns from a credit the report cannot show".
+   */
+  const PURCHASE_WINDOW_MS = 7 * DAY_MS;   // DEFAULT_POLICY.windowsMs.purchase
+  const HISTORY = { scope: DEFAULT_POLICY.scope, match: DEFAULT_POLICY.match, credit: DEFAULT_POLICY.credit };
+
+  it('logic: every path declares the same named contract version, the history it applied and the horizon it could actually read', async () => {
+    const m = await mount();
+    const d1 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const o1 = purchase(m.env, d1, T12 + 90 * 60_000, 'w22-b1-contract-purchase');
+    await throughTheLedger(m, [d1], [o1]);
+
+    const fromRecords = await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, m.env as never);
+    await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, {}, m.env as never);
+    await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W22_LEARN, NOW, {}, m.env as never);
+    const fromHours = await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, {}, m.env as never);
+
+    const recordsContract = dayContract(fromRecords) ?? absent('`attributionContract` on the direct-record day report', fromRecords);
+    const hoursContract = dayContract(fromHours) ?? absent('`attributionContract` on the hourly-fold day report', fromHours);
+    expect(typeof recordsContract === 'string' ? recordsContract : { name: recordsContract.name, history: recordsContract.history, windowsMs: recordsContract.windowsMs.purchase },
+      'W22.A1.01 — the direct-record recomputation declares the one named attribution contract, the history it applied and the window the tenant\'s published policy asks for (ruled member: `attributionContract`)')
+      .toEqual({ name: 'attribution', history: HISTORY, windowsMs: PURCHASE_WINDOW_MS });
+    expect(typeof hoursContract === 'string' || typeof recordsContract === 'string'
+      ? [recordsContract, hoursContract] : { same: hoursContract.name === recordsContract.name && hoursContract.version === recordsContract.version },
+      'W22.A1.01 — and the hourly fold declares the SAME contract name and version as the direct-record path, not a second unnamed one (document 35 §5 row W22: "one attribution contract with versioned histories/horizons")')
+      .toEqual({ same: true });
+    expect(typeof hoursContract === 'string' ? hoursContract : hoursContract.appliedWindowsMs.purchase,
+      'W22.A1.01 — the hourly fold says the horizon it could actually read: 48 hours, never the seven days the policy label promises (F17 P4; hourly.ts:37 DEFAULT_HORIZON_MS)')
+      .toBe(DEFAULT_HORIZON_MS);
+    expect(typeof hoursContract === 'string' ? hoursContract : hoursContract.windowsMs.purchase,
+      'W22.A1.01 — while still declaring the policy window it was asked for, so the difference is visible rather than hidden')
+      .toBe(PURCHASE_WINDOW_MS);
+  });
+
+  it('host: the day report, the window report and the published lift snapshot each name the contract, and a day written under an earlier contract version is never pooled with a later one', async () => {
+    const m = await mount();
+    const d1 = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+    const o1 = click(m.env, d1, ONLINE_TS + 60_000, 'w22-b1-contract-click');
+    await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] },
+      () => ({ reward: 'click', stats: DEFAULT_STATS, objective: 'unit', measurementBasis: 'served-v1' }));
+    await fanOutcome(m.env, TENANT, o1, DEFAULT_POLICY, BRAND, { hero: { reward: 'click', stats: DEFAULT_STATS, objective: 'unit', measurementBasis: 'served-v1' } },
+      { reward: 'click', stats: DEFAULT_STATS, objective: 'unit', measurementBasis: 'served-v1' });
+    await m.drain();
+    await throughTheLedger(m, [d1], [o1], Date.now());
+    const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: ONLINE_DATE, brand: BRAND });
+    expect(built.status, `the report route answers: ${JSON.stringify(built.body).slice(0, 300)}`).toBe(200);
+    const day = (built.body as { report: DayReport }).report;
+
+    const namespace = m.env.LEARN_STATS!;
+    const answered = await namespace.get(namespace.idFromName(statsName(TENANT, BRAND, 'hero'))).fetch('https://learn/snapshot');
+    const snapshot = (await answered.json() as { snapshot?: LiftSnapshot | null }).snapshot;
+    expect(snapshot, `the fixture's statistics object holds a snapshot for the slot (it answered ${answered.status})`).toBeTruthy();
+
+    const onlineContract = snapshotContract(snapshot!) ?? absent('`attributionContract` on the published lift snapshot', snapshot!);
+    expect(typeof onlineContract === 'string' ? onlineContract : { name: onlineContract.name, history: onlineContract.history, purchase: onlineContract.appliedWindowsMs.purchase },
+      'W22.A1.01 — the online path names the same contract and says the history and horizon it actually applied: the online ring keeps seven days (DecisionRing.ts:21 RING_MAX_AGE_MS), so this path can honour the policy\'s purchase window (ruled member: `attributionContract`)')
+      .toEqual({ name: 'attribution', history: HISTORY, purchase: PURCHASE_WINDOW_MS });
+
+    const windowAnswer = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${ONLINE_DATE}&to=${ONLINE_DATE}&brand=${BRAND}`);
+    const pooled = (windowAnswer.body as { report: WindowReport }).report;
+    const pooledContract = windowContract(pooled) ?? absent('`attributionContract` on the window report', pooled);
+    const dayReportContract = dayContract(day) ?? absent('`attributionContract` on the day report', day);
+    expect(typeof pooledContract === 'string' || typeof dayReportContract === 'string'
+      ? [dayReportContract, pooledContract] : { name: pooledContract.name, version: pooledContract.version === dayReportContract.version },
+      'W22.A1.01 — the window report names the contract version it pooled under, and it is the version its days were written under')
+      .toEqual({ name: 'attribution', version: true });
+
+    // A day saved under an earlier contract version is read as such and never
+    // pooled with a later one (document 35 §5 row W22, "versioned histories").
+    const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, ONLINE_DATE))!) as DayReport & { attributionContract?: AttributionContract };
+    const previousDay = new Date(Date.parse(ONLINE_DATE + 'T00:00:00Z') - DAY_MS).toISOString().slice(0, 10);
+    earlier.date = previousDay;
+    earlier.attributionContract = { name: 'attribution', version: 0, history: HISTORY,
+      windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } };
+    m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), JSON.stringify(earlier));
+    m.storage.versions.set(reportKey(TENANT, BRAND, previousDay), 1);
+    const mixed = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${previousDay}&to=${ONLINE_DATE}&brand=${BRAND}`);
+    const mixedReport = (mixed.body as { report: WindowReport }).report;
+    expect(mixedReport.slots.hero?.compatibility.reasons,
+      'W22.A1.01 — a day written under an earlier contract version is never pooled with a later one: the window declares the mixed basis instead of adding the two together')
+      .toContain('mixed_basis');
+  });
+});
+
+// ===========================================================================
+// unit:W22.S1.01 — product-sort evidence is durable and consistent
+// ===========================================================================
+
+describe('unit:W22.S1.01', () => {
+  /**
+   * Document 35 §5 row W22: "Wire persisted product-sort evidence via W14."
+   * HANDOFF-2026-09-16 §6 (:226): "Scheduled sort persistence is not durable
+   * acknowledgment." R104(a): measure what W14 left. The record's logical id is
+   * `record_id` (`src/ledger/productSort.ts:27`); the same read-path rule as
+   * every other stream applies to it (representation (ii)).
+   */
+  const CANDIDATES = [{ id: 'P-tabby-evening', line: 'Tabby', price_usd: 495 },
+    { id: 'P-rogue-work', line: 'Rogue', price_usd: 795 },
+    { id: 'P-charms-slg', line: 'Unknown', price_usd: 95 }];
+
+  /**
+   * A shopper who has made the explicit choice, through the door the shipped
+   * SDK uses (`POST /realtime/session/:id/preferences`); without a tracking
+   * choice the sort route records nothing at all, by design.
+   */
+  async function sort(m: Mounted): Promise<{ status: number; body: Record<string, unknown> }> {
+    const session = await newAnonymousSession(m.env, TENANT);
+    const chosen = await m.fetch(new Request(`http://sort.test/realtime/session/${session.sessionId}/preferences`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT, [SHOPPER_HEADER]: session.capability },
+      body: JSON.stringify({ trackingConsent: true, personalizationEnabled: true,
+        choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: session.grantId, iat: session.iat, exp: session.exp } }),
+    }));
+    expect(chosen.status, `the explicit consent choice answers: ${(await chosen.clone().text()).slice(0, 200)}`).toBe(200);
+    await m.drain();
+    const response = await m.fetch(new Request('http://sort.test/sort', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT, [SHOPPER_HEADER]: session.capability },
+      body: JSON.stringify({ userId: session.subject, candidates: CANDIDATES }),
+    }));
+    return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  }
+
+  it('host: a sort answer is given only after its record is captured, the record carries its logical id, and a redelivery of that record is stored once', async () => {
+    const m = await mount();
+    const answered = await sort(m);
+    expect(answered.status, `POST /sort answers: ${JSON.stringify(answered.body).slice(0, 300)}`).toBe(200);
+    const persistence = answered.body.persistence as { status: string; recordId?: string };
+    expect(persistence.status === 'durable' || persistence.status === 'queued',
+      `W22.S1.01 — the answer is acknowledged only with a captured record (src/routes/sort.ts:123, src/ledger/productSort.ts): it reported ${JSON.stringify(persistence)}`).toBe(true);
+    expect(typeof persistence.recordId === 'string' && persistence.recordId.includes(':product-sort:'),
+      'W22.S1.01 — and the captured record carries the logical id every other ledger row carries').toBe(true);
+    await m.drain();
+
+    // The queue's own copy, written by the real consumer, then REDELIVERED.
+    const wire = m.queued.splice(0);
+    expect(wire.length, 'the sort record reaches the ledger like the rest of the evidence').toBeGreaterThan(0);
+    expect((await consumeLedger(m.env, wire, Date.now())).ok, 'the sort record is written by the real consumer').toBe(true);
+    const afterFirst = [...m.storage.objects.keys()].filter(key => key.includes('/product-sort/')).length;
+    expect((await consumeLedger(m.env, wire, Date.now())).ok, 'the redelivery is acknowledged').toBe(true);
+    const rows: Array<{ record_id?: string }> = [];
+    for (const [key, body] of m.storage.objects) {
+      if (!key.includes('/product-sort/')) continue;
+      for (const line of body.split('\n')) if (line) rows.push(JSON.parse(line) as { record_id?: string });
+    }
+    expect(rows.filter(row => row.record_id === persistence.recordId).length,
+      'W22.S1.01 — a redelivered sort record is stored once, exactly as a redelivered decision or outcome is (representation (ii))')
+      .toBe(1);
+    expect([...m.storage.objects.keys()].filter(key => key.includes('/product-sort/')).length,
+      'W22.S1.01 — and the redelivery leaves no second object behind').toBe(afterFirst);
+
+    // A capture that did not happen is never acknowledged: the queue is out and
+    // the canonical object store refuses the write.
+    const failing = await mount({ queueFails: true });
+    failing.storage.failPutFrom = (key: string) => key.includes('/product-sort/');
+    const refused = await sort(failing);
+    expect(refused.status,
+      `W22.S1.01 — with neither sink accepting the record, the sorted answer is refused rather than acknowledged (HANDOFF-2026-09-16 :226). It answered ${JSON.stringify(refused.body).slice(0, 300)}`)
+      .toBe(503);
+    expect((refused.body.persistence as { status: string }).status,
+      'W22.S1.01 — and the refusal names that nothing was scheduled').toBe('not_scheduled');
+  });
+});
