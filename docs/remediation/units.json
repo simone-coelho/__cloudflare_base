@@ -4,7 +4,9 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "An ordinary search referrer (https://www.google.com/search?q=…, and each host family in SEARCH_HOSTS: bing, duckduckgo, yahoo, ecosia, baidu, yandex, brave, startpage) with no UTM classifies as `organic`.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 01; docs/handover/HANDOFF-2026-09-18.md §5 \"Concrete source-inspection defect\" (SEARCH_HOSTS prefix tokens vs the dot-stripping matcher); src/services/visit.ts SEARCH_HOSTS and the six-value EntryChannel vocabulary",
     "status": "specified",
     "batch": "W16-B1"
@@ -14,7 +16,9 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "A lookalike host (google.com.evil.example, notgoogle.com, evilgoogle.co) never classifies as search or social: host matching is exact or dot-boundary suffix, never substring or prefix. This covers the declared utm_source, which classifyEntryChannel matches as a host.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 02; docs/handover/HANDOFF-2026-09-18.md §5 (\"preserving the anti-spoof requirement\"; \"the social-source startsWith branches also need review\"); src/services/visit.ts matches()/SOCIAL_HOSTS",
     "status": "specified",
     "batch": "W16-B1"
@@ -24,7 +28,9 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "A social source with a paid medium (utm_source=facebook|instagram|meta|tiktok|pinterest, utm_medium=cpc|ppc|paid|paid_social|cpm) classifies as `paid_social` before any paid-search rule.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 03; docs/architecture/35-verification-reports/F13.md §5.H (Meta's default utm_medium=cpc pools into the paid-search cell); docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/services/visit.ts",
     "status": "specified",
     "batch": "W16-B1"
@@ -34,7 +40,11 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "Absent referrer, absent UTM and an unrecognized utm_medium never invent `direct`: the entry stays unknown (entryChannelOf null / no entry recorded) and no first visit is fabricated; `direct` only when the referrer is empty or same-site on a real page view, and only with a present valid siteHost (R14).",
-    "legs": ["logic", "host", "host-internal"],
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 04 and ruling R14 (an empty or non-hostname siteHost carries no page-view evidence and classifies as unknown, never direct; the SDK's all-empty placeholder is unknown); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"unknown stays unknown, no invented direct/first visit\"); docs/architecture/35-verification-reports/F13.md §5.A/§5.D",
     "status": "specified",
     "batch": "W16-B1",
@@ -45,7 +55,10 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "An established owned visit entry channel wins over a request-supplied fallback channel on the content decision path (src/content/service.ts), on both hosts; with nothing owned, a fallback outside the six-value vocabulary is unknown, not a channel.",
-    "legs": ["host", "host-internal"],
+    "legs": [
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 05 and ruling R13; docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/content/service.ts; src/content/service.ts serveContentDecisions channel precedence comment",
     "status": "specified",
     "batch": "W16-B1",
@@ -56,7 +69,11 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "Read-time idle rollover: after VISIT_GAP_MS of inactivity the next read yields the next visit number and a freshly classified entry channel; within the gap both are unchanged. Both hosts agree.",
-    "legs": ["logic", "host", "host-internal"],
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 06; docs/architecture/35-verification-reports/F13.md §5.B (the decision path never advances the visit boundary); docs/architecture/tapestry_requirements.txt:152 Return Visit Recognition",
     "status": "specified",
     "batch": "W16-B1",
@@ -67,7 +84,10 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "Visit number and entry channel are identical for the same event sequence through the SessionManager path and the ShopperReflex path, and appear identically in the SDK-visible projection, which carries visit: { visitNumber, entryChannel } (R20).",
-    "legs": ["host", "host-internal"],
+    "legs": [
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 07 and ruling R20 (GET /realtime/reflex carries the projectVisit shape on both hosts; the Durable Object's projection=content shape stays internal); docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 (\"Carry validated visit/channel through both hosts … and SDK\"); docs/architecture/35-verification-reports/F13.md §5.C",
     "status": "specified",
     "batch": "W16-B1",
@@ -78,7 +98,9 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "SDK: the cached entry is cleared on consent transition, identity-generation change and browsing-session rollover before entry signals are recomputed; entrySessionId is a public read-only Core member naming the browsing session that produced the cached entry (R18).",
-    "legs": ["sdk"],
+    "legs": [
+      "sdk"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 08 and ruling R18 (public read-only Core observable, exposed in the regenerated public/sdk bundles; a getter returning the current session id does not satisfy it); docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/sdk/core.ts",
     "status": "specified",
     "batch": "W16-B1",
@@ -89,17 +111,162 @@
     "w": "W16",
     "criterion": "C2",
     "outcome": "Vocabulary validation: validEntry/entryChannelOf reject values outside the six-value channel vocabulary and hosts that are not valid hostnames; oversize query strings beyond ENTRY_QUERY_LIMIT are refused, not truncated into a wrong channel.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 09 and ruling R14 (the siteHost hostname contract); docs/architecture/35-verification-reports/F13.md §5.E (the channel is unvalidated free text and becomes a statistics key); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"validate vocabulary and host\"); src/services/visit.ts ENTRY_LIMITS/ENTRY_QUERY_LIMIT",
     "status": "specified",
     "batch": "W16-B1"
+  },
+  {
+    "id": "W05.BASE.01",
+    "w": "W05",
+    "criterion": "BASE",
+    "outcome": "After a link, a browser write under the old cookie lands on the person's record; the consent-scope check honours the linked owner (raw.forwardTo / raw.identity.shopperId), not only raw.userId.",
+    "legs": [
+      "host-internal"
+    ],
+    "witness": "_evidence/BASE-2/reviewer/REPORT.md (BASE-2 reviewer verdict, 2026-09-18: \"SessionManager.identity.test.ts:133 fails at :140 (expected '/bags', got undefined); :139 passes, so the engine answers with the person's record and silently drops the write\"; reproduced at src/services/SessionManager.ts:381-382, which compares the instruction subject against raw.userId alone and ignores raw.forwardTo / raw.identity.shopperId, so after a CW25 fold no single subject reaches both the tombstone and the person); docs/remediation/LANE-LOG.md R22 (W05.BASE.01 assigned, confirmed) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W04 (CW25).",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "residual": "host-internal under ruling R19: the wrapped test drives SessionManager.createOrUpdateSession / absorbIntoShopper in process inside a real owner context (src/services/SessionManager.identity.test.ts), not a public route. The missing public observable, named for the whole-W05 review, is a post-link browser write under the OLD cookie driven through the mounted app on both hosts (the session host's write path in src/index.ts / ShopperReflex), proving the write lands on the person's record and the person is not renamed.",
+    "declared_from": " absorbIntoShopper: the first link the old cookie reads the person, and a write from the browser lands on the person without renaming it"
+  },
+  {
+    "id": "W06.BASE.01",
+    "w": "W06",
+    "criterion": "BASE",
+    "outcome": "A cold GET /realtime/personalization/:subject read on a consent-only owned record serves (200, no write activity) instead of answering 500 for a missing retention birth.",
+    "legs": [
+      "host"
+    ],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (1): \":2312 is a PRODUCT GAP: cold /realtime/personalization/:subject on a consent-only owned record answers 500 'Retention policy or retained-data authority unavailable' via readRetention ← requireRetention ← pinProfileRetention (src/identity/sessionAuthority.ts:327) ← RealtimeSegmentEngine.getSessionPersonalizationConfig (:463); src/services/RealtimeSegmentEngine.ts:458-462 mints a retention birth only when !stored; seeding the registry does not change it\"; docs/remediation/LANE-LOG.md R22 (W06.BASE.01, owner W06 with W05) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W06, W05.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W35.02 visit context carries first-paint and live return context into actual both-host cells without read activity"
+  },
+  {
+    "id": "W09.BASE.02",
+    "w": "W09",
+    "criterion": "BASE",
+    "outcome": "/sort answers 200 read-only for a linked non-default-tenant owned profile; recovery admission while durable recovery is disabled never surfaces as an untyped 500 on a read path.",
+    "legs": [
+      "host"
+    ],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62, Other: \"W04.02 :5695 /sort 500 = 'Durable recovery disabled' at src/ledger/recovery.ts:128 via ShopperReflex.admitRecovery (:2980) while LEDGER_RECOVERY_ENABLED !== 'true', an untyped 500 (owner W09/W35 with W04), owed\"; docs/remediation/LANE-LOG.md R22 (W09.BASE.02) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W09, W35.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W04.02 owned shopper lane preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts"
+  },
+  {
+    "id": "W11.BASE.01",
+    "w": "W11",
+    "criterion": "BASE",
+    "outcome": "A typed owner or consent refusal raised inside a publication storage read propagates as the 401 refusal on both hosts; it is never rewritten into a configuration-authority error.",
+    "legs": [
+      "host"
+    ],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (2): \"the do-host 500 is a PRODUCT DEFECT: recheckOwnerInvocation (src/identity/sessionAuthority.ts:318) throws the typed owner refusal inside the R2 read and src/config/publication.ts:100's blanket catch rewrites it as PublicationError 'Configuration publication authority unavailable' → declare W11.BASE.01 (owner W11 with W05): a typed owner/consent refusal raised inside a publication storage read must propagate as the 401\"; the session host already answers 401 'Shopper session unavailable' on the same body; docs/remediation/LANE-LOG.md R22 (W11.BASE.01, replaces the provisional W05.BASE.05) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W11, W05.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W05.10 explicit timed authority on do rechecks the choice at the actual post-config behavioral commit",
+    "declared_from_sibling": " W05.10 explicit timed authority on session rechecks the choice at the actual post-config behavioral commit (the describe.each session twin; it passes today and is renamed by the same wrap, so it is not a baseline entry)"
+  },
+  {
+    "id": "W37.BASE.01",
+    "w": "W37",
+    "criterion": "BASE",
+    "outcome": "With the configuration publication authority absent, invalid or unreadable, every shopper route including /realtime/personalization/:subject and /realtime/action answers a 4xx/5xx refusal; none serves.",
+    "legs": [
+      "host"
+    ],
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (3): \"W37.04 PASS: injection is authority-level (deletes every config-publication/v2/<owner>/* object, invalid head, throwing reads; remainingOwnerKeys=0); /realtime/personalization/:subject 200 and /realtime/action 200 with no authority while reflex/sort/snapshot answer 500 → W37.BASE.01 confirmed; failing line is :3862\"; the test's own committed authority-level injection (pre-wrap :3850-3859, :3851-3860 in this commit); docs/remediation/LANE-LOG.md R22 (W37.BASE.01 re-scoped and CONFIRMED) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W37, W11. Secondary stale expectation at pre-wrap :3866 (ReflexConfigUnavailableError vs PublicationError 'Coherent configuration publication is uninitialized') is named owed by the same witness and is updated in this batch under R10 and lead ruling R28: with the authority uninitialized or unavailable the required contract is a typed refusal of either class, PublicationError (src/config/publication.ts:15, thrown at :205 and :19) or ReflexConfigUnavailableError (src/reflex/configStore.ts:67), whose message names the unavailable or uninitialized authority; the three rejects.toBeInstanceOf(ReflexConfigUnavailableError) expectations inside the wrapped body now accept either class with that message.",
+    "status": "specified",
+    "batch": "BASE-D1",
+    "declared_from": " W37.04 tenant-owned runtime configuration fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention"
+  },
+  {
+    "id": "W16.C2.10",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Known networks on country-code and multi-label public suffixes classify by an explicit per-network pattern list, never a generic suffix rule: www.google.co.uk, google.com.co, google.de, search.yahoo.co.jp, yandex.ru classify as `organic`; google.com.co.evil.example, evilgoogle.co.uk and google.co.uk.attacker.example stay `referral`, and so does any other host on the same public suffix.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 10 and ruling R24 (search and social networks reached on country-code domains classify by an explicit per-network second-level pattern list, and google.com.co-style lookalikes stay referral); the W16-B1 build report residual 1 and the build review's logic probe (_evidence/W16-B1/reviewer-build/logs/probe-logic.log section A: www.google.co.uk, search.yahoo.co.jp and yandex.ru answer referral today); src/services/visit.ts SEARCH_HOSTS and matches() (exact or dot-boundary suffix); docs/architecture/tapestry_requirements.txt:157 Cross-Channel Awareness",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.11",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "A bare `paid` or `cpm` medium with no recognized network source, or with no source at all, stays unknown (projectVisit entryChannel null, liveVisit entryChannel undefined — the W16.C2.04 representation); it never defaults to `paid_search`. R27(b): a recognized SEARCH network name as the source token (google, bing, yahoo, duckduckgo, yandex, baidu, ecosia, brave, startpage — the SEARCH_HOSTS networks, matched by token) classifies paid_search, and a recognized social network or alias classifies paid_social: paid+facebook and cpm+instagram are paid_social; paid+google, paid+bing, cpm+yandex and cpc+google are paid_search.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 11, ruling R24 (a bare paid or cpm medium with no recognized network source stays unknown rather than defaulting to paid_search) and ruling R27(b) (the recognized-search-network token set and its paid_search outcome); the W16-B1 build report residual 2 (\"utm_medium=paid with no social source -> paid_search (documented judgement; could be ruled unknown)\") and the build review's logic probe section B; unit W16.C2.04 and ruling R14 for the unknown representation; src/services/visit.ts PAID_MEDIUMS/PAID_SOCIAL_MEDIUMS/SEARCH_HOSTS",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.12",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Token-form source aliases identify the network: facebook_ads, fb_ads, fb, ig, instagram_stories, meta_ads, tiktok_ads, pinterest_ads (R27(a): tokens split on `_`, `-` and whitespace, never on `.`; a token equal to a network name or a listed alias is that network) with a paid medium classify as `paid_social`; a dotted host-form source such as facebook.attacker.example, tiktok-ads.evil.example or instagram.com.evil.example is judged only by the host rule and is not social, while facebook.com and l.facebook.com still are.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 12 and ruling R27(a) (the `.` separator is removed from the token rule; a dotted source is host-form and is judged only by the host rule); the W16-B1 build review's logic probe (_evidence/W16-B1/reviewer-build/logs/probe-logic.log section B: facebook_ads, fb_ads and ig with cpc answer paid_search today) and the build report's paid-order note; docs/architecture/35-verification-reports/F13.md §5.H (a campaign builder's own source spelling must not poison the paid-search cell); src/services/visit.ts SOCIAL_SOURCES/declaresSocial; unit W16.C2.02 (the dot-boundary host rule the lookalike sources keep)",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.13",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "The public boundary accepts a `siteHost` of the form hostname[:port] and an internationalized hostname (normalized to its ASCII form by URL parsing); the port is not part of the site's identity for the same-site comparison; a URL with scheme, path or query, free text and anything outside the hostname[:port] form remain refused. POST /realtime/action and GET /v1/:tenant/decisions/snapshot answer 200 for shop.coach.com:8080 and for a unicode IDN host on both hosts, and the R20 hydrate shows the same-site page view as `direct`.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 13; the W16-B1 build report residual 3 (\"validEntry refuses a siteHost with a port; the SDK and storefront send location.hostname, a non-SDK integrator posting location.host is refused\") and the build review's probes (logs/probe-logic.log section D, logs/probe-route.log: snapshot 401 and action 400 for a ported site host, logs/probe-route-idn.log: unicode IDN 400, punycode 200); ruling R14 (`direct` needs a present valid siteHost with an empty or same-site referrer), R19 (the mounted public routes) and R20 (the hydrate visit shape); src/routes/decisions.ts:403 and src/routes/realtime.ts:122",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.14",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Trailing-dot fully-qualified hosts (www.google.com., shop.coach.com.) are normalized by stripping the root label before matching, for referrer and site hosts, on the classifier, the storing path and the bounded snapshot round trip; the dot-boundary rule is unchanged, so google.com.evil.example. and evilgoogle.com. stay `referral`.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 14; the W16-B1 build review's probes (logs/probe-logic.log section C: referrer host www.google.com. answers referral, section F: snapshotEntry carries the trailing dot through unchanged; logs/probe-route.log trailing-dot site host answers 200); src/services/visit.ts hostOf()/matches() and the same-site comparison; ruling R14",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.15",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Documentation is current. docs/api/01-rest-endpoints.md: the GET /realtime/reflex row names the hydrate visit fields `visitNumber` and `entryChannel`; the entry paragraph contains the phrases \"siteHost must be a hostname\" and \"hostname[:port]\" (the form unit W16.C2.13 ships) and the phrase \"stays unknown, never direct\", the sentence that speaks about observed empty strings is itself that R14 statement, and the file no longer contains \"may classify as direct\" or \"Existing classifier mappings are unchanged\" (false after units W16.C2.10, .11 and .12). docs/kit/02-api-reference.md contains `entrySessionId` and the phrase \"browsing session that produced the cached entry\". Phrases are matched with inline code ticks removed, so markup style is not asserted.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 15 and ruling R24 (documentation of the hydrate visit field and entrySessionId, and the correction of docs/api/01-rest-endpoints.md:32, are W16 residuals; that file is in the W16 grant); ruling R20 (the hydrate carries visit { visitNumber, entryChannel }), ruling R18 (entrySessionId names the browsing session that produced the cached entry signals and is documented in docs/kit/02-api-reference.md) and ruling R14 (an empty or invalid siteHost is unknown, never direct); the W16-B1 build report residual 5; the superseded sentence at docs/api/01-rest-endpoints.md:32",
+    "status": "specified",
+    "batch": "W16-B3",
+    "residual": "docs/kit/02-api-reference.md has no SDK Core member list today, so the unit asserts the two phrases file-wide rather than inside a member table; if the implementer adds a Core section the assertions still hold."
   },
   {
     "id": "W16.C4.01",
     "w": "W16",
     "criterion": "C4",
     "outcome": "The journey stage derives from ONE published, versioned threshold set over visit-local counters, using the one shared stage vocabulary JOURNEY_STAGES = ['exploring','thinking','deciding'] in that order. R32(1): the threshold set is the `journey` block of the already-published, tenant-scoped REFLEX_KIND document both hosts and the content decision read, and every revision carries its own stamped version identity. The thresholds are data, not constants: the same counters under two published sets give two stages. The reflex validator refuses, returning EVERY error and naming the journey block, a stage word outside the vocabulary, stages out of vocabulary order, a threshold on the first stage, a fractional or negative threshold, a counter the visit does not keep, a stage with no threshold and an empty set.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 01 and rulings R32(1)/R29; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"Versioned journey thresholds and one shared stage vocabulary use visit-local counters separate from cumulative durable taste\"); docs/architecture/tapestry_requirements.txt line 148 Journey Awareness (\"exploring (seeing) → thinking → deciding\"); docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 and §2 F13; src/reflex/configStore.ts:293 stampVersion and REFLEX_KIND for the per-revision version identity",
     "status": "specified",
     "batch": "W16-B4",
@@ -110,7 +277,10 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "Visit-local counters are separate from cumulative durable taste. They accumulate inside one visit (three Coach PDP views, one cross-category, one with dwell) and start from zero in the next: a new visit reached past VISIT_GAP_MS resets the journey to the vocabulary's first stage while the visit number increments to 2 and the shopper's accumulated affinity is preserved to two decimals, and the first interaction of the new visit is the first, not the fourth. Both hosts agree.",
-    "legs": ["logic", "host"],
+    "legs": [
+      "logic",
+      "host"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 02; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"New visits reset local journey.\" and \"Visit number and cumulative durable taste remain\"); docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition; document 35 §5 W16 (\"journey/new-visit/post-purchase reset, days/weeks memory\"); src/services/visit.ts VISIT_GAP_MS and the read-time rollover established by unit W16.C2.06",
     "status": "specified",
     "batch": "W16-B4",
@@ -121,7 +291,9 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "A purchase is the deciding current-event signal: after two interactions the shopper is still at the first stage under the published thresholds, and the personalization decision computed for the purchase event ITSELF reports 'deciding' (update.data.journeyStage) on both hosts, so the purchase is counted on its own decision and not only on the one after it.",
-    "legs": ["host"],
+    "legs": [
+      "host"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 03; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"A purchase remains the deciding current-event signal and truthful ODP/receipt input\") and the admission-r1 preflight correction on purchase timing; src/routes/realtime.ts:270-283 and src/durable-objects/ShopperReflex.ts:1255, where the same value is handed to upsertOdpProfile as the ODP-bound stage input",
     "status": "specified",
     "batch": "W16-B4",
@@ -132,7 +304,9 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "Reset ordering after a purchase: the purchase decision reports 'deciding' and its attribution is captured first (R32(3): the purchase outcome for orderId coach-order-1 reached the ledger producer before the next decision was asked for), and only then are the persisted visit-local counters reset, so the NEXT personalization decision starts from reset counters at the vocabulary's first stage, inside the SAME visit (visit number unchanged) and with the cumulative taste the purchase itself grew, never discarded. The reset is real: the interaction after the purchase is the first, and the third one after it moves the stage again. Both hosts.",
-    "legs": ["host"],
+    "legs": [
+      "host"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 04 and ruling R32(3); docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"only after that decision and attribution are captured are persisted visit-local journey counters reset for the next personalization decision. Visit number and cumulative durable taste remain.\"); document 35 §5 W16; src/routes/realtime.ts:194-212 (emitOutcome → outcomeFromAction → enqueueOutcome) and src/ledger/records.ts:253-278 for the outcome the order produces",
     "status": "specified",
     "batch": "W16-B4",
@@ -143,7 +317,10 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "Threshold versioning on the reflex document (R32(1)): with the baseline published, three interactions derive 'thinking' and the decision names the version it used (sources.journey = { version 'w16-b4-fixture', revision 1, reason null }, equal to sources.config, because initializePublicationSet stores the baseline unstamped); publishing the next revision changes the derivation for subsequent decisions with no new event (the same counters derive 'exploring'; sources.journey names 'w16-b4-fixture+r2' and revision 2); an invalid threshold block is refused at publication with errors naming the journey fault and the stage word, and the last published version keeps deciding; with no journey block published the routes still answer 200, the stage fails closed to the vocabulary's first stage and sources.journey carries version null, revision 0 and a diagnostic naming the journey thresholds. Every decision record and its receipt carry journey = { stage, version }, before a purchase ('thinking') and after it ('exploring'). Both hosts.",
-    "legs": ["host", "host-internal"],
+    "legs": [
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 05 and ruling R32(1); docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (versioned thresholds) and §5 point 3 C3 (\"Invalid, absent or unpublished rules fail closed\") applied to the journey block; src/config/publication.ts conditional r2 publication authority and :465-469 (the baseline is stored unstamped); src/routes/decisions.ts:312 (the receipts route reads the same records through receiptOf) and the DecisionSources block in src/content/service.ts, which already names the catalog, slots, learn and reflex versions a decision used",
     "status": "specified",
     "batch": "W16-B4",
@@ -154,7 +331,9 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "Cold start: absent, null or empty counters derive the vocabulary's first stage without inventing an interaction; on the compiled default threshold set the third interaction of the visit moves the stage past the first (Time to Relevance); and an explicitly buffered delivery of the same action, or of a purchase, counts as no interaction of the current visit (the counters come back unchanged and the stage does not move under a set that turns on the fourth interaction) while the same action delivered live counts as one and does move it.",
-    "legs": ["logic"],
+    "legs": [
+      "logic"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 06; docs/architecture/tapestry_requirements.txt line 147 Time to Relevance (\"3 clicks—site adapts third interaction onwards\"); docs/handover/HANDOFF-2026-09-18.md §7 settled decision D06-buffered-action-purpose (\"explicitly buffered browser/app actions may contribute age-decayed interest plus eligible historical measurement. They must not create fresh visits/recent ODP activity/regional activity on arrival\"); document 35 §5 W16 (\"contextual cold-start behavior\") and HANDOFF §5 point 8 C8 (\"first/third sparse interactions\"); the buffered wire shape at src/reflex/bufferedAction.ts:18-31",
     "status": "specified",
     "batch": "W16-B4",
@@ -165,7 +344,9 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "Both hosts derive the same stage for the same event sequence (three interactions, then a purchase, then the decision after it) and the SDK-visible hydrate projection GET /realtime/reflex carries that stage as one of the three shared vocabulary words on both hosts: 'thinking' while browsing, 'deciding' on the purchase decision, 'exploring' on the decision after the post-purchase reset.",
-    "legs": ["host"],
+    "legs": [
+      "host"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 07 and ruling R29; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (one shared stage vocabulary) and §5 point 5 C5 (\"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree\"); ruling R20 for the hydrate as the SDK-visible projection; docs/architecture/tapestry_requirements.txt line 148",
     "status": "specified",
     "batch": "W16-B4",
@@ -176,7 +357,11 @@
     "w": "W16",
     "criterion": "C4",
     "outcome": "R32(2): the persisted grammar is unchanged by C4. One explicit mapping point PERSISTED_STAGE = { exploring: 'early', thinking: 'mid', deciding: 'late' } carries the reported vocabulary into the stored token: the decision cell still carries `mid`, the learning ladder key is still `c=…|v=…|s=mid` (src/learn/stats.ts:34), and the W18.01 slot stage rule still fires on that cell (src/content/decide.ts:128) with the same demote (-0.2) and favour (+0.1) and the same slot order. The mounted routes serve the shared word for the same shopper on both hosts while the record keeps the token.",
-    "legs": ["logic", "host", "host-internal"],
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row 08 and rulings R32(2)/R29 (\"The persisted cell token early|mid|late and the learning key s=mid are a persisted grammar and stay (W24)\"); the W16-B4 specification-pass finding (2): src/content/service.ts:244 → src/content/cell.ts:70 asStage accepts only early|mid|late, so routing the new word into shopper.stage would silently switch the slot stage rule off and collapse the learning stage key; src/content/stage.test.ts for the rule's existing arithmetic",
     "status": "specified",
     "batch": "W16-B4",
@@ -187,7 +372,10 @@
     "w": "W16",
     "criterion": "C8",
     "outcome": "Days/weeks memory (R32(4), first C8 unit): the memory horizon the product ships and the one the mounted host publishes to the SDK must still hold the interest that drove a shopper's last decision after 7 and after 14 days — above the engine's own prune floor ε, which is what forgetting means here (src/reflex/core.ts apply step 2) — while still fading; and a real return past the visit boundary still ranks the remembered piece first (the catalogue's own first piece is a different line) and renews no retention.",
-    "legs": ["logic", "host"],
+    "legs": [
+      "logic",
+      "host"
+    ],
     "witness": "docs/remediation/LANE-LOG.md W16-B4 row W16.C8.01 and ruling R32(4); docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (\"Picks up where you left off, remembers what you were considering\"); document 35 §5 W16 (\"days/weeks memory\"); HANDOFF-2026-09-18.md §5 point 8 C8 (\"day7/day14 return/restart without renewal\"); src/reflex/core.ts:202 (the shipped 60 s tauMs) and the prune floor epsilon",
     "status": "specified",
     "batch": "W16-B4",

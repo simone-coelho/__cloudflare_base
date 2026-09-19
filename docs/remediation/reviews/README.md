@@ -1,0 +1,1 @@
+Whole-W review verdicts, one file per W item (`<W>.json`: `{ "w", "verdict": "PASS|FAIL|INCOMPLETE", "sha", "date", "reviewer_report" }`), written by the lead from the reviewer's whole-W report. The score tool closes a W only when every declared unit is green and this file says PASS at a named commit.
