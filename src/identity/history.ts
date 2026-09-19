@@ -27,7 +27,8 @@ import { TenantKV, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { resolveTenantReflexConfig } from '@/demos/registry';
 import { SessionManager } from '@/services/SessionManager';
-import { extractTouches, sanitizeEventAttributes, type ReflexConfig, type Touch } from '@/reflex/core';
+import { admittedTouches, extractTouches, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
+import { tenantCatalogVocabulary } from '@/content/service';
 import { IdentityStore } from '@/identity/store';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { loadTombstone, type Tombstone } from '@/ledger/erasure';
@@ -141,15 +142,39 @@ export function parseHistoryCsv(text: string): Array<Record<string, unknown>> {
   });
 }
 
-function touchesOf(row: HistoryRow, cfg: ReflexConfig): Touch[] {
+/**
+ * W16 C8.11 (R64): the coded reason a row is skipped BECAUSE the tenant's own
+ * published catalogue does not name the values it carried. It is a different
+ * fact from "this row carried no registry attribute at all", and an operator
+ * reading the import report has to be able to tell them apart: the first is
+ * answered by publishing the value, the second by sending a different column.
+ */
+export const OUT_OF_VOCABULARY_SKIP = 'out_of_vocabulary';
+
+/**
+ * W16 C8.10/C8.11 (R64, R67): a warehouse row is this tenant's input like any
+ * other, so each value it carries answers for itself against the catalogue the
+ * tenant publishes — through the one exported rule, never a second copy of it. A
+ * dimension that catalogue names nothing on stays the row's own to decide.
+ *
+ * `refused` is true only when the row really did carry registry values and the
+ * vocabulary is what left it with none.
+ */
+function touchesOf(row: HistoryRow, cfg: ReflexConfig, vocabulary: CatalogVocabulary): { touches: Touch[]; refused: boolean } {
   const attrs = { ...(row.product ?? {}), ...(row.attributes ?? {}) };
-  return extractTouches(sanitizeEventAttributes(attrs, cfg), cfg);
+  const carried = extractTouches(sanitizeEventAttributes(attrs, cfg), cfg);
+  const touches = admittedTouches(carried, vocabulary);
+  return { touches, refused: touches.length === 0 && carried.length > 0 };
 }
 
 /** Apply a batch. Rows are validated by the caller; this resolves, groups and writes. */
 export async function applyHistory(env: Env, tenant: TenantId, rows: Array<HistoryRow | ProfileRow>, now = Date.now()): Promise<HistoryReport> {
   const kv = new TenantKV(env.SESSIONS as never, tenant);
   const cfg = await resolveTenantReflexConfig(env, tenant);
+  // Read once for the batch, beside the configuration: the values this tenant's
+  // published catalogue names are what an imported row may build taste on. A
+  // tenant that publishes nothing names no vocabulary and refuses nothing.
+  const vocabulary = await tenantCatalogVocabulary(env, tenant, cfg);
   const report: HistoryReport = { received: rows.length, applied: 0, shoppers: 0, skipped: [], perShopper: [] };
   // Request-local point reads only; resolve every barrier before the first profile/history mutation.
   const barriers = new Map<string, Tombstone | null>();
@@ -205,8 +230,13 @@ export async function applyHistory(env: Env, tenant: TenantId, rows: Array<Histo
       continue;
     }
     if ((cfg.weights[r.action] ?? 0) <= 0) { report.skipped.push({ index: i, reason: `action "${r.action}" has no weight` }); continue; }
-    const touches = touchesOf(r, cfg);
-    if (touches.length === 0) { report.skipped.push({ index: i, reason: 'no registry attribute on the row' }); continue; }
+    const placed = touchesOf(r, cfg, vocabulary);
+    const touches = placed.touches;
+    if (touches.length === 0) {
+      report.skipped.push({ index: i,
+        reason: placed.refused ? OUT_OF_VOCABULARY_SKIP : 'no registry attribute on the row' });
+      continue;
+    }
     const g = groups.get(target) ?? [];
     g.push({ action: r.action, at: r.at, touches, index: i });
     groups.set(target, g);

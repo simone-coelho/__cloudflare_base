@@ -466,6 +466,25 @@ export async function upsertOdpProfile(
  * hosts call this one function, so they cannot drift about what a stage-only
  * change is worth telling anybody.
  */
+/**
+ * The one coded diagnostic a skipped stage projection reports (W16 C5.06, R63).
+ *
+ * It is a fixed string, so it cannot name a shopper, a session, a tenant or a
+ * destination identity, and both hosts emit the SAME words — the session host
+ * from `GET /realtime/reflex`, the object host from its snapshot door — so an
+ * operator reading the worker log cannot tell which host skipped and does not
+ * need to.
+ */
+export const STAGE_PROJECTION_RETENTION_SKIP = '[odp] stage projection skipped: profile retention unavailable';
+
+/**
+ * Report the skip, once, in those words. Exported beside the constant so the
+ * two hosts share the emission and not only the string.
+ */
+export function warnStageProjectionSkipped(): void {
+  console.warn(STAGE_PROJECTION_RETENTION_SKIP);
+}
+
 export function stageOnlyOdpProjection(
   env: Env,
   tenant: TenantId,

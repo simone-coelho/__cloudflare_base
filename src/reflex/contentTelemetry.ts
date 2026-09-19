@@ -34,7 +34,7 @@
 // let "we showed her a video" read as "she likes video".
 // ---------------------------------------------------------------------------
 
-import { extractTouches, sanitizeEventAttributes, type ReflexConfig, type Touch } from '@/reflex/core';
+import { admittedTouches, extractTouches, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
 import { CONTENT_KIND } from '@/content/kinds';
@@ -91,25 +91,36 @@ export function actionOf(event: { type: string; data?: Record<string, unknown> |
  * one, and through extractTouches so the registry is the only thing that decides
  * which attributes matter. The SDK sends contentType today; if it sends more
  * tomorrow, a registry entry with that source is all it takes.
+ *
+ * W16 C8.10 (R64/R67): a content event's OWN attributes are event-carried
+ * values like any other, so where the caller knows the tenant's published
+ * vocabulary each of them answers for itself against it — through the one
+ * exported rule, never a copy of it. A caller with no vocabulary to offer
+ * (nothing published, or a path that does not read it) passes none and the
+ * behavior is exactly what it was.
  */
-export function contentTouches(data: Record<string, unknown>, config: ReflexConfig): Touch[] {
-  return extractTouches(sanitizeEventAttributes(data, config), config);
+export function contentTouches(data: Record<string, unknown>, config: ReflexConfig, vocabulary?: CatalogVocabulary): Touch[] {
+  const touches = extractTouches(sanitizeEventAttributes(data, config), config);
+  return vocabulary ? admittedTouches(touches, vocabulary) : touches;
 }
 
 /** Held catalog tags are dimension-keyed, not raw source attributes. Read errors
- * must propagate before callers apply affinity or fan the same touches out. */
-export async function resolvedContentTouches(env: Env, tenant: string, data: Record<string, unknown>, config: ReflexConfig): Promise<Touch[]> {
+ * must propagate before callers apply affinity or fan the same touches out.
+ * The piece's OWN format tags are the catalogue speaking about itself, so they
+ * are appended after the event's values have answered to the vocabulary. */
+export async function resolvedContentTouches(env: Env, tenant: string, data: Record<string, unknown>, config: ReflexConfig,
+  vocabulary?: CatalogVocabulary): Promise<Touch[]> {
   const dimension = config.dimensions.find(spec => spec.key === 'contentType');
-  if (!dimension) return contentTouches(data, config);
-  if (!Object.prototype.hasOwnProperty.call(data, 'contentId')) return contentTouches(data, config);
+  if (!dimension) return contentTouches(data, config, vocabulary);
+  if (!Object.prototype.hasOwnProperty.call(data, 'contentId')) return contentTouches(data, config, vocabulary);
   const id = data.contentId;
   if (typeof id !== 'string' || id.trim() === '') throw new Error('Invalid contentId');
-  if (dimension.derive) return contentTouches(data, config).filter(touch => touch.dim !== 'contentType');
+  if (dimension.derive) return contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
   if (!catalog) throw new Error('Content catalog unavailable');
   const piece = catalog.value.pieces.find(candidate => candidate.id === id);
-  if (!piece) return contentTouches(data, config);
-  const touches = contentTouches(data, config).filter(touch => touch.dim !== 'contentType');
+  if (!piece) return contentTouches(data, config, vocabulary);
+  const touches = contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   for (const value of contentTypeValues(piece) ?? []) touches.push({ dim: 'contentType', value });
   return touches;
 }

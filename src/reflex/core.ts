@@ -455,8 +455,15 @@ export function productReferencesOf(data: Record<string, unknown>): string[] {
  * authority over nothing there, so every value on it stands — a tenant whose
  * published data tags only a line cannot thereby refuse every category its
  * shoppers browse.
+ *
+ * Exported (W16 C8.09/C8.10, R64/R67) because it is THE rule, and every ingest
+ * path applies it: the live and buffered product paths reach it through
+ * `placeEvent` below, and the two paths that reach the registry directly —
+ * content telemetry (`src/reflex/contentTelemetry.ts`) and historical import
+ * (`src/identity/history.ts`) — call it on the touches they built. One rule,
+ * one implementation, so no ingest door can drift into a second vocabulary.
  */
-function admitted(touches: Touch[], vocabulary: CatalogVocabulary): Touch[] {
+export function admittedTouches(touches: Touch[], vocabulary: CatalogVocabulary): Touch[] {
   return touches.filter((touch) => {
     const named = vocabulary.values.get(touch.dim);
     return named === undefined || named.size === 0 || named.has(touch.value);
@@ -490,7 +497,7 @@ export function placeEvent(
   const touches = product
     ? extractTouches(product, config)
     : config.eventAttributes === 'event-when-unknown'
-      ? admitted(extractTouches(sanitizeEventAttributes(data, config), config), vocabulary)
+      ? admittedTouches(extractTouches(sanitizeEventAttributes(data, config), config), vocabulary)
       : [];
   const primary = productReferenceOf(data);
   const unrecognized = productReferencesOf(data).filter((id) =>

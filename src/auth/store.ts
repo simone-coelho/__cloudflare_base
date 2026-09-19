@@ -71,8 +71,12 @@ const auditRef = z.string().regex(/^[a-f0-9]{64}$/);
 const memberSchema = z.object({ ordinal: z.number().int().min(0).max(999), accountRef: auditRef, shopperRef: auditRef.optional() }).strict();
 const historyTotal = z.number().int().min(1).max(1000);
 const historyCount = z.number().int().min(0).max(1000);
+// W16 C8.11 (R64): `out_of_vocabulary` is the row the tenant's own published
+// catalogue refused — a different audited fact from `no_registry_touch`, the
+// row that carried nothing the registry names at all.
 export const historySkipReasonSchema = z.enum(['invalid_shopper', 'invalid_visitor', 'no_subject', 'erased', 'selector_conflict',
-  'unweighted_action', 'no_registry_touch', 'profile_missing', 'consent_missing', 'consent_refused', 'stale_profile', 'replayed_profile']);
+  'unweighted_action', 'no_registry_touch', 'out_of_vocabulary', 'profile_missing', 'consent_missing', 'consent_refused',
+  'stale_profile', 'replayed_profile']);
 const historyMember = z.object({ ordinal: z.number().int().min(0).max(999), rowKind: z.enum(['behavioral', 'profile']),
   accountRef: auditRef.optional(), shopperRef: auditRef.optional(), visitorRef: auditRef.optional(),
 }).strict().refine(m => !!(m.accountRef || m.shopperRef || m.visitorRef));

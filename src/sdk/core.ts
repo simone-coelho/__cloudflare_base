@@ -98,6 +98,10 @@ export interface PageBindings {
   release(): void;
 }
 
+/** The operation id a recognition consume is keyed by: one v4 UUID, as the
+ * engine's own route requires (`OPERATION_ID`, src/routes/identity.ts). */
+const CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 function createPageBindings(): PageBindings {
   const listeners = new Set<() => void>();
   const observed = new Map<ElementLike, () => void>();
@@ -567,23 +571,57 @@ export function createCore(config: ClientConfig, host: Host): Core {
       const proof = host.storage.get(continuityKey) ?? '';
       if (!proof) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? '';
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operationId)) {
+      if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
         host.storage.set(continuityOperationKey, operationId);
       }
       return { proof, operationId };
     } catch { return null; }
   }
-  /** What the engine's own answer says to keep. A disabled answer clears it:
-   * a proof this engine will not recognize is a token nobody should hold. */
+  /**
+   * A consume this browser already STARTED and the engine never answered: the
+   * proof and its operation id are both still stored.
+   *
+   * W16 C6.13 (R62). The outage answer gave her an anonymous session of her own,
+   * so from the next page load on she is no longer "a browser with no capability
+   * of its own" — and without this the kept proof could never be presented again
+   * and the recognition the outage interrupted would be lost anyway. So the same
+   * consume, under the same operation id, is offered again. Never a NEW one: this
+   * mints nothing and starts nothing. It is self-limiting, because the engine's
+   * next answer either recognizes her (the rotated proof is stored and the
+   * operation id cleared) or decides about her (both cleared); only an outage
+   * leaves the pair in place.
+   */
+  function pendingContinuity(): { proof: string; operationId: string } | null {
+    if (cfg.sessionBroker) return null;
+    try {
+      const proof = host.storage.get(continuityKey) ?? '';
+      const operationId = host.storage.get(continuityOperationKey) ?? '';
+      return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
+    } catch { return null; }
+  }
+  /**
+   * What the engine's own answer says to keep. A disabled answer that is a
+   * DECISION about the shopper clears the proof: a token this engine will not
+   * recognize is one nobody should hold.
+   *
+   * W16 C6.13 (R62): `reason: 'unavailable'` is not such a decision. It says the
+   * engine could not reach the shopper's own object or could not read what it
+   * answered, so nothing was decided and nothing was consumed. The browser keeps
+   * the proof AND the operation id, so the next load presents the very same
+   * consume rather than starting a second one. Any other reason, and any answer
+   * whose reason this browser does not know, is treated as the decision it
+   * looks like and clears — an engine that has stopped recognizing her must not
+   * leave a long-lived credential lying in her browser.
+   */
   function keepContinuity(value: unknown): void {
     if (cfg.sessionBroker) return;
-    const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown } | null | undefined;
+    const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown; reason?: unknown } | null | undefined;
     try {
       if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
         host.storage.set(continuityKey, report.proof);
         host.storage.set(continuityOperationKey, '');
-      } else if (report?.enabled === false) {
+      } else if (report?.enabled === false && report.reason !== 'unavailable') {
         host.storage.set(continuityKey, '');
         host.storage.set(continuityOperationKey, '');
       }
@@ -645,8 +683,10 @@ export function createCore(config: ClientConfig, host: Host): Core {
         try { persisted = host.storage.get(capabilityKey) ?? ''; } catch { /* storage unavailable */ }
         if (Object.keys(recovery).length) persisted = '';
         const request = () => {
-          // Only a browser with no capability of its own is returning.
-          const returning = persisted ? null : presentContinuity();
+          // Only a browser with no capability of its own STARTS a consume; one
+          // that already has a capability only retries a consume the engine
+          // never answered (W16 C6.13).
+          const returning = persisted ? pendingContinuity() : presentContinuity();
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include',
             headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}) },
             body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning ? { continuity: returning } : {}) }) }, 16384);

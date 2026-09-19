@@ -491,8 +491,21 @@ export class RealtimeSegmentEngine {
       const catalogService = await this.catalogFor(surface);
       const audiencePrefix = tenantAudienceKeyPrefix(this.tenant, surface);
       const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
-      const contentEventTouches = reflexOn && isContentAction(actionOf(event))
-        ? await resolvedContentTouches(this.env, this.tenant, event.data ?? {}, reflexConfig) : null;
+      const eventData = (event.data ?? {}) as Record<string, unknown>;
+      const eventProductId = eventData.productId ?? eventData.product_id ?? eventData.sku;
+      const heldProduct = (eventProductId ? catalogService?.getProduct(String(eventProductId)) : undefined) as unknown as Record<string, unknown> | undefined;
+      const contentEvent = isContentAction(actionOf(event));
+      // W16 C8.03/C8.08/C8.10 (R47, R64, R67): the vocabulary an input is
+      // measured against is the catalogue THIS tenant publishes, read once per
+      // event and applied by the one shared rule. A content interaction carries
+      // its own attributes into the registry exactly as a product event does, so
+      // it answers to the same vocabulary; the read is skipped only when there is
+      // nothing for the vocabulary to answer about.
+      const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+        ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null)
+        : EMPTY_VOCABULARY;
+      const contentEventTouches = reflexOn && contentEvent
+        ? await resolvedContentTouches(this.env, this.tenant, eventData, reflexConfig, vocabulary) : null;
       await this.ensureSeeded(surface);
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
@@ -520,20 +533,12 @@ export class RealtimeSegmentEngine {
       const nowMs = Date.now();
       let reflex: ReflexResult | null = null;
       if (reflexOn) {
-        const data = event.data ?? {};
-        const pid = data.productId ?? data.product_id ?? data.sku;
-        const product = pid ? catalogService?.getProduct(String(pid)) : undefined;
         const action = actionOf(event);
         // W16 C8.03/C8.08 (R47, R64): each value the event carries answers for
         // itself against the catalogue this tenant publishes, and the answer
         // names every product reference the engine could not place. A content
-        // event is placed by the content catalogue one line above, so it never
-        // asks the product vocabulary about itself.
-        const eventData = data as Record<string, unknown>;
-        const heldProduct = product as unknown as Record<string, unknown> | undefined;
-        const vocabulary = contentEventTouches || !needsCatalogVocabulary(eventData, heldProduct, reflexConfig)
-          ? EMPTY_VOCABULARY
-          : await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null);
+        // event is placed by the content catalogue above, against the same
+        // vocabulary, so its diagnostic comes from those touches.
         const placed = placeEvent(eventData, heldProduct, reflexConfig, vocabulary);
         signals = contentEventTouches
           ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
@@ -981,8 +986,12 @@ export class RealtimeSegmentEngine {
     const preferences = { ...previous.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization };
     const restricted = preferences.trackingConsent !== previous.preferences.trackingConsent
       || preferences.personalizationEnabled !== previous.preferences.personalizationEnabled;
-    const answer = (sessionData: SessionData, interestApplied = false, dropped?: string) => ({ update: null,
-      sessionId: this.principal!.sessionId, sessionData, consent, interestApplied, ...(dropped ? { dropped } : {}) });
+    // W16 C8.09 (R21): the buffered answer carries the same input diagnostic the
+    // live answer carries, naming every product reference the engine could not
+    // place. Absent until the event has actually been placed.
+    const answer = (sessionData: SessionData, interestApplied = false, dropped?: string, signals?: RecognitionSignals) => ({ update: null,
+      sessionId: this.principal!.sessionId, sessionData, consent, interestApplied,
+      ...(dropped ? { dropped } : {}), ...(signals ? { signals } : {}) });
     if (restricted) await this.sessionManager.restrictConsent(this.principal.sessionId, consent, { sessionId: this.principal.sessionId, data: previous });
     const current = { ...previous, preferences };
     if (!consent.tracking) return answer(current, false, 'tracking_refused');
@@ -992,9 +1001,9 @@ export class RealtimeSegmentEngine {
     requireConsentPurpose(consent, 'personalization');
     const interest = await bufferedInterest(this.env, this.tenant, event,
       { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes } }, this.connectors.segments, now);
-    if (!interest.applied) return answer(current);
+    if (!interest.applied) return answer(current, false, undefined, interest.signals);
     await this.sessionManager.writeBufferedSession(current, { preferences, reflex: interest.reflex, segments: interest.segments });
-    return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true);
+    return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true, undefined, interest.signals);
   }
 
   /** Read-time qualification avoids stale derived membership after replacement. */

@@ -30,6 +30,16 @@ dimension the catalogue tags nothing on constrains nothing. The answer's `signal
 referred to that could not be placed, the top-level `productId`/`product_id`/`sku` and each `items[]`
 product of an order, never an attribute value.
 
+This holds at every door an interaction can arrive by, not only the live one: an explicitly buffered
+action (`"processing": "buffered"`, which answers `signals` of its own), a content interaction and a
+warehouse row posted to `POST /v1/{tenant}/identity/events` are all measured against the same published
+catalogue by the same rule.
+
+An import row the vocabulary left with nothing to build is reported in the answer's `skipped[]` under
+its own coded reason, `out_of_vocabulary` — a different fact from `no registry attribute on the row`,
+which is the row that carried nothing the registry names at all. The first is answered by publishing
+the value, the second by sending a different column.
+
 ## The decision
 
 One item in snapshot `decisions[]`; the set carries its original `pageInstance`. `content_decisions` is a client-compatible historical frame, not a production delivery promise.
