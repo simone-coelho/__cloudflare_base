@@ -151,16 +151,32 @@ used where the brand's registry says so.
 ```
 
 ```js
-client.emit.declarative();   // authenticated offer + rendered ACK still required
+const detach = client.emit.declarative();   // authenticated offer + rendered ACK still required
 ```
 
 **Your data layer**, the cheapest path where a tag layer exists. GA4 event names are mapped by default
 (`page_view`, `view_item`, `add_to_cart`, `add_to_wishlist`, `purchase`); override or add any of them.
 
 ```js
-client.emit.dataLayer();   // wraps window.dataLayer.push and replays what is already there
+const release = client.emit.dataLayer();   // wraps window.dataLayer.push and replays what is already there
 client.emit.dataLayer({ mapping: { my_event: (e) => ({ type: 'custom', data: { event: 'my_event', id: e.id } }) } });
 ```
+
+**Binding and unbinding.** Both calls return a detach function, and the SDK owns what it put on your page
+until you run it. Binding the same document twice — a route re-render, React StrictMode's double-invoked
+effect — joins the attachment already live, so the element keeps one listener and one observation and the
+first call's options stand; the page's elements come back when the last detach function has run. Detach
+removes listeners with `removeEventListener` and disconnects observers rather than muting them, so a node
+your framework reuses is left clean. A node re-rendered in place does not need rebinding: what it reports
+is read from its attributes when the shopper acts, so a changed `data-op-slot` or `data-op-content` reports
+the piece the node now shows (the served receipt in `data-op-decision-id` is read once, when the SDK binds).
+The tag layer is the page's: `push` is wrapped once however many clients capture from it, each live client
+sees a push once, and your own `push` function comes back only when the last attachment is released, so
+releasing one never removes another's. `client.destroy()` releases whatever the client still holds, so
+`destroy()` before the detach functions and the detach functions before `destroy()` both leave the page
+with no live listener, wrapper, observer or pending callback and nothing reaching the platform afterwards.
+After a sign-in or a switch to another tenant, the element carries one listener again and later events
+carry only the new identity.
 
 **Renderer callback:** call `rendered(slot, contentId, element, decisionId)` only after paint. Content clicks and dwell await that receipt; ordinary commerce events are separate.
 
