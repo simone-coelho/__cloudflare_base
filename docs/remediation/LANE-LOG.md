@@ -246,4 +246,5 @@ Plan: BASE-2 (L3) and BASE-1a (L4) run now in disjoint files. BASE-1b (shopperRe
 | `7260f02` | Frozen evidence and tracker. |
 | `d44f7e8` | Merge of `rem/tools-score` (`39c6d5f`): score tool, ratchet, CI gate wiring, tsconfig include. Reviewer PASS, lead validation green. |
 | `181c61958fe7507189591f50bfd1fa113ff471b8` | Merge of `rem/base-2-consent-fixtures` (`7925c4e`): six suites 43 → 1 failing. Reviewer PASS, lead validation green. Baseline regeneration from a serial run on this head follows. |
+| `13cdaec` (run) | Serial regeneration after the W16-B6 merge: 86 failing, 1 outside the baseline, the R56 load-sensitive `W14.05/W03.06` `do` leg timed out under four concurrent lanes; no score written (the tool refused); the BASE-R1 run at `432d733` supersedes it and is rerun on a quieter machine if the same timeout recurs. |
 | `5b0b0ae` | Method takeover: METHOD.md, agents, AGENTS.md, LANE-LOG.md, RESUME.md. |
