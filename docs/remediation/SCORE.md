@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 140/144 · W closed 3/26 (W16–W41) · suite 1962/2043 · residual 81 in 10 files · typecheck GREEN
+Units 141/144 · W closed 3/26 (W16–W41) · suite 1963/2043 · residual 80 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -20,7 +20,7 @@ Units 140/144 · W closed 3/26 (W16–W41) · suite 1962/2043 · residual 81 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 16 | 16 | no | — | — |
-| W21 | 9 | 7 | no | — | — |
+| W21 | 9 | 8 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -161,7 +161,7 @@ Units 140/144 · W closed 3/26 (W16–W41) · suite 1962/2043 · residual 81 in 
 | W20.G2.05 | green | 1 |
 | W20.G2.06 | green | 1 |
 | W20.G2.07 | green | 1 |
-| W21.C1.01 | red | 2 |
+| W21.C1.01 | green | 2 |
 | W21.C1.02 | green | 1 |
 | W21.C1.03 | green | 1 |
 | W21.C1.04 | green | 2 |
@@ -175,14 +175,13 @@ Units 140/144 · W closed 3/26 (W16–W41) · suite 1962/2043 · residual 81 in 
 ## Failing tests outside the baseline
 
 -  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
--  unit:W21.C1.01 logic: the relative interval is Katz's log interval from the raw rates, and the report vocabulary stays a diagnostic one
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 06b12b3d5a715dc686f99d7be70f7c95b658afdd4cb0f5698255ad6eed83c394 |
+| units sha256 | b48f3b741cb1c03a27af5decfd285a713de753e102b090782b27af952c61bec9 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -194,6 +193,6 @@ Units 140/144 · W closed 3/26 (W16–W41) · suite 1962/2043 · residual 81 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | ece524fe2ad3f6de8213795872af7f3dce125992f0729c6e1c60f624c7c834f6 |
-| commit | 8ef5ebb0a0940de0c5ac2b9c6d7fbb6fa46bf123 |
-| generated | 2026-09-19T22:50:11.874Z |
+| vitest report sha256 | 2748becf4b2cb171376891989be11d055c063b829b6298f9eff8900b62f1eb7c |
+| commit | 85755f7a9ff1fc405dca8115fcfe1aa3ba751da2 |
+| generated | 2026-09-19T23:01:26.569Z |
