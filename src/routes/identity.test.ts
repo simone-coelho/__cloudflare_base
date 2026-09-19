@@ -31,7 +31,7 @@ import { tenantKey } from '@/tenancy/tenant';
 import { applyHistory, historyRowSchema } from '@/identity/history';
 import { loadTombstone, tombstoneKey, writeTombstone } from '@/ledger/erasure';
 import { reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
-import { initializePublication, initializePublicationSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublicationSet, pinPublication, publicationScope, readPinnedPublication, type PublicationBaseline } from '@/config/publication';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
 import { Hono } from 'hono';
 import { tenantMiddleware, tenantConfig } from '@/tenancy/middleware';
@@ -166,9 +166,26 @@ function historyProfile(subject: string, now = Date.now()): SessionData {
   };
 }
 async function seedHistorySession(tenant: string, subject: string) {
-  const sid = 's-history-' + subject, kv = env.SESSIONS as unknown as FakeKV;
-  await kv.put(tenantKey(tenant, 'session:' + sid), JSON.stringify(historyProfile(subject)));
+  const sid = 's-history-' + subject, kv = env.SESSIONS as unknown as FakeKV, now = Date.now();
+  // A record carries the retention stamp its policy gave it at birth; a stamp-less
+  // record is legacy and is never newly authorized (src/retention.ts:79-86, :88-92),
+  // which is the shape the W06.01 fixture below already seeds.
+  await kv.put(tenantKey(tenant, 'session:' + sid), JSON.stringify({ ...historyProfile(subject),
+    retention: retentionBirth(env, tenant, 'profile', now, now), externalRetention: {} }));
   await kv.put(tenantKey(tenant, 'user:' + subject), sid);
+  // A readable legacy `user:` pointer is not an adoption witness: the owner
+  // object must already hold a grant on the same session before historical rows
+  // may be applied (src/durable-objects/ShopperReflex.ts:2662-2668), and it must
+  // hold an explicit stored choice before anything is kept (:2724-2726;
+  // src/content/consent.ts:139-163). Both are part of the fixture now.
+  if (bound && (isShopperId(subject) || /^vis-[0-9a-f-]{36}$/.test(subject))) {
+    const item = bound.object.open(shopperObjectName(tenant, subject));
+    const issued = await issueSessionCapability(env, { tenant, subject, sessionId: sid, kind: isShopperId(subject) ? 'recognized' : 'anonymous' });
+    const principal = await verifySessionCapability(env, issued.capability, tenant);
+    item.data.set('grantAuthority', { version: 1, epoch: principal.authorityEpoch, grants: { [principal.grantId!]: principal } });
+    item.data.set('consent', explicitChoice(tenant, subject));
+    item.object = new ShopperReflex(item.state, env);
+  }
   return sid;
 }
 
@@ -667,9 +684,13 @@ describe('W06.01 durable local erasure retry', () => {
     // configuration write needs If-Match and Idempotency-Key
     // (src/config/publication.ts:66-73, :76-88, :379-397), while an explicit
     // initial baseline is the sanctioned library-only path (:437-441, :492-495).
+    // Positive control: the tenant's Reflex configuration really is published
+    // and readable at revision 1 before any history is applied.
     await ensurePublication(tenant);
-    await initializePublication(env, REFLEX_KIND, reflexScopeForTenant(tenant),
-      { revision: 1, value: cfg, actor: 'w0509-synthetic', note: '', at: 1 }, '0:' + crypto.randomUUID()).catch(() => undefined);
+    const scope = reflexScopeForTenant(tenant);
+    const pin = await pinPublication(env, publicationScope(REFLEX_KIND, scope));
+    expect(pin.refs['reflex:' + scope]!.revision).toBe(1);
+    expect((await readPinnedPublication(env, REFLEX_KIND, scope, pin)).value.version).toBe(cfg.version);
   }
   async function seedHistoryTarget(d: ReturnType<typeof destinations>, tenant: string, subject: string, sid = 's-history-' + subject) {
     const item = d.object.open(shopperObjectName(tenant, subject)), now = Date.now();
@@ -2055,14 +2076,23 @@ describe('erase: the right to be forgotten (CW28)', () => {
     await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000002', accountId: 'acct-1001' } });
     const sh = a.body.shopperId as string;
 
-    const r = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001' } });
+    // Erasure continues in bounded steps: a pending receipt answers 202 and the
+    // operator repeats the same request until the local work completes
+    // (src/routes/identity.ts:303, :313 — pending 202, local_complete 200), the
+    // same continuation the W06.12 and W06.09 cases below drive.
+    const erase = () => call('/coach/identity/erase', { method: 'POST', headers: auth, json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001' } });
+    let r = await erase();
+    for (let step = 0; r.status === 202 && step < 10; step++) r = await erase();
     expect(r.status).toBe(200);
     expect(r.body.shopperId).toBe(sh);
     expect(r.body).toMatchObject({ ok: true, status: 'local_complete', complete: false, erased: [] });
     expect([...r.body.targets].sort()).toEqual([sh, 'vis-00000000-0000-4000-8000-000000000002', 'vis-00000000-0000-4000-8000-000000000001'].sort());
     expect(r.body.links).toEqual({ visitors: 2, shopper: true });
     expect(r.body.profiles.filter((p: { host: string }) => p.host === 'session').every((p: { result: string }) => p.result === 'local_completed')).toBe(true);
-    expect(r.body.profiles.filter((p: { host: string }) => p.host === 'object').every((p: { result: string }) => p.result === 'unbound')).toBe(true);
+    // 'unbound' is the result only while the object host has no binding
+    // (src/identity/erase.ts:868). With the owner namespace bound, each
+    // per-shopper object is actually reached and completes its local erasure.
+    expect(r.body.profiles.filter((p: { host: string }) => p.host === 'object').every((p: { result: string }) => p.result === 'local_completed')).toBe(true);
     expect(r.body.ledger.map((l: { id: string; tombstone: string | null }) => [l.id, !!l.tombstone]).every(([, t]: [string, boolean]) => t)).toBe(true);
     expect(r.body.notReached[0]).toMatch(/ODP/);
     expect(r.body.notReached.slice(1, 3)).toEqual([

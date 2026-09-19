@@ -1,1 +1,25 @@
-[]
+[
+  {
+    "id": "W06.BASE.02",
+    "w": "W06",
+    "criterion": "retained-data disposal at the end of a retention lifetime",
+    "outcome": "After a profile's retention expiry the shopper object retains no grant naming the subject or session: the grant-authority record may remain as the barrier that keeps a legacy writer out, but its grants map is empty.",
+    "legs": ["host"],
+    "witness": "src/durable-objects/ShopperReflex.ts:1469-1471 (the retention branch deletes only affinity, pipeline and audienceOwner and never runs eraseWithBarrier); src/retention.ts:24-25, :88-92 (a policy lifetime disposes the record it covers); BASE-1b reviewer probe P5 (a grant naming the subject and session survives the retention erasure).",
+    "status": "declared",
+    "batch": "BASE-1b",
+    "declared_from": "src/reflex/shopperReflex.test.ts > alarm — lazy re-evaluation, exits pushed, retention deleteAll > retention: idle past N days with no sockets → storage.deleteAll()",
+    "residual": "The same defect is measured a second time by src/reflex/shopperReflex.consent.test.ts 'W05.02 … honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', which is left unwrapped and RED on the same assertion."
+  },
+  {
+    "id": "W05.BASE.05",
+    "w": "W05",
+    "criterion": "explicit consent governs every served personalization surface",
+    "outcome": "The sort route validates the Durable Object consent envelope before it returns a ranked receipt: a reply that is not ok, carries no consent, or carries a consent that is not two real booleans with a live explicit instruction is refused before any receipt; and a real object whose stored choice is absent or refuses personalization contributes no vector, so the receipt scores 0 with no drivers while a consenting object's vector does contribute.",
+    "legs": ["logic", "host"],
+    "witness": "src/routes/sort.ts:79-88 (the envelope check and the personalizes() gate on the DO host); src/content/consent.ts:139-152, :176 (absence and a bare boolean grant nothing; only a live explicit instruction personalizes); settled decision D06-W05.",
+    "status": "specified",
+    "batch": "BASE-1b",
+    "residual": "Measured GREEN-AT-SPEC at c0973ad+rework: the engine already refuses all six malformed envelopes and already withholds the vector from an absent or refusing choice."
+  }
+]

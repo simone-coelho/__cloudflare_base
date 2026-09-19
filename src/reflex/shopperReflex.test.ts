@@ -477,14 +477,17 @@ describe('ingest — one reducer behind both doors', () => {
 
   it('drops events referencing unknown productIds (catalog-index validation) without creating state', async () => {
     const h = await ownedDO();
-    // The explicit choice itself arms the consent-expiry alarm before any event
-    // (ShopperReflex.ts:708, :1679-1685); a dropped event must not move it.
-    const armed = h.storage.alarm;
+    // The explicit choice itself arms the consent-expiry alarm before any event,
+    // at the choice's own deadline (ShopperReflex.ts:708, :1679-1685;
+    // CONSENT_LIFETIME_MS = 30 days). A dropped event writes no state, so the
+    // alarm is still that deadline and never a crossing or retention horizon.
+    const consentDeadline = t0 + 30 * DAY;
+    expect(h.storage.alarm).toBe(consentDeadline);
     const r = await post(h.shopper, viewEvent('NOT-A-REAL-SKU', { sessionId: h.principal!.sessionId }), h.capability);
     expect(r.status).toBe(200);
     expect(r.body.dropped).toBe('unknown_product');
     expect(h.storage.map.has('affinity')).toBe(false);
-    expect(h.storage.alarm).toBe(armed);
+    expect(h.storage.alarm).toBe(consentDeadline);
   });
 
   it('rate-limits per minute in-object (429), then admits again in the next window', async () => {
@@ -599,6 +602,14 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
     expect(push).toBeDefined();
   });
 
+  /**
+   * unit:W06.BASE.02 — after a profile's retention expiry the shopper object
+   * retains no grant naming the subject or session. The retention branch deletes
+   * only affinity, pipeline and audienceOwner (ShopperReflex.ts:1469-1471); it
+   * never runs eraseWithBarrier, so the grant authority survives with a live
+   * grant naming the subject and its session (reviewer probe P5, BASE-1b).
+   */
+  describe('unit:W06.BASE.02 the retention expiry leaves no grant naming the subject or session', () => {
   it('retention: idle past N days with no sockets → storage.deleteAll()', async () => {
     const h = await ownedDO({ REFLEX_RETENTION_DAYS: '30' });
     await driveToMembership(h);
@@ -608,12 +619,10 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
     vi.setSystemTime(t0 + 10_000 + RETENTION_30D + 1);
     idle.storage.alarm = null;
     await idle.shopper.alarm();
-    // Everything the shopper owned is gone; only the empty grant-authority
-    // barrier survives the erasure, which is what keeps a later legacy writer
-    // out (ShopperReflex.ts:1796-1801, :1692-1694) — the same record
-    // shopperReflex.consent.test.ts pins after an expiry.
+    // Everything the shopper owned is gone; the grant-authority record is the
+    // only key left (ShopperReflex.ts:1469-1471 deletes affinity, pipeline and
+    // audienceOwner and nothing else).
     expect([...idle.storage.map.keys()]).toEqual(['grantAuthority']);
-    expect(idle.storage.map.get('grantAuthority')).toMatchObject({ grants: {} });
     expect(idle.storage.alarm).toBeNull();
 
     // And a live socket DEFERS the wipe (the shopper is not idle).
@@ -622,6 +631,14 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
     vi.setSystemTime(t0 + 10_000 + RETENTION_30D + 1);
     await h2.shopper.alarm(); // socket present in this harness
     expect(h2.storage.map.size).toBeGreaterThan(0);
+
+    // The ruled outcome: the expired profile leaves no usable grant behind. The
+    // authority record may remain as the barrier that keeps a legacy writer out
+    // (ShopperReflex.ts:1692-1694), but it must name no subject or session once
+    // the retained data it authorized has been deleted (src/retention.ts:24-25,
+    // :88-92; ShopperReflex.ts:1469-1471).
+    expect((idle.storage.map.get('grantAuthority') as { grants: Record<string, unknown> }).grants).toEqual({});
+  });
   });
 });
 

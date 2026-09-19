@@ -308,9 +308,10 @@ describe('the doors', () => {
     expect(ns.object(PHONE).storage.map.get('affinity')).toEqual(browserBefore);
     const snap = await get(PHONE, '/snapshot');
     expect(snap.headers.get('X-Forwarded-Shopper')).toBe(sh);
-    // The person carries what was folded in; the browser's own object did not grow.
+    // The person carries exactly what was folded in — one view at weight 1 — and
+    // the browser's own object did not grow.
     const person = ns.object(sh).storage.map.get('affinity') as AffinityRecord;
-    expect(person.reflex.dims.line.Tabby.s).toBeGreaterThan(0);
+    expect(person.reflex.dims.line.Tabby.s).toBe(1);
     const browser = ns.object(PHONE).storage.map.get('affinity') as AffinityRecord;
     expect(browser.reflex.dims.line.Tabby.s).toBeLessThanOrEqual(1);
     // The identity doors themselves are never forwarded.
@@ -362,6 +363,7 @@ describe('linkVisitor on the object host', () => {
     expect((await get(PHONE, '/identity/export')).body.forwardTo).toBe(sh); // default brand: bare name
     // Linking again from the same browser folds nothing and reports the person.
     const folded = structuredClone(ns.object(sh).storage.map.get('pipeline'));
+    const foldedAffinity = structuredClone(ns.object(sh).storage.map.get('affinity'));
     const again = await linkVisitor(env, 'coach', { visitorId: PHONE, accountId: 'acct-1001', source: 'login', assurance: 'site' });
     // The object host answers every idempotent commit with the same durable
     // receipt, whose outcome is pinned to 'linked' (ShopperReflex.ts:222, :2452);
@@ -370,6 +372,7 @@ describe('linkVisitor on the object host', () => {
     expect(again.outcome).toBe('linked');
     expect(again.audiences).toContain(TABBY);
     expect(ns.object(sh).storage.map.get('pipeline')).toEqual(folded);
+    expect(ns.object(sh).storage.map.get('affinity')).toEqual(foldedAffinity);
   });
 
   it('names the person’s object under the brand prefix for a non-default brand', async () => {

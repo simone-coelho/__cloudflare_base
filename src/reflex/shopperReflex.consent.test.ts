@@ -227,7 +227,12 @@ describe('W05.02 shared reducer and timer boundaries', () => {
     // The refusal guard does not precede or extend the unchanged idle expiry.
     vi.setSystemTime(t0 + 31 * 86_400_000); sockets.length = 0;
     storage.alarm = null; await shopper.alarm(); expect(storage.map.has('affinity')).toBe(false); expect(storage.map.has('pipeline')).toBe(false);
-    expect(storage.map.get('grantAuthority')).toMatchObject({ grants: {} }); expect(storage.alarm).toBeNull();
+    // Same ruled outcome as unit:W06.BASE.02 in shopperReflex.test.ts: once the
+    // retained profile is deleted the object keeps no grant naming the subject
+    // or session. toMatchObject({ grants: {} }) admits any grants map, so the
+    // map itself is compared (ShopperReflex.ts:1469-1471; src/retention.ts:88-92).
+    expect((storage.map.get('grantAuthority') as { grants: Record<string, unknown> }).grants).toEqual({});
+    expect(storage.alarm).toBeNull();
   });
 });
 

@@ -238,6 +238,26 @@ describe('existing access credential compatibility', () => {
     expect((await f.request('/auth/me', bearer(token))).status).toBe(kind === 'access' ? 200 : 401);
     const authored = json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, token);
     const write = await f.request(f.configPath, { ...authored, headers: { ...authored.headers, ...await preconditions(f.env, f.scope) } });
+    if (kind.startsWith('untyped-')) {
+      // An authored configuration write admits only a typed access or service
+      // credential (src/routes/config.ts:101). Document 35 §5 W02 requires typed
+      // credentials and the migration of tool tokens (§5 W02 line 57 and the
+      // W02·G0 row), and HANDOFF-2026-09-18 §7 settles individually revocable
+      // service credentials, so an untyped legacy token no longer authors.
+      expect(write.status).toBe(401);
+      // and nothing was written: the publication still stands at the baseline.
+      expect(await f.current()).toMatchObject({ revision: 1, actor: 'synthetic-fixture' });
+      expect((await pinPublication(f.env, f.scope)).refs['reflex:' + reflexScopeForTenant(f.scope)]!.revision).toBe(1);
+      // Positive control: the same tool subject, with a service-typed credential,
+      // writes through the very same route and preconditions.
+      const typed = await signed({ sub: 'synthetic-tool', roles: ['operator'], permissions: ['read'], type: 'service' });
+      const control = json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, typed);
+      const accepted = await f.request(f.configPath, { ...control, headers: { ...control.headers, ...await preconditions(f.env, f.scope) } });
+      expect(accepted.status).toBe(200);
+      expect(await f.current()).toMatchObject({ revision: 2, actor: 'synthetic-tool', config: { K: 7 } });
+      expect((await pinPublication(f.env, f.scope)).refs['reflex:' + reflexScopeForTenant(f.scope)]!.revision).toBe(2);
+      return;
+    }
     expect(write.status).toBe(200);
     // The recorded actor is the credential's subject (src/routes/config.ts:90-92, :101).
     const actor = kind === 'access' ? 'synthetic-operator' : 'synthetic-tool';
