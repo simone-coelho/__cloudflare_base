@@ -25,11 +25,11 @@ import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND } from '@/learn/priors';
-import { HttpJsonSource, assemble, candidatesFrom, parseCsv, recordsFromJson, type ImportMode } from '@/content/import';
-import type { ContentCatalog, SlotCatalog } from '@/content/types';
+import { HttpJsonSource, assemble, candidatesFrom, csvColumnCaseVariants, FEED_FIELDS, parseCsv, recordsFromJson, type ImportMode } from '@/content/import';
+import type { ContentCatalog, ContentPiece, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -99,6 +99,45 @@ function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | 
     return tenant;
   });
 }
+/**
+ * The records a direct publication submitted, for the advisory channel alone.
+ * A direct PUT is never routed through the import normalizer (F27 §4.2), so the
+ * field set it is read against is the validator's own closed one: a name
+ * outside it reaches no stored piece and is named rather than lost in silence.
+ */
+function submittedPieces(candidate: unknown): unknown[] {
+  const pieces = (candidate as { pieces?: unknown } | null | undefined)?.pieces;
+  return Array.isArray(pieces) ? pieces : [];
+}
+const publishedRequest = (candidate: unknown) => ({ records: submittedPieces(candidate), accepted: PIECE_FIELDS });
+
+/**
+ * The catalogue's authored version label, carried across a partial import so a
+ * customer's own label survives a refresh that says nothing about it. The
+ * compiled default's sentinel is not an authored label: a catalogue that has
+ * been written is no longer the empty one, so carrying it would leave every
+ * later revision stamped `content-empty+rN` on the feed paths while the same
+ * catalogue published directly is stamped `content+rN` by the kind's own
+ * `stampLabel` root. One contract, one label.
+ */
+function carriedVersion(current: ContentCatalog): string | undefined {
+  const root = (current.version ?? '').replace(/\+r\d+$/, '');
+  return root && root !== EMPTY_CATALOG.version ? current.version : undefined;
+}
+
+/**
+ * How many stored pieces one write created or altered, from the stored values
+ * themselves rather than from the feed's row count: a refresh that carries the
+ * catalogue back unchanged reports none. A piece the operation removed is
+ * neither created nor altered and is not counted here.
+ */
+function changedPieces(before: ContentCatalog, after: ContentCatalog): number {
+  const previous = new Map(before.pieces.map((piece: ContentPiece) => [piece.id, JSON.stringify(piece)]));
+  let changed = 0;
+  for (const piece of after.pieces) if (previous.get(piece.id) !== JSON.stringify(piece)) changed++;
+  return changed;
+}
+
 function actorOf(c: { get: (k: 'auth') => AuthContext | undefined }): string {
   return c.get('auth')?.user?.sub ?? c.get('auth')?.user?.email ?? 'unknown';
 }
@@ -235,7 +274,7 @@ contentRoutes.post('/:kind/validate', async (c) => {
   inputCollection(k.kind.name, candidate);
   const result = k.kind.validate(candidate);
   return result.ok ? c.json({ valid: true, document: result.value,
-    ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null) } : {}),
+    ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null, publishedRequest(candidate)) } : {}),
     ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}) }) : c.json({ valid: false, errors: result.errors }, 422);
 });
 
@@ -284,7 +323,7 @@ contentRoutes.put('/:kind', async (c) => {
   } else result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
-        ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}),
+        ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate)) } : {}),
         ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
@@ -309,13 +348,26 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   const scope = catalogScope(c);
   const incoming = candidatesFrom(records);
   if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
+  // The catalogue this operation was published over, so `changed` is measured
+  // against the stored values. The mutator runs for every publication; an
+  // exact-request retry serves a retained answer without running it, and the
+  // revision it declared is the base that answer was measured against.
+  let base: ContentCatalog | undefined;
   const result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
-    current => ({ ...(current.version ? { version: current.version } : {}), ...assemble(current, incoming, mode) }));
-  return result.ok
-    ? c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: result.revision.value.pieces.length,
-        revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
-        diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) })
-    : c.json({ ok: false, errors: result.errors, received: records.length }, 422);
+    current => { base = current; return { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), ...assemble(current, incoming, mode) }; });
+  if (!result.ok) return c.json({ ok: false, errors: result.errors, received: records.length }, 422);
+  const before = base ?? await publishedOver(c.env, scope, meta.expectedRevision);
+  return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: result.revision.value.pieces.length,
+    changed: changedPieces(before, result.revision.value),
+    revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
+    diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, { records, accepted: FEED_FIELDS }) });
+}
+
+/** The catalogue at a declared base revision; an unreadable or absent base is the empty catalogue. */
+async function publishedOver(env: Env, scope: string, revision: number | undefined): Promise<ContentCatalog> {
+  if (revision === undefined || revision < 1) return EMPTY_CATALOG;
+  try { return (await readVersion<ContentCatalog>(env, CONTENT_KIND, scope, revision))?.value ?? EMPTY_CATALOG; }
+  catch { return EMPTY_CATALOG; }
 }
 
 /**
@@ -333,6 +385,13 @@ contentRoutes.post('/catalog/import', async (c) => {
     const text = await readInputText(c.req.raw.body);
     if (!text.trim()) return c.json({ error: 'body must be CSV text' }, 400);
     records = parseCsv(text);
+    // A header that matches a documented column only when case is ignored is a
+    // typo the boundary can recognise, and reading it as an unknown column
+    // would land every row with that field empty (F27 §5.3). Refused, naming
+    // the column the feed sent and the spelling the contract publishes.
+    const variants = csvColumnCaseVariants(Object.keys(records[0] ?? {}));
+    if (variants.length) return c.json({ ok: false, errors: variants.map(({ column, expected }) =>
+      `column '${column.slice(0, 64)}': column names are matched exactly; the published contract spells this column '${expected}'`) }, 422);
   } else {
     const body = await readInputJson(c.req.raw.body);
     if (body === null) return c.json({ error: 'body must be JSON' }, 400);

@@ -158,6 +158,16 @@ New writes, rollback and enrichment containing old duplicates refuse until the c
 corrected. Existing revision preconditions and exact-request retries still apply. This contract does
 not normalize registry/case/type aliases, locale, empty-taxonomy policy or product-attribute inheritance.
 
+Nothing above is silently dropped. A field or CSV column the table does not list is not stored, and
+the write answer names it as an `ignored_field` warning on the advisory `diagnostics` channel; two
+spellings of one tag value that differ only by case are named as `case_variant_value` with the exact
+spellings, and neither is rewritten. A CSV header that matches a listed column only when case is
+ignored — `Tags` for `tags` — is refused 422 naming both spellings, because reading it as an unknown
+column would land every row with that field empty. An unusable `journeyStageFit` word is refused
+naming the piece and the words the feed sent, beside the accepted vocabulary. An accepted import or
+pull also answers `changed`: how many stored pieces it created or altered, counted from the stored
+values, so re-importing what the catalog returned answers `changed: 0`.
+
 ### Hard slot controls
 
 ```json
