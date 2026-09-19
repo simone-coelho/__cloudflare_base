@@ -51,9 +51,14 @@
 // `category {Handbags, Accessories}`, `occasion {festival, evening, date-night}`
 // and the product ids its pieces feature. It names nothing on `subcategory`,
 // `silhouette`, `priceBand` or `contentType`, so those dimensions are never
-// refused here. The pieces, slots, journey block and horizon are byte-equal to
-// the fixture `src/units/W16/C8.unit.test.ts` publishes, so a value measured
-// there and a value measured here are the same value.
+// refused here. `FIXTURE_PIECES`, `FIXTURE_SLOTS`, `JOURNEY_V1`, the fourteen-day
+// `FIXTURE_TAU_MS` and `eventAttributes` below are the same data as the fixture
+// `src/units/W16/C8.unit.test.ts` publishes on the integration branch
+// `feature/real-time-personalization` — that file is not on this base yet, and
+// the two copies differ only in their comments, in the fixture `version` string
+// (`w16-b7-fixture` there, `w16-b8-fixture` here) and in the helper that
+// composes the reflex document (this one also carries W16.C6.13's continuity
+// block). So a value measured there and a value measured here are the same value.
 //
 // RULED MISSING MEMBERS (R21), asserted by the name this specification rules and
 // RED until they exist:
@@ -424,9 +429,24 @@ function boundary(host: 'session' | 'do', options: { odp?: boolean } = {}) {
    * condition R63 names — the record's own authority, not a broken environment.
    */
   const publishNextProfileRetentionRevision = () => {
-    const tenants = JSON.parse(env.TENANTS!).provisioned as string[];
-    env.RETENTION = JSON.stringify({ version: 1,
-      tenants: fixtureCategories(tenants, { ...fixtureRetentionPolicy, revision: 2 }) });
+    // ONE fault, which is what R63 rules: only the PROFILE policy moves to its
+    // next revision. Every other category this tenant holds is carried forward
+    // exactly as it stands — above all the destination's own
+    // `external.odp.<digest>` policy that `configureRetention` added
+    // (`destinationRetentionCategory`, src/retention.ts:11-18), so the fixture
+    // never also removes the destination's retained-data authority and the unit
+    // can only be red for the stamp R63 names.
+    const current = JSON.parse(env.RETENTION!) as { version: 1; tenants: Record<string, Record<string, RetentionPolicy>> };
+    const next: { version: 1; tenants: Record<string, Record<string, RetentionPolicy>> } = { version: 1, tenants: Object.fromEntries(
+      Object.entries(current.tenants).map(([tenant, categories]) =>
+        [tenant, { ...categories, profile: { ...fixtureRetentionPolicy, revision: 2 } }])) };
+    env.RETENTION = JSON.stringify(next);
+    // What the fixture actually changed and what it carried, so the unit can
+    // prove it arranged one fault and not two.
+    const before = current.tenants[TENANT] ?? {}, after = next.tenants[TENANT] ?? {};
+    const same = (category: string) => JSON.stringify(after[category]) === JSON.stringify(before[category]);
+    return { changed: Object.keys(after).filter(category => !same(category)).sort(),
+      carried: Object.keys(after).filter(same).sort() };
   };
   const construct = (name: string) => {
     const data = new Map<string, unknown>();
@@ -860,7 +880,16 @@ describe('unit:W16.C5.06', () => {
         //    publishes the next revision of its profile retention policy, so
         //    every stamp written under the previous one no longer matches the
         //    authority in force (`requireRetention`, src/retention.ts:96-100).
-        h.f.publishNextProfileRetentionRevision();
+        const republished = h.f.publishNextProfileRetentionRevision();
+        // The fixture arranges exactly the ONE fault R63 rules, proved rather
+        // than assumed: the profile policy is the only one that moved, and the
+        // destination keeps its own `external.odp.<digest>` retained-data policy
+        // (`destinationRetentionCategory`, src/retention.ts:11-18), so a skipped
+        // projection below can only be the profile stamp.
+        expect(republished.changed, `${host}: only the profile retention policy moves to its next revision`).toEqual(['profile']);
+        expect(republished.carried.filter(category => category.startsWith('external.odp.')),
+          `${host}: and the tenant's ODP destination keeps the retained-data authority it was configured with`)
+          .toHaveLength(1);
         const mark = network.calls.length;
         warn.mockClear();
         clock.mockReturnValue(T0 + 2 * STEP_MS + 2 * VISIT_GAP_MS + 2);
