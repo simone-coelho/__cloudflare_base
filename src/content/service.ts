@@ -301,6 +301,10 @@ export async function serveContentDecisions(
     learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf },
     external,
     served,
+    // W16 C3: the arrival's context for this page load, for the slots that
+    // publish seed rules. Observed only, under the same tracking gate as the
+    // visit it is read with, and never stored by the decision.
+    ...(consent.tracking && r.entry ? { entry: r.entry } : {}),
   });
 
   lap('decide');

@@ -39,6 +39,13 @@ export type EntryChannel =
 export interface ChannelSignals {
   utmMedium?: string | null;
   utmSource?: string | null;
+  /**
+   * The paid search keyword the campaign declared (`utm_term`). It is an arrival
+   * SIGNAL and nothing else: a keyword is what the shopper typed, never evidence
+   * of a channel, so `classifyEntryChannel` never reads it, and it is never
+   * persisted to the shopper record, the cell or any downstream payload.
+   */
+  utmTerm?: string | null;
   /** Full referrer URL or bare host; both are accepted. */
   referrer?: string | null;
   /** The site's own host, so a same-site referrer is not read as a referral. */
@@ -47,7 +54,9 @@ export interface ChannelSignals {
 
 /** The same bounded input contract at HTTP, socket and snapshot boundaries. */
 export const ENTRY_QUERY_LIMIT = 4096;
-const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 } as const;
+const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 } as const;
+/** The bound on a campaign term, the same one `utm_source` carries. */
+export const ENTRY_TERM_LIMIT: number = ENTRY_LIMITS.utmTerm;
 /** A hostname and nothing else: a URL, a path or free text does not round-trip. */
 function isHostname(value: string): boolean {
   return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
@@ -237,6 +246,32 @@ const matches = (host: string, domains: string[]) =>
 
 /** A `utm_source` declares a social network by its name or by its own host. */
 const declaresSocial = (source: string) => source !== '' && (SOCIAL_SOURCES.has(source) || matches(source, SOCIAL_HOSTS));
+
+/**
+ * The network a value NAMES, canonically; null when it is not one this engine
+ * knows. The vocabulary is the search and social tables above: every network is
+ * named by the registrable domain it is registered under, so configuration that
+ * names a network (a contextual seed rule, for one) can be refused where it is
+ * authored — free text, a bare product name and a subdomain someone else can
+ * register are all values that could otherwise only ever be silently inert.
+ */
+export function entryNetworkOf(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const domain = value.trim().toLowerCase();
+  return SEARCH_HOSTS.includes(domain) || SOCIAL_HOSTS.includes(domain) ? domain : null;
+}
+
+/**
+ * Whether an arrival came FROM that network: its referrer host, or a
+ * `utm_source` that is itself a host, under the classifier's own dot-boundary
+ * rule — so `instagram.com.evil.example` is not Instagram and neither is
+ * `notinstagram.com`.
+ */
+export function arrivedFromNetwork(entry: ChannelSignals | null | undefined, network: string): boolean {
+  const domain = entryNetworkOf(network);
+  if (!entry || domain === null) return false;
+  return matches(hostOf(norm(entry.referrer)), [domain]) || matches(norm(entry.utmSource), [domain]);
+}
 
 /**
  * Classify the visit's entry into one of doc 22's six channels.

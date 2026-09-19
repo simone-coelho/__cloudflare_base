@@ -1440,7 +1440,8 @@ function createEmit(core, listen) {
 // src/services/visit.ts
 var VISIT_GAP_MS = 30 * 60 * 1e3;
 var ENTRY_QUERY_LIMIT = 4096;
-var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
 function isHostname(value) {
   return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
 }
