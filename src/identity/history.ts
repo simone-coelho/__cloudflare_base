@@ -27,7 +27,8 @@ import { TenantKV, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { resolveTenantReflexConfig } from '@/demos/registry';
 import { SessionManager } from '@/services/SessionManager';
-import { extractTouches, sanitizeEventAttributes, type ReflexConfig, type Touch } from '@/reflex/core';
+import { admittedTouches, extractTouches, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
+import { tenantCatalogVocabulary } from '@/content/service';
 import { IdentityStore } from '@/identity/store';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { loadTombstone, type Tombstone } from '@/ledger/erasure';
@@ -141,15 +142,25 @@ export function parseHistoryCsv(text: string): Array<Record<string, unknown>> {
   });
 }
 
-function touchesOf(row: HistoryRow, cfg: ReflexConfig): Touch[] {
+/**
+ * W16 C8.10 (R64, R67): a warehouse row is this tenant's input like any other,
+ * so each value it carries answers for itself against the catalogue the tenant
+ * publishes — through the one exported rule, never a second copy of it. A
+ * dimension that catalogue names nothing on stays the row's own to decide.
+ */
+function touchesOf(row: HistoryRow, cfg: ReflexConfig, vocabulary: CatalogVocabulary): Touch[] {
   const attrs = { ...(row.product ?? {}), ...(row.attributes ?? {}) };
-  return extractTouches(sanitizeEventAttributes(attrs, cfg), cfg);
+  return admittedTouches(extractTouches(sanitizeEventAttributes(attrs, cfg), cfg), vocabulary);
 }
 
 /** Apply a batch. Rows are validated by the caller; this resolves, groups and writes. */
 export async function applyHistory(env: Env, tenant: TenantId, rows: Array<HistoryRow | ProfileRow>, now = Date.now()): Promise<HistoryReport> {
   const kv = new TenantKV(env.SESSIONS as never, tenant);
   const cfg = await resolveTenantReflexConfig(env, tenant);
+  // Read once for the batch, beside the configuration: the values this tenant's
+  // published catalogue names are what an imported row may build taste on. A
+  // tenant that publishes nothing names no vocabulary and refuses nothing.
+  const vocabulary = await tenantCatalogVocabulary(env, tenant, cfg);
   const report: HistoryReport = { received: rows.length, applied: 0, shoppers: 0, skipped: [], perShopper: [] };
   // Request-local point reads only; resolve every barrier before the first profile/history mutation.
   const barriers = new Map<string, Tombstone | null>();
@@ -205,7 +216,7 @@ export async function applyHistory(env: Env, tenant: TenantId, rows: Array<Histo
       continue;
     }
     if ((cfg.weights[r.action] ?? 0) <= 0) { report.skipped.push({ index: i, reason: `action "${r.action}" has no weight` }); continue; }
-    const touches = touchesOf(r, cfg);
+    const touches = touchesOf(r, cfg, vocabulary);
     if (touches.length === 0) { report.skipped.push({ index: i, reason: 'no registry attribute on the row' }); continue; }
     const g = groups.get(target) ?? [];
     g.push({ action: r.action, at: r.at, touches, index: i });

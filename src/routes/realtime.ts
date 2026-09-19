@@ -8,9 +8,9 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
-import { snapshot as reflexSnapshot } from '@/reflex/core';
+import { snapshot as reflexSnapshot, type ReflexConfig } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
-import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile } from '@/services/odpLoop';
+import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
 import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
@@ -395,6 +395,26 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
 });
 
 // Edge Affinity Reflex — hydrate snapshot for the Affinity Instrument (doc 16 §10).
+/**
+ * The `config` block the snapshot answer carries. Per-dimension overrides (e.g.
+ * priceBand's slower τ) ride along so the client's honest drain animation decays
+ * each bar at its TRUE rate. One function, so the ordinary answer and the answer
+ * that carries no retained profile (W16 C5.06) can never describe the same
+ * published runtime differently.
+ */
+const reflexConfigView = (cfg: ReflexConfig) => ({
+  version: cfg.version,
+  tauMs: cfg.tauMs,
+  K: cfg.K,
+  thetaIn: cfg.thetaIn,
+  thetaOut: cfg.thetaOut,
+  dims: Object.fromEntries(
+    cfg.dimensions
+      .filter((d) => d.tauMs || d.K || d.thetaIn || d.thetaOut)
+      .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
+  ),
+});
+
 // Resolves the shopper's session from cookies and returns freshly-computed live
 // affinity (scores decay by construction, so they are ALWAYS computed at read).
 realtimeRoutes.get('/reflex', async (c) => {
@@ -411,7 +431,29 @@ realtimeRoutes.get('/reflex', async (c) => {
     }
 
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
-    const { sessionId, sessionData, reflexConfig } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    // W16 C5.06 (R63). The ONE retained-data authority this read pins is the
+    // shopper's own PROFILE stamp — the record the answer would be built from
+    // (`SessionManager.readOwnedConsent`, and the profile birth a cold owned
+    // answer mints). When the authority that stamp was born under is no longer
+    // in force, nothing of that record may be read out, projected or sent; but
+    // refusing to SERVE her page is not a retention remedy. The read then
+    // answers with no retained profile at all, and the skip is reported once, in
+    // coded words that name nobody. Nothing else is absorbed here: the
+    // destination's own retained-data policy is pinned later, inside the
+    // projection below, under its own narrow catch, and every other path that
+    // pins retention still fails closed exactly as it did.
+    let owned: Awaited<ReturnType<RealtimeSegmentEngine['getOrCreateSessionFromCookies']>>;
+    try {
+      owned = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    } catch (error) {
+      if (!(error instanceof RetentionUnavailable)) throw error;
+      warnStageProjectionSkipped();
+      const cold = await resolveTenantReflexConfig(c.env, shopperPrincipal(c.req.raw).tenant,
+        resolveSurface({ surface: c.req.query('surface') }));
+      return c.json({ ok: true, now: Date.now(), config: reflexConfigView(cold),
+        affinity: null, journeyStage: null, visit: null, consent: await currentOwnerConsent() ?? storedConsent(undefined) });
+    }
+    const { sessionId, sessionData, reflexConfig } = owned;
     const consent = consentOf(sessionData);
     // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
     // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
@@ -451,28 +493,16 @@ realtimeRoutes.get('/reflex', async (c) => {
         // projection. Everything else — an owner or consent refusal above all —
         // is the caller's to see, and propagates.
         if (!(error instanceof RetentionUnavailable)) throw error;
-        // Coded and non-identifying, like every other ODP diagnostic.
-        console.warn('[odp] stage projection skipped: profile retention unavailable');
+        // Coded and non-identifying, like every other ODP diagnostic, and in the
+        // same words the object host uses for the same skip.
+        warnStageProjectionSkipped();
       }
     }
 
     return c.json({
       ok: true,
       now,
-      config: {
-        version: cfg.version,
-        tauMs: cfg.tauMs,
-        K: cfg.K,
-        thetaIn: cfg.thetaIn,
-        thetaOut: cfg.thetaOut,
-        // Per-dimension overrides (e.g. priceBand's slower τ) so the client's
-        // honest drain animation decays each bar at its TRUE rate.
-        dims: Object.fromEntries(
-          cfg.dimensions
-            .filter((d) => d.tauMs || d.K || d.thetaIn || d.thetaOut)
-            .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
-        ),
-      },
+      config: reflexConfigView(cfg),
       affinity: live
         ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
         : null,

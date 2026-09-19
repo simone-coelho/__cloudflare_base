@@ -114,6 +114,12 @@ Release note: the object host's `dropped: "unknown_product"` answer now also fir
 product we do not hold and whose every attribute value your catalogue refuses, not only for an event
 that carried an unknown id and no attributes at all; it carries the same `signals` naming the id.
 
+The same vocabulary and the same `signals` apply to every door an interaction can arrive by, not only
+the live one: an explicitly buffered action (`"processing": "buffered"`) is answered with `signals` of
+its own, and a content interaction and a historical import row are measured against the same published
+catalogue. A value your catalogue does not name on a dimension it does name builds no affinity
+whichever door it came in by.
+
 ### `GET /realtime/ws?tenant=<tenant>`
 
 The live channel; a WebSocket upgrade. Subject/profile routing derives from the verified capability on both hosts. The SDK sends `shopper-session-v1`, the capability, and `sdk-key-v1.<canonical base64url UTF-8 site key>` as subprotocols (key at most512 UTF-8 bytes). The site key remains an independent tenant gate. Duplicate, malformed or conflicting selectors refuse before owner effects. Legacy selectors remain guarded; headers/protocols still require sensitive-data handling, and no historical-log deletion is implied. Frames from the platform: `connected`, `heartbeat_response`,
@@ -258,7 +264,16 @@ Historical import requires an existing owned profile and live explicit tracking 
 | `{ enabled: false, reason: "unpublished" }` | This tenant has published no continuity block. Nothing recognizes a returning browser, and a return after the capability expires is a brand-new anonymous shopper |
 | `{ enabled: false, reason: "incomplete" }` | A block is published but is not a configuration: a transport outside `direct`/`broker`, a window that is not a finite positive number of milliseconds, no covered purpose, or `retentionApproved` that is not exactly `true` |
 | `{ enabled: false, reason: "consent" }` | Continuity is configured, and this shopper has made no current explicit choice. Both switches must be on |
+| `{ enabled: false, reason: "unavailable" }` | We could not reach this shopper's own object, or could not read what it answered. Nothing was decided about her and nothing was consumed |
 | `{ enabled: true, mode, purpose, generation, expiresAt, revision, proof? }` | The recognition descriptor her browser should carry |
+
+`unavailable` is a failure of the CALL and never a statement about the shopper, which is why it is
+not reported as `consent`. The request is still answered `200` on a brand-new anonymous session, the
+presented proof was **not** consumed and her chain did not rotate, and a caller holding a proof must
+**keep** it together with its `operationId` and present the same consume again on the next page load
+— the SDK does exactly that. Only `consent`, `unpublished` and `incomplete` are decisions, and a
+caller clears what it holds on those. A proof we genuinely cannot place stays the cold-shopper
+`consent` answer.
 
 There is **no shipped default**: the mode, the window and the covered purpose are published by the tenant on the versioned reflex document (`continuity: { mode, windowMs, purpose, retentionApproved }`), the same coherent publication set the weights, the decay horizon and the journey ladder ride, so `revision` names the document revision the descriptor is bound to. An incomplete block never becomes a configuration and never blocks the rest of the document.
 
