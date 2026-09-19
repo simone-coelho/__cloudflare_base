@@ -217,20 +217,29 @@ describe('POST /sort', () => {
     }
 
     it('logic: every malformed envelope the object could answer is refused before a receipt', async () => {
+      // Each case stands on a published configuration, so the only thing that can
+      // refuse is the envelope itself: the refusal is named, never a bare throw.
       for (const reply of [
-        { status: 503, body: { ok: false } }, { status: 200, body: { ok: false } },
-        { status: 200, body: { ok: true } }, { status: 200, body: { ok: true, consent: null } },
-        { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },
+        { status: 503, body: { ok: false }, error: 'Shopper session unavailable' },
+        { status: 200, body: { ok: false }, error: 'Sort consent unavailable' },
+        { status: 200, body: { ok: true }, error: 'Sort consent unavailable' },
+        { status: 200, body: { ok: true, consent: null }, error: 'Consent state unavailable' },
+        { status: 200, body: { ok: true, consent: {} }, error: 'Consent state unavailable' },
+        { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } }, error: 'Consent state unavailable' },
       ]) {
-        const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });
+        const e = env({ REFLEX_HOST: 'do', STORAGE: new SortR2(), SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });
+        invalidatePublicationCache();
+        await initializePublication(e as unknown as Env, REFLEX_KIND, reflexScopeForTenant('coach'),
+          { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
         const owned = await ownedRequest(e);
         const context = { env: e as unknown as Env, get: () => 'coach', req: { raw: owned.raw, header: (name: string) => owned.raw.headers.get(name) ?? undefined } };
-        await expect(affinityFor(context, owned.subject, undefined, { ...CONSENTING })).rejects.toThrow();
+        await expect(affinityFor(context, owned.subject, undefined, { ...CONSENTING })).rejects.toThrow(reply.error);
       }
       // Positive control: the envelope a real object answers — an explicit
       // stored choice, built by the product's own constructor
       // (src/content/consent.ts:92-113) — is accepted and yields its vector.
       const answered: { consent?: unknown } = {};
+      invalidatePublicationCache();
       const valid = env({ REFLEX_HOST: 'do', STORAGE: new SortR2(), SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () =>
         Response.json({ ok: true, consent: answered.consent, affinity: { dims: { line: { Tabby: 0.8 } } } }) }) } });
       await initializePublication(valid as unknown as Env, REFLEX_KIND, reflexScopeForTenant('coach'),
