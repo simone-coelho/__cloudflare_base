@@ -10,7 +10,7 @@ import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCa
 import { PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { extractTouches, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
+import { snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -198,15 +198,28 @@ async function readShopper(
   }
 }
 
-// ── The tenant's own catalogue vocabulary (W16 C8.03, R47) ──────────────────
+// ── The tenant's own catalogue vocabulary (W16 C8.03, R47, R64) ─────────────
 //
-// What an ingest host is allowed to call "recognized" comes from the catalogue
-// THIS tenant decides from, never from a list written in product code: the
-// values its published content catalogue tags carry, dimension by dimension,
-// plus the ids and registry-sourced attribute values of the product catalogue
-// it holds when it holds one. It is read here, beside the decision path's own
-// read of the same document, so the two halves of the platform can never
-// disagree about what the tenant's taxonomy is.
+// What an ingest host is allowed to refuse comes from the catalogue THIS tenant
+// PUBLISHES, never from a list written in product code: the values its published
+// content catalogue tags carry, dimension by dimension. It is read here, beside
+// the decision path's own read of the same document, so the two halves of the
+// platform can never disagree about what the tenant's taxonomy is.
+//
+// The two halves are deliberately different in kind:
+//
+//   · `values` — the authority over attribute VALUES — comes from published
+//     data only. A demo product catalogue bundled with this repository is not
+//     the tenant's published taxonomy, and letting it refuse a customer's event
+//     attributes would make one brand's rows a constant in product code
+//     (document 35 §6) and would invert CW24, whose whole point is that a
+//     customer's site scores against THEIR catalog, their events, not a copy of
+//     one held here.
+//   · `ids` — the authority over whether a product REFERENCE can be placed —
+//     also takes the ids of a product catalogue the engine actually holds for
+//     the tenant, because holding the product is exactly what placing its id
+//     means; it is the same fact the per-event `getProduct` lookup establishes,
+//     extended to the `items[]` references that lookup never sees.
 
 /** Any product catalogue the tenant holds, read structurally so no host type leaks in. */
 export interface CatalogVocabularySource {
@@ -271,12 +284,11 @@ export async function tenantCatalogVocabulary(
     // as long as that lasts, and the outage is not cached past its own read.
     cacheable = false;
   }
+  // Ids only: a product the engine holds can be placed by id. Its attribute
+  // values are NOT a vocabulary this tenant published, so they refuse nothing.
   for (const product of products?.getAllProducts() ?? []) {
     const id = product.id;
     if (typeof id === 'string' && id) ids.add(id);
-    // The same extraction the engine scores with, so a derived band on one side
-    // is the same word as the derived band on the other.
-    for (const touch of extractTouches(product, config)) name(touch.dim, touch.value);
   }
   const value: CatalogVocabulary = { ids, values };
   if (cacheable) {
