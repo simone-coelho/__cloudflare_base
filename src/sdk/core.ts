@@ -98,6 +98,13 @@ export interface Core {
   readonly sessionId: string;
   readonly profileSessionId: string;
   readonly entry: EntrySignals;
+  /**
+   * R18: the browsing session that produced the CACHED `entry` signals, empty
+   * while tracking is not allowed. It is deliberately not the current browsing
+   * session: after an idle rollover it still names the session the cached entry
+   * belongs to until the next entry read recomputes from the current document.
+   */
+  readonly entrySessionId: string;
   readonly socketStatus: SocketStatus;
   on<K extends keyof CoreEvents>(event: K, fn: CoreEvents[K]): () => void;
   emit<K extends keyof CoreEvents>(event: K, ...args: Parameters<CoreEvents[K]>): void;
@@ -946,6 +953,8 @@ export function createCore(config: ClientConfig, host: Host): Core {
     ready, beginTransition, finishTransition, forgetSession, isCurrent, adoptSession,
     get visitorId() { return visitorId; },
     get sessionId() { return session(); },
+    /** Read only: naming the session never rolls one over or recomputes the entry. */
+    get entrySessionId() { return entrySessionId; },
     get profileSessionId() { return sessionId; },
     get socketStatus() { return status; },
     on, emit, envelope, send, bindContent, sendRender, matchesSessionWitness, url, headers, getJson, postJson, setVisitorId, connect, disconnect, applyIncoming,

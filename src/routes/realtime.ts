@@ -16,7 +16,7 @@ import { enqueueOutcome } from '@/ledger/enqueue';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
-import { validEntry, type ChannelSignals } from '@/services/visit';
+import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -440,6 +440,11 @@ realtimeRoutes.get('/reflex', async (c) => {
         ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
         : null,
       ...(!personalizes(consent) ? { journeyStage: null } : {}),
+      // R20 / unit W16.C2.07: the SDK-visible hydrate carries the shopper's
+      // visit number and entry channel in the `projectVisit` shape, identically
+      // on both hosts (the DO host answers from ShopperReflex.handleSnapshot).
+      // The object's internal `projection=content` shape stays internal.
+      visit: personalizes(consent) ? projectVisit(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
       consent,
     });
   } catch (error) {
