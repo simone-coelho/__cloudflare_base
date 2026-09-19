@@ -135,5 +135,5 @@ _None._
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
 | vitest report sha256 | b70a6ab05365ef5c0ea8bcc19ecf047c717ca1f4950a2154c14b084df538ded3 |
-| commit | aadd6b8b681d91bca9cde7a4cae5d40b1ab1d5ad |
-| generated | 2026-09-19T16:33:00.114Z |
+| commit | bf1812a4c431b4e791703004346e51eb6f913dee |
+| generated | 2026-09-19T16:55:47.776Z |
