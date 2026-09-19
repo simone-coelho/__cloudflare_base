@@ -943,5 +943,71 @@
     "status": "specified",
     "batch": "W17-B2",
     "residual": "Measured at specification on the W17-B2 build head 53732de (log _evidence/W17-B2/specfix/logs/after-L2.log): RED at src/units/W17/L2.unit.test.ts:667, `the page's push function after a stale data-layer detach ran: expected [Function push] to be [Function wrapper]` — the detach `emit.dataLayer()` returns ends in `releaseLayer(layer)` (src/sdk/emit.ts:318-325), which runs whichever hold is in `layerHolds` at that moment rather than its own, so the stale detach released the LIVE attachment: the page's push was handed back and the live capture died silently. The declarative clauses are GREEN today (src/sdk/emit.ts:264-270 releases through the attachment the closure was returned for), and they stand as the guard for that path."
+  },
+  {
+    "id": "W16.C6.13",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "A transient owner-object or transport failure on the continuity issue or consume call (a 5xx from the shopper's own object, a thrown transport error, an answer the caller cannot read) never clears the browser's still-valid recognition proof and is never reported as `consent`: the route still answers 200 and reports the distinct `{ enabled: false, reason: 'unavailable' }`, the SDK keeps the stored proof AND the stored operation id, and the next successful call is the same consume under the same operation id and recognizes her with her chain rotated exactly once. A proof the engine genuinely cannot place stays the cold-shopper `consent` reason, and a successful answer still replaces the stored proof.",
+    "legs": [
+      "host",
+      "sdk"
+    ],
+    "witness": "W16-B8 brief row W16.C6.13 and ruling R62; _evidence/W16-B6/reviewer-build/REPORT.md finding F1 (`reportContinuity` maps a non-200, a malformed body and a thrown error all to `{enabled:false, reason:'consent'}`, src/routes/identity.ts:170-175; the SDK's `keepContinuity` clears the proof and operation id on any `enabled:false`, src/sdk/core.ts:585-588); docs/handover/HANDOFF-2026-09-18.md §5 point 6 (the C6 text) and §7 \"W16 continuity\" (a separate bounded rotating purpose- and mode-bound recognition proof; fail closed) and §12 (a ss1 capability and a long-lived proof are different purposes); the W16-B6 ruled contract clauses B, C and D as `src/units/W16/C6.unit.test.ts` states them (the reason vocabulary, the cold-shopper answer and the one deterministic successor receipt keyed by the operation id); rulings R19 and R21",
+    "status": "specified",
+    "batch": "W16-B8",
+    "residual": "RULED MEMBER (R21), absent today: the reason value `'unavailable'` on `ContinuityReport` (src/routes/identity.ts:101). The ruled outcome permitted either that named reason or omitting `continuity` from the answer; this specification rules the named reason, so the host leg and the sdk leg of one unit demand one representation and the SDK can tell \"the engine could not be reached\" from \"the engine placed nobody\" (an omitted member is also what an older engine sends). No missing EXPORT, so this unit adds no typecheck error. Not measured: the ISSUE call's own failure — `reportContinuity` runs inside the forwarded owner invocation on the refresh path, where `dispatchOwnedRequest` installs an owner-scoped proxy that short-circuits the shopper's own object to a local dispatch (src/identity/sessionAuthority.ts:623-644), so no external fixture can fail it; the W16-B6 review recorded the same limit (its probe D). The failures are therefore injected at the durable-object namespace boundary on the CONSUME call and the issue-call half of R62 rides on the same reported reason: the whole-W review owns it. Also not measured: a native (workerd/Miniflare) leg, the broker transport's cookie half of the same failure, and whether the engine's own logs name the outage."
+  },
+  {
+    "id": "W16.C5.06",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-moving read (`GET /realtime/reflex`, the SDK's own poll) whose stored profile-retention stamp is unusable still ANSWERS the read with `ok: true`, sends nothing at all to the tenant's configured destination, and emits exactly one coded diagnostic, `[odp] stage projection skipped: profile retention unavailable`, which names no shopper, no session and no destination identity. A usable stamp on the same read, the same shopper and the same visit boundary sends the stage projection (exactly one `POST /v3/profiles`) — the live control.",
+    "legs": [
+      "host"
+    ],
+    "witness": "W16-B8 brief row W16.C5.06 and ruling R63; _evidence/W16-B5/reviewer-build/REPORT.md finding F3 and its delta verdict residual (\"F3 has no unit (owed: a stage-moving read with an unusable profile stamp answers, sends nothing, emits the coded warn)\"); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (criterion C5: \"Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\"); the coded string as src/routes/realtime.ts:451 already words it; R40(a) (the read-time visit boundary IS the stage-only change) and the W16-B5 ruled table for W16.C5.02 (one read after the boundary, one profile call); rulings R19 and R32",
+    "status": "specified",
+    "batch": "W16-B8",
+    "residual": "The stamp is made unusable the only customer-neutral way an outside fixture can: the tenant publishes the next revision of its profile retention policy, so every stamp born under the previous one no longer matches the authority in force (`requireRetention`, src/retention.ts:96-100). The W16-B5 review reached the branch the same way (its probe E). Not measured: a native (workerd/Miniflare) leg; the SAME skip on the paths other than the SDK poll that also project (the decision snapshot's own hydrate); whether an operator can see the skip anywhere but the worker log — no route-level observable for it exists, which the whole-W review owns; the F1 repetition question (one upsert per poll across a boundary) which is an owner decision and not this unit's subject."
+  },
+  {
+    "id": "W16.C8.09",
+    "w": "W16",
+    "criterion": "C8",
+    "outcome": "Buffered ingest (`processing: 'buffered'` through `POST /realtime/action`, applied inside the shopper's real owner principal on both hosts) applies the R64 catalogue vocabulary exactly as the live path must: a buffered action carrying an out-of-vocabulary value on a dimension the tenant's published catalogue names builds no taste on that dimension, while the values the catalogue does name still build their age-decayed interest — the engine's own closed form for a touch of the action's weight at the moment it happened, read at delivery (`applyHistorical` + `snapshot`) — and her live memory is untouched. The buffered answer carries `signals { recognized, unrecognized }` naming every product reference the engine could not place; a buffered delivery for a product the catalogue names reports none.",
+    "legs": [
+      "host"
+    ],
+    "witness": "W16-B8 brief row W16.C8.09 and ruling R64; _evidence/W16-B7/reviewer-build/REPORT.md finding F3 (\"buffered (bufferedAction.ts:56), historical (history.ts:146) and content-telemetry (contentTelemetry.ts:96) ingest bypass the vocabulary; the buffered path shares the public route and deserves a unit before W16 closes\") and finding F1 (the per-value reading R64 replaced the whole-event one with); docs/handover/HANDOFF-2026-09-18.md §7 settled decision on buffered events (\"Explicitly buffered browser/app actions may contribute age-decayed interest plus eligible historical measurement\") and §12 (\"Unknown input remains unknown\"); document 35 §5 W16 (\"Tests use actual customer taxonomy/events and unknown cases\") and §2 F13; docs/kit/03-payload-schemas.md:19 for the event shape; the vocabulary rule and the `signals` member exactly as units W16.C8.03 and W16.C8.08 state them; rulings R19, R21 and R47",
+    "status": "specified",
+    "batch": "W16-B8",
+    "residual": "RULED MEMBER (R21), absent today: `signals { recognized: boolean; unrecognized: string[] }` on the BUFFERED answer of `POST /realtime/action` (src/routes/realtime.ts:250), the same member W16.C8.03 rules for the live answer. No missing EXPORT, so this unit adds no typecheck error. Written against the ruled R64 outcome on a base where the W16-B7 R64 round is NOT merged, so the live-path half of the vocabulary is red here too; the per-dimension assertions are stated as the DELTA the buffered arrival makes to her live taste, so they isolate the buffered path from whatever rule the live path is on. Not measured: a native (workerd/Miniflare) leg; the buffered path for a tenant with a real product catalogue (this tenant is content-only, so its vocabulary is its published pieces' tagged values and featured ids); the eligible-historical-measurement half of the buffered decision, which unit W16.C5.05 already owns."
+  },
+  {
+    "id": "W16.C8.10",
+    "w": "W16",
+    "criterion": "C8",
+    "outcome": "Historical import (`src/identity/history.ts`, through the public route `POST /v1/:tenant/identity/events`) and content telemetry (`src/reflex/contentTelemetry.ts`, through `POST /realtime/action` with a content action) apply the same R64 catalogue vocabulary: an imported row or a content event carrying an out-of-vocabulary value on a dimension the tenant's published catalogue names builds no taste on that dimension, and a value the catalogue does name builds taste through the very same call. On both hosts.",
+    "legs": [
+      "host"
+    ],
+    "witness": "W16-B8 brief row W16.C8.10 and ruling R64; _evidence/W16-B7/reviewer-build/REPORT.md finding F3 (history.ts:146 and contentTelemetry.ts:96 reach `extractTouches(sanitizeEventAttributes(...))` directly); docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 and §2 F13 (unknown input stays unknown on every ingest path, not only the live one); docs/handover/HANDOFF-2026-09-18.md §12 (\"Unknown input remains unknown; no invented direct entry or first visit\"); the vocabulary rule exactly as units W16.C8.03 and W16.C8.08 state it; docs/kit/03-payload-schemas.md and src/reflex/contentTelemetry.ts CONTENT_ACTIONS for the content event shape; rulings R19 and R47",
+    "status": "specified",
+    "batch": "W16-B8",
+    "residual": "Both ingest paths have a public route, so both clauses are `host` legs and no host-internal leg was needed (R19). The dimensions are split on purpose — content telemetry is measured on `category`, the import on `line` — so the two halves of one `it` can never be satisfied by each other. Written against the ruled R64 outcome on a base where the W16-B7 R64 round is NOT merged. Not measured: a native (workerd/Miniflare) leg; the CSV import framing (the JSON rows path is the one measured); profile-snapshot rows, which carry no registry touches at all; the import report's own `skipped` reasons, which no ruled outcome fixes — the observable this unit uses is the taste the shopper's profile actually holds; a tenant with a real product catalogue."
+  },
+  {
+    "id": "W16.C2.16",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "The browser half of the campaign entry term: the real `src/sdk` entry reads `utm_term` off the page URL, reports it as the arrival term and sends it to the engine verbatim at the 256-character bound (never trimmed), and one character beyond the bound it drops the term before anything is sent — the keyword appears in no request the browser makes, while the rest of the arrival (medium, source, referrer, site host) still travels. The engine itself still refuses an over-bound term on its own public route rather than truncating it, and accepts the same arrival at the bound.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "W16-B8 brief row W16.C2.16 and rulings R33/R39; _evidence/W16-B2/reviewer-build/REPORT.md residual (\"SDK drops an over-bound term silently while the server refuses it\"); the bound and the refuse-rather-than-truncate rule as unit W16.C3.09 states it (src/services/visit.ts:57 ENTRY_LIMITS.utmTerm = 256, exported as ENTRY_TERM_LIMIT) with rulings R30(3), R46(a) and R59 (an admitted caller whose `entry` is malformed gets the route's own documented 400, not 401); src/sdk/README.md and docs/kit/01-integration-guide.md on the arrival the SDK captures once per page load; src/sdk/types.ts:131-136 `EntrySignals.utmTerm`",
+    "status": "specified",
+    "batch": "W16-B8",
+    "residual": "GREEN-AT-SPEC, measured green on this base (log _evidence/W16-B8/specifier/logs/run-final.log): the send half is already implemented at src/sdk/identity.ts:82-87 (`utmTerm = usp.get('utm_term') ?? ''`, `if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = ''`, and absent stays absent), the term rides the action envelope at src/sdk/core.ts:708 (`entry: entryOf()`), and the engine's refusal is src/routes/realtime.ts:46 answering 400 'Invalid action event' for an entry `validEntry` rejects. THE BRIEF'S 401 IS SUPERSEDED: the merged unit W16.C3.09 measures 400 on the public route under rulings R46(a)/R59, and this unit follows it so two units never demand two answers for one input. \"The session call\" in the ruled outcome is read as the SDK's page-load traffic that carries `EntrySignals`: `POST /v1/:tenant/identity/session` carries no arrival at all, in the SDK or in the route contract, and the arrival rides the action envelope and the snapshot request. Not measured: the snapshot request's own `entry` (unit W16.C3.09 measures `snapshotEntry` and the snapshot route's 400 directly); the regenerated public/sdk bundle; a real browser."
   }
 ]
