@@ -32,14 +32,19 @@
 //     silent by design") — a channel that drops a whole code out of its sample,
 //     or a destructive write that reports nothing removed, is that silence
 //     returning through the cap.
-//   · docs/kit/03-payload-schemas.md :119-:159 "The content piece" (the closed
-//     field list `PIECE_FIELDS` must equal, :123-139) and :141-159 (merge is a
+//   · docs/kit/03-payload-schemas.md :129-:168 "The content piece" (the closed
+//     field list `PIECE_FIELDS` must equal, :133-149) and :151-168 (merge is a
 //     partial upsert by id; CSV blank cells mean omitted).
-//   · docs/kit/02-api-reference.md :368 (the diagnostics answer: "Available
-//     diagnostics contain `warningCount`, `omittedWarningCount` and at most 50
+//   · docs/kit/02-api-reference.md :396 (the diagnostics answer: "Available
+//     diagnostics contain `warningCount`, `omittedWarningCount` and at most50
 //     `warnings`… Counts include all warning occurrences beyond the sample
-//     limit; IDs and tag values are not echoed" — the bound and the privacy
-//     rule this batch locks, and the sentence the per-code counts extend).
+//     limit; IDs are not echoed, and tag values only as the bounded
+//     `case_variant_value` spellings above" — the bound and the privacy rule
+//     this batch locks, and the sentence the per-code counts extend). The same
+//     line publishes `ignored_field` as `{code, pieceIndex, field,
+//     fieldTruncated}` with "`pieceIndex` is the record's position in the
+//     submitted document": unit W19.F3.06 rules that position `recordIndex`, so
+//     that sentence is a documentation correction the build owes with the code.
 //   · rulings R19 (host legs drive the mounted routes), R21 (a ruled-but-absent
 //     member is named), R10 (an existing assertion a new member breaks is
 //     corrected with its witness), R84(a)-(d) (this batch's readings).
@@ -50,7 +55,8 @@
 // counts that exist (`warningCount`, `omittedWarningCount`) keep counting every
 // occurrence. The one whole-object equality on this channel in an existing test
 // is corrected in the same commit under R10, named in the report and in the
-// rows: `src/routes/content.test.ts:459` (the frozen W19.03 `toEqual`), whose
+// rows: `src/routes/content.test.ts:466` (the frozen W19.03 `toEqual`, which
+// after the integration merge also carries W19-B2's `slots` member), whose
 // `counts` value is derived from that fixture's own warnings.
 //
 // RULED MISSING MEMBERS (R21), asserted here by the names this specification
@@ -182,8 +188,8 @@ interface WriteAnswer {
   revision?: number;
   pieces?: number;
   changed?: number | null;
-  /** RULED, ABSENT TODAY (R21): stored pieces this write removed. */
-  removed?: number;
+  /** RULED, ABSENT TODAY (R21): stored pieces this write removed; null when `changedBasis` is `'unavailable'`. */
+  removed?: number | null;
   /** RULED, ABSENT TODAY (R21): whether `changed` could be measured against the stored base. */
   changedBasis?: string;
   diagnostics?: UnitDiagnostics;
@@ -239,6 +245,9 @@ async function feedFixture(initial = EMPTY_CATALOG, registry: unknown = DEFAULT_
       write(`/catalog/import?scope=${FEED_TENANT}&mode=${mode}`, JSON.stringify({ content: records, ...envelope }), {}, given),
     importCsv: (text: string, mode: 'replace' | 'merge' = 'replace') =>
       write(`/catalog/import?scope=${FEED_TENANT}&format=csv&mode=${mode}`, text, { 'Content-Type': 'text/csv' }),
+    /** POST /content/catalog/import?path=, so the records key is the one the request names. */
+    importPath: (body: Record<string, unknown>, path: string) =>
+      write(`/catalog/import?scope=${FEED_TENANT}&mode=replace&path=${path}`, JSON.stringify(body)),
     pull: async (records: unknown[], mode: 'replace' | 'merge' = 'replace', envelope: Record<string, unknown> = {}) => {
       const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: records, ...envelope })));
       try {
@@ -248,6 +257,9 @@ async function feedFixture(initial = EMPTY_CATALOG, registry: unknown = DEFAULT_
     /** PUT /content/catalog, the full replace that deliberately bypasses the normalizer (F27 §4.2). */
     put: async (pieces: unknown[], document: Record<string, unknown> = {}) =>
       answer(await request(`/catalog?scope=${FEED_TENANT}`, { method: 'PUT', headers: await headers(), body: JSON.stringify({ document: { pieces, ...document } }) })),
+    /** PUT /content/catalog with no `document` wrapper: `routes/content.ts:295` reads the body itself as the candidate. */
+    putRaw: async (body: Record<string, unknown>) =>
+      answer(await request(`/catalog?scope=${FEED_TENANT}`, { method: 'PUT', headers: await headers(), body: JSON.stringify(body) })),
     /** POST /content/catalog/validate, the authenticated dry run that answers the same channel. */
     validate: async (pieces: unknown[], document: Record<string, unknown> = {}) =>
       answer(await request(`/catalog/validate?scope=${FEED_TENANT}`, { method: 'POST', headers: auth, body: JSON.stringify({ document: { pieces, ...document } }) })),
@@ -256,7 +268,7 @@ async function feedFixture(initial = EMPTY_CATALOG, registry: unknown = DEFAULT_
 
 // ---------------------------------------------------------------------------
 // Fixtures — Coach's own taxonomy (docs/architecture/tapestry_requirements.txt
-// A.3.6; docs/kit/03-payload-schemas.md :123-139), in the fixture and never in
+// A.3.6; docs/kit/03-payload-schemas.md :133-149), in the fixture and never in
 // product code (METHOD §6).
 // ---------------------------------------------------------------------------
 
@@ -345,7 +357,7 @@ describe('unit:W19.F3.02', () => {
     const f = await feedFixture();
     // Probe A's feed, exactly: sixty pieces, each carrying one dimension the
     // tenant's published registry does not name and one field the contract does
-    // not list. 120 occurrences, a sample bounded at 50 (kit 02 :368).
+    // not list. 120 occurrences, a sample bounded at 50 (kit 02 :396).
     const records = Array.from({ length: 60 }, (_, index) => ({
       ...piece(`bulk-${index}`), tags: { occassion: ['evening'] }, vertical: 'menswear',
     }));
@@ -353,7 +365,7 @@ describe('unit:W19.F3.02', () => {
     expect(answer.status, 'the bulk feed is accepted').toBe(200);
     expect(answer.diagnostics?.warningCount, 'every occurrence is counted').toBe(120);
     expect(answer.diagnostics?.omittedWarningCount, 'and the cap omits seventy of them from the sample').toBe(70);
-    expect(warningsOf(answer.diagnostics).length, 'the sample stays bounded at fifty (kit 02 :368)').toBe(50);
+    expect(warningsOf(answer.diagnostics).length, 'the sample stays bounded at fifty (kit 02 :396)').toBe(50);
 
     // 1. The counts are exact per code, so an operator learns how much of each
     //    defect the feed carried even when the sample cannot show it.
@@ -444,7 +456,7 @@ describe('unit:W19.F3.03', () => {
 // W19.F3.04 — PIECE_FIELDS is locked to the validator (finding 4)
 // ===========================================================================
 
-/** Kit 03 :123-139 "The content piece": every field the published contract lists. */
+/** Kit 03 :133-149 "The content piece": every field the published contract lists. */
 const KIT_03_FIELDS = ['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime', 'tags', 'slotTypes',
   'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock'];
 
@@ -455,7 +467,7 @@ describe('unit:W19.F3.04', () => {
     // but the published contract it must equal, so the set is locked to kit 03
     // rather than to itself.
     expect([...PIECE_FIELDS].sort(),
-      'W19.F3.04 — the field set the write paths read a record against is exactly the field list kit 03 :123-139 publishes')
+      'W19.F3.04 — the field set the write paths read a record against is exactly the field list kit 03 :133-149 publishes')
       .toEqual([...KIT_03_FIELDS].sort());
   });
 
@@ -508,16 +520,46 @@ describe('unit:W19.F3.05', () => {
     // of the catalogue, and are never named. What is named is a key INSIDE the
     // submitted catalogue document that the contract does not list, beside its
     // `pieces` and its optional authored `version`.
+    // Every fixture below publishes ONE clean piece (a registered dimension, a
+    // safe render type, only listed fields), so the whole warning list is the
+    // document-level answer and can be asserted EXACTLY. An implementation that
+    // also named the envelope would add a second warning and fail here, which is
+    // how the rule above is asserted rather than merely stated.
     const named = (label: string, answer: WriteAnswer) => {
       expect(answer.status, `${label}: the document carrying an unlisted key is still accepted`).toBe(200);
       expect(warningsOf(answer.diagnostics),
-        `W19.F3.05 — ${label}: the answer must name the document key \`vertical\` it ignored (ruled code \`ignored_document_field\`)`)
-        .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ignored_document_field', field: 'vertical' })]));
-      expect(warningsOf(answer.diagnostics).filter(warning => warning.code === 'ignored_document_field')
-        .every(warning => warning.pieceIndex === undefined && warning.recordIndex === undefined),
-        `W19.F3.05 — ${label}: a document-level key belongs to no record, so it carries no record position`).toBe(true);
+        `W19.F3.05 — ${label}: the answer names the document key \`vertical\` it ignored (ruled code \`ignored_document_field\`), with no record position because the key belongs to no record, and names nothing else — the envelope that carried the request is not part of the document`)
+        .toEqual([{ code: 'ignored_document_field', field: 'vertical', fieldTruncated: false }]);
     };
 
+    // The envelope negatives first, so they are measured rather than left behind
+    // the unit's first RED. `routes/content.ts:295` reads
+    // `candidate = document ?? body`, so a caller that omits the `document`
+    // wrapper submits its own envelope as the catalogue: `note` and
+    // `publicationChanges` are still how the request was carried, and a body made
+    // only of them and `pieces` raises nothing at all.
+    const bare = await feedFixture();
+    const bareAnswer = await bare.putRaw({ pieces: [piece('one')], note: 'first' });
+    expect(bareAnswer.status, 'a bare-body PUT carrying its note is accepted').toBe(200);
+    expect(warningsOf(bareAnswer.diagnostics),
+      'W19.F3.05 — a bare-body PUT\'s own `note` is how the request was carried, never a key of the catalogue, so nothing is named').toEqual([]);
+
+    const related = await feedFixture();
+    const relatedAnswer = await related.putRaw({ pieces: [piece('one')], publicationChanges: [] });
+    expect(relatedAnswer.status, 'a PUT carrying a publicationChanges envelope is accepted').toBe(200);
+    expect(warningsOf(relatedAnswer.diagnostics),
+      'W19.F3.05 — and neither is `publicationChanges`').toEqual([]);
+
+    // The authored `version` label is a listed document key and is never named.
+    const authored = await feedFixture();
+    const authoredAnswer = await authored.put([piece('one')], { version: 'coach-autumn' });
+    expect(authoredAnswer.status, 'a document carrying its authored version label is accepted').toBe(200);
+    expect(warningsOf(authoredAnswer.diagnostics),
+      'W19.F3.05 — the document keys the contract does list raise nothing').toEqual([]);
+
+    // Now the positives. Each answer is asserted EXACTLY, so an implementation
+    // that also named the feed's records key (`content`, or the key a `?path=`
+    // names), `note` or `publicationChanges` fails here.
     const viaPut = await feedFixture();
     named('direct PUT', await viaPut.put([piece('one')], { vertical: 'menswear' }));
     expect((await viaPut.read()).document.pieces, 'W19.F3.05 — the piece itself is stored').toEqual([{ ...piece('one'), lifecycle: { status: 'live' } }]);
@@ -528,12 +570,8 @@ describe('unit:W19.F3.05', () => {
     const viaPull = await feedFixture();
     named('pull', await viaPull.pull([piece('one')], 'replace', { vertical: 'menswear' }));
 
-    // The authored `version` label is a listed document key and is never named.
-    const authored = await feedFixture();
-    const authoredAnswer = await authored.put([piece('one')], { version: 'coach-autumn' });
-    expect(authoredAnswer.status, 'a document carrying its authored version label is accepted').toBe(200);
-    expect(codesOf(authoredAnswer.diagnostics),
-      'W19.F3.05 — the document keys the contract does list raise nothing').toEqual([]);
+    const viaPath = await feedFixture();
+    named('JSON import through ?path=', await viaPath.importPath({ rows: [piece('one')], vertical: 'menswear' }, 'rows'));
   });
 });
 
@@ -573,10 +611,12 @@ describe('unit:W19.F3.07', () => {
   it('host: the case-variant echo is bounded to twenty spellings of sixty-four code units with its truncation flags, and no warning carries a piece id or a customer content id', async () => {
     const f = await feedFixture();
     // Twenty-four spellings of one value, one of them 70 code units long, on a
-    // dimension whose name is 80 code units long — and a piece whose OWN ids are
-    // strings that look exactly like tag values, so an answer that leaked an
-    // identifier would read as ordinary taxonomy. kit 02 :368: "IDs and tag
-    // values are not echoed" beyond the published bound.
+    // dimension whose name is 80 code units long — and a piece whose OWN ids
+    // read like taxonomy (`cnt-collision-01`, `evening`) while being ABSENT from
+    // every value this catalogue echoes, so a leaked identifier is a string the
+    // exact accounting below does not expect and cannot be mistaken for an
+    // echoed value. kit 02 :396: "IDs are not echoed, and tag values only as the
+    // bounded `case_variant_value` spellings above."
     const longDimension = 'x'.repeat(80);
     // Twenty-four spellings of ONE value: the same 72-code-unit word with the
     // case of its first five letters varied, so every one of them folds to the
@@ -585,7 +625,7 @@ describe('unit:W19.F3.07', () => {
     const spellings = Array.from({ length: 24 }, (_, index) =>
       [...longValue].map((character, position) => position < 5 && (index >> position) % 2 ? character.toUpperCase() : character).join(''));
     const colliding = {
-      id: 'Tabby', customerContentId: 'evening',
+      id: 'cnt-collision-01', customerContentId: 'evening',
       type: 'editorial', title: 'The Tabby Edit', slotTypes: ['story'],
       tags: { line: [...new Set(['tabby', 'Tabby', 'TABBY'])], [longDimension]: ['secret-value'] },
     };
@@ -610,11 +650,17 @@ describe('unit:W19.F3.07', () => {
       'W19.F3.07 — the unregistered dimension is echoed cut to sixty-four code units, with the truncation flag')
       .toEqual([{ code: 'unknown_dimension', pieceIndex: 0, dimensionIndex: 1, dimension: 'x'.repeat(64), dimensionTruncated: true }]);
 
-    // 3. No identifier is echoed anywhere in the channel. Asserted as the exact
-    //    set of strings the warnings carry — derived from the fixture — rather
-    //    than as a pattern the next fixture could evade: the piece ids `Tabby`
-    //    and `evening` collide with real tag values, so only an exact accounting
-    //    can tell an echoed value from a leaked identifier.
+    // 3. No identifier reaches the channel, in two independent ways. First by
+    //    KEY: the members the warnings carry are exactly the published ones, so
+    //    no warning gained an `id` or a `customerContentId` field.
+    expect([...new Set(warningsOf(answer.diagnostics).flatMap(warning => Object.keys(warning)))].sort(),
+      'W19.F3.07 — the warnings carry exactly the members the contract publishes, and no identifier member')
+      .toEqual(['code', 'dimension', 'dimensionIndex', 'dimensionTruncated', 'pieceIndex', 'values', 'valuesTruncated']);
+
+    //    Second by VALUE: the exact set of strings the warnings carry, derived
+    //    from the fixture, rather than a pattern the next fixture could evade.
+    //    Neither `cnt-collision-01` nor `evening` is an echoed value here, so a
+    //    leak of either is a string this accounting does not expect.
     const strings = new Set<string>();
     const walk = (value: unknown) => {
       if (typeof value === 'string') strings.add(value);
@@ -635,33 +681,44 @@ describe('unit:W19.F3.07', () => {
 // ===========================================================================
 
 describe('unit:W19.F3.08', () => {
-  it('host: an exact-request retry answers the retained revision and the same changed count, and a base revision the store cannot read is said by name instead of counting every piece as created', async () => {
+  /** The publication this unit retries, and the exact request that made it. */
+  async function retryFixture() {
     const f = await feedFixture();
     expect((await f.put([piece('one'), piece('two'), piece('three')])).status, 'three pieces are published').toBe(200);
-
-    // 1. The retry: same precondition, same idempotency key. The publication
-    //    serves the retained answer (kit 03 :158, "exact-request retries still
-    //    apply"), and the answer a retry serves is the answer the original gave.
     const retryHeaders = await f.headers();
-    const original = await f.importJson([piece('one'), piece('two', { title: 'Two, refreshed' })], 'replace', retryHeaders);
+    const feed = [piece('one'), piece('two', { title: 'Two, refreshed' })];
+    const original = await f.importJson(feed, 'replace', retryHeaders);
     expect(original.status, 'the original import is accepted').toBe(200);
+    return { f, retryHeaders, feed, original };
+  }
+
+  it('host: an exact-request retry answers the retained revision and the same changed count, and says what it was measured against', async () => {
+    // The retry: same precondition, same idempotency key. The publication serves
+    // the retained answer (kit 03 :158, "exact-request retries still apply"),
+    // and the answer a retry serves is the answer the original gave.
+    const { f, retryHeaders, feed, original } = await retryFixture();
     expect(original.changed, 'one piece altered').toBe(1);
-    const retried = await f.importJson([piece('one'), piece('two', { title: 'Two, refreshed' })], 'replace', retryHeaders);
+    const retried = await f.importJson(feed, 'replace', retryHeaders);
     expect(retried.status, 'the exact request is retried').toBe(200);
     expect(retried.revision, 'the retry serves the retained revision').toBe(original.revision);
     expect(retried.changed, 'W19.F3.08 — and the same `changed` the original answered, measured against the same base').toBe(original.changed);
     expect(retried.changedBasis,
       'W19.F3.08 — the answer says what `changed` was measured against (ruled member `changedBasis`)').toBe('stored');
+  });
 
-    // 2. The base revision the answer declares is unreadable — a storage outage
-    //    on that one object, the case the reviewer measured as an overcount,
-    //    where the fallback treats the base as the empty catalogue and reports
-    //    every stored piece as created (`routes/content.ts:366-370`).
+  it('host: a retry whose declared base revision the store cannot read says so by name instead of counting every piece as created', async () => {
+    // The base revision the answer declares is unreadable — a storage outage on
+    // that one object, the case the W19-B1 reviewer measured as an overcount,
+    // where the fallback treats the base as the empty catalogue and reports
+    // every stored piece as created (`routes/content.ts:366-370`). The fixture
+    // rewrites that one body in its OWN in-memory R2 with invalid JSON; nothing
+    // is deleted and no other object is touched.
+    const { f, retryHeaders, feed, original } = await retryFixture();
     const base = original.revision! - 1;
     const key = [...f.storage.objects.keys()].find(name => name.endsWith(`/content/rev/${base}.json`))!;
     expect(key, 'the fixture found the stored body of the declared base revision').toBeTruthy();
     f.storage.objects.set(key, '{ this is not the revision body }');
-    const unreadable = await f.importJson([piece('one'), piece('two', { title: 'Two, refreshed' })], 'replace', retryHeaders);
+    const unreadable = await f.importJson(feed, 'replace', retryHeaders);
     expect(unreadable.status, 'the retry with an unreadable base still serves its retained revision').toBe(200);
     expect(unreadable.revision, 'at the same revision').toBe(original.revision);
     expect(unreadable.changedBasis,
