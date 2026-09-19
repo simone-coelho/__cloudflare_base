@@ -154,6 +154,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { captureRetention, RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
 import { contentRoutes } from '@/routes/content';
 import { decisionRoutes } from '@/routes/decisions';
+import { ledgerRecoveryRoutes } from '@/routes/ledgerRecovery';
 import realtimeRoutes from '@/routes/realtime';
 import { sortRoutes } from '@/routes/sort';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -205,7 +206,12 @@ const W22_PIECES: ContentPiece[] = [
 ];
 const W22_CATALOGUE = { version: 'w22-b1-coach-catalogue', pieces: W22_PIECES };
 const W22_SLOTS: SlotCatalog = { version: 'w22-b1-coach-slots',
-  pages: { home: [{ slot: 'hero', take: 1, weights: { occasion: 0.35, line: 0.25 } }] } };
+  pages: { home: [
+    { slot: 'hero', take: 1, weights: { occasion: 0.35, line: 0.25 } },
+    // The second slot learns from purchases, the reward whose policy window is
+    // seven days: the horizon F17 P4 measures the fold against.
+    { slot: 'story', take: 1, weights: { occasion: 0.35, line: 0.25 } },
+  ] } };
 
 /**
  * The tenant's published learning document. `holdout.share: 0` so every fixture
@@ -217,7 +223,7 @@ const W22_SLOTS: SlotCatalog = { version: 'w22-b1-coach-slots',
 const W22_LEARN: LearnConfig = {
   holdout: { share: 0, salt: 'w22-b1', arms: ['default'] },
   regional: { enabled: false, kBlend: 1, minEvents: 30 },
-  slots: { hero: { reward: 'click' } },
+  slots: { hero: { reward: 'click' }, story: { reward: 'purchase' } },
 } as unknown as LearnConfig;
 
 /** The cell every fixture decision carries: one known Coach cell and one unknown one. */
@@ -311,8 +317,16 @@ async function mount(options: { queueFails?: boolean; statsStatus?: () => number
     DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
     // The shipped deployment declares `LEDGER_RECOVERY_ENABLED = "false"` in all
     // three environments (wrangler.toml:155, :237, :336), so this fixture runs
-    // the configuration the customer would run today. Activating the managed
-    // owner-recovery path is a deployment decision, not one this batch takes.
+    // the configuration the customer would run today, stated and not merely
+    // unset. Activating the managed owner-recovery path is a deployment
+    // decision, not one this batch takes.
+    LEDGER_RECOVERY_ENABLED: 'false',
+    // The dead-letter consumer's own configuration, the one `src/index.ts:332`
+    // reads before it captures an exhausted message, and the provenance key
+    // `src/ledger/quarantine.ts:52` requires (32 characters or more).
+    LEDGER_RECOVERY_CONFIG: JSON.stringify({ version: 1, sourceQueue: 'events', deadLetterQueue: 'events-dead-letter',
+      unknown: { id: 'w22-b1-quarantine', revision: 1, durationMs: 30 * DAY_MS, basis: 'admitted', renewal: 'new-record-only', disposal: 'delete-on-expiry' } }),
+    IDENTITY_SALT: 'w22-b1-synthetic-quarantine-provenance-salt',
     EVENT_QUEUE: { send: async (body: unknown) => {
       if (options.queueFails) throw new Error('Synthetic queue outage');
       queued.push(body);
@@ -381,6 +395,8 @@ async function mount(options: { queueFails?: boolean; statsStatus?: () => number
   app.route('/realtime', realtimeRoutes);
   app.route('/sort', sortRoutes);
   app.route('/v1', decisionRoutes);
+  // The operator recovery surface, mounted where `src/index.ts:121` mounts it.
+  app.route('/operator/ledger-recovery', ledgerRecoveryRoutes);
 
   const operatorToken = await new jose.SignJWT({ sub: 'ops', type: 'service', roles: ['operator', 'admin'] })
     .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('2h')
@@ -426,11 +442,11 @@ async function operatorPost(m: Mounted, path: string, body: unknown = {}): Promi
  * (`{tenant}:{ts36}:{visitor}:…`, `src/ledger/writer.ts:40-45`), and the
  * retention stamp is the one `captureRetention` writes on the request path.
  */
-function decision(env: Env, visitor: string, ts: number, item: string, over: Partial<DecisionRecord> = {}): DecisionRecord {
+function decision(env: Env, visitor: string, ts: number, item: string, slot: 'hero' | 'story' = 'hero', over: Partial<DecisionRecord> = {}): DecisionRecord {
   return {
-    decision_id: `${TENANT}:${ts36(ts)}:${visitor}:home:hero:0`,
+    decision_id: `${TENANT}:${ts36(ts)}:${visitor}:home:${slot}:0`,
     tenant: TENANT, brand: BRAND, visitor_id: visitor, session_id: `s-${visitor}`, identity_anchor: 'visitor', ts,
-    page: 'home', slot: 'hero', position: 0, item_id: item, customer_item_id: `CMS-${item}`, candidates: [],
+    page: 'home', slot, position: 0, item_id: item, customer_item_id: `CMS-${item}`, candidates: [],
     cell: visitor.startsWith('u-') ? UNKNOWN_CELL : COACH_CELL, arm: 'personalized', explored: false, authority: 'engine',
     versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'w22-b1',
     explain: { drivers: [], score_base: 0, lift: null, score_final: 0 },
@@ -442,14 +458,14 @@ function decision(env: Env, visitor: string, ts: number, item: string, over: Par
 /** A click on the item a visitor was served, with the engine's own event nonce. */
 function click(env: Env, d: DecisionRecord, ts: number, nonce: string): OutcomeRecord {
   const outcome = outcomeFromAction({ type: 'content_click', userId: d.visitor_id, sessionId: d.session_id ?? undefined, timestamp: ts,
-    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: 'hero' } } as never, TENANT, BRAND)!;
+    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: d.slot } } as never, TENANT, BRAND)!;
   return { ...outcome, retention: captureRetention(env as never, TENANT, ts, ts) } as OutcomeRecord;
 }
 
 /** A purchase: the reward whose policy window is seven days (F17 P4). */
 function purchase(env: Env, d: DecisionRecord, ts: number, nonce: string): OutcomeRecord {
   const outcome = outcomeFromAction({ type: 'purchase', userId: d.visitor_id, sessionId: d.session_id ?? undefined, timestamp: ts,
-    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: 'hero', value: 795, currency: 'USD' } } as never, TENANT, BRAND)!;
+    eventId: nonce, eventIdSource: 'provided', data: { contentId: d.item_id, slot: d.slot, value: 795, currency: 'USD' } } as never, TENANT, BRAND)!;
   return { ...outcome, retention: captureRetention(env as never, TENANT, ts, ts) } as OutcomeRecord;
 }
 
@@ -560,6 +576,15 @@ describe('unit:W22.D1.01', () => {
     expect(dayObjects(m, 'decision').length,
       'the fixture ledger holds the duplicated object F16 §2.1 measured, beside the two legitimate ones').toBe(3);
 
+    // One more copy of the first batch's rows, under the key that sorts LAST in
+    // the day, so its duplicate rows are read only after every distinct row is
+    // already in hand. A reader that applied the cap before the skip would stop
+    // here and call the day truncated; a reader that skips first never reaches
+    // the cap at all (F16 §7.1, §5(e)).
+    const trailing = dayObjects(m, 'decision').at(-1)!.replace(/-[0-9a-z]+\.ndjson$/, '-zzzzzz.ndjson');
+    m.storage.objects.set(trailing, m.storage.objects.get(dayObjects(m, 'decision')[0]!)!);
+    expect(dayObjects(m, 'decision').at(-1), 'the trailing duplicate object is the last one the reader opens').toBe(trailing);
+
     // 1. The direct-record recomputation (`runReport`, `report.ts:loadDay`).
     const fromRecords = await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, m.env as never);
     expect({ decisions: fromRecords.counts.decisions, outcomes: fromRecords.counts.outcomes, visitors: fromRecords.counts.visitors },
@@ -567,7 +592,7 @@ describe('unit:W22.D1.01', () => {
       .toEqual({ decisions: 4, outcomes: 1, visitors: 4 });
     expect(fromRecords.counts.duplicates,
       'W22.D1.01 — and it names what it dropped, in the engine\'s own vocabulary `counts.duplicates` (F16 §7.1)')
-      .toEqual({ decisions: 2, outcomes: 1 });
+      .toEqual({ decisions: 4, outcomes: 1 });
 
     // 2. The hourly fold (`buildHour` → `loadHourRecords`), then the day from
     //    its hours, the way the cron publishes it (`src/index.ts:272`).
@@ -577,11 +602,11 @@ describe('unit:W22.D1.01', () => {
       .toEqual({ decisions: 4, outcomes: 1 });
     expect(hour.brands[BRAND]?.duplicates,
       'W22.D1.01 — and the hour names what it dropped, in the same vocabulary as the day report')
-      .toEqual({ decisions: 2, outcomes: 1 });
+      .toEqual({ decisions: 4, outcomes: 1 });
     const fromHours = await runDayReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, NOW, {}, m.env as never);
     expect({ decisions: fromHours.counts.decisions, outcomes: fromHours.counts.outcomes, duplicates: fromHours.counts.duplicates },
       'W22.D1.01 — the day built from its hours reports the same distinct numbers and the same dropped count')
-      .toEqual({ decisions: 4, outcomes: 1, duplicates: { decisions: 2, outcomes: 1 } });
+      .toEqual({ decisions: 4, outcomes: 1, duplicates: { decisions: 4, outcomes: 1 } });
 
     // 3. The window report pools the saved day: the duplicated rows must not
     //    reach the pooled arms either (F16 §2.7 — duplication shrinks the
@@ -591,23 +616,29 @@ describe('unit:W22.D1.01', () => {
       'W22.D1.01 — the window pools the distinct rows: four personalized decisions and one credit')
       .toEqual([{ arm: 'personalized', n: 4, s: 1 }]);
 
-    // 4. BEFORE the cap. The day holds four distinct decision rows and four
-    //    duplicates; a reader capped at exactly four records must return the
-    //    four DISTINCT rows, not four of the eight stored ones (F16 §5(e)).
+    // 4. BEFORE the cap, and the ORDER matters. The day holds four distinct
+    //    decision rows and four duplicates, two of them in the object that
+    //    sorts last: a reader capped at exactly four records has its four
+    //    distinct rows in hand when the trailing duplicates arrive. Skipping
+    //    first, it never reaches the cap and the day is not truncated; checking
+    //    the cap first, it stops on the fifth row read and calls a complete day
+    //    truncated (F16 §5(e), §7.1).
     const capped = await loadDay<DecisionRecord>(m.storage as never, TENANT, DATE, 'decision', 4);
     expect(capped.records.map(row => row.decision_id).sort(),
       'W22.D1.01 — the cap is applied to the distinct rows, after the duplicate is skipped (F16 §5(e), §7.1)')
       .toEqual(decisions.map(row => row.decision_id).sort());
-    expect(capped.truncated, 'W22.D1.01 — and a day whose distinct rows fit the cap is not reported truncated').toBe(false);
+    expect(capped.truncated,
+      'W22.D1.01 — and a day whose DISTINCT rows fit the cap is not reported truncated, even though its duplicates are read after the cap is full')
+      .toBe(false);
 
-    // 5. The same rule on the hour's OBJECT cap. The hour holds five objects —
-    //    three decision objects (one of them the byte-identical redelivery) and
-    //    two outcome objects (one of them the same redelivery) — read under a
-    //    cap of four. Every distinct row of the hour must still be counted: a
-    //    duplicate object may not consume the cap in place of a real one.
+    // 5. The same rule on the hour's OBJECT cap. The hour holds six objects —
+    //    four decision objects (two of them duplicates) and two outcome objects
+    //    (one of them a duplicate) — read under a cap of five. Every distinct
+    //    row of the hour must still be counted: a duplicate object may not
+    //    consume the cap in place of a real one.
     expect([...m.storage.objects.keys()].filter(key => key.startsWith(`${TENANT}/${DATE}/${HOUR}/`)).length,
-      'the fixture hour holds five objects, one decision object and one outcome object of them duplicates').toBe(5);
-    const hourCapped = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, { maxObjects: 4 }, m.env as never);
+      'the fixture hour holds six objects: two duplicate decision objects and one duplicate outcome object beside the real ones').toBe(6);
+    const hourCapped = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, { maxObjects: 5 }, m.env as never);
     expect({ decisions: hourCapped.brands[BRAND]?.decisions, outcomes: hourCapped.brands[BRAND]?.outcomes },
       'W22.D1.01 — a duplicate object never consumes the hour\'s object cap in place of a real one (F16 §5(e): duplicates "can push a legitimate hour into truncated:true and silently drop real records")')
       .toEqual({ decisions: 4, outcomes: 1 });
@@ -651,12 +682,16 @@ describe('unit:W22.D1.01', () => {
  * same". R104(c): bounded, pruned with the ring's own horizon — this unit
  * redelivers inside the horizon and never claims a repeat beyond it.
  *
- * Leg `host-internal` (R19): the observable is the published lift snapshot of
- * the statistics object, which no public route exposes for a single slot; the
- * unit drives the REAL `DecisionRing` and `LearnStats` classes through the real
- * fan the request path runs (`src/content/service.ts:473` → `fanDecisions`,
- * `src/learn/route.ts:40` → `fanOutcome`). The row names the missing public
- * observable.
+ * TWO LEGS, one representation. The `host` leg reads the observable where an
+ * operator reads it — `POST /v1/:tenant/learn/publish` then
+ * `GET /v1/:tenant/lift?slot=hero` on the mounted app — and redelivers the
+ * OUTCOME, which a client retry really does produce (the same action with the
+ * same event nonce mints the same `outcome_id`, `src/ledger/records.ts:263`).
+ * The `host-internal` leg (R19) keeps only the EXPOSURE hop: no public producer
+ * can redeliver a `/exposures` post, because the only caller is the decision
+ * path's own fan-out (`src/content/service.ts:473` → `fanDecisions`), so the
+ * redelivery is made where the platform's own at-least-once retry would make
+ * it. Both legs drive the REAL `DecisionRing` and `LearnStats` classes.
  */
 describe('unit:W22.D1.02', () => {
   const slotConfig = () => ({ reward: 'click' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
@@ -670,6 +705,49 @@ describe('unit:W22.D1.02', () => {
   const counts = (snapshot: LiftSnapshot | null) => ({
     item: snapshot?.items['cnt-tabby-evening']?.['*'] ? { n: snapshot.items['cnt-tabby-evening']!['*']!.n, s: snapshot.items['cnt-tabby-evening']!['*']!.s } : null,
     slot: snapshot?.slotRates['*'] ? { n: snapshot.slotRates['*']!.n, s: snapshot.slotRates['*']!.s } : null,
+  });
+  /**
+   * Both counters decay against the wall clock with the same τ, so a difference
+   * in READING TIME cancels in the ratio while a second delivery does not: one
+   * delivery against one delivery is 1.0, two against one is 2.0, whatever the
+   * seconds between the two reads.
+   */
+  const ratio = (later: number, earlier: number) => later / earlier;
+
+  /** What an operator reads: publish the slot now, then read the published snapshot. */
+  const publishedLift = async (m: Mounted): Promise<LiftSnapshot | null> => {
+    const published = await operatorPost(m, `/v1/${TENANT}/learn/publish`, { slot: 'hero', brand: BRAND });
+    expect(published.status, `POST /v1/:tenant/learn/publish answers: ${JSON.stringify(published.body).slice(0, 300)}`).toBe(200);
+    const read = await operatorGet(m, `/v1/${TENANT}/lift?slot=hero&brand=${BRAND}`);
+    expect(read.status, `GET /v1/:tenant/lift answers: ${JSON.stringify(read.body).slice(0, 300)}`).toBe(200);
+    return (read.body as { snapshot?: LiftSnapshot | null }).snapshot ?? null;
+  };
+
+  it('host: a redelivered outcome — the same event nonce a client retry re-sends — leaves the PUBLISHED lift snapshot an operator reads where one delivery leaves it', async () => {
+    const seed = async (deliveries: number) => {
+      const m = await mount();
+      const d = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+      const o = click(m.env, d, ONLINE_TS + 60_000, 'w22-b1-public-click');
+      await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: d.visitor_id, records: [d] }, slotConfig);
+      for (let n = 0; n < deliveries; n++) {
+        // `src/learn/route.ts:40`, the call the action route makes for an
+        // outcome; the second call is the client's retry of the same event.
+        await fanOutcome(m.env, TENANT, o, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+      }
+      await m.drain();
+      return m;
+    };
+    const control = counts(await publishedLift(await seed(1)));
+    expect(control.item && control.item.s > 0,
+      `the control must have published the one credit: ${JSON.stringify(control)}`).toBe(true);
+    const redelivered = counts(await publishedLift(await seed(2)));
+    const why = 'W22.D1.02 — a redelivered outcome must be credited once: `DecisionRing` consults a bounded journal of recently credited `outcome_id`s before `attribute()` (F16 §7, §2.3 measured "credits, outcome delivery #1 / #2 : 1 / 1"). '
+      + `One delivery: ${JSON.stringify(control)}; after the redelivery: ${JSON.stringify(redelivered)}`;
+    expect(redelivered.item, why).toBeTruthy();
+    expect(ratio(redelivered.item!.s, control.item!.s), why).toBeCloseTo(1, 3);
+    expect(ratio(redelivered.slot!.s, control.slot!.s), why).toBeCloseTo(1, 3);
+    expect(ratio(redelivered.item!.n, control.item!.n),
+      'W22.D1.02 — and the exposure behind it is still counted exactly once').toBeCloseTo(1, 3);
   });
 
   it('host-internal: a redelivered exposure and a redelivered outcome leave the published lift snapshot exactly where one delivery leaves it, across a restart of both objects', async () => {
@@ -704,14 +782,14 @@ describe('unit:W22.D1.02', () => {
     const twice = counts(await snapshotOf(subject));
     const why = 'W22.D1.02 — one redelivered exposure and one redelivered outcome must leave the published snapshot where a single delivery leaves it: `LearnStats` counts the exposure once because the `/exposures` payload carries the decision\'s logical id (F16 §7, fan.ts:330), and `DecisionRing` credits the outcome once because a bounded journal of recently credited `outcome_id`s is consulted before `attribute()` (F16 §7, §2.3). One delivery: '
       + `${JSON.stringify(once)}; after the redelivery: ${JSON.stringify(twice)}`;
-    // The counters decay against the wall clock, so the two snapshots are
-    // compared to five decimals, not to the bit: the difference a second
-    // delivery makes is a whole exposure and a whole credit.
+    // Compared as a ratio, so the seconds between the two reads cancel: one
+    // delivery against one delivery is 1.0 whenever they are read, two against
+    // one is 2.0.
     expect(twice.item, why).toBeTruthy();
-    expect(twice.item!.n, why).toBeCloseTo(once.item!.n, 5);
-    expect(twice.item!.s, why).toBeCloseTo(once.item!.s, 5);
-    expect(twice.slot!.n, why).toBeCloseTo(once.slot!.n, 5);
-    expect(twice.slot!.s, why).toBeCloseTo(once.slot!.s, 5);
+    expect(ratio(twice.item!.n, once.item!.n), why).toBeCloseTo(1, 3);
+    expect(ratio(twice.item!.s, once.item!.s), why).toBeCloseTo(1, 3);
+    expect(ratio(twice.slot!.n, once.slot!.n), why).toBeCloseTo(1, 3);
+    expect(ratio(twice.slot!.s, once.slot!.s), why).toBeCloseTo(1, 3);
 
     // The ring itself already refuses a duplicate append; the unit states it so
     // the two halves of the online path are read as one representation.
@@ -770,9 +848,17 @@ describe('unit:W22.D1.03', () => {
     expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id),
       'W22.D1.03 — and the stored ledger still holds exactly the first event under that id')
       .toEqual([o1.item_id]);
-    const named = await operatorGet(m, `/v1/${TENANT}/ledger/quarantine`);
-    expect(named.status === 200 || named.status === 404,
-      `W22.D1.03 — the refusal is named on an operator surface, not swallowed (the quarantine listing answered ${named.status})`).toBe(true);
+    // Named, by the id of the event it refused: the quarantine case the
+    // operator recovery surface serves (`GET /operator/ledger-recovery`,
+    // mounted here as `src/index.ts:121` mounts it; `listQuarantine` reads the
+    // same objects this assertion reads). A count alone would not say WHICH
+    // event was refused.
+    const quarantined = [...m.storage.objects.entries()]
+      .filter(([key]) => key.startsWith('ledger-quarantine/v1/'))
+      .map(([key, body]) => ({ key, body }));
+    expect(quarantined.filter(entry => entry.body.includes(o1.outcome_id!)).length,
+      `W22.D1.03 — the refused event is named by its own logical id on the operator recovery surface, not swallowed: exactly one quarantine case carries ${o1.outcome_id} (the store held ${quarantined.length} case(s))`)
+      .toBe(1);
 
     // (c) the partial batch of F16 §2.2: R2 accepts the first object of the
     //     batch and throws on the second, then the whole batch is retried.
@@ -843,7 +929,7 @@ describe('unit:W22.R1.01', () => {
     const lossy = await mount({ queueFails: true });
     const d1 = decision(lossy.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
     const produced = await enqueueDecisions(lossy.env, [d1]);
-    expect(produced.code, 'the producer reports the outage on its receipt').toBe('queue_unavailable');
+    expect(produced.code, 'the producer reports the outage on its receipt (src/ledger/enqueue.ts:119)').toBe('queue_rejected');
 
     // 2. The consumer's skipped row: an envelope the writer cannot place
     //    (`src/ledger/consume.ts:20`, `src/index.ts:264`).
@@ -859,9 +945,12 @@ describe('unit:W22.R1.01', () => {
     expect(fan.ok, 'the fan-out reports that the exposure was not accepted').toBe(false);
 
     // 4. The exhausted retry: the message the dead-letter consumer captured
-    //    (`src/index.ts:332-336` → `captureQuarantine`).
-    await captureQuarantine(lossy.env, 'events-dead-letter', 'w22-b1-dead-letter-1',
+    //    (`src/index.ts:332-336` → `captureQuarantine`, on the queue the
+    //    manifest declares as the dead-letter queue).
+    const dead = await captureQuarantine(lossy.env, 'events-dead-letter', 'w22-b1-dead-letter-1',
       { kind: 'ledger', type: 'outcome', version: 1, record: click(lossy.env, d1, T12 + 300_000, 'w22-b1-dead-click') });
+    expect(dead.state, `the dead-letter capture must have happened before its counter can be demanded: ${JSON.stringify(dead).slice(0, 200)}`).toBe('pending');
+    expect(dead.records, 'and it holds the one record whose retries were exhausted').toBe(1);
 
     for (const [label, host, expected] of [
       ['the tenant whose producer, consumer and dead-letter path lost rows', lossy, { producerFailed: 1, consumerSkipped: 1, fanOutRejected: 0, retriesExhausted: 1 }],
@@ -899,14 +988,22 @@ describe('unit:W22.R1.02', () => {
    * observable is read through the mounted operator report route.
    */
   /**
-   * The cron's own call (`src/index.ts:272`), with the lookback narrowed to the
-   * hours this fixture writes. The cron's defaults (26 hours of candidates, two
-   * hours per run) reach the same hours over successive five-minute runs; F17's
-   * own probe narrowed them for the same reason ("my first attempt failed to
-   * reproduce because `catchUp`'s default `maxHours: 2` had not yet reached
-   * hour 12").
+   * The cron's own call, with the cron's own options: `catchUp(env.STORAGE,
+   * tenant, learn, Date.now(), {}, env)` (`src/index.ts:272`), so the default
+   * 26-hour lookback and two-hours-per-run budget are the ones under test. One
+   * five-minute run folds at most two hours, so the fixture runs the cron until
+   * it has caught up, exactly as a quarter of an hour of real runs would.
    */
-  const fold = (m: Mounted, now: number) => catchUp(m.storage as never, TENANT, W22_LEARN, now, { lookbackHours: 4, maxHours: 4 }, m.env as never);
+  async function fold(m: Mounted, now: number): Promise<{ built: string[]; failed: string[] }> {
+    const built: string[] = [], failed: string[] = [];
+    for (let run = 0; run < 20; run++) {
+      const result = await catchUp(m.storage as never, TENANT, W22_LEARN, now, {}, m.env as never);
+      for (const hour of result.built) built.push(`${hour.date} ${hour.hour}`);
+      for (const hour of result.failed) failed.push(`${hour.date} ${hour.hour}`);
+      if (!result.built.length) break;
+    }
+    return { built, failed };
+  }
 
   it('host: an hour whose ledger grew after it was folded is folded again, a failed hour repaired after a later hour still credits across the hour boundary, and the day\'s distinct visitors survive an out-of-order repair', async () => {
     // ── P1: the late arrival ────────────────────────────────────────────────
@@ -951,26 +1048,46 @@ describe('unit:W22.R1.02', () => {
       .toBe(1);
 
     // ── P7: the distinct-visitor count across an out-of-order repair ────────
+    // Two visitors are served in the previous day's last hour and NOWHERE else,
+    // so the number moves with the repair: if the repaired hour never folds,
+    // the previous day's report is short by exactly those two, and if the
+    // repair wipes the current day's `seen`, the current day's report is short
+    // by the visitors folded before it. Both days are asserted, and the fold is
+    // the cron's own, with the cron's cross-date 26-hour lookback.
     const v = await mount();
-    const previous = Date.UTC(2026, 8, 2, 23, 0, 0);
-    const yesterday = decision(v.env, 'v-charms', previous + 10 * 60_000, 'cnt-charms-slg');
+    const PREVIOUS = '2026-09-02';
+    const previousHour = Date.UTC(2026, 8, 2, 23, 0, 0);
+    const yesterday = [
+      decision(v.env, 'v-yesterday-tabby', previousHour + 10 * 60_000, 'cnt-tabby-evening'),
+      decision(v.env, 'v-yesterday-rogue', previousHour + 20 * 60_000, 'cnt-rogue-work'),
+    ];
     const today = [
       decision(v.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
       decision(v.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
       decision(v.env, 'u-unknown', T12 + HOUR_MS + 60_000, 'cnt-tabby-evening'),
       decision(v.env, 'v-charms', T12 + HOUR_MS + 120_000, 'cnt-charms-slg'),
     ];
-    await enqueueDecisions(v.env, [yesterday, ...today]);
-    const wire = v.queued.splice(0);
-    const yesterdayKeyMissing = await consumeLedger(v.env, wire, NOW);
-    expect(yesterdayKeyMissing.ok, 'the two-day fixture is written').toBe(true);
-    await buildHour(v.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, T12 + 2 * HOUR_MS, {}, v.env as never);
-    await buildHour(v.storage as never, TENANT, { date: '2026-09-02', hour: 23 }, W22_LEARN, T12 + 2 * HOUR_MS, {}, v.env as never)
-      .catch(() => undefined);   // the out-of-order repair of the previous day
-    await buildHour(v.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W22_LEARN, T12 + 3 * HOUR_MS, {}, v.env as never);
-    const visitors = await runDayReport(v.storage as never, { tenant: TENANT, brand: BRAND, date: DATE }, W22_LEARN, null, T12 + 3 * HOUR_MS, {}, v.env as never);
-    expect(visitors.counts.visitors,
-      'W22.R1.02 — the day\'s distinct-visitor count survives an out-of-order repair across a date boundary: four visitors were served on this date (F17 P7 measured four where eight were served)')
+    await throughTheLedger(v, [...yesterday, ...today], []);
+    const previousKey = [...v.storage.objects.keys()].find(key => key.startsWith(`${TENANT}/${PREVIOUS}/23/`))!;
+    const previousBody = v.storage.objects.get(previousKey)!;
+    v.storage.objects.delete(previousKey);                       // the oldest hour cannot be read yet
+    const firstPass = await fold(v, T12 + 3 * HOUR_MS);           // today's hours fold first
+    expect(firstPass.built, 'the fixture folds the current day before the previous day is repairable')
+      .toContain(`${DATE} ${HOUR}`);
+    v.storage.objects.set(previousKey, previousBody);             // the previous day's hour returns
+    const repairPass = await fold(v, T12 + 3 * HOUR_MS + 60_000); // the out-of-order repair run
+
+    expect(repairPass.built,
+      'W22.R1.02 — the previous day\'s hour is folded when it becomes readable, after the current day\'s hours have already been folded: `seen` is kept per date instead of being wiped whenever the shard\'s date changes, so an older hour is repairable rather than refused for ever (F17 P7, §6 item 3; hourly.ts:289 SeenDateAhead, :316-318 the wipe)')
+      .toContain(`${PREVIOUS} 23`);
+    const previousDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: PREVIOUS, brand: BRAND });
+    expect(previousDay.status, `the previous day's report answers: ${JSON.stringify(previousDay.body).slice(0, 300)}`).toBe(200);
+    expect((previousDay.body as { report: DayReport }).report.counts.visitors,
+      'W22.R1.02 — and the two visitors served only in that repaired hour are counted on their own day')
+      .toBe(2);
+    const currentDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect((currentDay.body as { report: DayReport }).report.counts.visitors,
+      'W22.R1.02 — while the current day keeps every distinct visitor it was serving before the repair (F17 P7 measured four where eight were served)')
       .toBe(4);
   });
 });
@@ -1171,6 +1288,49 @@ describe('unit:W22.A1.01', () => {
     expect(typeof hoursContract === 'string' ? hoursContract : hoursContract.windowsMs.purchase,
       'W22.A1.01 — while still declaring the policy window it was asked for, so the difference is visible rather than hidden')
       .toBe(PURCHASE_WINDOW_MS);
+
+    // ── the horizon tied to the credit it produced (F17 P4) ─────────────────
+    // A purchase three days after the story it followed: inside the policy's
+    // seven-day window, outside the fold's 48-hour horizon. The online path
+    // credits it; the fold cannot. Each path's declared `appliedWindowsMs`
+    // must match the credit that path actually shows, so a stamped constant
+    // cannot satisfy both.
+    const p = await mount();
+    const DECIDED_AT = ONLINE_TS - 3 * DAY_MS, BOUGHT_AT = ONLINE_TS;
+    const buyDate = new Date(BOUGHT_AT).toISOString().slice(0, 10);
+    const decidedDate = new Date(DECIDED_AT).toISOString().slice(0, 10);
+    const storyConfig = () => ({ reward: 'purchase' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+    const story = decision(p.env, 'v-tabby', DECIDED_AT, 'cnt-tabby-evening', 'story');
+    const bought = purchase(p.env, story, BOUGHT_AT, 'w22-b1-late-purchase');
+    await fanDecisions(p.env, { tenant: TENANT, brand: BRAND, visitor_id: story.visitor_id, records: [story] }, storyConfig);
+    await fanOutcome(p.env, TENANT, bought, DEFAULT_POLICY, BRAND, { story: storyConfig() }, storyConfig());
+    await p.drain();
+    const statsNs = p.env.LEARN_STATS!;
+    const onlineAnswer = await statsNs.get(statsNs.idFromName(statsName(TENANT, BRAND, 'story'))).fetch('https://learn/snapshot');
+    const onlineSnapshot = (await onlineAnswer.json() as { snapshot?: LiftSnapshot | null }).snapshot;
+    expect(onlineSnapshot, `the online path must hold the story slot's snapshot (it answered ${onlineAnswer.status})`).toBeTruthy();
+    const onlineCredits = Math.round(onlineSnapshot!.items['cnt-tabby-evening']?.['*']?.s ?? 0);
+
+    await throughTheLedger(p, [story], [bought], Date.now());
+    await buildHour(p.storage as never, TENANT, { date: decidedDate, hour: new Date(DECIDED_AT).getUTCHours() }, W22_LEARN, Date.now(), {}, p.env as never);
+    await buildHour(p.storage as never, TENANT, { date: buyDate, hour: new Date(BOUGHT_AT).getUTCHours() }, W22_LEARN, Date.now(), {}, p.env as never);
+    const foldedDay = await runDayReport(p.storage as never, { tenant: TENANT, brand: BRAND, date: buyDate }, W22_LEARN, null, Date.now(), {}, p.env as never);
+    const foldedCredits = foldedDay.policies.find(row => row.role === 'learning')?.credits ?? 0;
+
+    const onlineContractLogic = snapshotContract(onlineSnapshot!) ?? absent('`attributionContract` on the online snapshot', onlineSnapshot!);
+    const foldContract = dayContract(foldedDay) ?? absent('`attributionContract` on the hourly-fold day report', foldedDay);
+    expect(typeof onlineContractLogic === 'string' ? onlineContractLogic : { appliedPurchaseMs: onlineContractLogic.appliedWindowsMs.purchase, credited: onlineCredits },
+      'W22.A1.01 — the online path read seven days of ring and credited the purchase, and the horizon it declares is the one that produced that credit (F17 P4; DecisionRing.ts:21 RING_MAX_AGE_MS)')
+      .toEqual({ appliedPurchaseMs: PURCHASE_WINDOW_MS, credited: 1 });
+    expect(typeof foldContract === 'string' ? foldContract : { appliedPurchaseMs: foldContract.appliedWindowsMs.purchase, credited: foldedCredits },
+      'W22.A1.01 — the fold could read only 48 hours and shows no credit for the same purchase; it declares that horizon and never reports under the policy\'s seven-day label (F17 P4: "The engine learns from a credit the report cannot show")')
+      .toEqual({ appliedPurchaseMs: DEFAULT_HORIZON_MS, credited: 0 });
+
+    for (const [label, contract] of [['the direct-record recomputation', recordsContract], ['the hourly fold', foldContract], ['the online path', onlineContractLogic]] as const) {
+      expect(typeof contract === 'string' ? contract : Object.entries(contract.windowsMs).map(([reward, asked]) => [reward, contract.appliedWindowsMs[reward]! <= asked]),
+        `W22.A1.01 — ${label} never claims to have read more than the policy asked for: every applied horizon is at or inside its declared window`)
+        .toEqual(typeof contract === 'string' ? contract : Object.keys(contract.windowsMs).map(reward => [reward, true]));
+    }
   });
 
   it('host: the day report, the window report and the published lift snapshot each name the contract, and a day written under an earlier contract version is never pooled with a later one', async () => {
@@ -1208,16 +1368,23 @@ describe('unit:W22.A1.01', () => {
 
     // A day saved under an earlier contract version is read as such and never
     // pooled with a later one (document 35 §5 row W22, "versioned histories").
-    const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, ONLINE_DATE))!) as DayReport & { attributionContract?: AttributionContract };
+    // The previous day is BUILT by the engine's own report path, so the stored
+    // document is the canonical serializer's; only the contract version is then
+    // moved back, which is the one thing this clause is about.
     const previousDay = new Date(Date.parse(ONLINE_DATE + 'T00:00:00Z') - DAY_MS).toISOString().slice(0, 10);
-    earlier.date = previousDay;
-    earlier.attributionContract = { name: 'attribution', version: 0, history: HISTORY,
-      windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } };
+    const dYesterday = decision(m.env, 'v-rogue', Date.parse(previousDay + 'T12:00:00Z'), 'cnt-rogue-work');
+    const oYesterday = click(m.env, dYesterday, Date.parse(previousDay + 'T12:05:00Z'), 'w22-b1-contract-yesterday');
+    await throughTheLedger(m, [dYesterday], [oYesterday], Date.now());
+    await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: previousDay }, W22_LEARN, null, Date.now(), m.env as never);
+    const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { attributionContract?: AttributionContract };
+    earlier.attributionContract = { ...(earlier.attributionContract ?? { name: 'attribution', history: HISTORY,
+      windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } }), version: 0 };
     m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), JSON.stringify(earlier));
-    m.storage.versions.set(reportKey(TENANT, BRAND, previousDay), 1);
+    m.storage.versions.set(reportKey(TENANT, BRAND, previousDay), (m.storage.versions.get(reportKey(TENANT, BRAND, previousDay)) ?? 0) + 1);
     const mixed = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${previousDay}&to=${ONLINE_DATE}&brand=${BRAND}`);
-    const mixedReport = (mixed.body as { report: WindowReport }).report;
-    expect(mixedReport.slots.hero?.compatibility.reasons,
+    const mixedReport = (mixed.body as { report?: WindowReport }).report;
+    expect(mixedReport?.slots.hero?.compatibility.reasons
+      ?? `the window over the two contract versions answered ${mixed.status}: ${JSON.stringify(mixed.body).slice(0, 200)} — a stored report carrying the ruled member must still be readable by the window`,
       'W22.A1.01 — a day written under an earlier contract version is never pooled with a later one: the window declares the mixed basis instead of adding the two together')
       .toContain('mixed_basis');
   });
@@ -1298,5 +1465,70 @@ describe('unit:W22.S1.01', () => {
       .toBe(503);
     expect((refused.body.persistence as { status: string }).status,
       'W22.S1.01 — and the refusal names that nothing was scheduled').toBe('not_scheduled');
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.05 — the export reconciles with the day report
+// ===========================================================================
+
+/** RULED, ABSENT TODAY (R21): the export listing's own reconciliation counts. */
+interface ExportCounts {
+  /** Rows the listed objects physically hold, per stream. */
+  rows: { decisions: number; outcomes: number };
+  /** Distinct logical rows, after the same dedup the report applies. */
+  distinct: { decisions: number; outcomes: number };
+  /** The canonical day report's own counts, and whether they agree with `distinct`. */
+  report: { decisions: number; outcomes: number };
+  agrees: boolean;
+}
+const exportCounts = (body: Record<string, unknown>): ExportCounts | undefined => body.counts as ExportCounts | undefined;
+
+describe('unit:W22.R1.05', () => {
+  /**
+   * The W22 row asks for "durable online/R2/fold/export reconciliation". F16
+   * §4.4: every exported row already carries a stable primary key, "so the
+   * customer's warehouse can dedupe on decision_id/outcome_id today — what is
+   * missing is the CONTRACT". The export is the R2 partition itself (doc 22
+   * §12.4), and `GET /v1/:tenant/ledger/batches` is the listing a warehouse job
+   * reads (`src/routes/decisions.ts:536`). This unit makes the listing say what
+   * it holds and whether that agrees with the day the platform published, so a
+   * warehouse loading the objects and an operator reading the report cannot
+   * disagree in silence.
+   *
+   * Member names are disjoint from W21-B1's `from`/`to`/`date` on the same
+   * answer: this unit rules `counts` only.
+   */
+  it('host: the export listing states the rows it holds, the distinct rows after dedup and the day report\'s own counts, agrees when they match, and names the mismatch when the export loses an object', async () => {
+    const m = await mount();
+    const decisions = [
+      decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
+      decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
+    ];
+    const outcomes = [click(m.env, decisions[0]!, T12 + 300_000, 'w22-b1-export-click')];
+    const wire = await throughTheLedger(m, decisions, outcomes);
+    // One redelivery, so the export physically holds more rows than the day
+    // report counts: the reconciliation must be over the DISTINCT rows.
+    expect((await consumeLedger(m.env, wire, NOW)).ok, 'the redelivery is acknowledged by the real consumer').toBe(true);
+    const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect(built.status, `the report route answers: ${JSON.stringify(built.body).slice(0, 300)}`).toBe(200);
+
+    const listed = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}`);
+    expect(listed.status, `the export listing answers: ${JSON.stringify(listed.body).slice(0, 300)}`).toBe(200);
+    const counts = exportCounts(listed.body) ?? absent('`counts` on GET /v1/:tenant/ledger/batches', listed.body);
+    expect(typeof counts === 'string' ? counts : counts,
+      'W22.R1.05 — the export listing reconciles itself with the day the platform published: four decision rows and two outcome rows on the objects, two and one distinct after dedup on the logical ids, the same two and one in the report, and they agree (document 35 §5 row W22, "durable online/R2/fold/export reconciliation"; F16 §4.4)')
+      .toEqual({ rows: { decisions: 4, outcomes: 2 }, distinct: { decisions: 2, outcomes: 1 },
+        report: { decisions: 2, outcomes: 1 }, agrees: true });
+
+    // The sink mismatch, at the export: an object the report counted is no
+    // longer in the partition a warehouse would load.
+    const dropped = dayObjects(m, 'outcome')[0]!;
+    m.storage.objects.delete(dropped);
+    const after = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}`);
+    const mismatch = exportCounts(after.body) ?? absent('`counts` on GET /v1/:tenant/ledger/batches', after.body);
+    expect(typeof mismatch === 'string' ? mismatch : { distinct: mismatch.distinct, report: mismatch.report, agrees: mismatch.agrees },
+      'W22.R1.05 — and when the export no longer holds what the report counted, the listing says so instead of letting a warehouse load a short day in silence')
+      .toEqual({ distinct: { decisions: 2, outcomes: 0 }, report: { decisions: 2, outcomes: 1 }, agrees: false });
   });
 });
