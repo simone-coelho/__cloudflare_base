@@ -180,10 +180,19 @@ function ownerDescriptor(value: unknown, tenant: string, subject: string): Conti
  * threw, the object answered a non-200, or its answer is not the acknowledgment
  * this contract defines — is `unavailable`, because nothing was decided and the
  * browser must keep what it holds.
+ *
+ * Answers `undefined` — no statement at all — for a session this credential
+ * cannot describe. W16 C6 is ANONYMOUS return recognition: the descriptor is
+ * bound to an anonymous browser subject and `issueContinuityProof` signs nothing
+ * else, so asking a signed-in shopper's own object to mint one is a question the
+ * contract has no answer to. Making it cost her the session refresh itself would
+ * be worse than saying nothing: she is signed in, she has no anonymous return to
+ * recognize, and the engine simply reports nothing about one.
  */
 async function reportContinuity(env: Env, tenant: string, decision: ContinuityDecision,
-  session: { subject: string; capability: string; consent?: Consent },
-  setCookie: (value: string) => void): Promise<ContinuityReport> {
+  session: { subject: string; capability: string; kind?: unknown; consent?: Consent },
+  setCookie: (value: string) => void): Promise<ContinuityReport | undefined> {
+  if (session.kind !== 'anonymous') return undefined;
   if (!inForce(decision)) return { enabled: false, reason: decision.reason };
   if (!personalizes(storedConsent(session.consent))) return { enabled: false, reason: 'consent' };
   let body: { ok?: unknown; enabled?: unknown; descriptor?: unknown; proof?: unknown };
@@ -299,12 +308,36 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
     } else session = await anonymousWithConsent(c.env, tenant, hints);
   } else {
     const principal = await verifySessionCapability(c.env, token, tenant);
-    const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);
-    session = { ...principal, capability: token, consent: await establishRefusal(c.env, principal, token, consent) };
+    // W16 C6.13 (R62, R72). A browser carrying BOTH a capability and a
+    // recognition proof is a browser whose return this engine could not finish:
+    // the `unavailable` answer served it a PROVISIONAL anonymous session in
+    // place of the recognition, and a return carries no capability by contract,
+    // so without this the same consume would never be offered again and she
+    // would be lost for good. Two things bound it. It is attempted only when the
+    // session she already holds is itself ANONYMOUS, so a presented proof can
+    // never take over a session that belongs to an identified shopper; and it
+    // is the ordinary consume, atomic in her own object, so the chain keeps its
+    // single use, its one rotation and its one deterministic retry. Nothing of
+    // the provisional subject is carried across: it is not merged, not read and
+    // not renewed — it is simply left behind to its own retention.
+    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined
+      ? await consumeContinuity(c.env, tenant, decision, c.req.raw, body.continuity, hints, setCookie)
+      : null;
+    if (returned !== null && returned !== 'unavailable') {
+      session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
+        consent: storedConsent(returned.consent) };
+      continuity = returned.report;
+    } else {
+      if (returned === 'unavailable') continuity = UNAVAILABLE;
+      const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);
+      session = { ...principal, capability: token, consent: await establishRefusal(c.env, principal, token, consent) };
+    }
   }
   continuity ??= await reportContinuity(c.env, tenant, decision, session, setCookie);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, session, continuity });
+  // `continuity` is absent when the engine makes no statement about anonymous
+  // return recognition for this session (an identified shopper has none).
+  return c.json({ ok: true, session, ...(continuity === undefined ? {} : { continuity }) });
 });
 
 identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false }), async (c) => {

@@ -143,14 +143,28 @@ export function parseHistoryCsv(text: string): Array<Record<string, unknown>> {
 }
 
 /**
- * W16 C8.10 (R64, R67): a warehouse row is this tenant's input like any other,
- * so each value it carries answers for itself against the catalogue the tenant
- * publishes — through the one exported rule, never a second copy of it. A
- * dimension that catalogue names nothing on stays the row's own to decide.
+ * W16 C8.11 (R64): the coded reason a row is skipped BECAUSE the tenant's own
+ * published catalogue does not name the values it carried. It is a different
+ * fact from "this row carried no registry attribute at all", and an operator
+ * reading the import report has to be able to tell them apart: the first is
+ * answered by publishing the value, the second by sending a different column.
  */
-function touchesOf(row: HistoryRow, cfg: ReflexConfig, vocabulary: CatalogVocabulary): Touch[] {
+export const OUT_OF_VOCABULARY_SKIP = 'out_of_vocabulary';
+
+/**
+ * W16 C8.10/C8.11 (R64, R67): a warehouse row is this tenant's input like any
+ * other, so each value it carries answers for itself against the catalogue the
+ * tenant publishes — through the one exported rule, never a second copy of it. A
+ * dimension that catalogue names nothing on stays the row's own to decide.
+ *
+ * `refused` is true only when the row really did carry registry values and the
+ * vocabulary is what left it with none.
+ */
+function touchesOf(row: HistoryRow, cfg: ReflexConfig, vocabulary: CatalogVocabulary): { touches: Touch[]; refused: boolean } {
   const attrs = { ...(row.product ?? {}), ...(row.attributes ?? {}) };
-  return admittedTouches(extractTouches(sanitizeEventAttributes(attrs, cfg), cfg), vocabulary);
+  const carried = extractTouches(sanitizeEventAttributes(attrs, cfg), cfg);
+  const touches = admittedTouches(carried, vocabulary);
+  return { touches, refused: touches.length === 0 && carried.length > 0 };
 }
 
 /** Apply a batch. Rows are validated by the caller; this resolves, groups and writes. */
@@ -216,8 +230,13 @@ export async function applyHistory(env: Env, tenant: TenantId, rows: Array<Histo
       continue;
     }
     if ((cfg.weights[r.action] ?? 0) <= 0) { report.skipped.push({ index: i, reason: `action "${r.action}" has no weight` }); continue; }
-    const touches = touchesOf(r, cfg, vocabulary);
-    if (touches.length === 0) { report.skipped.push({ index: i, reason: 'no registry attribute on the row' }); continue; }
+    const placed = touchesOf(r, cfg, vocabulary);
+    const touches = placed.touches;
+    if (touches.length === 0) {
+      report.skipped.push({ index: i,
+        reason: placed.refused ? OUT_OF_VOCABULARY_SKIP : 'no registry attribute on the row' });
+      continue;
+    }
     const g = groups.get(target) ?? [];
     g.push({ action: r.action, at: r.at, touches, index: i });
     groups.set(target, g);

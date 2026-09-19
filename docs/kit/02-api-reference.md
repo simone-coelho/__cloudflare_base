@@ -268,18 +268,29 @@ Historical import requires an existing owned profile and live explicit tracking 
 | `{ enabled: true, mode, purpose, generation, expiresAt, revision, proof? }` | The recognition descriptor her browser should carry |
 
 `unavailable` is a failure of the CALL and never a statement about the shopper, which is why it is
-not reported as `consent`. The request is still answered `200` on a brand-new anonymous session, the
-presented proof was **not** consumed and her chain did not rotate, and a caller holding a proof must
-**keep** it together with its `operationId` and present the same consume again on the next page load
-— the SDK does exactly that. Only `consent`, `unpublished` and `incomplete` are decisions, and a
+not reported as `consent`. The request is still answered `200` on a **provisional** anonymous session,
+the presented proof was **not** consumed and her chain did not rotate, and a caller holding a proof
+must **keep** it together with its `operationId` and present the same consume again on the next page
+load — the SDK does exactly that. Only `consent`, `unpublished` and `incomplete` are decisions, and a
 caller clears what it holds on those. A proof we genuinely cannot place stays the cold-shopper
 `consent` answer.
+
+Because that provisional session leaves the browser holding a capability, the retry is the one case
+where a return **may** carry `X-Shopper-Session`: we complete the consume beside a capability only
+when the session that capability names is itself anonymous. A presented proof never takes over a
+session that belongs to an identified shopper, and nothing of the provisional subject is merged into
+the recognized one — it is left behind to its own retention.
+
+The `continuity` block is **absent altogether** from the answer for a shopper who is signed in.
+Return recognition here is anonymous recognition: the descriptor is bound to an anonymous browser
+subject, so for an identified shopper there is no anonymous return to report and we report none. An
+absent block is not a decision and changes nothing a caller holds.
 
 There is **no shipped default**: the mode, the window and the covered purpose are published by the tenant on the versioned reflex document (`continuity: { mode, windowMs, purpose, retentionApproved }`), the same coherent publication set the weights, the decay horizon and the journey ladder ride, so `revision` names the document revision the descriptor is bound to. An incomplete block never becomes a configuration and never blocks the rest of the document.
 
 `expiresAt` is the descriptor's original fixed expiry — issue time plus `windowMs`. It never moves: not on rotation, not on browsing, not on renewal. `generation` is `1` for the first descriptor of a chain and one more per return. `proof` is present **only** in `direct` mode; in `broker` mode the long proof leaves only as the first-party `opt_shopper_continuity` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`) and the body carries none.
 
-A return presents the proof on the same route with **no** `X-Shopper-Session` header: `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
+A return presents the proof on the same route, normally with **no** `X-Shopper-Session` header (the one exception is the `unavailable` retry above): `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
 
 Logout (`detach`), session reset, link and erase each retire the descriptor, a withdrawn choice makes a descriptor issued before it cold, and the owner object holds only the digest, the generation and the fixed expiry — never the proof. The SDK keeps a direct-mode proof in its own tenant-scoped store under `opt_shopper_continuity:<endpoint>:<tenant>` and presents it on a cold start; in broker mode it holds none and sends none.
 
