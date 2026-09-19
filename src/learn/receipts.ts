@@ -49,6 +49,12 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (drivers.length) why.push(`Interest matched: ${drivers.map((d) => `${d.dim} ${d.value} (interest ${r3(d.a)} × weight ${r3(d.weight)})`).join(', ')}.`);
     else if (e.score_base === 0 && !e.freshness && !e.stage) why.push('No interest signal yet for this shopper: the slot served its catalogue order.');
     for (const d of (e.drivers || []).filter((d) => d.dim === 'completes')) why.push(`Completes what she committed to: ${d.value} (+${r3(d.weight)}).`);
+    // W16 C3: the arrival's own evidence, named rule by rule with the delta it
+    // caused. A candidate the rules never named says nothing here rather than
+    // claiming a context it did not have.
+    if (e.contextual && e.contextual.drivers.length) {
+      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${d.value} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
+    }
     if (e.regional) why.push(`What is trending ${e.regional.region === '*' ? 'everywhere' : `in ${e.regional.region}`} contributed ${r3(e.regional.contribution)} (the trend's share of the score: ${r3(e.regional.lambda)}).`);
     if (e.external) {
       if ('status' in e.external) why.push(`Their model (${e.external.ref}) was unavailable: ${e.external.reason}; the term was omitted.`);
@@ -62,7 +68,12 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece; it competes on its base score alone.');
     if (e.lift) {
       const l = e.lift;
-      const applied = l.gamma > 0 ? `applied at trust ${r3(l.gamma)}` : 'shown on the receipt, not applied (trust 0)';
+      // N20: a multiplicative term on a score it could not move applied nothing,
+      // whatever the trust dial says, and the receipt never claims otherwise. A
+      // retained record that itemised no delta keeps the sentence it was written with.
+      const applied = l.gamma <= 0 ? 'shown on the receipt, not applied (trust 0)'
+        : l.applied === 0 ? `shown on the receipt; at trust ${r3(l.gamma)} it moved this score by nothing`
+          : `applied at trust ${r3(l.gamma)}`;
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
         : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units), ${applied}.`);
