@@ -664,7 +664,7 @@ export default {
         async get(key) {
           note('STORAGE.get', key); const value = storage.get(key);
           return value === undefined ? null : { body: new Response(value).body,
-            ...(input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled ? { key, etag: publicationEtags.get(key), size: new TextEncoder().encode(value).length,
+            ...(input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost ? { key, etag: publicationEtags.get(key), size: new TextEncoder().encode(value).length,
               async text() { return value; } } : {}),
             ...(input.operatorDiagnostics ? { async json() { return JSON.parse(value); } } : {}),
             ...(input.scheduled || input.subjectOperations ? { async text() { return value; } } : {}),
@@ -673,7 +673,9 @@ export default {
         async put(key, value, options) {
           note('STORAGE.put', key);
           if (input.failStoragePut) throw new Error('W0701_PRIVATE_FAILURE');
-          if (input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled) {
+          // The shopper-host case reads and writes the configuration publication,
+          // which requires the full put/get contract (src/config/publication.ts:225-237, :293-295).
+          if (input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost) {
             const condition = options?.onlyIf;
             if (condition instanceof Headers ? storage.has(key) : condition && condition.etagMatches !== publicationEtags.get(key)) return null;
             const text = await new Response(value).text(), etag = 'publication-' + (++publicationVersion);
@@ -798,8 +800,16 @@ export default {
       if (input.shopperHost) {
         const scope = reflexScopeForTenant('acme');
         const config = { ...DEFAULT_REFLEX_CONFIG, version: 'w3707-synthetic-native', dimensions: [{ key: 'taste', source: 'taste' }] };
-        if (!(await writeReflexConfig(bindings, scope, config, { actor: 'synthetic' })).ok
-          || !(await writeReflexConfig(runtimeEnv, scope, config, { actor: 'synthetic' })).ok) throw new Error('Synthetic customer config unavailable');
+        // Configuration publication is the only configuration authority, and an
+        // authored write needs If-Match + Idempotency-Key over an existing head
+        // (src/config/publication.ts:19, :66-73, :76-88, :379-397). This scope has
+        // no head yet, so the fixture publishes the explicit initial baseline,
+        // which is the sanctioned library-only path (:437-441, :492-495) and
+        // throws on every failure instead of returning ok:false.
+        for (const target of [bindings, runtimeEnv]) {
+          await initializePublication(target, REFLEX_KIND, scope,
+            { revision: 1, value: config, actor: 'synthetic', note: '', at: 1 }, '0:' + crypto.randomUUID());
+        }
         Object.assign(bindings, { REFLEX_HOST: input.shopperHost, CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock',
           SHOPPER_REFLEX: runtimeEnv.SHOPPER_REFLEX, PERSONALIZATION_WEBSOCKET: runtimeEnv.PERSONALIZATION_WEBSOCKET });
         const context = { waitUntil(p) { pending.push(Promise.resolve(p)); }, passThroughOnException() {} };
@@ -979,7 +989,11 @@ function nativeRuntime(reflexHost = 'session', ledgerObserver?: (request: Reques
     compatibilityDate: '2025-06-01', compatibilityFlags: ['nodejs_compat'],
     durableObjects: { SHOPPER_REFLEX: 'ShopperReflex', PERSONALIZATION_WEBSOCKET: 'PersonalizationWebSocket' },
     kvNamespaces: ['CACHE', 'SESSIONS'],
-    ...(ledgerObserver ? { r2Buckets: ['STORAGE'], serviceBindings: { W0612_OBSERVER: ledgerObserver } } : {}),
+    // The configuration publication authority is an R2 bucket and is required
+    // by every served request (src/config/publication.ts:19, :180-183), so the
+    // native runtime always binds it.
+    r2Buckets: ['STORAGE'],
+    ...(ledgerObserver ? { serviceBindings: { W0612_OBSERVER: ledgerObserver } } : {}),
     bindings: { DEPLOYMENT_PROFILE: 'demo', REFLEX_HOST: reflexHost, JWT_SECRET: SECRET, JWT_ISSUER: 'w0102', JWT_AUDIENCE: 'w0102', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock',
       TENANTS: JSON.stringify({ provisioned: ['acme', 'globex'], hosts: { 'acme.example': 'acme' } }), RETENTION: nativeRetention },
     outboundService: () => { outboundAttempts++; throw new Error('W01.02 forbids outbound network'); },

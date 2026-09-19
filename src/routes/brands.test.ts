@@ -13,9 +13,15 @@ describe('GET /v1/:tenant/brands', () => {
     expect(await r.json()).toEqual({ ok: true, tenant: 'coach', brands: [{ id: 'coach', default: true }, { id: 'kate-spade', default: false }] });
   });
   it('an unconfigured stamp answers its default brand, and the scope asked for', async () => {
-    const r = await decisionRoutes.request('http://w/acme/brands', {}, {} as Env);
-    const body = (await r.json()) as { brands: Array<{ id: string; default: boolean }> };
+    // An absent manifest retains legacy Coach operation and provisions nothing
+    // else (src/tenancy/middleware.ts:52-56); an unprovisioned scope is refused
+    // before the list is built (src/routes/decisions.ts:183). The scope asked
+    // for on an unconfigured stamp is therefore its own default brand.
+    const r = await decisionRoutes.request('http://w/coach/brands', {}, {} as Env);
+    expect(r.status).toBe(200);
+    const body = (await r.json()) as { tenant: string; brands: Array<{ id: string; default: boolean }> };
     expect(body.brands[0]!.default).toBe(true);
-    expect(body.brands.map((b) => b.id)).toContain('acme');
+    expect(body.brands.map((b) => b.id)).toContain('coach');
+    expect(body.tenant).toBe('coach');
   });
 });

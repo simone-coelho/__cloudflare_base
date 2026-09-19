@@ -30,12 +30,15 @@ import { shopperObjectName } from '@/tenancy/objects';
 import { tenantKey } from '@/tenancy/tenant';
 import { applyHistory, historyRowSchema } from '@/identity/history';
 import { loadTombstone, tombstoneKey, writeTombstone } from '@/ledger/erasure';
-import { reflexScopeForTenant, writeReflexConfig } from '@/reflex/configStore';
+import { reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
+import { initializePublication, initializePublicationSet, type PublicationBaseline } from '@/config/publication';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
 import { Hono } from 'hono';
 import { tenantMiddleware, tenantConfig } from '@/tenancy/middleware';
 import { decisionRoutes } from '@/routes/decisions';
 import { memoryStore, type OperationAuditDetail } from '@/auth/store';
-import { CONSENT_LIFETIME_MS } from '@/content/consent';
+import { CONSENT_LIFETIME_MS, consentInstruction, type Consent, type ConsentInstruction } from '@/content/consent';
+import { runOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, type RetentionCategory } from '@/retention';
 
 
@@ -67,17 +70,53 @@ class FakeR2 {
       || (condition.has('If-Match') && condition.get('If-Match') !== JSON.stringify(current))
       : (condition?.etagDoesNotMatch === '*' && current !== null) || (condition?.etagMatches !== undefined && condition.etagMatches !== current)) return null;
     this.store.set(key, body); const version = (this.versions.get(key) ?? 0) + 1; this.versions.set(key, version);
-    return { etag: 'v' + version };
+    return { key, etag: 'v' + version, size: new TextEncoder().encode(body).length };
   }
-  async get(key: string) { const v = this.store.get(key); return v === undefined ? null : { text: async () => v, etag: 'v' + (this.versions.get(key) ?? 0) }; }
+  // The publication reader requires etag, byte size and a body stream, and the
+  // writer requires key/etag/size back (src/config/publication.ts:225-237, :293-295).
+  async get(key: string) {
+    const v = this.store.get(key);
+    return v === undefined ? null : { key, text: async () => v, json: async () => JSON.parse(v) as unknown,
+      etag: 'v' + (this.versions.get(key) ?? 0), size: new TextEncoder().encode(v).length, body: new Response(v).body };
+  }
   async delete(key: string) { this.store.delete(key); }
   async list(o: { prefix: string }) { return { objects: [...this.store.keys()].filter((k) => k.startsWith(o.prefix)).map((key) => ({ key })), truncated: false }; }
 }
 
-const mkEnv = (over: Record<string, unknown> = {}): Env => ({
-  CACHE: new FakeKV(), SESSIONS: new FakeKV(), STORAGE: new FakeR2(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',
-  JWT_SECRET: 'w0202-synthetic-route-signing-material', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: 'coach:s3cret', ...over,
-} as unknown as Env);
+const mkEnv = (over: Record<string, unknown> = {}): Env => {
+  const built: Record<string, unknown> = {
+    CACHE: new FakeKV(), SESSIONS: new FakeKV(), STORAGE: new FakeR2(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',
+    JWT_SECRET: 'w0202-synthetic-route-signing-material', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: 'coach:s3cret',
+    ...over,
+  };
+  // A first record may not be born without the retention policy registry
+  // (src/retention.ts:39, :72-89), and the registry is subordinate to the
+  // stamp's own tenant manifest (:59-60).
+  if (built.RETENTION === undefined) built.RETENTION = retentionRegistry(tenantConfig(built as unknown as Env).provisioned);
+  return built as unknown as Env;
+};
+
+const fixturePolicy = { id: 'explicit-identity-route-fixture', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted' as const, renewal: 'new-record-only' as const };
+const retentionRegistry = (tenants: string[]) => JSON.stringify({ version: 1, tenants: Object.fromEntries(tenants.map((tenant) => [tenant,
+  Object.fromEntries((['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'] as RetentionCategory[]).map((category) => [category, fixturePolicy]))])) });
+
+/**
+ * Configuration publication is the only configuration authority
+ * (src/config/publication.ts:19, :150-152, :204-206); every served request
+ * resolves the tenant's Reflex config through it. Explicit test-authored W11
+ * baseline, never a re-admitted KV fallback.
+ */
+async function ensurePublication(tenant: string) {
+  const bucket = env.STORAGE as unknown as FakeR2;
+  if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(tenant) || bucket.store.has('config-publication/v2/' + tenant + '/head.json')) return;
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = tenant): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  await initializePublicationSet(env, [
+    baseline(REFLEX_KIND, cfg, reflexScopeForTenant(tenant)),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+}
 const token = (sub = 'ops') => new jose.SignJWT({ sub }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode('w0202-synthetic-route-signing-material'));
 
 const browse = (values: string[], at: number): ReflexState => {
@@ -89,12 +128,34 @@ const browse = (values: string[], at: number): ReflexState => {
 let env: Env;
 let auth: Record<string, string>;
 let ownedIds = new Map<string, string>();
+let bound: ReturnType<typeof destinations> | undefined;
+
+/**
+ * Tracking and personalization are off until an explicit stored choice, and a
+ * `preferences` boolean grants nothing (src/content/consent.ts:139-163; settled
+ * decision D06-W05). This is the record an owned choice writes, the same shape
+ * the W06.01 fixture below seeds.
+ */
+function explicitChoice(tenant: string, subject: string, now = Date.now()): ConsentInstruction {
+  return { version: 1, tenant, subject, revision: 'identity-route-explicit-choice',
+    tracking: { value: true, chosenAt: now - 1000, expiresAt: now - 1000 + CONSENT_LIFETIME_MS },
+    personalization: { value: true, chosenAt: now - 1000, expiresAt: now - 1000 + CONSENT_LIFETIME_MS } };
+}
+const owned = (tenant: string, subject: string): Consent => consentInstruction(explicitChoice(tenant, subject));
 
 async function seedDevice(visitorId: string, sessionId: string, values: string[]) {
   ownedIds.set(visitorId, sessionId);
   const sm = new SessionManager(env);
-  // Built a few seconds ago, not at T0: the route merges at Date.now(), and a vector from 2023 is dust by now.
-  await sm.createOrUpdateSession(sessionId, visitorId, { reflex: browse(values, Date.now() - 5_000), attributes: { product_views: values.length } });
+  // The write only happens for an explicitly consenting shopper: a refused or
+  // absent choice returns an untracked projection and stores nothing
+  // (src/services/SessionManager.ts:298-322; src/content/consent.ts:139-163).
+  // The owner's own object carries the same stored choice, because the link runs
+  // inside it (src/durable-objects/ShopperReflex.ts:1623-1631).
+  await runOwnerOperation({}, env, async () => {
+    // Built a few seconds ago, not at T0: the route merges at Date.now(), and a vector from 2023 is dust by now.
+    await sm.createOrUpdateSession(sessionId, visitorId, { reflex: browse(values, Date.now() - 5_000), attributes: { product_views: values.length } });
+  }, env.SESSIONS as never, undefined, async () => owned('coach', visitorId));
+  bound?.object.open(shopperObjectName('coach', visitorId)).data.set('consent', explicitChoice('coach', visitorId));
 }
 
 function historyProfile(subject: string, now = Date.now()): SessionData {
@@ -140,6 +201,7 @@ async function signedCall(path: string, init: RequestInit & { json?: unknown }) 
 beforeEach(async () => {
   env = mkEnv();
   ownedIds = new Map();
+  bound = undefined;
   auth = { Authorization: `Bearer ${await token()}` };
 });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -230,6 +292,11 @@ it('W03.05 audits exact identity owners and every1000-account mapping with two a
 });
 
 describe('the link, on the session host', () => {
+  // Shopper routes are owner-dispatched: requireShopper forwards the verified
+  // request to the shopper's own object, so the namespace must be bound with
+  // real ShopperReflex instances (src/identity/sessionCapability.ts:141-176;
+  // src/identity/sessionAuthority.ts:525-537; src/tenancy/objects.ts:48-54).
+  beforeEach(async () => { bound = destinations(); await ensurePublication('coach'); });
   it('a phone signs in: the response names the person, sets the cookie, and the old cookie reads the person', async () => {
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby', 'Tabby', 'Tabby']);
     const r = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
@@ -311,7 +378,7 @@ describe('the link, on the session host', () => {
 });
 
 describe('the assertion, when the tenant has a secret', () => {
-  beforeEach(() => { env = mkEnv({ IDENTITY_SECRETS: 'coach:s3cret' }); destinations(); });
+  beforeEach(async () => { env = mkEnv({ IDENTITY_SECRETS: 'coach:s3cret' }); bound = destinations(); await ensurePublication('coach'); });
 
   it('refuses an unsigned link, accepts the site-signed one, and records signed assurance', async () => {
     const unsigned = await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005', accountId: 'acct-1001' } });
@@ -349,6 +416,7 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
       ];
       for (const { material, mode, proof } of attempts) {
         env = mkEnv({ REFLEX_HOST: host, AUTH_MODE: mode, IDENTITY_SECRETS: material, SHOPPER_REFLEX: objects });
+        await ensurePublication('coach');
         const kvs = [env.CACHE, env.SESSIONS] as unknown as FakeKV[];
         kvs.forEach(kv => kv.store.set('synthetic-private', 'W0401_PRIVATE_STORE'));
         const before = kvs.map(kv => [...kv.store]);
@@ -361,6 +429,7 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
         calls.forEach(spy => spy.mockRestore());
       }
       env = mkEnv({ REFLEX_HOST: host, DEPLOYMENT_PROFILE: 'demo', IDENTITY_SECRETS: 'coach:s3cret' });
+      await ensurePublication('coach');
       const actual = destinations();
       objectCalls.length = 0;
       const r = await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000006', accountId: 'acct-proof', exp, assertion: signed } });
@@ -423,6 +492,9 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
 });
 
 describe('detach', () => {
+  // The owner namespace is bound: requireShopper forwards to the shopper's own
+  // object (src/identity/sessionCapability.ts:141-176; sessionAuthority.ts:525-537).
+  beforeEach(async () => { bound = destinations(); await ensurePublication('coach'); });
   it('clears the cookies and deletes nothing', async () => {
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     const linked = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
@@ -435,6 +507,9 @@ describe('detach', () => {
 });
 
 describe('the data team’s doors', () => {
+  // The owner namespace is bound: requireShopper forwards to the shopper's own
+  // object (src/identity/sessionCapability.ts:141-176; sessionAuthority.ts:525-537).
+  beforeEach(async () => { bound = destinations(); await ensurePublication('coach'); });
   it('resolve, visitor and shopper want the operator token', async () => {
     expect((await call('/coach/identity/resolve', { method: 'POST', json: { accountIds: ['a'] } })).status).toBe(401);
     expect((await call('/coach/identity/visitor/vis-00000000-0000-4000-8000-000000000005')).status).toBe(401);
@@ -464,6 +539,9 @@ describe('the data team’s doors', () => {
 });
 
 describe('historical rows', () => {
+  // The owner namespace is bound: requireShopper forwards to the shopper's own
+  // object (src/identity/sessionCapability.ts:141-176; sessionAuthority.ts:525-537).
+  beforeEach(async () => { bound = destinations(); await ensurePublication('coach'); });
   it('JSON rows by account id enrich an existing consenting person, discounted by their age', async () => {
     await seedHistorySession('coach', await shopperIdFor(env, 'coach', 'acct-1001'));
     const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
@@ -585,7 +663,13 @@ describe('W06.01 durable local erasure retry', () => {
     env.RETENTION = JSON.stringify({ version: 1, tenants: Object.fromEntries(tenantConfig(env).provisioned.map(selected => [selected,
       Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly'].map(category => [category, { id: 'fixture-' + category, revision: 1,
         durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' }]))])) });
-    expect((await writeReflexConfig(env, reflexScopeForTenant(tenant), cfg, { actor: 'w0509-synthetic' })).ok).toBe(true);
+    // The authored baseline is published, not written without preconditions: a
+    // configuration write needs If-Match and Idempotency-Key
+    // (src/config/publication.ts:66-73, :76-88, :379-397), while an explicit
+    // initial baseline is the sanctioned library-only path (:437-441, :492-495).
+    await ensurePublication(tenant);
+    await initializePublication(env, REFLEX_KIND, reflexScopeForTenant(tenant),
+      { revision: 1, value: cfg, actor: 'w0509-synthetic', note: '', at: 1 }, '0:' + crypto.randomUUID()).catch(() => undefined);
   }
   async function seedHistoryTarget(d: ReturnType<typeof destinations>, tenant: string, subject: string, sid = 's-history-' + subject) {
     const item = d.object.open(shopperObjectName(tenant, subject)), now = Date.now();
@@ -1962,6 +2046,9 @@ describe('W06.01 durable local erasure retry', () => {
 
 describe('erase: the right to be forgotten (CW28)', () => {
   it('forgets a person: links, both browsers\u2019 profiles, the person\u2019s session, and a tombstone per id', async () => {
+    // The owner namespace is bound: requireShopper forwards to the shopper's own
+    // object (src/identity/sessionCapability.ts:141-176; sessionAuthority.ts:525-537).
+    bound = destinations(); await ensurePublication('coach');
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     await seedDevice('vis-00000000-0000-4000-8000-000000000002', 's-laptop', ['Rogue']);
     const a = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
@@ -2009,6 +2096,7 @@ describe('erase: the right to be forgotten (CW28)', () => {
   });
 
   it('accepts a shopper id directly, and is idempotent', async () => {
+    bound = destinations(); await ensurePublication('coach');
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     const a = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
     const first = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { shopperId: a.body.shopperId } });

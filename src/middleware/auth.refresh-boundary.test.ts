@@ -6,8 +6,10 @@ import { hashPassword } from '@/auth/accounts';
 import { memoryStore } from '@/auth/store';
 import { authRoutes } from '@/routes/auth';
 import { configRoutes } from '@/routes/config';
-import { invalidateConfigCache } from '@/reflex/configStore';
+import { invalidateConfigCache, reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { initializePublicationSet, pinPublication, type PublicationBaseline } from '@/config/publication';
 import { jwt, type AuthContext } from './auth';
 import { operatorWrites, sdkKey } from './edgeAccess';
 
@@ -34,6 +36,61 @@ class SyntheticKV {
     this.calls.push(`delete:${key}`);
     this.values.delete(key);
   }
+}
+
+/**
+ * R2 honouring the strengthened publication put/get contract: `get` reports
+ * etag/size/body and `put` returns key/etag/size and honours the conditional
+ * headers (src/config/publication.ts:225-237, :293-295).
+ */
+class FixtureR2 {
+  data = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string> | undefined>();
+  async get(key: string) {
+    const raw = this.data.get(key);
+    if (raw === undefined) return null;
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length,
+      customMetadata: this.metadata.get(key), body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async put(key: string, raw: string, options?: { onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string } | Headers; customMetadata?: Record<string, string> }) {
+    const old = this.data.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if (absent && old !== null || match != null && match !== old && match !== JSON.stringify(old)) return null;
+    this.data.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
+  }
+  async delete(key: string) { this.data.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.data.keys()].filter((k) => k.startsWith(options.prefix ?? '')).sort(), start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map((key) => ({ key })), truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+/**
+ * Configuration publication is the only configuration authority and a write
+ * stands on an authored head (src/config/publication.ts:19, :150-152, :379-397,
+ * :437-441). Explicit test-authored W11 baseline, never a KV fallback.
+ */
+const seedPublication = (env: Env, scope: string) => {
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, target = scope): PublicationBaseline =>
+    ({ kind, scope: target, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  return initializePublicationSet(env, [
+    baseline(REFLEX_KIND, DEFAULT_REFLEX_CONFIG, reflexScopeForTenant(scope)),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+};
+
+/**
+ * Every configuration write carries the authored document revision and the
+ * coherent publication identity (src/config/publication.ts:66-73, :76-88);
+ * without them the route answers 428 precondition_required.
+ */
+async function preconditions(env: Env, scope: string) {
+  const pin = await pinPublication(env, scope), revision = pin.refs['reflex:' + reflexScopeForTenant(scope)]!.revision;
+  return { 'If-Match': `"${revision}/${pin.revision}/${pin.digest}"`, 'Idempotency-Key': revision + ':' + crypto.randomUUID() };
 }
 
 const bearer = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -63,9 +120,11 @@ async function fixture(mode: 'open' | 'enforced' = 'enforced') {
   const store = memoryStore();
   const cache = new SyntheticKV();
   const env = environment({ CACHE: cache as unknown as KVNamespace, ACCOUNTS: store, AUTH_MODE: mode,
+    STORAGE: new FixtureR2() as unknown as R2Bucket,
     TENANTS: JSON.stringify({ provisioned: ['acme', scope], operatorGrants: {
       'synthetic-operator': ['acme', scope], 'synthetic-tool': ['acme', scope],
     } }) });
+  await seedPublication(env, scope);
   await store.put({
     id: 'synthetic-operator', email: 'operator@example.invalid', name: 'Synthetic Operator',
     roles: ['operator', 'admin'], permissions: ['read', 'write'],
@@ -104,14 +163,22 @@ describe.each(['open', 'enforced'] as const)('refresh credential containment in 
     expect((await f.request('/auth/me', bearer(renewed.accessToken))).status).toBe(200);
 
     // A real, successful access-token write proves the route and KV fixture work.
-    const control = await f.request(f.configPath, json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 3 }, note: 'access control' }, f.tokens.accessToken));
+    const authored = json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 3 }, note: 'access control' }, f.tokens.accessToken);
+    const control = await f.request(f.configPath, { ...authored, headers: { ...authored.headers, ...await preconditions(f.env, f.scope) } });
     expect(control.status).toBe(200);
     const before = await f.current();
     const historyBefore = await f.history();
-    expect(before).toMatchObject({ revision: 1, actor: 'Synthetic Operator', config: { K: 3 } });
-    expect(before.config.version).toMatch(/\+r1$/);
-    expect(historyBefore.revisions).toHaveLength(1);
-    expect(f.cache.calls.filter((call) => call.startsWith('put:'))).toHaveLength(3);
+    // Revision 2 over the fixture's own authored baseline: the counter never
+    // rewinds (src/config/publication.ts:368-370).
+    // The recorded actor is the credential's own subject, which is also what the
+    // write authorization compares against (src/routes/config.ts:90-92, :101).
+    expect(before).toMatchObject({ revision: 2, actor: 'synthetic-operator', config: { K: 3 } });
+    expect(before.config.version).toMatch(/\+r2$/);
+    expect(historyBefore.revisions).toHaveLength(2);
+    // Configuration lands in the publication, not in compatibility KV
+    // (src/config/publication.ts:19, :150-152; src/config/versionedStore.ts:92-94),
+    // so durability is read from the published set the route just advanced.
+    expect((await pinPublication(f.env, f.scope)).refs['reflex:' + reflexScopeForTenant(f.scope)]!.revision).toBe(2);
 
     if (state === 'revoked') {
       expect((await f.request('/auth/logout', json('POST', {}, f.tokens.accessToken))).status).toBe(200);
@@ -169,12 +236,17 @@ describe('existing access credential compatibility', () => {
       ...(kind === 'untyped-sub-only' ? {} : { roles: ['operator'], permissions: ['read'] }),
       type: kind.startsWith('untyped-') ? undefined : kind });
     expect((await f.request('/auth/me', bearer(token))).status).toBe(kind === 'access' ? 200 : 401);
-    const write = await f.request(f.configPath, json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, token));
+    const authored = json('PUT', { config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, token);
+    const write = await f.request(f.configPath, { ...authored, headers: { ...authored.headers, ...await preconditions(f.env, f.scope) } });
     expect(write.status).toBe(200);
-    const actor = kind === 'access' ? 'Synthetic Operator' : 'synthetic-tool';
-    expect(await f.current()).toMatchObject({ revision: 1, actor, config: { K: 7 } });
-    expect((await f.history()).revisions).toMatchObject([{ revision: 1, actor }]);
-    expect(f.cache.calls.filter((call) => call.startsWith('put:'))).toHaveLength(3);
+    // The recorded actor is the credential's subject (src/routes/config.ts:90-92, :101).
+    const actor = kind === 'access' ? 'synthetic-operator' : 'synthetic-tool';
+    // Revision 2 over the fixture's authored baseline (src/config/publication.ts:368-370).
+    expect(await f.current()).toMatchObject({ revision: 2, actor, config: { K: 7 } });
+    expect((await f.history()).revisions).toMatchObject([{ revision: 2, actor }, { revision: 1, actor: 'synthetic-fixture' }]);
+    // The write lands in the publication, which is the only configuration
+    // authority (src/config/publication.ts:19, :150-152).
+    expect((await pinPublication(f.env, f.scope)).refs['reflex:' + reflexScopeForTenant(f.scope)]!.revision).toBe(2);
   });
 });
 

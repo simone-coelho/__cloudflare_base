@@ -73,13 +73,96 @@ const FEED = [
   { id: 'P3', line: 'Tabby', price_usd: 350 },
 ];
 
-async function post(body: unknown, e = env()) {
+/**
+ * POST /sort is owner-dispatched: requireShopper verifies the capability and
+ * forwards the request to the shopper's own object, and ownedRequestPath only
+ * recognizes the mounted path `/sort` (src/identity/sessionCapability.ts:141-176;
+ * src/identity/sessionAuthority.ts:478-490, :525-537). So the fixture mounts the
+ * real app and binds a real ShopperReflex namespace; `snapshot` may still answer
+ * the object's own projection read for the cases that probe it.
+ */
+function sortHost(overrides: Record<string, unknown> = {}, snapshot?: (url: string, init?: RequestInit) => Response) {
+  const asked: Array<{ url: string; headers: Headers }> = [];
+  const names: string[] = [];
+  const pending: Promise<unknown>[] = [];
+  const policy = { id: 'explicit-sort-route-fixture', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' };
+  const e = env({
+    STORAGE: new SortR2(), DEPLOYMENT_PROFILE: 'demo',
+    TENANTS: JSON.stringify({ provisioned: ['coach'] }),
+    // A first record needs the retention registry (src/retention.ts:39, :72-89).
+    RETENTION: JSON.stringify({ version: 1, tenants: { coach: Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'].map((category) => [category, policy])) } }),
+    PERSONALIZATION_WEBSOCKET: { idFromName: (name: string) => name, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
+    ...overrides,
+  }) as unknown as Env;
+  const objects = new Map<string, { data: Map<string, unknown>; shopper: ShopperReflex }>();
+  if (!('SHOPPER_REFLEX' in overrides)) e.SHOPPER_REFLEX = { idFromName: (name: string) => { names.push(name); return name; }, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input instanceof Request ? input.url : input));
+    if (url.pathname !== '/authority/request') { asked.push({ url: String(input), headers: new Headers(init?.headers) }); if (snapshot) return snapshot(String(input), init); }
+    let item = objects.get(name);
+    if (!item) {
+      const data = new Map<string, unknown>();
+      let alarm: number | null = null;
+      const storage = {
+        get: async (key: string | string[]) => structuredClone(Array.isArray(key) ? new Map(key.map(k => [k, data.get(k)])) : data.get(key)),
+        put: async (key: string | Record<string, unknown>, value?: unknown) => { if (typeof key === 'string') data.set(key, structuredClone(value)); else for (const [k, v] of Object.entries(key)) data.set(k, structuredClone(v)); },
+        delete: async (key: string | string[]) => { const list = typeof key === 'string' ? [key] : key; for (const k of list) data.delete(k); return list.length; },
+        deleteAll: async () => data.clear(),
+        list: async (options?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }) => structuredClone(new Map([...data]
+          .filter(([key]) => key.startsWith(options?.prefix ?? '') && (!options?.startAfter || key > options.startAfter))
+          .sort(([a], [b]) => (options?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, options?.limit))),
+        getAlarm: async () => alarm, setAlarm: async (at: number) => { alarm = at; }, deleteAlarm: async () => { alarm = null; },
+        transaction: async (run: (tx: DurableObjectTransaction) => Promise<unknown>) => {
+          const candidate = structuredClone(data);
+          const result = await run({ list: async () => structuredClone(candidate), get: async (key: string) => structuredClone(candidate.get(key)),
+            delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+            put: async (values: string | Record<string, unknown>, value?: unknown) => { if (typeof values === 'string') candidate.set(values, structuredClone(value)); else for (const [key, item] of Object.entries(values)) candidate.set(key, structuredClone(item)); },
+            deleteAlarm: async () => { alarm = null; }, setAlarm: async (at: number) => { alarm = at; } } as unknown as DurableObjectTransaction);
+          data.clear(); for (const [key, value] of candidate) data.set(key, value); return result;
+        },
+      };
+      const state = { id: name, storage, getWebSockets: () => [], waitUntil: (promise: Promise<unknown>) => pending.push(promise) } as unknown as DurableObjectState;
+      item = { data, shopper: new ShopperReflex(state, e) };
+      objects.set(name, item);
+    }
+    return item.shopper.fetch(new Request(input, init));
+  } }) } as unknown as DurableObjectNamespace;
+  const app = new Hono<{ Bindings: Env }>();
+  app.use('*', tenantMiddleware()); app.route('/sort', sortRoutes);
+  return { env: e, app, asked, names, objects, pending };
+}
+
+/**
+ * RETAINED probe driver for the two cases that inject the object's own snapshot
+ * projection. On the real owner path the object serves its own projection:
+ * dispatchOwnedRequest rewires SHOPPER_REFLEX.get(this object) to a local fetch
+ * (src/identity/sessionAuthority.ts:616-626), so a namespace-level double is
+ * unreachable and those two cases still drive the sub-router directly.
+ */
+async function postDirect(body: unknown, e: Record<string, unknown>) {
   const session = await newAnonymousSession(e as unknown as Env, 'coach');
   const input = body as { userId?: string };
   const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;
   const res = await sortRoutes.request('/', {
     method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),
   }, e);
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
+async function post(body: unknown, host = sortHost()) {
+  // Configuration publication is the only configuration authority
+  // (src/config/publication.ts:19, :150-152, :204-206). Explicit authored
+  // baseline, never a KV fallback.
+  invalidatePublicationCache();
+  if (!(host.env.STORAGE as unknown as SortR2).store.has('config-publication/v2/coach/head.json')) {
+    await initializePublication(host.env, REFLEX_KIND, reflexScopeForTenant('coach'),
+      { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
+  }
+  const session = await newAnonymousSession(host.env, 'coach');
+  const input = body as { userId?: string };
+  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;
+  const res = await host.app.request('https://sort.invalid/sort', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),
+  }, host.env);
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
@@ -116,7 +199,7 @@ describe('POST /sort', () => {
       { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },
     ]) {
       const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });
-      const out = await post({ userId: 'v', candidates: FEED }, e);
+      const out = await postDirect({ userId: 'v', candidates: FEED }, e);
       expect(out.status).toBeGreaterThanOrEqual(400); expect(out.body).not.toHaveProperty('items'); expect(out.body).not.toHaveProperty('order');
     }
   });
@@ -128,7 +211,7 @@ describe('POST /sort', () => {
       return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });
     } }) } });
     for (const affinity of [0, 4]) {
-      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);
+      const { status, body } = await postDirect({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);
       expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);
       expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);
     }
@@ -147,17 +230,10 @@ describe('POST /sort', () => {
   });
 
   it('refuses a visitor id that addresses another brand, on the DO host', async () => {
-    const asked: string[] = [];
-    const e = env({
-      REFLEX_HOST: 'do',
-      SHOPPER_REFLEX: {
-        idFromName: (n: string) => { asked.push(n); return n; },
-        get: () => ({ fetch: async () => new Response(JSON.stringify({ affinity: { dims: {} } })) }),
-      },
-    });
-    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, e);
+    const host = sortHost({ REFLEX_HOST: 'do' }, () => new Response(JSON.stringify({ affinity: { dims: {} } })));
+    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, host);
     expect(status).toBe(401);
-    expect(asked).toEqual([]);
+    expect(host.names).toEqual([]);
   });
 });
 
