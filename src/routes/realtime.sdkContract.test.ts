@@ -62,7 +62,7 @@ import { VISIT_GAP_MS } from '@/services/visit';
 import { shopperIdFor } from '@/identity/shopperId';
 import * as odpLoop from '@/services/odpLoop';
 import { admitOwnerPrincipal, ownerEnvironment, ownerFetch, runOwnerOperation, sessionAuthorityKV } from '@/identity/sessionAuthority';
-import { CONSENT_LIFETIME_MS, storedConsent, type Consent, type ConsentInstruction } from '@/content/consent';
+import { CONSENT_LIFETIME_MS, CONSENT_SWITCHES, storedConsent, type Consent, type ConsentInstruction } from '@/content/consent';
 import { configuredDestinations } from '@/connectors/config';
 import { retentionBirth, externalRetentionBirths, type RetentionPolicy, type RetentionCategory } from '@/retention';
 import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';
@@ -3939,14 +3939,18 @@ describe('W37.04 tenant-owned runtime configuration', () => {
         await expect(item.shopper.alarm()).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:alarm`);
         expect(qualified).not.toHaveBeenCalled(); qualified.mockRestore();
         expect([...item.data]).toEqual(trackedBefore);
-        // R46(g): clearing the nearer decay alarm above makes the re-arm observable. The test's
-        // own long-standing expectation is kept untouched: the owner re-arms at
-        // `affinity.lastSeen + 30 days`. Measured on this head the armed value is 2-4 ms BELOW
-        // that (varying per run), and the owner's stored retention expiry is lastSeen + 365 d
-        // (the fixture policy), so the 30-day horizon is not the retention window and the arm
-        // base is a few milliseconds earlier than the record's own lastSeen. Left RED: which
-        // timestamp the re-arm is owed from is a product question, not a stale expectation.
-        expect(item.alarms.at(-1)).toBe((item.data.get('affinity') as AffinityRecord).lastSeen + 30 * 86400000);
+        // Rulings R46(g) and R46(i): clearing the nearer decay alarm above makes the re-arm
+        // observable, and after a refused alarm the object's armed alarm is the nearest deadline
+        // it owns — `scheduleProjectionAlarm` keeps the minimum of the retention expiry, the
+        // consent expiry and the decay crossings. Here that minimum is the consent expiry: an
+        // explicit choice lasts CONSENT_LIFETIME_MS from its own `chosenAt`
+        // (src/content/consent.ts:17, :19, :112), and this owner's choice was made a few
+        // milliseconds before the action that set `lastSeen`, while its retention expiry is the
+        // fixture's 365-day policy. Both deadlines are read from the records themselves.
+        const armed = item.data.get('consent') as ConsentInstruction;
+        const consentExpiry = Math.min(...CONSENT_SWITCHES.flatMap(key => armed[key] ? [armed[key]!.chosenAt + CONSENT_LIFETIME_MS] : []));
+        const retentionExpiry = (item.data.get('affinity') as AffinityRecord).retention!.expiresAt;
+        expect(item.alarms.at(-1)).toBe(Math.min(consentExpiry, retentionExpiry));
       }
       const refused = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}&trackingConsent=false`, g.capability, undefined, g.tenant);
       expect(refused.status).toBeGreaterThanOrEqual(400);
