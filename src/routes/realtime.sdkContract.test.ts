@@ -2376,8 +2376,13 @@ describe('W35.02 visit context', () => {
             .filter(([key]) => key !== 'preferences' && key !== 'consent')))
           : JSON.stringify((JSON.parse(state ?? '[]') as Array<[string, unknown]>).filter(([key]) => key !== 'consent'));
         expect(withoutConsent(f.state())).toBe(withoutConsent(stateBeforeRefusals));
-        expect(storedConsent(f.objects.get(shopperObjectName('meridian', f.g.subject))!.data.get('consent')))
-          .toEqual({ tracking: false, personalization: false });
+        // This shopper chose positively and then withdrew, so the withdrawn instruction is
+        // still stored and the projection carries it (src/content/consent.ts:69-73): both
+        // switches read off and the stored instruction is this subject's withdrawal, never absent.
+        const projection = storedConsent(f.objects.get(shopperObjectName('meridian', f.g.subject))!.data.get('consent'));
+        expect(projection).toMatchObject({ tracking: false, personalization: false });
+        expect(projection.instruction).toMatchObject({ tenant: 'meridian', subject: f.g.subject,
+          tracking: { value: false }, personalization: { value: false } });
       }
     } finally { vi.restoreAllMocks(); }
   });
@@ -3922,6 +3927,10 @@ describe('W37.04 tenant-owned runtime configuration', () => {
         const item = f.objects.get(shopperObjectName(tracked.tenant, tracked.subject))!;
         expect([...item.data]).toEqual(trackedBefore); item.shopper = new ShopperReflex(item.state, f.env);
         const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');
+        // R46(g): the refused alarm re-arms the owner's retention alarm, and
+        // scheduleProjectionAlarm keeps the nearest already-armed alarm, so the harness drops
+        // the decay alarm this fixture armed earlier and leaves the retention one to observe.
+        item.alarms.length = 0;
         // Ruling R28: the owner's alarm is a consuming path, so with the authority
         // uninitialized or unavailable it owes the same typed refusal the two calls above
         // already pin — PublicationError (src/config/publication.ts:15, :19, :205) or
@@ -3930,6 +3939,13 @@ describe('W37.04 tenant-owned runtime configuration', () => {
         await expect(item.shopper.alarm()).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:alarm`);
         expect(qualified).not.toHaveBeenCalled(); qualified.mockRestore();
         expect([...item.data]).toEqual(trackedBefore);
+        // R46(g): clearing the nearer decay alarm above makes the re-arm observable. The test's
+        // own long-standing expectation is kept untouched: the owner re-arms at
+        // `affinity.lastSeen + 30 days`. Measured on this head the armed value is 2-4 ms BELOW
+        // that (varying per run), and the owner's stored retention expiry is lastSeen + 365 d
+        // (the fixture policy), so the 30-day horizon is not the retention window and the arm
+        // base is a few milliseconds earlier than the record's own lastSeen. Left RED: which
+        // timestamp the re-arm is owed from is a product question, not a stale expectation.
         expect(item.alarms.at(-1)).toBe((item.data.get('affinity') as AffinityRecord).lastSeen + 30 * 86400000);
       }
       const refused = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}&trackingConsent=false`, g.capability, undefined, g.tenant);
@@ -5734,7 +5750,15 @@ describe('W04.02 owned shopper lane', () => {
         expect(analyticsCalls.filter(v => v.startsWith('get:'))).toHaveLength(0);
         expect(preferenceCalls.filter(v => v.startsWith('get:'))).toHaveLength(0);
         expect(preferenceCalls.filter(v => v.startsWith('put:'))).toHaveLength(1);
-      } else { expect(analyticsCalls).toEqual([]); expect(preferenceCalls).toEqual([]); }
+      } else {
+        // The owner answers analytics from its own durable projection. A preferences POST
+        // carrying cookieConsent reaches updateUserPreferences → readRaw, and on a projection
+        // miss `src/durable-objects/ShopperReflex.ts:3074-3077` deliberately reads the real
+        // SESSIONS binding exactly once for the owner's own session key — "no historical KV
+        // value acquires authority merely by being readable" — and writes nothing back.
+        expect(analyticsCalls).toEqual([]);
+        expect(preferenceCalls).toEqual([`get:${tenantKey('meridian', 'session:' + anon.sessionId)}`]);
+      }
       console.info('W04.02 owned operation counts', JSON.stringify({ host, analyticsReads: analyticsCalls.filter(v => v.startsWith('get:')).length, preferencesReads: preferenceCalls.filter(v => v.startsWith('get:')).length, preferencesWrites: preferenceCalls.filter(v => v.startsWith('put:')).length }));
       if (host === 'do') {
         const store = f.objects.get(shopperObjectName('meridian', anon.subject))!.data;
