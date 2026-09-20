@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 191/199 · W closed 4/26 (W16–W41) · suite 2051/2132 · residual 81 in 10 files · typecheck GREEN
+Units 191/199 · W closed 4/26 (W16–W41) · suite 2053/2132 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -234,8 +234,7 @@ Units 191/199 · W closed 4/26 (W16–W41) · suite 2051/2132 · residual 81 in 
 
 ## Failing tests outside the baseline
 
--  /content routes W20.01 rejects contradictory pin publication without writes and preserves retained reads through corrected publication
--  /content routes W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority
+_None._
 
 ## Derivation inputs
 
@@ -254,6 +253,6 @@ Units 191/199 · W closed 4/26 (W16–W41) · suite 2051/2132 · residual 81 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 0d527924e88e5e96c82306e52a006e7b50adec9ef9e09cb48cfde9f0a3d68cfa |
-| commit | e192ad4242057ac3b23702f1130347c60194d952 |
-| generated | 2026-09-20T13:25:00.782Z |
+| vitest report sha256 | 738287ea98cd47cfb6621234a31e9fe0be6eaffbead03f575f82e8404dd9028c |
+| commit | 0626491e6dffeb7ddf4838efcb14244fa7f28430 |
+| generated | 2026-09-20T13:32:36.657Z |
