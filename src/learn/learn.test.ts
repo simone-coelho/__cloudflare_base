@@ -1242,14 +1242,24 @@ describe('the objects', () => {
       expect(result).toMatchObject({ ok: true, outcome: { attributed: 1, credits: { processed: 1 } } });
       expect(result).not.toHaveProperty('coalesced');
     }
-    expect((stats.storage.map.get('learn') as { stats: StatsState }).stats.items.A!['*']!.s.click).toEqual({ s: 5, t: now + 100 });
+    // W22.D1.02 (ruling R120 item 2): three of those five sends carry ONE
+    // logical id — `valid`, `valid` again and the same outcome with
+    // `event_id_source: 'request'`, which does not change `outcome_id` — so the
+    // bounded journal of recently credited ids credits them once; the two
+    // legacy sends carry a timestamp-derived id that two genuinely distinct
+    // events can share (F16 §5(j)), cannot be deduplicated, and keep crediting
+    // once each. 1 + 2 = 3.
+    expect((stats.storage.map.get('learn') as { stats: StatsState }).stats.items.A!['*']!.s.click).toEqual({ s: 3, t: now + 100 });
     expect(f.storage.map.get('ring')).toEqual(saved([row])); expect(f.put).not.toHaveBeenCalled();
     const mutable = structuredClone(valid); let release!: () => void;
     const waiting = new Promise<void>(resolve => { release = resolve; });
     f.get.mockImplementationOnce(async () => { await waiting; return null; });
     const pending = send(mutable); mutable.item_id = 'other'; mutable.visitor_id = 'other'; mutable.event_id = 'other';
     release(); expect(await pending).toMatchObject({ ok: true, outcome: { credits: { processed: 1 } } });
-    expect((stats.storage.map.get('learn') as { stats: StatsState }).stats.items.A!['*']!.s.click).toEqual({ s: 6, t: now + 100 });
+    // The clone carries the same `outcome_id` as `valid`, so the credit it
+    // would have made is already applied: the mutation cannot change what was
+    // credited, and it cannot add to it either. Still 3.
+    expect((stats.storage.map.get('learn') as { stats: StatsState }).stats.items.A!['*']!.s.click).toEqual({ s: 3, t: now + 100 });
   });
 
   it('W22.09 fences uncorrelated item product and any credits to the exact brand in actual statistics', async () => {
@@ -1364,7 +1374,11 @@ describe('the objects', () => {
       expect(sent).toEqual([{ name: 'coach:coach:hero', url: 'https://learn/credits', body: { tenant: 'coach', brand: 'coach', slot: 'hero', config: boundedConfig,
         credits: [{ decision_id: target.decision_id, slot: 'hero', item: 'A', cell, reward: 'click', event: 'click', ts: original.ts, weight: 1 }] } }]);
       expect(original.ts).toBe(target.ts + 100); expect(original.event_id).toBe('w2208-original');
-      expect(f.storage.map.get('ring')).toEqual(persisted); expect(f.put).toHaveBeenCalledTimes(2);
+      // Two appends put the ring twice; the credit puts nothing INTO the ring —
+      // `persisted` is unchanged above — but W22.D1.02's bounded journal of
+      // recently credited `outcome_id`s is durable, so crediting adds its own
+      // third put, under its own key (ruling R120 item 2).
+      expect(f.storage.map.get('ring')).toEqual(persisted); expect(f.put).toHaveBeenCalledTimes(3);
     } finally { clock.mockRestore(); }
   });
 
@@ -1444,7 +1458,7 @@ describe('the objects', () => {
     expect(await (await concurrent.request('/append', { records: [b] })).json()).toMatchObject({ receipt: { accepted: 1, duplicates: 0 } });
   });
 
-  it('W26.03 surfaces ring retry receipts without claiming statistics or fan-out idempotency', async () => {
+  it('W26.03 surfaces ring retry receipts, counts a redelivered exposure once and a legacy outcome every time', async () => {
     const now = Date.now() - 1000, row = record('retry', 'hero', 'A', now), f = boundedRing(), statsStorage = new FakeStorage();
     const stats = new LearnStats({ storage: statsStorage } as unknown as DurableObjectState, {} as Env);
     const ringFetch = vi.fn((url: string, init?: RequestInit) => f.ring.fetch(new Request(url, init)));
@@ -1464,7 +1478,12 @@ describe('the objects', () => {
     const credit = () => f.request('/outcome', { tenant: 'coach', brand: 'coach', outcome: named, policy: DEFAULT_POLICY, defaultSlotConfig: boundedConfig });
     for (let i = 0; i < 2; i++) expect(await (await credit()).json()).toMatchObject({ credits: 1, receipt: { credits: { processed: 1 } } });
     const stored = statsStorage.map.get('learn') as { stats: StatsState };
-    expect(stored.stats.items.A!['*']!.n).toEqual({ s: 2, t: now });
+    // W22.D1.02 (ruling R120 item 2): the redelivered exposure carries the
+    // decision's own logical id — the ring reports it as `duplicates: 1` two
+    // lines above — so the statistics object counts it ONCE. The outcome is a
+    // legacy one with no event nonce: two genuinely distinct clicks can share
+    // that id (F16 §5(j)), so it is not deduplicated and credits every time.
+    expect(stored.stats.items.A!['*']!.n).toEqual({ s: 1, t: now });
     expect(stored.stats.items.A!['*']!.s.click).toEqual({ s: 2, t: named.ts });
 
     const base = { version: 1, kind: 'append', received: 1, accepted: 1, cutoffSkipped: 0, retained: 1, indexed: 1 };
