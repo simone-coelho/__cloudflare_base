@@ -971,7 +971,7 @@ describe('unit:W31.S1.01', () => {
     expect(Object.keys(items), 'F34 §6 — one page of items').toHaveLength(50);
     for (const levels of Object.values(items)) expect(Object.keys(levels), 'F34 §4.4 — one pooled level per item, not six').toEqual(['*']);
     expect(view!.page, 'F34 §6 — with the page the caller pages by').toMatchObject({ slot: SLOT, total: ITEMS, offset: 0, limit: 50 });
-    expect(view!.page!.next, 'and a cursor to the next page').not.toBeNull();
+    expect(typeof view!.page!.next, 'and a cursor to the next page of items').toBe('string');
     const projectedBytes = new TextEncoder().encode(JSON.stringify(view!.report)).length;
     const dayBytes = new TextEncoder().encode(r2.objects.get(reportKey(TENANT, TENANT, QUARTER[0]!))!).length;
     expect(projectedBytes * 5, 'F34 §4.4 — five sixths of the payload is no longer downloaded to read one level').toBeLessThan(dayBytes);
