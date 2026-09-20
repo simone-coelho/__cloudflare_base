@@ -12,7 +12,7 @@ const NOW = Date.now();
 const cell = { channel: 'direct', visit_bucket: '1' as const, region: 'US-NY', affinity: null };
 
 describe('the credit\'s weight under an objective', () => {
-  it('unit counts, revenue weighs by value, margin by margin or value; a click has nothing to weigh', () => {
+  it('unit counts, revenue weighs by value, margin weighs only a real margin; a click has nothing to weigh', () => {
     const purchase = outcomeFromAction({ type: 'purchase', userId: 'v', data: { orderId: 'o1', value: 395, currency: 'USD', items: [{ productId: 'A', quantity: 2, margin: 80 }, { productId: 'B', margin: 25.5 }] }, timestamp: NOW }, 'coach')!;
     expect(purchase.value).toBe(395); expect(purchase.margin).toBe(185.5);            // 80 × 2 + 25.5
     expect(creditWeight('unit', purchase)).toBe(1);
@@ -21,7 +21,11 @@ describe('the credit\'s weight under an objective', () => {
     const noMargin = outcomeFromAction({ type: 'purchase', userId: 'v', data: { orderId: 'o2', value: 120, margin: 48 }, timestamp: NOW }, 'coach')!;
     expect(noMargin.margin).toBe(48);
     const bare = outcomeFromAction({ type: 'purchase', userId: 'v', data: { orderId: 'o3', value: 120 }, timestamp: NOW }, 'coach')!;
-    expect(bare.margin).toBeNull(); expect(creditWeight('margin', bare)).toBe(120);   // the value stands in
+    // W24.R1.02 (ruling R144): a margin objective never falls back to the value.
+    // Weighing a margin series with a revenue number is two units in one
+    // counter (F19 §5.2, `margin ?? value`), so an outcome that carries no
+    // margin is worth nothing to margin learning and is excluded from it.
+    expect(bare.margin).toBeNull(); expect(creditWeight('margin', bare)).toBe(0);
     const click = outcomeFromAction({ type: 'content_click', userId: 'v', data: { contentId: 'c', slot: 'hero' }, timestamp: NOW }, 'coach')!;
     expect(click.value).toBeNull();
     expect(creditWeight('unit', click)).toBe(1); expect(creditWeight('revenue', click)).toBe(0); expect(creditWeight('margin', click)).toBe(0);

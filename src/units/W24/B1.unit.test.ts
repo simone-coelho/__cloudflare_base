@@ -550,20 +550,41 @@ describe('unit:W24.G1.01', () => {
       'W24.G1.01 — and the generation is the same one: a presentation change never restarts learning')
       .toBe(generationOf(before!).generation);
 
-    // (b) ACCUMULATION: the objective moves. A fresh generation, not a refusal.
-    const moved = await withDocument({ reward: 'click', objective: 'revenue' });
+    // (b) ACCUMULATION, UNAUTHORIZED: a changed objective arriving on a write is
+    //     refused, and nothing in the object moves. That refusal is part of the
+    //     ruled outcome, not a defect: it is the guard against a silent
+    //     reinterpretation of counters built under another objective, and
+    //     `src/learn/learn.test.ts:525-533` locks it (409 `statistics
+    //     configuration incompatible`, `applied: false`, the stored state
+    //     unchanged). Ruling R144.
+    // A revenue objective needs a value-carrying reward, which the published
+    // document enforces (`src/content/kinds.ts:532`), so the accumulation
+    // change this fixture makes is the pair the tenant would really publish.
+    const moved = await withDocument({ reward: 'purchase', objective: 'revenue' });
+    const storedBefore = JSON.stringify(moved.stats.get(statsName(TENANT, BRAND, 'hero'))!.data.get('learn'));
     const d3 = decision(moved.env, 'v-charms', ONLINE_TS + 180_000, 'cnt-tabby-evening');
-    const changed = await fanDecisions(moved.env, { tenant: TENANT, brand: BRAND, visitor_id: 'v-charms', records: [d3] },
-      accumulation({ objective: 'revenue' }));
+    const refused = await fanDecisions(moved.env, { tenant: TENANT, brand: BRAND, visitor_id: 'v-charms', records: [d3] },
+      accumulation({ reward: 'purchase', objective: 'revenue' }));
     await moved.drain();
-    expect(changed.ok,
-      `W24.G1.01 — an accumulation change is a TRANSITION, not a permanent refusal: the write is accepted under a fresh generation (F19 §7; today LearnStats.ts:391 answers 409 \`statistics configuration incompatible\`, which no operator can move past). It answered: ${JSON.stringify(changed).slice(0, 200)}`)
-      .toBe(true);
+    expect({ applied: refused.ok, unchanged: JSON.stringify(moved.stats.get(statsName(TENANT, BRAND, 'hero'))!.data.get('learn')) === storedBefore },
+      'W24.G1.01 — an accumulation change that arrives as an ordinary write is REFUSED and changes nothing: counters built under one objective are never reinterpreted under another (the retained safe-incompatibility disposition, HANDOFF-2026-09-16 :228, locked by src/learn/learn.test.ts:525-533)')
+      .toEqual({ applied: false, unchanged: true });
+
+    // (c) ACCUMULATION, AUTHORIZED: the operator transition of W24.G1.02 is the
+    //     only way past it, and it starts a fresh generation rather than
+    //     reinterpreting or silently keeping the counters (F19 §7).
+    const promoted = await operatorPost(moved, `/v1/${TENANT}/learn/generation`, { slot: 'hero', brand: BRAND, reward: 'purchase', objective: 'revenue' });
+    expect(promoted.status,
+      `W24.G1.01 — the authorized transition is the one way past that refusal (W24.G1.02's route); it answered: ${JSON.stringify(promoted.body).slice(0, 160)}`).toBe(200);
+    const accepted = await fanDecisions(moved.env, { tenant: TENANT, brand: BRAND, visitor_id: 'v-charms', records: [d3] },
+      accumulation({ reward: 'purchase', objective: 'revenue' }));
+    await moved.drain();
     const fresh = await snapshotOf(moved);
-    expect({ generationChanged: generationOf(fresh!).generation !== generationOf(before!).generation,
-      objective: fresh?.objective, counters: fresh?.items['cnt-tabby-evening']?.['*']?.n },
-      'W24.G1.01 — the counters start fresh under the new objective and the snapshot names both: the label matches the generation that produced the counts, and nothing from the old objective is reinterpreted (F19 §7 "Do not silently keep the counters")')
-      .toEqual({ generationChanged: true, objective: 'revenue', counters: 1 });
+    expect(fresh === null ? 'no snapshot: the object still holds the old generation\'s configuration'
+      : { applied: accepted.ok, generationChanged: generationOf(fresh).generation !== generationOf(before!).generation,
+        objective: fresh.objective, reward: fresh.reward, counters: fresh.items['cnt-tabby-evening']?.['*']?.n },
+      'W24.G1.01 — after the authorized transition the write is taken under a FRESH generation: the counters start again under the new objective, the snapshot names both, and nothing from the old objective is carried into it (F19 §7 "Do not silently keep the counters")')
+      .toEqual({ applied: true, generationChanged: true, objective: 'revenue', reward: 'purchase', counters: 1 });
   });
 });
 
