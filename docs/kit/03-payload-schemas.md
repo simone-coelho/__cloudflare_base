@@ -431,14 +431,29 @@ revision.
 ## The lift snapshot
 
 `GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, version, publishedAt, events, n0, nMin, liftMin,
-liftMax, priorVersion, items, slotRates }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
+liftMax, priorVersion, items, slotRates, attributionContract }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
 p_hat, lift, prior? }` with the symbols defined above; `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
+
+`attributionContract` is the one named, versioned attribution contract every path that reports
+attribution now carries — this snapshot, the day report and the window report — so two numbers can be
+read against each other or seen not to be comparable:
+`{ name: "attribution", version, history: { scope, match, credit }, windowsMs, appliedWindowsMs }`.
+`windowsMs` is per reward what YOUR PUBLISHED learn document asks for. `appliedWindowsMs` is per reward
+the horizon the path that produced these numbers could actually read, and is never larger: the online
+snapshot applies the visitor's ring horizon of seven days, a day report built from the hour aggregates
+applies the least `horizonMs` of the hours it summed (48 hours by default), and a day report
+recomputed from the day's records applies the one day it read. The two maps differ on purpose — a
+seven-day purchase window against a 48-hour batch horizon is a credit the engine learns from and the
+batch report cannot show — and stating both is how that difference is visible rather than hidden
+behind one label. A report stored under an earlier `version` is read as such and is never pooled with
+a later one: the window reports `mixed_basis` for every slot instead of adding the two together.
+Absent on an archive or a report written before the contract existed.
 
 ## The day report
 
 `POST /v1/{tenant}/learn/report`. `{ tenant, brand, date, builtAt, counts: { decisions, outcomes,
-visitors, truncated }, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
+visitors, truncated, duplicates?, conflicts? }, attributionContract, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
 mode } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
 visitorOutcomes, targets }`. `armVisitors` is `{ version, basis: "distinct_visitors", arms: [ { arm, visitors } ] }` — whose `arm`
@@ -453,8 +468,20 @@ sufficiency is computable on your side under your own protocol. `visitorOutcomes
 arm with at least one outcome of each reward type, counted by the arm the visitor is ENROLLED in and
 not by whether a served piece matched — two purchases by one visitor are one purchasing visitor.
 The window report carries an `armVisitors` on the `visitor_days` basis (the per-day distinct counts
-summed), `null` when any pooled day predates it. Aggregates only; no visitor id
-in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin falls back to value), not currency conversion or probability.
+summed), `null` when any pooled day predates it, and the same `attributionContract`, whose
+`appliedWindowsMs` is the least any pooled day applied. Aggregates only; no visitor id
+in it.
+
+Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
+read here and in your own warehouse: the same logical row may reach the partition more than once, and
+every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }` — the copies the read
+dropped, so the rate is a number instead of a silence. An outcome minted before the per-event nonce
+existed carries a timestamp-derived id that two genuinely distinct events can share; such legacy rows
+are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a read. Two genuinely
+DIFFERENT rows under one logical id are never merged: the read refuses the day and names the
+collision (`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it
+for recovery in your tenant's own scope, and reads again on the next call with that row excluded and
+counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin falls back to value), not currency conversion or probability.
 
 ## Socket frames
 
