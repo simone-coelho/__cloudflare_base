@@ -6,7 +6,7 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
 import { liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
@@ -47,6 +47,14 @@ type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?:
  * place that can tell two outcomes apart, and it does that before it sends.
  */
 const SEEN_KEY = 'learnSeen';
+/**
+ * W23 H1.01: the basis the operator's explicit reset started this object again
+ * on. Its own storage key, written in the same transaction as the reset, so a
+ * snapshot published afterwards can say what it was built from and no reader
+ * mistakes post-reset counters for the tenant's whole history. Absent on an
+ * object that was never repaired; charged against the object's total bound.
+ */
+const REBUILT_KEY = 'learnRebuilt';
 const SEEN_MAX_BYTES = 32 * 1024;
 const SEEN_MAX_ROWS = 512;
 interface SeenExposure { id: string; digest: string; ts: number }
@@ -311,7 +319,10 @@ export class LearnStats {
               if (!Number.isSafeInteger(fence.whole + 1)) throw recovery();
               await this.state.storage.transaction(async tx => {
                 await tx.put('learnFence', { whole: fence.whole + 1, items: {} });
-                await tx.delete('learn'); await tx.delete(SEEN_KEY);
+                // A basis describes the repair the counters standing now were
+                // started on. These counters are going, so it goes with them
+                // rather than being carried onto evidence it never named.
+                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(REBUILT_KEY);
               });
             }
           } finally { this.data = null; }
@@ -564,6 +575,9 @@ export class LearnStats {
     if (count + slotKeys.size > LEARN_LIMITS.counters) throw capacity();
     const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract);
     snap.witness = await this.witness(d, await this.fence());
+    // W23 H1.01: only an object that was actually repaired names a basis.
+    const basis = await this.rebuiltFrom();
+    if (basis) snap.rebuiltFrom = basis;
     if (bytes(snap) > LEARN_LIMITS.snapshotBytes) throw capacity();
     return snap;
   }
@@ -648,11 +662,13 @@ export class LearnStats {
   }
   private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown): Promise<void> {
     // Fixed key inventory: learn, fence, publication identity, one repair
-    // receipt, and the bounded exposure journal (W22 D1.02).
+    // receipt, the bounded exposure journal (W22 D1.02) and the rebuild basis
+    // (W23 H1.01).
     if (bytes(candidate) + bytes(fence ?? await this.fence()) + bytes(await this.state.storage.get('learnRepair') ?? null)
       + bytes(publication ?? await this.state.storage.get('learnPublished') ?? null)
       + bytes(reset ?? await this.state.storage.get('learnReset') ?? null)
-      + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+      + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null)
+      + bytes(await this.state.storage.get(REBUILT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
     if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !itemName(b.item) || typeof b.operationId !== 'string'
@@ -694,6 +710,50 @@ export class LearnStats {
     try { await this.publish(); } catch { publicationOutcome = 'unknown'; }
     return json({ ok: true, item, had, resetCompleted: true, publicationOutcome });
   }
+  /**
+   * W23 H1.01. The operator-authorised explicit reset: the damaged counters go,
+   * the generation advances so nothing prepared against the old one can land,
+   * and the object remembers the BASIS it was started again on so its next
+   * published snapshot names it. It is local and it is conditional on this
+   * object's own affected history: it touches no other brand, no other slot and
+   * no other tenant, and a slot that is never called stays byte-identical.
+   * Running any repair against production state is a separate authority
+   * (`W23.P1.01`) and is not this code's to give.
+   */
+  private async explicitReset(operationId: string, digest: string, fence: GenerationFence, publication: unknown): Promise<Response> {
+    const nextFence: GenerationFence = { whole: fence.whole + 1, items: {} };
+    if (!Number.isSafeInteger(nextFence.whole)) throw recovery();
+    const basis: RebuildBasis = { basis: 'explicit-reset', operationId, at: Date.now(), generation: nextFence.whole };
+    const after = await recoveryDigest({ raw: null, fence: nextFence });
+    const receipt = { operationId, before: digest, after, generation: fence.whole };
+    if (bytes(null) + bytes(nextFence) + bytes(receipt) + bytes(basis) + bytes(publication ?? null)
+      + bytes(await this.state.storage.get('learnReset') ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+    try {
+      await this.state.storage.transaction(async tx => {
+        if (await recoveryDigest({ raw: await tx.get('learn') ?? null, fence: await tx.get('learnFence') ?? { whole: 0, items: {} } }) !== digest) throw new Refusal(409, 'statistics recovery precondition changed');
+        await tx.delete('learn'); await tx.delete(SEEN_KEY);
+        await tx.put('learnFence', nextFence); await tx.put('learnRepair', receipt); await tx.put(REBUILT_KEY, basis);
+      });
+    } finally { this.data = null; }
+    await this.arm();
+    return json({ ok: true, recovered: true, reset: true, digest: after, generation: nextFence.whole });
+  }
+
+  /**
+   * The rebuild basis this object carries, or undefined when it was never
+   * repaired. A marker that is not the shape this object writes is damaged
+   * state, not an absent basis: it is refused rather than published as a
+   * snapshot claiming to hold the tenant's whole history.
+   */
+  private async rebuiltFrom(): Promise<RebuildBasis | undefined> {
+    const value: unknown = await this.state.storage.get(REBUILT_KEY);
+    if (value === undefined) return undefined;
+    if (!fields(value, ['basis', 'operationId', 'at', 'generation']) || value.basis !== 'explicit-reset'
+      || typeof value.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(value.operationId)
+      || !time(value.at) || !Number.isSafeInteger(value.generation) || (value.generation as number) < 0) throw recovery();
+    return { basis: 'explicit-reset', operationId: value.operationId, at: value.at as number, generation: value.generation as number };
+  }
+
   private witness(d: Stored, fence: GenerationFence): Promise<string> {
     return recoveryDigest({ tenant: d.tenant, brand: d.brand, slot: d.slot, config: d.config, fence,
       projection: d.stats.bounded ? { depth: d.stats.bounded.depth, closed: d.stats.bounded.closed === true } : null });
@@ -706,13 +766,25 @@ export class LearnStats {
     const digest = await recoveryDigest({ raw: raw ?? null, fence });
     let healthy = true;
     try { if (raw !== undefined) { stateValid(raw); await this.totalBound(raw); } } catch { healthy = false; }
+    // W23 H1.01 (F18 §6.3, §8: "fixing `bump` does not repair counters whose
+    // `t` is already skewed; those objects must be reset and refolded, or
+    // rebuilt from the ledger"). A state anchored after this object's own clock
+    // is damaged historical state and says so, instead of reporting itself
+    // healthy and being served from. This READ repairs nothing: the anchor is
+    // corrected only when an event is recorded, so an operator sees the damage
+    // for as long as it is there, which is what the explicit reset exists for.
+    if (healthy && raw !== undefined && anchoredAfter((raw as unknown as Stored).stats, Date.now())) healthy = false;
     const publication = await this.state.storage.get<{ digest: string; witness: string; version: number }>('learnPublished');
     if (path !== '/recover') return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot,
       state: raw === undefined ? 'empty' : healthy ? 'healthy' : 'recovery-required', generation: fence.whole, digest, bytes: size,
       publication: publication && /^[a-f0-9]{64}$/.test(publication.digest) && /^[a-f0-9]{64}$/.test(publication.witness) && Number.isSafeInteger(publication.version)
         ? { digest: publication.digest, witness: publication.witness, version: publication.version } : null,
       witness: healthy && raw !== undefined ? await this.witness(raw as unknown as Stored, fence) : null });
-    if (b.intent !== 'coarsen' || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01: two repair intents, both operator-authorised and audited by the
+    // route in front of this object. `coarsen` keeps the evidence and merges it;
+    // `reset` discards damaged counters outright and records the basis, for
+    // state that cannot be merged back into honesty.
+    if ((b.intent !== 'coarsen' && b.intent !== 'reset') || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
       || typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation)) throw invalid();
     const prior = await this.state.storage.get<{ operationId: string; before: string; after: string; generation: number }>('learnRepair');
     if (prior?.operationId === b.operationId) {
@@ -721,6 +793,9 @@ export class LearnStats {
       return json({ ok: true, recovered: true, digest, generation: fence.whole });
     }
     if (digest !== b.digest || fence.whole !== b.generation || raw === undefined) throw new Refusal(409, 'statistics recovery precondition changed');
+    // An explicit reset is exactly the repair for state no validation can
+    // accept, so it does not demand that the damaged state validate first.
+    if (b.intent === 'reset') return this.explicitReset(b.operationId, digest, fence, publication);
     stateValid(raw, true); // bounded full shape/provenance validation, not a reset
     const candidate = structuredClone(raw);
     if (!candidate.stats.slot['*'] || Object.values(candidate.stats.items).some(map => !map['*'])) throw recovery();

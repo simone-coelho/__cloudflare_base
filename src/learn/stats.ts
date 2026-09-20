@@ -238,6 +238,29 @@ export interface LiftSnapshot {
   slotRates: Record<string, { n: number; s: number; rate: number }>;
   /** W22 A1.01: the attribution contract these counts were produced under. Absent on an archive from before it existed. */
   attributionContract?: AttributionContract;
+  /**
+   * W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset damaged
+   * item and slot state … A local merge patch alone cannot repair historical
+   * evidence"): the basis these counters were rebuilt on, when they were. A
+   * reader of this snapshot can then see that it holds the evidence admitted
+   * SINCE that repair and not the tenant's whole history.
+   *
+   * ABSENT on an object that was never repaired — repair is conditional on
+   * actual affected history (HANDOFF-2026-09-16 §6 :227) — so no existing
+   * snapshot, and no snapshot of an unaffected slot, gains a member.
+   */
+  rebuiltFrom?: RebuildBasis;
+}
+
+/** How a repaired object's counters were started again, and under whose operation. */
+export interface RebuildBasis {
+  /** The operator discarded the damaged counters outright. W24 owns the generation semantics of the transition. */
+  basis: 'explicit-reset';
+  /** The audited recovery operation that did it. */
+  operationId: string;
+  at: number;
+  /** The generation the object moved to, so nothing prepared against the old one can be mistaken for post-repair evidence. */
+  generation: number;
 }
 
 /**
