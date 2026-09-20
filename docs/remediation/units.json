@@ -2168,5 +2168,99 @@
     "status": "specified",
     "batch": "W21-B2",
     "residual": "MEASURED RED at src/units/W21/B2.unit.test.ts:1073 — \"F12 — the object budget holds for the request as a whole, not between days (answered 1000): expected false to be true\" (two days of 500 objects in a three-day window), and behind it \"F12 — a 184-day window with two days of content costs at most four listings (made 185)\" (measured at the spec head, probe log PROBE P6: 185 list calls, 2 objects). GREEN-AT-SPEC in the same run: the answer's `days` already names exactly the days its objects came from, and a window it read to the end reports `truncated: false` (reversing lines src/routes/decisions.ts:606-608, `days: dates.slice(0, listedDays)`). The list-call bound is ruled as an OBSERVABLE — at most four listings for a 184-day window holding two days of objects — not as a mechanism; how the walk is bounded is the builder's. SEAM with W22-B1 (which edits `decisions.ts`): this unit names no member of `counts`, `conflict`, `evidenceLoss`, `reconciliation` or `attributionContract`; it asserts only `objects`, `days` and `truncated`, which the route already answers. NOT IN THIS BATCH, named here: the hour-aggregate report path (`reportFromHours`) still groups by the arm served and answers `armVisitors: null` — W21-B3, after W22-B2's shard-state change — and nothing in this unit claims otherwise; the owner's protocol row W21.P1.01 and the anchor-retention owner item are untouched; customer acceptance stays OPEN."
+  },
+  {
+    "id": "W24.G1.01",
+    "w": "W24",
+    "criterion": "G1",
+    "legs": [
+      "logic",
+      "host-internal"
+    ],
+    "outcome": "Accumulation semantics are versioned apart from estimator and presentation settings: a change to n0/nMin/the lift clamps keeps the counters and the generation, an accumulation change (objective, reward, τ, schema) starts a FRESH generation instead of being refused for ever, and every published snapshot names the generation its counters belong to, when it restarted and how many exposures it has seen.",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\"); docs/architecture/35-verification-reports/F19.md §7 (\"Stamp a generation on the counters and start a fresh one when the generation changes … Do not silently keep the counters\"; `gen` over {objective, reward, tauLearnMs, n0, nMin, liftMin, liftMax}; `LiftSnapshot` gains `generation`, `restartedAt`, `exposuresSinceRestart`); docs/handover/HANDOFF-2026-09-16.md :228 (the refusal of incompatible reward/objective/τ EXISTS); product: src/durable-objects/LearnStats.ts:385-393 (`candidate()`, the 409 `statistics configuration incompatible`), src/learn/stats.ts (`LiftSnapshot`, `buildSnapshot`).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "RED on both legs (log /home/simonecoelho/rem/_evidence/W24-B1/specifier/logs/w24-final.log). MEASURED first (R142(a)): a presentation change is already accepted and keeps the counters — the fixture publishes a new learn document with n0 50 / nMin 5 and the next exposure is counted under it (that half is GREEN-AT-SPEC, reversing line LearnStats.ts:395 `{ ...structuredClone(existing), config }`); an accumulation change is refused 409 for ever, which is not a silent reinterpretation but is not a transition either. The three ruled members are typecheck-visible on `LiftSnapshot` (three tsc errors, the only ones). The document-level `stats` is where the object reads the estimator settings (LearnStats.ts priorsFor), so the fixture publishes them there. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.G1.02",
+    "w": "W24",
+    "criterion": "G1",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "outcome": "An authorized generation transition: `POST /v1/:tenant/learn/generation` refuses without an operator credential and answers one with `{ok, generation, restartedAt, archivedVersion}`; the promotion writes `liftKey` — the one key the serving path reads — and archives the superseded version; the object then serves the new generation, names when learning restarted and counts nothing from before it.",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\"); F19.md §7 gap 2 (\"The promotion must write `liftKey` — the only key `src/content/service.ts` reads — and archive the superseded version\") and the receipt line (receipts.ts:65 \"learning restarted <when> after a configuration change; N exposures since\"); HANDOFF-2026-09-16 :228 (the authorized rebuild/promote is OPEN); product: src/learn/fan.ts (`liftKey`, `liftArchiveKey`), src/routes/decisions.ts (`learn/publish`, `learn/recovery`, both `operatorJwt()`).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "RED on both legs: the route does not exist (404 where the unit requires 401 without a credential and 200 with one), so neither the `liftKey` write nor the archive can be reached. The two clauses are asserted as one pair so a route that merely 401s everything cannot pass. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.T1.01",
+    "w": "W24",
+    "criterion": "T1",
+    "legs": [
+      "host"
+    ],
+    "outcome": "No stale oscillation and no mixed cached snapshots: across a generation transition two isolates (two mounts over one store and one set of objects) never serve the superseded generation again and never oscillate between them, and every read is one generation whole — the counters and the settings a decision uses come from the same one.",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\") (\"no stale oscillation or mixed cached snapshots … test old callers and partial deployment\"); F19.md §5.7 (a configuration change is never atomic for the reader); product: src/content/service.ts:76-106 (the per-isolate lift cache, `currentLiftWitness` on every read and cache hit).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "RED on both hosts, today for the same reason as W24.G1.02: the transition route does not exist, so the fixture cannot supersede a generation. The per-isolate cache already re-checks the DO witness on every hit (service.ts:88), which is the mechanism the clause will exercise once a transition can happen. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.T1.02",
+    "w": "W24",
+    "criterion": "T1",
+    "legs": [
+      "logic",
+      "host-internal",
+      "host"
+    ],
+    "outcome": "Reset is containment or a trustworthy rebuild: a slot denominator never counts the exposures of an item whose evidence the platform no longer holds; a whole reset leaves neither counters nor denominator; and a rebuild from retained events produces the fold's own counters and says what it was rebuilt from (`rebuiltFrom`, W23.H1.01's vocabulary).",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\"); F19.md §7 gap 3 (\"The reset it exposes must cover `stats.slot`, not only `stats.items`, or the lift denominator stays mixed (§4.4)\") — ruled OVER the retained disposition in HANDOFF-2026-09-16 :228 (\"item reset retains slot denominator\"), R142(d); doc 22 §4.2 (rebuild from the ledger, publish as a new version, keep the old).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "SPLIT. The whole-reset containment clause is GREEN-AT-SPEC (measured: the object keeps no counters and no denominator; reversing line LearnStats.ts:296-305, the reset transaction). The denominator rule is RED at the logic leg: with an item's counters removed the slot denominator still counts its exposures (2 where 1 remains). The rebuild clause is RED on the missing transition route. DEVIATION, named: the ITEM-reset ROUTE (`POST /v1/:tenant/learn/items/reset`) requires an operator ACCOUNT session (decisions.ts:914, `user.type === 'access'`) and the DO's `/reset-item` requires a committed publication with `note: 'item reset admitted'` (LearnStats.ts:642-650), neither of which this harness can mint; the rule is therefore asserted where the denominator is computed (`buildSnapshot`), and the operator path is named for the whole-W review. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.R1.01",
+    "w": "W24",
+    "criterion": "R1",
+    "legs": [
+      "host-internal"
+    ],
+    "outcome": "The online credit path is filtered to the slot's configured reward: a purchase credits a click-learning slot with nothing, starts no second series beside its clicks and leaves its published lift unmoved.",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\") (\"Define reward filter\"); F19.md §7 gap 1 (\"It must also filter the online credit path to the slot's configured reward, as the batch path already does (`report.ts:110`) — otherwise §5.1's pre-loaded contamination survives the fix\") and §5.1; product: src/learn/hourly.ts:407 (`if (c.reward !== reward) continue; // the slot learns against one reward`), src/durable-objects/DecisionRing.ts (the online credit weighs by objective and never reads the reward).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "RED, measured on the object's own stored counters rather than on a click snapshot (which would not show it): after one purchase the item holds `['click','purchase']` and the fan-out reports `eligible: 1` where the unit requires `['click']` and 0. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.R1.02",
+    "w": "W24",
+    "criterion": "R1",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "outcome": "Money: a margin objective never falls back to the value; an outcome in a currency the tenant has not declared and a negative value are NAMED and refused under an unset policy (`money_policy_unset`) rather than silently added, dropped or subtracted; and the published schema names `objective` while the kit says what `s`, `p0` and the lift mean in money terms.",
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W24 :426 (\"Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.\") (\"revenue/margin/currency/refund behavior\"); F19.md §5.2 (`margin ?? value` mixes units), §5.3 (the currency is never read, a refund never subtracts); document 35 §2 N17 :279; docs/kit/03-payload-schemas.md:105, :107-108, :417; product: src/learn/policy.ts:71-73 (`creditWeight`, `outcome.margin ?? outcome.value`).",
+    "status": "specified",
+    "batch": "W24-B1",
+    "residual": "RED. Measured: `creditWeight('margin', {value: 100, margin: null})` returns 100 — two units in one counter — where the unit requires 0; the receipt carries no `money` block for a foreign currency or a negative value. The kit half is GREEN-AT-SPEC (measured: `slots.{slot}.objective` and \"units follow the slot objective\" are both in the shipped docs/kit/03-payload-schemas.md), so N17's documentation half no longer holds at this commit. The POLICY VALUES — which currencies convert and at what rate, whether a refund subtracts, what a nonpositive value means — are the owner's and go to W24.P1.01; this unit asserts only the refusal to guess. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.P1.01",
+    "w": "W24",
+    "criterion": "P1",
+    "legs": [],
+    "outcome": "The reward/revenue/margin/currency/refund/nonpositive POLICY VALUES and the production authorization for a generation rebuild/promote. No test is written.",
+    "witness": "document 35 §5 row W24 :426; F19.md §5.3; docs/handover/HANDOFF-2026-09-16.md :228 (\"Revenue/margin/currency/refund/nonpositive handling needs D09/DS agreement\"); docs/handover/HANDOFF-2026-09-18.md §8 (D09 — customer business/DS/learning owners).",
+    "status": "no-witness",
+    "batch": "W24-B1",
+    "residual": "NO-WITNESS. What is required, and from whom: (1) from the customer business and DS owners (D09) — which currencies the tenant reports in and the rule for converting the others (a rate source and its staleness bound), because no conversion is the platform's to invent; (2) from the same owners — whether a refund SUBTRACTS from the objective it credited, is ignored, or opens a new series, and what a nonpositive or zero value means; (3) from the learning owners — whether margin absence is a zero credit (this batch's ruling) or a documented fallback, and the reward each slot learns from at rollout; (4) from the architecture/delivery owners — who may authorize a generation rebuild/promote in production and under what evidence. Until (1)-(3) are published, W24.R1.02 asserts only that the platform refuses to guess; until (4) is settled, W24.G1.02's route is specified as an operator-credentialed act without naming a production approver. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
   }
 ]
