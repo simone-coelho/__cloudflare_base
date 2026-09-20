@@ -51,7 +51,7 @@ import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { captureRetention, RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
 import * as hourly from '@/learn/hourly';
-import { buildHour, catchUp, hourKey, runDayReport, shardKey, DEFAULT_HORIZON_MS, HOUR_MS, MAX_HOUR_OBJECTS,
+import { buildHour, catchUp, hourKey, runDayReport, shardKey, CLOSE_GRACE_MS, DEFAULT_HORIZON_MS, HOUR_MS, MAX_HOUR_OBJECTS,
   type HourAggregate, type HourBrand, type ShardState } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import type { DayReport, DuplicateCounts, ReportCoverage } from '@/learn/report';
@@ -346,8 +346,14 @@ const absent = (what: string, saw: unknown): string =>
 type W30Coverage = ReportCoverage & {
   /** The published re-fold horizon: the window inside which a folded hour is still re-checked. */
   refoldHorizonMs?: number | null;
-  /** Per built hour: `open` while inside that horizon, `final` past it. */
-  maturities?: Array<{ hour: number; maturity: 'open' | 'final' }>;
+  /**
+   * Per built hour: `open` while inside that horizon, `final` past it, and
+   * `repaired` where the hour's aggregate was WRITTEN after it became final —
+   * a rebuild the caller asked for (W30.R1.01), or a first fold that reached
+   * the hour late. Derived from the aggregate's own `builtAt` against the
+   * hour's end plus the published horizon, so it needs no new stored member.
+   */
+  maturities?: Array<{ hour: number; maturity: 'open' | 'final' | 'repaired' }>;
   /** Rows that reached an hour's ledger prefix after the hour became final: counted, named, never applied. */
   lateAfterMaturity?: Array<{ hour: number; objects: number }>;
   /** Per built hour, the outcomes whose carry-in history the fold could not reach. */
@@ -430,8 +436,15 @@ const says = (text: string, ...patterns: RegExp[]): boolean =>
 const saysInProse = (text: string, ...patterns: RegExp[]): boolean =>
   text.split(/(?<=[.!?])\s+/).some(sentence => patterns.every(pattern => pattern.test(sentence)));
 
-/** The published kit, read from the repository the way `src/units/W21/B3.unit.test.ts` reads it. */
-const kitFile = (name: string): string => readFileSync(`docs/kit/${name}`, 'utf8');
+/**
+ * The repository itself, resolved from this module and never from the working
+ * directory, so the kit and the shipped screens are read the same whatever
+ * directory the runner was started in (the W21-B1/B2 pattern).
+ */
+const REPO = new URL('../../../', import.meta.url);
+const repoFile = (path: string): string => readFileSync(new URL(path, REPO), 'utf8');
+/** The published kit a customer reads. */
+const kitFile = (name: string): string => repoFile(`docs/kit/${name}`);
 /**
  * R174: what the published coverage paragraph must name. Every one of these is a
  * member this batch rules; `counts.conflicts` is the day-level member the
@@ -440,6 +453,19 @@ const kitFile = (name: string): string => readFileSync(`docs/kit/${name}`, 'utf8
 const RULED_COVERAGE_MEMBERS = ['refoldHorizonMs', 'maturities', 'lateAfterMaturity', 'carryInHours', 'objectScan', 'recoveryFromMs', 'counts.conflicts'];
 /** The sentence that stops being true the moment an hour can be stated final or open (`docs/kit/02-api-reference.md:586`). */
 const RETIRED_MATURITY_SENTENCE = 'Maturity is always `unknown`';
+
+/**
+ * A moment strictly INSIDE the published window and at or past the close grace —
+ * their midpoint — so no assertion below silently binds the owner's
+ * `REFOLD_MATURITY_MS` (W30.P1.01) to a length of its own. It is well defined
+ * for any window longer than the close grace, which W30.M1.01 asserts as a
+ * mechanism constraint: an hour final before the fold has looked at it once
+ * could never be re-folded on a grown prefix at all.
+ */
+const openAfter = (hourEnd: number, window: number): number => hourEnd + CLOSE_GRACE_MS + Math.ceil((window - CLOSE_GRACE_MS) / 2);
+const openProbe = (window: number): number => openAfter(HOUR12_END, window);
+/** A moment one minute past the published window: the hour is final by declaration. */
+const finalProbe = (window: number): number => HOUR12_END + window + MIN;
 
 // ===========================================================================
 // unit:W30.R1.01 — the higher-cap repair
@@ -555,6 +581,34 @@ describe('unit:W30.R1.01', () => {
     expect({ source: day.hours?.source, decisions: day.counts.decisions, credits: day.policies.find(row => row.role === 'learning')?.credits },
       'W30.R1.01 — and the day the catch-up publishes from the aggregates carries the recovered decisions and the cross-hour credit')
       .toEqual({ source: 'aggregates', decisions: 5, credits: 1 });
+
+    // ── a repair PAST maturity says so on the hour it rewrote ───────────────
+    // Ruling R177 item 1: a requested repair is exempt from the maturity window
+    // (W30.M1.01 bounds the AUTOMATIC re-fold on a grown prefix only), so it can
+    // change an hour whose numbers an analyst has already read as final. It may
+    // never do that silently. The smallest honest statement is a third value of
+    // the member that already says what an hour is — not a second list — because
+    // an hour is in exactly one of these three states and two lists could
+    // disagree about it.
+    const maturity = maturityWindow();
+    expect(typeof maturity === 'number' ? 'published' : absent(MATURITY_EXPORT, hourly),
+      'W30.R1.01 — the published re-fold horizon exists before a repair past it can be named').toBe('published');
+    const window = maturity!;
+    const r = await mount();
+    for (let n = 0; n < 3; n++) {
+      const d = decision(r.env, 'v-rogue', T12 + (n + 1) * MIN, SERVED[n]!);
+      await throughTheLedger(r, [d], [], T12 + (n + 1) * MIN + 1000);
+    }
+    const repairOptions = { shards: 1, lookbackHours: Math.ceil(window / H) + 4 };
+    await fold(r, openProbe(window), { ...repairOptions, maxObjects: 2 });
+    expect(storedHour(r, DATE, HOUR).truncated, 'the fixture folds the hour truncated while it is still open').toBe(true);
+    const past = finalProbe(window);
+    await fold(r, past, { ...repairOptions, maxObjects: MAX_HOUR_OBJECTS });
+    const repaired = coverageOf(await publish(r, past));
+    expect({ hour12: repaired.maturities?.find(row => row.hour === HOUR) ?? absent('`coverage.maturities`', repaired),
+      read: storedHour(r, DATE, HOUR).objectsRead, truncated: storedHour(r, DATE, HOUR).truncated },
+      'W30.R1.01 — a repair asked for after the hour was already final is NAMED as one: the hour reads `repaired`, never plain `final`, so a rebuild can never quietly replace numbers an analyst has read (ruled value: `coverage.maturities[].maturity = \'repaired\'`, derived from the aggregate\'s own `builtAt` against the hour\'s end plus the published horizon — no new stored member)')
+      .toEqual({ hour12: { hour: HOUR, maturity: 'repaired' }, read: 3, truncated: false });
   });
 });
 
@@ -590,9 +644,10 @@ describe('unit:W30.M1.01', () => {
    */
   it('logic: the re-fold horizon is a named published constant on the coverage, an hour inside it is open, and a row that arrives after the hour is final is counted and named instead of being silently applied', async () => {
     const maturity = maturityWindow();
-    expect(typeof maturity === 'number' ? { positive: maturity > 0, insideTheLookback: maturity < 26 * H } : absent(MATURITY_EXPORT, hourly),
-      'W30.M1.01 — the window inside which a folded hour is still re-checked is a named, published value of the fold, not an unstated 26-hour side effect of the lookback; and it fits inside the catch-up\'s own lookback, because an hour whose late rows can never be seen can never be named (ruled export: `REFOLD_MATURITY_MS`; F17 §6 item 1)')
-      .toEqual({ positive: true, insideTheLookback: true });
+    expect(typeof maturity === 'number'
+      ? { beyondTheCloseGrace: maturity > CLOSE_GRACE_MS, insideTheLookback: maturity < 26 * H } : absent(MATURITY_EXPORT, hourly),
+      'W30.M1.01 — the window inside which a folded hour is still re-checked is a named, published value of the fold, not an unstated 26-hour side effect of the lookback. Its LENGTH is the owner\'s (W30.P1.01); these are the two bounds the MECHANISM needs and neither picks a value: it must outlast the five-minute close grace, or an hour is final before the fold has looked at it once and a grown prefix could never be re-folded at all (W22.R1.02), and it must fit inside the catch-up\'s own lookback, or an hour\'s late rows could never be seen to be named (ruled export: `REFOLD_MATURITY_MS`; F17 §6 item 1)')
+      .toEqual({ beyondTheCloseGrace: true, insideTheLookback: true });
     const window = maturity!;
     const lookbackHours = Math.ceil(window / H) + 4;
     const options = { shards: 1, lookbackHours };
@@ -601,9 +656,10 @@ describe('unit:W30.M1.01', () => {
     const served = decision(m.env, 'v-tabby', T12 + 10 * MIN, 'cnt-tabby-evening');
     await throughTheLedger(m, [served], [], T12 + 11 * MIN);
 
-    // OPEN: six minutes after hour 12 ends, well inside any published window.
-    await fold(m, HOUR12_END + 6 * MIN, options);
-    const open = coverageOf(await publish(m, HOUR12_END + 6 * MIN));
+    // OPEN: the midpoint between the close grace and the published window, read
+    // off the module, so this fixture binds no length of its own.
+    await fold(m, openProbe(window), options);
+    const open = coverageOf(await publish(m, openProbe(window)));
     expect({ refoldHorizonMs: open.refoldHorizonMs ?? absent('`coverage.refoldHorizonMs`', open),
       hour12: open.maturities?.find(row => row.hour === HOUR) ?? absent('`coverage.maturities`', open) },
       'W30.M1.01 — the day states the published re-fold horizon it was built under and says, hour by hour, which hours are still inside it (ruled members: `coverage.refoldHorizonMs`, `coverage.maturities`)')
@@ -613,7 +669,7 @@ describe('unit:W30.M1.01', () => {
     // 12:30 is written into hour 12's prefix (`hourPrefix` files a record by its
     // event time, F17 §1), and the catch-up runs again.
     const late = click(m.env, served, T12 + 30 * MIN, 'w30-b1-late-past-maturity');
-    const pastMaturity = HOUR12_END + window + MIN;
+    const pastMaturity = finalProbe(window);
     await throughTheLedger(m, [], [late], pastMaturity);
     await fold(m, pastMaturity, options);
 
@@ -622,7 +678,7 @@ describe('unit:W30.M1.01', () => {
       lateAfterMaturity: final.lateAfterMaturity ?? absent('`coverage.lateAfterMaturity`', final),
       hour12: final.maturities?.find(row => row.hour === HOUR) ?? absent('`coverage.maturities`', final),
       status: final.status },
-      'W30.M1.01 — past the published horizon the hour is final BY DECLARATION: the row that arrived afterwards is COUNTED and NAMED with its hour, never silently applied to a number an analyst has already read and never silently dropped; the day says it is incomplete because data exists that it does not include (ruled member: `coverage.lateAfterMaturity`; HANDOFF-2026-09-16 :234 "User did not approve a blanket age cutoff" — the rows stay in the ledger and are named, and an explicit repair still reaches them, W30.R1.01)')
+      'W30.M1.01 — past the published horizon the hour is final BY DECLARATION: the row that arrived afterwards is COUNTED and NAMED with its hour, never silently applied to a number an analyst has already read and never silently dropped; the day says it is incomplete because data exists that it does not include (ruled member: `coverage.lateAfterMaturity`; HANDOFF-2026-09-16 :234 "User did not approve a blanket age cutoff" — the rows stay in the ledger and are NAMED, which is what makes this a declaration rather than a cutoff. No ruled path applies them: W30.R1.01\'s repair fires only on `truncated && cap > objectsRead`, and no public route raises the cap today — that is W30.R1.01\'s named residual, not a promise made here)')
       .toEqual({ outcomes: 0, lateAfterMaturity: [{ hour: HOUR, objects: 1 }], hour12: { hour: HOUR, maturity: 'final' }, status: 'incomplete' });
     expect(storedHour(m, DATE, HOUR).lateObjects ?? absent('`HourAggregate.lateObjects`', storedHour(m, DATE, HOUR)),
       'W30.M1.01 — and the hour itself carries the count, so the statement survives a restart of the job that made it (ruled member: `HourAggregate.lateObjects`)')
@@ -639,8 +695,8 @@ describe('unit:W30.M1.01', () => {
     const m = await mount();
     const served = decision(m.env, 'v-tabby', T12 + 10 * MIN, 'cnt-tabby-evening');
     await throughTheLedger(m, [served], [], T12 + 11 * MIN);
-    await fold(m, HOUR12_END + 6 * MIN, options);
-    const pastMaturity = HOUR12_END + window + MIN;
+    await fold(m, openProbe(window), options);
+    const pastMaturity = finalProbe(window);
     await throughTheLedger(m, [], [click(m.env, served, T12 + 30 * MIN, 'w30-b1-host-late')], pastMaturity);
     await fold(m, pastMaturity, options);
     await publish(m, pastMaturity);
@@ -687,10 +743,15 @@ describe('unit:W30.V1.01', () => {
    *     `ringCap: 1`: `outcomes: 1, credits: 0`, and no member of the hour or of
    *     the coverage says why. RULED member `HourBrand.carryIn.evicted`: the
    *     outcomes of this hour that earned no credit under the learning policy
-   *     while the visitor's usable history was BOUNDED — her ring held `ringCap`
-   *     entries when the outcome was attributed, or this fold dropped an entry of
-   *     hers older than the horizon cutoff. That is the honest name for the
-   *     uncertainty, never a claim that a credit was owed.
+   *     while the visitor's attribution ring was FULL — it held exactly
+   *     `ringCap` entries at the moment the outcome was attributed, so a
+   *     decision the cap or the horizon removed may be the one that would have
+   *     been credited. The honest name for the uncertainty, never a claim that a
+   *     credit was owed. It is a function of the ring AS ATTRIBUTED and never of
+   *     what this particular fold happened to drop, because `hourly.test.ts:1012`
+   *     locks `repeated.brands` toEqual `first.brands` across a replay of an
+   *     already-folded hour: the same hour folded twice must produce the same
+   *     brand, carry-in included.
    *
    * (iii) RULED — unplaced carry-in, the W21-B3 build review's finding 1:
    *     "an outcome at 09:15 whose visitor's only decision of the day is at
@@ -846,6 +907,7 @@ describe('unit:W30.F1.01', () => {
     const maturity = maturityWindow();
     expect(typeof maturity === 'number' ? 'published' : absent(MATURITY_EXPORT, hourly),
       'W30.F1.01 — the published re-fold horizon exists before a report can propagate it').toBe('published');
+    const window = maturity!;
 
     // ── a day with a truncated hour, on a shard migrated from version 1 ─────
     const m = await mount();
@@ -858,16 +920,30 @@ describe('unit:W30.F1.01', () => {
     // floor is what the migration inherits (`src/learn/hourly.ts:123`).
     const v1: ShardState = { version: 1, shard: 0, through: T12 - H, rings: {}, seenDate: '', seen: {} };
     await m.storage.put(shardKey(TENANT, 0), JSON.stringify(v1));
+    // A SECOND hour holding ONE object, folded under the same cap of two: its
+    // `read` is one, so the scan row cannot be the cap echoed back (R177 item 6).
+    await throughTheLedger(m, [decision(m.env, 'u-unknown', T12 + H + MIN, 'cnt-unknown-taxonomy')], [], T12 + H + 2 * MIN);
 
-    const truncated = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W30_LEARN, HOUR12_END + 6 * MIN, { shards: 1, maxObjects: 2 }, m.env as never);
-    expect({ objects: truncated.objects, read: truncated.objectsRead },
-      'the fixture: three ledger objects in hour 12 and a fold allowed to open two').toEqual({ objects: 3, read: 2 });
-    const coverage = coverageOf(await publish(m, HOUR12_END + 6 * MIN));
+    const at = openProbe(window);
+    const truncated = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W30_LEARN, at, { shards: 1, maxObjects: 2 }, m.env as never);
+    const quiet = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W30_LEARN, at, { shards: 1, maxObjects: 2 }, m.env as never);
+    expect([{ objects: truncated.objects, read: truncated.objectsRead }, { objects: quiet.objects, read: quiet.objectsRead }],
+      'the fixture: three ledger objects in hour 12 and one in hour 13, both folded under a cap of two, so one hour hit the bound and the other did not')
+      .toEqual([{ objects: 3, read: 2 }, { objects: 1, read: 1 }]);
+    const coverage = coverageOf(await publish(m, at));
 
     expect({ objectScan: coverage.objectScan ?? absent('`coverage.objectScan`', coverage),
       truncatedHours: coverage.truncatedHours },
-      'W30.F1.01 — the day names the object-scan bound where an hour hit it: how many ledger objects the hour holds and how many the fold opened, so the reader can see both the loss and the cap that caused it (N08: "the fold reads at most 600 objects/hour"; ruled member: `coverage.objectScan`, beside the `truncatedHours` W22.R1.03 already carries)')
-      .toEqual({ objectScan: [{ hour: HOUR, objects: 3, read: 2 }], truncatedHours: [HOUR] });
+      'W30.F1.01 — the day names the object-scan bound where an hour hit it: how many ledger objects each built hour holds and how many the fold OPENED — the fold\'s own count, which is why the hour that did not hit the bound reads one and not the cap (N08: "the fold reads at most 600 objects/hour"; ruled member: `coverage.objectScan`, beside the `truncatedHours` W22.R1.03 already carries)')
+      .toEqual({ objectScan: [{ hour: HOUR, objects: 3, read: 2 }, { hour: HOUR + 1, objects: 1, read: 1 }], truncatedHours: [HOUR] });
+
+    // R177 item 3: the conflict member is OMITTED when there is none, exactly as
+    // `counts.duplicates` is — seven exact locks read `counts` whole
+    // (`src/learn/hourly.test.ts:450`, `:718`, `:1075`, `:1107`;
+    // `src/learn/report.test.ts:199`, `:600`, `:777`). LOCKED, green at spec.
+    expect(Object.keys((await publish(m, at)).counts).sort(),
+      'W30.F1.01 — a day with no collision carries no `conflicts` member at all: the count is omitted, never published as a zero (the vocabulary `counts.duplicates` already uses)')
+      .toEqual(['decisions', 'outcomes', 'truncated', 'visitors']);
 
     expect(coverage.recoveryFromMs ?? absent('`coverage.recoveryFromMs`', coverage),
       'W30.F1.01 — and the day states the version-1 shard migration bound: repair reaches back to the first version-2 fold and no further, because a version-1 state remembers only a high-water mark (W22 R143: "v1-shard migration bound — P3b recovery begins at the first v2 fold"; the stored `through` here is 11:00, so the earliest hour a repair can still put into these rings is 12:00)')
@@ -882,8 +958,9 @@ describe('unit:W30.F1.01', () => {
       carryInHours: pooledDay.carryInHours ?? absent('`coverage.carryInHours` on the pooled day', pooledDay),
       maturities: pooledDay.maturities ?? absent('`coverage.maturities` on the pooled day', pooledDay) },
       'W30.F1.01 — and the window report carries every one of them per day, instead of dropping every honesty signal but missing days (F17 §3.4)')
-      .toEqual({ objectScan: [{ hour: HOUR, objects: 3, read: 2 }], recoveryFromMs: T12,
-        carryInHours: [{ hour: HOUR, evicted: 0, unplaced: 0 }], maturities: [{ hour: HOUR, maturity: 'open' }] });
+      .toEqual({ objectScan: [{ hour: HOUR, objects: 3, read: 2 }, { hour: HOUR + 1, objects: 1, read: 1 }], recoveryFromMs: T12,
+        carryInHours: [{ hour: HOUR, evicted: 0, unplaced: 0 }, { hour: HOUR + 1, evicted: 0, unplaced: 0 }],
+        maturities: [{ hour: HOUR, maturity: 'open' }, { hour: HOUR + 1, maturity: 'open' }] });
 
     // ── the fold's collision: named, and counted once it is filed ───────────
     const c = await mount();
@@ -901,7 +978,7 @@ describe('unit:W30.F1.01', () => {
     expect((refused.body as { conflict?: { id?: string } }).conflict?.id,
       'LOCKED (W22.D1.03) — the read names the colliding logical id and files it').toBe(o1.outcome_id);
 
-    const folded = await fold(c, HOUR12_END + 6 * MIN, { shards: 1, lookbackHours: 2 });
+    const folded = await fold(c, openProbe(window), { shards: 1, lookbackHours: 2 });
     expect(folded.failed,
       'W30.F1.01 — the fold no longer fails closed on a collision an operator has already filed: it reads the filed case the report route wrote and folds the hour (W22 R124 residual: "the hourly fold still fails closed unnamed on a collision")')
       .toEqual([]);
@@ -929,9 +1006,13 @@ describe('unit:W30.F1.01', () => {
     await throughTheLedger(m, [carry, newer], [], T12 + 3 * MIN);
     // An outcome in hour 13 on the decision the cap evicted: the carry-in line.
     await throughTheLedger(m, [], [click(m.env, carry, T12 + H + MIN, 'w30-b1-screen-evicted')], T12 + H + 2 * MIN);
-    await fold(m, T12 + 2 * H + 6 * MIN, options);
+    // Each hour is folded while it is still OPEN — the midpoint of its own close
+    // grace and the published window — so hour 12 reads `final` at the end and
+    // never `repaired`, whatever length the owner gives the window.
+    await fold(m, openProbe(window), options);
+    await fold(m, openAfter(T12 + 2 * H, window), options);
     // And a row that arrives after hour 12 is final: the maturity line.
-    const pastMaturity = HOUR12_END + window + MIN;
+    const pastMaturity = Math.max(finalProbe(window), openAfter(T12 + 2 * H, window) + MIN);
     await throughTheLedger(m, [], [click(m.env, newer, T12 + 40 * MIN, 'w30-b1-screen-late')], pastMaturity);
     await fold(m, pastMaturity, options);
     // The day the screens read, saved at the pinned moment (W22.R1.03's own step).
@@ -940,7 +1021,7 @@ describe('unit:W30.F1.01', () => {
     const screens: Array<{ name: string; text: string }> = [];
     for (const screen of ['console', 'legacy'] as const) {
       const page = screen === 'console' ? 'console/index.html' : 'legacy/learning.html';
-      const dom = new JSDOM(readFileSync(`public/${page}`, 'utf8'),
+      const dom = new JSDOM(repoFile(`public/${page}`),
         { url: `${OPERATOR_ORIGIN}/${screen === 'console' ? `console/#/measure?scope=${TENANT}&date=${DATE}` : `legacy/learning.html?scope=${TENANT}&brand=${BRAND}&slot=hero`}`, pretendToBeVisual: true, runScripts: 'outside-only' });
       const w = dom.window as unknown as ScreenWindow;
       w.fetch = async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
@@ -956,7 +1037,7 @@ describe('unit:W30.F1.01', () => {
       const scripts = screen === 'console'
         ? ['operator-session.js', 'console/shell.js', 'console/views.js', 'console/views-config.js', 'console/views-measure.js', 'console/views-accounts.js', 'console/views-explore.js']
         : ['operator-session.js', 'learning.js'];
-      for (const script of scripts) w.eval(readFileSync(`public/${script}`, 'utf8'));
+      for (const script of scripts) w.eval(repoFile(`public/${script}`));
       const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 12)); };
       await settle();
       if (screen === 'legacy') {
@@ -1056,9 +1137,9 @@ describe('unit:W30.C1.01', () => {
     expect(answered.status, `the day the catch-up published reads back: ${JSON.stringify(answered.body).slice(0, 300)}`).toBe(200);
     const day = dayOf(answered.body), coverage = coverageOf(day);
     const crowdedHour = new Date(crowded).getUTCHours();
-    expect(coverage.objectScan?.find(row => row.hour === crowdedHour) ?? absent('`coverage.objectScan`', coverage),
-      'W30.C1.01 — the hour that hit the object-scan bound says so with the bound itself: three objects in the hour, two opened by the fold (N08: "the fold reads at most 600 objects/hour; no universal break-even"; ruled member: `coverage.objectScan`)')
-      .toEqual({ hour: crowdedHour, objects: 3, read: CAP });
+    expect(coverage.objectScan?.filter(row => row.hour === HOUR || row.hour === crowdedHour) ?? absent('`coverage.objectScan`', coverage),
+      'W30.C1.01 — the hour that hit the object-scan bound says so with the bound itself — three objects in the hour, two opened by the fold — and the quiet hour beside it says ONE, so the row carries what the fold really opened and never the cap echoed back (N08: "the fold reads at most 600 objects/hour; no universal break-even"; ruled member: `coverage.objectScan`)')
+      .toEqual([{ hour: HOUR, objects: 1, read: 1 }, { hour: crowdedHour, objects: 3, read: CAP }]);
 
     // N23, LOCKED (W22.A1.01): the day says which history it could really read,
     // beside the window the tenant's published policy asks for, so "one cap
@@ -1073,5 +1154,6 @@ describe('unit:W30.C1.01', () => {
       .toEqual({ published: PURCHASE_WINDOW_MS, read: 48 * H });
   });
 });
+
 
 
