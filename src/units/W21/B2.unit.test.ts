@@ -79,7 +79,6 @@ import { JSDOM } from 'jsdom';
 import * as jose from 'jose';
 
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
-import { armFor } from '@/content/holdout';
 import { invalidateLiftCache } from '@/content/service';
 import type { ContentPiece, DecisionRecord, HoldoutConfig, SlotCatalog } from '@/content/types';
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
@@ -786,12 +785,16 @@ const kitFile = (file: string) => readFileSync(new URL(`../../../docs/kit/${file
  * separator, so the digits reach the DOM exactly as written.
  */
 const AUDIT_DAY = new Date().toISOString().slice(0, 10);
+/** The same fixture for tomorrow, so a run that crosses midnight reads a seeded day either side. */
+const AUDIT_NEXT_DAY = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const AUDIT_DECISIONS = 407;
 
 function seedAuditDay(m: Mounted): void {
-  storeLegacyDayReport(m, AUDIT_DAY, { hero: [{ arm: 'default', decisions: AUDIT_DECISIONS, credited: 29 }, { arm: 'personalized', decisions: 612, credited: 55 }] },
-    { decisions: 1019, outcomes: 84, visitors: 700, truncated: false },
-    { source: 'aggregates', built: [...Array(24).keys()], missing: [] });
+  for (const date of [AUDIT_DAY, AUDIT_NEXT_DAY]) {
+    storeLegacyDayReport(m, date, { hero: [{ arm: 'default', decisions: AUDIT_DECISIONS, credited: 29 }, { arm: 'personalized', decisions: 612, credited: 55 }] },
+      { decisions: 1019, outcomes: 84, visitors: 700, truncated: false },
+      { source: 'aggregates', built: [...Array(24).keys()], missing: [] });
+  }
 }
 
 describe('unit:W21.C1.05', () => {
@@ -965,18 +968,23 @@ describe('unit:W21.E1.07', () => {
     expect(served.experiment?.id, 'the join key names the salt in force').toBe(`${TENANT}:${TENANT}:${SALT_B}`);
     expect(served.experiment?.saltVersion, 'and this history is short enough to count exactly').toBe(2);
 
-    // A history the platform cannot finish reading answers unknown, and still
-    // serves and still names the experiment.
-    const faulted = await mount('session');
-    const other = await shopperOn(faulted, ENROLLED_ANON, { tracking: true, personalization: true });
-    await republishLearn(faulted, { holdout: { share: 0.5, salt: SALT_B, arms: ['default'] }, regional: { enabled: false, kBlend: 1, minEvents: 30 }, slots: {} });
+    // R130 pins the mechanism: the salt version is carried where the HEAD is
+    // read, so the serving path never walks — not before the answer and not
+    // behind it. A serve-time storage fault on a prior revision is therefore not
+    // an observable of this leg at all (it can only change an answer that walks),
+    // and the partial walk stays where it can be seen: the logic leg above.
+    // What the serving path must still say honestly is the HORIZON: past the
+    // revisions the platform can see, the count is an explicit unknown (NR4).
+    const far = await mount('session');
+    const distant = await shopperOn(far, ENROLLED_ANON, { tracking: true, personalization: true });
+    await publishSaltHistory(far, [...Array.from({ length: 26 }, () => SALT_B), SALT_C]);
     invalidateSaltVersions();
-    faulted.storage.failWhen = key => key.endsWith('/learn/rev/1.json');
-    const unknown = await other.snapshot();
-    expect(unknown.status, 'NR4 — an unreadable history is not a reason to refuse her a page').toBe(200);
-    expect(unknown.experiment?.saltVersion, 'NR4 — the answer says unknown rather than the count it happened to reach').toBeNull();
+    const unknown = await distant.snapshot();
+    expect(unknown.status, 'NR4 — a long history is not a reason to refuse her a page').toBe(200);
+    expect(unknown.experiment?.saltVersion,
+      'NR4 — past the 24 revisions the platform can read, the count of salts before this one is unknown, never a smaller number').toBeNull();
     expect(unknown.experiment?.id, 'and `experiment.id` carries the salt itself, so the join key is unaffected')
-      .toBe(`${TENANT}:${TENANT}:${SALT_B}`);
+      .toBe(`${TENANT}:${TENANT}:${SALT_C}`);
 
     // The bound is published, not folklore.
     expect(kitFile('02-api-reference.md').includes(KIT_SALT_HORIZON),
@@ -1047,7 +1055,11 @@ describe('unit:W21.E1.08', () => {
         expect(captured[0]!.measurementBasis, `${shopperKind}: on the rendered basis`).toBe('rendered-v1');
         // R101(a) with R100(c): the capture path stores the block the DECISION
         // path answered — never one re-derived at capture time, which is the
-        // hazard the same rule already forbids on the export.
+        // hazard the same rule already forbids on the export. The answered block
+        // is asserted present first, so the comparison below can never be two
+        // undefineds agreeing with each other.
+        expect(served.experiment?.id, `${shopperKind}: the decision path answered a provenance block to carry`)
+          .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
         expect(captured[0]!.experiment, `${shopperKind}: the captured record carries the answered provenance, unchanged`)
           .toEqual(served.experiment);
       }
