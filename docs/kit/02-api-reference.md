@@ -211,6 +211,60 @@ The member is BOUNDED, because the number of pins on a page is operator-authored
 
 The snapshot answer is the shopper's surface and names one page load. What a tenant's slots refused over time is an operator fact, and the operator surfaces carry it. `GET /v1/{tenant}/learn/slots?evidence=1` adds `governance` to every slot entry, joined under the same flag and the same 200-slot budget as `evidence`: `{since, scope, refusedPinCount, refusedPins: [{pinnedPieceId, reason, count}], shortTakeCount, shortTakePositions}`. The counts are distinct occurrences since `since` — a second identical page view counts again — on both hosts and both arms, in the runtime refusal vocabulary above; `since` is the horizon those counts start at, 30 days, after which they restart, and it is never later than the page load that produced them. A slot that refused nothing and filled every position reports zeros, never an omitted block. `scope` is the scope the counts are kept at and always reads `"tenant"`: there is one counter document per tenant, counted across all of the tenant's brands, while the `evidence` beside it is kept per brand — so both brands of a tenant read the same counts on the row beside their own brand's learning evidence, and no other tenant's refusals are ever among them. `refusedPins` is a bounded sample of the distinct pins named per slot; the counts beside it stay whole, so a pathological document loses detail, never a count. `POST`/`GET /v1/{tenant}/monitor` answers the same two counts summed over the tenant's slots, as `governance: {since, scope, refusedPinCount, shortTakeCount}`, from the same counters — never from the monitor's own synthetic probe, whose compose of the tenant's page is excluded where the counters are written. Two things guarantee that exclusion and both are part of this contract: the probe composes unsigned with tracking refused and declares `selfCheck` — no shopper granted it anything, its own cookie header withholds tracking consent, and the counters are skipped for any compose that declares the flag — so either guarantor alone already keeps the probe out of a tenant's counts, and neither can be removed without contradicting this reference. `shortTakeCount` counts the times a pinned slot served what it could and still fell short of its `take`, and `shortTakePositions` the positions left empty across them; a slot whose pin was refused serves nothing at all and is counted as a refusal instead. These counters hold slot names, the merchandiser's own pinned piece ids, refusal reasons and counts — configuration, never shopper state. They are written fire and forget after the answer is decided, are never read on a decision path, are skipped entirely when the shopper withheld tracking consent, and are a best-effort diagnostic rather than an accounting ledger: concurrent page loads may collapse to one increment; the counts are a floor, never an overcount, and nothing outside them depends on their value.
 
+`POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
+read on the scheduled run and never on a decision path.
+
+`evidenceLoss` is `{ since, producerFailed, consumerSkipped, fanOutRejected, retriesExhausted }`: the
+four ways a row of evidence is lost, in one vocabulary — the producer could not hand it to the queue,
+the consumer could not place it, its fan-out post to a statistics object was attempted and refused, or
+its retries were exhausted and it was captured to the dead-letter quarantine. `since` is the horizon
+the counts start at (30 days, after which they restart). A tenant that lost nothing reads zero on
+every path, never an absent member; the member is absent only on a record written before it existed
+and on a run whose counter store could not be read, so no result states a zero it did not observe.
+These are a FLOOR, not an accounting ledger: the read-modify-write is last-write-wins, so concurrent
+drops may collapse into one increment. Three things are deliberately NOT counted, because counting
+them would be worse than not: a batch that failed as a whole (it is retried whole, and counting it
+would multiply one drop by the retry count), a producer refusal whose cause is that the tenant's own
+configuration could not be read (there is nothing to attribute the count to), and the platform's own
+synthetic monitoring probe, which is excluded where every one of these counters is written.
+
+`reconciliation` is `{ since, compared, disagreements: [ { brand, slot, online, ledger, difference,
+threshold } ] }`: the scheduled comparison of the two stores that hold the same credits by two
+different roads — each slot's statistics object, which counted them online as they happened, and the
+day report, which counted them from the ledger. It reads the NEWEST day this tenant has published,
+and only that day; `since` is that day's start and `compared` is how many (brand, slot) pairs the run
+really compared, so a clean result is never an empty one. `online` is the slot's credited mass at its
+own decay, rounded; `ledger` is the credits the published day counted for that slot's personalized
+arm. A pair is named only when `difference` exceeds `threshold`, a stated relative tolerance of five
+per cent of the larger of the two: zero at unit scale, which is where one lost or doubled credit
+shows, and wide enough at volume to absorb the two stores reading their own clocks. Absent on a
+legacy record and on a run that could not read one of the two sinks.
+
+`GET /v1/{tenant}/ledger/batches?date=` reconciles the day's export partition with the day the platform
+published, on the same answer: `counts` is `{ rows: { decisions, outcomes }, distinct: { decisions,
+outcomes }, report: { decisions, outcomes }, agrees }`. `rows` is what the listed objects physically
+hold, line by line — ledger rows are at-least-once, so this can exceed what any read counts. `distinct`
+applies the same dedup every read applies, on `decision_id` and `outcome_id`, and then the pending
+erasures this answer already tells you to apply. `report` is the day report published for that brand
+(`?brand=`, defaulting to the tenant). `agrees` is true only when the two were observed to match, so a
+warehouse loading the partition and an operator reading the report cannot disagree in silence. The
+member is carried only by a listing that can see the whole day: a `from=`/`to=` window lists several
+days, a `cursor=` page lists part of one, a `stream=` filter hides the other stream, and a truncated
+listing has already stopped short — none of those carries it. It opens only the objects it has just
+listed and reads the report by its own key; it lists nothing a second time.
+
+Ledger rows are delivered AT LEAST ONCE, and `decision_id` / `outcome_id` are the dedup keys — in every
+read this platform performs and in your own warehouse job. The same logical row can reach the R2
+partition more than once (a queue redelivery, a retried partial batch), and every read above yields it
+exactly once, counting the copies it dropped as `counts.duplicates`. An outcome minted before the
+per-event nonce existed carries a timestamp-derived id that two genuinely distinct events can share;
+those legacy rows are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a
+read. Two genuinely DIFFERENT rows under one logical id are never merged: the read refuses the day
+with `{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
+conflicting row for recovery in the tenant's own scope where the ledger-recovery surface lists it, and
+reads the day again on the next call with that row excluded and counted as `counts.conflicts`, in the
+same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+
 Where a pinned slot fell short and still served something, it also wrote records, so the shortfall is on the receipt as well: `explain.shortTake = {take, served, empty, sentence}` rides every record that slot wrote, pinned position or ranked, and `GET /v1/{tenant}/visitors/{visitorId}/receipts` reads its sentence onto `why` exactly as it reads out stage, freshness, fatigue, merchandising and diversity. A refused slot writes no record, so it has no receipt and the counters above are its only home.
 
 With explicit `rendered-v1` slot measurement and approved original retention/recovery, actual rendering sends a signed `content_impression` with original `eventId` and `timestamp`, and data `page, pageInstance, position, contentId, slot, decisionId, renderOffer`. The separate exact response is `render:{version:1,decisionId,eventId,pageInstance,status:'durable',source:'pending'|'recovered'}`. An update/HTTP success alone is not this ACK; pending source admission does not certify every sink. Retry the same original envelope, not a new ID/time. The sealed offer is bounded by original grant/consent/ledger/online expiry and current publication; it is never a persistent profile token. Correlated clicks/dwell follow that exact ACK. See [the rendered integration](./01-integration-guide.md#3-the-ten-lines-that-personalize-a-page).
@@ -279,6 +333,36 @@ All under `/v1/{tenant}/identity/`. The first two take the site key; the rest ta
 | `GET visitor/{visitorId}` | | The link from the browser's end, if any |
 | `GET shopper/{shopperId}` | | The browsers on the person and the history applied; the account id is not on it |
 | `POST events` | JSON `{ rows }` or `text/csv`, each at most 1 MiB of actual streamed UTF-8 bytes and 1000 data rows | Historical actions or versioned typed profile snapshots; existing `accountId \| shopperId \| visitorId` resolution |
+
+### Experiment enrollment across a link
+
+A shopper who has consented to personalization is enrolled once, against a persistent enrollment
+anchor and the published salt of the experiment named in the learn document, and every decision
+record kept for her carries `experiment: { id, saltVersion, arm, anchorGeneration }` — `id` is
+`{tenant}:{brand}:{salt}`, so rotating the salt starts a NEW experiment rather than silently
+re-randomising the running one. The arm is read back from that anchor on every decision; it is
+never re-drawn from whichever id the browser happens to be carrying.
+
+**Across an identity link the enrollment recorded first wins; the arm is never re-drawn from the new id.**
+The anchor of a recognised shopper is the first browser linked to her, so signing in, signing in on
+a second device, or returning months later on a new browser all keep the arm she was first enrolled
+in. `anchorGeneration` is that anchor's generation; recognition does not replace an anchor.
+
+`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.
+A shopper who has not consented to personalization is served exactly what the control arm is served,
+and her decision records, her outcome records and her snapshot answer say `experiment.arm:
+"ineligible"` — she was never drawn, so no comparison may count her as a randomised control. If she
+later turns personalization on, she is enrolled from that moment against the same anchor.
+
+`experiment.reason` says why an assignment is `ineligible`: `personalization_consent` when she has not
+consented to personalization, and `anchor_unavailable` when her persistent enrollment anchor could not
+be read at that moment. An anchor we cannot read is never an invitation to draw a new arm from the id
+her browser happens to be carrying: she is served the site's own defaults, the assignment says
+`ineligible` with that reason, and the occurrence is counted for your operators on
+`GET /v1/{tenant}/learn/queue` as `enrollment_anchor_unavailable`.
+
+Until the hour aggregates carry the experimental assignment, the canonical nightly report groups by the arm served, so an `ineligible` assignment is counted in `default` on that path.
+The day report built on demand from the day's records groups by the assignment.
 
 Historical import requires an existing owned profile and live explicit tracking and personalization choices; legacy preference booleans do not authorize import. It cannot grant consent. Multiple supplied identifiers must resolve to the same subject. Missing state or consent and refused consent are reported by original row index in `skipped`, without changing profile or history counts; corrupt state and failed writes fail the request, which may follow earlier successful subject groups. Original times remain subject to erasure cutoffs and current owner-serialized import/adoption/publication barriers; independent external stores are not one global transaction.
 
@@ -476,12 +560,12 @@ Identity visitor/shopper GETs (including HEAD), identity resolve/erase, ledger e
 | `GET visitors/{visitorId}/receipts[?limit=&cursor=]` | What this shopper was served, newest first, each with the sentences that say why: the interest matched, the region's trend, your model's term, the journey-stage, freshness, fatigue, merchandising and diversity rules, a pinned slot that could not fill its take, the learned lift and whether it was applied, a pin, the holdout arm, an explored pick. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history/projection returns 503, never empty success. Operator token; no-store |
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history returns 503. Operator token; no-store |
 | `GET ledger/{decision_id}`, `GET ledger/{outcome_id}?stream=outcome`, and `GET ledger/{record_id}?stream=product-sort` | One record from the ledger by id, no index needed; consumer/source/readback stages are separate; behavior and complete product-sort records use durable owner admission and managed queue/R2 recovery |
-| `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome\|product-sort][&cursor=]` | The day's batch objects, so a warehouse job knows what to fetch with its own storage credentials. Product-sort objects require the explicit selector; apply erasure cutoffs when loading |
+| `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome\|product-sort][&cursor=]`, or `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The batch objects of one day, or of a window of at most 184 inclusive UTC days, so a warehouse job knows what to fetch with its own storage credentials: the comparison is computed on your side, from the arm-tagged records these objects hold. Each entry names the `date` it belongs to. A window answers the days it read (`days`) and sets `truncated` when it stopped at the object budget or mid-day; `cursor` continues a single `date` only. Product-sort objects require the explicit selector; apply erasure cutoffs when loading. The export states no lift |
 | `GET ledger/erasures` | The visitors whose erasure is pending, each with the moment of erasure: a warehouse job drops their rows at or before that moment from what it loads, until the nightly rewrite has removed them from the objects themselves. `ledger/batches` says how many are pending |
 | `POST ledger/erasures` `{ visitorId }` | The ledger half of an erasure: writes the tombstone every reader honours at once and empties the visitor's ring. The identity erase route calls the same function after erasing the profile. `POST ledger/erasures/rewrite` runs the nightly rewrite now |
 | `GET replay/{decision_id}` | Validates recorded page dependencies, loads required prefix archives (none for a genuine pin), and compares the target including authority/exploration: `{ equal, diff[], used }`; unavailable or inconsistent dependencies fail explicitly |
-| `POST learn/report` `{ date, brand?, policies? }` and `GET learn/report?date=&brand=` | Raw attribution diagnostics from available hour aggregates, or budgeted day-ledger reads for custom policies/fallback. Explicit `policies` arrays, including empty or preset-equivalent arrays, return response-only results and never save the canonical day. Omit `policies` for ordinary canonical publication. POST bodies are limited to64KiB; raw-report budgets below return explicit413 rather than a truncated success. GET reads the stored canonical day, not a guarantee of current or settled coverage. Additive `coverage` reports source limitations; legacy `hours` and counts remain compatible. Aggregation does not establish any-size capacity or complete history. No visitor id in the result |
-| `GET learn/report/window?from=&to=&brand=` | Pools bounded stored day diagnostics over at most 184 inclusive UTC days (the longest six consecutive full calendar months) only where recorded slot computation bases agree. Requested endpoints are preserved; 185 days refuse before storage I/O. Unknown or mixed contributors withhold pooled arms with reasons/dates; found days, source counts and normalized coverage remain visible. Only genuinely missing reports enter `missing`; oversized inputs return413 and corrupt/unavailable inputs503. No experimental compatibility, inference or maturity claim |
+| `POST learn/report` `{ date, brand?, policies? }` and `GET learn/report?date=&brand=` | Raw attribution diagnostics from available hour aggregates, or budgeted day-ledger reads for custom policies/fallback. Explicit `policies` arrays, including empty or preset-equivalent arrays, return response-only results and never save the canonical day. Omit `policies` for ordinary canonical publication. POST bodies are limited to64KiB; raw-report budgets below return explicit413 rather than a truncated success. GET reads the stored canonical day, not a guarantee of current or settled coverage. Additive `coverage` reports source limitations; legacy `hours` and counts remain compatible. Aggregation does not establish any-size capacity or complete history. No visitor id in the result. The answer carries `armVisitors` (per-arm distinct visitors, `null` on a day written before the field existed), `allocation` (the published share and arms the day was served under) and `visitorOutcomes` (per-arm enrolled visitors by outcome type, counted by enrollment and not by content match) |
+| `GET learn/report/window?from=&to=&brand=` | Pools bounded stored day diagnostics over at most 184 inclusive UTC days (the longest six consecutive full calendar months) only where recorded slot computation bases agree. Requested endpoints are preserved; 185 days refuse before storage I/O. Unknown or mixed contributors withhold pooled arms with reasons/dates; found days, source counts and normalized coverage remain visible. Only genuinely missing reports enter `missing`; oversized inputs return413 and corrupt/unavailable inputs503. No experimental compatibility, inference or maturity claim. The answer carries `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled day predates the field |
 | `POST learn/cycle[?brand=]` | Unavailable: valid authenticated requests return 503. Automatic and on-demand proposal generation/application are withdrawn pending W29 safeguards |
 | `GET learn/proposals` | Read-only historical records, explicitly unverified; retained statuses are not proof of successful application and the returned history is not guaranteed complete |
 | `POST learn/proposals/{id}/apply\|reject` | Unavailable: valid authenticated requests return 503 without proposal/configuration access or mutation |

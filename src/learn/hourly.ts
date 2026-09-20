@@ -24,10 +24,10 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
-import { policyOf, slotConfigsOf } from './route';
+import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
+import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
-  type ComputationBasis, type DuplicateCounts, type DuplicateWitness } from './report';
+  type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
 
 export const HOUR_MS = 3600_000;
@@ -609,6 +609,23 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     // Existing anonymous historical max counts are not reconstructed by this fold.
     counts,
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison, computation,
+    // W21 C1.03: the allocation the day was served under is published
+    // configuration and is recorded here as it is on a raw-day build. The
+    // per-arm VISITOR counts are not: an hour aggregate holds the day's
+    // distinct visitors as one number per brand, not one per arm, so this
+    // branch says unknown rather than dividing a total it does not hold.
+    // Carrying them is a schema change in the hour aggregate and its shard
+    // state (F25 §7), named as owed work.
+    allocation: publishedAllocation(learn),
+    // W22 A1.01 (F17 P4): the same named contract as every other path, with the
+    // horizon THIS fold really ran under — the least of the hours it summed, so
+    // the day never claims a reach one of its hours did not have. The window
+    // the tenant published stands beside it, so the difference between "seven
+    // days" and "forty-eight hours" is on the answer instead of in the code.
+    attributionContract: attributionContractOf(learn, sorted.length
+      ? Math.min(...sorted.map(a => Number.isFinite(a.horizonMs) && a.horizonMs >= 0 ? a.horizonMs : 0)) : 0),
+    armVisitors: null,
+    visitorOutcomes: null,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
     hours,
     coverage: reportCoverage({ counts, hours }, {
@@ -1283,7 +1300,7 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
  * from the ledger itself otherwise (a day from before the fold existed, or custom reporting policies,
  * which are computed over the records and so need a day one request can read).
  */
-export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv): Promise<DayReport> {
+export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
   if (reporting === null) {
     const report = await publishAggregateDay(r2, ids, learn, now, false);
     if (report) return report;
@@ -1292,5 +1309,5 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
     const n = await countDayObjects(r2, ids.tenant, ids.date, opts.maxObjects);
     if (n > opts.maxObjects) throw new ReportTooLarge(n, opts.maxObjects);
   }
-  return runReport(r2, ids, learn, reporting, now, retentionEnv);
+  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved);
 }

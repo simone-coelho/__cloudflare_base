@@ -16,8 +16,8 @@ import { boundedLedgerText, equalLogicalRows, logicalIdentity } from '@/ledger/d
 import type { R2Like } from '@/ledger/writer';
 import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type LiftSnapshot, type StatsConfig } from './stats';
-import { policyOf, slotConfigsOf } from './route';
+import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
+import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -33,6 +33,23 @@ export class ReportBudgetExceeded extends Error {
 }
 export class ReportInputError extends Error { constructor() { super('invalid raw report input'); } }
 export class ReportUnavailableError extends Error { constructor() { super('report unavailable'); } }
+/**
+ * W22 D1.03 (F16 §5(j)): the reader met two genuinely DIFFERENT rows under one
+ * logical id. At-least-once delivery cannot prevent it and the writer really
+ * stores it, so the reader refuses the day rather than merge the two — and,
+ * unlike the unnamed input refusal it used to raise, it says which id and which
+ * stream, so an operator can act on it and the caller can file it.
+ */
+export class ReportRowConflict extends ReportInputError {
+  readonly code = 'report_row_conflict';
+  constructor(readonly stream: 'decision' | 'outcome', readonly id: string, readonly row: Record<string, unknown>) {
+    super();
+    // A conflict IS an input the reader refuses, so every caller that already
+    // refuses on `ReportInputError` keeps refusing exactly as before; what is
+    // new is that this one can be named and filed.
+    this.message = 'conflicting rows under one logical id';
+  }
+}
 export class ReportTooLarge extends ReportBudgetExceeded {
   constructor(readonly objects: number, readonly max: number) { super('objects', max, objects); }
 }
@@ -147,6 +164,9 @@ function rowShape(row: unknown, stream: 'decision' | 'outcome'): void {
 }
 
 export interface DuplicateCounts { decisions: number; outcomes: number }
+/** W22 D1.03: logical ids whose conflict is already filed, so the day reads again with the row excluded. */
+export type ResolvedConflicts = ReadonlySet<string>;
+export const conflictKey = (stream: 'decision' | 'outcome', id: string): string => JSON.stringify([stream, id]);
 export interface DuplicateWitness { brand: string; visitor_id: string; ts: number; stream: 'decision' | 'outcome'; count: number }
 export function validDuplicateCounts(value: unknown): value is DuplicateCounts {
   return object(value) && only(value, ['decisions', 'outcomes'])
@@ -158,7 +178,10 @@ export class ReportRowIdentity {
   private rows = new Map<string, { row: Record<string, unknown>; stream: 'decision' | 'outcome'; count: number }>();
   private bytes = 0;
   private work = 0;
-  constructor(private tenant: string) {}
+  private conflicted: DuplicateCounts = { decisions: 0, outcomes: 0 };
+  /** `resolved` holds the conflicts an operator surface already carries; a row
+   * whose conflict is filed is excluded and COUNTED instead of refusing the day. */
+  constructor(private tenant: string, private resolved: ResolvedConflicts = new Set<string>()) {}
   private spend(n = 1): void { bound('work', this.work += n); }
   admit(value: unknown, stream: 'decision' | 'outcome'): boolean {
     this.spend(); rowShape(value, stream);
@@ -172,10 +195,24 @@ export class ReportRowIdentity {
     const id = row[stream === 'decision' ? 'decision_id' : 'outcome_id'];
     const key = JSON.stringify([row.tenant, stream, id]), prior = this.rows.get(key);
     if (!prior) { this.rows.set(key, { row, stream, count: 0 }); return true; }
-    // Old timestamp-derived outcome IDs can represent separate identical events.
-    if (identity === 'legacy' || !equalLogicalRows(prior.row, row, n => this.spend(n))) throw new ReportInputError();
+    // Old timestamp-derived outcome IDs can represent separate identical events:
+    // such an id cannot prove an exact retry, and it cannot name a conflict
+    // either — neither row can be shown to be the intruder — so it keeps the
+    // unnamed refusal it has always had and is never filed or excluded.
+    if (identity === 'legacy') throw new ReportInputError();
+    if (!equalLogicalRows(prior.row, row, n => this.spend(n))) {
+      // W22 D1.03: two different rows under one STABLE logical id are never
+      // merged. Either the conflict is already filed — then this row is
+      // excluded and counted — or the read fails closed and NAMES it.
+      const key = conflictKey(stream, String(id));
+      if (!this.resolved.has(key)) throw new ReportRowConflict(stream, String(id), row);
+      this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
+      return false;
+    }
     prior.count++; return false;
   }
+  /** Rows excluded because their conflict is filed, in the vocabulary `duplicates` uses. */
+  conflicts(): DuplicateCounts { return { ...this.conflicted }; }
   duplicates(): DuplicateWitness[] {
     return [...this.rows.values()].filter(r => r.count > 0).map(({ row, stream, count }) =>
       ({ brand: row.brand as string, visitor_id: row.visitor_id as string, ts: row.ts as number, stream, count }));
@@ -293,7 +330,8 @@ function savedShape(value: unknown, ids: { tenant: string; brand: string; date: 
     }
   }
   if (value.counts !== undefined) { const c = map(value.counts); for (const k of ['decisions', 'outcomes', 'visitors']) count(c[k]); if (typeof c.truncated !== 'boolean'
-    || (Object.hasOwn(c, 'duplicates') && !validDuplicateCounts(c.duplicates))) fail(); }
+    || (Object.hasOwn(c, 'duplicates') && !validDuplicateCounts(c.duplicates))
+    || (Object.hasOwn(c, 'conflicts') && !validDuplicateCounts(c.conflicts))) fail(); }
   if (value.policies !== undefined) {
     if (!Array.isArray(value.policies)) fail();
     bound('policies', (value.policies as unknown[]).length);
@@ -401,12 +439,14 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'attributionContract'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
+  // `armVisitors` rides the summary because the window pools it from here; a
+  // summary written before it existed simply does not carry the key.
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -423,7 +463,11 @@ export function canonicalReportJson(report: DayReport): string {
     builtAt: report.builtAt, counts: report.counts,
     holdout: Object.fromEntries(Object.entries(report.holdout).map(([slot, rows]) =>
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
-    ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation) };
+    ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
+    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    // W22 A1.01: the window pools from the summary, so the contract it pooled
+    // under has to be readable without opening the whole grid.
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
   const full = rawReportJson(report);
@@ -518,6 +562,8 @@ export interface ReportInput {
   outcomes: readonly OutcomeRecord[];
   now: number;
   truncated: boolean;
+  /** W22 D1.03: conflicts already filed, excluded here instead of refusing the day. */
+  resolved?: ResolvedConflicts;
 }
 
 export interface ArmRow {
@@ -534,6 +580,82 @@ export const REPORT_MEASUREMENT = {
   inference: 'unavailable',
   experimentalCoverage: 'not_assessed',
 } as const;
+
+/**
+ * W21 C1.03 (F25 §5.3, §7): the per-arm DENOMINATORS, which decisions are not.
+ * Within a day the figure is distinct visitors; pooled across days it is
+ * visitor-days, and the basis says which, because a visitor active on two days
+ * is two visitor-days and calling both "visitors" would misstate the design
+ * effect. A source that predates the version field is unknown — `null`, never
+ * zero and never re-derived from the decision counts it does hold.
+ */
+export interface ArmVisitors {
+  version: 1;
+  basis: 'distinct_visitors' | 'visitor_days';
+  arms: Array<{ arm: string; visitors: number }>;
+}
+const count = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+export function validArmVisitors(value: unknown, basis: ArmVisitors['basis']): ArmVisitors | null {
+  if (!object(value) || value.version !== 1 || value.basis !== basis || !Array.isArray(value.arms)
+    || value.arms.length > REPORT_LIMITS.cells) return null;
+  const arms: ArmVisitors['arms'] = [];
+  const seen = new Set<string>();
+  for (const row of value.arms as unknown[]) {
+    if (!object(row) || !name(row.arm) || !count(row.visitors) || seen.has(row.arm)) return null;
+    seen.add(row.arm); arms.push({ arm: row.arm, visitors: row.visitors });
+  }
+  return { version: 1, basis, arms: arms.sort((a, b) => a.arm.localeCompare(b.arm)) };
+}
+
+/**
+ * W21 C1.03 (F25 §1.3): the allocation in force when the day was built, so
+ * sample sufficiency is computable on the customer's side under their own
+ * protocol (D04) instead of being answered here from a fixed confidence and an
+ * assumption of equal arms. Recorded from the tenant's published learn
+ * document; absent on a report built before it was recorded.
+ */
+export interface ReportAllocation { version: 1; source: 'published'; share: number; arms: string[] }
+/** The allocation a report records: the tenant's published holdout share and arms. */
+export function publishedAllocation(learn: LearnConfig): ReportAllocation {
+  const share = finite(learn.holdout?.share) ? Math.min(1, Math.max(0, learn.holdout.share)) : 0;
+  return { version: 1, source: 'published', share, arms: [...(learn.holdout?.arms ?? [])] };
+}
+export function validAllocation(value: unknown): ReportAllocation | null {
+  if (!object(value) || value.version !== 1 || value.source !== 'published' || !finite(value.share)
+    || value.share < 0 || value.share > 1 || !Array.isArray(value.arms) || value.arms.length > REPORT_LIMITS.policies
+    || (value.arms as unknown[]).some(arm => !name(arm))) return null;
+  return { version: 1, source: 'published', share: value.share, arms: [...(value.arms as string[])] };
+}
+
+/**
+ * W21 E1.04 (F07 §2.5, §7): business outcomes counted by ENROLLMENT and by
+ * VISITOR, independently of whether a served piece matched them. A control
+ * visitor's purchase counts for control whether or not she was served anything
+ * related to it, and two purchases by one visitor are one purchasing visitor.
+ * No rate is published here: CVR, revenue per visitor and the return rate are
+ * the customer's own unit definitions (D04, W21.P1.01).
+ */
+export interface VisitorOutcomes {
+  version: 1;
+  basis: 'enrolled_visitors';
+  arms: Array<{ arm: string; visitors: number; byType: Record<string, number> }>;
+}
+export function validVisitorOutcomes(value: unknown): VisitorOutcomes | null {
+  if (!object(value) || value.version !== 1 || value.basis !== 'enrolled_visitors' || !Array.isArray(value.arms)
+    || value.arms.length > REPORT_LIMITS.cells) return null;
+  const arms: VisitorOutcomes['arms'] = [];
+  const seen = new Set<string>();
+  for (const row of value.arms as unknown[]) {
+    if (!object(row) || !name(row.arm) || !count(row.visitors) || seen.has(row.arm) || !object(row.byType)) return null;
+    const byType: Record<string, number> = {};
+    for (const [type, n] of Object.entries(row.byType)) {
+      if (!rewards.has(type) || !count(n)) return null;
+      byType[type] = n;
+    }
+    seen.add(row.arm); arms.push({ arm: row.arm, visitors: row.visitors, byType });
+  }
+  return { version: 1, basis: 'enrolled_visitors', arms: arms.sort((a, b) => a.arm.localeCompare(b.arm)) };
+}
 
 export function attributionArm(arm: string, decisions: number, credited: number): ArmRow {
   const creditedPerDecision = decisions > 0 ? credited / decisions : null;
@@ -563,7 +685,9 @@ export interface DayReport {
   brand: string;
   date: string;
   builtAt: number;
-  counts: { decisions: number; outcomes: number; visitors: number; truncated: boolean; duplicates?: DuplicateCounts };
+  counts: { decisions: number; outcomes: number; visitors: number; truncated: boolean; duplicates?: DuplicateCounts;
+    /** W22 D1.03: rows excluded because two different rows share their logical id and the conflict is filed. */
+    conflicts?: DuplicateCounts };
   policies: Array<{ name: string; policy: AttributionPolicy; role: 'learning' | 'reporting'; credits: number }>;
   /** slot → policy name → the grid the engine would have learned under that policy, from this day alone. */
   grids: Record<string, Record<string, LiftSnapshot>>;
@@ -573,6 +697,12 @@ export interface DayReport {
   holdout: Record<string, ArmRow[]>;
   /** Empty compatibility collections. These counts cannot support experimental inference. */
   holdoutComparison: Record<string, never[]>;
+  /** W21 C1.03: per-arm distinct visitors for the day. Null where the source predates the field. */
+  armVisitors?: ArmVisitors | null;
+  /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
+  allocation?: ReportAllocation;
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
   /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
@@ -580,7 +710,17 @@ export interface DayReport {
   coverage?: ReportCoverage;
   /** Null/absent means unknown. Equality is not experimental compatibility. */
   computation?: ComputationBasis | null;
+  /** W22 A1.01: the one named, versioned attribution contract this day was built under. Absent on a report built before it existed. */
+  attributionContract?: AttributionContract;
 }
+
+/**
+ * W22 A1.01: how far back the DIRECT-RECORD recomputation can credit. It reads
+ * one day of decisions and one day of outcomes and attributes the second
+ * against the first, so whatever the policy asks for, this path cannot see a
+ * decision from the day before: its reach is the day itself.
+ */
+export const RAW_DAY_REACH_MS = 86_400_000;
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
@@ -618,19 +758,33 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   };
 }
 
-/** Withdraw historic inference at read time without rewriting the stored report. */
+/**
+ * Withdraw historic inference at read time without rewriting the stored report.
+ *
+ * W21 C1 with position 8 (ruling R108): a report of ours states no business
+ * target at all — not a value, not a standing, not the vocabulary. The per-arm
+ * denominators, the published allocation and the visitor-level outcomes below
+ * are counts the customer computes their own comparison from; nothing here is
+ * read against a target.
+ */
 export function diagnosticDayReport(report: DayReport): DayReport {
   const holdout = Object.fromEntries(Object.entries(report.holdout ?? {}).map(([slot, rows]) =>
     [slot, rows.map(({ arm, decisions, credited }) => attributionArm(arm, decisions, credited))]));
+  const coverage = reportCoverage(report);
+  const allocation = validAllocation(report.allocation);
   return {
     tenant: report.tenant, brand: report.brand, date: report.date, builtAt: report.builtAt,
     counts: report.counts, policies: report.policies, grids: report.grids, exploration: report.exploration,
     measurement: REPORT_MEASUREMENT, holdout,
     holdoutComparison: Object.fromEntries(Object.keys(holdout).map((slot) => [slot, []])),
+    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    ...(allocation ? { allocation } : {}),
+    visitorOutcomes: validVisitorOutcomes(report.visitorOutcomes),
     ...(report.erasures ? { erasures: report.erasures } : {}),
     ...(report.hours ? { hours: report.hours } : {}),
-    coverage: reportCoverage(report),
+    coverage,
     computation: recordedComputation(report.computation),
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
   };
 }
 
@@ -676,7 +830,7 @@ const referenceKey = (tenant: string, visitor: string, id: string) => JSON.strin
 export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<string>): DayReport {
   if (!Array.isArray(i.decisions) || !Array.isArray(i.outcomes)) throw new ReportInputError();
   bound('work', i.decisions.length + i.outcomes.length);
-  const identity = new ReportRowIdentity(i.tenant);
+  const identity = new ReportRowIdentity(i.tenant, i.resolved);
   let decisions = 0, outcomes = 0;
   i = { ...i, decisions: i.decisions.filter(row => { if (!identity.admit(row, 'decision')) return false; bound('records', ++decisions); return true; }),
     outcomes: i.outcomes.filter(row => { if (!identity.admit(row, 'outcome')) return false; bound('records', ++outcomes); return true; }) };
@@ -692,11 +846,34 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const statsCfg: StatsConfig = i.learn.stats ?? DEFAULT_STATS;
   const exposures = new Map<string, ReturnType<typeof emptyStats>>();
   const slotCounts = new Map<string, { arms: Map<string, number>; decisions: number; explored: number }>();
+  // W21 C1.03/E1.04: the day's DENOMINATORS, per arm, in visitors. Kept beside
+  // the decision counts rather than derived from them: the two differ by the
+  // decisions each visitor was served, which is exactly the quantity the design
+  // effect needs and the quantity decisions alone cannot supply (F25 §5.3).
+  const armVisitorIds = new Map<string, Set<string>>();
+  // W21 E1.04 (R118(4)): each visitor's assignments IN TIME, so an outcome can be
+  // attributed to the one in force when it happened instead of to every arm she
+  // appeared on that day — a consent transition would otherwise put one
+  // purchase into both the ineligible and the randomised control rows.
+  const visitorTimeline = new Map<string, Array<{ ts: number; assignment: string }>>();
+  // W21 E1.02 (R108): the arms of a report are the experimental ASSIGNMENTS,
+  // where the record carries one — so a shopper who was never drawn appears as
+  // `ineligible` and is never pooled into the randomised control. A record
+  // written before the provenance block existed is read by its served arm
+  // exactly as before and is never re-interpreted.
+  const assignmentOf = (d: DecisionRecord): string => d.experiment?.arm ?? d.arm;
+  const assignmentById = new Map<string, string>();
   for (const d of i.decisions) {
+    const assignment = assignmentOf(d);
+    if (d.experiment?.arm !== undefined && !assignmentById.has(d.decision_id)) assignmentById.set(d.decision_id, assignment);
     const counts = slotCounts.get(d.slot) ?? { arms: new Map<string, number>(), decisions: 0, explored: 0 };
-    counts.arms.set(d.arm, (counts.arms.get(d.arm) ?? 0) + 1);
+    counts.arms.set(assignment, (counts.arms.get(assignment) ?? 0) + 1);
     if (explorationOpportunity(d) && d.arm !== 'default') { counts.decisions++; if (d.explored) counts.explored++; }
     slotCounts.set(d.slot, counts);
+    const enrolled = armVisitorIds.get(assignment) ?? new Set<string>();
+    enrolled.add(d.visitor_id); armVisitorIds.set(assignment, enrolled);
+    const timeline = visitorTimeline.get(d.visitor_id) ?? [];
+    timeline.push({ ts: d.ts, assignment }); visitorTimeline.set(d.visitor_id, timeline);
     if (d.arm === 'personalized') {
       const st = exposures.get(d.slot) ?? emptyStats();
       recordExposure(st, d.item_id, d.cell, d.rendered?.at ?? d.ts, statsCfg); exposures.set(d.slot, st);
@@ -727,8 +904,11 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
         credits += 1;
         // Explicit selection already proved one subject-owned target. Only
         // absent-ID legacy attribution retains the global first-match lookup.
-        const arm = (Object.hasOwn(o, 'decision_id') ? ring.find(d => d.id === c.decision_id)?.arm
-          : decisionsById.get(c.decision_id)?.arm) ?? 'personalized';
+        // The subject-scoped lookup is unchanged; only the LABEL it resolves to
+        // is the assignment, and only when that same decision carried one.
+        const resolved = Object.hasOwn(o, 'decision_id') ? ring.find(d => d.id === c.decision_id)?.arm
+          : decisionsById.get(c.decision_id)?.arm;
+        const arm = (resolved === undefined ? undefined : assignmentById.get(c.decision_id)) ?? resolved ?? 'personalized';
         armCredits.set(`${c.slot}|${arm}`, (armCredits.get(`${c.slot}|${arm}`) ?? 0) + 1);
         if (arm === 'personalized') { const w = creditWeight(slotCfg[c.slot]?.objective, o); if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, w, statsCfg); }
       }
@@ -760,12 +940,44 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
   });
 
+  // W21 E1.04: outcomes by the arm the VISITOR is enrolled in, never by whether
+  // a served piece matched the outcome. A visitor served on two arms in one day
+  // counts once under each; under persistent enrollment there is only one.
+  for (const timeline of visitorTimeline.values()) timeline.sort((a, b) => a.ts - b.ts);
+  /** The assignment in force at `ts`: her last decision at or before it, else her first of the day. */
+  const assignmentAt = (visitor: string, ts: number): string | null => {
+    const timeline = visitorTimeline.get(visitor);
+    if (!timeline?.length) return null;
+    let held: string | null = null;
+    for (const entry of timeline) { if (entry.ts > ts) break; held = entry.assignment; }
+    return held ?? timeline[0]!.assignment;
+  };
+  const outcomeVisitors = new Map<string, Map<string, Set<string>>>();
+  for (const o of i.outcomes) {
+    const arm = assignmentAt(o.visitor_id, o.ts);
+    if (arm === null) continue;
+    const byType = outcomeVisitors.get(arm) ?? new Map<string, Set<string>>();
+    const visitors = byType.get(o.type) ?? new Set<string>();
+    visitors.add(o.visitor_id); byType.set(o.type, visitors); outcomeVisitors.set(arm, byType);
+  }
+  const armNames = [...armVisitorIds.keys()].sort((a, b) => a.localeCompare(b));
+  const armVisitors: ArmVisitors = { version: 1, basis: 'distinct_visitors',
+    arms: armNames.map(arm => ({ arm, visitors: armVisitorIds.get(arm)!.size })) };
+  const visitorOutcomes: VisitorOutcomes = { version: 1, basis: 'enrolled_visitors',
+    arms: armNames.map(arm => ({ arm, visitors: armVisitorIds.get(arm)!.size,
+      byType: Object.fromEntries([...(outcomeVisitors.get(arm) ?? new Map<string, Set<string>>())]
+        .sort(([a], [b]) => a.localeCompare(b)).map(([type, visitors]) => [type, visitors.size] as const)) })) };
+
   const report: DayReport = {
     tenant: i.tenant, brand: i.brand, date: i.date, builtAt: i.now,
     counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated },
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison,
+    armVisitors, visitorOutcomes, allocation: publishedAllocation(i.learn),
     computation: new Set(policies.map(p => p.name)).size === policies.length
       ? computationBasis(i.learn, policies, slots, { source: 'raw-day', horizonMs: null, ringCap: null }) : null,
+    // W22 A1.01: what the tenant's published policy asks for, and the one day
+    // this path could actually read it over.
+    attributionContract: attributionContractOf(i.learn, RAW_DAY_REACH_MS),
     coverage: reportCoverage({ counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated }, hours: { source: 'ledger', built: [], missing: [] } }, {
       version: 1, source: 'ledger', truncated: i.truncated, visitorsIncomplete: null,
       missingHours: [], truncatedHours: [], unadvancedHours: [], unknownHours: [], horizons: [],
@@ -803,7 +1015,7 @@ export async function rawText(obj: NonNullable<Awaited<ReturnType<R2Like['get']>
 }
 
 /** General callers retain explicit truncation; raw reports supply one shared strict budget. */
-export async function loadDay<T>(r2: R2Like, tenant: string, date: string, stream: 'decision' | 'outcome', cap: number, strict?: RawReadBudget): Promise<{ records: T[]; truncated: boolean; duplicates?: DuplicateWitness[] }> {
+export async function loadDay<T>(r2: R2Like, tenant: string, date: string, stream: 'decision' | 'outcome', cap: number, strict?: RawReadBudget, resolved?: ResolvedConflicts): Promise<{ records: T[]; truncated: boolean; duplicates?: DuplicateWitness[]; conflicts?: DuplicateCounts }> {
   const prefix = `${tenant}/${date}/`;
   const keys: string[] = strict ? (strict.keys ?? await rawKeys(r2, prefix, strict))[stream] : [];
   let cursor: string | undefined;
@@ -815,7 +1027,7 @@ export async function loadDay<T>(r2: R2Like, tenant: string, date: string, strea
     } while (cursor);
     keys.sort();
   }
-  const records: T[] = [], identity = new ReportRowIdentity(tenant);
+  const records: T[] = [], identity = new ReportRowIdentity(tenant, resolved);
   let truncated = false, lines = 0;
   for (const key of keys) {
     const obj = await r2.get(key);
@@ -838,11 +1050,13 @@ export async function loadDay<T>(r2: R2Like, tenant: string, date: string, strea
     }
     if (truncated) break;
   }
-  const duplicates = identity.duplicates();
-  return { records, truncated, ...(duplicates.length ? { duplicates } : {}) };
+  const duplicates = identity.duplicates(), conflicts = identity.conflicts();
+  return { records, truncated, ...(duplicates.length ? { duplicates } : {}),
+    ...(conflicts.decisions || conflicts.outcomes ? { conflicts } : {}) };
 }
 
 export const reportKey = (tenant: string, brand: string, date: string) => `reports/${tenant}/${brand}/${date}.json`;
+export const reportPrefix = (tenant: string) => `reports/${tenant}/`;
 export const REPORT_CAP = REPORT_LIMITS.records;
 /** A Worker may open only so many storage objects in one request; past this many ledger objects a day is built by the nightly job, not on demand. */
 export const REPORT_MAX_OBJECTS = REPORT_LIMITS.objects;
@@ -865,6 +1079,74 @@ export async function countDayObjects(r2: R2Like, tenant: string, date: string, 
   return n;
 }
 
+/**
+ * W22 R1.05 (document 35 §5 row W22, "durable online/R2/fold/export
+ * reconciliation"; F16 §4.4): what the day's export partition actually holds,
+ * beside what the platform published for the same day.
+ *
+ * `rows` is the physical count a warehouse job would load if it read every
+ * listed object line by line. `distinct` applies exactly the reader's own
+ * dedup — `ReportRowIdentity`, the same admission `loadDay` uses — and then the
+ * erasures the listing already tells the consumer to apply, so it is the number
+ * the report counted from the same objects. `report` is the day report the
+ * platform published for this brand. `agrees` is false whenever the two cannot
+ * be shown to match, including when the read stopped short: it never claims an
+ * agreement it did not observe.
+ *
+ * It opens no object the listing did not already name and lists nothing a
+ * second time: the caller passes the keys it has just listed, and the report is
+ * a point read of its own key. The comparison is over the ledger's own logical
+ * ids, which every exported row already carries; nothing here re-derives a
+ * record's provenance.
+ */
+export interface ExportReconciliation {
+  rows: { decisions: number; outcomes: number };
+  distinct: { decisions: number; outcomes: number };
+  report: { decisions: number; outcomes: number };
+  agrees: boolean;
+}
+
+export async function exportReconciliation(
+  r2: R2Like, ids: { tenant: string; brand: string; date: string }, keys: readonly string[],
+  tombs: ReadonlyMap<string, Pick<import('@/ledger/erasure').Tombstone, 'erased_at'>>,
+): Promise<ExportReconciliation | null> {
+  try {
+    validateReportIds(ids);
+    const identity = new ReportRowIdentity(ids.tenant);
+    const rows = { decisions: 0, outcomes: 0 };
+    const distinct = { decisions: 0, outcomes: 0 };
+    const budget: RawReadBudget = { objects: 0, bytes: 0 };
+    let lines = 0;
+    for (const key of [...keys].sort()) {
+      const stream: 'decision' | 'outcome' | null = key.includes('/decision/') ? 'decision' : key.includes('/outcome/') ? 'outcome' : null;
+      if (!stream || isProductSortKey(key)) continue;
+      if (++budget.objects > REPORT_LIMITS.objects) throw new ReportTooLarge(budget.objects, REPORT_LIMITS.objects);
+      const obj = await r2.get(key);
+      if (!obj) continue;                 // the listing raced a delete; it holds nothing now
+      const text = await rawText(obj, budget);
+      const field = stream === 'decision' ? 'decisions' : 'outcomes';
+      let offset = 0;
+      while (offset < text.length) {
+        bound('work', ++lines);
+        const end = text.indexOf('\n', offset), line = text.slice(offset, end < 0 ? text.length : end);
+        offset = end < 0 ? text.length : end + 1;
+        if (!line) continue;
+        const row: unknown = JSON.parse(line);
+        rows[field]++;
+        if (!identity.admit(row, stream)) continue;
+        bound('records', distinct[field] + 1);
+        if (!hidden(tombs, row as { visitor_id: string; ts: number })) distinct[field]++;
+      }
+    }
+    const saved = await readWindowSummary(r2 as unknown as SavedReportReader, ids, { bytes: 0, cells: 0 });
+    const published = !!saved?.counts;
+    const report = { decisions: finite(saved?.counts?.decisions) ? saved!.counts.decisions : 0,
+      outcomes: finite(saved?.counts?.outcomes) ? saved!.counts.outcomes : 0 };
+    const agrees = published && distinct.decisions === report.decisions && distinct.outcomes === report.outcomes;
+    return { rows, distinct, report, agrees };
+  } catch { return null; }
+}
+
 export async function runReport(
   r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
   ids: { tenant: string; brand: string; date: string },
@@ -872,14 +1154,15 @@ export async function runReport(
   reporting: ReportPolicy[] | null,
   now = Date.now(),
   retentionEnv?: RetentionEnv,
+  resolved?: ResolvedConflicts,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
   bound('policies', overlays.length + 1); validateReportPolicies([learning, ...overlays]);
   const budget: RawReadBudget = { objects: 0, bytes: 0 };
   // Sequential reads share limits and stop before later streams/erasure reads on refusal.
-  const d = await loadDay<DecisionRecord>(r2, ids.tenant, ids.date, 'decision', REPORT_CAP, budget);
-  const o = await loadDay<OutcomeRecord>(r2, ids.tenant, ids.date, 'outcome', REPORT_CAP, budget);
+  const d = await loadDay<DecisionRecord>(r2, ids.tenant, ids.date, 'decision', REPORT_CAP, budget, resolved);
+  const o = await loadDay<OutcomeRecord>(r2, ids.tenant, ids.date, 'outcome', REPORT_CAP, budget, resolved);
   const tombs = await loadTombstones(r2, ids.tenant);
   // CW28: an erased visitor's rows are dropped here at once; the nightly rewrite removes them from the objects.
   const dBrand = d.records.filter((x) => x.brand === ids.brand), oBrand = o.records.filter((x) => x.brand === ids.brand);
@@ -896,13 +1179,17 @@ export async function runReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes,
+    decisions, outcomes, ...(resolved ? { resolved } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };
   const duplicates = [...(d.duplicates ?? []), ...(o.duplicates ?? [])].filter(row => row.brand === ids.brand && !hidden(tombs, row));
   if (duplicates.length) report.counts.duplicates = { decisions: duplicates.filter(row => row.stream === 'decision').reduce((n, row) => n + row.count, 0),
     outcomes: duplicates.filter(row => row.stream === 'outcome').reduce((n, row) => n + row.count, 0) };
+  // W22 D1.03: the rows this day excluded because their conflict is filed,
+  // counted in the same vocabulary as the duplicates beside them.
+  const excluded = { decisions: (d.conflicts?.decisions ?? 0), outcomes: (o.conflicts?.outcomes ?? 0) };
+  if (excluded.decisions || excluded.outcomes) report.counts.conflicts = excluded;
   report.hours = { source: 'ledger', built: [], missing: [] };
   // Explicit overlays (even [] or the preset list) are response-only. They must not
   // replace the canonical aggregate/raw report subsequently read by GET/window.

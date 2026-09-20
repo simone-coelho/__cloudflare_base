@@ -125,6 +125,38 @@ export interface LevelStat {
   prior?: { p: number; n: number };
 }
 export interface ItemStats { levels: LevelStat[] }
+
+/**
+ * W22 A1.01 (document 35 §5 row W22: "Define one attribution contract with
+ * versioned histories/horizons, not blindly identical caps"; N23; F17 P4).
+ *
+ * ONE contract, named and versioned, carried by every path that reports
+ * attribution — the day report built from records, the day report built from
+ * hours, the window report and the published lift snapshot — so a reader can
+ * see that two numbers were produced under the same history, and can see WHERE
+ * they differ when they were not.
+ *
+ * The two window maps are deliberately separate and are never the same number
+ * by construction:
+ *   · `windowsMs` is what the TENANT'S PUBLISHED POLICY asks for, per reward.
+ *   · `appliedWindowsMs` is the horizon that path could actually read — the
+ *     fold's own `horizonMs`, the raw day's one day, the online ring's own age
+ *     limit — and is never larger than what was asked for.
+ * F17 P4 is exactly the gap between them: a seven-day purchase window against a
+ * forty-eight-hour batch horizon, where "the engine learns from a credit the
+ * report cannot show". Stating both makes that difference visible instead of
+ * letting one label stand for two different computations.
+ */
+export interface AttributionContract {
+  name: 'attribution';
+  /** Bumped only when the meaning of a number under this contract changes. */
+  version: number;
+  history: { scope: 'session' | 'visitor'; match: 'direct' | 'any'; credit: 'first' | 'last' };
+  /** Per reward, what the tenant's published policy asks for. */
+  windowsMs: Record<string, number>;
+  /** Per reward, the horizon this path really applied. Never above `windowsMs`. */
+  appliedWindowsMs: Record<string, number>;
+}
 export interface LiftSnapshot {
   measurementBasis?: import('@/content/types').MeasurementBasis;
   /** Exact committed state/fence identity checked against the authoritative DO. */
@@ -143,6 +175,8 @@ export interface LiftSnapshot {
   items: Record<string, Record<string, LevelStat>>;
   /** level key → the slot's own decayed n, s and smoothed rate in that cell */
   slotRates: Record<string, { n: number; s: number; rate: number }>;
+  /** W22 A1.01: the attribution contract these counts were produced under. Absent on an archive from before it existed. */
+  attributionContract?: AttributionContract;
 }
 
 /**
@@ -154,7 +188,7 @@ export interface LiftSnapshot {
  * an item's events at a fine level are the same events at every coarser one,
  * and shrinking toward yourself is not shrinkage. §5.3's example is exact.
  */
-export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1'): LiftSnapshot {
+export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1', attributionContract?: AttributionContract): LiftSnapshot {
   const tau = cfg.tauLearnMs;
   // The slot's rate per level key, shrunk toward the parent key's rate; the root shrinks toward itself.
   const slotRates: LiftSnapshot['slotRates'] = {};
@@ -204,6 +238,7 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
     items[item] = out;
   }
   return { tenant: ids.tenant, brand: ids.brand, slot: ids.slot, reward, objective, measurementBasis, tauLearnMs: cfg.tauLearnMs, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates,
+    ...(attributionContract ? { attributionContract } : {}),
     ...(st.bounded ? { completeness: { depth: st.bounded.depth, omittedItems: st.bounded.closed === true,
       selection: st.bounded.selection, reason: st.bounded.closed ? 'item-capacity' as const : st.bounded.depth < 5 ? 'coarse' as const : 'complete' as const } } : {}) };
 }

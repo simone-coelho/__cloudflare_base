@@ -32,13 +32,29 @@ import type { StatsConfig } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
-import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES } from '@/ledger/delivery';
+import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES, recordEvidenceLoss } from '@/ledger/delivery';
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { pinRetention } from '@/identity/sessionAuthority';
 import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
 
 /** Physical input/comparison budgets, not retained-history or provider limits. */
 export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_000 } as const;
+
+/**
+ * The online path's own horizon, used for two things that must never drift
+ * apart. The visitor's `DecisionRing` keeps seven days of receipts
+ * (`DecisionRing.ts` RING_MAX_AGE_MS), so:
+ *   · W22 A1.01 — whatever window the tenant's published policy asks for, this
+ *     is the horizon the online path can actually apply, which is what its
+ *     snapshot's `appliedWindowsMs` declares.
+ *   · W22 D1.02 (F16 §7, §2.3; ruling R104(c)) — it is also how far back the
+ *     two halves of the online path can recognize a REDELIVERY they have
+ *     already applied: the exposure in `LearnStats` and the credit in
+ *     `DecisionRing` forget a delivery at the same moment, and neither claims
+ *     idempotence beyond it. A repeat arriving after it is applied again, and
+ *     no unit claims otherwise.
+ */
+export const ONLINE_RING_REACH_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
 export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
@@ -176,6 +192,23 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const credits: StatsDelivery = { ...r.credits };
   return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits };
 }
+/**
+ * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
+ * refusal F16 §5(c) says every caller records as delivered. A destination that
+ * was never called (`notAttempted`) is a binding that is absent, not a post
+ * that was refused, and is not counted here.
+ */
+export function fanOutRejectedRows(out: LearningReceipt): number {
+  // The statistics objects only. The visitor's ring is one destination for a
+  // whole set, and its own failure is already a receipt the caller reports; it
+  // is not a row the statistics refused, and counting it here would say a row
+  // of evidence was rejected when the ring simply did not answer.
+  return out.exposures.rowsUnknown + (out.outcome?.credits.rowsUnknown ?? 0);
+}
+async function reportFanOutLoss(env: Partial<Pick<Env, 'CACHE'>>, tenant: string, out: LearningReceipt): Promise<LearningReceipt> {
+  await recordEvidenceLoss(env, tenant, 'fanOutRejected', fanOutRejectedRows(out));
+  return out;
+}
 function finish(out: LearningReceipt): LearningReceipt {
   out.ok = out.code === 'complete' && total(out.ring.destinations, out.ring.acknowledged, out.ring.unknown, out.ring.notAttempted)
     && out.ring.acknowledged === out.ring.destinations && isStatsDelivery(out.exposures)
@@ -274,7 +307,7 @@ export async function prepareExposureEffects(env: Env, records: DecisionRecord[]
 }
 
 /** After a decision set is served: the ring gets the full records, each slot's object gets its exposures. */
-export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
+export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
   const out = receipt('decisions', Array.isArray(set.records) ? set.records.length : 0);
   try {
     const { tenant, brand, visitor_id: visitorId, records: input } = set, budget = admission();
@@ -325,10 +358,19 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
     out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size,
       received: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0) };
-    const exposures = [...bySlot].map(([slot, rows]) => ({ slot, body: {
+    // W22 D1.02 (F16 §7): "put `decision_id` back into the `/exposures` payload
+    // so `LearnStats` can do the same". A decision is served once, so its
+    // logical id is what makes a redelivered exposure recognizable — and the
+    // digest of the WHOLE served record travels with it, because two different
+    // records under one id are two events, not a repeat (F16 §5(j)), and the
+    // payload alone cannot tell them apart. The managed path carries neither:
+    // its effect marker already proves the same thing, and adding fields to its
+    // row would change the digest every stored marker was written under.
+    const exposures = await Promise.all([...bySlot].map(async ([slot, rows]) => ({ slot, body: {
       tenant, brand, slot, config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
-      exposures: rows.map(r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts, ...(managed ? { effect: managed.effects[r.decision_id] } : {}) })),
-    } }));
+      exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
+        ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
+    } })));
     // All validation/barrier/config reads precede starting either destination.
     for (const row of records) requireRetention(env as RetentionEnv, row.retention?.online, tenant, 'online');
     out.code = 'complete';
@@ -343,11 +385,11 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     if (ring.state === 'acknowledged') out.append = ring.receipt;
     out.exposures = sumStatsDeliveries(stats);
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
-  return finish(out);
+  return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }): Promise<LearningReceipt> {
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -366,5 +408,5 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
-  return finish(out);
+  return reportFanOutLoss(env, tenant, finish(out));
 }
