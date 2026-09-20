@@ -91,7 +91,7 @@ import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { consumeLedger } from '@/ledger/consume';
 import { writeTombstone } from '@/ledger/erasure';
-import { HISTORICAL_EXPLORATION } from '@/learn/explore';
+import { bucketOf, hourKeyOf, HISTORICAL_EXPLORATION } from '@/learn/explore';
 import { liftArchiveKey, liftKey, statsName } from '@/learn/fan';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { replayDecision, replayDeps, type ReplayDeps, type ReplayResult } from '@/learn/replay';
@@ -175,11 +175,16 @@ const learnDocument = (f: LearnFixture = {}) => ({
 const SLOT_CONFIG = { reward: 'click' as const, objective: 'unit' as const, stats: DEFAULT_STATS };
 
 /**
- * A fixed decision time, five minutes in the past: `explorationPick` seeds its
- * bucket from `hourKeyOf(nowMs)` and the retention birth is the record's own
- * `ts`, so nothing here may depend on the wall clock at assertion time.
+ * The decision time, PINNED to a literal epoch (2026-09-18 12:00:00Z): rotation
+ * is gated on `Math.round(bucketOf(visitorId, slot, hourKeyOf(nowMs)) * 1000) /
+ * 1000 >= share` (`src/learn/explore.ts:90, :107`), so an unpinned clock would
+ * put the γ = 0 legs of W27.R1.01 in an hour whose bucket rounds to 1.000 and
+ * flip them. At this epoch `hourKeyOf(NOW)` is '497148' and the gate is open;
+ * the assertion beside the fixture proves it rather than trusting the comment.
+ * Retention births from this same `ts` and the fixture policy runs a year, so
+ * every record is inside its horizon at assertion time.
  */
-const NOW = Date.now() - 5 * 60_000;
+const NOW = Date.UTC(2026, 8, 18, 12, 0, 0);
 
 // ===========================================================================
 // The stores, the real statistics object and the published documents. Harness
@@ -542,8 +547,14 @@ describe('unit:W27.M1.01', () => {
     await observe(w, 'chero', [{ item: 'cnt-charms-slg', exposures: 100, clicks: 90 }, { item: 'cnt-tabby-evening', exposures: 100, clicks: 1 },
       { item: 'cnt-rogue-work', exposures: 100, clicks: 1 }, { item: 'cnt-unknown-signal', exposures: 100, clicks: 1 }]);
     await observe(w, 'story', [{ item: 'cnt-tabby-evening', exposures: 100, clicks: 5 }]);
-    const chero = await w.publish('chero'), story = await w.publish('story');
-    const snapshots = { chero, story };
+    // R165(1): the PINNED slot has a published snapshot of its own, so its zero
+    // dependency is PRODUCED by the guards at `decide.ts:437` and `:470` rather
+    // than by the absence of anything to name. Learning really did observe this
+    // slot; the pin is why the decision could not have used it (F22 §4.4).
+    await observe(w, 'merch', [{ item: 'cnt-merch-pin', exposures: 100, clicks: 40 }, { item: 'cnt-tabby-evening', exposures: 100, clicks: 3 }]);
+    const chero = await w.publish('chero'), story = await w.publish('story'), merch = await w.publish('merch');
+    expect(merch.version, 'the pinned slot has a live snapshot identity the guard must suppress').toBeGreaterThan(0);
+    const snapshots = { merch, chero, story };
     const records = decidePage(w, snapshots);
 
     // (iii) The manifest is the page, in page order, at the identities the
@@ -556,9 +567,15 @@ describe('unit:W27.M1.01', () => {
     for (const record of records) expect(record.inputs!.replay, `${record.slot} carries the whole page`).toEqual(expected);
 
     // F22 §4.4: a decision learning could not have touched is not stamped with
-    // a lift version it never used.
+    // a lift version it never used — with `merch/${merch.version}` sitting in
+    // the archive, so the zero is the guard's answer and not an empty slot's.
     const pin = recordFor(records, 'merch');
     expect(pin).toMatchObject({ authority: 'pin', item_id: 'cnt-merch-pin', versions: { lift: 0, prior: 0 } });
+    expect(await replayDeps(w.env).archive(TENANT, BRAND, 'merch', merch.version), 'the suppressed snapshot exists').not.toBeNull();
+    // ...and the pin replays without ever asking for it.
+    const pinDeps = trackedDeps(w);
+    expect(await replayDecision(w.env, pin, pinDeps)).toMatchObject({ ok: true, equal: true, diff: [] });
+    expect(pinDeps.archives).toEqual([]);
     // ...and the slots that did learn carry their own snapshot's identity.
     expect(recordFor(records, 'chero').versions).toMatchObject({ lift: chero.version, prior: chero.priorVersion ?? 0 });
     expect(recordFor(records, 'story').versions).toMatchObject({ lift: story.version, prior: story.priorVersion ?? 0 });
@@ -660,6 +677,12 @@ describe('unit:W27.R1.01', () => {
     expect(pinDeps.archives).toEqual([]);
 
     // ---- γ = 0: the exploration channel on the earlier slot (F22 §2.2) ----
+    // R165(2): rotation is gated on the visitor's bucket for this slot and hour
+    // (`explore.ts:90, :107`). `NOW` is a literal epoch, and the gate it yields
+    // is asserted here so the two γ = 0 legs below can never be silently
+    // disarmed by the hour the suite happens to run in.
+    expect(hourKeyOf(NOW)).toBe('497148');
+    expect(Math.round(bucketOf(VISITOR, 'chero', hourKeyOf(NOW)) * 1000) / 1000).toBeLessThan(1);
     const shadow = await world({ gamma: 0, exploration: { mode: 'rotation', share: 1, floor: 50 } });
     await observe(shadow, 'chero', [{ item: 'cnt-tabby-evening', exposures: 100, clicks: 1 }, { item: 'cnt-rogue-work', exposures: 100, clicks: 1 },
       { item: 'cnt-unknown-signal', exposures: 100, clicks: 1 }, { item: 'cnt-charms-slg', exposures: 1, clicks: 0 }]);
@@ -894,6 +917,17 @@ describe('unit:W27.O1.01', () => {
     const corrupt = structuredClone(current);
     (corrupt.inputs!.replay as unknown as Record<string, unknown>).candidateLimit = Infinity;
     expect(await replayDecision(w.env, corrupt, replayDeps(w.env))).toMatchObject({ ok: false, reason: 'invalid page replay manifest' });
+
+    // R165(3): a `version` that is not a nonnegative safe integer above the one
+    // this build implements is NOT a rollout event and is never interpolated
+    // into the operator-visible sentence (kit :312, the nonnegative-safe-integer
+    // rule that governs every recorded identity before a dependency is read).
+    for (const version of ['2', 2.5, -1, 0, {}, null, Number.MAX_SAFE_INTEGER + 1]) {
+      const malformed = structuredClone(current);
+      (malformed.inputs!.replay as unknown as Record<string, unknown>).version = version;
+      expect(await replayDecision(w.env, malformed, replayDeps(w.env)), JSON.stringify(version) ?? 'undefined')
+        .toMatchObject({ ok: false, equal: false, replayed: null, reason: 'invalid page replay manifest' });
+    }
 
     // A manifest version this build does not implement is a ROLLOUT event, and
     // the refusal names the version it was handed.
