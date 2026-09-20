@@ -564,8 +564,13 @@ describe('unit:W22.D1.04', () => {
     const d1 = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
     const first = click(m.env, d1, ONLINE_TS + 60_000, 'w22-b2-digest-click');
     // A genuinely different event that the engine's own id cannot tell apart:
-    // the same `outcome_id`, another item. `logicalIdentity` calls it `stable`.
-    const second = { ...first, item_id: 'cnt-rogue-work' } as OutcomeRecord;
+    // the same `outcome_id`, another VALUE — one of the three fields the id
+    // does not cover (`records.ts:270`; F16 §5(j)). `logicalIdentity` calls it
+    // `stable`, `attribute()` credits it against the same decision, and only
+    // the id-keyed journal drops it (ruling R133 item 1: `item_id` is the field
+    // the `direct` match keys on, so a record differing by it never attributes
+    // and could not reach this credit at all).
+    const second = { ...first, value: 495 } as OutcomeRecord;
     await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] }, slotConfig);
 
     await fanOutcome(m.env, TENANT, first, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
@@ -708,9 +713,14 @@ describe('unit:W22.A1.02', () => {
     expect(fan.ONLINE_RING_REACH_MS === ring.RING_MAX_AGE_MS,
       `W22.A1.02 — and the fan-out's reach IS that constant, not a copy of its value (fan.ts has ${String(fan.ONLINE_RING_REACH_MS)}, the ring has ${String(ring.RING_MAX_AGE_MS)})`)
       .toBe(true);
-    const source = readFileSync('src/learn/fan.ts', 'utf8');
-    expect(source.includes('RING_MAX_AGE_MS'),
-      'W22.A1.02 — read in the source: `src/learn/fan.ts` names the ring\'s own constant')
+    // Read from this file's own location, never from the process's working
+    // directory: a cwd-relative read takes another checkout's file (R133 item 2).
+    const source = readFileSync(new URL('../../learn/fan.ts', import.meta.url), 'utf8');
+    expect(/import\s*\{[^}]*\bRING_MAX_AGE_MS\b[^}]*\}\s*from\s*'@\/durable-objects\/DecisionRing'/.test(source),
+      'W22.A1.02 — `src/learn/fan.ts` IMPORTS the ring\'s own constant')
+      .toBe(true);
+    expect(/ONLINE_RING_REACH_MS\s*=\s*RING_MAX_AGE_MS\s*;/.test(source),
+      'W22.A1.02 — and its reach IS that binding, not a second literal')
       .toBe(true);
     expect(/ONLINE_RING_REACH_MS\s*=\s*7\s*\*/.test(source),
       'W22.A1.02 — and no longer restates the literal seven days beside it, which is how the two drifted apart')
