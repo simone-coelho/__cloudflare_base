@@ -39,7 +39,7 @@ import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE } from '@/learn/explore';
-import type { ContentCatalog, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
 import { readEnrollmentHealth } from '@/content/holdout';
@@ -60,6 +60,39 @@ async function readConfig<T>(c: { env: Env }, kind: DocumentKind<T>, tenant: str
   let pin = requestPins.get(c);
   if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
   return (await readPinnedPublication(c.env, kind, tenant, await pin)).value;
+}
+/**
+ * The tenant's proposal list for a work queue, where a tenant that has never
+ * run a learning cycle has published no proposals document at all.
+ *
+ * Absence and unreadability are kept apart, which is the whole point: the
+ * publication SET is still read and still authoritative, and only the set's own
+ * statement that this member does not exist answers "no proposals". A storage
+ * or authority failure still refuses, exactly as it did.
+ */
+async function publishedProposals(c: { env: Env }, tenant: string): Promise<ProposalsDoc> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  const published = Object.values(set.refs).some(ref => ref.kind === PROPOSALS_KIND.name && ref.scope === tenant);
+  return published ? readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant) : { proposals: [] };
+}
+/**
+ * The decisions an outcome credits, with the provenance each of them was
+ * DECIDED under. Only the outcome's own explicit reference is followed: a
+ * record that names no decision is not searched for one, because guessing which
+ * decision an outcome credits is the reporting policy's job and not the
+ * export's. Bounded by that one lookup, and any failure to read it leaves the
+ * list empty rather than refusing the export.
+ */
+async function creditedDecisionProvenance(c: { env: Env }, tenant: string, outcome: CapturedRecord): Promise<Array<{ decision_id: string; experiment?: EnrollmentProvenance }>> {
+  const reference = (outcome as { decision_id?: unknown }).decision_id;
+  if (typeof reference !== 'string' || !reference || !validLedgerSelector(tenant, reference)) return [];
+  try {
+    const decision = await findById<DecisionRecord>(c.env.STORAGE as unknown as R2Like, reference, 'decision');
+    if (!decision || decision.record.tenant !== tenant || decision.record.visitor_id !== outcome.visitor_id) return [];
+    return [{ decision_id: reference, ...(decision.record.experiment ? { experiment: decision.record.experiment } : {}) }];
+  } catch { return []; }
 }
 const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 /**
@@ -290,7 +323,7 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   const now = Date.now();
   const [slots, catalog, learn, proposals, tombs] = await Promise.all([
     readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant),
-    readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
+    publishedProposals(c, tenant), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
   ]);
   const index = slotsIndex(slots, catalog, learn, now);
   const entries = index.pages.flatMap((p) => p.slots);
@@ -665,7 +698,17 @@ decisionRoutes.get('/:tenant/ledger/:id', operatorJwt(), async (c) => {
   if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
   witness = structuredClone(requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger'));
   const record = Object.fromEntries(Object.entries(found.record).filter(([key]) => key !== DELIVERY_FIELD));
-  return c.json({ ok: true, stream, key: found.key, record });
+  // W21 E1.03 (ruling R118(7)): an outcome is delivered beside the provenance of
+  // the DECISIONS it credits, so a join across a salt rotation is never empty.
+  // The decision's own block is copied as it was stored — never re-derived from
+  // today's published salt, which is the hazard R101(a) forbids — and an
+  // outcome whose credited decision carries none, or that names no decision at
+  // all, simply has nothing to add.
+  const credited = stream === 'outcome' ? await creditedDecisionProvenance(c, tenant, found.record) : [];
+  if (stream === 'outcome' && record.experiment === undefined && credited.length === 1 && credited[0]!.experiment) {
+    record.experiment = credited[0]!.experiment;
+  }
+  return c.json({ ok: true, stream, key: found.key, record, ...(stream === 'outcome' ? { creditedDecisions: credited } : {}) });
   });
   if (response.ok && witness) try { requireRetention(c.env, witness, tenant, 'ledger'); }
   catch { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); }

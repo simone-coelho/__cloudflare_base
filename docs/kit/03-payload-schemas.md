@@ -407,7 +407,6 @@ what it changes.
 | Field | Meaning | Default |
 |---|---|---|
 | `holdout.share`, `holdout.arms` | The share of visitors held out, by a stable hash, and which arms exist (`default`, `no_learning`) | 0.05, `default` |
-| `targets.minimum`, `target`, `stretch` | Your OWN pre-set business targets, as relative lift, ordered minimum ≤ target ≤ stretch. Published configuration only: no customer's numbers are compiled into the platform, and no report of ours ever states that a target was reached | none |
 | `regional.enabled`, `kBlend`, `minEvents` | The population prior on the base score | on, 1, 30 |
 | `policy.scope`, `match`, `credit`, `windowsMs` | The attribution policy: `session` or `visitor`; `direct` or `any`; `last` or `first`; per reward, how long after a decision an outcome may still count | session, direct, last; click 30 min, add to bag 6 h, purchase 7 d |
 | `stats.n0`, `tauLearnMs`, `liftMin`, `liftMax`, `nMin` | The estimator: prior strength, the decay horizon, the lift clamp, the evidence threshold per cell | 30, 21 days, 0.5, 2, 30 |
@@ -441,19 +440,24 @@ rate }`. `version` is the publish time in milliseconds and is what a decision's 
 visitors, truncated }, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
 mode } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
-visitorOutcomes, targets }`. `armVisitors` is `{ version, basis: "distinct_visitors", arms: [ { arm, visitors } ] }` — whose `arm`
-is the experimental ASSIGNMENT where the day's records carry one, so an `ineligible` row stands on its
-own and is never pooled into `default`, and a record written before the provenance block is read by
-the arm it was served under —
-— the per-arm DENOMINATORS in distinct visitors, which the decision counts are not — and is `null` on a
-day written before the field existed, never zero and never re-derived. `allocation` is
+visitorOutcomes }`.
+
+`armVisitors` is `{ version, basis: "distinct_visitors", arms: [ { arm, visitors } ] }`: the per-arm
+DENOMINATORS in distinct visitors, which the decision counts are not. Its `arm` is the experimental
+ASSIGNMENT wherever the day's records carry one, so an `ineligible` row stands on its own and is never
+pooled into `default`, and a record written before the provenance block existed is read by the arm it
+was served under. It is `null` on a day written before the field existed — never zero, and never
+re-derived from the decision counts the day does hold. `allocation` is
 `{ version, source: "published", share, arms }`, the allocation the day was served under, so sample
 sufficiency is computable on your side under your own protocol. `visitorOutcomes` is
 `{ version, basis: "enrolled_visitors", arms: [ { arm, visitors, byType } ] }`: distinct visitors on each
-arm with at least one outcome of each reward type, counted by the arm the visitor is ENROLLED in and
-not by whether a served piece matched — two purchases by one visitor are one purchasing visitor.
-The window report carries an `armVisitors` on the `visitor_days` basis (the per-day distinct counts
-summed), `null` when any pooled day predates it. Aggregates only; no visitor id
+assignment with at least one outcome of each reward type, counted by the assignment the visitor held
+when the outcome happened and not by whether a served piece matched — two purchases by one visitor are
+one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
+`armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
+day predates it. No report of ours states a business target, a lift or a standing.
+
+Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin falls back to value), not currency conversion or probability.
 
 ## Socket frames

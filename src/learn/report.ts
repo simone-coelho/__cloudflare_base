@@ -795,7 +795,11 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   // decisions each visitor was served, which is exactly the quantity the design
   // effect needs and the quantity decisions alone cannot supply (F25 §5.3).
   const armVisitorIds = new Map<string, Set<string>>();
-  const visitorArms = new Map<string, Set<string>>();
+  // W21 E1.04 (R118(4)): each visitor's assignments IN TIME, so an outcome can be
+  // attributed to the one in force when it happened instead of to every arm she
+  // appeared on that day — a consent transition would otherwise put one
+  // purchase into both the ineligible and the randomised control rows.
+  const visitorTimeline = new Map<string, Array<{ ts: number; assignment: string }>>();
   // W21 E1.02 (R108): the arms of a report are the experimental ASSIGNMENTS,
   // where the record carries one — so a shopper who was never drawn appears as
   // `ineligible` and is never pooled into the randomised control. A record
@@ -812,8 +816,8 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     slotCounts.set(d.slot, counts);
     const enrolled = armVisitorIds.get(assignment) ?? new Set<string>();
     enrolled.add(d.visitor_id); armVisitorIds.set(assignment, enrolled);
-    const arms = visitorArms.get(d.visitor_id) ?? new Set<string>();
-    arms.add(assignment); visitorArms.set(d.visitor_id, arms);
+    const timeline = visitorTimeline.get(d.visitor_id) ?? [];
+    timeline.push({ ts: d.ts, assignment }); visitorTimeline.set(d.visitor_id, timeline);
     if (d.arm === 'personalized') {
       const st = exposures.get(d.slot) ?? emptyStats();
       recordExposure(st, d.item_id, d.cell, d.rendered?.at ?? d.ts, statsCfg); exposures.set(d.slot, st);
@@ -883,13 +887,22 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   // W21 E1.04: outcomes by the arm the VISITOR is enrolled in, never by whether
   // a served piece matched the outcome. A visitor served on two arms in one day
   // counts once under each; under persistent enrollment there is only one.
+  for (const timeline of visitorTimeline.values()) timeline.sort((a, b) => a.ts - b.ts);
+  /** The assignment in force at `ts`: her last decision at or before it, else her first of the day. */
+  const assignmentAt = (visitor: string, ts: number): string | null => {
+    const timeline = visitorTimeline.get(visitor);
+    if (!timeline?.length) return null;
+    let held: string | null = null;
+    for (const entry of timeline) { if (entry.ts > ts) break; held = entry.assignment; }
+    return held ?? timeline[0]!.assignment;
+  };
   const outcomeVisitors = new Map<string, Map<string, Set<string>>>();
   for (const o of i.outcomes) {
-    for (const arm of visitorArms.get(o.visitor_id) ?? []) {
-      const byType = outcomeVisitors.get(arm) ?? new Map<string, Set<string>>();
-      const visitors = byType.get(o.type) ?? new Set<string>();
-      visitors.add(o.visitor_id); byType.set(o.type, visitors); outcomeVisitors.set(arm, byType);
-    }
+    const arm = assignmentAt(o.visitor_id, o.ts);
+    if (arm === null) continue;
+    const byType = outcomeVisitors.get(arm) ?? new Map<string, Set<string>>();
+    const visitors = byType.get(o.type) ?? new Set<string>();
+    visitors.add(o.visitor_id); byType.set(o.type, visitors); outcomeVisitors.set(arm, byType);
   }
   const armNames = [...armVisitorIds.keys()].sort((a, b) => a.localeCompare(b));
   const armVisitors: ArmVisitors = { version: 1, basis: 'distinct_visitors',

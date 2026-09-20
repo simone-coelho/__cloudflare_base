@@ -51,21 +51,16 @@ export interface ArmSummary extends ArmCount {
 export type Verdict = 'treatment_better' | 'control_better' | 'undecided';
 
 /**
- * Pre-set targets, as RELATIVE lift of the treatment rate over the control rate
- * (BTIE §6.4.2: "CVR lift vs holdout, minimum +10 %, target +40 %, stretch +60 %").
+ * Pre-set targets, as RELATIVE lift of the treatment rate over the control rate.
  * Set before any money is spent; the comparison only ever reports against them.
+ *
+ * W21 C1.04 (F25 §5.2, rulings R108(1d) and R118(9)): the CALLER's numbers,
+ * always. This module holds no customer's targets — not as a default, not as a
+ * named constant — because a platform that serves more than one customer may
+ * not read one customer's numbers when a caller supplies none. It says
+ * `no_published_target` instead.
  */
 export interface Targets { minimum: number; target: number; stretch: number }
-
-/**
- * The numbers BTIE §6.4.2 names, kept so a caller that wants them can pass them.
- *
- * W21 C1.04 (F25 §5.2, ruling R108): NOT a default. A platform that serves more
- * than one customer may not hold one customer's targets as the set every other
- * customer's comparison is read against — a caller that supplies none gets a
- * reading that says so (`reason: 'no_published_target'`), never these numbers.
- */
-export const TAPESTRY_TARGETS: Targets = { minimum: 0.10, target: 0.40, stretch: 0.60 };
 
 export type Standing = 'reached_stretch' | 'reached_target' | 'reached_minimum' | 'on_track' | 'below' | 'undecided';
 

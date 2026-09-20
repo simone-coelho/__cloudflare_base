@@ -300,10 +300,15 @@ and her decision records, her outcome records and her snapshot answer say `exper
 "ineligible"` — she was never drawn, so no comparison may count her as a randomised control. If she
 later turns personalization on, she is enrolled from that moment against the same anchor.
 
-One limit, stated rather than hidden: consent is owned state the queue does not hold, so an OUTCOME
-recorded after she withdraws personalization carries the enrollment her anchor still resolves to
-rather than `ineligible`. Read eligibility from the arm-tagged decision records, which carry what she
-was actually served under.
+`experiment.reason` says why an assignment is `ineligible`: `personalization_consent` when she has not
+consented to personalization, and `anchor_unavailable` when her persistent enrollment anchor could not
+be read at that moment. An anchor we cannot read is never an invitation to draw a new arm from the id
+her browser happens to be carrying: she is served the site's own defaults, the assignment says
+`ineligible` with that reason, and the occurrence is counted for your operators on
+`GET /v1/{tenant}/learn/queue` as `enrollment_anchor_unavailable`.
+
+Until the hour aggregates carry the experimental assignment, the canonical nightly report groups by the arm served, so an `ineligible` assignment is counted in `default` on that path.
+The day report built on demand from the day's records groups by the assignment.
 
 Historical import requires an existing owned profile and live explicit tracking and personalization choices; legacy preference booleans do not authorize import. It cannot grant consent. Multiple supplied identifiers must resolve to the same subject. Missing state or consent and refused consent are reported by original row index in `skipped`, without changing profile or history counts; corrupt state and failed writes fail the request, which may follow earlier successful subject groups. Original times remain subject to erasure cutoffs and current owner-serialized import/adoption/publication barriers; independent external stores are not one global transaction.
 

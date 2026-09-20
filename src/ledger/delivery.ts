@@ -87,7 +87,22 @@ export function logicalIdentity(row: Record<string, unknown>, stream: LedgerStre
   return stream === 'outcome' ? 'legacy' : 'stable';
 }
 
-/** Compare complete JSON rows after identity validation; only top-level transport provenance is excluded. */
+/**
+ * W21 E1.03 (ruling R118(5)): the top-level fields two deliveries of ONE record
+ * may differ in without being two records.
+ *
+ * `_ledger_delivery` is transport provenance. `experiment` is EXPERIMENT
+ * provenance, resolved by the producer when the record was recorded, and two
+ * deliveries of one `outcome_id` can straddle a salt rotation and carry
+ * different blocks. Comparing them made the second delivery a conflicting
+ * duplicate, which refuses the whole day's report (src/learn/report.ts) and the
+ * per-record lookup (src/ledger/writer.ts) — a record that IS the same record.
+ * The identity of the record is unchanged by it, so it is excluded here, in the
+ * one place both callers share.
+ */
+export const LOGICAL_EXCLUDED_FIELDS: readonly string[] = [DELIVERY_FIELD, 'experiment'];
+
+/** Compare complete JSON rows after identity validation; only top-level transport and experiment provenance are excluded. */
 export function equalLogicalRows(first: Record<string, unknown>, second: Record<string, unknown>, spend: (n?: number) => void): boolean {
   const pending: Array<[unknown, unknown, boolean]> = [[first, second, true]];
   while (pending.length) {
@@ -99,8 +114,8 @@ export function equalLogicalRows(first: Record<string, unknown>, second: Record<
       for (let n = 0; n < a.length; n++) pending.push([a[n], b[n], false]);
     } else {
       if (!object(a) || !object(b)) return false;
-      const keys = Object.keys(a).filter(k => !top || k !== DELIVERY_FIELD);
-      if (keys.length !== Object.keys(b).filter(k => !top || k !== DELIVERY_FIELD).length) return false;
+      const keys = Object.keys(a).filter(k => !top || !LOGICAL_EXCLUDED_FIELDS.includes(k));
+      if (keys.length !== Object.keys(b).filter(k => !top || !LOGICAL_EXCLUDED_FIELDS.includes(k)).length) return false;
       spend(keys.length);
       for (const k of keys) {
         if (!Object.hasOwn(b, k)) return false;
