@@ -156,9 +156,15 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       // is written only where the decision recorded a prior, so a receipt
       // without one keeps the sentence it has always had.
       const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
+      // W26 X1.01 (F21 §8, §2 probes 3 and 4): a LEARNED estimate is a ratio of
+      // observed rates and corrects for neither the rank the piece was shown at
+      // nor the placement it was shown in, so the sentence that reports it says
+      // so — the same fact `LiftRow.correction` states on the operator's table.
+      // Only here: a lift a merchandiser FROZE is an instruction, not an
+      // estimate, and nothing was measured for it to be uncorrected of.
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
         n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };

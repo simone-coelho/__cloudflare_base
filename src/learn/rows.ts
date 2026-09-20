@@ -12,8 +12,25 @@ import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { LEVEL_WORDS, liftReferenceOf, type LiftReference, type LiftSnapshot, type Level } from './stats';
 import type { SlotGovernance } from './slotGovernance';
 
+/**
+ * W26 X1.01 (F21 §8): what this estimate has been corrected for, by name.
+ *
+ * `uncorrected-v1` is the only value the platform can honestly write today: the
+ * lift is a ratio of observed rates, and nothing in it accounts for the rank a
+ * piece was shown at or for which placement it was shown in. F21 §2 measured
+ * both — a 3.80× spread from rank alone against a true content difference of
+ * 1.00×, and a 3.54× spread from cross-placement credit — so a reader who takes
+ * the table for incremental business lift is reading it wrong, and until now
+ * nothing on the row told them. It is a NAME and not a number: the correction
+ * itself is an owner and Data Science decision (`W26.P1.01`), and when one is
+ * agreed it arrives as a further value here, never as a silent change to `lift`.
+ */
+export type LiftCorrection = 'uncorrected-v1';
+
 export interface LiftRow {
   measurementBasis: 'served-v1' | 'rendered-v1';
+  /** What the estimate corrects for. See `LiftCorrection`: nothing, today. */
+  correction: LiftCorrection;
   objective: 'unit' | 'revenue' | 'margin';
   item: string;
   customer_item_id: string | null;
@@ -67,7 +84,7 @@ export function rowsOf(snap: LiftSnapshot, names: Names, controls: Record<string
       if (level === 'pooled' ? key !== '*' : key === '*') continue;
       const n0 = st.n0 ?? snap.n0;
       out.push({
-        measurementBasis: snap.measurementBasis ?? 'served-v1', objective: snap.objective ?? 'unit',
+        measurementBasis: snap.measurementBasis ?? 'served-v1', correction: 'uncorrected-v1', objective: snap.objective ?? 'unit',
         item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null,
         key, level: st.level, level_words: LEVEL_WORDS[st.level as Level] ?? String(st.level),
         n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, n0,
