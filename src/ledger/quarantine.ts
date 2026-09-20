@@ -6,6 +6,7 @@ import { consumeLedger, consumeSurvivors } from './consume';
 import { expandLedgerMessage, prepareDeliveryClaims } from './writer';
 import { recoveryDigest, recoveryJSON, RECOVERY_LIMITS } from './recovery';
 import { retentionBirth, retentionPolicy, readRetention, type RetentionStamp } from '@/retention';
+import type { CapturedRecord, LedgerStream } from './records';
 import { shopperObjectName } from '@/tenancy/objects';
 import { loadTombstone } from './erasure';
 
@@ -31,8 +32,27 @@ export function recoveryReady(env: Env): boolean {
 }
 
 export type CaseState = 'pending' | 'recovered' | 'suppressed_erased' | 'expired_unrecovered' | 'irrecoverable' | 'disposal_pending';
+/**
+ * W22 D1.03: where a case came from, and therefore what its `tenant` means.
+ *
+ * Absent (the original shape) and `dead-letter` are the same thing: a message
+ * the dead-letter consumer captured, whose tenant is claimed only on a shopper
+ * ownership proof, because such a case can be REDRIVEN back into the ledger and
+ * a queue repair must never turn an operator into fresh shopper authority.
+ *
+ * `read-conflict` is the other case this platform now files: a reader found two
+ * genuinely DIFFERENT rows under one logical id (F16 §5(j)) and refused the day
+ * rather than merge them. It is never redrivable — it is not a managed
+ * delivery, so `operateQuarantine` refuses to redrive it — and its tenant is
+ * not a claim about a shopper at all: it is the tenant whose own partition the
+ * conflicting row was read from, which is the scope an operator must be able to
+ * list the conflict in. The discriminator is covered by the case's HMAC
+ * provenance, so no stored byte can turn a dead-letter case into a read one.
+ */
+export type CaseOrigin = 'dead-letter' | 'read-conflict';
 export interface QuarantineCase {
   version: 1; id: string; digest: string; revision: number; tenant: string | null;
+  origin?: CaseOrigin;
   provenance: string;
   source: { queue: string; message: string }; admittedAt: number; expiresAt: number;
   retention: RetentionStamp | z.infer<typeof policy>; state: CaseState;
@@ -51,7 +71,10 @@ type LoadedCase = { value: QuarantineCase; etag: string };
 async function provenance(env: Env, value: QuarantineCase): Promise<string> {
   if (typeof env.IDENTITY_SALT !== 'string' || env.IDENTITY_SALT.trim().length < 32) throw new Error('Quarantine provenance key unavailable');
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.IDENTITY_SALT.trim()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  // `origin` joins the identity only when the case carries one, so every case
+  // written before it existed keeps exactly the provenance it was signed with.
   const identity = { version: value.version, id: value.id, digest: value.digest, tenant: value.tenant, ownership: value.ownership ?? null,
+    ...(value.origin ? { origin: value.origin } : {}),
     source: value.source, admittedAt: value.admittedAt, expiresAt: value.expiresAt, retention: value.retention, safety: value.safety, records: value.records,
     survivors: value.survivors ?? null, legacyRows: value.legacyRows ?? null };
   return [...new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(recoveryJSON(identity))))]
@@ -72,7 +95,14 @@ export async function loadQuarantine(env: Env, id: string): Promise<LoadedCase |
     || (value.wire !== undefined && (typeof value.wire !== 'string' || await recoveryDigest(value.wire) !== value.digest))
     || typeof value.source?.queue !== 'string' || typeof value.source?.message !== 'string'
     || !Number.isSafeInteger(value.admittedAt) || value.admittedAt < 0 || value.expiresAt < 0
-    || (value.tenant !== null && (!value.ownership || value.ownership.tenant !== value.tenant
+    || (value.origin !== undefined && !['dead-letter', 'read-conflict'].includes(value.origin))
+    // A REDRIVABLE case still claims its tenant only on a shopper ownership
+    // proof. A read conflict is not redrivable (it is never `managed`) and
+    // carries the tenant whose partition it was read from; the discriminator is
+    // inside the HMAC above, so this is an additional provenance, never a weaker one.
+    || (value.origin === 'read-conflict' && (value.safety !== 'unsafe_history' || value.ownership !== undefined
+      || value.tenant === null || !name.safeParse(value.tenant).success))
+    || (value.tenant !== null && value.origin !== 'read-conflict' && (!value.ownership || value.ownership.tenant !== value.tenant
       || !idSchema.safeParse(value.ownership.admission).success || !/^[A-Za-z0-9_.-]{1,200}$/.test(value.ownership.subject)
       || !Number.isSafeInteger(value.ownership.expiresAt)))) throw new Error('Quarantine commitment unavailable');
   if (value.tenant) readRetention(value.retention, value.tenant, 'quarantine');
@@ -198,6 +228,58 @@ async function countExhausted(env: Env, recognized: ReturnType<typeof expandLedg
     }
     for (const [tenant, rows] of byTenant) await recordEvidenceLoss(env, tenant, 'retriesExhausted', rows);
   } catch { /* the capture stands whatever the counter does */ }
+}
+
+/** W22 D1.03: the deterministic case identity of one conflicting logical row,
+ * so a reader that meets the same conflict again reconciles onto the same case
+ * instead of filing a new one on every read. */
+export const readConflictMessage = (stream: LedgerStream, logicalId: string): string => `conflict:${stream}:${logicalId}`;
+
+/**
+ * W22 D1.03 (F16 §5(j)): a reader found two genuinely different rows under one
+ * logical id. The two are never merged; the day fails closed until the conflict
+ * is durably filed here, in the tenant's own scope and named by that id, and
+ * reads again afterwards with the conflicting row excluded and counted.
+ *
+ * Nothing is re-derived (R101(a)): the wire is the row exactly as the partition
+ * holds it.
+ */
+export async function captureReadConflict(env: Env, stream: LedgerStream, logicalId: string, record: CapturedRecord, now = Date.now()): Promise<QuarantineCase | null> {
+  const tenant = record.tenant;
+  if (!tenantConfig(env).provisioned.includes(tenant)) return null;
+  if (typeof logicalId !== 'string' || !logicalId || logicalId.length > 2048) throw new Error('Conflicting row identity unavailable');
+  const config = recoveryConfiguration(env), queue = config.sourceQueue, message = readConflictMessage(stream, logicalId);
+  const text = quarantineWire({ kind: 'ledger', type: stream, version: 1, record });
+  if (byteLength(text) > 256 * 1024) throw new Error('Quarantine body exceeded');
+  const id = await recoveryDigest({ version: 1, queue, messageId: message }), digest = await recoveryDigest(text);
+  const existing = await loadQuarantine(env, id);
+  if (existing) return existing.value;
+  const retention = retentionBirth(env, tenant, 'quarantine', record.ts, now);
+  // A conflict case can never outlive the row it holds.
+  let expiresAt = retention.expiresAt;
+  if (record.retention?.ledger) expiresAt = Math.min(expiresAt, readRetention(record.retention.ledger, tenant, 'ledger').expiresAt);
+  const expired = expiresAt <= now;
+  const value: QuarantineCase = { version: 1, id, digest, provenance: '', revision: 1, tenant, origin: 'read-conflict',
+    source: { queue, message }, admittedAt: now, expiresAt, retention, state: expired ? 'expired_unrecovered' : 'pending',
+    safety: 'unsafe_history', records: 1, ...(expired ? {} : { wire: text }), terminalLoss: expired ? null : 0 };
+  value.provenance = await provenance(env, value);
+  try { await saveCase(env, value); }
+  catch (error) {
+    const won = await loadQuarantine(env, id);
+    if (!won) throw error;
+    return won.value;
+  }
+  return value;
+}
+
+/** Has this exact logical conflict already been filed for this tenant? */
+export async function readConflictFiled(env: Env, stream: LedgerStream, logicalId: string): Promise<boolean> {
+  try {
+    const queue = recoveryConfiguration(env).sourceQueue;
+    const id = await recoveryDigest({ version: 1, queue, messageId: readConflictMessage(stream, logicalId) });
+    const existing = await loadQuarantine(env, id);
+    return !!existing && existing.value.tenant !== null && existing.value.origin === 'read-conflict';
+  } catch { return false; }
 }
 
 /** The exact sorted owner chain excludes erasure through the actual case PUT.

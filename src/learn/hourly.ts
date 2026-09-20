@@ -27,7 +27,7 @@ import { ringEntryOf } from './fan';
 import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
-  type ComputationBasis, type DuplicateCounts, type DuplicateWitness } from './report';
+  type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
 
 export const HOUR_MS = 3600_000;
@@ -1300,7 +1300,7 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
  * from the ledger itself otherwise (a day from before the fold existed, or custom reporting policies,
  * which are computed over the records and so need a day one request can read).
  */
-export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv): Promise<DayReport> {
+export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
   if (reporting === null) {
     const report = await publishAggregateDay(r2, ids, learn, now, false);
     if (report) return report;
@@ -1309,5 +1309,5 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
     const n = await countDayObjects(r2, ids.tenant, ids.date, opts.maxObjects);
     if (n > opts.maxObjects) throw new ReportTooLarge(n, opts.maxObjects);
   }
-  return runReport(r2, ids, learn, reporting, now, retentionEnv);
+  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved);
 }
