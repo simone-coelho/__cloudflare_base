@@ -134,7 +134,11 @@ type ProducerEnv = Pick<Env, 'EVENT_QUEUE' | 'ANALYTICS'> & Partial<Pick<Env, 'S
  * either is a row that never reached the ledger.
  */
 async function reportProducerLoss(env: ProducerEnv, tenant: string, result: LedgerDeliveryReceipt): Promise<LedgerDeliveryReceipt> {
-  if (result.code === 'accepted' || result.code === 'empty' || result.capture?.ok) return result;
+  // `configuration_unavailable` is the one code that is NOT counted: the
+  // tenant's own configuration is what could not be read, so this producer
+  // cannot establish where a count would belong and must not reach for another
+  // binding to guess. Such a refusal is named as owed work, never as a zero.
+  if (result.code === 'accepted' || result.code === 'empty' || result.code === 'configuration_unavailable' || result.capture?.ok) return result;
   await recordEvidenceLoss(env, tenant, 'producerFailed', result.records.unknown + result.records.notAttempted);
   return result;
 }
