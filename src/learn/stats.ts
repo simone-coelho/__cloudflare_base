@@ -314,15 +314,23 @@ export const ACCUMULATION_SCHEMA = 1;
 
 /**
  * W24 G1.01: the name of an accumulation generation. It covers the accumulation
- * half only — schema, objective, reward, decay horizon — and the moment that
- * generation started, so two snapshots can be compared for "same counters, same
- * meaning" without reading the counters. A presentation change (n0, nMin, the
- * lift clamps) keeps the name; an authorized accumulation transition starts a
- * new one, and its `restartedAt` is what makes it new even when the settings
- * happen to return to what they were.
+ * half only — schema, objective, reward, decay horizon — so two snapshots can be
+ * compared for "same counters, same meaning" without reading the counters, and a
+ * presentation change (n0, nMin, the lift clamps) keeps the name because it
+ * reinterprets nothing.
+ *
+ * `restartedAt` is appended only for counters that were actually RESTARTED, and
+ * it is what separates two runs of one meaning: a slot moved to revenue and back
+ * to unit is not the unit generation it was before, and its name says so. A
+ * generation that has never been restarted has nothing more to be named by, and
+ * in particular is not named by its own evidence — every new event moves a
+ * decayed counter's reference time forward, so a name taken from the counters
+ * would change whenever the slot was served, which is exactly what a generation
+ * must not do.
  */
-export function accumulationGeneration(a: { objective: 'unit' | 'revenue' | 'margin'; reward: RewardType; tauLearnMs: number }, restartedAt: number): string {
-  return `a${ACCUMULATION_SCHEMA}:${a.objective}:${a.reward}:${a.tauLearnMs}:${restartedAt}`;
+export function accumulationGeneration(a: { objective: 'unit' | 'revenue' | 'margin'; reward: RewardType; tauLearnMs: number }, restartedAt?: number): string {
+  const name = `a${ACCUMULATION_SCHEMA}:${a.objective}:${a.reward}:${a.tauLearnMs}`;
+  return typeof restartedAt === 'number' && Number.isFinite(restartedAt) ? `${name}:${restartedAt}` : name;
 }
 
 /**
@@ -434,7 +442,7 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
   // that was only ever counted into has run since its own earliest evidence.
   const startedAt = typeof restartedAt === 'number' && Number.isFinite(restartedAt) ? restartedAt : earliestAnchor(st, now);
   return { tenant: ids.tenant, brand: ids.brand, slot: ids.slot, reward, objective, measurementBasis, tauLearnMs: cfg.tauLearnMs, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates,
-    generation: accumulationGeneration({ objective, reward, tauLearnMs: cfg.tauLearnMs }, startedAt), restartedAt: startedAt, exposuresSinceRestart: st.events,
+    generation: accumulationGeneration({ objective, reward, tauLearnMs: cfg.tauLearnMs }, restartedAt), restartedAt: startedAt, exposuresSinceRestart: st.events,
     ...(attributionContract ? { attributionContract } : {}),
     ...(st.bounded ? { completeness: { depth: st.bounded.depth, omittedItems: st.bounded.closed === true,
       selection: st.bounded.selection, reason: st.bounded.closed ? 'item-capacity' as const : st.bounded.depth < 5 ? 'coarse' as const : 'complete' as const } } : {}) };
