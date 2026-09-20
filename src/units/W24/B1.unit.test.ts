@@ -95,6 +95,7 @@ import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
 import { captureQuarantine, listQuarantine } from '@/ledger/quarantine';
 import { outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { fanDecisions, fanOutcome, liftArchiveKey, liftKey, ringName, statsName } from '@/learn/fan';
+import { readLift } from '@/content/service';
 import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport, shardOf } from '@/learn/hourly';
 import { attribute, creditWeight, DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
@@ -502,10 +503,16 @@ describe('unit:W24.G1.01', () => {
     const state: StatsState = emptyStats();
     recordExposure(state, 'cnt-tabby-evening', COACH_CELL as unknown as Cell, ONLINE_TS, DEFAULT_STATS);
     recordSuccess(state, 'cnt-tabby-evening', COACH_CELL as unknown as Cell, 'click', ONLINE_TS + 60_000, 1, DEFAULT_STATS);
-    const snapshot = buildSnapshot(state, { tenant: TENANT, brand: BRAND, slot: 'hero' }, 'click', ONLINE_TS + 120_000, DEFAULT_STATS, null, 'unit', 'served-v1');
-    expect({ ...generationOf(snapshot), objective: snapshot.objective, reward: snapshot.reward },
-      'W24.G1.01 — every published snapshot names the generation its counters belong to, when that generation started and how many exposures it has seen, beside the accumulation settings it was built under (F19 §7: `LiftSnapshot` gains `generation`, `restartedAt` and `exposuresSinceRestart`)')
-      .toEqual({ generation: expect.any(String), restartedAt: expect.any(Number), exposuresSinceRestart: 1, objective: 'unit', reward: 'click' });
+    const builtAt = ONLINE_TS + 120_000;
+    const snapshot = buildSnapshot(state, { tenant: TENANT, brand: BRAND, slot: 'hero' }, 'click', builtAt, DEFAULT_STATS, null, 'unit', 'served-v1');
+    const stamped = generationOf(snapshot);
+    // `restartedAt` is bracketed by the fixture's own clock — the generation
+    // cannot have started before its first exposure or after this build — so a
+    // stamped constant cannot satisfy it (R147 item 3).
+    expect({ generation: stamped.generation, restartedAtInWindow: typeof stamped.restartedAt === 'number' && stamped.restartedAt >= ONLINE_TS && stamped.restartedAt <= builtAt,
+      exposuresSinceRestart: stamped.exposuresSinceRestart, objective: snapshot.objective, reward: snapshot.reward },
+      'W24.G1.01 — every published snapshot names the generation its counters belong to, when that generation started — a moment no earlier than its first exposure and no later than this build — and how many exposures it has seen, beside the accumulation settings it was built under (F19 §7: `LiftSnapshot` gains `generation`, `restartedAt` and `exposuresSinceRestart`)')
+      .toEqual({ generation: expect.any(String), restartedAtInWindow: true, exposuresSinceRestart: 1, objective: 'unit', reward: 'click' });
   });
 
   it('host-internal: a presentation change keeps the counters and the generation; an accumulation change starts a fresh generation instead of refusing the write', async () => {
@@ -613,37 +620,56 @@ describe('unit:W24.G1.02', () => {
       method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT },
       body: JSON.stringify({ slot: 'hero', brand: BRAND, objective: 'revenue' }),
     }));
+    const t0 = Date.now();
     const promoted = await operatorPost(m, `/v1/${TENANT}/learn/generation`, { slot: 'hero', brand: BRAND, objective: 'revenue' });
+    const t1 = Date.now();
     expect({ withoutCredential: unauthenticated.status, withOperator: promoted.status },
       'W24.G1.02 — the transition is an authorized act on a route that exists: refused without an operator credential, answered with one (ruled route: POST /v1/:tenant/learn/generation, beside `learn/publish` and `learn/recovery`)')
       .toEqual({ withoutCredential: 401, withOperator: 200 });
     const answer = promoted.body as { ok?: boolean; generation?: string; restartedAt?: number; archivedVersion?: number };
-    expect({ status: promoted.status, ok: answer.ok, generation: typeof answer.generation, restartedAt: typeof answer.restartedAt, archivedVersion: answer.archivedVersion },
-      `W24.G1.02 — an operator moves the slot to a new accumulation generation and is told which one, when it started and which version it superseded (ruled route: POST /v1/:tenant/learn/generation). It answered: ${JSON.stringify(promoted.body).slice(0, 220)}`)
-      .toEqual({ status: 200, ok: true, generation: 'string', restartedAt: 'number', archivedVersion: first!.version });
+    // `restartedAt` is bracketed by the promotion itself, so a stamped constant
+    // cannot satisfy it (R147 item 3).
+    expect({ status: promoted.status, ok: answer.ok, generation: typeof answer.generation,
+      restartedAtInWindow: typeof answer.restartedAt === 'number' && answer.restartedAt >= t0 && answer.restartedAt <= t1,
+      archivedVersion: answer.archivedVersion },
+      `W24.G1.02 — an operator moves the slot to a new accumulation generation and is told which one, when it started — a moment inside this promotion, ${t0}..${t1} — and which version it superseded (ruled route: POST /v1/:tenant/learn/generation). It answered: ${JSON.stringify(promoted.body).slice(0, 220)}`)
+      .toEqual({ status: 200, ok: true, generation: 'string', restartedAtInWindow: true, archivedVersion: first!.version });
 
     const served = await m.env.CACHE!.get(liftKey(TENANT, BRAND, 'hero'), 'json') as LiftSnapshot | null;
     expect({ key: liftKey(TENANT, BRAND, 'hero'), objective: served?.objective, superseded: (served?.version ?? 0) > first!.version },
       'W24.G1.02 — the promotion writes the ONE key the serving path reads (`src/content/service.ts` → `liftKey`), so the next decision serves the new generation')
       .toEqual({ key: liftKey(TENANT, BRAND, 'hero'), objective: 'revenue', superseded: true });
+    // The archive must be the SUPERSEDED generation, not merely a copy of
+    // whatever was last published: read its body and require the OLD objective
+    // and the OLD generation beside the new one on `liftKey` (R147 item 1 — a
+    // publish-time archive already exists at `LearnStats.ts:571` and proves
+    // nothing about the promotion).
     const archived = await m.storage.objects.get(liftArchiveKey(TENANT, BRAND, 'hero', first!.version));
-    expect(archived ? (JSON.parse(archived) as LiftSnapshot).version : `absent: no archive at ${liftArchiveKey(TENANT, BRAND, 'hero', first!.version)}`,
-      'W24.G1.02 — and the superseded version is archived, not overwritten: the generation it belonged to stays readable (F19 §7 gap 2)')
-      .toBe(first!.version);
+    const body = archived ? JSON.parse(archived) as LiftSnapshot : null;
+    expect(body === null ? `absent: no archive at ${liftArchiveKey(TENANT, BRAND, 'hero', first!.version)}`
+      : { version: body.version, objective: body.objective, generation: generationOf(body).generation,
+        stillTheOldGeneration: generationOf(body).generation !== generationOf(served!).generation },
+      'W24.G1.02 — and what is archived is the generation the promotion SUPERSEDED: the old objective and the old generation stay readable under the superseded version while `liftKey` holds the new one (F19 §7 gap 2)')
+      .toEqual({ version: first!.version, objective: 'unit', generation: generationOf(first!).generation, stillTheOldGeneration: true });
   });
 
   it('host-internal: the statistics object reports the new generation and the moment learning restarted, and a receipt can say so', async () => {
     const m = await mount();
     await serveAndCredit(m, accumulation());
     const before = await snapshotOf(m);
+    const t0 = Date.now();
     const promoted = await operatorPost(m, `/v1/${TENANT}/learn/generation`, { slot: 'hero', brand: BRAND, objective: 'revenue' });
+    const t1 = Date.now();
     expect(promoted.status,
       `W24.G1.02 — the ruled transition route (POST /v1/:tenant/learn/generation) answers the operator; it answered: ${JSON.stringify(promoted.body).slice(0, 160)}`).toBe(200);
     const after = await snapshotOf(m);
+    const restarted = generationOf(after!).restartedAt, restartedBefore = generationOf(before!).restartedAt;
     expect({ generationChanged: generationOf(after!).generation !== generationOf(before!).generation,
-      restartedAt: typeof generationOf(after!).restartedAt, since: generationOf(after!).exposuresSinceRestart },
+      restartedInWindow: typeof restarted === 'number' && restarted >= t0 && restarted <= t1,
+      laterThanBefore: typeof restarted === 'number' && typeof restartedBefore === 'number' && restarted > restartedBefore,
+      since: generationOf(after!).exposuresSinceRestart },
       'W24.G1.02 — after the transition the object serves the new generation, names when it restarted and counts nothing from before it, so a receipt can say "learning restarted <when> after a configuration change; N exposures since" instead of asserting a unit it cannot vouch for (F19 §7, receipts.ts:65)')
-      .toEqual({ generationChanged: true, restartedAt: 'number', since: 0 });
+      .toEqual({ generationChanged: true, restartedInWindow: true, laterThanBefore: true, since: 0 });
   });
 });
 
@@ -680,13 +706,33 @@ describe('unit:W24.T1.01', () => {
       expect(promoted.status,
         `W24.T1.01 — the fixture needs the authorized transition W24.G1.02 rules (POST /v1/:tenant/learn/generation); it answered: ${JSON.stringify(promoted.body).slice(0, 160)}`).toBe(200);
 
+      const promotedGeneration = (promoted.body as { generation?: string }).generation
+        ?? `absent: no \`generation\` on the transition's answer (${JSON.stringify(promoted.body).slice(0, 160)})`;
       const readings = [await m24Snapshot(second), await m24Snapshot(second), await m24Snapshot(first)];
       expect(readings.map(snapshot => snapshot?.objective ?? 'none'),
         `W24.T1.01 — ${host}: once the head is superseded no isolate serves the old generation again, and none oscillates between them: every later read is the new generation or nothing at all (F19 §5.7)`)
         .toEqual(['revenue', 'revenue', 'revenue']);
-      expect(readings.map(snapshot => generationOf(snapshot!).generation === generationOf(readings[0]!).generation),
-        'W24.T1.01 — and each read is ONE generation whole: the counters and the settings a decision uses come from the same one')
-        .toEqual([true, true, true]);
+      // Anchored to the generation the transition itself returned, and required
+      // to differ from what the isolate read before it: a stamped constant or
+      // an undefined member cannot satisfy this (R147 item 2).
+      expect({ readings: readings.map(snapshot => generationOf(snapshot!).generation ?? 'none'),
+        movedOn: generationOf(before!).generation !== promotedGeneration },
+        'W24.T1.01 — and each read is ONE generation whole, the very generation the transition published: the counters and the settings a decision uses come from the same one, and it is not the one this isolate was serving before')
+        .toEqual({ readings: [promotedGeneration, promotedGeneration, promotedGeneration], movedOn: true });
+
+      // "Test old callers" (document 35 §5 row W24): a caller still holding the
+      // superseded snapshot is served consistently or refused explicitly, never
+      // a mixture of one generation's counters with another's settings.
+      const stale = before!;
+      const staleServed = await readLift({ ...first.env, CACHE: {
+        get: async (key: string, type?: string) => key === liftKey(TENANT, BRAND, 'hero')
+          ? (type === 'json' ? stale : JSON.stringify(stale)) : first.env.CACHE!.get(key, type as never),
+        put: async () => undefined, delete: async () => undefined, list: async () => ({ keys: [], list_complete: true }),
+      } as unknown as Env['CACHE'] }, TENANT, BRAND, 'hero', Date.now(), { reward: 'click', stats: DEFAULT_STATS, objective: 'unit', measurementBasis: 'served-v1' });
+      expect(staleServed === null ? 'refused: the serving path declines a superseded generation'
+        : { objective: staleServed.objective, generation: generationOf(staleServed).generation },
+        'W24.T1.01 — and an old caller holding the superseded generation is served that generation whole or refused outright: what it must never get is the old counters under the new settings (F19 §5.7; document 35 §5 row W24 "test old callers")')
+        .toEqual('refused: the serving path declines a superseded generation');
     });
   }
 });
