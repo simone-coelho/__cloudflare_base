@@ -341,7 +341,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const explore = learning?.exploreOf ? (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => {
     const cfg = learning.exploreOf!(slot);
     if (!cfg) return null;
-    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg }, historical);
+    // W28.M1.01 (F23 §4.3): the merchandiser's item controls belong to the
+    // caller, which already holds them, and they govern exploration as well as
+    // scoring — an item whose learned treatment a person took control of is out
+    // of the rule's discretion. This reads the learn document the decision is
+    // already holding: no I/O, nothing that can fail or change the ranking.
+    const controlled = new Set<string>();
+    if (learning.controlOf) for (const r of ranked) if (learning.controlOf(slot, r.id)) controlled.add(r.id);
+    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical);
     if (!pick) return null;
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };

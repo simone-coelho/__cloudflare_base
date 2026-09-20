@@ -490,8 +490,15 @@ Absent on an archive or a report written before the contract existed.
 `POST /v1/{tenant}/learn/report`. `{ tenant, brand, date, builtAt, counts: { decisions, outcomes,
 visitors, truncated, duplicates?, conflicts? }, attributionContract, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
-mode } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
+mode, configuredMode?, unsupported? } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
 visitorOutcomes }`.
+
+An `exploration` row states the mode the engine RAN. Where the slot's retained document names a mode
+the engine will not run (Thompson is withdrawn), `mode` is `off`, `configured` is `null`, and
+`configuredMode` with `unsupported: true` name the stored setting — the same two members
+`GET learn/exploring` answers with, so no reader sees a configured share for a policy that cannot
+explore. A supported mode carries neither member. `explored` counts every decision the rule made,
+including one whose draw agreed with the ranking's own leader.
 
 `armVisitors` is `{ version, basis: "distinct_visitors", arms: [ { arm, visitors } ] }`: the per-arm
 DENOMINATORS in distinct visitors, which the decision counts are not. Its `arm` is the experimental
