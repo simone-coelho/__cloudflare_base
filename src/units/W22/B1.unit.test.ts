@@ -145,7 +145,7 @@ import { fanDecisions, fanOutcome, ringName, statsName } from '@/learn/fan';
 import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport, shardOf } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
-import { loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
+import { canonicalReportJson, loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import { windowReport, type WindowReport } from '@/measure/window';
 import type { MonitorResult } from '@/ops/monitor';
@@ -1278,7 +1278,12 @@ describe('unit:W22.A1.01', () => {
     const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { attributionContract?: AttributionContract };
     earlier.attributionContract = { ...(earlier.attributionContract ?? { name: 'attribution', history: HISTORY,
       windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } }), version: 0 };
-    m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), JSON.stringify(earlier));
+    // Written by the engine's own canonical serializer, not by JSON.stringify:
+    // a saved report is a `_summary`-marked document with its framing newline,
+    // and `src/measure/window.test.ts:147` requires the window to REFUSE the
+    // shape a bare stringify produces (R120 item 4). Only the contract version
+    // moves back.
+    m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), canonicalReportJson(earlier));
     m.storage.versions.set(reportKey(TENANT, BRAND, previousDay), (m.storage.versions.get(reportKey(TENANT, BRAND, previousDay)) ?? 0) + 1);
     const mixed = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${previousDay}&to=${ONLINE_DATE}&brand=${BRAND}`);
     const mixedReport = (mixed.body as { report?: WindowReport }).report;
@@ -1422,8 +1427,14 @@ describe('unit:W22.R1.05', () => {
 
     // The sink mismatch, at the export: an object the report counted is no
     // longer in the partition a warehouse would load.
-    const dropped = dayObjects(m, 'outcome')[0]!;
-    m.storage.objects.delete(dropped);
+    // Every object that carries that outcome goes, its redelivered copy
+    // included: the export is short of the row, not merely of one of its
+    // copies. (R120 item 3: the two clauses of this unit must be able to hold
+    // on one product — the first needs the duplicate present, this one needs
+    // the row itself gone.)
+    const carrying = dayObjects(m, 'outcome').filter(key => (m.storage.objects.get(key) ?? '').includes(outcomes[0]!.outcome_id!));
+    expect(carrying.length, 'the fixture holds that outcome in two objects: the original and its redelivery').toBe(2);
+    for (const key of carrying) m.storage.objects.delete(key);
     const after = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}`);
     const mismatch = exportCounts(after.body) ?? absent('`counts` on GET /v1/:tenant/ledger/batches', after.body);
     expect(typeof mismatch === 'string' ? mismatch : { distinct: mismatch.distinct, report: mismatch.report, agrees: mismatch.agrees },
