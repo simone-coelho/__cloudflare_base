@@ -37,6 +37,60 @@ W20 G1 — a refused pin is not silent. The snapshot answer (`GET`/`POST /v1/:te
 
 W20 G2 — that member is bounded, and the operator has counters of their own. The answer carries at most 50 entries, in page and slot order, with `refusedCount` (every refusal on the page) and `omittedCount` (how many the sample left out) beside them; the bound is applied before the answer's size guard, so no operator-authored slot document can turn a served snapshot into a 503. The served snapshot is the shopper's surface and stays a per-page fact. What happened over time belongs to the operator: `GET /v1/:tenant/learn/slots?evidence=1` adds `governance` to each slot entry, under the same flag and the same 200-slot budget as `evidence` — `{since, scope, refusedPinCount, refusedPins:[{pinnedPieceId, reason, count}], shortTakeCount, shortTakePositions}`, counting distinct occurrences on both hosts and both arms since the horizon `since` states (30 days, after which the counts restart), with zero reported as zero rather than omitted, and the `refusedPins` detail bounded per slot while the counts stay whole. `scope` states the scope those counts are kept at and always reads `"tenant"`: one counter document per tenant, counted across all of the tenant's brands, while the `evidence` beside it is kept per brand — so a `brand=` page reads its tenant's counts on the row beside that brand's own learning evidence. `POST`/`GET /v1/:tenant/monitor` answers the same two counts summed for the tenant, as `governance: {since, scope, refusedPinCount, shortTakeCount}`; it is read from those counters and never from the monitor's own probe, whose compose of the tenant's page is excluded where the counters are written. Two things guarantee that exclusion and both are part of this contract: the probe composes unsigned with tracking refused and declares `selfCheck` — no shopper granted it anything, its own cookie header withholds tracking consent, and the counters are skipped for any compose that declares the flag — so either guarantor alone already keeps the probe out of a tenant's counts, and neither can be removed without contradicting this reference. `shortTakeCount` counts the times a pinned slot served what it could and still fell short of its `take`, with `shortTakePositions` the positions left empty across them. Where that slot served something it also wrote records, so `explain.shortTake = {take, served, empty, sentence}` rides each of them and `GET /v1/:tenant/visitors/:visitorId/receipts` reads the sentence out on `why`. A slot whose pin was refused wrote no record at all, so it has no receipt and these counters are its only home. The counters hold slot names, the merchandiser's pinned piece ids, refusal reasons and counts — configuration, never shopper state — are written fire and forget after the answer, never read on the decision path, and are a best-effort diagnostic rather than an accounting ledger.
 
+`POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
+read on the scheduled run and never on a decision path.
+
+`evidenceLoss` is `{ since, producerFailed, consumerSkipped, fanOutRejected, retriesExhausted }`: the
+four ways a row of evidence is lost, in one vocabulary — the producer could not hand it to the queue,
+the consumer could not place it, its fan-out post to a statistics object was attempted and refused, or
+its retries were exhausted and it was captured to the dead-letter quarantine. `since` is the horizon
+the counts start at (30 days, after which they restart). A tenant that lost nothing reads zero on
+every path, never an absent member; the member is absent only on a record written before it existed
+and on a run whose counter store could not be read, so no result states a zero it did not observe.
+These are a FLOOR, not an accounting ledger: the read-modify-write is last-write-wins, so concurrent
+drops may collapse into one increment. Three things are deliberately NOT counted, because counting
+them would be worse than not: a batch that failed as a whole (it is retried whole, and counting it
+would multiply one drop by the retry count), a producer refusal whose cause is that the tenant's own
+configuration could not be read (there is nothing to attribute the count to), and the platform's own
+synthetic monitoring probe, which is excluded where every one of these counters is written.
+
+`reconciliation` is `{ since, compared, disagreements: [ { brand, slot, online, ledger, difference,
+threshold } ] }`: the scheduled comparison of the two stores that hold the same credits by two
+different roads — each slot's statistics object, which counted them online as they happened, and the
+day report, which counted them from the ledger. It reads the NEWEST day this tenant has published,
+and only that day; `since` is that day's start and `compared` is how many (brand, slot) pairs the run
+really compared, so a clean result is never an empty one. `online` is the slot's credited mass at its
+own decay, rounded; `ledger` is the credits the published day counted for that slot's personalized
+arm. A pair is named only when `difference` exceeds `threshold`, a stated relative tolerance of five
+per cent of the larger of the two: zero at unit scale, which is where one lost or doubled credit
+shows, and wide enough at volume to absorb the two stores reading their own clocks. Absent on a
+legacy record and on a run that could not read one of the two sinks.
+
+`GET /v1/{tenant}/ledger/batches?date=` reconciles the day's export partition with the day the platform
+published, on the same answer: `counts` is `{ rows: { decisions, outcomes }, distinct: { decisions,
+outcomes }, report: { decisions, outcomes }, agrees }`. `rows` is what the listed objects physically
+hold, line by line — ledger rows are at-least-once, so this can exceed what any read counts. `distinct`
+applies the same dedup every read applies, on `decision_id` and `outcome_id`, and then the pending
+erasures this answer already tells you to apply. `report` is the day report published for that brand
+(`?brand=`, defaulting to the tenant). `agrees` is true only when the two were observed to match, so a
+warehouse loading the partition and an operator reading the report cannot disagree in silence. The
+member is carried only by a listing that can see the whole day: a `from=`/`to=` window lists several
+days, a `cursor=` page lists part of one, a `stream=` filter hides the other stream, and a truncated
+listing has already stopped short — none of those carries it. It opens only the objects it has just
+listed and reads the report by its own key; it lists nothing a second time.
+
+Ledger rows are delivered AT LEAST ONCE, and `decision_id` / `outcome_id` are the dedup keys — in every
+read this platform performs and in your own warehouse job. The same logical row can reach the R2
+partition more than once (a queue redelivery, a retried partial batch), and every read above yields it
+exactly once, counting the copies it dropped as `counts.duplicates`. An outcome minted before the
+per-event nonce existed carries a timestamp-derived id that two genuinely distinct events can share;
+those legacy rows are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a
+read. Two genuinely DIFFERENT rows under one logical id are never merged: the read refuses the day
+with `{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
+conflicting row for recovery in the tenant's own scope where the ledger-recovery surface lists it, and
+reads the day again on the next call with that row excluded and counted as `counts.conflicts`, in the
+same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+
 Caller-managed buffered browser/app actions use HTTP `POST /realtime/action` with top-level `processing: "buffered"`, a stable `eventId`, an explicit nonnegative integer millisecond `timestamp` no later than server evaluation time, and original `browsingSessionId` (1–128 characters without surrounding whitespace, or explicit `null` when unknown). Numeric zero is valid; there is no maximum event age. The signed session still identifies the existing owned profile. Absent `processing` keeps live behavior; buffered WebSocket actions are refused. This adds no SDK offline queue or emitted bundle behavior.
 
 Buffered processing applies current configured interest weights with occurrence-time decay and re-evaluates local memberships, without fresh visits, counters, last activity, profile cookies, ODP activity, demo capture or receipt-geolocation regional counts. Interest needs registry-resolvable top-level product/event attributes or canonical content touches; `items[]` alone does not invent basket/quantity interest weighting. Tracking refusal prevents measurement; personalization refusal permits eligible measurement only. Missing/corrupt/forwarded profiles, unavailable erasure barriers and unsafe persistence refuse or explicitly drop; observed erased events do not resurrect state. Existing absolute Session expiry/metadata and DO last-seen/retention deadline are preserved; an earlier audience-exit alarm may be scheduled.

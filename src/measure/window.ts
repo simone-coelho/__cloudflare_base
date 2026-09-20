@@ -2,6 +2,8 @@
 // requires enrollment, control, outcome and analysis contracts outside this report.
 import { attributionArm, readWindowSummary, reportCoverage, reportPayloadJson, validArmVisitors, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, REPORT_MEASUREMENT, type ArmRow, type ArmVisitors, type ReportCoverage, type SavedReportReader } from '@/learn/report';
 import { recordedComputation, slotComputation, type DayReport } from '@/learn/report';
+import { validAttributionContract } from '@/learn/route';
+import type { AttributionContract } from '@/learn/stats';
 
 export type R2ReportReader = SavedReportReader;
 
@@ -28,6 +30,15 @@ export interface WindowReport {
    * is never replaced by a smaller one.
    */
   armVisitors: ArmVisitors | null;
+  /**
+   * W22 A1.01: the one named attribution contract this window pooled under.
+   * `windowsMs` is what every pooled day was asked for; `appliedWindowsMs` is
+   * the LEAST any of them actually applied, because a pooled number can claim
+   * only the shortest reach that went into it. Null when no pooled day carries
+   * a contract, and the days that disagree on its version are not pooled at
+   * all — each such slot is reported `mixed_basis` instead.
+   */
+  attributionContract?: AttributionContract;
   slots: Record<string, {
     /** n/s are compatibility aliases for decisions/credited, not Bernoulli trials/successes. */
     arms: Array<ArmRow & { n: number; s: number }>;
@@ -69,6 +80,9 @@ export async function windowReport(
   // W21 C1.03: visitor-days per arm, and whether every day could supply them.
   const visitorDays = new Map<string, number>();
   let armVisitorsKnown = true;
+  // W22 A1.01: the contract each pooled day was written under.
+  let contract: AttributionContract | undefined;
+  let contractMixed = false;
   const budget = { bytes: 0, cells: 0 };
   const pooled = () => { if (++budget.cells > REPORT_LIMITS.cells) throw new ReportBudgetExceeded('cells', REPORT_LIMITS.cells, budget.cells); };
 
@@ -87,12 +101,25 @@ export async function windowReport(
       if (!visitorDays.has(row.arm)) pooled();
       visitorDays.set(row.arm, (visitorDays.get(row.arm) ?? 0) + row.visitors);
     }
+    // W22 A1.01: a day written under an EARLIER contract version is never
+    // pooled with a later one. The version names what the numbers mean, so two
+    // versions in one window is a mixed basis, exactly as two computations are.
+    const dayContract = validAttributionContract(report.attributionContract);
+    if (dayContract) {
+      const pooledContract = contract;
+      if (!pooledContract) contract = dayContract;
+      else if (dayContract.version !== pooledContract.version) contractMixed = true;
+      else contract = { ...pooledContract,
+        appliedWindowsMs: Object.fromEntries(Object.entries(pooledContract.appliedWindowsMs)
+          .map(([reward, applied]) => [reward, Math.min(applied, dayContract.appliedWindowsMs[reward] ?? applied)])) };
+    }
     const basis = recordedComputation(report.computation);
     for (const slot of new Set([...Object.keys(report.holdout), ...(basis?.slots.map(s => s.slot) ?? [])])) {
       const rows = report.holdout[slot];
       const info: WindowReport['slots'][string]['compatibility'] = compatibility.get(slot) ?? { status: 'compatible', reasons: [], days: [] };
       const identity = slotComputation(basis, slot);
       const addReason = (reason: typeof info.reasons[number]) => { if (!info.reasons.includes(reason)) info.reasons.push(reason); };
+      if (contractMixed) addReason('mixed_basis');
       if (!identity) addReason('unknown_basis');
       if (!rows?.length) addReason('unrepresented_counts');
       if (identity && identities.has(slot) && identities.get(slot) !== identity) addReason('mixed_basis');
@@ -116,6 +143,12 @@ export async function windowReport(
     }
   }
 
+  // A mixed contract is decided after every day is read, so it reaches the
+  // slots the earlier days had already been pooled into.
+  if (contractMixed) for (const info of compatibility.values()) {
+    if (!info.reasons.includes('mixed_basis')) info.reasons.push('mixed_basis');
+    info.reasons.sort(); info.status = 'mixed';
+  }
   const slots: WindowReport['slots'] = {};
   for (const [slot, bySlot] of counts) {
     const arms = [...bySlot.entries()].map(([arm, total]) => ({
@@ -126,6 +159,7 @@ export async function windowReport(
   }
   const report: WindowReport = { ...ids, days, missing, incomplete, measurement: REPORT_MEASUREMENT, slots,
     compatibility: { version: 1, experimental: 'unverified' }, sourceCounts,
+    ...(contract ? { attributionContract: contract } : {}),
     armVisitors: armVisitorsKnown && days.length
       ? { version: 1, basis: 'visitor_days', arms: [...visitorDays.entries()].map(([arm, visitors]) => ({ arm, visitors })).sort((a, b) => a.arm.localeCompare(b.arm)) }
       : null,

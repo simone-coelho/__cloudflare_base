@@ -7,7 +7,7 @@ import type { Env } from '@/types/env';
 import { expandLedgerMessage, persistDeliveries, writeBatches, type R2Like } from './writer';
 import type { CapturedMessage } from './records';
 import { hidden, loadTombstones, type R2Readable } from './erasure';
-import { hasDelivery, readDelivery, captureReceipt, deliveryClaimSubset, validCaptureReceipt, validDeliveryCaptureReceipt, type CaptureReceipt, type Delivery } from './delivery';
+import { hasDelivery, readDelivery, captureReceipt, deliveryClaimSubset, recordEvidenceLoss, validCaptureReceipt, validDeliveryCaptureReceipt, type CaptureReceipt, type Delivery } from './delivery';
 import { tenantConfig } from '@/tenancy/middleware';
 import { requireRetention } from '@/retention';
 import type { QuarantineCase } from './quarantine';
@@ -72,12 +72,40 @@ function validConsumeResult(value: unknown, bodies: readonly unknown[]): value i
  * positional and requires every partition; legacy failure retries that cohort.
  * Managed retries converge; legacy ones may duplicate.
  */
-export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPLOYMENT_PROFILE'> & Partial<Pick<Env, 'SHOPPER_REFLEX' | 'SESSIONS' | 'RETENTION'>>, bodies: readonly unknown[], now = Date.now(), preparedClaims?: Record<string, string>, recovery = false, recoveryDeadline?: number): Promise<ConsumeResult> {
+/**
+ * W22 R1.01: which provisioned tenant an envelope the writer could not place
+ * belonged to, read defensively off the envelope itself. An envelope that names
+ * no provisioned tenant is not counted against any of them (F16 §5(g)).
+ */
+function envelopeTenant(body: unknown, tenants: readonly string[]): string | null {
+  if (!body || typeof body !== 'object') return null;
+  const value = body as { record?: unknown; records?: unknown };
+  const row = value.record && typeof value.record === 'object' ? value.record
+    : Array.isArray(value.records) && value.records[0] && typeof value.records[0] === 'object' ? value.records[0] : null;
+  const tenant = row ? (row as { tenant?: unknown }).tenant : undefined;
+  return typeof tenant === 'string' && tenants.includes(tenant) ? tenant : null;
+}
+
+export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPLOYMENT_PROFILE'> & Partial<Pick<Env, 'SHOPPER_REFLEX' | 'SESSIONS' | 'RETENTION' | 'CACHE'>>, bodies: readonly unknown[], now = Date.now(), preparedClaims?: Record<string, string>, recovery = false, recoveryDeadline?: number): Promise<ConsumeResult> {
   const messages: CapturedMessage[] = [];
   const deliveries: Delivery[] = [];
   const dispositions: LedgerDisposition[] = Array.from(bodies, () => 'retry');
   const legacyIndices: number[] = [], managedIndices: number[] = [];
   let skipped = 0;
+  // W22 R1.01: rows this call could not place, by the tenant that owns them.
+  const unplaceable = new Map<string, number>();
+  const unplaced = (tenant: string | null, rows: number) => {
+    if (tenant && rows > 0) unplaceable.set(tenant, (unplaceable.get(tenant) ?? 0) + rows);
+  };
+  // A batch that failed as a whole is retried whole, and its rejected envelopes
+  // are rejected again on every attempt: counting them here would multiply one
+  // drop by the retry count, and would also make a failed batch leave a trace
+  // where the consumer promises none. The count is taken when this call reached
+  // a definite disposition, which is when the drop is a drop.
+  const reportUnplaced = async (failed: boolean) => {
+    if (failed) return;
+    for (const [tenant, rows] of unplaceable) await recordEvidenceLoss(env, tenant, 'consumerSkipped', rows);
+  };
   let tenants: string[];
   try { tenants = tenantConfig(env as Env).provisioned; }
   catch { return { written: 0, objects: 0, skipped: bodies.length, suppressed: 0, ok: bodies.length === 0, dispositions,
@@ -91,13 +119,18 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
       }
       else {
         const got = expandLedgerMessage(b);
-        if (!got.length || got.some(m => !tenants.includes(m.record.tenant))) { skipped++; continue; }
+        if (!got.length || got.some(m => !tenants.includes(m.record.tenant))) {
+          skipped++; unplaced(envelopeTenant(b, tenants), Math.max(1, got.length)); continue;
+        }
         messages.push(...got);
         legacyIndices.push(index);
       }
-    } catch { skipped++; }
+    } catch { skipped++; unplaced(envelopeTenant(b, tenants), 1); }
   }
-  if (!legacyIndices.length && !managedIndices.length) return { written: 0, objects: 0, skipped, suppressed: 0, ok: bodies.length === 0, dispositions };
+  if (!legacyIndices.length && !managedIndices.length) {
+    await reportUnplaced(false);
+    return { written: 0, objects: 0, skipped, suppressed: 0, ok: bodies.length === 0, dispositions };
+  }
   let ownerDispatched = false;
   try {
     // JSON cannot preserve own undefined fields or sparse arrays. An envelope
@@ -160,15 +193,18 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
           }
         }
         if (capture && managedIndices.some(index => dispositions[index] !== 'ack')) { capture.ok = false; if (capture.code === 'captured') capture.code = 'storage_unavailable'; }
+        await reportUnplaced(!!rejected);
         return { written, objects, skipped, suppressed, ok: dispositions.every(value => value === 'ack'), dispositions,
           ...(rejected ? { error: rejected } : {}), ...(capture ? { capture } : {}) };
       }
       const result = await ledgerUnderOwners<ConsumeResult>(env as Env, operation, () => { ownerDispatched = true; });
       if (!validConsumeResult(result, bodies)) throw new Error('Ledger positional result unavailable');
+      await reportUnplaced(result.error !== undefined);
       return result;
     }
   } catch {
     const total = deliveries.reduce((sum, delivery) => sum + delivery.messages.length, 0);
+    await reportUnplaced(true);
     return { written: 0, objects: 0, skipped, suppressed: 0, ok: false, dispositions, error: 'Ledger owner authority unavailable',
       ...(total ? { capture: { ...captureReceipt(total), ok: false, code: 'storage_unavailable' as const,
         unknown: ownerDispatched ? total : 0, notAttempted: ownerDispatched ? 0 : total } } : {}) };
@@ -189,7 +225,10 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
           try {
             for (const { record } of delivery.messages) if (!hidden(barriers.get(record.tenant)!, record)) requireRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
             admitted.push(delivery); positions.push(managedIndices[position]!);
-          } catch { skipped++; error = 'Ledger retention authority unavailable'; }
+          } catch {
+            skipped++; error = 'Ledger retention authority unavailable';
+            unplaced(delivery.messages[0]?.record.tenant ?? null, delivery.messages.length);
+          }
         }
         for (const delivery of admitted) for (const { record } of delivery.messages) if (!hidden(barriers.get(record.tenant)!, record)) pinRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
         attemptedManaged = admitted.reduce((sum, delivery) => sum + delivery.messages.length, 0);
@@ -215,7 +254,10 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
       try {
         for (const { record } of rows) if (!hidden(barriers.get(record.tenant)!, record)) requireRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
         admittedLegacy.push(...rows); admittedPositions.push(index);
-      } catch { skipped++; error = 'Ledger retention authority unavailable'; }
+      } catch {
+        skipped++; error = 'Ledger retention authority unavailable';
+        unplaced(rows[0]?.record.tenant ?? null, rows.length);
+      }
     }
     const allowed = admittedLegacy.filter(m => !hidden(barriers.get(m.record.tenant)!, m.record));
     for (const { record } of allowed) pinRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
@@ -223,6 +265,7 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
     legacyWritten = allowed.length; legacyObjects = written.length; legacySuppressed = admittedLegacy.length - allowed.length;
     for (const index of admittedPositions) dispositions[index] = 'ack';
   } catch { error = 'Ledger storage or erasure state unavailable'; }
+  await reportUnplaced(error !== undefined);
   return { written: legacyWritten + (capture?.newlyStored ?? 0), objects: legacyObjects + (capture?.objects ?? 0), skipped,
     suppressed: legacySuppressed + (capture?.suppressed ?? 0), ok: dispositions.every(value => value === 'ack'), dispositions,
     ...(error ? { error } : {}), ...(capture ? { capture } : {}) };
