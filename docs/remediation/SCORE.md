@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 160/164 · W closed 4/26 (W16–W41) · suite 1994/2076 · residual 82 in 10 files · typecheck GREEN
+Units 160/164 · W closed 4/26 (W16–W41) · suite 1997/2076 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -195,9 +195,7 @@ Units 160/164 · W closed 4/26 (W16–W41) · suite 1994/2076 · residual 82 in 
 
 ## Failing tests outside the baseline
 
--  the day report W21 rejects invalid, nonexistent, reversed and oversized windows before storage I/O through the actual route
--  the day report W21 retains repeated credits in raw reports and withdraws historic GET inference without storage mutation
--  the day report W30.02 normalizes new, legacy and malformed coverage through actual day and window reads without writeback
+_None._
 
 ## Derivation inputs
 
@@ -216,6 +214,6 @@ Units 160/164 · W closed 4/26 (W16–W41) · suite 1994/2076 · residual 82 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 47025c96b12eb3ccc10048f61ffd6dd23942274e119544aa2b8cd793fc9cae49 |
-| commit | 688287414933bffe6b3ad87ad177a1ceb4e53259 |
-| generated | 2026-09-20T06:38:38.691Z |
+| vitest report sha256 | 6ff59cd39c95e3c6428aa2918c1c39ea01ab6a1399e7b3d1a0b83e2d48ee6427 |
+| commit | f8608ae396358a4fa2fd422326d878c9d2534e13 |
+| generated | 2026-09-20T06:46:07.392Z |
