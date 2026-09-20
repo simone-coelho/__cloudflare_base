@@ -473,6 +473,13 @@ one purchasing visitor, and one purchase is counted on exactly one row. The wind
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
 day applied. No report of ours states a business target, a lift or a standing.
 
+`coverage.unassignedHours` is `number[] | null` and names the source limitation behind those two
+`null`s on a day summed from hour aggregates: `[]` when every built hour carries the experimental
+assignment, the hours that do not when some were folded before this release — that day's rows are
+grouped by the arm SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are
+`null` rather than a number the source cannot support — and `null` when the stored report does not
+record the member at all.
+
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and
 every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }` — the copies the read
