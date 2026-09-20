@@ -111,14 +111,19 @@ const W29_PIECES: ContentPiece[] = [
 ];
 
 /**
- * `hero` on `home` and on `category`, with DIFFERENT current weights. F24 §4.1:
- * "`learn.slots[slot].autonomy` … likewise keyed by slot name only, so two pages
- * share one autonomy config"; `validateSlotCatalog` scopes its duplicate check
- * per page (`kinds.ts:214`), "so this configuration is legal and expected".
+ * Two placements on two pages with DIFFERENT current weights, each with its own
+ * slot name. R189 (unit:W26.I1.01): a slot name may not be reused on a second
+ * page of the same brand — `validateSlotCatalog` refuses it at authoring time,
+ * which is F21 §8's remedy for "the pooling key is coarser than the placement"
+ * and exactly what prevents F24 §4.1's shared-configuration defect
+ * ("`learn.slots[slot].autonomy` … keyed by slot name only, so two pages share
+ * one autonomy config"). None of this file's claims depends on the two pages
+ * sharing one name; what the fixture needs is two pages carrying different
+ * current weights, and that is what it has.
  */
 const W29_SLOTS: SlotCatalog = { version: 'w29-b1-coach-slots', pages: {
   home: [{ slot: 'hero', take: 1, weights: { occasion: 0.9, line: 0.25 } }],
-  category: [{ slot: 'hero', take: 1, weights: { occasion: 0.8, line: 0.1 } }],
+  category: [{ slot: 'category-hero', take: 1, weights: { occasion: 0.8, line: 0.1 } }],
 } } as unknown as SlotCatalog;
 
 /** The stored mode is `autonomous` with `occasion` pinned: dormant configuration, retained. */

@@ -341,7 +341,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const explore = learning?.exploreOf ? (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => {
     const cfg = learning.exploreOf!(slot);
     if (!cfg) return null;
-    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg }, historical);
+    // W28.M1.01 (F23 §4.3): the merchandiser's item controls belong to the
+    // caller, which already holds them, and they govern exploration as well as
+    // scoring — an item whose learned treatment a person took control of is out
+    // of the rule's discretion. This reads the learn document the decision is
+    // already holding: no I/O, nothing that can fail or change the ranking.
+    const controlled = new Set<string>();
+    if (learning.controlOf) for (const r of ranked) if (learning.controlOf(slot, r.id)) controlled.add(r.id);
+    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical);
     if (!pick) return null;
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
@@ -412,7 +419,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (fa) d.explain.drivers.push({ dim: 'fatigue', value: `served ${fa.served} time${fa.served === 1 ? '' : 's'} in ${fa.windowHours} h`, a: Math.round(Math.min(fa.served, fatigueRules.get(d.slot)!.cap) / fatigueRules.get(d.slot)!.cap * 1000) / 1000, weight: -fatigueRules.get(d.slot)!.weight });
   }
   const freshSentence = (f: { ageDays: number; decay: number; applied: number }) => `${f.ageDays} days old, freshness at ${f.decay} of new: +${f.applied}`;
-  const fatigueSentence = (f: { served: number; windowHours: number; applied: number }) => `this shopper was served it ${f.served} time${f.served === 1 ? '' : 's'} in the last ${f.windowHours} hours: ${f.applied}`;
+  // W26 F1.01 (F21 §6(a)): the count behind this sentence is the shopper's
+  // history of this piece ANYWHERE IN THIS BRAND — every placement, every page,
+  // either arm (`servedCounts`, src/learn/fan.ts) — and the sentence says the
+  // scope it really has. It read "in the last N hours" beside a slot-keyed
+  // number and a merchandiser reasonably took it for this slot's own history.
+  const fatigueSentence = (f: { served: number; windowHours: number; applied: number }) => `this shopper was served it ${f.served} time${f.served === 1 ? '' : 's'} anywhere in this brand in the last ${f.windowHours} hours: ${f.applied}`;
   const stageSentence = (st: { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }) =>
     st.inside ? `made for a shopper who is ${st.visitor}: +${st.applied}` : `made for ${st.fit.join(' and ')}, and this shopper is ${st.visitor}: ${st.applied}`;
   const externalOf = (slot: string, key: string): { external?: DecisionRecord['explain']['external'] } => {

@@ -64,13 +64,20 @@ export interface Credit {
 
 /**
  * CW27 (doc 22 §13): what a credit is worth under the slot's objective. `unit` counts the success;
- * `revenue` weighs it by the outcome's value; `margin` by its margin, or its value when the feed gave
- * none. An outcome with nothing to weigh under a value objective is worth nothing, and the credit is
- * dropped rather than counted as one: a click cannot outrank a purchase on a slot that learns revenue.
+ * `revenue` weighs it by the outcome's value; `margin` by its margin. An outcome with nothing to weigh
+ * under a value objective is worth nothing, and the credit is dropped rather than counted as one: a
+ * click cannot outrank a purchase on a slot that learns revenue.
+ *
+ * W24 R1.02 (F19 §5.2, ruling R144): a margin objective NEVER falls back to the value. `margin ?? value`
+ * put two different quantities in one counter — an order's margin and another order's revenue — so a
+ * series learned under `margin` could not be read as money at all. An outcome the feed gave no margin
+ * for is worth nothing to margin learning and is excluded from it, exactly as an outcome with no value
+ * is excluded from revenue learning. What a MISSING margin should mean instead — a documented fallback,
+ * or this zero — is the learning owners' (W24.P1.01); until they publish one the platform does not guess.
  */
 export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefined, outcome: Pick<OutcomeRecord, 'value' | 'margin'>): number {
   if (!objective || objective === 'unit') return 1;
-  const v = objective === 'margin' ? (outcome.margin ?? outcome.value) : outcome.value;
+  const v = objective === 'margin' ? outcome.margin : outcome.value;
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
 }
 
@@ -93,7 +100,29 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
  * different session — is a miss by identity, not a miss by time, and is not
  * counted here.
  */
-export interface Attribution { credits: Credit[]; outsideWindow: number }
+/**
+ * W26 C1.01 (F21 §6(c), §8): beside them, the correlated decisions this outcome
+ * NAMED and could not be credited to because the brand it carries disagrees
+ * with the brand that decision was served under.
+ *
+ * The credit itself is refused exactly as it always was — a numerator may never
+ * be moved into another brand's statistics object. What was missing is the
+ * word: the receipt said `attributed: 0`, which is indistinguishable from
+ * "nothing matched this outcome at all", and a tenant whose outcome brand was
+ * defaulted to its tenant id could lose every credit without one number saying
+ * so. This is a COUNT of decisions, never a flag and never a gate: it widens
+ * nothing, credits nothing, and reaching it changes no decision.
+ */
+export interface Attribution { credits: Credit[]; outsideWindow: number; brandMismatched: number }
+
+/**
+ * The placement an outcome names, or null when it names none. Absent, empty and
+ * the SDK's literal `unknown` (`src/sdk/emit.ts:93`) are all "unspecified
+ * placement", never a slot called `unknown`. One definition, so attribution and
+ * the day report agree on what a legacy, placement-less outcome is.
+ */
+export const namedSlotOf = (slot: string | null | undefined): string | null =>
+  typeof slot === 'string' && slot.trim().length > 0 && slot !== 'unknown' ? slot : null;
 
 /**
  * Apply the learning policy to one outcome against the visitor's ring. Pure.
@@ -106,7 +135,7 @@ export function attribute(outcome: OutcomeRecord, ring: readonly RingEntry[], po
 
 /** `attribute`, and beside it what the reward's window refused. */
 export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEntry[], policy: AttributionPolicy): Attribution {
-  const none: Attribution = { credits: [], outsideWindow: 0 };
+  const none: Attribution = { credits: [], outsideWindow: 0, brandMismatched: 0 };
   let candidates = ring;
   if (Object.prototype.hasOwnProperty.call(outcome, 'decision_id')) {
     const id = outcome.decision_id;
@@ -114,17 +143,20 @@ export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEnt
     const carrier = parseId(id)!;
     if (carrier.tenant !== outcome.tenant || id.split(':')[2] !== outcome.visitor_id) return none;
     const matches = ring.filter(e => e.id === id);
+    // W26 C1.01: the one refusal below that is a BRAND disagreement, counted
+    // apart from the rest so it is legible instead of silent. Reported whether
+    // or not another clause would also have refused this reference.
+    const brandMismatched = matches.length === 1 && matches[0]!.brand !== outcome.brand ? 1 : 0;
     // Even identical duplicate rows are ambiguous retained evidence, not two selectable receipts.
-    if (matches.length !== 1 || matches[0]!.brand !== outcome.brand || matches[0]!.ts !== carrier.ts
+    if (matches.length !== 1 || brandMismatched === 1 || matches[0]!.ts !== carrier.ts
       || (Object.hasOwn(matches[0]!, 'tenant') && matches[0]!.tenant !== outcome.tenant)
-      || (Object.hasOwn(matches[0]!, 'visitor_id') && matches[0]!.visitor_id !== outcome.visitor_id)) return none;
+      || (Object.hasOwn(matches[0]!, 'visitor_id') && matches[0]!.visitor_id !== outcome.visitor_id)) return { ...none, brandMismatched };
     candidates = matches;
   }
   const window = policy.windowsMs[outcome.type] ?? policy.windowsMs.custom ?? 30 * MIN;
   // The SDK's literal `unknown` is an unspecified-placement sentinel. Otherwise
   // preserve the supplied name exactly; a named miss must not broaden attribution.
-  const namedSlot = typeof outcome.slot === 'string' && outcome.slot.trim().length > 0 && outcome.slot !== 'unknown'
-    ? outcome.slot : null;
+  const namedSlot = namedSlotOf(outcome.slot);
   /**
    * Everything the policy asks of a candidate EXCEPT the reward's window: its
    * exposure time when it matches this outcome's identity, null when it does
@@ -153,13 +185,13 @@ export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEnt
     if (outcome.ts - exposureAt > window) { outsideWindow++; continue; }
     eligible.push(e);
   }
-  if (eligible.length === 0) return { credits: [], outsideWindow };
+  if (eligible.length === 0) return { credits: [], outsideWindow, brandMismatched: 0 };
   // Pick once within each eligible slot. Unspecified direct outcomes and `any`
   // retain their broad legacy behavior; an explicitly named direct outcome does not.
   const bySlot = new Map<string, RingEntry>();
   const ordered = [...eligible].sort((a, b) => (policy.credit === 'last' ? b.ts - a.ts : a.ts - b.ts));
   for (const e of ordered) if (!bySlot.has(e.slot)) bySlot.set(e.slot, e);
-  return { outsideWindow, credits: [...bySlot.values()].map((e) => ({
+  return { outsideWindow, brandMismatched: 0, credits: [...bySlot.values()].map((e) => ({
     decision_id: e.id, slot: e.slot, item: e.item, cell: e.cell, reward: outcome.type, event: outcome.event, ts: outcome.ts, weight: 1,
   })) };
 }

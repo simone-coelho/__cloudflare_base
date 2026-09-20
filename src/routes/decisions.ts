@@ -41,7 +41,7 @@ import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, sl
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
-import { DEFAULT_EXPLORE } from '@/learn/explore';
+import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
@@ -305,8 +305,11 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
     readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant),
   ]);
   const ex = learn.slots?.[slot]?.exploration ?? null;
-  const effective = { mode: ex?.mode === 'thompson' ? 'off' : ex?.mode ?? 'off', share: ex?.mode === 'thompson' ? 0 : ex?.share ?? 0,
-    ...(ex?.mode === 'thompson' ? { configuredMode: 'thompson', unsupported: true } : {}) };
+  // W28.W1.01: one representation of "the mode the engine runs, and the retained
+  // setting where they differ" — the same helper the day report's §7 row uses.
+  const eff = effectiveExploration(ex);
+  const effective = { mode: eff.mode ?? 'off', share: eff.unsupported ? 0 : ex?.share ?? 0,
+    ...(eff.unsupported ? { configuredMode: eff.configuredMode, unsupported: true } : {}) };
   const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
   c.header('Cache-Control', 'no-store');
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
@@ -864,7 +867,7 @@ decisionRoutes.get('/:tenant/replay/:id', operatorJwt(), async (c) => {
   if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
   const result = await replayDecision(c.env, found.record);
   witness = structuredClone(requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger'));
-  return c.json({ ok: result.ok, equal: result.equal, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
+  return c.json({ ok: result.ok, equal: result.equal, classification: result.classification, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
   });
   if (response.ok && witness) try { requireRetention(c.env, witness, tenant, 'ledger'); }
   catch { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); }
@@ -1040,6 +1043,76 @@ decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
   } catch {
     invalidateLiftCache();
     return c.json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
+  }
+});
+
+/**
+ * POST /v1/:tenant/learn/generation { slot, brand?, reward?, objective?, rebuildFrom? }
+ *
+ * W24 G1.02 (document 35 §5 row W24 :426 "authorized generation transition with
+ * no stale oscillation or mixed cached snapshots … reset as explicit containment
+ * or trustworthy rebuild/promote from retained events"; F19 §7; the authorized
+ * rebuild/promote left OPEN in HANDOFF-2026-09-16 :228).
+ *
+ * The ACCUMULATION semantics of a slot — what a counter means: the objective, the
+ * reward it is filtered to — can never change on an ordinary write. The statistics
+ * object refuses that with 409 so counters built under one objective are never
+ * silently reinterpreted under another. This is the one authorized way past it,
+ * and it is a transition rather than a reinterpretation: the superseded published
+ * version is archived under its own version, the counters are discarded (or
+ * rebuilt from one retained day), a fresh generation starts, and it is published
+ * at once to the key the serving path reads so no isolate goes on serving the
+ * generation it superseded.
+ *
+ * WHO may authorize it in production, and on what evidence, is an owner decision
+ * (D09, W24.P1.01). Until it is settled this carries the operator credential the
+ * other learning operations carry and names no production approver of its own.
+ */
+const TRANSITION_REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
+decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  c.header('Cache-Control', 'no-store');
+  const b = (await c.req.json().catch(() => null)) as { slot?: unknown; brand?: unknown; reward?: unknown; objective?: unknown; rebuildFrom?: unknown } | null;
+  if (!b || typeof b !== 'object' || Array.isArray(b)
+    || Object.keys(b).some(key => !['slot', 'brand', 'reward', 'objective', 'rebuildFrom'].includes(key))
+    || typeof b.slot !== 'string' || !b.slot || b.slot.length > 200
+    || (b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200))
+    || (b.reward !== undefined && (typeof b.reward !== 'string' || !TRANSITION_REWARDS.has(b.reward)))
+    || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
+    || (b.rebuildFrom !== undefined && (typeof b.rebuildFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.rebuildFrom)))
+    // A transition that names nothing would discard a generation's evidence for
+    // no declared change, which is a reset and has its own audited operation.
+    || (b.reward === undefined && b.objective === undefined && b.rebuildFrom === undefined)) {
+    return c.json({ ok: false, error: 'slot, and at least one of reward, objective or rebuildFrom' }, 400);
+  }
+  const brand = (b.brand ?? '').trim() || tenant;
+  if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
+  const supplied = (c.req.header('Idempotency-Key') ?? '').trim();
+  if (supplied && !/^[a-f0-9]{32}$/.test(supplied)) return c.json({ ok: false, error: 'Idempotency-Key must be 32 hexadecimal characters' }, 400);
+  const operationId = supplied || crypto.randomUUID().replace(/-/g, '');
+  try {
+    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+    const response = await stub.fetch('https://learn/transition', { method: 'POST', body: JSON.stringify({
+      tenant, brand, slot: b.slot, operationId,
+      ...(b.reward !== undefined ? { reward: b.reward } : {}), ...(b.objective !== undefined ? { objective: b.objective } : {}),
+      ...(b.rebuildFrom !== undefined ? { rebuildFrom: b.rebuildFrom } : {}),
+    }) });
+    const res = await response.json() as { ok?: unknown; generation?: unknown; restartedAt?: unknown; archivedVersion?: unknown;
+      publicationOutcome?: unknown; rebuiltFrom?: unknown } | null;
+    // Every isolate's per-request lift cache is dropped here for the same reason
+    // publication drops it: what it holds is a generation that no longer stands.
+    invalidateLiftCache();
+    if (!response.ok || !res || res.ok !== true || typeof res.generation !== 'string' || !res.generation
+      || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
+      return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
+    }
+    return c.json({ ok: true, tenant, brand, slot: b.slot, operationId, generation: res.generation,
+      restartedAt: res.restartedAt, archivedVersion: res.archivedVersion ?? null,
+      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}) });
+  } catch {
+    invalidateLiftCache();
+    return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, 503);
   }
 });
 

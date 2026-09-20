@@ -92,12 +92,17 @@ describe('exploration', () => {
     expect(betaSample(rng, 1, 1)).toBeGreaterThan(0);
   });
 
-  it('epsilon: uniform inside the share, never flags the leader as an exploration', () => {
+  // R162 (an R10 correction for W28.C1.01): the expectation below was stale, not the mode. F23 §4.1
+  // names the old one as a lie — "a decision that WAS made by a random draw is recorded as not
+  // explored" — and doc 22 §7 promises the realized share can be verified rather than trusted, which
+  // an unflagged leader draw defeats. Uniform inside the share is unchanged; a draw that lands on
+  // the leader is now the exploration it was.
+  it('epsilon: uniform inside the share, and a draw that lands on the leader is the exploration it was', () => {
     const cfg = { mode: 'epsilon' as const, share: 1, floor: 0 };
     const picks = new Set<string | null>();
     for (let i = 0; i < 100; i++) picks.add(explorationPick({ visitorId: `e${i}`, slot: 'hero', nowMs: T0, ranked, snapshot: null, cfg })?.pieceId ?? null);
     expect(picks.has('b') && picks.has('c')).toBe(true);
-    expect(picks.has('a')).toBe(false);
+    expect(picks.has('a'), 'R162 / W28.C1.01 — the uniform draw names the leader for some visitors inside the share, and that decision is an exploration too').toBe(true);
   });
 });
 

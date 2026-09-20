@@ -270,6 +270,15 @@ export function composeContentDetailed(
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
 
+    // W28.C1.01(b) (F23 §4.2): where an exploration moved ONE piece to the front,
+    // the support the ledger records is the top candidates BY SCORE — taken
+    // before that move, so the third-highest scored piece is no longer pushed
+    // out of the record by the reorder — with the piece the exploration named
+    // kept beside them, first, because it is what was served. Record only: the
+    // served ranking is untouched, and a slot with no exploration pick, or one
+    // whose whole ranking was replaced, records exactly what it recorded before.
+    let byScore: typeof scored | null = null;
+    let promoted: string | null = null;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
       if (pick?.ranking) {
@@ -277,12 +286,15 @@ export function composeContentDetailed(
         scored.sort((x, y) => (order.get(x.p.id) ?? 1e9) - (order.get(y.p.id) ?? 1e9));
       } else if (pick?.first) {
         const i = scored.findIndex((s) => s.p.id === pick.first);
-        if (i > 0) scored.unshift(...scored.splice(i, 1));
+        if (i > 0) { byScore = scored.slice(); promoted = pick.first; scored.unshift(...scored.splice(i, 1)); }
       }
     }
 
-    candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit))
-      .map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
+    const limit = Math.max(0, candidateLimit);
+    const support = limit > 0 && byScore && promoted !== null
+      ? [scored[0]!, ...byScore.slice(0, limit).filter((s) => s.p.id !== promoted)]
+      : scored.slice(0, limit);
+    candidates[slot.slot] = support.map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
 
     // The take. With a diversity rule (CW33), a piece that would put a value of the dimension over
     // `max` yields to the next ranked piece and is named on that piece's explain; if the rule leaves

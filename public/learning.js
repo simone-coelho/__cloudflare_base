@@ -102,6 +102,10 @@
   const REWARDS = ['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'];
   const LEVEL_WORDS = ['everyone', 'channel', 'channel and visit', 'channel, visit and stage', 'channel, visit, stage and region', 'channel, visit, stage, region and affinity'];
   const levelOf = (key) => (key === '*' ? 0 : key.split('|').length);
+  // Doc 22 §7: the exploration modes the engine runs. A retained document may still
+  // name a withdrawn one; it is reported as the dormant setting it is, never as live.
+  const SUPPORTED_EXPLORATION = ['off', 'rotation', 'epsilon'];
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
 
   // ---------- tiny DOM helpers ----------
   function h(tag, attrs, ...children) {
@@ -362,8 +366,17 @@
     const floor = ex ? ex.floor : 50;
     const rows = S.snapshot ? Object.entries(S.snapshot.items || {}).map(([item, byKey]) => ({ item, n: (byKey['*'] || { n: 0 }).n })).filter((r) => r.n < floor).sort((a, b) => a.n - b.n) : [];
     const rep = S.report && S.report.exploration ? S.report.exploration.find((e) => e.slot === S.slot) : null;
+    // W28.W1.01: this panel states the mode the ENGINE RAN. A retained setting the
+    // engine will not run (Thompson is withdrawn — doc 22 §7) is named as the
+    // dormant setting it is, in the same words the editor below uses, and is never
+    // presented as the live mode with a share and a floor it is not spending.
+    const retained = ex && SUPPORTED_EXPLORATION.indexOf(ex.mode) < 0 ? ex : null;
+    const live = retained ? null : ex;
     host.append(h('div', { class: 'kv' },
-      h('span', { class: 'k' }, 'Mode'), h('span', { class: 'v' }, ex && ex.mode !== 'off' ? `${ex.mode}, share ${pct(ex.share)}, floor ${ex.floor} observations` : 'off'),
+      h('span', { class: 'k' }, 'Mode'), h('span', { class: 'v' }, live && live.mode !== 'off' ? `${live.mode}, share ${pct(live.share)}, floor ${live.floor} observations`
+        : retained ? 'off (the retained setting is dormant)' : 'off'),
+      retained ? [h('span', { class: 'k' }, 'Retained setting'),
+        h('span', { class: 'v' }, `${storedModeWords(retained.mode)}; this slot explored nothing. Choose a supported mode in the dials below to replace it.`)] : null,
       h('span', { class: 'k' }, 'Realized share'), h('span', { class: 'v' }, rep ? `${pct(rep.realized)} of ${rep.decisions} first-position decisions on ${S.report.date}${rep.configured !== null ? ` (configured ${pct(rep.configured)})` : ''}` : 'build the day report below to measure it'),
       h('span', { class: 'k' }, 'Under the floor'), h('span', { class: 'v' }, rows.length ? `${rows.length} item${rows.length === 1 ? '' : 's'}` : 'none: every served item has reached the floor'),
     ));

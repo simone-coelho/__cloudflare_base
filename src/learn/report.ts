@@ -14,10 +14,11 @@ import { requireRetention, type RetentionEnv } from '@/retention';
 import { isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
 import { boundedLedgerText, equalLogicalRows, logicalIdentity } from '@/ledger/delivery';
 import type { R2Like } from '@/ledger/writer';
-import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, creditWeight, DEFAULT_POLICY, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
+import { effectiveExploration, type ExploreMode } from './explore';
 import type { PriorIndex } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
@@ -349,7 +350,10 @@ function savedShape(value: unknown, ids: { tenant: string; brand: string; date: 
   if (value.policies !== undefined) {
     if (!Array.isArray(value.policies)) fail();
     bound('policies', (value.policies as unknown[]).length);
-    for (const p of value.policies as unknown[]) { const v = map(p); row(); if (!name(v.name) || (v.role !== 'learning' && v.role !== 'reporting')) fail(); count(v.credits); }
+    // W26 R1.01: `legacyCredits` is validated when present and never required —
+    // a day report retained before it existed stays readable.
+    for (const p of value.policies as unknown[]) { const v = map(p); row(); if (!name(v.name) || (v.role !== 'learning' && v.role !== 'reporting')) fail(); count(v.credits);
+      if (v.legacyCredits !== undefined) count(v.legacyCredits); }
   }
   if (value.exploration !== undefined) {
     if (!Array.isArray(value.exploration)) fail();
@@ -704,7 +708,22 @@ export function attributionArm(arm: string, decisions: number, credited: number)
   const creditedPerDecision = decisions > 0 ? credited / decisions : null;
   return { arm, decisions, credited, creditedPerDecision, rate: creditedPerDecision };
 }
-export interface ExploreRow { slot: string; decisions: number; explored: number; realized: number; configured: number | null; mode: string | null }
+/**
+ * §7: what explored in the slot, against the share the slot can actually
+ * reserve. W28.W1.01: `mode` is the mode the engine RAN. Where the retained
+ * document names a mode the engine will not run, the row publishes no share and
+ * names the stored setting in `configuredMode`/`unsupported` — the words
+ * `GET learn/exploring` answers with — so "configured 10%, realized 0%" is never
+ * read off a policy that cannot explore at all.
+ */
+export interface ExploreRow {
+  slot: string; decisions: number; explored: number; realized: number;
+  configured: number | null; mode: string | null;
+  /** The retained setting, where the engine will not run it. Absent for a supported mode. */
+  configuredMode?: ExploreMode;
+  /** Set with `configuredMode`: retained configuration, not an active policy. */
+  unsupported?: boolean;
+}
 
 /** Reported source limitations, not delivery completeness or experimental maturity. */
 export interface ReportCoverage {
@@ -743,7 +762,24 @@ export interface DayReport {
   counts: { decisions: number; outcomes: number; visitors: number; truncated: boolean; duplicates?: DuplicateCounts;
     /** W22 D1.03: rows excluded because two different rows share their logical id and the conflict is filed. */
     conflicts?: DuplicateCounts };
-  policies: Array<{ name: string; policy: AttributionPolicy; role: 'learning' | 'reporting'; credits: number }>;
+  /**
+   * W26 R1.01 (doc 35 §5 W26, "unknown legacy outcomes"): `credits` is what this
+   * policy credited; `legacyCredits` is how many of them came from an outcome
+   * that named NEITHER a placement nor a decision — the legacy shape the SDK's
+   * `unknown` sentinel and every pre-correlation integration still send.
+   *
+   * Such an outcome is still credited, deliberately and by the declared legacy
+   * rule: it is spread over every placement of the item in the window, so one
+   * click on a piece in two slots pays two credits. That is a defensible rule
+   * and a poor measurement, and the two were indistinguishable on the report —
+   * a day of legacy traffic read exactly like a day of named-placement credit.
+   * Counting them apart is what lets an operator see how much of the day's
+   * evidence is a guess about where the shopper was.
+   *
+   * OPTIONAL on the type, because retained day reports were written before it
+   * existed and are still valid; every report this build produces sets it.
+   */
+  policies: Array<{ name: string; policy: AttributionPolicy; role: 'learning' | 'reporting'; credits: number; legacyCredits?: number }>;
   /** slot → policy name → the grid the engine would have learned under that policy, from this day alone. */
   grids: Record<string, Record<string, LiftSnapshot>>;
   exploration: ExploreRow[];
@@ -978,15 +1014,21 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     const stateOf = (slot: string) => { let s = states.get(slot); if (!s) { s = emptyStats(); states.set(slot, s); } return s; };
     // Credits under this policy, from every outcome against its visitor's ring.
     let credits = 0;
+    // W26 R1.01: of those credits, the ones an outcome bought without naming
+    // where the shopper was — no placement and no decision reference — so the
+    // report can say how much of the day rests on the legacy spread rule.
+    let legacyCredits = 0;
     const armCredits = new Map<string, number>();
     for (const o of i.outcomes) {
       if (Object.hasOwn(o, 'decision_id') && conflictingReferences?.has(referenceKey(o.tenant, o.visitor_id, o.decision_id!))) continue;
       const ring = rings.get(o.visitor_id);
       if (!ring) continue;
+      const legacy = !Object.hasOwn(o, 'decision_id') && namedSlotOf(o.slot) === null;
       for (const c of attribute(o, ring, p)) {
         const reward = slotCfg[c.slot]?.reward ?? 'click';
         if (c.reward !== reward) continue;                       // the slot learns against one reward
         credits += 1;
+        if (legacy) legacyCredits += 1;
         // Explicit selection already proved one subject-owned target. Only
         // absent-ID legacy attribution retains the global first-match lookup.
         // The subject-scoped lookup is unchanged; only the LABEL it resolves to
@@ -998,7 +1040,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
         if (arm === 'personalized') { const w = creditWeight(slotCfg[c.slot]?.objective, o); if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, w, statsCfg); }
       }
     }
-    policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits });
+    policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits, legacyCredits });
     for (const slot of slots) {
       const st = states.get(slot) ?? emptyStats();
       // W25 O1.01: the declaration below is derived here, from the index this
@@ -1028,7 +1070,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const exploration: ExploreRow[] = slots.map((slot) => {
     const { decisions, explored } = slotCounts.get(slot)!;
     const cfg = i.learn.slots?.[slot]?.exploration ?? null;
-    return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
+    return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, ...effectiveExploration(cfg) };
   });
 
   // W21 E1.04: outcomes by the arm the VISITOR is enrolled in, never by whether

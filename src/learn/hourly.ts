@@ -22,10 +22,11 @@ import { isLearningKey, parseId, type OutcomeRecord, type RewardType } from '@/l
 import type { R2Like } from '@/ledger/writer';
 import { readRetention, requireRetention, mergeRetention, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
-import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
 import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
+import { effectiveExploration } from './explore';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
   type ArmVisitors, type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts, type VisitorOutcomes } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
@@ -185,6 +186,19 @@ export interface PolicyHour {
   policy: AttributionPolicy;
   role: 'learning' | 'reporting';
   credits: number;
+  /**
+   * W26 R1.01: how many of this hour's `credits` came from an outcome that named
+   * NEITHER a placement nor a decision — the legacy shape that is spread over
+   * every placement of the item instead of crediting the one the shopper acted
+   * on. It adds across the hours of a day exactly as `credits` does.
+   *
+   * The member's ABSENCE is the statement that this hour cannot say (R149), the
+   * same rule `HourAssignments` states above: an aggregate folded before this
+   * release carries none, and a day summed with any such hour carries none
+   * either rather than reporting a total that silently omits those hours. Every
+   * hour this build folds carries it, zero included.
+   */
+  legacyCredits?: number;
   /** `slot|arm` → credits, for the holdout rows. */
   armCredits: Record<string, number>;
   /** slot → the decayed accumulators this hour contributed under this policy. */
@@ -270,7 +284,7 @@ export function policiesOf(learn: LearnConfig): RolePolicy[] {
 
 export const emptyBrand = (): HourBrand => ({ decisions: 0, outcomes: 0, visitorsDay: 0, policies: {}, arms: {}, exploration: {}, rows_hidden: 0 });
 const policyHour = (hb: HourBrand, p: RolePolicy): PolicyHour =>
-  (hb.policies[p.name] ??= { policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role: p.role, credits: 0, armCredits: {}, stats: {} });
+  (hb.policies[p.name] ??= { policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role: p.role, credits: 0, legacyCredits: 0, armCredits: {}, stats: {} });
 
 // ── merging: exact, because every number is a count or a decayed accumulator ──
 
@@ -341,9 +355,16 @@ export function mergeBrand(a: HourBrand, b: HourBrand, tau: number): HourBrand {
     for (const [slot, e] of Object.entries(src.exploration)) { const x = (out.exploration[slot] ??= { decisions: 0, explored: 0 }); x.decisions += e.decisions; x.explored += e.explored; }
     for (const [name, p] of Object.entries(src.policies)) {
       const cur = out.policies[name];
-      if (!cur) { out.policies[name] = { policy: p.policy, role: p.role, credits: p.credits, armCredits: { ...p.armCredits }, stats: Object.fromEntries(Object.entries(p.stats).map(([s, st]) => [s, mergeStats(st, emptyStats(), tau)])) }; continue; }
+      if (!cur) { out.policies[name] = { policy: p.policy, role: p.role, credits: p.credits,
+        ...(p.legacyCredits !== undefined ? { legacyCredits: p.legacyCredits } : {}),
+        armCredits: { ...p.armCredits }, stats: Object.fromEntries(Object.entries(p.stats).map(([s, st]) => [s, mergeStats(st, emptyStats(), tau)])) }; continue; }
       if (cur.role !== p.role || JSON.stringify(effectiveReportPolicy(cur.policy)) !== JSON.stringify(effectiveReportPolicy(p.policy))) unavailable();
       cur.credits += p.credits;
+      // W26 R1.01 (R149): the legacy share sums only where BOTH hours can say
+      // it. One hour folded before the release makes the day's total unknowable
+      // — not zero — so the member leaves, and the day reports none.
+      if (cur.legacyCredits === undefined || p.legacyCredits === undefined) delete cur.legacyCredits;
+      else cur.legacyCredits += p.legacyCredits;
       addCounts(cur.armCredits, p.armCredits);
       for (const [slot, st] of Object.entries(p.stats)) cur.stats[slot] = mergeStats(cur.stats[slot] ?? emptyStats(), st, tau);
     }
@@ -725,6 +746,11 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     const ring = Object.hasOwn(o, 'decision_id') ? subjectRing : subjectRing.filter((e) => e.brand === o.brand);
     if (!ring.length) continue;
     const hb = (ctx.brands[o.brand] ??= emptyBrand());
+    // W26 R1.01: an outcome that names neither a placement nor a decision buys
+    // its credits by the legacy spread rule. The same predicate the raw-day
+    // branch uses (`src/learn/report.ts`), so the two branches count one day
+    // one way.
+    const legacy = !Object.hasOwn(o, 'decision_id') && namedSlotOf(o.slot) === null;
     for (const p of ctx.policies) {
       const ph = policyHour(hb, p);
       for (const c of attribute(o, ring, p)) {
@@ -735,6 +761,7 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
           slots.add(c.slot); ctx.creditedSlots.set(o.brand, slots);
         }
         ph.credits += 1;
+        if (legacy) ph.legacyCredits = (ph.legacyCredits ?? 0) + 1;
         const credited = ring.find((e) => e.id === c.decision_id);
         const arm = credited?.arm ?? 'personalized';
         ph.armCredits[`${c.slot}|${arm}`] = (ph.armCredits[`${c.slot}|${arm}`] ?? 0) + 1;
@@ -891,6 +918,9 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
       for (const [name, value] of Object.entries(aggregateMap(b.policies))) {
         aggregateName(name); visit(); const p = aggregateMap(value);
         if (p.role !== 'learning' && p.role !== 'reporting') unavailable(); aggregateNumber(p.credits);
+        // W26 R1.01: present or absent, never malformed — an aggregate folded
+        // before the release carries none and stays readable.
+        if (p.legacyCredits !== undefined) aggregateNumber(p.legacyCredits);
         try { validateReportPolicies([{ ...aggregateMap(p.policy), name } as ReportPolicy]); } catch { unavailable(); }
         if (brand === ids.brand) { policies.add(name); aggregateBound('policies', policies.size); }
         for (const [key, n] of Object.entries(aggregateMap(p.armCredits))) { aggregateName(key, 2048); aggregateNumber(n); visit(); }
@@ -1020,7 +1050,11 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const holdoutComparison: DayReport['holdoutComparison'] = {};
   for (const name of names) {
     const p = hb.policies[name]!;
-    policies.push({ name, policy: p.policy, role: p.role, credits: p.credits });
+    // W26 R1.01 (R149): the legacy share is carried onto the day only where
+    // every summed hour could say it; otherwise the member is absent, exactly
+    // as the per-arm denominators are when an hour cannot name the assignment.
+    policies.push({ name, policy: p.policy, role: p.role, credits: p.credits,
+      ...(p.legacyCredits !== undefined ? { legacyCredits: p.legacyCredits } : {}) });
     for (const slot of slots) (grids[slot] ??= {})[name] = buildSnapshot(p.stats[slot] ?? emptyStats(), { tenant: ids.tenant, brand: ids.brand, slot }, slotCfg[slot]?.reward ?? 'click', now, statsCfg, null, slotCfg[slot]?.objective ?? 'unit', slotCfg[slot]?.measurementBasis ?? 'served-v1');
     if (p.role !== 'learning') continue;
     for (const slot of slots) {
@@ -1034,10 +1068,12 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
       holdoutComparison[slot] = [];
     }
   }
+  // W28.W1.01: the folded day says exactly what the raw day says (`src/learn/report.ts`),
+  // including the retained setting where the engine will not run the configured mode.
   const exploration = slots.map((slot) => {
     const x = hb.exploration[slot] ?? { decisions: 0, explored: 0 };
     const cfg = learn.slots?.[slot]?.exploration ?? null;
-    return { slot, decisions: x.decisions, explored: x.explored, realized: x.decisions ? r3(x.explored / x.decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
+    return { slot, decisions: x.decisions, explored: x.explored, realized: x.decisions ? r3(x.explored / x.decisions) : 0, ...effectiveExploration(cfg) };
   });
   // W21 C1.03/E1.04 (F25 §5.3, F07 §7): the day's per-arm DENOMINATORS, in
   // distinct visitors, summed from the membership each hour carried — never
