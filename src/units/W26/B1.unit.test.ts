@@ -82,6 +82,7 @@ import { consumeLedger } from '@/ledger/consume';
 import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeFromAction, rewardOf, ts36, validDecisionMeasurement, type OutcomeRecord } from '@/ledger/records';
 import { fanDecisions, fanOutcome, ringEntryOf, ringName, servedCounts, statsName, liftKey, type SlotLearnConfig } from '@/learn/fan';
+import { compactOf } from '@/learn/hourly';
 import { attribute, DEFAULT_POLICY, type RingEntry } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { receiptOf } from '@/learn/receipts';
@@ -406,6 +407,18 @@ describe('unit:W26.U1.01', () => {
       .toEqual({ counted: false, reason: 'not-a-learning-input' });
     expect(learningInputOf!({ type: 'content_click', data: { contentId: 'tabby-in-motion-film', slot: 'hero' } }))
       .toEqual({ counted: true, reward: 'click', event: 'content_click' });
+    // R157 finding 3: the declaration is tied to the ENGINE, not to a second
+    // literal table that drifts the moment a reward is added. For every wire
+    // type the repository ships, `learningInputOf` must agree with `rewardOf`
+    // — the function `outcomeFromAction` really consults (`src/ledger/records.ts:266`).
+    for (const type of ['content_click', 'content_dwell', 'video_complete', 'add_to_cart', 'cart_add', 'wishlist_add',
+      'purchase', 'checkout', 'order_complete', 'content_impression', 'page_view', 'product_view', 'search'] as const) {
+      const action = { type, userId: 'v-w26', data: { contentId: 'tabby-in-motion-film', slot: 'hero' } };
+      const reward = rewardOf(action);
+      expect(learningInputOf!(action), `W26.U1.01: learningInputOf must agree with rewardOf for '${type}'`)
+        .toEqual(reward === null ? { counted: false, reason: 'not-a-learning-input' }
+          : { counted: true, reward: reward.type, event: reward.event });
+    }
     // LOCKED, and the reason the declaration above must exist: the impression
     // produces no outcome record today (`src/ledger/records.ts:198-205`).
     expect(rewardOf({ type: 'content_impression', userId: 'v-w26', data: {} })).toBeNull();
@@ -523,6 +536,13 @@ describe('unit:W26.I1.01', () => {
     const receipt = receiptOf(served, NO_NAMES) as unknown as Record<string, unknown>;
     expect(receipt, 'W26.I1.01: `receiptOf` must carry the brand the decision was served under').toMatchObject({ brand: BRAND });
     expect(receipt).toMatchObject({ page: 'pdp', slot: 'hero', position: 2 });
+    // R157 finding 2: the brand is the RECORD's, never stamped from the tenant
+    // — the very default F21 §6(c) condemns. A tenant whose brand is not its
+    // own id is the case that distinguishes the two.
+    const branded = record({} as Env, { slot: 'hero', item_id: 'tabby-in-motion-film', ts: T0,
+      tenant: MULTI_TENANT, brand: MULTI_BRAND, retention: undefined });
+    expect(receiptOf(branded, NO_NAMES) as unknown as Record<string, unknown>,
+      'W26.I1.01: the receipt brand is the brand the decision carries, not the tenant id').toMatchObject({ brand: MULTI_BRAND });
 
     // RULED (F21 §8, the M: "Page in `statsName`/`liftKey`, or an enforced
     // global uniqueness of slot names across pages"). `validateSlot` refuses a
@@ -648,7 +668,7 @@ describe('unit:W26.C1.01', () => {
       decision_id: served.decision_id, retention: captureRetention(ring.env as never, MULTI_TENANT, now + 1000, Date.now()) };
     const receipt = await fanOutcome(ring.env, MULTI_TENANT, mismatched, DEFAULT_POLICY, 'beta', SLOT_CONFIG,
       { reward: 'click', objective: 'unit', stats: DEFAULT_STATS });
-    // LOCKED (`src/learn/policy.ts:88`): the credit itself is still refused —
+    // LOCKED (`src/learn/policy.ts:91`): the credit itself is still refused —
     // and the count beside it is what makes the refusal visible rather than
     // indistinguishable from "nothing matched". The counter must survive the
     // fan-out's own receipt projection (`src/learn/fan.ts:204`), which is where
@@ -737,7 +757,14 @@ describe('unit:W26.X1.01', () => {
    */
   it('logic: position stays on the entry, and every lift row and learned-lift sentence states that it is corrected for neither position nor placement', () => {
     // LOCKED (`src/learn/fan.ts:288`: `position: r.position`).
-    expect(ringEntryOf(record({} as Env, { slot: 'rail', item_id: 'willow-slg-editorial', ts: T0, position: 4, retention: undefined })).position).toBe(4);
+    const ranked = record({} as Env, { slot: 'rail', item_id: 'willow-slg-editorial', ts: T0, position: 4, retention: undefined });
+    expect(ringEntryOf(ranked).position).toBe(4);
+    // LOCKED (`src/learn/hourly.ts:83-84`): the batch fold keeps the position
+    // too — on the entry and beside it — so the day report and the replay read
+    // the same rank the online path served (F21 §6(c): "`compactOf` also keeps
+    // `position`, and uses it solely for the exploration counter, never for
+    // pooling"). R157: this closes the leg the spec pass found missing.
+    expect(compactOf(ranked)).toMatchObject({ position: 4, entry: { position: 4, brand: BRAND, page: 'home', slot: 'rail' } });
 
     // RULED. The table is a diagnostic until W26.P1.01 decides the correction.
     const rows = rowsOf(SNAPSHOT, NO_NAMES, undefined, 'pooled') as unknown as Array<Record<string, unknown>>;
