@@ -577,6 +577,36 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
 });
 
 /**
+ * W21 C1.07 (F12): how many pages of one listing prefix a windowed export reads
+ * before it stops and says so. The bound is on the WORK, not on the calendar, so
+ * a window of empty days costs the walk that passes over them and nothing more.
+ */
+const WINDOW_LIST_PAGES = 8;
+/** The longest prefix two keys of the same shape share. */
+function sharedPrefix(a: string, b: string): string {
+  let n = 0; while (n < a.length && n < b.length && a[n] === b[n]) n++;
+  return a.slice(0, n);
+}
+/**
+ * The listing prefixes a window is swept under: one per calendar year the window
+ * touches (at most two, since a window is at most 184 inclusive days), each
+ * narrowed to the longest prefix that year's own days share. A whole day keeps
+ * its trailing separator, so a one-day sweep lists exactly what a `date=` listing
+ * lists. Dates arrive sorted and contiguous.
+ */
+function windowPrefixes(tenant: string, dates: readonly string[]): string[] {
+  const years = new Map<string, { first: string; last: string }>();
+  for (const date of dates) {
+    const year = date.slice(0, 4), seen = years.get(year);
+    if (seen) seen.last = date; else years.set(year, { first: date, last: date });
+  }
+  return [...years.values()].map(({ first, last }) => {
+    const shared = sharedPrefix(first, last);
+    return `${tenant}/${shared}${shared.length === first.length ? '/' : ''}`;
+  });
+}
+
+/**
  * GET /v1/:tenant/ledger/batches?date=YYYY-MM-DD[&stream=decision|outcome|product-sort][&cursor=]
  * The export (doc 22 §12.4) is the R2 partition itself; this lists one day's
  * batch objects so a warehouse job knows what to fetch. Authenticated.
@@ -609,17 +639,67 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
   const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
   const objects: Array<{ key: string; date: string; size: number; uploaded: string }> = [];
   let truncated = false, nextCursor: string | undefined, listedDays = 0;
-  for (const listedDate of dates) {
-    // The object budget the single-day listing already applied, applied to the
-    // window as a whole: a window answers what it read and says it stopped.
-    if (objects.length >= REPORT_LIMITS.objects) { truncated = true; break; }
-    const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${listedDate}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
-    listedDays++;
-    for (const o of listed.objects) {
-      if (!(stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))) continue;
-      objects.push({ key: o.key, date: listedDate, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+  // W21 C1.07 (F12): the days of a window are one ORDERED key space, so the
+  // window is swept under the prefixes its days share instead of one listing per
+  // day. A six-month window whose content is two days cost 184 sequential
+  // listings; it now costs one per calendar year the window touches (at most
+  // two, since a window is at most 184 days), plus its pages. The object budget
+  // is applied where an object is TAKEN rather than between days, so a day that
+  // starts inside the budget can no longer carry the answer past it, and the
+  // answer names the days the sweep actually reached.
+  let reached: string | null = null;
+  const reach = (value: string) => { if (reached === null || value > reached) reached = value; };
+  if (windowed && dates.length > 1) {
+    sweep:
+    for (const prefix of windowPrefixes(tenant, dates)) {
+      let page: string | undefined;
+      for (let read = 0; read < WINDOW_LIST_PAGES; read++) {
+        // W21 C1.09 (the W21-B2 build review, finding 1): the sweep BEGINS at the
+        // window's first day. The prefix a window's days share is the calendar
+        // year, so without this the listing starts at the year's first key and a
+        // tenant with more objects earlier that year than the page budget
+        // (`WINDOW_LIST_PAGES` × 1000) spends the whole budget skipping keys
+        // `continue` already discards, and is answered an empty window it really
+        // has days in. `startAfter` resumes at the first key strictly after
+        // `<tenant>/<from>`, which is before every key of `<tenant>/<from>/…`,
+        // so no object of the window is skipped and the earlier ones are never
+        // paged through. It is passed on the FIRST page only: a continuation
+        // carries its position in the cursor, which already began after it.
+        const listed = await c.env.STORAGE.list({ prefix,
+          ...(page ? { cursor: page } : { startAfter: `${tenant}/${from}` }), limit: 1000 });
+        let past = false;
+        for (const o of listed.objects) {
+          const objectDate = o.key.split('/')[1] ?? '';
+          if (objectDate < from) continue;
+          if (objectDate > to) { past = true; break; }
+          if (!(stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))) { reach(objectDate); continue; }
+          if (objects.length >= REPORT_LIMITS.objects) { truncated = true; break sweep; }
+          objects.push({ key: o.key, date: objectDate, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+          reach(objectDate);
+        }
+        if (past || !listed.truncated) break;
+        page = listed.cursor;
+        // The listing budget is the one bound a window cannot talk its way past:
+        // a prefix with more pages than this stops the request and says so.
+        if (read + 1 >= WINDOW_LIST_PAGES) { truncated = true; break sweep; }
+      }
     }
-    if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
+    // Everything up to the last day the sweep reached was read in full; a sweep
+    // that ran to the end of its prefixes read the whole window.
+    listedDays = truncated ? dates.filter(d => reached !== null && d <= reached).length : dates.length;
+  } else {
+    for (const listedDate of dates) {
+      // The object budget the single-day listing already applied, applied to the
+      // window as a whole: a window answers what it read and says it stopped.
+      if (objects.length >= REPORT_LIMITS.objects) { truncated = true; break; }
+      const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${listedDate}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
+      listedDays++;
+      for (const o of listed.objects) {
+        if (!(stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))) continue;
+        objects.push({ key: o.key, date: listedDate, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+      }
+      if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
+    }
   }
   c.header('Cache-Control', 'no-store');
   // W22 R1.05: a single-date listing reconciles itself with the day the platform
@@ -1034,8 +1114,16 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
  * CW34 (delivery lane, named in plan 21): the day reports over a window, pooled per
  * slot and arm as attribution diagnostics. Reads reports already built;
  * missing reports and known incomplete days remain visible.
+ *
+ * W21 C1.05 (F25 §5.1, ruling R112(d)): both report READS carry the same gate as
+ * the build POST beside them, `operatorJwt()`, in every deployment auth mode.
+ * `operatorWrites()` let an open-mode deployment answer per-arm conversion rates,
+ * intervals and target standing to any caller who could view source on the
+ * storefront, while the console's own error handler already expected 401/403
+ * here. The credential is the one the build POST already accepts — a service or
+ * human operator token — never an account session.
  */
-decisionRoutes.get('/:tenant/learn/report/window', operatorWrites(), async (c) => {
+decisionRoutes.get('/:tenant/learn/report/window', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const from = (c.req.query('from') ?? '').trim();
   const to = (c.req.query('to') ?? '').trim();
@@ -1054,7 +1142,7 @@ decisionRoutes.get('/:tenant/learn/report/window', operatorWrites(), async (c) =
     throw error;
   }
 });
-decisionRoutes.get('/:tenant/learn/report', operatorWrites(), async (c) => {
+decisionRoutes.get('/:tenant/learn/report', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const date = (c.req.query('date') ?? '').trim();
   if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);

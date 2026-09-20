@@ -28,7 +28,15 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import type { AttributionPolicy, RingEntry } from './policy';
-import type { StatsConfig } from './stats';
+// The ring's own reach, read from the module that declares it and that
+// `@/durable-objects/DecisionRing` re-exports under the same name. It is read
+// from there and NOT from the ring itself because the ring imports this module:
+// measured under this repository's own runner, `import { RING_MAX_AGE_MS } from
+// '@/durable-objects/DecisionRing'` here resolves to `undefined` whenever the
+// ring is the first of the two to load (src/learn/learn.test.ts imports it at
+// line 10, this module at line 12), which silently emptied the statistics
+// object's applied-delivery journal.
+import { RING_MAX_AGE_MS, type StatsConfig } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -42,8 +50,10 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
 
 /**
  * The online path's own horizon, used for two things that must never drift
- * apart. The visitor's `DecisionRing` keeps seven days of receipts
- * (`DecisionRing.ts` RING_MAX_AGE_MS), so:
+ * apart. It IS the visitor ring's own reach — `RING_MAX_AGE_MS`, exported by
+ * the object that enforces it (`@/durable-objects/DecisionRing`) and re-exported
+ * here under the name the online path already reads — so there is one constant
+ * and not a second copy of its value (W22 A1.02):
  *   · W22 A1.01 — whatever window the tenant's published policy asks for, this
  *     is the horizon the online path can actually apply, which is what its
  *     snapshot's `appliedWindowsMs` declares.
@@ -53,8 +63,9 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
  *     `DecisionRing` forget a delivery at the same moment, and neither claims
  *     idempotence beyond it. A repeat arriving after it is applied again, and
  *     no unit claims otherwise.
+ *
  */
-export const ONLINE_RING_REACH_MS = 7 * 24 * 60 * 60 * 1000;
+export const ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
 export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;

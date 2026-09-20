@@ -232,7 +232,17 @@ realtimeRoutes.post('/action', async (c) => {
         // outcome says `ineligible`; a failure to resolve leaves the block off
         // and never delays or drops the record.
         const p = (async () => {
-          const experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent));
+          // W21 E1.06 (NR1): the annotation is CONTAINED here, at the producer,
+          // and not only inside the resolver. The resolver's own guard cannot
+          // cover a resolver that fails before it runs — a publication binding
+          // withdrawn under a fence, an import that will not load, a future
+          // caller — and without this the whole emission was lost with it: the
+          // action answered 500 and the outcome was never enqueued. A failed
+          // annotation leaves the block off; it never guesses one, never delays
+          // the record and never costs it.
+          let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
+          try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
+          catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
             ? outcomeToLearning(c.env, c.get('tenant'), outcome)

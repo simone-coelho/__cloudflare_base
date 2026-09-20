@@ -27,7 +27,7 @@ import { ringEntryOf } from './fan';
 import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
-  type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts } from './report';
+  type ArmVisitors, type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts, type VisitorOutcomes } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
 
 export const HOUR_MS = 3600_000;
@@ -48,6 +48,14 @@ export const CLOSE_GRACE_MS = 5 * 60_000;
 export const MAX_HOUR_OBJECTS = 600;
 /** The subrequests one catch-up run may spend on folding, under a Worker invocation's limit with room for the day reports. */
 export const RUN_BUDGET = 700;
+/**
+ * W22 R1.02: what the version-2 shard state is allowed to remember. Each is a
+ * hard cap under the horizon prune, so a custom horizon, a long outage or a
+ * corrupt document can never grow the shard without bound: at the default
+ * horizon the set holds 48 hours and the archive three dates.
+ */
+export const FOLDED_HOURS_MAX = 768;
+export const SEEN_DAYS_MAX = 8;
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 export const hourKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/${date}/${pad2(hour)}.json`;
@@ -69,33 +77,108 @@ export function shardOf(visitor: string, shards = SHARDS): number {
 // ── shapes ────────────────────────────────────────────────────────────────────
 
 /** A ring entry with the brand it was served for, so a brand's report credits only its own decisions. */
-export interface BatchRingEntry extends RingEntry { brand: string }
+export interface BatchRingEntry extends RingEntry {
+  brand: string;
+  /**
+   * W21 C1.08 (R108, F07 §1.4): the experimental ASSIGNMENT this decision
+   * carried, kept BESIDE the arm it was served under and never instead of it. A
+   * record written before the provenance block existed carries none and is read
+   * by its served arm exactly as before, so an old ring entry is unchanged and a
+   * fold of records without provenance writes exactly the bytes it always did.
+   */
+  assignment?: string;
+}
 /** What the fold keeps of a decision: the ring entry plus the two facts the exploration count needs. */
 export interface CompactDecision { entry: BatchRingEntry; visitor_id: string; ts: number; position: number; explored: boolean; explorationOpportunity?: boolean }
 export const compactOf = (d: DecisionRecord): CompactDecision =>
-  ({ entry: { ...ringEntryOf(d), brand: d.brand }, visitor_id: d.visitor_id, ts: d.ts, position: d.position, explored: d.explored, explorationOpportunity: explorationOpportunity(d) });
+  ({ entry: { ...ringEntryOf(d), brand: d.brand, ...(d.experiment?.arm === undefined ? {} : { assignment: d.experiment.arm }) },
+    visitor_id: d.visitor_id, ts: d.ts, position: d.position, explored: d.explored, explorationOpportunity: explorationOpportunity(d) });
+/**
+ * The row an arm of a REPORT is: the assignment where the record carries one,
+ * the arm served where it does not (`src/learn/report.ts:877`, the raw-day
+ * branch's own rule). Only the LABEL of a decision, of a credit and of a
+ * visitor denominator; what was exposed and what explored stay on the
+ * experience served (doc 22 §10).
+ */
+export const assignmentLabel = (entry: { arm: string; assignment?: string }): string => entry.assignment ?? entry.arm;
+/** Labels reach the aggregate, where `aggregateName` admits at most 256 bytes; refuse one the shard could not carry. */
+const shardLabel = (value: unknown): string => {
+  if (typeof value !== 'string' || !value || value.length > 256 || aggregateBytes(value) > 256
+    || Object.hasOwn(Object.prototype, value)) throw new ReportInputError();
+  return value;
+};
 
+/**
+ * W22 R1.02 (F17 §6; ruling R133). Version 2 of the shard state. Every member
+ * of version 1 keeps its name and its meaning, and a stored version-1 shard is
+ * read without loss — `through` is still the high-water mark of the hours
+ * folded, and `seen`/`seenAt`/`seenRetention`/`seenIncomplete` are still the
+ * membership of `seenDate`. What version 2 adds is the memory a REPAIR needs:
+ *
+ *  · `foldedHours` — which hours are in these rings, as a set instead of only a
+ *    mark, so an hour that failed and is retried after a later hour has been
+ *    folded still puts its decisions into the rings (F17 P3b). It is pruned to
+ *    the horizon, and a pruned hour raises `foldedThrough`, the floor below
+ *    which every hour is taken to be folded — which is exactly what a version-1
+ *    state's `through` means, so the migration is `foldedThrough = through`.
+ *  · `seenDays` — the membership of the OTHER dates this shard has folded, so
+ *    rolling forward to a new date no longer FORGETS the old one and an hour of
+ *    it can still be folded onto its own day's count (F17 P7).
+ *
+ * Nothing records the repairs themselves: an hour aggregate already carries
+ * `builtAt`, so the catch-up sees an earlier hour folded after a later one
+ * without this state having to remember it.
+ */
 export interface ShardState {
-  version: 1;
+  version: 1 | 2;
   shard: number;
   /** The start of the last hour folded into these rings; an earlier hour is never folded twice. */
   through: number;
+  /** v2: hours whose decisions are in these rings, above `foldedThrough`. */
+  foldedHours?: number[];
+  /** v2: the floor a version-1 `through` becomes, and where a pruned hour goes. */
+  foldedThrough?: number;
   /** visitor → their decisions inside the horizon, oldest first, at most RING_CAP. */
   rings: Record<string, BatchRingEntry[]>;
   /** The date `seen` counts, and per brand the visitors with a decision on it. */
   seenDate: string;
   seen: Record<string, string[]>;
+  /** v2: the same membership for the other dates this shard has folded, pruned to the horizon. */
+  seenDays?: Record<string, Record<string, string[]>>;
   /** Latest witnessed decision time per brand/visitor on seenDate, retained independently of ring eviction. */
   seenAt?: Record<string, Record<string, number>>;
   seenRetention?: Record<string, Record<string, RetentionStamp>>;
   /** Date-scoped, nonidentifying warning: legacy timing left incomplete visitor coverage. */
   seenIncomplete?: Record<string, true>;
+  /**
+   * W21 C1.08: the per-ASSIGNMENT memory of the dates this shard tracks, keyed
+   * by date so it stands beside `seen` (the current date) and `seenDays` (the
+   * archived ones) without either changing its name or its meaning. Its keys are
+   * exactly the membership's — an id that leaves `seen` for erasure or for
+   * retention leaves this too, and nothing here holds an id the membership does
+   * not already hold under the same retention stamp. Only counts ever leave the
+   * shard: the hour aggregate carries the sizes, never an id.
+   *
+   * A version-1 or version-2 state written before this release simply has none,
+   * which is why an hour folded onto such a state says it cannot report the
+   * assignment rather than reporting a count of the visitors it happens to know.
+   */
+  enrollment?: Record<string, Record<string, Record<string, VisitorEnrollment>>>;
   /** Technical write generation, retained after completion to prevent coordinator ETag reuse. */
   generation?: string;
   /** Only shard zero coordinates an interrupted fold; no extra visitor history is retained. */
   pending?: PendingHour;
   cleanup?: CleanupHour;
 }
+/** W21 C1.08: what one visitor's date is remembered as — no timestamp, no record id, no ring. */
+export interface VisitorEnrollment {
+  /** The assignments she was drawn into that date, first seen first. */
+  arms: string[];
+  /** assignment → the outcome types she produced while holding it. */
+  outcomes?: Record<string, string[]>;
+}
+/** At most this many distinct assignments, and outcome types under one, are remembered for one visitor on one date. */
+export const ENROLLMENT_ARMS_MAX = 16;
 export const emptyShard = (shard: number): ShardState => ({ version: 1, shard, through: -1, rings: {}, seenDate: '', seen: {} });
 
 export interface PolicyHour {
@@ -107,6 +190,37 @@ export interface PolicyHour {
   /** slot → the decayed accumulators this hour contributed under this policy. */
   stats: Record<string, StatsState>;
 }
+/**
+ * W21 C1.08 (F25 §5.3, §7; F07 §7): the hour's answer BY EXPERIMENTAL
+ * ASSIGNMENT, carried in a member of its own so that every member the aggregate
+ * already had keeps its name, its meaning and its bytes — `arms` and
+ * `armCredits` are still the arm SERVED, which is what the exposure statistics
+ * and the exploration denominator are counted on.
+ *
+ * `decisions` and `credits` add across the hours of a day. `visitors` and
+ * `outcomes` do not: like `visitorsDay`, each is the DAY's distinct count
+ * through this hour, taken from the shard membership rather than from the
+ * hour's own rows, because distinct visitors cannot be summed. They are
+ * therefore merged by maximum, exactly as `visitorsDay` is.
+ *
+ * The member's ABSENCE is the statement that this hour cannot say: an aggregate
+ * folded before this release carries none, and neither does an hour whose shard
+ * membership this fold could not account for visitor by visitor. A day with any
+ * such hour is grouped by the arm served and answers its denominators `null`,
+ * naming those hours in `coverage.unassignedHours`.
+ */
+export interface HourAssignments {
+  version: 1;
+  /** slot → assignment → decisions. */
+  decisions: Record<string, Record<string, number>>;
+  /** policy name → `slot|assignment` → credits. */
+  credits: Record<string, Record<string, number>>;
+  /** assignment → distinct visitors with a decision on the DATE, through this hour. */
+  visitors: Record<string, number>;
+  /** assignment → outcome type → distinct visitors on the DATE, through this hour. */
+  outcomes: Record<string, Record<string, number>>;
+}
+export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {} });
 export interface HourBrand {
   computation?: ComputationBasis | null;
   duplicates?: DuplicateCounts;
@@ -123,6 +237,8 @@ export interface HourBrand {
   exploration: Record<string, { decisions: number; explored: number }>;
   /** Rows an erasure tombstone hid before the fold. */
   rows_hidden: number;
+  /** W21 C1.08: the same hour by experimental assignment. Absent where this hour cannot say. */
+  assignments?: HourAssignments;
 }
 export interface HourAggregate {
   version: 1;
@@ -185,6 +301,28 @@ export function mergeStats(a: StatsState, b: StatsState, tau: number): StatsStat
 function addCounts(into: Record<string, number>, from: Record<string, number>): void {
   for (const [k, v] of Object.entries(from)) into[k] = (into[k] ?? 0) + v;
 }
+/** A day's distinct count is cumulative through its hour, so two hours combine by the larger — `visitorsDay`'s own rule. */
+function maxCounts(into: Record<string, number>, from: Record<string, number>): void {
+  for (const [k, v] of Object.entries(from)) into[k] = Math.max(into[k] ?? 0, v);
+}
+/**
+ * W21 C1.08: the per-assignment view of two hours. Decisions and credits add,
+ * the day's distinct visitor counts take the maximum. Whether the DAY may use
+ * the result is decided in `reportFromHours` from the hours themselves, because
+ * only there is it known which hour could not say.
+ */
+function mergeAssignments(a: HourAssignments | undefined, b: HourAssignments | undefined): HourAssignments | undefined {
+  if (!a && !b) return undefined;
+  const out = emptyAssignments();
+  for (const src of [a, b]) {
+    if (!src) continue;
+    for (const [slot, arms] of Object.entries(src.decisions)) addCounts((out.decisions[slot] ??= {}), arms);
+    for (const [name, credits] of Object.entries(src.credits)) addCounts((out.credits[name] ??= {}), credits);
+    maxCounts(out.visitors, src.visitors);
+    for (const [arm, byType] of Object.entries(src.outcomes)) maxCounts((out.outcomes[arm] ??= {}), byType);
+  }
+  return out;
+}
 /** Counts merge only after reportFromHours has admitted the recorded computation basis. */
 export function mergeBrand(a: HourBrand, b: HourBrand, tau: number): HourBrand {
   const out = emptyBrand();
@@ -196,6 +334,8 @@ export function mergeBrand(a: HourBrand, b: HourBrand, tau: number): HourBrand {
   if (a.duplicates || b.duplicates) out.duplicates = { decisions: (a.duplicates?.decisions ?? 0) + (b.duplicates?.decisions ?? 0),
     outcomes: (a.duplicates?.outcomes ?? 0) + (b.duplicates?.outcomes ?? 0) };
   if (out.duplicates && !validDuplicateCounts(out.duplicates)) unavailable();
+  const assignments = mergeAssignments(a.assignments, b.assignments);
+  if (assignments) out.assignments = assignments;
   for (const src of [a, b]) {
     for (const [slot, arms] of Object.entries(src.arms)) addCounts((out.arms[slot] ??= {}), arms);
     for (const [slot, e] of Object.entries(src.exploration)) { const x = (out.exploration[slot] ??= { decisions: 0, explored: 0 }); x.decisions += e.decisions; x.explored += e.explored; }
@@ -221,6 +361,12 @@ export function foldDecisions(decs: readonly CompactDecision[], policies: readon
     hb.decisions += 1;
     const arms = (hb.arms[e.slot] ??= {});
     arms[e.arm] = (arms[e.arm] ?? 0) + 1;
+    // W21 C1.08: the same decision counted again under its ASSIGNMENT, beside
+    // the served count and never instead of it, so the report can group either
+    // way and the exposure and exploration counts below are untouched.
+    const label = shardLabel(assignmentLabel(e));
+    const byAssignment = ((hb.assignments ??= emptyAssignments()).decisions[e.slot] ??= {});
+    byAssignment[label] = (byAssignment[label] ?? 0) + 1;
     if ((d.explorationOpportunity ?? d.position === 0) && e.arm !== 'default') { const x = (hb.exploration[e.slot] ??= { decisions: 0, explored: 0 }); x.decisions += 1; if (d.explored) x.explored += 1; }
     // Exposures: the personalized arm only, as the fan-in records them (doc 22 §10: holdout traffic never feeds the statistics).
     if (e.arm === 'personalized') for (const p of policies) recordExposure((policyHour(hb, p).stats[e.slot] ??= emptyStats()), e.item, e.cell, e.renderedAt ?? d.ts, statsCfg);
@@ -238,6 +384,16 @@ export interface FoldContext {
   date: string;
   from: number;
   to: number;
+  /** When this fold ran, as the aggregate's own `builtAt`; a repair is dated by it. */
+  now?: number;
+  /**
+   * W22 R1.02: this hour is being folded again because its ledger has GROWN
+   * since the aggregate was written, so rows the rings do not already hold are
+   * admitted. Without it a re-fold of an unchanged hour admits nothing, which
+   * is what replay has always done and what `ringsFolded: false` reports —
+   * rows the cap or the horizon evicted are not resurrected by a rebuild.
+   */
+  refold?: boolean;
   policies: readonly RolePolicy[];
   slotCfg: Record<string, SlotLearnConfig>;
   statsCfg: StatsConfig;
@@ -253,6 +409,84 @@ export interface FoldContext {
 const objectMap = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const onDate = (ts: unknown, date: string): ts is number => typeof ts === 'number' && Number.isSafeInteger(ts) && ts >= 0
   && Number.isFinite(new Date(ts).getTime()) && new Date(ts).toISOString().slice(0, 10) === date;
+
+const dateShape = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  && onDate(Date.parse(value), value);
+/** W22 R1.02: the version-2 members, refused whole when any of them is malformed. */
+function checkFold(state: ShardState): void {
+  if (state.foldedHours !== undefined && (!Array.isArray(state.foldedHours) || state.foldedHours.length > FOLDED_HOURS_MAX
+    || state.foldedHours.some(from => !Number.isSafeInteger(from) || from < 0 || from % HOUR_MS !== 0)
+    || new Set(state.foldedHours).size !== state.foldedHours.length)) throw new Error('Hourly fold state unavailable');
+  if (state.foldedThrough !== undefined && (!Number.isSafeInteger(state.foldedThrough) || state.foldedThrough < -1)) throw new Error('Hourly fold state unavailable');
+  if (state.seenDays !== undefined) {
+    if (!objectMap(state.seenDays) || Object.keys(state.seenDays).length > SEEN_DAYS_MAX) throw new Error('Hourly seen state unavailable');
+    for (const [date, brands] of Object.entries(state.seenDays)) {
+      if (!dateShape(date) || date === state.seenDate || !objectMap(brands)) throw new Error('Hourly seen state unavailable');
+      for (const ids of Object.values(brands)) {
+        if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string' || !id)) throw new Error('Hourly seen state unavailable');
+      }
+    }
+  }
+}
+
+/**
+ * W21 C1.08: the per-assignment memory, refused whole when any of it is
+ * malformed — a shard that cannot be read exactly is never read approximately.
+ */
+function checkEnrollment(state: ShardState): void {
+  const memory: unknown = state.enrollment;
+  if (memory === undefined) return;
+  function fail(): never { throw new Error('Hourly enrollment state unavailable'); }
+  const label = (value: unknown): boolean => typeof value === 'string' && !!value && value.length <= 256;
+  const list = (value: unknown, each: (item: unknown) => boolean): boolean => Array.isArray(value)
+    && value.length <= ENROLLMENT_ARMS_MAX && new Set(value).size === value.length && value.every(each);
+  if (!objectMap(memory) || Object.keys(memory).length > SEEN_DAYS_MAX + 1) fail();
+  let work = 0;
+  for (const [date, brands] of Object.entries(memory)) {
+    if (!dateShape(date) || !objectMap(brands)) fail();
+    for (const [brand, record] of Object.entries(brands)) {
+      if (!label(brand) || !objectMap(record)) fail();
+      for (const [visitor, value] of Object.entries(record)) {
+        aggregateBound('work', ++work);
+        if (!visitor || visitor.length > 256 || !objectMap(value) || !list(value.arms, label)) fail();
+        const outcomes: unknown = value.outcomes;
+        if (outcomes === undefined) continue;
+        if (!objectMap(outcomes) || Object.keys(outcomes).length > ENROLLMENT_ARMS_MAX) fail();
+        for (const [arm, types] of Object.entries(outcomes)) {
+          aggregateBound('work', ++work);
+          if (!label(arm) || !list(types, label)) fail();
+        }
+      }
+    }
+  }
+}
+
+/**
+ * W21 C1.08: the per-assignment memory a date keeps is exactly that date's
+ * membership. An id erasure or retention removed from `seen` leaves here in the
+ * same pass, and a date the shard no longer tracks is dropped whole.
+ */
+function pruneEnrollment(state: ShardState): void {
+  const memory = state.enrollment;
+  if (!memory) return;
+  for (const [date, brands] of Object.entries(memory)) {
+    const membership = date === state.seenDate ? state.seen : state.seenDays?.[date];
+    if (!membership) { delete memory[date]; continue; }
+    for (const [brand, record] of Object.entries(brands)) {
+      const ids = new Set(membership[brand] ?? []);
+      for (const visitor of Object.keys(record)) if (!ids.has(visitor)) delete record[visitor];
+      if (!Object.keys(record).length) delete brands[brand];
+    }
+    if (!Object.keys(brands).length) delete memory[date];
+  }
+  if (!Object.keys(memory).length) delete state.enrollment;
+}
+
+/** The record one visitor's date is remembered by, created on demand; pruned to the membership before the state is written. */
+function enrollmentOf(state: ShardState, date: string, brand: string, visitor: string): VisitorEnrollment {
+  const brands = ((state.enrollment ??= {})[date] ??= {});
+  return ((brands[brand] ??= {})[visitor] ??= { arms: [] });
+}
 
 /** Present but unreadable metadata is not proof of activity after erasure. Validate before changing the shard. */
 function checkSeen(state: ShardState): void {
@@ -272,23 +506,47 @@ function checkSeen(state: ShardState): void {
   }
   if (state.seenIncomplete !== undefined && (!objectMap(state.seenIncomplete)
     || Object.values(state.seenIncomplete).some(flag => flag !== true))) throw new Error('Hourly seen state unavailable');
+  checkFold(state);
+  checkEnrollment(state);
 }
 
-/** A known date boundary can skip older catch-up work without rereading or rewinding a shard. */
+/**
+ * A known date boundary once meant an older hour could never be folded. It is
+ * no longer raised: W22 R1.02 keeps the membership of the other dates
+ * (`seenDays`), so an older hour folds onto its own day instead of being
+ * refused for ever. Retained as an exported name a caller may still catch.
+ */
 export class SeenDateAhead extends Error {
   constructor(public readonly seenDate: string) { super(`Hourly seen state is newer than requested date: ${seenDate}`); }
 }
 
+/** W22 R1.02: the hours this shard has already folded into its rings. */
+const foldedSet = (state: ShardState): Set<number> => new Set(state.foldedHours ?? []);
+/** Below this, every hour is taken to be folded — a version-1 `through` exactly. */
+const foldedFloor = (state: ShardState): number => state.foldedThrough ?? state.through;
+const alreadyFolded = (state: ShardState, from: number): boolean => from <= foldedFloor(state) || foldedSet(state).has(from);
+/** The membership of one date: the current one is `seen`, an older one is kept per date. */
+const seenOn = (state: ShardState, date: string): Record<string, string[]> =>
+  state.seenDate === date ? state.seen : (state.seenDays?.[date] ?? {});
+
 /**
- * Phase two, one shard: the hour's decisions join the rings (unless the shard is already past this
- * hour), erased visitors leave, the rings are pruned to the horizon and the cap, and the hour's
+ * Phase two, one shard: the hour's decisions join the rings (those the rings do not already hold),
+ * erased visitors leave, the rings are pruned to the horizon and the cap, and the hour's
  * outcomes are attributed under every policy against their visitor's ring of the same brand.
  */
 export function foldShard(state: ShardState, decs: readonly CompactDecision[], outs: readonly OutcomeRecord[], ctx: FoldContext): { state: ShardState; folded: boolean; changed: boolean } {
   checkSeen(state);
-  if (state.seenDate > ctx.date) throw new SeenDateAhead(state.seenDate);
   let changed = false;
-  const folded = ctx.from > state.through;
+  // W22 R1.02 (F17 P3b): whether this hour is already in these rings is a set
+  // membership, not `from > through`, so an hour that failed and is retried
+  // after a later hour has been folded is still folded in. What it may add is
+  // then only what the rings do not already hold, which is what `folded`
+  // reports: a rebuild that adds nothing leaves `ringsFolded` false, exactly as
+  // a refused out-of-order fold did.
+  const already = alreadyFolded(state, ctx.from);
+  // Read before anything below advances `through`: the floor is what this state
+  // said on entry, which is what `already` was decided against.
+  const floorAtEntry = foldedFloor(state);
   const cutoff = ctx.from - ctx.horizonMs;
   if (!objectMap(state.rings)) throw new ReportInputError();
   const retainedIds = ctx.retainedIds ?? new Set<string>();
@@ -308,23 +566,43 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
       if (hidden(ctx.tombs, { visitor_id: visitor, ts: entry.ts }) || entry.ts < cutoff || entry.ts >= ctx.to) continue;
       const size = aggregateBytes(entry.id);
       if (size > 2048) throw new ReportInputError();
-      if (retainedIds.has(entry.id) || (folded && incomingIds.has(entry.id))) throw new ReportInputError();
+      // On a FIRST fold an incoming id already in the rings is corrupt state and
+      // still refuses. On a re-fold it is the ordinary case — it is how this
+      // fold knows which rows the rings already hold — and is skipped below.
+      if (retainedIds.has(entry.id) || (!already && incomingIds.has(entry.id))) throw new ReportInputError();
       aggregateBound('rawBytes', retainedBudget.bytes += size);
       retainedIds.add(entry.id);
     }
   }
-  if (state.seenDate !== ctx.date) {
+  // W22 R1.02 (F17 P7): the membership of a date is no longer wiped when the
+  // shard folds an hour of another one. Rolling FORWARD keeps the date it
+  // leaves in `seenDays`, so an hour of it is still countable; folding an hour
+  // of an OLDER date works on that date's own membership and leaves the current
+  // date — `seen`, `seenAt`, `seenRetention`, `seenIncomplete` and `seenDate`,
+  // all of which keep their version-1 meaning — untouched.
+  const older = state.seenDate !== '' && ctx.date < state.seenDate;
+  const beforeDays = JSON.stringify(state.seenDays ?? null);
+  const beforeEnrollment = JSON.stringify(state.enrollment ?? null);
+  if (!older && state.seenDate !== ctx.date) {
     changed = Object.keys(state.seen).length > 0 || state.seenAt !== undefined || state.seenIncomplete !== undefined;
-    state.seenDate = ctx.date; state.seen = {}; delete state.seenAt; delete state.seenIncomplete; delete state.seenRetention;
+    if (state.seenDate !== '' && Object.keys(state.seen).length) (state.seenDays ??= {})[state.seenDate] = state.seen;
+    state.seenDate = ctx.date; state.seen = state.seenDays?.[ctx.date] ?? {};
+    if (state.seenDays) { delete state.seenDays[ctx.date]; if (!Object.keys(state.seenDays).length) delete state.seenDays; }
+    delete state.seenAt; delete state.seenIncomplete; delete state.seenRetention;
   }
   const beforeSeen = JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]);
-  const seenSets = new Map(Object.entries(state.seen).map(([brand, ids]) => [brand, new Set(ids)]));
+  // The membership this hour counts: the current date's, or — when an older
+  // date is being repaired — that date's own, which carries ids and nothing
+  // else. Every id a tombstone covers leaves it, because without the witnesses
+  // the current date keeps there is nothing that can show a later decision.
+  const seenSets = new Map(Object.entries(older ? (state.seenDays?.[ctx.date] ?? {}) : state.seen).map(([brand, ids]) => [brand, new Set(ids)]));
   // A timestamp can support existing membership; orphan metadata must never recreate an ID.
-  const seenAt = new Map([...seenSets].map(([brand, ids]) => [brand, new Map(Object.entries(state.seenAt?.[brand] ?? {}).filter(([id]) => ids.has(id)))]));
-  const incomplete = new Set(Object.keys(state.seenIncomplete ?? {}));
+  const seenAt = new Map([...seenSets].map(([brand, ids]) => [brand, new Map(Object.entries((older ? undefined : state.seenAt)?.[brand] ?? {}).filter(([id]) => ids.has(id)))]));
+  const incomplete = new Set(older ? [] : Object.keys(state.seenIncomplete ?? {}));
   for (const [brand, ids] of seenSets) for (const v of ids) {
     const tomb = ctx.tombs.get(v);
     if (!tomb) continue;
+    if (older) { ids.delete(v); continue; }
     const times = seenAt.get(brand)!;
     let latest = times.get(v);
     // Ring presence is positive evidence only. Legacy ring absence (or an old row) cannot prove
@@ -347,9 +625,10 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     if (kept.length !== ring.length) changed = true;
   }
   // Attribution needs the ring at the outcome's time, not the end of the hour.
-  // Reconstruct current-hour rows on replay too; the persisted fold guard below
-  // still prevents duplicate appends or a through/seen rewind. Evicted carry-in
-  // cannot be recovered here, and later dependent hours are not rebuilt.
+  // Reconstruct current-hour rows on replay too; the append guard below still
+  // prevents a row entering the rings twice. Evicted carry-in cannot be
+  // recovered here; the hours built after a repaired one ARE rebuilt, by the
+  // catch-up, against the rings this fold leaves (W22 R1.02).
   const orderedOutcomes = outs.filter(o => o.ts >= ctx.from && o.ts < ctx.to && !hidden(ctx.tombs, o)).sort((a, b) => a.ts - b.ts);
   const attributionRings = new Map<string, BatchRingEntry[]>();
   for (const o of orderedOutcomes) if (!attributionRings.has(o.visitor_id)) {
@@ -358,16 +637,42 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   }
   const current = decs.filter(d => d.ts >= ctx.from && d.ts < ctx.to && d.ts >= cutoff
     && attributionRings.has(d.visitor_id) && !hidden(ctx.tombs, d)).sort((a, b) => a.ts - b.ts);
+  // W21 C1.08 (F07 §7): her earliest decision of THIS DATE that this fold can
+  // see, per brand. It is the fallback the raw-day branch uses for an outcome
+  // that precedes every decision of the day (`src/learn/report.ts:966`).
+  const firstOnDate = new Map<string, BatchRingEntry>();
+  for (const d of current) if (onDate(d.ts, ctx.date)) {
+    const key = `${d.entry.brand}\u0000${d.visitor_id}`;
+    if (!firstOnDate.has(key)) firstOnDate.set(key, d.entry);
+  }
   const touched = new Set<string>();
-  if (folded) {
-    for (const d of decs) {
-      if (hidden(ctx.tombs, d)) continue;
+  // What this fold may put into the rings: on a first fold every surviving row,
+  // on a re-fold only the rows the rings do not already hold. `folded` — and so
+  // the aggregate's `ringsFolded` — is true exactly when this hour's decisions
+  // are in the rings because of this run or a first fold, and false when a
+  // rebuild found nothing to add, which is what it has always meant.
+  const admitted = decs.filter(d => !hidden(ctx.tombs, d) && !(already && (!ctx.refold || retainedIds.has(d.entry.id))));
+  const folded = !already || admitted.length > 0;
+  {
+    for (const d of admitted) {
       (state.rings[d.visitor_id] ??= []).push(d.entry);
       touched.add(d.visitor_id);
-      if (!onDate(d.ts, state.seenDate)) continue;
+      if (!onDate(d.ts, ctx.date)) continue;
       let s = seenSets.get(d.entry.brand);
       if (!s) { s = new Set(); seenSets.set(d.entry.brand, s); }
       s.add(d.visitor_id);
+      // W21 C1.08: her ASSIGNMENT on this date, which is a membership fact like
+      // the id itself — same date, same brand, same visitor, pruned to the same
+      // membership before this state is written, so it is erased with it.
+      {
+        const enrolled = enrollmentOf(state, ctx.date, d.entry.brand, d.visitor_id);
+        const label = shardLabel(assignmentLabel(d.entry));
+        if (!enrolled.arms.includes(label)) {
+          if (enrolled.arms.length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+          enrolled.arms.push(label);
+        }
+      }
+      if (older) continue;                 // an older date keeps ids, and no witness it cannot carry
       let times = seenAt.get(d.entry.brand);
       if (!times) { times = new Map(); seenAt.set(d.entry.brand, times); }
       times.set(d.visitor_id, Math.max(times.get(d.visitor_id) ?? d.ts, d.ts));
@@ -376,7 +681,7 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
         stamps[d.visitor_id] = prior ? mergeRetention(prior, d.entry.retention.hourly, d.entry.tenant!, 'hourly') : d.entry.retention.hourly;
       }
     }
-    if (decs.length) changed = true;
+    if (admitted.length) changed = true;
   }
   // Keep the existing hour-start horizon and final persisted retention behavior.
   for (const [v, ring] of Object.entries(state.rings)) {
@@ -395,6 +700,26 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
       if (entries.length > ctx.ringCap) attributionRings.set(d.visitor_id, entries.slice(-ctx.ringCap));
     }
     const subjectRing = attributionRings.get(o.visitor_id) ?? [];
+    // W21 C1.08 (F07 §7): the outcome as a VISITOR-level fact, under the
+    // assignment in force when it happened — her latest decision of this date at
+    // or before it, else her earliest of the date, which is the raw-day branch's
+    // own rule. Counted here, before attribution, because an outcome counts for
+    // the arm the visitor holds whether or not a served piece matched it, and
+    // recorded as a set of types, because two purchases by one visitor are one
+    // purchasing visitor.
+    const held = subjectRing.filter(e => e.brand === o.brand && onDate(e.ts, ctx.date) && e.ts <= o.ts).at(-1)
+      ?? firstOnDate.get(`${o.brand}\u0000${o.visitor_id}`);
+    if (held) {
+      const enrolled = enrollmentOf(state, ctx.date, o.brand, o.visitor_id);
+      const label = shardLabel(assignmentLabel(held)), type = shardLabel(o.type);
+      const outcomes = (enrolled.outcomes ??= {});
+      if (!outcomes[label] && Object.keys(outcomes).length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+      const types = (outcomes[label] ??= []);
+      if (!types.includes(type)) {
+        if (types.length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+        types.push(type);
+      }
+    }
     // An explicit reference must expose ambiguity across the complete retained
     // subject ring; the shared selector checks the unique target's brand.
     const ring = Object.hasOwn(o, 'decision_id') ? subjectRing : subjectRing.filter((e) => e.brand === o.brand);
@@ -410,8 +735,15 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
           slots.add(c.slot); ctx.creditedSlots.set(o.brand, slots);
         }
         ph.credits += 1;
-        const arm = ring.find((e) => e.id === c.decision_id)?.arm ?? 'personalized';
+        const credited = ring.find((e) => e.id === c.decision_id);
+        const arm = credited?.arm ?? 'personalized';
         ph.armCredits[`${c.slot}|${arm}`] = (ph.armCredits[`${c.slot}|${arm}`] ?? 0) + 1;
+        // W21 C1.08: the same credit again, under the ASSIGNMENT of the decision
+        // it credits. The served label above, and the statistics below, are
+        // unchanged.
+        const label = credited ? shardLabel(assignmentLabel(credited)) : arm;
+        const byAssignment = ((hb.assignments ??= emptyAssignments()).credits[p.name] ??= {});
+        byAssignment[`${c.slot}|${label}`] = (byAssignment[`${c.slot}|${label}`] ?? 0) + 1;
         if (arm === 'personalized') {
           const w = creditWeight(ctx.slotCfg[c.slot]?.objective, o);
           if (w > 0) recordSuccess((ph.stats[c.slot] ??= emptyStats()), c.item, c.cell, c.reward as RewardType, c.ts, w, ctx.statsCfg);
@@ -419,13 +751,61 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
       }
     }
   }
-  if (folded) { state.through = ctx.from; if (decs.length) changed = true; }
-  state.seen = Object.fromEntries([...seenSets].map(([b, s]) => [b, [...s]]));
-  const witnesses = [...seenAt].filter(([, times]) => times.size);
-  if (witnesses.length || state.seenAt !== undefined) state.seenAt = Object.fromEntries(witnesses.map(([brand, times]) => [brand, Object.fromEntries(times)]));
-  if (incomplete.size) state.seenIncomplete = Object.fromEntries([...incomplete].map(brand => [brand, true as const]));
+  if (folded && ctx.from > state.through) state.through = ctx.from;   // the version-1 mark, still the newest hour folded
+  if (older) {
+    const days = (state.seenDays ??= {});
+    days[ctx.date] = Object.fromEntries([...seenSets].map(([b, s]) => [b, [...s]]));
+  } else {
+    state.seen = Object.fromEntries([...seenSets].map(([b, s]) => [b, [...s]]));
+    const witnesses = [...seenAt].filter(([, times]) => times.size);
+    if (witnesses.length || state.seenAt !== undefined) state.seenAt = Object.fromEntries(witnesses.map(([brand, times]) => [brand, Object.fromEntries(times)]));
+    if (incomplete.size) state.seenIncomplete = Object.fromEntries([...incomplete].map(brand => [brand, true as const]));
+  }
+  // W22 R1.02: this hour is now in these rings, the set is pruned to the
+  // horizon — a pruned hour raising the floor, so it is never folded twice —
+  // and an older hour folded after newer ones is recorded, so the catch-up can
+  // rebuild the hours whose attribution ran against the rings as they were.
+  rememberFold(state, ctx, floorAtEntry);
+  pruneSeenDays(state, ctx);
+  // W21 C1.08: the per-assignment memory keeps exactly the membership's ids, so
+  // it is pruned last, after the membership and the archived dates are final.
+  pruneEnrollment(state);
+  if (JSON.stringify(state.enrollment ?? null) !== beforeEnrollment) changed = true;
+  if (JSON.stringify(state.seenDays ?? null) !== beforeDays) changed = true;
   if (JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]) !== beforeSeen) changed = true;
   return { state, folded, changed };
+}
+
+/**
+ * The fold record, after the hour is folded: this hour joins the set, and the
+ * set is pruned to the horizon with every dropped hour raising the floor below
+ * which an hour is taken to be folded — so a pruned hour is never folded twice,
+ * and the state a shard keeps is bounded by the horizon and by a hard cap.
+ */
+function rememberFold(state: ShardState, ctx: FoldContext, floorAtEntry: number): void {
+  const hours = foldedSet(state);
+  hours.add(ctx.from);
+  let floor = floorAtEntry;
+  const newest = Math.max(ctx.from, state.through, ...hours);
+  const keepFrom = newest - Math.max(ctx.horizonMs, 0);
+  for (const from of [...hours].sort((a, b) => a - b)) {
+    if (from >= keepFrom && hours.size <= FOLDED_HOURS_MAX) break;
+    hours.delete(from); floor = Math.max(floor, from);
+  }
+  state.version = 2;
+  state.foldedThrough = floor;
+  state.foldedHours = [...hours].filter(from => from > floor).sort((a, b) => a - b);
+}
+
+/** The archived dates, kept only while an hour of them can still reach the rings. */
+function pruneSeenDays(state: ShardState, ctx: FoldContext): void {
+  const days = state.seenDays;
+  if (!days) return;
+  const oldest = new Date(Math.max(0, hourStart(ctx.date, 0) - Math.max(ctx.horizonMs, 0))).toISOString().slice(0, 10);
+  for (const date of Object.keys(days)) if (date < oldest || date === state.seenDate) delete days[date];
+  const dates = Object.keys(days).sort();
+  for (const date of dates.slice(0, Math.max(0, dates.length - SEEN_DAYS_MAX))) delete days[date];
+  if (!Object.keys(days).length) delete state.seenDays;
 }
 
 // ── the day from its hours ────────────────────────────────────────────────────
@@ -488,6 +868,26 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
         aggregateName(slot); visit(); if (brand === ids.brand) slots.add(slot);
         const e = aggregateMap(value); aggregateNumber(e.decisions); aggregateNumber(e.explored);
       }
+      // W21 C1.08: the per-assignment member is admitted exactly as strictly as
+      // the served one; a malformed one refuses the day rather than being
+      // ignored, which would answer a denominator from a source read loosely.
+      if (Object.hasOwn(b, 'assignments')) {
+        const ha = aggregateMap(b.assignments);
+        if (ha.version !== 1) unavailable();
+        for (const [slot, value] of Object.entries(aggregateMap(ha.decisions))) {
+          aggregateName(slot); visit(); if (brand === ids.brand) slots.add(slot);
+          for (const [arm, n] of Object.entries(aggregateMap(value))) { aggregateName(arm); aggregateNumber(n); visit(); }
+        }
+        for (const [name, value] of Object.entries(aggregateMap(ha.credits))) {
+          aggregateName(name); visit();
+          for (const [key, n] of Object.entries(aggregateMap(value))) { aggregateName(key, 2048); aggregateNumber(n); visit(); }
+        }
+        for (const [arm, n] of Object.entries(aggregateMap(ha.visitors))) { aggregateName(arm); aggregateNumber(n); visit(); }
+        for (const [arm, value] of Object.entries(aggregateMap(ha.outcomes))) {
+          aggregateName(arm); visit();
+          for (const [type, n] of Object.entries(aggregateMap(value))) { aggregateName(type); aggregateNumber(n); visit(); }
+        }
+      }
       for (const [name, value] of Object.entries(aggregateMap(b.policies))) {
         aggregateName(name); visit(); const p = aggregateMap(value);
         if (p.role !== 'learning' && p.role !== 'reporting') unavailable(); aggregateNumber(p.credits);
@@ -545,9 +945,10 @@ function compatibleHours(aggs: readonly HourAggregate[], brand: string, learn: L
     if (header(basis) !== header(expected) || (first && header(first) !== header(basis))) unavailable();
     const bySlot = new Map(basis.slots.map(s => [s.slot, s]));
     for (const s of expected.slots) if (JSON.stringify(s) !== JSON.stringify(bySlot.get(s.slot))) unavailable();
-    for (const slot of new Set([...Object.keys(b.arms), ...Object.keys(b.exploration), ...Object.values(b.policies).flatMap(p => Object.keys(p.stats))])) if (!bySlot.has(slot)) unavailable();
+    for (const slot of new Set([...Object.keys(b.arms), ...Object.keys(b.exploration), ...Object.keys(b.assignments?.decisions ?? {}),
+      ...Object.values(b.policies).flatMap(p => Object.keys(p.stats))])) if (!bySlot.has(slot)) unavailable();
     // The producer's arm suffix has no delimiter; retain slots containing delimiters intact.
-    for (const p of Object.values(b.policies)) for (const key of Object.keys(p.armCredits)) {
+    for (const credits of [...Object.values(b.policies).map(p => p.armCredits), ...Object.values(b.assignments?.credits ?? {})]) for (const key of Object.keys(credits)) {
       if (!bySlot.has(key.slice(0, key.lastIndexOf('|')))) unavailable();
     }
     for (const s of basis.slots) {
@@ -557,6 +958,35 @@ function compatibleHours(aggs: readonly HourAggregate[], brand: string, learn: L
     first ??= basis;
   }
   return first ? { ...first, slots: [...slots.values()].sort((a, b) => a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0) } : null;
+}
+
+/**
+ * W21 C1.08: whether an hour's per-assignment view really is the same hour as
+ * the served one it stands beside. Both are written for every decision of the
+ * same fold, so in anything this platform wrote their per-slot decision totals
+ * and their per-policy credit totals agree, no arm has more visitors than the
+ * day has and no outcome row has more visitors than its arm. A STORED aggregate
+ * where any of that fails — a partial write, a corrupt object, a producer this
+ * reader does not know — is a source that cannot say what the assignment was,
+ * and is read exactly like one folded before the member existed: the day groups
+ * by the arm SERVED, answers its denominators null, and names the hour.
+ */
+function assignmentsAgree(b: HourBrand): boolean {
+  const ha = b.assignments;
+  if (!ha) return false;
+  const total = (counts: Record<string, number> | undefined) => Object.values(counts ?? {}).reduce((n, v) => n + v, 0);
+  for (const slot of new Set([...Object.keys(b.arms), ...Object.keys(ha.decisions)])) {
+    if (total(b.arms[slot]) !== total(ha.decisions[slot])) return false;
+  }
+  for (const name of new Set([...Object.keys(b.policies), ...Object.keys(ha.credits)])) {
+    if (total(b.policies[name]?.armCredits) !== total(ha.credits[name])) return false;
+  }
+  const visitors = Object.values(ha.visitors);
+  if (visitors.some(n => n > b.visitorsDay) || total(ha.visitors) < b.visitorsDay) return false;
+  for (const [arm, byType] of Object.entries(ha.outcomes)) {
+    if (Object.values(byType).some(n => n > (ha.visitors[arm] ?? 0))) return false;
+  }
+  return true;
 }
 
 /** The day report, in the shape `buildReport` makes, from whichever hours are built. */
@@ -573,6 +1003,15 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   let hb = emptyBrand();
   for (const a of sorted) { const b = a.brands[ids.brand]; if (b) hb = mergeBrand(hb, b, tau); }
   finiteMerged(hb);
+  // W21 C1.08 (R108, F25 §7): which of the summed hours can say what the
+  // ASSIGNMENT was. An hour that carries this brand but not the member was
+  // folded before this release, or onto a shard state that predates it. The day
+  // then groups by the arm SERVED, exactly as it always did, answers its per-arm
+  // denominators unknown rather than dividing a total it does not hold, and
+  // NAMES those hours. One day uses one rule for all of its hours: mixing the
+  // two groupings would put one visitor under two different rows.
+  const unassignedHours = sorted.filter(a => a.brands[ids.brand] !== undefined && !assignmentsAgree(a.brands[ids.brand]!)).map(a => a.hour);
+  const assignments = unassignedHours.length === 0 ? hb.assignments : undefined;
   const names = Object.keys(hb.policies).sort((a, b) => Number(hb.policies[b]!.role === 'learning') - Number(hb.policies[a]!.role === 'learning'));
   const slots = [...new Set([...Object.keys(hb.arms), ...Object.keys(hb.exploration), ...Object.values(hb.policies).flatMap((p) => Object.keys(p.stats))])].sort();
   const policies: DayReport['policies'] = [];
@@ -585,9 +1024,10 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     for (const slot of slots) (grids[slot] ??= {})[name] = buildSnapshot(p.stats[slot] ?? emptyStats(), { tenant: ids.tenant, brand: ids.brand, slot }, slotCfg[slot]?.reward ?? 'click', now, statsCfg, null, slotCfg[slot]?.objective ?? 'unit', slotCfg[slot]?.measurementBasis ?? 'served-v1');
     if (p.role !== 'learning') continue;
     for (const slot of slots) {
-      const byArm = hb.arms[slot] ?? {};
+      const byArm = assignments ? assignments.decisions[slot] ?? {} : hb.arms[slot] ?? {};
+      const armCredits = assignments ? assignments.credits[name] ?? {} : p.armCredits;
       const rows: ArmRow[] = Object.keys(byArm).sort().map((arm) => {
-        const decisions = byArm[arm] ?? 0, credited = p.armCredits[`${slot}|${arm}`] ?? 0;
+        const decisions = byArm[arm] ?? 0, credited = armCredits[`${slot}|${arm}`] ?? 0;
         return attributionArm(arm, decisions, credited);
       });
       holdout[slot] = rows;
@@ -599,6 +1039,17 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     const cfg = learn.slots?.[slot]?.exploration ?? null;
     return { slot, decisions: x.decisions, explored: x.explored, realized: x.decisions ? r3(x.explored / x.decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
   });
+  // W21 C1.03/E1.04 (F25 §5.3, F07 §7): the day's per-arm DENOMINATORS, in
+  // distinct visitors, summed from the membership each hour carried — never
+  // divided out of the decision counts, which differ from them by exactly the
+  // quantity the design effect needs.
+  const armNames = assignments
+    ? [...new Set([...Object.keys(assignments.visitors), ...Object.keys(assignments.outcomes)])].sort((a, b) => a.localeCompare(b)) : [];
+  const armVisitors: ArmVisitors | null = assignments
+    ? { version: 1, basis: 'distinct_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0 })) } : null;
+  const visitorOutcomes: VisitorOutcomes | null = assignments
+    ? { version: 1, basis: 'enrolled_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0,
+      byType: Object.fromEntries(Object.entries(assignments.outcomes[arm] ?? {}).sort(([x], [y]) => x.localeCompare(y))) })) } : null;
   const last = sorted[sorted.length - 1];
   const counts = { decisions: hb.decisions, outcomes: hb.outcomes, visitors: hb.visitorsDay, truncated: sorted.some((a) => a.truncated) || !!hb.visitorsIncomplete,
     ...(hb.duplicates ? { duplicates: hb.duplicates } : {}) };
@@ -610,12 +1061,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     counts,
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison, computation,
     // W21 C1.03: the allocation the day was served under is published
-    // configuration and is recorded here as it is on a raw-day build. The
-    // per-arm VISITOR counts are not: an hour aggregate holds the day's
-    // distinct visitors as one number per brand, not one per arm, so this
-    // branch says unknown rather than dividing a total it does not hold.
-    // Carrying them is a schema change in the hour aggregate and its shard
-    // state (F25 §7), named as owed work.
+    // configuration and is recorded here as it is on a raw-day build.
     allocation: publishedAllocation(learn),
     // W22 A1.01 (F17 P4): the same named contract as every other path, with the
     // horizon THIS fold really ran under — the least of the hours it summed, so
@@ -624,12 +1070,13 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     // days" and "forty-eight hours" is on the answer instead of in the code.
     attributionContract: attributionContractOf(learn, sorted.length
       ? Math.min(...sorted.map(a => Number.isFinite(a.horizonMs) && a.horizonMs >= 0 ? a.horizonMs : 0)) : 0),
-    armVisitors: null,
-    visitorOutcomes: null,
+    armVisitors,
+    visitorOutcomes,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
     hours,
     coverage: reportCoverage({ counts, hours }, {
       version: 1, source: 'aggregates', truncated: counts.truncated, visitorsIncomplete: !!hb.visitorsIncomplete,
+      unassignedHours,
       missingHours: hours.missing, truncatedHours: sorted.filter(a => a.truncated === true).map(a => a.hour),
       unadvancedHours: sorted.filter(a => a.ringsFolded === false).map(a => a.hour),
       unknownHours: sorted.filter(a => typeof a.ringsFolded !== 'boolean' || typeof a.truncated !== 'boolean').map(a => a.hour),
@@ -747,7 +1194,7 @@ async function readHourBody(r2: R2Like, key: string, budget = { bytes: 0, cells:
 }
 function shardState(body: string | null, shard: number): ShardState {
   const state: ShardState = body === null ? emptyShard(shard) : JSON.parse(body) as ShardState;
-  if (!objectMap(state) || state.version !== 1 || state.shard !== shard || !Number.isSafeInteger(state.through) || state.through < -1
+  if (!objectMap(state) || (state.version !== 1 && state.version !== 2) || state.shard !== shard || !Number.isSafeInteger(state.through) || state.through < -1
     || !objectMap(state.rings) || (state.generation !== undefined && !generationShape(state.generation))
     || (shard !== 0 && (state.pending !== undefined || state.cleanup !== undefined))
     || (state.pending !== undefined && state.cleanup !== undefined)) throw new ReportInputError();
@@ -888,6 +1335,15 @@ function cleanupShard(state: ShardState, tenant: string, tombs: ReadonlyMap<stri
     next.seen[brand] = kept;
     if (!kept.length && next.seenAt) delete next.seenAt[brand];
   }
+  // W22 R1.02: the other dates' membership is ids and nothing else, so an
+  // erased visitor simply leaves it — there is no witness there that could show
+  // a decision after the erasure, and keeping her would be keeping an id the
+  // tenant asked to be forgotten.
+  for (const [date, brands] of Object.entries(next.seenDays ?? {})) {
+    for (const [brand, ids] of Object.entries(brands)) brands[brand] = ids.filter(visitor => !tombs.has(visitor));
+    if (!Object.keys(brands).length) delete next.seenDays![date];
+  }
+  if (next.seenDays && !Object.keys(next.seenDays).length) delete next.seenDays;
   // Orphan metadata is never used to recreate membership. Remove only its own
   // expired instruction or a cutoff-covered witness, preserving later evidence.
   for (const [brand, values] of Object.entries(next.seenRetention ?? {})) {
@@ -901,6 +1357,9 @@ function cleanupShard(state: ShardState, tenant: string, tombs: ReadonlyMap<stri
     if (!Object.keys(values).length) delete next.seenRetention![brand];
   }
   if (next.seenRetention && !Object.keys(next.seenRetention).length) delete next.seenRetention;
+  // W21 C1.08: the per-assignment memory holds no id the membership does not,
+  // so erasure and expiry reach it through the same pass that just ran.
+  pruneEnrollment(next);
   checkSeen(next); return next;
 }
 
@@ -1055,9 +1514,22 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
   for (const d of decisions) { const s = shardOf(d.visitor_id, shards); const list = byShardD.get(s) ?? []; list.push(d); byShardD.set(s, list); }
   for (const o of outcomes) { const s = shardOf(o.visitor_id, shards); const list = byShardO.get(s) ?? []; list.push(o); byShardO.set(s, list); }
   const creditedSlots = new Map<string, Set<string>>();
-  const ctx: FoldContext = { tenant, date: at.date, from, to, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
+  // W22 R1.02 (F17 P1): this hour has an aggregate and the hour's prefix now
+  // holds MORE objects than that fold read, so it is being rebuilt against rows
+  // it has not seen and those rows may still join the rings. A rebuild of an
+  // unchanged hour admits nothing, exactly as a replay always did.
+  let refold = false;
+  if (!pending && aggregate.body !== null) {
+    try {
+      const previous: unknown = JSON.parse(aggregate.body);
+      refold = objectMap(previous) && Number.isSafeInteger(previous.objects) && loaded.objects > (previous.objects as number);
+    } catch { refold = false; }
+  }
+  const ctx: FoldContext = { tenant, date: at.date, from, to, now, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
     retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
   let ringsFolded = true;
+  /** W21 C1.08: brands whose date membership this fold could not account for assignment by assignment. */
+  const unaccounted = new Set<string>();
   const generation = pending?.generation ?? crypto.randomUUID();
   const staged: Array<string | null> = [], fingerprints: PendingHour['states'] = [];
   let stagedBytes = 0;
@@ -1077,8 +1549,31 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     }
     const r = foldShard(state, byShardD.get(s) ?? [], byShardO.get(s) ?? [], ctx);
     if (!r.folded) ringsFolded = false;
-    for (const [brand, ids] of Object.entries(r.state.seen)) (brands[brand] ??= emptyBrand()).visitorsDay += ids.length;
-    for (const brand of Object.keys(r.state.seenIncomplete ?? {})) (brands[brand] ??= emptyBrand()).visitorsIncomplete = true;
+    // W22 R1.02: the day this hour belongs to, which for a repaired older hour
+    // is its own date's membership and not the newer one the shard has moved on
+    // to. The per-brand uncertainty flag belongs to the current date, which is
+    // the only date that carries the witnesses it is derived from.
+    for (const [brand, ids] of Object.entries(seenOn(r.state, at.date))) {
+      const hb = (brands[brand] ??= emptyBrand());
+      hb.visitorsDay += ids.length;
+      // W21 C1.08: the same membership, split by ASSIGNMENT. A shard that cannot
+      // account for every id it just counted — a state written before this
+      // release holds the ids and not the assignments — makes the whole brand's
+      // hour unable to say, because a denominator drawn from part of a
+      // membership is a wrong number, not a smaller one.
+      const record = r.state.enrollment?.[at.date]?.[brand] ?? {};
+      if (ids.some(visitor => !record[visitor]?.arms.length)) { unaccounted.add(brand); continue; }
+      const ha = (hb.assignments ??= emptyAssignments());
+      for (const visitor of ids) {
+        const enrolled = record[visitor]!;
+        for (const arm of enrolled.arms) ha.visitors[arm] = (ha.visitors[arm] ?? 0) + 1;
+        for (const [arm, types] of Object.entries(enrolled.outcomes ?? {})) {
+          const byType = (ha.outcomes[arm] ??= {});
+          for (const type of types) byType[type] = (byType[type] ?? 0) + 1;
+        }
+      }
+    }
+    if (r.state.seenDate === at.date) for (const brand of Object.keys(r.state.seenIncomplete ?? {})) (brands[brand] ??= emptyBrand()).visitorsIncomplete = true;
     // Preserve the established no-change through/seen body. Changed bodies get a
     // nonce too: a later replay must never recreate an old conditional-write ETag.
     let body = original;
@@ -1097,6 +1592,11 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
   }
   for (const [brand, b] of Object.entries(brands)) {
     for (const p of policies) policyHour(b, p);
+    // W21 C1.08: the hour says what the assignment was, or it says nothing at
+    // all. An hour with no decisions still says so — its empty answer is the
+    // truth — and one whose membership this fold could not account for withdraws
+    // the member entirely, which is what `coverage.unassignedHours` then names.
+    if (unaccounted.has(brand)) delete b.assignments; else b.assignments ??= emptyAssignments();
     try {
       b.computation = computationBasis(learn,
         Object.entries(b.policies).map(([name, p]) => ({ name, role: p.role, policy: p.policy })),
@@ -1147,6 +1647,43 @@ export interface CatchUpResult {
   reports: { published: string[]; failed: Array<{ date: string; error: string }>; deferred: string[] };
 }
 
+/**
+ * W22 R1.02 (F17 P1, §6 item 1): an hour that HAS an aggregate but whose
+ * aggregate no longer describes it. Two ways that happens, and the cost is one
+ * listing of the hour's own prefix and one point read of its aggregate:
+ *
+ *  · the hour's ledger prefix has grown since the fold — a record delivered
+ *    late, into an hour already folded, which today "is durably in R2, is never
+ *    read again, and is counted nowhere". `HourAggregate` already stores the
+ *    object count the fold read, so the comparison needs nothing new, and it
+ *    converges: the rebuild writes the count it has just seen.
+ *  · an EARLIER hour was folded after this one was built, so this hour's
+ *    attribution ran against rings that have since changed (F17 P3b). No new
+ *    state records that: an aggregate already carries `builtAt`, and the hours
+ *    of the lookback are read oldest first, so an earlier hour with a later
+ *    `builtAt` — or one this very run has just folded — is the whole test. It
+ *    converges, because a rebuild stamps this hour with the newest time of all.
+ *
+ * A read that fails answers "not stale": the hour already has an aggregate, and
+ * postponing a rebuild to the next run is the harmless direction.
+ */
+async function staleHour(r2: R2Agg, tenant: string, which: { date: string; hour: number },
+  builtAt: Map<number, number>, earlierBuiltInRun: boolean): Promise<boolean> {
+  const at = { ...which, from: hourStart(which.date, which.hour) };
+  let objects: number, mine: number;
+  try {
+    objects = (await listKeys(r2, `${tenant}/${at.date}/${pad2(at.hour)}/`)).filter(isLearningKey).length;
+    const stored = await readHourBody(r2, hourKey(tenant, at.date, at.hour));
+    if (stored.body === null) return false;
+    const agg: unknown = JSON.parse(stored.body);
+    if (!objectMap(agg) || !Number.isSafeInteger(agg.objects) || !Number.isSafeInteger(agg.builtAt)) return false;
+    mine = agg.builtAt as number;
+    builtAt.set(at.from, mine);
+    if (objects > (agg.objects as number)) return true;
+  } catch { return false; }
+  return earlierBuiltInRun || [...builtAt].some(([from, when]) => from < at.from && when > mine);
+}
+
 /** A saved summary proves only exact known hour membership, not content or policy freshness. */
 function hasReportedHours(report: DayReport | null, expected: ReadonlySet<number>): boolean {
   const hours = report?.hours;
@@ -1191,15 +1728,23 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   const missing = candidates.filter((c) => !existing.has(hourKey(tenant, c.date, c.hour)));
   const debt = new Set(missing.map(c => hourKey(tenant, c.date, c.hour)));
   if (interrupted) debt.add(hourKey(tenant, interrupted.date, interrupted.hour));
-  const work = interrupted ? [interrupted, ...missing.filter(c => c.date !== interrupted.date || c.hour !== interrupted.hour)] : missing;
+  // W22 R1.02: the hours that already have an aggregate are candidates too —
+  // for a re-fold, not for a first one. They are taken after every missing
+  // hour, they cost a listing and a point read each and only while the run has
+  // budget for them, and a re-fold appears in `built` like any other hour: the
+  // result keeps exactly the members it had.
+  const settled = candidates.filter((c) => existing.has(hourKey(tenant, c.date, c.hour)));
+  const builtAt = new Map<number, number>();
+  const work = [...(interrupted ? [interrupted] : []), ...missing.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour),
+    ...settled.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)];
+  // An interrupted hour is never a re-fold candidate: its transaction has to
+  // finish, whatever its aggregate says.
+  const rebuild = new Set(settled.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)
+    .map(c => hourKey(tenant, c.date, c.hour)));
   const built: CatchUpResult['built'] = [], failed: CatchUpResult['failed'] = [];
   let budget = opts.budget ?? RUN_BUDGET;
-  let newerSeen: SeenDateAhead | undefined, otherFailures = 0;
+  let otherFailures = 0;
   for (const c of work) {
-    if (newerSeen && c.date < newerSeen.seenDate) {
-      failed.push({ date: c.date, hour: c.hour, error: newerSeen.message });
-      continue;
-    }
     if (built.length >= (opts.maxHours ?? 2) || budget <= 0) break;
     let spent = 0;
     const metered: R2Agg = {
@@ -1208,6 +1753,11 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
       put: (key, body, options) => { spent++; return r2.put(key, body, options); },
     };
     try {
+      // An hour that already has an aggregate is rebuilt only when that
+      // aggregate no longer describes it; the probe is charged to this run's
+      // budget like any other work, and a quiet catch-up writes nothing.
+      if (rebuild.has(hourKey(tenant, c.date, c.hour))
+        && !await staleHour(metered, tenant, c, builtAt, built.some(b => hourStart(b.date, b.hour) < hourStart(c.date, c.hour)))) continue;
       const agg = await buildHour(metered, tenant, c, learn, now, opts, retentionEnv);
       const sum = (k: 'decisions' | 'outcomes') => Object.values(agg.brands).reduce((n, b) => n + b[k], 0);
       built.push({ date: c.date, hour: c.hour, decisions: sum('decisions'), outcomes: sum('outcomes'), objects: agg.objects, truncated: agg.truncated });
@@ -1223,9 +1773,7 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
       try { stillPending = !!pendingHour(shardState((await readHourBody(metered, shardKey(tenant, 0))).body, 0), tenant); }
       catch { stillPending = true; }
       if (stillPending) break;
-      if (e instanceof SeenDateAhead) {
-        if (!newerSeen || e.seenDate > newerSeen.seenDate) newerSeen = e;
-      } else if (++otherFailures >= 2) break;
+      if (++otherFailures >= 2) break;
     } finally {
       // Actual method calls include all shard/conditional/readback I/O; charge a
       // coordinator discovery per attempted hour conservatively. The existing

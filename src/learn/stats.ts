@@ -19,6 +19,20 @@ export interface StatsConfig {
 }
 export const DEFAULT_STATS: StatsConfig = { n0: 30, tauLearnMs: 21 * 24 * 60 * 60 * 1000, liftMin: 0.5, liftMax: 2, nMin: 30 };
 
+/**
+ * W22 A1.02: how far back the visitor's ring reaches, as ONE constant.
+ *
+ * The object that enforces it (`@/durable-objects/DecisionRing`) re-exports it
+ * under this name, and the online fan-out (`@/learn/fan`) binds its
+ * `ONLINE_RING_REACH_MS` to it, so the horizon the online path DECLARES as
+ * applied is the horizon the ring actually holds and the two cannot drift.
+ * It is declared in this pure module because the ring imports the fan-out and
+ * the fan-out must read the constant at module scope: a definition in either of
+ * them would be read across an import cycle, before initialization, whenever
+ * the other loaded first.
+ */
+export const RING_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 export type Level = 0 | 1 | 2 | 3 | 4 | 5;
 export const LEVEL_WORDS: Record<Level, string> = {
   0: 'everyone', 1: 'channel', 2: 'channel and visit bucket', 3: 'channel, visit bucket and journey stage',

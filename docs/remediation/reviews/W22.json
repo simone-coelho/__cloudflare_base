@@ -1,0 +1,8 @@
+{
+  "w": "W22",
+  "verdict": "PASS",
+  "sha": "48a74a38e201bd20802edfae81af8303be633099",
+  "date": "2026-09-20",
+  "reviewer_report": "/home/simonecoelho/rem/_evidence/W22/reviewer-whole/REPORT.md",
+  "scope": "local scope of document 35 §5 row W22 (event and evidence consistency: shared logical event identity and dedup before caps; durable online/R2/fold/export reconciliation with explicit completeness; one attribution contract with versioned histories and horizons; persisted product-sort evidence via W14; the fault tests for id collision and retry, late arrivals, partial writes and sink mismatch), F16 §7 and F17 §6 item by item; all fourteen tested units W22.D1.01–D1.05, R1.01–R1.06, A1.01–A1.02, S1.01 green (W22-B1 merged at f0421eb, W22-B2 at 48a74a3); whole-item review PASS at 48a74a3 with the clause table, no regression (79 failures in 9 files, 0 outside the baseline), two non-blocking findings (the admitted online-vs-ledger contract — two different records under one stable outcome_id credit twice online while the ledger refuses and names that brand's day — not yet stated where a customer reads, docs/api/01-rest-endpoints.md:90-94 and docs/kit/03-payload-schemas.md:481-485 predate W22-B2 and no unit binds them; the two remedies make the platform report the designed collision outcome as a reconciliation disagreement); closure waits on the owner row W22.P1.01 (the durable ingestion log and the seven-day storage decision — never decided here); residuals for live acceptance and later units recorded in LANE-LOG R120, R124, R131, R143, R145 and on the units.json rows (the DLQ queues a deployment dependency; the higher-cap repair owned by W30; the ingest clamp by W23; no native/Miniflare leg in any W22 unit)"
+}
