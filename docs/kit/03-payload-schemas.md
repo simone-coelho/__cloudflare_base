@@ -68,6 +68,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `visitor_id`, `session_id` | The first-party identifiers. `session_id` is the platform's session, the one attribution compares |
 | `identity_anchor` | `visitor` when the state hung on the durable id, `session` when only a session was available, `none` when no state could be read |
 | `ts` | Original server decision time; never rewritten to render/replay time |
+| `experiment` | `{ id, saltVersion, arm, anchorGeneration }`: the experiment this record's arm belongs to, as the decision path answered it. `id` is `{tenant}:{brand}:{salt}`, so rotating the published salt starts a new experiment instead of re-randomising the running one; `saltVersion` is the learn-document revision the enrollment was written under; `anchorGeneration` is the generation of the shopper's persistent enrollment anchor. Written by the producer and delivered unchanged — never re-derived later from a then-current document. `arm` here is the ASSIGNMENT (`personalized`, `default`, `no_learning`, or `ineligible` for a shopper who never consented to personalization and so was never drawn), which is not the same field as the record's own `arm`, the experience served. Absent on records written before enrollment was persistent |
 | `measurementBasis` | `served-v1` (also absent legacy metadata) or `rendered-v1`; incompatible counts are not pooled |
 | `rendered` | Rendered-v1 only: `{version:1,eventId,at,pageInstance}` from the original durably admitted renderer signal, not proof of human visibility |
 | `page`, `slot`, `position` | Where it was served, and the rank inside the slot |
@@ -126,6 +127,7 @@ One per reward-bearing event, written after the response.
 | `margin` | The margin the event carried (`margin`, or the items' margins times quantity summed), for a slot that learns margin; null when none |
 | `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them |
 | `session_id`, `visitor_id`, `brand`, `arm`, `ts` | As on the decision |
+| `experiment` | `{ id, saltVersion, arm, anchorGeneration }`: the experiment this outcome's VISITOR is enrolled in, resolved from her persistent enrollment anchor when the outcome was recorded, so an outcome is attributable to her assignment whether or not a served piece matched it. Consent is not readable at record time, so an outcome recorded after a shopper withdraws personalization carries the enrollment her anchor still resolves to; read eligibility from the decision records. Absent on records written before enrollment was persistent, and on a visitor whose enrollment could not be resolved |
 
 ## The content piece
 
@@ -437,7 +439,25 @@ rate }`. `version` is the publish time in milliseconds and is what a decision's 
 `POST /v1/{tenant}/learn/report`. `{ tenant, brand, date, builtAt, counts: { decisions, outcomes,
 visitors, truncated }, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
-mode } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] } }`. Aggregates only; no visitor id
+mode } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
+visitorOutcomes }`.
+
+`armVisitors` is `{ version, basis: "distinct_visitors", arms: [ { arm, visitors } ] }`: the per-arm
+DENOMINATORS in distinct visitors, which the decision counts are not. Its `arm` is the experimental
+ASSIGNMENT wherever the day's records carry one, so an `ineligible` row stands on its own and is never
+pooled into `default`, and a record written before the provenance block existed is read by the arm it
+was served under. It is `null` on a day written before the field existed — never zero, and never
+re-derived from the decision counts the day does hold. `allocation` is
+`{ version, source: "published", share, arms }`, the allocation the day was served under, so sample
+sufficiency is computable on your side under your own protocol. `visitorOutcomes` is
+`{ version, basis: "enrolled_visitors", arms: [ { arm, visitors, byType } ] }`: distinct visitors on each
+assignment with at least one outcome of each reward type, counted by the assignment the visitor held
+when the outcome happened and not by whether a served piece matched — two purchases by one visitor are
+one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
+`armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
+day predates it. No report of ours states a business target, a lift or a standing.
+
+Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin falls back to value), not currency conversion or probability.
 
 ## Socket frames

@@ -4,7 +4,17 @@
 // module's own arithmetic; the words are checked for what they claim.
 
 import { describe, it, expect } from 'vitest';
-import { compareArms, neededPerArm, newcombe, pooled, readTargets, wilson, zFor, TAPESTRY_TARGETS } from '@/measure/holdout';
+import { compareArms, neededPerArm, newcombe, pooled, readTargets, wilson, zFor } from '@/measure/holdout';
+
+/**
+ * R10/R118(9) with the build review's F11 and METHOD §6 (customer-neutral core):
+ * a named customer's numbers are a FIXTURE, not a shipped product constant. The
+ * value is byte-for-byte the one `src/measure/holdout.ts` exported as
+ * `TAPESTRY_TARGETS` (BTIE §6.4.2: minimum +10 %, target +40 %, stretch +60 %
+ * relative); the product export is deleted by the build, and every expected
+ * value in this file is unchanged by the move.
+ */
+const TAPESTRY_TARGETS = { minimum: 0.10, target: 0.40, stretch: 0.60 };
 
 describe('wilson', () => {
   it('matches the formula worked by hand: 10 of 40 at 95% is 0.1419 to 0.4020', () => {
@@ -169,40 +179,76 @@ describe('CW34: the confidence level, and the other one beside it', () => {
 });
 
 describe('CW34: the pre-set targets', () => {
-  it("uses Tapestry's numbers by default and can be switched off", () => {
-    const r = compareArms({ n: 1000, s: 30 }, { n: 20000, s: 900 });
+  // R10/R118(9), the build review's F10: the name claimed a compiled default this
+  // function no longer has, so it names what the block actually tests. The
+  // assertions and their values are unchanged.
+  it('reads against the numbers the caller gives it, and can be switched off', () => {
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const r = compareArms({ n: 1000, s: 30 }, { n: 20000, s: 900 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(r.targets?.targets).toEqual(TAPESTRY_TARGETS);
     expect(compareArms({ n: 10, s: 1 }, { n: 10, s: 2 }, { targets: null }).targets).toBeUndefined();
   });
 
+  // R118(9) with F25 §5.2 and ruling R108(1d): the replacement lock for the
+  // default this module used to hold, kept beside the test that used to assert
+  // it. A platform that serves more than one customer may not read one
+  // customer's numbers when a caller supplies none; it says so instead.
+  it('supplied no targets, it reads against none and says why', () => {
+    const unsupplied = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 }).targets;
+    expect(unsupplied?.standing, 'F25 §5.2 — with no targets supplied there is no rung to award').toBe('undecided');
+    expect(unsupplied?.reason, 'F25 §5.2 — and the reading names why').toBe('no_published_target');
+    expect(unsupplied?.targets, 'F25 §5.2 — no compiled customer default is read in').toBeNull();
+    // The same counts WITH the caller's numbers still answer a rung, so the
+    // withheld reading is about the missing targets, not about these arms.
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 },
+      { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_minimum');
+  });
+
   it('judges on the low end of the interval, not the point estimate', () => {
     // 3.0% vs 4.5%: +50% observed. Small arms: the low end is under the minimum, so on track, not reached.
-    const small = compareArms({ n: 200, s: 6 }, { n: 4000, s: 180 });
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const small = compareArms({ n: 200, s: 6 }, { n: 4000, s: 180 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(small.relative).toBeCloseTo(0.5, 2);
     expect(small.targets?.standing).toBe('on_track');
     expect(small.words).toContain('on track, the observed lift clears the minimum but the low end of the interval is');
-    // Same rates, big arms: the low end clears the target.
-    const big = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 });
-    expect(big.targets?.standing).toBe('reached_target');
-    expect(big.words).toContain('the target is reached, the low end of the interval is +');
+    // Same rates, big arms: the low end clears the minimum, and not the target.
+    const big = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });   // R10/R108(1d): targets supplied explicitly
+    // R10/R100(b), witness F25 §7.3 (the Katz log relative interval from RAW rates) and §5.5 (this exact
+    // fixture: "shipped relative low 41.33 % … Katz low 38.46 % -> reached_minimum"). By hand at
+    // z = 1.959963984540054: p_c = 600/20000 = 0.03, p_t = 18000/400000 = 0.045, ln(1.5) = 0.4054651081,
+    // SE = sqrt(0.955/18000 + 0.97/600) = 0.0408622347, z·SE = 0.0800885083,
+    // low = exp(0.4054651081 − 0.0800885083) − 1 = +0.3845519698 (r4 0.3846), high = exp(…+…) − 1 = +0.6250744277.
+    // +38.46 % is under the +40 % target and over the +10 % minimum, so the rung is the minimum.
+    expect(big.targets?.standing).toBe('reached_minimum');
+    expect(big.words).toContain('the minimum is reached, the low end of the interval is +');
   });
 
   it('reaches stretch, or the minimum only, or is below', () => {
-    expect(compareArms({ n: 20000, s: 400 }, { n: 400000, s: 16000 }).targets?.standing).toBe('reached_stretch');   // 2% → 4%: +100%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }).targets?.standing).toBe('reached_minimum');   // 3% → 3.75%: +25%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }).targets?.standing).toBe('below');             // 3% → 3.15%: +5%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }).words).toContain('below the minimum');
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    expect(compareArms({ n: 20000, s: 400 }, { n: 400000, s: 16000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_stretch');   // 2% → 4%: +100%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_minimum');   // 3% → 3.75%: +25%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('below');             // 3% → 3.15%: +5%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).words).toContain('below the minimum');
   });
 
   it('cannot be read against a control rate of zero, and says so', () => {
-    const r = compareArms({ n: 100, s: 0 }, { n: 100, s: 5 });
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const r = compareArms({ n: 100, s: 0 }, { n: 100, s: 5 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(r.targets?.standing).toBe('undecided');
     expect(r.words).toContain('cannot be read against a control rate of zero');
     expect(readTargets({ p: 0.05, lo: 0.01, hi: 0.09 }, 0, TAPESTRY_TARGETS).relativeLow).toBeNull();
   });
 
   it('accepts a tenant\u2019s own targets', () => {
-    // 3% → 3.75%: +25% observed; the low end of the relative interval is about +17% at these sizes.
+    // 3% → 3.75%: +25% observed; the low end of the relative interval is about +15.3% at these sizes.
+    // (R10/R100(b), F25 §7.3, by hand at z = 1.959963984540054: p_c = 0.03, p_t = 0.0375,
+    // ln(1.25) = 0.2231435513, SE = sqrt(0.9625/15000 + 0.97/600) = 0.0409979674, z·SE = 0.0803545396,
+    // low = +0.1534864039 (r4 0.1535), high = +0.3545890049. Both assertions below still hold, and 0.1535 ≥ the
+    // tenant's +15% target, so the rung is unchanged; only the comment's "+17%" was the narrow interval's.)
     const r = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }, { targets: { minimum: 0.05, target: 0.15, stretch: 0.3 } });
     expect(r.targets?.relativeLow).toBeGreaterThan(0.15);
     expect(r.targets?.relativeLow).toBeLessThan(0.2);

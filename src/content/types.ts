@@ -137,7 +137,43 @@ export interface SlotCatalog {
   pages: Record<string, SlotStrategy[]>;
 }
 
+/** The EXPERIENCE served. Unchanged by W21: a shopper who withheld a consent switch is served the site's own defaults. */
 export type Arm = 'personalized' | 'default' | 'no_learning';
+
+/**
+ * W21 E1.02 (F07 §1.4, ruling R108): the experimental ASSIGNMENT, which is not
+ * the served experience. A shopper who has not consented to personalization was
+ * never drawn into the experiment at all; she is served exactly what the
+ * `default` arm is served, and only her assignment says `ineligible`, so the
+ * control arm of any comparison holds randomised controls only. The two live in
+ * different places on purpose: `arm` on the answer and on the record is what she
+ * saw, `experiment.arm` is what she was assigned.
+ */
+export type Assignment = Arm | 'ineligible';
+
+/**
+ * W21 E1 (F07 §7(b)): the shopper's enrollment in the agreed experiment, written
+ * once against a persistent anchor and read back on every later decision, so the
+ * arm is never redrawn from whatever id the browser is carrying at that moment.
+ */
+export interface EnrollmentProvenance {
+  /** `${tenant}:${brand}:${effective salt}` — a salt change starts a new experiment. */
+  id: string;
+  /** The revision of the published learn document the enrollment was written under. */
+  saltVersion: number;
+  /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn. */
+  arm: Assignment;
+  /**
+   * Why the assignment is `ineligible`, so an analyst need not guess which
+   * population a row belongs to: the shopper withheld personalization consent,
+   * or her persistent enrollment anchor could not be read at that moment and no
+   * arm may be drawn from the id her browser happens to carry (R118(2), (3)).
+   * Absent on a randomised assignment.
+   */
+  reason?: 'personalization_consent' | 'anchor_unavailable';
+  /** 1 for the first anchor; only a replacement of the anchor itself advances it. Recognition does not. */
+  anchorGeneration: number;
+}
 
 /** Doc 22 §10. Assignment is a hash, so it is sticky by construction. */
 export interface HoldoutConfig {
@@ -358,6 +394,15 @@ export interface DecisionRecord {
    */
   journey?: { stage: import('@/services/JourneyStage').JourneyWord; version: string | null };
   arm: Arm;
+  /**
+   * W21 E1.03: the experiment this record's arm belongs to, as the decision
+   * path answered it. Written by the producer and stored and exported
+   * unchanged; never reconstructed later from the then-current learn document,
+   * which would stamp a record decided under an older salt with today's
+   * experiment (F07 §5.7). Absent on records written before enrollment was
+   * persistent, and absent where the shopper was not enrolled.
+   */
+  experiment?: EnrollmentProvenance;
   explored: boolean;
   authority: Authority;
   versions: DecisionVersions;
@@ -426,6 +471,8 @@ export interface ContentDecisionSet {
   identity_anchor: IdentityAnchor;
   ts: number;
   arm: Arm;
+  /** W21 E1.03: the experiment this page's arm belongs to. Absent where the shopper is not enrolled. */
+  experiment?: EnrollmentProvenance;
   cell: Cell;
   versions: DecisionVersions;
   config_label: string;

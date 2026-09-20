@@ -32,16 +32,17 @@ import { pinPublication, readPinnedPublication, publicationMeta, PublicationErro
 import { replayDecision } from '@/learn/replay';
 import { readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
-import { WindowRangeError, windowReport } from '@/measure/window';
+import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
 import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE } from '@/learn/explore';
-import type { ContentCatalog, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
+import { readEnrollmentHealth } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
 import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
@@ -59,6 +60,39 @@ async function readConfig<T>(c: { env: Env }, kind: DocumentKind<T>, tenant: str
   let pin = requestPins.get(c);
   if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
   return (await readPinnedPublication(c.env, kind, tenant, await pin)).value;
+}
+/**
+ * The tenant's proposal list for a work queue, where a tenant that has never
+ * run a learning cycle has published no proposals document at all.
+ *
+ * Absence and unreadability are kept apart, which is the whole point: the
+ * publication SET is still read and still authoritative, and only the set's own
+ * statement that this member does not exist answers "no proposals". A storage
+ * or authority failure still refuses, exactly as it did.
+ */
+async function publishedProposals(c: { env: Env }, tenant: string): Promise<ProposalsDoc> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  const published = Object.values(set.refs).some(ref => ref.kind === PROPOSALS_KIND.name && ref.scope === tenant);
+  return published ? readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant) : { proposals: [] };
+}
+/**
+ * The decisions an outcome credits, with the provenance each of them was
+ * DECIDED under. Only the outcome's own explicit reference is followed: a
+ * record that names no decision is not searched for one, because guessing which
+ * decision an outcome credits is the reporting policy's job and not the
+ * export's. Bounded by that one lookup, and any failure to read it leaves the
+ * list empty rather than refusing the export.
+ */
+async function creditedDecisionProvenance(c: { env: Env }, tenant: string, outcome: CapturedRecord): Promise<Array<{ decision_id: string; experiment?: EnrollmentProvenance }>> {
+  const reference = (outcome as { decision_id?: unknown }).decision_id;
+  if (typeof reference !== 'string' || !reference || !validLedgerSelector(tenant, reference)) return [];
+  try {
+    const decision = await findById<DecisionRecord>(c.env.STORAGE as unknown as R2Like, reference, 'decision');
+    if (!decision || decision.record.tenant !== tenant || decision.record.visitor_id !== outcome.visitor_id) return [];
+    return [{ decision_id: reference, ...(decision.record.experiment ? { experiment: decision.record.experiment } : {}) }];
+  } catch { return []; }
 }
 const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 /**
@@ -289,7 +323,7 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   const now = Date.now();
   const [slots, catalog, learn, proposals, tombs] = await Promise.all([
     readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant),
-    readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
+    publishedProposals(c, tenant), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
   ]);
   const index = slotsIndex(slots, catalog, learn, now);
   const entries = index.pages.flatMap((p) => p.slots);
@@ -299,7 +333,14 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
     try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn, erasuresPending: tombs.size }) });
+  // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
+  // read from the same operator cache the governance counters use; unreadable
+  // answers zero rather than failing the queue.
+  // It is not part of `queueOf`'s pure computation over the published documents:
+  // it is a counter read from the operator cache, so it is answered beside it.
+  const health = await readEnrollmentHealth(c.env, tenant, now);
+  return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
 });
 
 /**
@@ -506,6 +547,11 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
+    // W21 E1.03: the experiment this answer belongs to — `arm` above is the
+    // experience served, `experiment.arm` the experimental assignment — so a
+    // customer can join their own outcome data to the population we served her
+    // in. Absent for an unsigned caller, which is no shopper.
+    ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
     // the refusal reaches nothing outside the worker: the slot silently falls back to
@@ -536,22 +582,47 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
 decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const date = (c.req.query('date') ?? '').trim();
-  if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
+  // W21 E1.03 (position 8): the comparison is computed on the customer's side,
+  // from records this export delivers, so the export takes the WINDOW they are
+  // comparing over instead of making them walk it one date at a time.
+  // `date=` remains exactly what it was: one day, the same answer as before.
+  const from = (c.req.query('from') ?? '').trim(), to = (c.req.query('to') ?? '').trim();
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  const windowed = from !== '' || to !== '';
+  if (!TENANT.test(tenant) || (windowed ? date !== '' || !day.test(from) || !day.test(to) : !day.test(date))) {
+    return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD, or from=YYYY-MM-DD and to=YYYY-MM-DD' }, 400);
+  }
+  let dates: string[];
+  try { dates = windowed ? datesBetween(from, to) : [date]; }
+  catch (error) { return c.json({ ok: false, error: error instanceof WindowRangeError ? error.message : 'Invalid window' }, 400); }
   const selected = c.req.query('stream');
   if (selected && !['decision', 'outcome', 'product-sort', 'behavior'].includes(selected)) return c.json({ ok: false, error: 'Invalid stream' }, 400);
   const stream = selected as LedgerStream | undefined;
   const cursor = (c.req.query('cursor') ?? '').trim() || undefined;
+  // A cursor continues one day's listing; it cannot be read across a window,
+  // because the days are listed in order and a cursor names a position in one.
+  if (cursor && dates.length !== 1) return c.json({ ok: false, error: 'cursor continues a single date' }, 400);
   return auditedSubjectRead(c, tenant, 'batches', undefined, async () => {
-  const [listed, tombs] = await Promise.all([
-    c.env.STORAGE.list({ prefix: `${tenant}/${date}/`, ...(cursor ? { cursor } : {}), limit: 1000 }),
-    loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
-  ]);
-  const objects = listed.objects
-    .filter((o) => stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))
-    .map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) }));
+  const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
+  const objects: Array<{ key: string; date: string; size: number; uploaded: string }> = [];
+  let truncated = false, nextCursor: string | undefined, listedDays = 0;
+  for (const listedDate of dates) {
+    // The object budget the single-day listing already applied, applied to the
+    // window as a whole: a window answers what it read and says it stopped.
+    if (objects.length >= REPORT_LIMITS.objects) { truncated = true; break; }
+    const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${listedDate}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
+    listedDays++;
+    for (const o of listed.objects) {
+      if (!(stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))) continue;
+      objects.push({ key: o.key, date: listedDate, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+    }
+    if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
+  }
   c.header('Cache-Control', 'no-store');
   // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
-  return c.json({ ok: true, tenant, date, stream: stream ?? 'both', objects, truncated: listed.truncated, ...(listed.truncated ? { cursor: listed.cursor } : {}), erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
+  return c.json({ ok: true, tenant, ...(windowed ? { from, to, days: dates.slice(0, listedDays) } : { date }),
+    stream: stream ?? 'both', objects, truncated, ...(nextCursor ? { cursor: nextCursor } : {}),
+    erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
   });
 });
 
@@ -629,7 +700,17 @@ decisionRoutes.get('/:tenant/ledger/:id', operatorJwt(), async (c) => {
   if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
   witness = structuredClone(requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger'));
   const record = Object.fromEntries(Object.entries(found.record).filter(([key]) => key !== DELIVERY_FIELD));
-  return c.json({ ok: true, stream, key: found.key, record });
+  // W21 E1.03 (ruling R118(7)): an outcome is delivered beside the provenance of
+  // the DECISIONS it credits, so a join across a salt rotation is never empty.
+  // The decision's own block is copied as it was stored — never re-derived from
+  // today's published salt, which is the hazard R101(a) forbids — and an
+  // outcome whose credited decision carries none, or that names no decision at
+  // all, simply has nothing to add.
+  const credited = stream === 'outcome' ? await creditedDecisionProvenance(c, tenant, found.record) : [];
+  if (stream === 'outcome' && record.experiment === undefined && credited.length === 1 && credited[0]!.experiment) {
+    record.experiment = credited[0]!.experiment;
+  }
+  return c.json({ ok: true, stream, key: found.key, record, ...(stream === 'outcome' ? { creditedDecisions: credited } : {}) });
   });
   if (response.ok && witness) try { requireRetention(c.env, witness, tenant, 'ledger'); }
   catch { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); }

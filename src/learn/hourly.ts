@@ -24,7 +24,7 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
+import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
 import { policyOf, slotConfigsOf } from './route';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
   type ComputationBasis, type DuplicateCounts, type DuplicateWitness } from './report';
@@ -609,6 +609,16 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     // Existing anonymous historical max counts are not reconstructed by this fold.
     counts,
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison, computation,
+    // W21 C1.03: the allocation the day was served under is published
+    // configuration and is recorded here as it is on a raw-day build. The
+    // per-arm VISITOR counts are not: an hour aggregate holds the day's
+    // distinct visitors as one number per brand, not one per arm, so this
+    // branch says unknown rather than dividing a total it does not hold.
+    // Carrying them is a schema change in the hour aggregate and its shard
+    // state (F25 §7), named as owed work.
+    allocation: publishedAllocation(learn),
+    armVisitors: null,
+    visitorOutcomes: null,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
     hours,
     coverage: reportCoverage({ counts, hours }, {

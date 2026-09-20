@@ -280,6 +280,36 @@ All under `/v1/{tenant}/identity/`. The first two take the site key; the rest ta
 | `GET shopper/{shopperId}` | | The browsers on the person and the history applied; the account id is not on it |
 | `POST events` | JSON `{ rows }` or `text/csv`, each at most 1 MiB of actual streamed UTF-8 bytes and 1000 data rows | Historical actions or versioned typed profile snapshots; existing `accountId \| shopperId \| visitorId` resolution |
 
+### Experiment enrollment across a link
+
+A shopper who has consented to personalization is enrolled once, against a persistent enrollment
+anchor and the published salt of the experiment named in the learn document, and every decision
+record kept for her carries `experiment: { id, saltVersion, arm, anchorGeneration }` — `id` is
+`{tenant}:{brand}:{salt}`, so rotating the salt starts a NEW experiment rather than silently
+re-randomising the running one. The arm is read back from that anchor on every decision; it is
+never re-drawn from whichever id the browser happens to be carrying.
+
+**Across an identity link the enrollment recorded first wins; the arm is never re-drawn from the new id.**
+The anchor of a recognised shopper is the first browser linked to her, so signing in, signing in on
+a second device, or returning months later on a new browser all keep the arm she was first enrolled
+in. `anchorGeneration` is that anchor's generation; recognition does not replace an anchor.
+
+`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.
+A shopper who has not consented to personalization is served exactly what the control arm is served,
+and her decision records, her outcome records and her snapshot answer say `experiment.arm:
+"ineligible"` — she was never drawn, so no comparison may count her as a randomised control. If she
+later turns personalization on, she is enrolled from that moment against the same anchor.
+
+`experiment.reason` says why an assignment is `ineligible`: `personalization_consent` when she has not
+consented to personalization, and `anchor_unavailable` when her persistent enrollment anchor could not
+be read at that moment. An anchor we cannot read is never an invitation to draw a new arm from the id
+her browser happens to be carrying: she is served the site's own defaults, the assignment says
+`ineligible` with that reason, and the occurrence is counted for your operators on
+`GET /v1/{tenant}/learn/queue` as `enrollment_anchor_unavailable`.
+
+Until the hour aggregates carry the experimental assignment, the canonical nightly report groups by the arm served, so an `ineligible` assignment is counted in `default` on that path.
+The day report built on demand from the day's records groups by the assignment.
+
 Historical import requires an existing owned profile and live explicit tracking and personalization choices; legacy preference booleans do not authorize import. It cannot grant consent. Multiple supplied identifiers must resolve to the same subject. Missing state or consent and refused consent are reported by original row index in `skipped`, without changing profile or history counts; corrupt state and failed writes fail the request, which may follow earlier successful subject groups. Original times remain subject to erasure cutoffs and current owner-serialized import/adoption/publication barriers; independent external stores are not one global transaction.
 
 ### Return recognition (anonymous continuity)
@@ -476,12 +506,12 @@ Identity visitor/shopper GETs (including HEAD), identity resolve/erase, ledger e
 | `GET visitors/{visitorId}/receipts[?limit=&cursor=]` | What this shopper was served, newest first, each with the sentences that say why: the interest matched, the region's trend, your model's term, the journey-stage, freshness, fatigue, merchandising and diversity rules, a pinned slot that could not fill its take, the learned lift and whether it was applied, a pin, the holdout arm, an explored pick. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history/projection returns 503, never empty success. Operator token; no-store |
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history returns 503. Operator token; no-store |
 | `GET ledger/{decision_id}`, `GET ledger/{outcome_id}?stream=outcome`, and `GET ledger/{record_id}?stream=product-sort` | One record from the ledger by id, no index needed; consumer/source/readback stages are separate; behavior and complete product-sort records use durable owner admission and managed queue/R2 recovery |
-| `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome\|product-sort][&cursor=]` | The day's batch objects, so a warehouse job knows what to fetch with its own storage credentials. Product-sort objects require the explicit selector; apply erasure cutoffs when loading |
+| `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome\|product-sort][&cursor=]`, or `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The batch objects of one day, or of a window of at most 184 inclusive UTC days, so a warehouse job knows what to fetch with its own storage credentials: the comparison is computed on your side, from the arm-tagged records these objects hold. Each entry names the `date` it belongs to. A window answers the days it read (`days`) and sets `truncated` when it stopped at the object budget or mid-day; `cursor` continues a single `date` only. Product-sort objects require the explicit selector; apply erasure cutoffs when loading. The export states no lift |
 | `GET ledger/erasures` | The visitors whose erasure is pending, each with the moment of erasure: a warehouse job drops their rows at or before that moment from what it loads, until the nightly rewrite has removed them from the objects themselves. `ledger/batches` says how many are pending |
 | `POST ledger/erasures` `{ visitorId }` | The ledger half of an erasure: writes the tombstone every reader honours at once and empties the visitor's ring. The identity erase route calls the same function after erasing the profile. `POST ledger/erasures/rewrite` runs the nightly rewrite now |
 | `GET replay/{decision_id}` | Validates recorded page dependencies, loads required prefix archives (none for a genuine pin), and compares the target including authority/exploration: `{ equal, diff[], used }`; unavailable or inconsistent dependencies fail explicitly |
-| `POST learn/report` `{ date, brand?, policies? }` and `GET learn/report?date=&brand=` | Raw attribution diagnostics from available hour aggregates, or budgeted day-ledger reads for custom policies/fallback. Explicit `policies` arrays, including empty or preset-equivalent arrays, return response-only results and never save the canonical day. Omit `policies` for ordinary canonical publication. POST bodies are limited to64KiB; raw-report budgets below return explicit413 rather than a truncated success. GET reads the stored canonical day, not a guarantee of current or settled coverage. Additive `coverage` reports source limitations; legacy `hours` and counts remain compatible. Aggregation does not establish any-size capacity or complete history. No visitor id in the result |
-| `GET learn/report/window?from=&to=&brand=` | Pools bounded stored day diagnostics over at most 184 inclusive UTC days (the longest six consecutive full calendar months) only where recorded slot computation bases agree. Requested endpoints are preserved; 185 days refuse before storage I/O. Unknown or mixed contributors withhold pooled arms with reasons/dates; found days, source counts and normalized coverage remain visible. Only genuinely missing reports enter `missing`; oversized inputs return413 and corrupt/unavailable inputs503. No experimental compatibility, inference or maturity claim |
+| `POST learn/report` `{ date, brand?, policies? }` and `GET learn/report?date=&brand=` | Raw attribution diagnostics from available hour aggregates, or budgeted day-ledger reads for custom policies/fallback. Explicit `policies` arrays, including empty or preset-equivalent arrays, return response-only results and never save the canonical day. Omit `policies` for ordinary canonical publication. POST bodies are limited to64KiB; raw-report budgets below return explicit413 rather than a truncated success. GET reads the stored canonical day, not a guarantee of current or settled coverage. Additive `coverage` reports source limitations; legacy `hours` and counts remain compatible. Aggregation does not establish any-size capacity or complete history. No visitor id in the result. The answer carries `armVisitors` (per-arm distinct visitors, `null` on a day written before the field existed), `allocation` (the published share and arms the day was served under) and `visitorOutcomes` (per-arm enrolled visitors by outcome type, counted by enrollment and not by content match) |
+| `GET learn/report/window?from=&to=&brand=` | Pools bounded stored day diagnostics over at most 184 inclusive UTC days (the longest six consecutive full calendar months) only where recorded slot computation bases agree. Requested endpoints are preserved; 185 days refuse before storage I/O. Unknown or mixed contributors withhold pooled arms with reasons/dates; found days, source counts and normalized coverage remain visible. Only genuinely missing reports enter `missing`; oversized inputs return413 and corrupt/unavailable inputs503. No experimental compatibility, inference or maturity claim. The answer carries `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled day predates the field |
 | `POST learn/cycle[?brand=]` | Unavailable: valid authenticated requests return 503. Automatic and on-demand proposal generation/application are withdrawn pending W29 safeguards |
 | `GET learn/proposals` | Read-only historical records, explicitly unverified; retained statuses are not proof of successful application and the returned history is not guaranteed complete |
 | `POST learn/proposals/{id}/apply\|reject` | Unavailable: valid authenticated requests return 503 without proposal/configuration access or mutation |

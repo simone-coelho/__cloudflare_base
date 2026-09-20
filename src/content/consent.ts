@@ -175,5 +175,12 @@ export function consentFromCookies(cookieHeader: string | null | undefined): Con
 /** Whether the engine may personalize for this shopper at all. */
 export const personalizes = (c: Consent): boolean => c.tracking && c.personalization;
 
-/** The arm the shopper actually gets: the site's defaults unless both switches are on. */
+/**
+ * The arm the shopper actually gets: the site's defaults unless both switches
+ * are on. This is the EXPERIENCE, and W21 E1.02 does not change it (R108): she
+ * is served exactly what the `default` arm is served. What W21 separates is the
+ * experimental ASSIGNMENT — she was never drawn into the experiment, and her
+ * records say so on `experiment.arm` (`ineligible`, `Assignment` in ./types),
+ * so the control arm of any comparison holds randomised controls only.
+ */
 export const armUnder = (c: Consent, arm: Arm): Arm => (personalizes(c) ? arm : 'default');

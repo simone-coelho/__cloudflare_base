@@ -13,6 +13,7 @@ import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
 import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
+import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
@@ -205,9 +206,19 @@ realtimeRoutes.post('/action', async (c) => {
       }, c.get('tenant'));
       if (outcome) {
         outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
-        const p = c.env.LEDGER_RECOVERY_ENABLED === 'true'
-          ? outcomeToLearning(c.env, c.get('tenant'), outcome)
-          : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+        // W21 E1.02/E1.03 (R118(1)): the outcome carries the experimental
+        // assignment of the visitor who produced it, resolved HERE — where her
+        // consent at this moment is known and the read is an ordinary serving
+        // read — and then stored and exported unchanged. An ineligible shopper's
+        // outcome says `ineligible`; a failure to resolve leaves the block off
+        // and never delays or drops the record.
+        const p = (async () => {
+          const experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent));
+          if (experiment) outcome.experiment = experiment;
+          return c.env.LEDGER_RECOVERY_ENABLED === 'true'
+            ? outcomeToLearning(c.env, c.get('tenant'), outcome)
+            : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+        })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
       }
     };

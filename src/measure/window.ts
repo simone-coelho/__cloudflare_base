@@ -1,6 +1,6 @@
 // Pool raw attribution counts from saved day reports. Experimental inference
 // requires enrollment, control, outcome and analysis contracts outside this report.
-import { attributionArm, readWindowSummary, reportCoverage, reportPayloadJson, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, REPORT_MEASUREMENT, type ArmRow, type ReportCoverage, type SavedReportReader } from '@/learn/report';
+import { attributionArm, readWindowSummary, reportCoverage, reportPayloadJson, validArmVisitors, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, REPORT_MEASUREMENT, type ArmRow, type ArmVisitors, type ReportCoverage, type SavedReportReader } from '@/learn/report';
 import { recordedComputation, slotComputation, type DayReport } from '@/learn/report';
 
 export type R2ReportReader = SavedReportReader;
@@ -21,6 +21,13 @@ export interface WindowReport {
   measurement: typeof REPORT_MEASUREMENT;
   compatibility: { version: 1; experimental: 'unverified' };
   sourceCounts: Array<{ date: string; counts: DayReport['counts'] | null }>;
+  /**
+   * W21 C1.03: per-arm VISITOR-DAYS over the window — the per-day distinct
+   * counts summed, which is why the basis is not called "visitors". Null when
+   * any pooled day was written before the field existed: a missing denominator
+   * is never replaced by a smaller one.
+   */
+  armVisitors: ArmVisitors | null;
   slots: Record<string, {
     /** n/s are compatibility aliases for decisions/credited, not Bernoulli trials/successes. */
     arms: Array<ArmRow & { n: number; s: number }>;
@@ -59,6 +66,9 @@ export async function windowReport(
   const compatibility = new Map<string, WindowReport['slots'][string]['compatibility']>();
   const identities = new Map<string, string>();
   const sourceCounts: WindowReport['sourceCounts'] = [];
+  // W21 C1.03: visitor-days per arm, and whether every day could supply them.
+  const visitorDays = new Map<string, number>();
+  let armVisitorsKnown = true;
   const budget = { bytes: 0, cells: 0 };
   const pooled = () => { if (++budget.cells > REPORT_LIMITS.cells) throw new ReportBudgetExceeded('cells', REPORT_LIMITS.cells, budget.cells); };
 
@@ -71,6 +81,12 @@ export async function windowReport(
     coverageDays.push({ date, coverage });
     const { truncated, missingHours } = coverage;
     if (coverage.status === 'incomplete') incomplete.push({ date, truncated, missingHours: [...missingHours] });
+    const dayVisitors = validArmVisitors(report.armVisitors, 'distinct_visitors');
+    if (!dayVisitors) armVisitorsKnown = false;
+    else for (const row of dayVisitors.arms) {
+      if (!visitorDays.has(row.arm)) pooled();
+      visitorDays.set(row.arm, (visitorDays.get(row.arm) ?? 0) + row.visitors);
+    }
     const basis = recordedComputation(report.computation);
     for (const slot of new Set([...Object.keys(report.holdout), ...(basis?.slots.map(s => s.slot) ?? [])])) {
       const rows = report.holdout[slot];
@@ -110,6 +126,9 @@ export async function windowReport(
   }
   const report: WindowReport = { ...ids, days, missing, incomplete, measurement: REPORT_MEASUREMENT, slots,
     compatibility: { version: 1, experimental: 'unverified' }, sourceCounts,
+    armVisitors: armVisitorsKnown && days.length
+      ? { version: 1, basis: 'visitor_days', arms: [...visitorDays.entries()].map(([arm, visitors]) => ({ arm, visitors })).sort((a, b) => a.arm.localeCompare(b.arm)) }
+      : null,
     coverage: { version: 1, status: missing.length || incomplete.length ? 'incomplete' : 'unknown', maturity: 'unknown', days: coverageDays,
       minHorizonMs: !missing.length && coverageDays.length && coverageDays.every(d => d.coverage.minHorizonMs !== null)
         ? Math.min(...coverageDays.map(d => d.coverage.minHorizonMs!)) : null },

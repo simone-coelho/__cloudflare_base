@@ -51,20 +51,30 @@ export interface ArmSummary extends ArmCount {
 export type Verdict = 'treatment_better' | 'control_better' | 'undecided';
 
 /**
- * Pre-set targets, as RELATIVE lift of the treatment rate over the control rate
- * (BTIE §6.4.2: "CVR lift vs holdout, minimum +10 %, target +40 %, stretch +60 %").
+ * Pre-set targets, as RELATIVE lift of the treatment rate over the control rate.
  * Set before any money is spent; the comparison only ever reports against them.
+ *
+ * W21 C1.04 (F25 §5.2, rulings R108(1d) and R118(9)): the CALLER's numbers,
+ * always. This module holds no customer's targets — not as a default, not as a
+ * named constant — because a platform that serves more than one customer may
+ * not read one customer's numbers when a caller supplies none. It says
+ * `no_published_target` instead.
  */
 export interface Targets { minimum: number; target: number; stretch: number }
-
-/** Tapestry's own numbers, from their measurement chapter. A tenant may set its own. */
-export const TAPESTRY_TARGETS: Targets = { minimum: 0.10, target: 0.40, stretch: 0.60 };
 
 export type Standing = 'reached_stretch' | 'reached_target' | 'reached_minimum' | 'on_track' | 'below' | 'undecided';
 
 export interface TargetReading {
-  targets: Targets;
-  /** The relative lift's interval, from the absolute interval over the control rate. Null when the control rate is zero. */
+  /** The targets read against: the CALLER's, or null when none were supplied. */
+  targets: Targets | null;
+  /** Why no rung was awarded, when the reason is the absence of a published target rather than the counts. */
+  reason: 'no_published_target' | null;
+  /**
+   * The relative lift's interval: Katz's log interval on the two arms' RAW
+   * rates (F25 §7.3). Null when the control rate is zero, and null when the raw
+   * counts the log interval needs were not supplied — a relative interval is
+   * never reconstructed by dividing an absolute interval by a rounded rate.
+   */
   relativeLow: number | null;
   relativeHigh: number | null;
   /**
@@ -78,7 +88,11 @@ export interface TargetReading {
 export interface CompareOptions {
   /** 0.90, 0.95 or 0.99. Tapestry's rule is 90 % or better; the default stays 95 %. */
   confidence?: number;
-  /** null switches the target reading off. */
+  /**
+   * The caller's OWN pre-set targets. `null` switches the reading off entirely;
+   * omitting it is not a request for anyone else's numbers — the reading is
+   * answered `undecided` with `reason: 'no_published_target'` (R108).
+   */
   targets?: Targets | null;
 }
 
@@ -184,25 +198,74 @@ const rel = (r: number) => `${r >= 0 ? '+' : '−'}${(Math.abs(r) * 100).toFixed
 const fmt = (n: number) => n.toLocaleString('en-US');
 const verdictOf = (d: Proportion): Verdict => (d.lo > 0 ? 'treatment_better' : d.hi < 0 ? 'control_better' : 'undecided');
 
-/** Where a relative lift stands against the targets, judged on the interval's low end. */
-export function readTargets(difference: Proportion, controlRate: number, targets: Targets): TargetReading {
-  if (!(controlRate > 0)) return { targets, relativeLow: null, relativeHigh: null, standing: 'undecided' };
-  const relativeLow = r4(difference.lo / controlRate);
-  const relativeHigh = r4(difference.hi / controlRate);
-  const point = difference.p / controlRate;
+/**
+ * The relative difference of two arms with its interval, by Katz's log method:
+ *
+ *   relative = p_t / p_c − 1,
+ *   low/high = exp( ln(p_t/p_c) ∓ z·sqrt( (1−p_t)/s_t + (1−p_c)/s_c ) ) − 1
+ *
+ * computed from the RAW rates. Dividing an absolute difference interval by a
+ * rounded control rate is not this interval and is not used anywhere: at a
+ * small control rate the divisor's own rounding dominates the answer, and at a
+ * large difference the two are simply different intervals.
+ *
+ * Every member is null where the quantity is unreadable rather than zero: a
+ * control rate of zero has no ratio to take, and a treatment arm with no
+ * credited outcome, an empty arm or a count that is not a proportion (credits
+ * may exceed decisions, doc 22 §10) has no log interval.
+ */
+export function katzRelativeInterval(control: ArmCount, treatment: ArmCount, z = Z95): { relative: number | null; low: number | null; high: number | null } {
+  const unreadable = { relative: null, low: null, high: null };
+  const nc = Math.max(0, finite(control?.n)), sc = Math.max(0, finite(control?.s));
+  const nt = Math.max(0, finite(treatment?.n)), st = Math.max(0, finite(treatment?.s));
+  if (!(nc > 0) || !(nt > 0)) return unreadable;
+  const pc = sc / nc, pt = st / nt;
+  if (!(pc > 0) || !Number.isFinite(pc) || !Number.isFinite(pt)) return unreadable;
+  const relative = pt / pc - 1;
+  const variance = (1 - pt) / st + (1 - pc) / sc;
+  if (!(pt > 0) || !Number.isFinite(variance) || variance < 0) return { relative, low: null, high: null };
+  const half = finite(z) * Math.sqrt(variance);
+  const centre = Math.log(pt / pc);
+  return { relative, low: Math.exp(centre - half) - 1, high: Math.exp(centre + half) - 1 };
+}
+
+/**
+ * Where a relative lift stands against the targets, judged on the low end of
+ * the Katz interval. The arms' raw counts are what that interval is computed
+ * from; without them the reading is withheld rather than approximated.
+ */
+export function readTargets(difference: Proportion, controlRate: number, targets: Targets | null,
+  counts?: { control: ArmCount; treatment: ArmCount; z?: number }): TargetReading {
+  // No published target is a reason of its own, and it is named rather than
+  // filled in from a compiled set (F25 §5.2).
+  const withheld = (reason: TargetReading['reason'] = null): TargetReading =>
+    ({ targets, reason, relativeLow: null, relativeHigh: null, standing: 'undecided' });
+  if (!targets) return withheld('no_published_target');
+  if (!(controlRate > 0) || !counts) return withheld();
+  const katz = katzRelativeInterval(counts.control, counts.treatment, counts.z ?? Z95);
+  if (katz.low === null || katz.high === null || katz.relative === null) return withheld();
+  // Reported unrounded: the rung a target reading turns on is decided a few
+  // parts in ten thousand from the boundary often enough that rounding the
+  // interval's own ends would decide it.
+  const relativeLow = katz.low;
+  const relativeHigh = katz.high;
+  const point = katz.relative;
   const standing: Standing =
     relativeLow >= targets.stretch ? 'reached_stretch'
     : relativeLow >= targets.target ? 'reached_target'
     : relativeLow >= targets.minimum ? 'reached_minimum'
     : point >= targets.minimum ? 'on_track'
     : 'below';
-  return { targets, relativeLow, relativeHigh, standing };
+  return { targets, reason: null, relativeLow, relativeHigh, standing };
 }
 
-function targetWords(r: TargetReading): string {
+function targetWords(r: TargetReading, controlRate: number): string {
   const t = r.targets;
+  if (!t) return 'no pre-set target was supplied, so no target rung is read';
   const named = `the pre-set targets (minimum ${rel(t.minimum)}, target ${rel(t.target)}, stretch ${rel(t.stretch)} relative)`;
-  if (r.standing === 'undecided' || r.relativeLow === null) return `${named} cannot be read against a control rate of zero`;
+  if (r.standing === 'undecided' || r.relativeLow === null) {
+    return `${named} cannot be read ${controlRate > 0 ? 'without a relative interval on these counts' : 'against a control rate of zero'}`;
+  }
   const low = `the low end of the interval is ${rel(r.relativeLow)}`;
   switch (r.standing) {
     case 'reached_stretch': return `against ${named}: the stretch target is reached, ${low}`;
@@ -230,17 +293,24 @@ export function compareArms(
   const confidence = [0.9, 0.95, 0.99].includes(options.confidence ?? 0.95) ? (options.confidence ?? 0.95) : clamp01(finite(options.confidence) || 0.95);
   const z = zFor(confidence);
   const other = Math.abs(confidence - 0.95) < 1e-9 ? 0.9 : 0.95;
-  const targets = options.targets === undefined ? TAPESTRY_TARGETS : options.targets;
+  // Omitted is not "use someone else's": only an explicit null switches the
+  // reading off, and an omitted set is reported as no published target (R108).
+  const targets = options.targets === undefined ? null : options.targets;
+  const reading = options.targets === null ? undefined : true;
 
   const c: ArmSummary = { arm: control.arm ?? 'default', n: Math.max(0, finite(control.n)), s: Math.max(0, finite(control.s)), rate: wilson(control.s, control.n, z) };
   const t: ArmSummary = { arm: treatment.arm ?? 'personalized', n: Math.max(0, finite(treatment.n)), s: Math.max(0, finite(treatment.s)), rate: wilson(treatment.s, treatment.n, z) };
   const difference = newcombe(t, c, z);
-  const relative = c.rate.p > 0 ? r4((t.rate.p - c.rate.p) / c.rate.p) : null;
+  // The point ratio comes from the RAW rates, never from the rounded ones the
+  // interval is reported at: at a small control rate that rounding is the whole
+  // answer (a genuine lift divided by a divisor rounded to four decimals reads 0).
+  const katz = katzRelativeInterval(c, t, z);
+  const relative = katz.relative === null ? null : r4(katz.relative);
   const verdict = verdictOf(difference);
   const needed = neededPerArm(c, t);
   const otherDiff = newcombe(t, c, zFor(other));
   const alsoAt = { confidence: other, difference: otherDiff, verdict: verdictOf(otherDiff) };
-  const reading = targets ? readTargets(difference, c.rate.p, targets) : undefined;
+  const read = reading === undefined ? undefined : readTargets(difference, c.rate.p, targets, { control: c, treatment: t, z });
 
   let words: string;
   const level = `${Math.round(confidence * 100)}% interval`;
@@ -263,7 +333,7 @@ export function compareArms(
     } else {
       words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better, and the holdout is the reason we can say so.${also}`;
     }
-    if (reading) words += ` ${targetWords(reading).replace(/^./, (ch) => ch.toUpperCase())}.`;
+    if (read) words += ` ${targetWords(read, c.rate.p).replace(/^./, (ch) => ch.toUpperCase())}.`;
   }
-  return { control: c, treatment: t, difference, relative, verdict, neededPerArm: needed, confidence, alsoAt, ...(reading ? { targets: reading } : {}), words };
+  return { control: c, treatment: t, difference, relative, verdict, neededPerArm: needed, confidence, alsoAt, ...(read ? { targets: read } : {}), words };
 }
