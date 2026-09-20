@@ -95,6 +95,19 @@ export interface StatsDelivery extends DestinationCounts {
 export interface OutcomeReceipt {
   version: 1; kind: 'outcome'; received: 1; cutoffSkipped: number;
   attributed: number; eligible: number; weightSkipped: number; credits: StatsDelivery;
+  /**
+   * W23 T1.01: how many ring decisions this outcome matched but could not be
+   * credited to, because more time had passed than the reward's own attribution
+   * window allows (doc 22 §4.1). Zero when nothing matched it at all: a miss by
+   * item is not a miss by time, and an operator can tell the two apart.
+   *
+   * OPTIONAL, and carried through rather than required, because `outcomeReply`
+   * below rebuilds a ring reply member by member and the object's reply is not
+   * the only body that reaches it: `src/learn/holdoutArms.test.ts:279`/`:300`
+   * feed it a synthetic receipt that has no such member and must still be
+   * accepted as valid. The visitor's own `DecisionRing` always sets it.
+   */
+  outsideWindow?: number;
 }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
@@ -199,9 +212,12 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
-    || (r.cutoffSkipped === 1 && r.attributed !== 0)) return null;
+    || (r.cutoffSkipped === 1 && r.attributed !== 0)
+    // W23 T1.01: present or absent, never malformed.
+    || (r.outsideWindow !== undefined && !count(r.outsideWindow))) return null;
   const credits: StatsDelivery = { ...r.credits };
-  return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits };
+  return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits,
+    ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the

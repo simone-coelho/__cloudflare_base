@@ -37,7 +37,7 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -107,6 +107,19 @@ const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const RUNTIME_PIN_SAMPLE = 50;
 const HISTORY_VISITOR = /^[A-Za-z0-9_.-]{1,200}$/;
 const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
+/**
+ * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
+ * mutation is withdrawn for every tenant — `POST learn/cycle` and
+ * `POST learn/proposals/:id/:decision` answer 503 below without reading or
+ * writing anything — and the retained statuses were never verified as applied
+ * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
+ * reports proposal work carries these two facts beside it, so a count is never
+ * read as an action a person can take today. Stamped, not derived from
+ * configuration, because no configuration a tenant can set makes the mutation
+ * available: the routes below refuse unconditionally (F24 §5, document 35 §5
+ * W29). It is stated here, once, beside the constants the same routes share.
+ */
+const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
 function validLedgerSelector(tenant: string, id: string): boolean {
   const carrier = parseId(id);
@@ -212,7 +225,10 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
   const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
-  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+  // W25 V1.01: the grid states WHICH prior document its numbers were built with,
+  // so an export a data scientist downloads can be reconciled against the
+  // document they imported. 0 where the snapshot was built without one.
+  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
 
 /**
@@ -253,13 +269,17 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
     // evidence it sits next to, and never silent: a slot with nothing to report
     // carries zeros, not an absent member.
     const governance = await readSlotGovernance(c.env, tenant, now);
+    // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
+    // for an item it does not carry is not counted as something the slot has
+    // learned about. The catalogue is the one this answer already read.
+    const catalogue = new Set(catalog.pieces.map((p) => p.id));
     let budget = 200;
     for (const page of index.pages) for (const s of page.slots) {
       if (budget-- <= 0) { s.evidence = null; continue; }
       s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
       try {
         const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null;
+        s.evidence = slotEvidence(snap, catalogue);
       } catch { s.evidence = null; }
     }
   }
@@ -292,7 +312,10 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
-  const page = pageOf(exploringRows(snapshot, names, floor), cur ? cur.o : 0, limit);
+  // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
+  // the catalogue carries; a prior row for an id it does not carry is never
+  // offered here. The catalogue is the one this answer already read.
+  const page = pageOf(exploringRows(snapshot, names, floor, new Set(names.keys())), cur ? cur.o : 0, limit);
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
   return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, ...effective, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
@@ -330,10 +353,11 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   ]);
   const index = slotsIndex(slots, catalog, learn, now);
   const entries = index.pages.flatMap((p) => p.slots);
+  const queueCatalogue = new Set(catalog.pieces.map((p) => p.id));
   let budget = 200;
   for (const s of entries) {
     if (budget-- <= 0) { s.evidence = null; continue; }
-    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
+    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = slotEvidence(snap, queueCatalogue); } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
   // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
@@ -342,8 +366,16 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // It is not part of `queueOf`'s pure computation over the published documents:
   // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
+  // W29 U1.01: this answer is the landing page of an operator application, so
+  // its `proposals_pending` must not stand alone while every apply and reject
+  // is withdrawn (503, below). The withdrawal is reported beside the counts,
+  // for the same reason the enrollment counter is: it is not part of `queueOf`'s
+  // pure computation over the published documents, it is what this deployment
+  // can do with them. `proposals_pending` is a count of historical `proposed`
+  // statuses, and the statuses it excludes are stored records, not verified
+  // applications — the same two facts `GET learn/proposals` answers.
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, autonomy: AUTONOMY_WITHDRAWN });
 });
 
 /**
@@ -654,7 +686,19 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
     for (const prefix of windowPrefixes(tenant, dates)) {
       let page: string | undefined;
       for (let read = 0; read < WINDOW_LIST_PAGES; read++) {
-        const listed = await c.env.STORAGE.list({ prefix, ...(page ? { cursor: page } : {}), limit: 1000 });
+        // W21 C1.09 (the W21-B2 build review, finding 1): the sweep BEGINS at the
+        // window's first day. The prefix a window's days share is the calendar
+        // year, so without this the listing starts at the year's first key and a
+        // tenant with more objects earlier that year than the page budget
+        // (`WINDOW_LIST_PAGES` × 1000) spends the whole budget skipping keys
+        // `continue` already discards, and is answered an empty window it really
+        // has days in. `startAfter` resumes at the first key strictly after
+        // `<tenant>/<from>`, which is before every key of `<tenant>/<from>/…`,
+        // so no object of the window is skipped and the earlier ones are never
+        // paged through. It is passed on the FIRST page only: a continuation
+        // carries its position in the cursor, which already began after it.
+        const listed = await c.env.STORAGE.list({ prefix,
+          ...(page ? { cursor: page } : { startAfter: `${tenant}/${from}` }), limit: 1000 });
         let past = false;
         for (const o of listed.objects) {
           const objectDate = o.key.split('/')[1] ?? '';
@@ -894,7 +938,14 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined)
     || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined)) return c.json({ ok: false }, 400);
   if (b.operation === 'repair' && (typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation) || Number(b.generation) < 0
-    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || b.intent !== (b.kind === 'stats' ? 'coarsen' : 'compact'))) return c.json({ ok: false }, 400);
+    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset
+    // damaged item and slot state"): statistics have two repair intents. The
+    // merge-and-keep one, `coarsen`, and the explicit `reset` for damaged
+    // counters that cannot be merged back into honesty — the same audited,
+    // human-operator route, the same digest/generation precondition, the same
+    // two audit phases. The ring's only intent is still `compact`.
+    || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
   const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string) : ringName(tenant, b.visitorId as string);

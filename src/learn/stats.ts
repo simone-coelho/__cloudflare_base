@@ -64,11 +64,54 @@ export interface StatsState {
 }
 export const emptyStats = (): StatsState => ({ items: {}, slot: {}, events: 0, updatedAt: 0 });
 
-function bump(entry: ReflexEntry | undefined, ts: number, w: number, tau: number): ReflexEntry {
-  if (!entry) return { s: w, t: ts };
-  // Keep acknowledged mass at a monotonic reference time; late input ages only itself.
-  const t = Math.max(entry.t, ts);
-  return { s: effectiveScore(entry, t, tau) + w * Math.exp(-(t - ts) / tau), t };
+/**
+ * W23 T1.01 / T1.02 (doc 16 §4 :104 "The engine clock is authoritative … a
+ * forged or skewed clock cannot inflate affinity"; F18 §6.3 "a future-dated
+ * event suspends decay", §8 "the client timestamp clamped").
+ *
+ * `now` is the engine's own present. Three things follow, and nothing else
+ * changes:
+ *   · a contribution stamped AFTER the present is folded in AT the present. It
+ *     is counted in full — never dropped, never refused here — but it cannot
+ *     buy itself a reference time the engine cannot account for.
+ *   · no counter's reference time is left after the present, so a counter that
+ *     a future-dated event already anchored ahead stops being frozen: its next
+ *     event pulls the anchor back to now and it decays from now on. Because
+ *     `effectiveScore` clamps `dt` at zero, the mass acknowledged at that future
+ *     anchor is carried across unchanged — pulled back, never inflated.
+ *   · a legitimately OLD `ts` is untouched: `min(ts, now) === ts`, the anchor is
+ *     still `max(entry.t, ts)`, and the contribution ages by exactly its own
+ *     age. An old event is admitted as old (HANDOFF-2026-09-18 §7 :353/:354).
+ *
+ * The default `Infinity` is the merge primitive's NO-CLAMP behaviour, identical
+ * to this function before W23. `coarsenStats` folds mass that is already stored
+ * and must never silently repair a stored anchor, so it keeps that default.
+ */
+function bump(entry: ReflexEntry | undefined, ts: number, w: number, tau: number, now = Infinity): ReflexEntry {
+  const at = Math.min(ts, now);
+  if (!entry) return { s: w, t: at };
+  // Keep acknowledged mass at a monotonic reference time, never after the
+  // engine's present; late input ages only itself.
+  const t = Math.min(Math.max(entry.t, at), now);
+  return { s: effectiveScore(entry, t, tau) + w * Math.exp(-(t - at) / tau), t };
+}
+
+/**
+ * W23 H1.01: does this state hold a reference time the engine's present cannot
+ * account for? Pure, and read-only by construction — naming damage is not
+ * repairing it (F18 §8: "fixing `bump` does not repair counters whose `t` is
+ * already skewed"). Once every write clamps, only state damaged before the
+ * clamp, or damaged out of band, can answer true.
+ */
+export function anchoredAfter(st: StatsState, now: number): boolean {
+  if (st.updatedAt > now) return true;
+  const maps: Array<Record<string, Counter>> = [st.slot, ...Object.values(st.items)];
+  if (st.bounded) maps.push({ '*': st.bounded.omitted });
+  for (const map of maps) for (const c of Object.values(map)) {
+    if (c.n.t > now) return true;
+    for (const entry of Object.values(c.s)) if (entry && entry.t > now) return true;
+  }
+  return false;
 }
 const counter = (): Counter => ({ n: { s: 0, t: 0 }, s: {} });
 
@@ -106,30 +149,61 @@ function itemAdmitted(st: StatsState, item: string): boolean {
   return false;
 }
 
-export function recordExposure(st: StatsState, item: string, cell: Cell, ts: number, cfg: StatsConfig): void {
+/**
+ * W23 T1.01 / T1.02: the trailing `now` is the engine's present, and it is
+ * OPTIONAL. Every existing caller — including the batch fold over retained
+ * history (`src/learn/hourly.ts`, `src/learn/report.ts`) — keeps its current
+ * signature and gets the engine's own clock, and for a fold of historical rows
+ * `min(ts, now) === ts`, so nothing about a historical rebuild changes
+ * (F18 §3: the batch fold is not the defect). A caller that already knows the
+ * present it is recording against passes it, so the arithmetic cannot depend on
+ * how long the surrounding work took.
+ */
+export function recordExposure(st: StatsState, item: string, cell: Cell, ts: number, cfg: StatsConfig, now: number = Date.now()): void {
   const admitted = itemAdmitted(st, item);
   for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
     const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
-    ic.n = bump(ic.n, ts, 1, cfg.tauLearnMs);
+    ic.n = bump(ic.n, ts, 1, cfg.tauLearnMs, now);
     const sc = (st.slot[k] ??= counter());
-    sc.n = bump(sc.n, ts, 1, cfg.tauLearnMs);
+    sc.n = bump(sc.n, ts, 1, cfg.tauLearnMs, now);
   }
   if (!admitted) st.bounded!.omittedEvents++;
-  st.events += 1; st.updatedAt = Math.max(st.updatedAt, ts);
+  st.events += 1; st.updatedAt = stampedAt(st.updatedAt, ts, now);
 }
 
-export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: RewardType, ts: number, weight: number, cfg: StatsConfig): void {
+export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: RewardType, ts: number, weight: number, cfg: StatsConfig, now: number = Date.now()): void {
   const admitted = itemAdmitted(st, item);
   for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
     const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
-    ic.s[reward] = bump(ic.s[reward], ts, weight, cfg.tauLearnMs);
+    ic.s[reward] = bump(ic.s[reward], ts, weight, cfg.tauLearnMs, now);
     const sc = (st.slot[k] ??= counter());
-    sc.s[reward] = bump(sc.s[reward], ts, weight, cfg.tauLearnMs);
+    sc.s[reward] = bump(sc.s[reward], ts, weight, cfg.tauLearnMs, now);
   }
-  st.updatedAt = Math.max(st.updatedAt, ts);
+  st.updatedAt = stampedAt(st.updatedAt, ts, now);
 }
 
+/**
+ * The state's own last-updated stamp, under the same rule as every counter's
+ * reference time: forward with the evidence, never after the engine's present.
+ * A stamp a future-dated event already pushed ahead is pulled back by the next
+ * event that is recorded, and only by it.
+ */
+const stampedAt = (updatedAt: number, ts: number, now: number): number => Math.min(Math.max(updatedAt, ts), now);
+
 const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effectiveScore(e, now, tau) : 0);
+
+/**
+ * W25 Z1.01 (F20, "a lift of one where there is nothing to compare against"):
+ * WHAT this row's `lift` was measured against.
+ *
+ * `slot-rate` — the slot's own rate in this cell, the definition of lift.
+ * `none` — the slot has no rate in this cell (it has never recorded a success
+ * there, so p₀ is exactly zero) and there is nothing to divide by. The `lift`
+ * number stays 1, because a multiplicative term with no reference must leave the
+ * ranking where it found it; this member is what stops that 1 from being read as
+ * "measured, and equal to the slot", which is a claim no evidence supports.
+ */
+export type LiftReference = 'slot-rate' | 'none';
 
 export interface LevelStat {
   level: Level; key: string; n: number; s: number; p0: number; p_hat: number; lift: number;
@@ -137,6 +211,8 @@ export interface LevelStat {
   n0?: number;
   /** Doc 22 §8: the imported prior in force for this key, when there is one. */
   prior?: { p: number; n: number };
+  /** W25 Z1.01: what `lift` was measured against. Absent on an archive built before it was named. */
+  liftReference?: LiftReference;
 }
 export interface ItemStats { levels: LevelStat[] }
 
@@ -191,6 +267,29 @@ export interface LiftSnapshot {
   slotRates: Record<string, { n: number; s: number; rate: number }>;
   /** W22 A1.01: the attribution contract these counts were produced under. Absent on an archive from before it existed. */
   attributionContract?: AttributionContract;
+  /**
+   * W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset damaged
+   * item and slot state … A local merge patch alone cannot repair historical
+   * evidence"): the basis these counters were rebuilt on, when they were. A
+   * reader of this snapshot can then see that it holds the evidence admitted
+   * SINCE that repair and not the tenant's whole history.
+   *
+   * ABSENT on an object that was never repaired — repair is conditional on
+   * actual affected history (HANDOFF-2026-09-16 §6 :227) — so no existing
+   * snapshot, and no snapshot of an unaffected slot, gains a member.
+   */
+  rebuiltFrom?: RebuildBasis;
+}
+
+/** How a repaired object's counters were started again, and under whose operation. */
+export interface RebuildBasis {
+  /** The operator discarded the damaged counters outright. W24 owns the generation semantics of the transition. */
+  basis: 'explicit-reset';
+  /** The audited recovery operation that did it. */
+  operationId: string;
+  at: number;
+  /** The generation the object moved to, so nothing prepared against the old one can be mistaken for post-repair evidence. */
+  generation: number;
 }
 
 /**
@@ -247,7 +346,9 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
       const target = prior ? prior.p : p0slot, n0 = prior ? prior.n : cfg.n0;
       const p_hat = (s + n0 * target) / (n + n0);
       const lift = p0slot > 0 ? Math.min(cfg.liftMax, Math.max(cfg.liftMin, p_hat / p0slot)) : 1;
-      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift, ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
+      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift,
+        liftReference: p0slot > 0 ? 'slot-rate' : 'none',
+        ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
     }
     items[item] = out;
   }
@@ -264,7 +365,12 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
+export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
+  /** W25 Z1.01: what this lift was measured against. Derived for an archive built before the member existed, never guessed: p₀ is on the row. */
+  liftReference: LiftReference }
+
+/** What a row's lift was measured against, from the row itself. */
+export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
 
 /** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
 export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
@@ -276,7 +382,7 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
+      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, liftReference: liftReferenceOf(st), ...(st.prior ? { prior: st.prior } : {}) };
     }
   }
   return null;
