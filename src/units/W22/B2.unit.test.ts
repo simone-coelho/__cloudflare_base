@@ -430,9 +430,12 @@ describe('unit:W22.R1.02', () => {
     const twelve = dayObjects(r, 'decision').find(key => key.startsWith(`${TENANT}/${DATE}/12/`))!;
     const held = r.storage.objects.get(twelve)!;
     r.storage.objects.delete(twelve);                                   // hour 12 unreadable on the first run
-    await fold(r, T12 + 3 * HOUR_MS);                                   // folds 13 and 14 without 12
+    // 15:06 and 15:07: past hour 14's own close grace (CLOSE_GRACE_MS), so
+    // hours 13 AND 14 — the hour the cross-hour click lands in — are candidates
+    // on the first pass, and the repair of 12 follows them (ruling R137 item 2).
+    await fold(r, T12 + 3 * HOUR_MS + 6 * 60_000);                      // folds 13 and 14 without 12
     r.storage.objects.set(twelve, held);                                // the hour is readable again
-    await fold(r, T12 + 3 * HOUR_MS + 60_000);                          // the repair run
+    await fold(r, T12 + 3 * HOUR_MS + 7 * 60_000);                      // the repair run
 
     const repaired = await operatorPost(r, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
     const repairedReport = (repaired.body as { report: DayReport }).report;
@@ -716,8 +719,13 @@ describe('unit:W22.A1.02', () => {
     // Read from this file's own location, never from the process's working
     // directory: a cwd-relative read takes another checkout's file (R133 item 2).
     const source = readFileSync(new URL('../../learn/fan.ts', import.meta.url), 'utf8');
-    expect(/import\s*\{[^}]*\bRING_MAX_AGE_MS\b[^}]*\}\s*from\s*'@\/durable-objects\/DecisionRing'/.test(source),
-      'W22.A1.02 — `src/learn/fan.ts` IMPORTS the ring\'s own constant')
+    // The module that DECLARES the constant, whichever of the three it is: the
+    // ring already imports `@/learn/fan`, so importing back from the ring's own
+    // module is a cycle that Vite's hoisting resolves to `undefined` whenever
+    // the ring loads first (ruling R137 item 1). A shared declaring module that
+    // the ring re-exports satisfies the same rule.
+    expect(/import\s*\{[^}]*\bRING_MAX_AGE_MS\b[^}]*\}\s*from\s*'(\.\/stats|@\/learn\/stats|@\/durable-objects\/DecisionRing)'/.test(source),
+      'W22.A1.02 — `src/learn/fan.ts` IMPORTS the ring\'s own constant from the module that declares it')
       .toBe(true);
     expect(/ONLINE_RING_REACH_MS\s*=\s*RING_MAX_AGE_MS\s*;/.test(source),
       'W22.A1.02 — and its reach IS that binding, not a second literal')
