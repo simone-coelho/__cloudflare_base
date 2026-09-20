@@ -725,7 +725,11 @@ async function openScreen(m: Mounted, screen: 'console' | 'learning', credential
   const hash = screen === 'console' ? '#/measure' : '';
   const dom = new JSDOM(pub(page), { url: `${OPERATOR_ORIGIN}/${screen === 'console' ? 'console/' : 'legacy/learning.html'}${hash}`,
     pretendToBeVisual: true, runScripts: 'outside-only' });
-  const w = dom.window as unknown as Window & typeof globalThis & { fetch: unknown; TextEncoder: unknown; setInterval: unknown; eval(code: string): unknown };
+  const w = dom.window as unknown as {
+    document: { body: { textContent: string | null } };
+    localStorage: { setItem(key: string, value: string): void };
+    eval(code: string): unknown; close(): void;
+  };
   (w as unknown as { fetch: unknown }).fetch = async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
     const target = new URL(url, `${OPERATOR_ORIGIN}/`);
     return m.fetch(new Request(OPERATOR_ORIGIN + target.pathname + target.search, {
