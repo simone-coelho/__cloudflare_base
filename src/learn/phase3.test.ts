@@ -452,7 +452,7 @@ describe('replay (doc 22 §12.3)', () => {
   it('W27.02 refuses malformed or missing page dependencies and ambiguous legacy records, and compares choice metadata', async () => {
     const f = pageFixture('rotation'), original = decideContent(f.input, undefined, HISTORICAL_PINS).records[1]!;
     const manifest = original.inputs!.replay!;
-    const invalid: unknown[] = [null, undefined, {}, { ...manifest, version: 2 }, { ...manifest, learning: 'yes' },
+    const invalid: unknown[] = [null, undefined, {}, { ...manifest, learning: 'yes' },
       { ...manifest, candidateLimit: Infinity }, { ...manifest, extra: 1 }, { ...manifest, slots: manifest.slots.slice(1) },
       { ...manifest, slots: [...manifest.slots].reverse() }, { ...manifest, slots: manifest.slots.map(() => manifest.slots[0]) },
       ...[-1, 1.1, Number.MAX_SAFE_INTEGER + 1].map(lift => ({ ...manifest, slots: manifest.slots.map((row, i) => i ? row : { ...row, lift }) })),
@@ -462,6 +462,12 @@ describe('replay (doc 22 §12.3)', () => {
       const record = structuredClone(original); record.inputs!.replay = value as never;
       expect(await replayDecision(replayEnv, record, f.dependencies)).toMatchObject({ ok: false, reason: 'invalid page replay manifest' });
     }
+    // R161 (the lead's ruling on the W27-B1 collision): a manifest version this
+    // build does not implement is still REFUSED, and unit W27.O1.01 rules that
+    // the refusal names the version it was handed instead of pooling a rollout
+    // event with a corrupt manifest.
+    const ahead = structuredClone(original); ahead.inputs!.replay = { ...manifest, version: 2 } as never;
+    expect(await replayDecision(replayEnv, ahead, f.dependencies)).toMatchObject({ ok: false, reason: 'page replay manifest version 2 is not supported' });
     for (const snapshot of [null, { ...f.snapshots.first!, tenant: 'other' }, { ...f.snapshots.first!, brand: 'other' },
       { ...f.snapshots.first!, slot: 'hero' }, { ...f.snapshots.first!, version: 1 }, { ...f.snapshots.first!, priorVersion: 8 },
       { ...f.snapshots.first!, items: { a: { '*': { n: 1 } } } }]) {
