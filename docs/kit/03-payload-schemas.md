@@ -23,6 +23,14 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
 
+`data.brand` is accepted on any of these and is the brand the shopper's page was served under — the
+same value the decision request carried. A reward-bearing event that names it is measured in that
+brand's statistics; one that names none is measured in the tenant's own brand, as before. Send it
+wherever a tenant serves more than one brand, or a click on brand A's hero lands in brand B's numerator
+while the exposure stays in A's denominator. A correlated event whose `brand` disagrees with the brand
+of the `decisionId` it names is refused, not pooled, and the refusal is counted on the outcome receipt
+as `brandMismatched`.
+
 An attribute value the tenant's published catalogue does not name, on a dimension that catalogue does
 name values for, builds no affinity — that value alone, whatever else the same event carries. A
 dimension the catalogue tags nothing on constrains nothing. The answer's `signals` reports the result:

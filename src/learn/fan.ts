@@ -108,6 +108,21 @@ export interface OutcomeReceipt {
    * accepted as valid. The visitor's own `DecisionRing` always sets it.
    */
   outsideWindow?: number;
+  /**
+   * W26 C1.01 (F21 §6(c), §8): how many correlated decisions this outcome NAMED
+   * and could not be credited to because it carries another brand than the
+   * decision was served under. Zero when nothing disagreed; the credit is
+   * refused either way, and this is what makes the refusal legible rather than
+   * indistinguishable from "nothing matched".
+   *
+   * OPTIONAL and carried through rather than required, for exactly the reason
+   * `outsideWindow` above is: `outcomeReply` rebuilds a ring reply member by
+   * member and the visitor's object is not the only body that reaches it
+   * (`src/learn/holdoutArms.test.ts:279`/`:300` feed a synthetic receipt that
+   * has no such member and must still be accepted). The visitor's own
+   * `DecisionRing` always sets it.
+   */
+  brandMismatched?: number;
 }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
@@ -213,11 +228,13 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
     || (r.cutoffSkipped === 1 && r.attributed !== 0)
-    // W23 T1.01: present or absent, never malformed.
-    || (r.outsideWindow !== undefined && !count(r.outsideWindow))) return null;
+    // W23 T1.01, W26 C1.01: present or absent, never malformed.
+    || (r.outsideWindow !== undefined && !count(r.outsideWindow))
+    || (r.brandMismatched !== undefined && !count(r.brandMismatched))) return null;
   const credits: StatsDelivery = { ...r.credits };
   return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits,
-    ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}) };
+    ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}),
+    ...(r.brandMismatched !== undefined ? { brandMismatched: r.brandMismatched as number } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the

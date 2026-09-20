@@ -284,7 +284,19 @@ function productsOf(d: Record<string, unknown>): string[] | null {
   return out.size ? [...out] : null;
 }
 
-/** Build the §3.2 record from a wire action, or null when the action is not a reward. */
+/**
+ * Build the §3.2 record from a wire action, or null when the action is not a reward.
+ *
+ * W26 C1.01 (F21 §6(c), §8): the outcome's BRAND is the brand the shopper's page
+ * was served under, which the action itself names in `data.brand` — the same
+ * value the decision request carried. It was defaulted to the tenant id before,
+ * and for the first tenant that actually uses brands that put the numerator in
+ * one statistics object and the denominator in another. It is resolved HERE,
+ * once, from what the caller already holds: no second read, nothing to fail on
+ * the serving path, and no branch on the host. An action that names no brand
+ * keeps the caller's brand (the tenant by default), so every client that never
+ * sent one goes on learning exactly as it did.
+ */
 export function outcomeFromAction(action: ActionLike, tenant: string, brand = tenant, arm: string | null = null): OutcomeRecord | null {
   const d = action.data ?? {}, hasDecision = Object.prototype.hasOwnProperty.call(d, 'decisionId');
   if (hasDecision && !isDecisionReference(d.decisionId)) throw new Error('Invalid decision reference');
@@ -298,7 +310,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     outcome_id: `${tenant}:${ts36(ts)}:${action.userId}:${reward.event}${hasNonce ? `:n1:${action.eventId}` : ''}`,
     ...(hasDecision ? { decision_id: d.decisionId as string } : {}),
     ...(hasNonce ? { event_id: action.eventId, event_id_source: action.eventIdSource ?? 'provided' } : {}),
-    tenant, brand,
+    tenant, brand: str(d.brand) ?? brand,
     visitor_id: action.userId,
     session_id: str(action.sessionId) ,
     ts,
