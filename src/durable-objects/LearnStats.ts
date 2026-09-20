@@ -7,7 +7,7 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { liftArchiveKey, liftKey, ONLINE_IDEMPOTENCE_HORIZON_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
@@ -30,26 +30,7 @@ interface EffectMarker { digest: string; subject: string; ts: number; expiresAt:
 interface Stored { tenant: string; brand: string; slot: string; config: SlotLearnConfig; stats: StatsState;
   effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
 interface GenerationFence { whole: number; items: Record<string, number> }
-type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string };
-/**
- * W22 D1.02 (F16 §7, §2.3): the bounded, durable journal of exposures this
- * object has already applied, so a REDELIVERED exposure — the at-least-once
- * repeat F16 §2.3 measured counting one impression twice — is recognized and
- * not counted again. It is keyed by the decision's own logical id, which the
- * `/exposures` payload now carries, because a decision is served exactly once.
- *
- * It lives under its own storage key rather than inside `learn`, so it can
- * never take room from the estimator's counters or make `fit()` coarsen them,
- * and it is charged against the object's existing total bound. It is pruned to
- * the online horizon and then to these two caps, oldest first; a repeat that
- * arrives after it has been pruned is applied again, and nothing claims
- * otherwise. Credits are NOT journalled here: the visitor's ring is the one
- * place that can tell two outcomes apart, and it does that before it sends.
- */
-const SEEN_KEY = 'learnSeen';
-const SEEN_MAX_BYTES = 32 * 1024;
-const SEEN_MAX_ROWS = 512;
-interface SeenExposure { id: string; ts: number }
+type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect };
 class Refusal extends Error {
   constructor(readonly status: 400 | 409 | 413 | 503, message: string) { super(message); }
 }
@@ -165,9 +146,7 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
     const ts = row.ts === undefined || row.ts === null ? Date.now() : Number(row.ts);
     const weight = row.weight === undefined || row.weight === null ? 1 : Number(row.weight);
     if (!time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
-    if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
-      ...(typeof row.decision === 'string' ? { decision: row.decision } : {}),
       ...(Object.hasOwn(row, 'effect') ? { effect: row.effect as LearningEffect } : {}) });
   }
   return accepted;
@@ -259,11 +238,6 @@ export class LearnStats {
             await this.commit(candidate);
             if (b.retired === true) await this.arm();
           }
-          // W22 D1.02: the journal holds decision ids, which carry the subject,
-          // so erasure removes hers from it exactly as it removes her markers.
-          const journal = await this.seenExposures();
-          const remaining = journal.filter(row => row.id.split(':')[2] !== b.subject);
-          if (remaining.length !== journal.length) await this.rememberExposures(remaining);
           if (Number.isFinite(next)) {
             const prior = await this.state.storage.getAlarm();
             if (prior === null || prior > next) await this.state.storage.setAlarm(next);
@@ -299,7 +273,7 @@ export class LearnStats {
               if (!Number.isSafeInteger(fence.whole + 1)) throw recovery();
               await this.state.storage.transaction(async tx => {
                 await tx.put('learnFence', { whole: fence.whole + 1, items: {} });
-                await tx.delete('learn'); await tx.delete(SEEN_KEY);
+                await tx.delete('learn');
               });
             }
           } finally { this.data = null; }
@@ -404,12 +378,6 @@ export class LearnStats {
     return this.serialize(async () => {
       const candidate = await this.candidate(tenant, brand, slot, config);
       const fence = managed ? await this.fence() : null;
-      // W22 D1.02: the unmanaged online path's own idempotence. The managed
-      // path already proves it with effect markers, so the journal is read only
-      // where there are none.
-      const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
-      const applied = journal ? new Set(journal.map(row => row.id)) : null;
-      const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
       if (managed) {
         candidate.effects ??= {};
@@ -439,13 +407,6 @@ export class LearnStats {
           candidate.effects![effect.id] = { digest, subject: effect.subject, ts: row.ts,
             expiresAt: Math.min(retention.expiresAt, effect.consentUntil), item: row.item };
         }
-        // A redelivered exposure is not applied a second time. It is reported as
-        // PROCESSED, not skipped: the delivery is complete — this object already
-        // holds that impression — and a skip would tell the fan-out it failed.
-        if (applied && row.decision) {
-          if (applied.has(row.decision)) continue;
-          applied.add(row.decision); added.push({ id: row.decision, ts: row.ts });
-        }
         const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
           visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
@@ -472,40 +433,12 @@ export class LearnStats {
         catch (error) { this.data = null; throw error; }
         this.data = candidate;
       } else await this.commit(candidate);
-      if (journal && added.length) await this.rememberExposures([...journal, ...added]);
       let alarm: StatsWriteReceipt['alarm'] = 'scheduled';
       try { await this.arm(); } catch { alarm = 'unknown'; }
       const receipt: StatsWriteReceipt = { version: managed ? 2 : 1, kind, received, processed: rows.length, skipped: received - rows.length, alarm,
         ...(managed ? { newlyApplied, alreadyApplied, suppressed } : {}) };
       return json({ ok: true, receipt });
     });
-  }
-
-  /** The journal as it stands, pruned to the online horizon. Never throws on a
-   * shape it does not recognize: an unreadable journal means no repeat can be
-   * recognized, which is the behaviour before it existed, never a refusal. */
-  private async seenExposures(): Promise<SeenExposure[]> {
-    let stored: unknown;
-    try { stored = await this.state.storage.get(SEEN_KEY); } catch { return []; }
-    if (!Array.isArray(stored)) return [];
-    const now = Date.now(), out: SeenExposure[] = [];
-    for (const entry of stored as unknown[]) {
-      if (!fields(entry, ['id', 'ts']) || typeof entry.id !== 'string' || !entry.id || !time(entry.ts)) continue;
-      if (now - (entry.ts as number) > ONLINE_IDEMPOTENCE_HORIZON_MS) continue;
-      out.push({ id: entry.id, ts: entry.ts as number });
-    }
-    return out;
-  }
-  /** Oldest first, inside both caps and inside the object's total bound. */
-  private async rememberExposures(rows: SeenExposure[]): Promise<void> {
-    try {
-      const now = Date.now();
-      let kept = rows.filter(row => now - row.ts <= ONLINE_IDEMPOTENCE_HORIZON_MS).sort((a, b) => a.ts - b.ts);
-      if (kept.length > SEEN_MAX_ROWS) kept = kept.slice(-SEEN_MAX_ROWS);
-      while (kept.length && bytes(kept) > SEEN_MAX_BYTES) kept = kept.slice(1);
-      await this.totalBound(this.data, undefined, undefined, undefined, kept);
-      await this.state.storage.put(SEEN_KEY, kept);
-    } catch { /* a repeat this object cannot remember is applied again, never refused */ }
   }
 
   private async arm(): Promise<void> {
@@ -521,7 +454,7 @@ export class LearnStats {
     // here — `priorsFor` has just read the same learn document against which
     // this object's configuration is checked — so the snapshot declares the
     // window that document asks for, and the horizon the visitor's ring really
-    // keeps (`ONLINE_IDEMPOTENCE_HORIZON_MS`, the ring's own age limit), never
+    // keeps (`ONLINE_RING_REACH_MS`, the ring's own age limit), never
     // a constant of its own.
     const contract = await this.attributionContract(d);
     // Count exactly the item/cell identities the builder will materialize.
@@ -589,7 +522,7 @@ export class LearnStats {
     try {
       const pin = await pinPublication(this.env, d.tenant, true);
       const learn = await readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin);
-      return attributionContractOf(learn.value, ONLINE_IDEMPOTENCE_HORIZON_MS);
+      return attributionContractOf(learn.value, ONLINE_RING_REACH_MS);
     } catch { return undefined; }
   }
 
@@ -624,13 +557,11 @@ export class LearnStats {
       }
     }
   }
-  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown): Promise<void> {
-    // Fixed key inventory: learn, fence, publication identity, one repair
-    // receipt, and the bounded exposure journal (W22 D1.02).
+  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown): Promise<void> {
+    // Fixed key inventory: learn, fence, publication identity, one repair receipt.
     if (bytes(candidate) + bytes(fence ?? await this.fence()) + bytes(await this.state.storage.get('learnRepair') ?? null)
       + bytes(publication ?? await this.state.storage.get('learnPublished') ?? null)
-      + bytes(reset ?? await this.state.storage.get('learnReset') ?? null)
-      + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+      + bytes(reset ?? await this.state.storage.get('learnReset') ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
     if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !itemName(b.item) || typeof b.operationId !== 'string'

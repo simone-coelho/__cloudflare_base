@@ -41,16 +41,14 @@ import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGen
 export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_000 } as const;
 
 /**
- * W22 D1.02 (F16 §7, §2.3; ruling R104(c)): how far back the online path can
- * recognize a REDELIVERY of an event it has already applied. It is the ring's
- * own horizon — the visitor's `DecisionRing` keeps seven days of receipts
- * (`DecisionRing.ts` RING_MAX_AGE_MS) — so the two halves of the online path,
- * the exposure in `LearnStats` and the credit in `DecisionRing`, forget a
- * delivery at the same moment and neither claims idempotence beyond it. A
- * repeat that arrives after this horizon is applied again, and no unit claims
- * otherwise.
+ * W22 A1.01: how far back the ONLINE path can attribute at all. The visitor's
+ * `DecisionRing` keeps seven days of receipts (`DecisionRing.ts`
+ * RING_MAX_AGE_MS), so whatever window the tenant's published policy asks for,
+ * this is the horizon the online path can actually apply — which is what its
+ * snapshot's `appliedWindowsMs` declares. It is stated here, beside the
+ * fan-in the ring is reached through, so the two never drift apart silently.
  */
-export const ONLINE_IDEMPOTENCE_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
+export const ONLINE_RING_REACH_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
 export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
@@ -353,12 +351,7 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
       received: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0) };
     const exposures = [...bySlot].map(([slot, rows]) => ({ slot, body: {
       tenant, brand, slot, config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
-      // W22 D1.02 (F16 §7): "put `decision_id` back into the `/exposures`
-      // payload so `LearnStats` can do the same". A decision is served once, so
-      // its logical id is what makes a redelivered exposure recognizable; the
-      // managed path already carries it inside the effect.
-      exposures: rows.map(r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts, decision: r.decision_id,
-        ...(managed ? { effect: managed.effects[r.decision_id] } : {}) })),
+      exposures: rows.map(r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts, ...(managed ? { effect: managed.effects[r.decision_id] } : {}) })),
     } }));
     // All validation/barrier/config reads precede starting either destination.
     for (const row of records) requireRetention(env as RetentionEnv, row.retention?.online, tenant, 'online');
