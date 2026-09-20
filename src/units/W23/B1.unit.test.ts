@@ -104,7 +104,12 @@
 //       the reward's own attribution window; one beyond that window is not
 //       learned from and is NAMED on the outcome receipt. No allowance NUMBER is
 //       invented anywhere: the future clauses use a year-ahead timestamp, which
-//       every finite allowance refuses, and the VALUE goes to `W23.P1.01`.
+//       every finite allowance refuses, and the VALUE goes to `W23.P1.01`. The
+//       named-late case is arranged on a CLICK (R169): its 30-minute window is
+//       the one documented reward window SHORTER than the ring's seven-day
+//       reach, and a decision beyond that reach is never retained, so it can be
+//       matched by nothing. For a purchase the two constants coincide — the
+//       T1.01 row states that residual rather than hiding it in a fixture.
 //   (g) A counter whose stored reference time is ahead of the present decays
 //       from the present and is corrected by its next event.
 //   (h) Damaged historical state: what exists today is the object's own
@@ -1084,13 +1089,31 @@ describe('unit:W23.T1.01', () => {
    * The reward's own attribution window is the eligibility rule the settled
    * "Late history" decision points at (HANDOFF §7 :354 "Experiment lifecycle/
    * retained evidence determines eligibility", not an age cutoff inferred from
-   * delivery delay). doc 22 §4.1: purchase 7 days. `attribute` already enforces
-   * it (`policy.ts:103`; `learn.test.ts:897`, green at head, is its witness) —
+   * delivery delay). doc 22 §4.1: purchase 7 days, click 30 minutes. The window
+   * is the one the OUTCOME's own reward names (`policy.ts:96`,
+   * `policy.windowsMs[outcome.type]`) and `attribute` already enforces it
+   * (`policy.ts:103`; `learn.test.ts:897`, green at head, is its witness) —
    * what is missing is that the refusal is NAMED, so an operator can tell
    * "nothing matched" from "it matched, but it was too late to count". The
    * member is a COUNT of the matches the window refused, which is why the third
    * outcome below — one that matches no served decision at all — must report
    * zero rather than a flag.
+   *
+   * THE REFUSED CASE IS A CLICK (R169). The ring keeps a decision for seven
+   * days (`RING_MAX_AGE_MS`, `DecisionRing.ts:21`, applied at `:361`), so a
+   * decision older than that reach is not retained at all: attribution then
+   * sees no candidate and honestly reports nothing outside the window, which is
+   * the third clause of this very test, not this one. "Matched but too late" is
+   * therefore observable only for a reward whose window is SHORTER than that
+   * reach. Click's is the shortest documented one, and it is read off the
+   * compiled `DEFAULT_POLICY` below rather than restated: a click delivered one
+   * hour ago against a decision served three hours ago is two hours late
+   * against that window, while the decision itself sits well inside the ring's
+   * reach — which every arrangement here asserts (`retained`), so no case of
+   * this test can ever decay into "nothing was retained". A purchase cannot
+   * show it: its window equals the whole reach, so a matched-but-late purchase
+   * would need an outcome dated in the future, which this unit's own first
+   * clause refuses. That coincidence of the two constants is stated on the row.
    *
    * RULED (R21): `OutcomeReceipt['outsideWindow']`.
    */
@@ -1113,14 +1136,25 @@ describe('unit:W23.T1.01', () => {
       value: 475, currency: 'USD', margin: null, products: null, arm: 'personalized',
       retention: captureRetention(m.env, TENANT, Math.min(ts, Date.now())),
     } as unknown as OutcomeRecord);
+    /** The same shopper's click on the piece she was served: a reward whose window (doc 22 §4.1, 30 minutes) is shorter than the ring's reach. */
+    const click = (visitor: string, ts: number): OutcomeRecord => ({
+      outcome_id: `${TENANT}:${ts.toString(36)}:${visitor}:click`, tenant: TENANT, brand: TENANT, visitor_id: visitor,
+      session_id: 'w23-b1-browsing', ts, type: 'click', event: 'click', item_id: ITEM_A, slot: null,
+      value: null, currency: null, margin: null, products: null, arm: 'personalized',
+      retention: captureRetention(m.env, TENANT, Math.min(ts, Date.now())),
+    } as unknown as OutcomeRecord);
 
-    const outcomeOn = async (visitor: string, decisionTs: number, outcomeTs: number, servedItem = ITEM_A) => {
+    const outcomeOn = async (visitor: string, decisionTs: number, outcome: OutcomeRecord, servedItem = ITEM_A) => {
       const ring = m.env.DECISION_RING!.get(m.env.DECISION_RING!.idFromName(ringName(TENANT, visitor)));
       const appended = await ring.fetch('https://learn/append', { method: 'POST',
         body: JSON.stringify({ tenant: TENANT, visitorId: visitor, records: [served(visitor, decisionTs, servedItem)] }) });
       expect(appended.status, `${visitor}: the served decision is retained`).toBe(200);
+      // The decision must be inside the ring's own retention reach, or no
+      // receipt could name it and every clause below would be vacuous.
+      expect((await appended.json() as { receipt: { retained: number } }).receipt.retained,
+        `${visitor}: the decision served at ${decisionTs} must still be retained by the ring, ${Date.now() - decisionTs} ms later`).toBe(1);
       const response = await ring.fetch('https://learn/outcome', { method: 'POST',
-        body: JSON.stringify({ tenant: TENANT, brand: TENANT, outcome: purchase(visitor, outcomeTs),
+        body: JSON.stringify({ tenant: TENANT, brand: TENANT, outcome,
           policy: DEFAULT_POLICY, defaultSlotConfig: CONFIG }) });
       expect(response.status, `${visitor}: the outcome is receipted`).toBe(200);
       return (await response.json() as { receipt: OutcomeReceipt }).receipt;
@@ -1128,16 +1162,23 @@ describe('unit:W23.T1.01', () => {
 
     // Inside the window: a purchase delivered three days late, one hour after
     // the decision it names — 7-day purchase window, doc 22 §4.1.
-    const inside = await outcomeOn('w23-b1-inside', now - 3 * DAY - HOUR, now - 3 * DAY);
+    const inside = await outcomeOn('w23-b1-inside', now - 3 * DAY - HOUR, purchase('w23-b1-inside', now - 3 * DAY));
     expect(inside.attributed, 'a late delivery inside the reward window is credited').toBe(1);
     expect(inside.eligible, 'and the decision it names is the eligible one').toBe(1);
     expect(inside.outsideWindow, 'nothing fell outside the window here').toBe(0);
     const credited = storedStats(m, TENANT).items[ITEM_A]!['*']!.s.purchase!;
     expect(credited.t, 'the credit is recorded at the outcome\'s own old time, not at the present').toBe(now - 3 * DAY);
 
-    // Beyond it: the same purchase against a decision thirty days old — 27 days
-    // between the two, four times the reward's window.
-    const beyond = await outcomeOn('w23-b1-beyond', now - 30 * DAY, now - 3 * DAY);
+    // Beyond it, on the reward whose window is shorter than the ring's reach
+    // (R169): the same shopper's click on the piece she was served, delivered
+    // an hour ago against a decision served three hours ago. The decision is
+    // retained (asserted in `outcomeOn`) and matches this outcome by item, slot
+    // and session — only its age refuses it.
+    const clickWindow = DEFAULT_POLICY.windowsMs.click!;
+    const beyondDecisionTs = now - 3 * HOUR, beyondOutcomeTs = now - HOUR;
+    expect(beyondOutcomeTs - beyondDecisionTs > clickWindow,
+      `the arrangement must actually be late: ${beyondOutcomeTs - beyondDecisionTs} ms separate the decision from the click, against the compiled click window of ${clickWindow} ms`).toBe(true);
+    const beyond = await outcomeOn('w23-b1-beyond', beyondDecisionTs, click('w23-b1-beyond', beyondOutcomeTs));
     expect(beyond.attributed, 'an outcome beyond the reward window is not learned from').toBe(0);
     expect(beyond.outsideWindow,
       'and the receipt names it: one decision matched this outcome but lay outside the reward window').toBe(1);
@@ -1145,7 +1186,7 @@ describe('unit:W23.T1.01', () => {
     // And it is a COUNT of what the window refused, never a flag for "nothing
     // was credited": an outcome whose visitor was served a different piece an
     // hour ago matches no decision at all, and nothing lay outside the window.
-    const unmatched = await outcomeOn('w23-b1-unmatched', now - HOUR, now, ITEM_C);
+    const unmatched = await outcomeOn('w23-b1-unmatched', now - HOUR, purchase('w23-b1-unmatched', now), ITEM_C);
     expect(unmatched.attributed, 'an outcome that matches no served decision credits nothing').toBe(0);
     expect(unmatched.outsideWindow,
       'and nothing is named as late, because nothing matched: a miss by item is not a miss by time').toBe(0);
