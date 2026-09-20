@@ -193,8 +193,11 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
  * that was refused, and is not counted here.
  */
 export function fanOutRejectedRows(out: LearningReceipt): number {
-  return out.exposures.rowsUnknown + (out.outcome?.credits.rowsUnknown ?? 0)
-    + (out.ring.unknown ? out.received : 0);
+  // The statistics objects only. The visitor's ring is one destination for a
+  // whole set, and its own failure is already a receipt the caller reports; it
+  // is not a row the statistics refused, and counting it here would say a row
+  // of evidence was rejected when the ring simply did not answer.
+  return out.exposures.rowsUnknown + (out.outcome?.credits.rowsUnknown ?? 0);
 }
 async function reportFanOutLoss(env: Partial<Pick<Env, 'CACHE'>>, tenant: string, out: LearningReceipt): Promise<LearningReceipt> {
   await recordEvidenceLoss(env, tenant, 'fanOutRejected', fanOutRejectedRows(out));

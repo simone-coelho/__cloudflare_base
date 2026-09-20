@@ -582,10 +582,13 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
   // published — the rows the objects hold, the distinct rows after the reader's
   // own dedup, and the saved report's own counts — so a warehouse loading the
   // partition and an operator reading the report cannot disagree in silence.
-  // A window lists several days and a cursor lists part of one, so neither can
-  // state a whole day's reconciliation and neither carries the member.
-  const counts = windowed || cursor ? null
-    : await exportReconciliation(c.env.STORAGE as unknown as Parameters<typeof exportReconciliation>[0], tenant, date, tombs);
+  // Only a listing that can see the WHOLE day carries it: a window lists several
+  // days, a cursor lists part of one, a `stream` filter hides the other stream,
+  // and a truncated listing has already stopped short. It opens only the objects
+  // it just listed and reads the report by its own key; it lists nothing twice.
+  const counts = windowed || cursor || stream || truncated ? null
+    : await exportReconciliation(c.env.STORAGE as unknown as Parameters<typeof exportReconciliation>[0],
+      { tenant, brand: (c.req.query('brand') ?? '').trim() || tenant, date }, objects.map(o => o.key), tombs);
   // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
   return c.json({ ok: true, tenant, ...(windowed ? { from, to, days: dates.slice(0, listedDays) } : { date }),
     stream: stream ?? 'both', objects, truncated, ...(nextCursor ? { cursor: nextCursor } : {}),
