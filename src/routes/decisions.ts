@@ -1095,8 +1095,16 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
  * CW34 (delivery lane, named in plan 21): the day reports over a window, pooled per
  * slot and arm as attribution diagnostics. Reads reports already built;
  * missing reports and known incomplete days remain visible.
+ *
+ * W21 C1.05 (F25 §5.1, ruling R112(d)): both report READS carry the same gate as
+ * the build POST beside them, `operatorJwt()`, in every deployment auth mode.
+ * `operatorWrites()` let an open-mode deployment answer per-arm conversion rates,
+ * intervals and target standing to any caller who could view source on the
+ * storefront, while the console's own error handler already expected 401/403
+ * here. The credential is the one the build POST already accepts — a service or
+ * human operator token — never an account session.
  */
-decisionRoutes.get('/:tenant/learn/report/window', operatorWrites(), async (c) => {
+decisionRoutes.get('/:tenant/learn/report/window', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const from = (c.req.query('from') ?? '').trim();
   const to = (c.req.query('to') ?? '').trim();
@@ -1115,7 +1123,7 @@ decisionRoutes.get('/:tenant/learn/report/window', operatorWrites(), async (c) =
     throw error;
   }
 });
-decisionRoutes.get('/:tenant/learn/report', operatorWrites(), async (c) => {
+decisionRoutes.get('/:tenant/learn/report', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const date = (c.req.query('date') ?? '').trim();
   if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
