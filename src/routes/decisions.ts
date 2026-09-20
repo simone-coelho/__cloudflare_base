@@ -107,6 +107,19 @@ const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const RUNTIME_PIN_SAMPLE = 50;
 const HISTORY_VISITOR = /^[A-Za-z0-9_.-]{1,200}$/;
 const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
+/**
+ * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
+ * mutation is withdrawn for every tenant — `POST learn/cycle` and
+ * `POST learn/proposals/:id/:decision` answer 503 below without reading or
+ * writing anything — and the retained statuses were never verified as applied
+ * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
+ * reports proposal work carries these two facts beside it, so a count is never
+ * read as an action a person can take today. Stamped, not derived from
+ * configuration, because no configuration a tenant can set makes the mutation
+ * available: the routes below refuse unconditionally (F24 §5, document 35 §5
+ * W29). It is stated here, once, beside the constants the same routes share.
+ */
+const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
 function validLedgerSelector(tenant: string, id: string): boolean {
   const carrier = parseId(id);
@@ -342,8 +355,16 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // It is not part of `queueOf`'s pure computation over the published documents:
   // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
+  // W29 U1.01: this answer is the landing page of an operator application, so
+  // its `proposals_pending` must not stand alone while every apply and reject
+  // is withdrawn (503, below). The withdrawal is reported beside the counts,
+  // for the same reason the enrollment counter is: it is not part of `queueOf`'s
+  // pure computation over the published documents, it is what this deployment
+  // can do with them. `proposals_pending` is a count of historical `proposed`
+  // statuses, and the statuses it excludes are stored records, not verified
+  // applications — the same two facts `GET learn/proposals` answers.
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, autonomy: AUTONOMY_WITHDRAWN });
 });
 
 /**
@@ -654,7 +675,19 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
     for (const prefix of windowPrefixes(tenant, dates)) {
       let page: string | undefined;
       for (let read = 0; read < WINDOW_LIST_PAGES; read++) {
-        const listed = await c.env.STORAGE.list({ prefix, ...(page ? { cursor: page } : {}), limit: 1000 });
+        // W21 C1.09 (the W21-B2 build review, finding 1): the sweep BEGINS at the
+        // window's first day. The prefix a window's days share is the calendar
+        // year, so without this the listing starts at the year's first key and a
+        // tenant with more objects earlier that year than the page budget
+        // (`WINDOW_LIST_PAGES` × 1000) spends the whole budget skipping keys
+        // `continue` already discards, and is answered an empty window it really
+        // has days in. `startAfter` resumes at the first key strictly after
+        // `<tenant>/<from>`, which is before every key of `<tenant>/<from>/…`,
+        // so no object of the window is skipped and the earlier ones are never
+        // paged through. It is passed on the FIRST page only: a continuation
+        // carries its position in the cursor, which already began after it.
+        const listed = await c.env.STORAGE.list({ prefix,
+          ...(page ? { cursor: page } : { startAfter: `${tenant}/${from}` }), limit: 1000 });
         let past = false;
         for (const o of listed.objects) {
           const objectDate = o.key.split('/')[1] ?? '';
@@ -894,7 +927,14 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined)
     || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined)) return c.json({ ok: false }, 400);
   if (b.operation === 'repair' && (typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation) || Number(b.generation) < 0
-    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || b.intent !== (b.kind === 'stats' ? 'coarsen' : 'compact'))) return c.json({ ok: false }, 400);
+    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset
+    // damaged item and slot state"): statistics have two repair intents. The
+    // merge-and-keep one, `coarsen`, and the explicit `reset` for damaged
+    // counters that cannot be merged back into honesty — the same audited,
+    // human-operator route, the same digest/generation precondition, the same
+    // two audit phases. The ring's only intent is still `compact`.
+    || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
   const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string) : ringName(tenant, b.visitorId as string);
