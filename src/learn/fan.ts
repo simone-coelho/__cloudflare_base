@@ -475,11 +475,13 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
 }
 
 /**
- * W24 R1.01 (F19 §7 gap 1, §5.1): which slot configuration decides whether this
- * outcome may be credited at all. An outcome that NAMES its slot is decided by
- * that slot's own configuration; one that names none can only be decided by the
- * configurations in scope together. Nothing in scope decides nothing: a caller
- * that supplied no configuration is left exactly as it was.
+ * W24 R1.01 (F19 §7 gap 1, §5.1): the slot configuration that DECIDES this
+ * outcome, which is the configuration of the slot the outcome itself names.
+ *
+ * Only a named slot decides. An outcome that names none is still the visitor's
+ * own event and still goes to her ring: which slots it could be credited to is
+ * not knowable until attribution has run there, and the caller has no business
+ * guessing. The residual that leaves is stated on the call below.
  */
 function decisiveConfig(outcome: OutcomeRecord, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): SlotLearnConfig | null {
   const named = typeof outcome.slot === 'string' && outcome.slot.trim().length > 0 && outcome.slot !== 'unknown' ? outcome.slot : null;
@@ -517,9 +519,19 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
      * W24 R1.02: and the same refusal covers money the platform will not weigh,
      * because sending it would let the visitor's ring weigh it by a value whose
      * unit nobody has declared.
+     *
+     * RESIDUAL, named rather than guessed at: this closes the case the outcome
+     * itself decides — it names the slot it happened in, and that slot learns
+     * from another reward. An outcome that names NO slot still goes to the ring,
+     * which attributes it and may then credit a slot that learns another reward;
+     * closing that half means filtering each credited slot where the ring groups
+     * the credits (`DecisionRing.outcome`), the way the fold filters each hour's
+     * credits per slot, and that file is outside this batch's scope. Suppressing
+     * the ring call instead would be wrong twice over: the ring is the visitor's
+     * own record and her delivery journal, not only a credit engine.
      */
     const decisive = decisiveConfig(outcome, slotConfig, defaultSlotConfig), scope = configsInScope(slotConfig, defaultSlotConfig);
-    const learns = decisive ? decisive.reward === outcome.type : scope.length === 0 || scope.some(c => c.reward === outcome.type);
+    const learns = decisive === null || decisive.reward === outcome.type;
     const weighing = decisive ? decisive.objective : scope.map(c => c.objective).find(o => o === 'revenue' || o === 'margin');
     const refused = moneyRefusal(weighing, outcome, money);
     if (!learns || refused) {
