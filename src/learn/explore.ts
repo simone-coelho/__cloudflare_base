@@ -24,7 +24,48 @@ export interface ExploreConfig {
   /** Observations below which an item is under-observed. */
   floor: number;
 }
-export const DEFAULT_EXPLORE: ExploreConfig = { mode: 'rotation', share: 0.1, floor: 50 };
+/**
+ * N25 (W28.S1.01): the compiled default states what a slot with no exploration
+ * block actually does — nothing. `exploreOf` answers null for such a slot, so
+ * the ranking serves and no record is flagged; the kit, doc 22 §7 and both
+ * editors say the same. `floor` keeps its value: it is the fallback the
+ * exploring answer publishes when a slot names no floor of its own
+ * (`src/routes/decisions.ts`), which is the only member anything reads.
+ */
+export const DEFAULT_EXPLORE: ExploreConfig = { mode: 'off', share: 0, floor: 50 };
+
+/** The modes the live decision path will run. A retained document may still name a withdrawn one. */
+export const SUPPORTED_EXPLORE_MODES: readonly ExploreMode[] = ['off', 'rotation', 'epsilon'];
+
+/** True for a mode the engine offers; `thompson` is withdrawn (doc 22 §7, HANDOFF-2026-09-16 :232). */
+export function isSupportedExploreMode(mode: string | null | undefined): boolean {
+  return typeof mode === 'string' && (SUPPORTED_EXPLORE_MODES as readonly string[]).includes(mode);
+}
+
+/** What a reporting surface says about a slot's dial: the mode the engine RAN, and the retained setting where they differ. */
+export interface EffectiveExploration {
+  /** The mode the engine runs; null where the slot configures no exploration at all. */
+  mode: ExploreMode | null;
+  /** The share a policy that can actually run reserves; null when nothing can run. */
+  configured: number | null;
+  /** The mode the document names, where the engine will not run it. */
+  configuredMode?: ExploreMode;
+  /** Set with `configuredMode`: the stored policy is retained, not offered. */
+  unsupported?: true;
+}
+
+/**
+ * W28.W1.01: a withdrawn mode is inert on the decision path (`explorationPick`
+ * refuses it below), so every surface that REPORTS exploration reports the mode
+ * the engine ran and names the retained setting instead of publishing a share
+ * for a policy that cannot explore. One representation, in the words
+ * `GET learn/exploring` already answers with.
+ */
+export function effectiveExploration(cfg: ExploreConfig | null | undefined): EffectiveExploration {
+  if (!cfg) return { mode: null, configured: null };
+  if (!isSupportedExploreMode(cfg.mode)) return { mode: 'off', configured: null, configuredMode: cfg.mode, unsupported: true };
+  return { mode: cfg.mode, configured: cfg.mode === 'off' ? null : cfg.share };
+}
 
 export interface Ranked { id: string; score: number }
 
@@ -80,10 +121,23 @@ export function betaSample(rng: () => number, alpha: number, beta: number): numb
 export const HISTORICAL_EXPLORATION = Symbol('historical exploration');
 
 export function explorationPick(
-  input: { visitorId: string; slot: string; nowMs: number; ranked: readonly Ranked[]; snapshot: LiftSnapshot | null | undefined; cfg: ExploreConfig },
+  input: {
+    visitorId: string; slot: string; nowMs: number; ranked: readonly Ranked[];
+    snapshot: LiftSnapshot | null | undefined; cfg: ExploreConfig;
+    /**
+     * W28.M1.01 (F23 §4.3): items whose learned treatment a merchandiser has
+     * taken manual control of — `reject` removed the learned evidence from the
+     * item's treatment, `freeze` replaced it with a chosen value. Exploration
+     * selects on that same learned evidence, so a controlled item is not
+     * eligible for it and keeps the position its base score earned. The ranking
+     * itself is unchanged: the leader the pick is compared against is still the
+     * merchandiser's own.
+     */
+    controlled?: ReadonlySet<string>;
+  },
   historical?: typeof HISTORICAL_EXPLORATION,
 ): ExplorePick | null {
-  const { visitorId, slot, nowMs, ranked, snapshot, cfg } = input;
+  const { visitorId, slot, nowMs, ranked, snapshot, cfg, controlled } = input;
   if (cfg.mode === 'off' || ranked.length < 2) return null;
   if (cfg.mode === 'thompson' && historical !== HISTORICAL_EXPLORATION) return null;
   const share = Math.min(1, Math.max(0, cfg.share));
@@ -105,17 +159,22 @@ export function explorationPick(
   }
 
   if (bucket >= share) return null;
+  // W28.M1.01: what exploration may serve. Empty of controls this is the ranking itself.
+  const eligible = controlled?.size ? ranked.filter((r) => !controlled.has(r.id)) : ranked;
+  if (eligible.length === 0) return null;
+  // W28.C1.01(a) (F23 §4.1): a draw that lands on the ranking's own leader is
+  // still the draw it was. The decision was made by this rule, inside the
+  // configured share, so it is recorded as an exploration and counted in the
+  // realized share; nothing is reordered, because the piece is already first.
   if (cfg.mode === 'epsilon') {
-    const idx = Math.floor((bucket / share) * ranked.length) % ranked.length;
-    const pick = ranked[idx]!;
-    if (pick.id === ranked[0]!.id) return null;
-    return { mode: 'epsilon', pieceId: pick.id, reason: `bucket ${bucket} < share ${share}: uniform pick ${idx + 1} of ${ranked.length}`, bucket };
+    const idx = Math.floor((bucket / share) * eligible.length) % eligible.length;
+    const pick = eligible[idx]!;
+    return { mode: 'epsilon', pieceId: pick.id, reason: `bucket ${bucket} < share ${share}: uniform pick ${idx + 1} of ${eligible.length}`, bucket };
   }
   // Rotation: the under-observed item with the fewest observations, ties by id.
-  const under = ranked.map((r) => ({ r, n: observationsOf(snapshot, r.id) })).filter((x) => x.n < cfg.floor)
+  const under = eligible.map((r) => ({ r, n: observationsOf(snapshot, r.id) })).filter((x) => x.n < cfg.floor)
     .sort((a, b) => (a.n - b.n) || a.r.id.localeCompare(b.r.id));
   if (under.length === 0) return null;
   const pick = under[0]!;
-  if (pick.r.id === ranked[0]!.id) return null;
   return { mode: 'rotation', pieceId: pick.r.id, reason: `bucket ${bucket} < share ${share}: under-observed, n ${pick.n} < floor ${cfg.floor}`, bucket };
 }
