@@ -1250,7 +1250,15 @@ describe('the objects', () => {
     // events can share (F16 §5(j)), cannot be deduplicated, and keep crediting
     // once each. 1 + 2 = 3.
     expect((stats.storage.map.get('learn') as { stats: StatsState }).stats.items.A!['*']!.s.click).toEqual({ s: 3, t: now + 100 });
-    expect(f.storage.map.get('ring')).toEqual(saved([row])); expect(f.put).not.toHaveBeenCalled();
+    // R10/R124: crediting still writes nothing INTO the ring — the object is
+    // asserted unchanged on this line — but W22.D1.02's credited-`outcome_id`
+    // journal is durable, so the first accepted nonce-bearing outcome puts once
+    // under its own key; the repeats of that id are already journalled and the
+    // two legacy sends carry no stable identity to journal. The guarantee that
+    // a MALFORMED identity writes nothing is asserted where it belongs, inside
+    // the refusal loop above (`expect(f.put).not.toHaveBeenCalled()`), and is
+    // untouched.
+    expect(f.storage.map.get('ring')).toEqual(saved([row])); expect(f.put).toHaveBeenCalledTimes(1);
     const mutable = structuredClone(valid); let release!: () => void;
     const waiting = new Promise<void>(resolve => { release = resolve; });
     f.get.mockImplementationOnce(async () => { await waiting; return null; });
