@@ -691,6 +691,18 @@ export interface ReportCoverage {
   unknownHours: number[];
   horizons: Array<{ hour: number; horizonMs: number | null }>;
   minHorizonMs: number | null;
+  /**
+   * W21 C1.08 (R149): the built hours that cannot say what the experimental
+   * ASSIGNMENT was, because they were folded before the aggregates carried it.
+   * `[]` where every built hour carries it; `null` where the stored report does
+   * not record the member at all, which is the honest unknown a report written
+   * before this release is owed. A day with any such hour is grouped by the arm
+   * SERVED and answers `armVisitors` and `visitorOutcomes` null.
+   *
+   * Optional in the stored evidence: a report written before this release does
+   * not carry it and is still `metadata: 'recorded'`.
+   */
+  unassignedHours?: number[] | null;
 }
 
 export interface DayReport {
@@ -747,7 +759,12 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const source = report.hours?.source === 'aggregates' || report.hours?.source === 'ledger' ? report.hours.source
     : report.hours === undefined && e.version === 1 && e.source === 'ledger' ? 'ledger' : 'unknown';
   const built = knownHours(report.hours?.built), missing = knownHours(report.hours?.missing);
-  const valid = e.version === 1 && e.source === source && source !== 'unknown' &&
+  // W21 C1.08 (R149): optional in the evidence, because a report written before
+  // this release cannot carry it and is not thereby invalid. Present, it is a
+  // list of built hours or the explicit unknown.
+  const assignment = e.unassignedHours === undefined || e.unassignedHours === null
+    || (hours(e.unassignedHours) && e.unassignedHours.every(h => knownHours(report.hours?.built).includes(h)));
+  const valid = e.version === 1 && e.source === source && source !== 'unknown' && assignment &&
     typeof e.truncated === 'boolean' && (typeof e.visitorsIncomplete === 'boolean' || e.visitorsIncomplete === null) &&
     hours(e.missingHours) && hours(e.truncatedHours) && hours(e.unadvancedHours) && hours(e.unknownHours) &&
     e.truncatedHours.every(h => built.includes(h)) && e.unadvancedHours.every(h => built.includes(h)) && e.unknownHours.every(h => built.includes(h)) &&
@@ -765,6 +782,10 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   return {
     version: 1, source, metadata, status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length ? 'incomplete' : 'unknown',
     maturity: 'unknown', truncated, visitorsIncomplete, missingHours, truncatedHours, unadvancedHours, unknownHours, horizons,
+    // Stated only where the source really states it: an absent, unknown or
+    // unreadable evidence block reads `null`, never an empty list, which would
+    // claim every built hour carries the assignment.
+    unassignedHours: valid && Array.isArray(e.unassignedHours) ? knownHours(e.unassignedHours).filter(h => built.includes(h)) : null,
     // Never reinterpret the old hours.horizonMs (the last hour) as a minimum.
     minHorizonMs: valid && metadata === 'recorded' && source === 'aggregates' && horizons.length > 0 && !missingHours.length && !unknownHours.length
       ? Math.min(...horizons.map(h => h.horizonMs!)) : null,
@@ -993,6 +1014,10 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     attributionContract: attributionContractOf(i.learn, RAW_DAY_REACH_MS),
     coverage: reportCoverage({ counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated }, hours: { source: 'ledger', built: [], missing: [] } }, {
       version: 1, source: 'ledger', truncated: i.truncated, visitorsIncomplete: null,
+      // W21 C1.08: this branch reads the records themselves, so every row it
+      // counted carries whatever assignment it was written with; there is no
+      // built hour that cannot say.
+      unassignedHours: [],
       missingHours: [], truncatedHours: [], unadvancedHours: [], unknownHours: [], horizons: [],
     }),
   };
