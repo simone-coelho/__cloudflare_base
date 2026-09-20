@@ -489,8 +489,10 @@ export class DecisionRing {
     // W23 T1.01: `outsideWindow` is on this object's own reply from the start,
     // so a receipt never leaves the ring silent about what the reward's window
     // refused — including on the paths that return before attribution runs.
+    // W26 C1.01: `brandMismatched` likewise, so a receipt never leaves the ring
+    // silent about a correlated credit refused for a brand disagreement.
     const plan: CreditPlan = { receipt: { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0,
-      attributed: 0, eligible: 0, weightSkipped: 0, outsideWindow: 0, credits: emptyStatsDelivery() }, batches: [] };
+      attributed: 0, eligible: 0, weightSkipped: 0, outsideWindow: 0, brandMismatched: 0, credits: emptyStatsDelivery() }, batches: [] };
     if (managed) plan.retention = requireRetention(this.env, outcome.retention?.online, tenant, 'online');
     if (cutoff !== undefined && outcome.ts <= cutoff) { plan.receipt.cutoffSkipped = 1; return plan; }
     requireRetention(this.env, outcome.retention?.online, tenant, 'online');
@@ -506,6 +508,11 @@ export class DecisionRing {
     // attribution considered. A decision dropped here was matched and too late,
     // never merely unmatched.
     plan.receipt.outsideWindow = attribution.outsideWindow;
+    // W26 C1.01 (F21 §6(c)): and what the BRAND refused — the correlated
+    // decision this outcome named but was served under another brand. Counted
+    // over the same candidates attribution considered, so it reports a refusal
+    // that happened and never a decision this outcome never named.
+    plan.receipt.brandMismatched = attribution.brandMismatched;
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);

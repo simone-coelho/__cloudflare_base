@@ -191,6 +191,21 @@ export interface OutcomeReceipt {
    * accepted as valid. The visitor's own `DecisionRing` always sets it.
    */
   outsideWindow?: number;
+  /**
+   * W26 C1.01 (F21 §6(c), §8): how many correlated decisions this outcome NAMED
+   * and could not be credited to because it carries another brand than the
+   * decision was served under. Zero when nothing disagreed; the credit is
+   * refused either way, and this is what makes the refusal legible rather than
+   * indistinguishable from "nothing matched".
+   *
+   * OPTIONAL and carried through rather than required, for exactly the reason
+   * `outsideWindow` above is: `outcomeReply` rebuilds a ring reply member by
+   * member and the visitor's object is not the only body that reaches it
+   * (`src/learn/holdoutArms.test.ts:279`/`:300` feed a synthetic receipt that
+   * has no such member and must still be accepted). The visitor's own
+   * `DecisionRing` always sets it.
+   */
+  brandMismatched?: number;
 }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
@@ -321,8 +336,9 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
     || (r.cutoffSkipped === 1 && r.attributed !== 0)
-    // W23 T1.01: present or absent, never malformed.
+    // W23 T1.01, W26 C1.01: present or absent, never malformed.
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
+    || (r.brandMismatched !== undefined && !count(r.brandMismatched))
     || refusedBySlot === null || money === null
     || (r.refused !== undefined && !count(r.refused))
     || (refusedBySlot !== undefined && r.refused !== Object.keys(refusedBySlot).length)
@@ -331,6 +347,7 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const credits: StatsDelivery = { ...r.credits };
   return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits,
     ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}),
+    ...(r.brandMismatched !== undefined ? { brandMismatched: r.brandMismatched as number } : {}),
     ...(refusedBySlot !== undefined ? { refusedBySlot } : {}),
     ...(r.refused !== undefined ? { refused: r.refused as number } : {}),
     ...(money !== undefined ? { money } : {}),
@@ -400,7 +417,22 @@ export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, 
   } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
-/** CW30: slot → item → times served inside that slot's fatigue window, from the ring entries. */
+/**
+ * CW30: slot → item → how many times this shopper was served that item, from
+ * the ring entries, inside the window the slot's own fatigue rule sets.
+ *
+ * W26 F1.01 (F21 §6(a)): the count is this shopper's history of the ITEM
+ * across every placement in the brand — every slot, every page, either arm —
+ * and only the WINDOW and the basis come from the slot being scored. That is
+ * the settled behaviour (HANDOFF-2026-09-16:230 "W26.04 live fatigue now
+ * filters to brand, retaining intended cross-placement global-item history. Do
+ * not accidentally add slot/page/arm fatigue restrictions as a 'fix.'";
+ * HANDOFF-2026-09-18:322), and it is what a shopper means by "I keep seeing
+ * this": she does not see slots. The ring this reads is already one brand's,
+ * so the brand is the scope and no filter here narrows it further. The doc said
+ * "that slot's" and the code never did; the words were the defect, not the
+ * number.
+ */
 export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ slot: string; fatigue?: { weight: number; windowHours: number }; measurementBasis?: import('@/content/types').MeasurementBasis }>, now: number): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const s of slots) {

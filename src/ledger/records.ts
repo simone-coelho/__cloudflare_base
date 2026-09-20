@@ -219,10 +219,46 @@ export interface ActionLike {
  * in `data.event`, which is how the SDK sends content interactions and the
  * conversion until the server names them first-class (CW3).
  */
-export function rewardOf(action: ActionLike): { type: RewardType; event: string } | null {
+/**
+ * Just enough of an action to say what reward it carries: the wire type, and a
+ * `custom` event's real name in `data.event`. Everything else an action holds is
+ * optional here, so a caller that has only the wire type — a declaration, a
+ * diagnostic — can ask without inventing a visitor.
+ */
+export type RewardActionLike = Pick<ActionLike, 'type' | 'data'> & Partial<Omit<ActionLike, 'type' | 'data'>>;
+
+export function rewardOf(action: RewardActionLike): { type: RewardType; event: string } | null {
   const name = action.type === 'custom' && typeof action.data?.event === 'string' ? action.data.event : action.type;
   const type = REWARD_OF[name];
   return type ? { type, event: name } : null;
+}
+
+/**
+ * W26 U1.01 (F21 §5 item 5): what the learning loop counts, said in one place a
+ * caller can read.
+ *
+ * The wire carries events the loop learns from and events it does not, and
+ * until now the difference was only an ABSENCE — `REWARD_OF` has no
+ * `content_impression` row, so a viewable impression is thrown away silently
+ * and an integrator reading the event list cannot tell a signal that is counted
+ * from one that is accepted and discarded. This states it: `counted: false`
+ * with the reason, or `counted: true` with the reward and the event name the
+ * outcome record will carry.
+ *
+ * It is DERIVED from `rewardOf` — the function `outcomeFromAction` itself
+ * consults — and never from a second table, so the declaration cannot drift
+ * away from the engine when a reward is added or removed. It decides nothing
+ * and gates nothing: it only reports what the engine already does.
+ */
+export type LearningInput =
+  | { counted: true; reward: RewardType; event: string }
+  | { counted: false; reason: 'not-a-learning-input' };
+
+export function learningInputOf(action: RewardActionLike): LearningInput {
+  const reward = rewardOf(action);
+  return reward === null
+    ? { counted: false, reason: 'not-a-learning-input' }
+    : { counted: true, reward: reward.type, event: reward.event };
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
@@ -256,7 +292,19 @@ function productsOf(d: Record<string, unknown>): string[] | null {
   return out.size ? [...out] : null;
 }
 
-/** Build the §3.2 record from a wire action, or null when the action is not a reward. */
+/**
+ * Build the §3.2 record from a wire action, or null when the action is not a reward.
+ *
+ * W26 C1.01 (F21 §6(c), §8): the outcome's BRAND is the brand the shopper's page
+ * was served under, which the action itself names in `data.brand` — the same
+ * value the decision request carried. It was defaulted to the tenant id before,
+ * and for the first tenant that actually uses brands that put the numerator in
+ * one statistics object and the denominator in another. It is resolved HERE,
+ * once, from what the caller already holds: no second read, nothing to fail on
+ * the serving path, and no branch on the host. An action that names no brand
+ * keeps the caller's brand (the tenant by default), so every client that never
+ * sent one goes on learning exactly as it did.
+ */
 export function outcomeFromAction(action: ActionLike, tenant: string, brand = tenant, arm: string | null = null): OutcomeRecord | null {
   const d = action.data ?? {}, hasDecision = Object.prototype.hasOwnProperty.call(d, 'decisionId');
   if (hasDecision && !isDecisionReference(d.decisionId)) throw new Error('Invalid decision reference');
@@ -270,7 +318,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     outcome_id: `${tenant}:${ts36(ts)}:${action.userId}:${reward.event}${hasNonce ? `:n1:${action.eventId}` : ''}`,
     ...(hasDecision ? { decision_id: d.decisionId as string } : {}),
     ...(hasNonce ? { event_id: action.eventId, event_id_source: action.eventIdSource ?? 'provided' } : {}),
-    tenant, brand,
+    tenant, brand: str(d.brand) ?? brand,
     visitor_id: action.userId,
     session_id: str(action.sessionId) ,
     ts,
