@@ -251,7 +251,14 @@ const learnDocument = (f: LearnFixture = {}) => ({
 
 class UnitKV {
   data = new Map<string, string>();
-  async get(key: string, type?: string) { const v = this.data.get(key); return v === undefined ? null : type === 'stream' ? new Response(v).body : type === 'json' ? JSON.parse(v) as unknown : v; }
+  /** A store that answers an error for these key prefixes (W21.E1.05, case (a)). */
+  failPrefixes: string[] = [];
+  /** A store whose value for these key prefixes has gone (expired or never written) (case (b)). */
+  hidePrefixes: string[] = [];
+  async get(key: string, type?: string) {
+    if (this.failPrefixes.some(prefix => key.includes(prefix))) throw new Error('synthetic key-value read failure');
+    if (this.hidePrefixes.some(prefix => key.includes(prefix))) return null;
+    const v = this.data.get(key); return v === undefined ? null : type === 'stream' ? new Response(v).body : type === 'json' ? JSON.parse(v) as unknown : v; }
   async put(key: string, value: string) { this.data.set(key, value); }
   async delete(key: string) { this.data.delete(key); }
   async list(o?: { prefix?: string; limit?: number; cursor?: string }) {
@@ -295,6 +302,8 @@ const fixtureCategories = (tenants: string[]) => Object.fromEntries(tenants.map(
 interface Mounted {
   env: Env;
   storage: UnitR2;
+  sessions: UnitKV;
+  cache: UnitKV;
   fetch: (input: Request) => Promise<Response>;
   drain: () => Promise<void>;
   /** Everything the producer put on the queue, written to R2 by the real consumer. */
@@ -307,10 +316,11 @@ async function mount(host: 'session' | 'do', learn: LearnFixture = {}): Promise<
   const pending: Promise<unknown>[] = [];
   const queued: unknown[] = [];
   const storage = new UnitR2();
+  const cache = new UnitKV(), sessions = new UnitKV();
   const objects = new Map<string, { shopper: ShopperReflex; data: Map<string, unknown> }>();
   const stub = { idFromName: (n: string) => n, get: () => ({ fetch: async () => new Response('{}') }) };
   const env = {
-    DEPLOYMENT_PROFILE: 'demo', CACHE: new UnitKV(), SESSIONS: new UnitKV(), CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock',
+    DEPLOYMENT_PROFILE: 'demo', CACHE: cache, SESSIONS: sessions, CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock',
     REFLEX_HOST: host, STORAGE: storage,
     JWT_SECRET: OPERATOR_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: `${TENANT}:${IDENTITY_SECRET}`,
     TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }),
@@ -401,7 +411,7 @@ async function mount(host: 'session' | 'do', learn: LearnFixture = {}): Promise<
     const result = await consumeLedger(env, bodies);
     expect(result.error, 'the fixture ledger batch must be written by the real consumer').toBeUndefined();
   };
-  return { env, storage, fetch: fetchOne, drain, drainLedger, operatorToken };
+  return { env, storage, sessions, cache, fetch: fetchOne, drain, drainLedger, operatorToken };
 }
 
 const HOSTS = ['session', 'do'] as const;
@@ -1324,6 +1334,77 @@ describe('unit:W21.E1.03', () => {
     expect(underNewSalt.experiment?.id, 'F07 §5.7 — a salt change starts a new experiment id')
       .toBe(`${TENANT}:${TENANT}:${SALT_B}`);
   });
+});
+
+// ===========================================================================
+// unit:W21.E1.05 — the enrollment anchor unavailable is never a failure and
+// never a redraw.
+// ===========================================================================
+
+describe('unit:W21.E1.05', () => {
+  for (const host of HOSTS) {
+    for (const fault of ['throws', 'absent'] as const) {
+      it(`host (${host}): with the enrollment anchor ${fault === 'throws' ? 'unreadable' : 'missing or expired'}, a recognised shopper is served the site default as ineligible with the reason named, never the arm her current id would draw, and the failure is counted for an operator`, async () => {
+        const m = await mount(host);
+        // The build review's F4 (a throwing `identity:shopper:<id>` read answered
+        // HTTP 500 — no content, no record, no arm) and F5 (a missing or expired
+        // projection silently re-randomised a recognised shopper, measured
+        // `default` → `personalized`). Both are refusals of the same rule: an
+        // anchor the engine cannot read is not an invitation to draw a new arm
+        // (tapestry_requirements :364-:367; F07 §2.2, §7(b)).
+        // She is enrolled while anonymous and then recognised, exactly as
+        // W21.E1.01 has her: the anchor EXISTS and is hers. The fault is applied
+        // afterwards, so this unit is about a store that stops answering, never
+        // about a shopper who was never enrolled.
+        expect(armFor(ENROLLED_ANON, HOLDOUT), 'she is enrolled in the control arm while anonymous').toBe('default');
+        expect(armFor(ENROLLED_SHOPPER_ID, HOLDOUT), 'and the arm her recognised id would draw, which she must not be given').toBe('personalized');
+        const anonymous = await shopperOn(m, ENROLLED_ANON, { tracking: true, personalization: true });
+        expect((await anonymous.snapshot()).arm, 'her enrollment is drawn once, against her own anchor').toBe('default');
+        const exp = Math.floor(Date.now() / 1000) + 300;
+        const link = await m.fetch(new Request(`https://synthetic.invalid/v1/${TENANT}/identity/link`, {
+          method: 'POST',
+          headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: anonymous.capability, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitorId: ENROLLED_ANON, accountId: ENROLLED_ACCOUNT, exp,
+            assertion: await signAssertion(IDENTITY_SECRET, TENANT, ENROLLED_ANON, ENROLLED_ACCOUNT, exp) }),
+        }));
+        expect(link.status, await link.clone().text()).toBe(200);
+        const linked = await link.clone().json().catch(() => ({})) as {
+          session?: { capability: string; sessionId: string; grantId?: string; iat: number; exp: number } };
+        await m.drain();
+        const handed = linked.session!;
+        const shopper = await withCapability(m, ENROLLED_SHOPPER_ID, handed.sessionId, handed.capability,
+          { grantId: handed.grantId!, iat: handed.iat, exp: handed.exp });
+
+        // Now her anchor stops answering.
+        if (fault === 'throws') { m.sessions.failPrefixes.push('identity:shopper:'); m.cache.failPrefixes.push('identity:shopper:'); }
+        else { m.sessions.hidePrefixes.push('identity:shopper:'); m.cache.hidePrefixes.push('identity:shopper:'); }
+
+        const served = await shopper.snapshot();
+        // (1) Never a failure: she is answered and she is served.
+        expect(served.status, 'F4 — a store that cannot answer is not a reason to refuse her a page').toBe(200);
+        expect(served.served.length, 'and the page\'s only slot is filled with the site\'s own default').toBe(1);
+        // (Her ledger ROW is the render-acknowledgement path's to capture — a
+        // public snapshot is an offer, `src/content/service.ts:456-458` — which is
+        // the later unit R100(c) records; the row names it.)
+        // (2) Never a redraw: the assignment is ineligible, with the reason.
+        expect(served.arm, 'the experience served is the site\'s own defaults, on the wire-compatible arm').toBe('default');
+        expect(served.experiment?.arm, 'F5 — an unreadable anchor is an ineligible assignment, never a fresh draw from her current id')
+          .toBe('ineligible');
+        expect(served.experiment?.reason, 'R118(3) — and the assignment names why it is ineligible')
+          .toBe('anchor_unavailable');
+        expect(served.experiment?.id, 'under the experiment she is excluded from').toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+
+        // (3) Counted for a person: the operator work queue, which is "what needs
+        // a person, as counts" (doc 28 §3.5, src/learn/queue.ts:1-23), carries the
+        // RULED counter beside `erasures_pending`.
+        const queue = await operatorGet(m, `/v1/${TENANT}/learn/queue?brand=${TENANT}`);
+        expect(queue.status, JSON.stringify(queue.body)).toBe(200);
+        const work = (queue.body.queue ?? queue.body) as Record<string, unknown>;
+        expect(work.enrollment_anchor_unavailable, 'R118(3) — one decision could not read its anchor today, and an operator can see it')
+          .toBe(1);
+      });
+    }
+  }
 });
 
 // ===========================================================================
