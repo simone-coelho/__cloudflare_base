@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 194/202 · W closed 4/26 (W16–W41) · suite 2059/2138 · residual 79 in 9 files · typecheck GREEN
+Units 200/209 · W closed 4/26 (W16–W41) · suite 2071/2150 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -25,6 +25,7 @@ Units 194/202 · W closed 4/26 (W16–W41) · suite 2059/2138 · residual 79 in 
 | W23 | 9 | 8 | no | — | — |
 | W24 | 10 | 9 | no | — | — |
 | W25 | 7 | 6 | no | — | — |
+| W26 | 7 | 6 | no | — | — |
 | W29 | 3 | 2 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
@@ -230,6 +231,13 @@ Units 194/202 · W closed 4/26 (W16–W41) · suite 2059/2138 · residual 79 in 
 | W25.P1.01 | unspecified | 0 |
 | W25.V1.01 | green | 2 |
 | W25.Z1.01 | green | 2 |
+| W26.C1.01 | green | 2 |
+| W26.F1.01 | green | 1 |
+| W26.I1.01 | green | 2 |
+| W26.P1.01 | unspecified | 0 |
+| W26.R1.01 | green | 3 |
+| W26.U1.01 | green | 2 |
+| W26.X1.01 | green | 2 |
 | W29.P1.01 | unspecified | 0 |
 | W29.R1.01 | green | 2 |
 | W29.U1.01 | green | 2 |
@@ -244,7 +252,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 3c1567902e84e1eb58c3e32b915bd71244164d4076cb04cac1fd1450a5757800 |
+| units sha256 | 1eb86dba1fb185aeea6df4c2812014748efe11e8e649501a9e8833001115fcc9 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -256,6 +264,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 1dc3bd54d17612ebf99a6f2f6790d1661244af3567893649cf17cc8ea43152a1 |
-| commit | 06399ce7e9b1f4ba71a8c7f7a99d2acb83d4cb02 |
-| generated | 2026-09-20T13:48:05.784Z |
+| vitest report sha256 | 6935589d08b4f458e8b1b4f61273406d8244b263d995c5e59c519f853387913d |
+| commit | 8eae07feacfd79ce0d5464a96b2f6ac3f6781ab3 |
+| generated | 2026-09-20T13:58:07.402Z |
