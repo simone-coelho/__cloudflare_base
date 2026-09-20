@@ -336,9 +336,11 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
   // read from the same operator cache the governance counters use; unreadable
   // answers zero rather than failing the queue.
+  // It is not part of `queueOf`'s pure computation over the published documents:
+  // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size, anchorUnavailable: health.anchorUnavailable }) });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
 });
 
 /**
