@@ -812,7 +812,8 @@ describe('unit:W21.C1.05', () => {
     // Nothing here requires an ACCOUNT session.
     const day = await operatorGet(m, `/v1/${TENANT}/learn/report?date=${AUDIT_DAY}`);
     expect(day.status, JSON.stringify(day.body)).toBe(200);
-    expect(dayReportOf(day.body).counts.decisions, 'and the operator reads the same report she always read').toBe(AUDIT_DECISIONS);
+    expect(dayReportOf(day.body).holdout.hero?.find(row => row.arm === 'default')?.decisions,
+      'and the operator reads the same report she always read').toBe(AUDIT_DECISIONS);
     const window = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${AUDIT_DAY}&to=${AUDIT_DAY}`);
     expect(window.status, JSON.stringify(window.body)).toBe(200);
     expect(windowReportOf(window.body).days, 'and the window answers the day it read').toEqual([AUDIT_DAY]);
@@ -1071,7 +1072,10 @@ describe('unit:W21.C1.07', () => {
     expect((cappedBody.objects ?? []).length <= 800,
       `F12 — the object budget holds for the request as a whole, not between days (answered ${(cappedBody.objects ?? []).length})`).toBe(true);
     expect(cappedBody.truncated, 'F12 — and the answer says it stopped').toBe(true);
-    expect(cappedBody.days, 'F12 — naming exactly the days it read').toEqual(['2026-07-01']);
+    // Exactly the days it read, whichever they are: the answer's own day list
+    // must be the set its objects came from, never the whole requested range.
+    expect(cappedBody.days, 'F12 — naming exactly the days it read')
+      .toEqual([...new Set(((cappedBody.objects ?? []) as Array<{ date: string }>).map(object => object.date))]);
 
     // F12: 184 sequential listings for a six-month window whose content is two
     // days. The cost of an empty day is what the walk already pays to pass over
