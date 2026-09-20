@@ -527,6 +527,15 @@ async function operatorPost(m: Mounted, path: string, body: unknown, authenticat
   return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
 }
 
+/** One published section of the customer kit, by its heading. */
+function kitSection(file: string, heading: string): string {
+  const text = readFileSync(new URL(`../../../docs/kit/${file}`, import.meta.url), 'utf8');
+  const start = text.indexOf(`\n## ${heading}\n`);
+  expect(start, `docs/kit/${file} must publish a "${heading}" section`).toBeGreaterThan(-1);
+  const rest = text.slice(start + 1), end = rest.indexOf('\n## ', 1);
+  return end < 0 ? rest : rest.slice(0, end);
+}
+
 /** The ruled shape of a report answer, as this specification rules it (R21). */
 interface ArmVisitorsBlock { version: number; basis: string; arms: Array<{ arm: string; visitors: number }> }
 interface VisitorOutcomesBlock { version: number; basis: string; arms: Array<{ arm: string; visitors: number; byType: Record<string, number> }> }
@@ -883,6 +892,15 @@ describe('unit:W21.C1.03', () => {
     const oldWindow = await operatorGet(legacy, `/v1/${TENANT}/learn/report/window?from=2026-04-05&to=2026-04-05`);
     expect(oldWindow.status, JSON.stringify(oldWindow.body)).toBe(200);
     expect(windowReportOf(oldWindow.body).armVisitors, 'F25 §7 — and a window that pooled it cannot invent one either').toBeNull();
+
+    // R118(8) with F8: the member this unit rules is published, in words a
+    // customer can act on, and the paragraph is well formed.
+    const dayReport = kitSection('03-payload-schemas.md', 'The day report');
+    for (const token of ['armVisitors', 'distinct_visitors', 'visitor_days', 'allocation']) {
+      expect(dayReport.includes(token), `F8 — the published day-report schema names \`${token}\``).toBe(true);
+    }
+    expect(dayReport.split('\n').some(line => /^\s*—\s*$/.test(line)),
+      'F8 — and the paragraph is well formed: no line is a dangling em dash').toBe(false);
   });
 });
 
@@ -914,6 +932,16 @@ describe('unit:W21.C1.04', () => {
     expect(supplied?.relativeLow, 'F25 §7.3 — judged on the Katz low end from raw rates').toBeCloseTo(0.3845519698419917, 10);
     expect(supplied?.standing, 'F25 §5.2 — +38.46 % clears this caller\'s +25 % stretch, which Tapestry\'s +60 % would not be')
       .toBe('reached_stretch');
+
+    // R118(8) with the build review's F8: what the customer kit publishes must be
+    // true of the delivered documents. R108(1) withdrew `LearnConfig.targets` and
+    // the `targets` member of the day-report answer, so the kit may describe
+    // neither — a published field that does not exist is a false statement to a
+    // customer, and this unit is where the target vocabulary is ruled.
+    const learnDocument = kitSection('03-payload-schemas.md', 'The learn document');
+    expect(/\|\s*`targets/.test(learnDocument), 'F8 — the learn document publishes no `targets` field, because none exists').toBe(false);
+    const dayReport = kitSection('03-payload-schemas.md', 'The day report');
+    expect(/\btargets\b/.test(dayReport), 'F8 — and the day-report answer lists no `targets` member, which C1.01 and C1.04 require to be absent').toBe(false);
   });
 
   it('host: building a day report requires an operator credential', async () => {
@@ -987,6 +1015,15 @@ const MERGE_POLICY_SENTENCE =
  * Ruling R108(2): the served experience and the experimental assignment are two
  * different fields, and the kit says so in these words.
  */
+/**
+ * Ruling R118(10) with the build review's F3: the canonical nightly report takes
+ * the hour-aggregate branch, which groups by the arm SERVED until W21-B2 carries
+ * the assignment into the aggregate. The kit says so plainly — unflattering and
+ * required, because a customer reading an `ineligible` row on one path and not
+ * on the other must know which is which.
+ */
+const NIGHTLY_GROUPING_SENTENCE =
+  'Until the hour aggregates carry the experimental assignment, the canonical nightly report groups by the arm served, so an `ineligible` assignment is counted in `default` on that path.';
 const ARM_VOCABULARY_SENTENCE =
   '`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.';
 /** The visitor whose record predates the provenance block (W21.E1.02), bucket 0.485563: the control side. */
@@ -1175,6 +1212,10 @@ describe('unit:W21.E1.02', () => {
       const kit = readFileSync(new URL('../../../docs/kit/02-api-reference.md', import.meta.url), 'utf8');
       expect(kit.includes(ARM_VOCABULARY_SENTENCE),
         `R108(2) — docs/kit/02-api-reference.md must publish the distinction in these words: "${ARM_VOCABULARY_SENTENCE}"`).toBe(true);
+      // R118(10) with F3: the two report paths do not group alike yet, and the
+      // customer is told which is which rather than left to discover it.
+      expect(kit.includes(NIGHTLY_GROUPING_SENTENCE),
+        `R118(10) — docs/kit/02-api-reference.md must publish the deferral in these words: "${NIGHTLY_GROUPING_SENTENCE}"`).toBe(true);
     });
   }
 });
@@ -1462,6 +1503,10 @@ describe('unit:W21.E1.04', () => {
       expect(report.visitorOutcomes?.version, 'F07 §7 — visitor-level outcomes are versioned like the rest of the schema').toBe(1);
       expect(report.visitorOutcomes?.basis, 'F07 §2.5 — the denominators are enrolled visitors, not exposures').toBe('enrolled_visitors');
       const arms = Object.fromEntries((report.visitorOutcomes?.arms ?? []).map(a => [a.arm, a]));
+      // The three assignments this day holds, so "exactly one row" below is a
+      // statement about a known set and never vacuous.
+      expect(Object.keys(arms).sort(), 'F07 §2.5 — every assignment the day holds is represented')
+        .toEqual(['default', 'ineligible', 'personalized']);
       expect(arms.default?.visitors, 'F07 §2.5 — two visitors were enrolled in the control arm on this day').toBe(2);
       expect(arms.default?.byType?.purchase, 'F07 §7 — each of their purchases counts for the control arm although no served piece matched it').toBe(2);
       expect(arms.personalized?.visitors, 'F07 §2.5 — one enrolled treated visitor').toBe(1);
