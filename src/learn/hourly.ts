@@ -373,6 +373,9 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // reports: a rebuild that adds nothing leaves `ringsFolded` false, exactly as
   // a refused out-of-order fold did.
   const already = alreadyFolded(state, ctx.from);
+  // Read before anything below advances `through`: the floor is what this state
+  // said on entry, which is what `already` was decided against.
+  const floorAtEntry = foldedFloor(state);
   const cutoff = ctx.from - ctx.horizonMs;
   if (!objectMap(state.rings)) throw new ReportInputError();
   const retainedIds = ctx.retainedIds ?? new Set<string>();
@@ -544,7 +547,7 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // horizon — a pruned hour raising the floor, so it is never folded twice —
   // and an older hour folded after newer ones is recorded, so the catch-up can
   // rebuild the hours whose attribution ran against the rings as they were.
-  rememberFold(state, ctx);
+  rememberFold(state, ctx, floorAtEntry);
   pruneSeenDays(state, ctx);
   if (JSON.stringify(state.seenDays ?? null) !== beforeDays) changed = true;
   if (JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]) !== beforeSeen) changed = true;
@@ -557,10 +560,10 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
  * which an hour is taken to be folded — so a pruned hour is never folded twice,
  * and the state a shard keeps is bounded by the horizon and by a hard cap.
  */
-function rememberFold(state: ShardState, ctx: FoldContext): void {
+function rememberFold(state: ShardState, ctx: FoldContext, floorAtEntry: number): void {
   const hours = foldedSet(state);
   hours.add(ctx.from);
-  let floor = foldedFloor(state);
+  let floor = floorAtEntry;
   const newest = Math.max(ctx.from, state.through, ...hours);
   const keepFrom = newest - Math.max(ctx.horizonMs, 0);
   for (const from of [...hours].sort((a, b) => a - b)) {
