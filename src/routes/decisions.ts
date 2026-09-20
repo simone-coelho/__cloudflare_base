@@ -37,7 +37,7 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -225,7 +225,10 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
   const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
-  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+  // W25 V1.01: the grid states WHICH prior document its numbers were built with,
+  // so an export a data scientist downloads can be reconciled against the
+  // document they imported. 0 where the snapshot was built without one.
+  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
 
 /**
@@ -266,13 +269,17 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
     // evidence it sits next to, and never silent: a slot with nothing to report
     // carries zeros, not an absent member.
     const governance = await readSlotGovernance(c.env, tenant, now);
+    // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
+    // for an item it does not carry is not counted as something the slot has
+    // learned about. The catalogue is the one this answer already read.
+    const catalogue = new Set(catalog.pieces.map((p) => p.id));
     let budget = 200;
     for (const page of index.pages) for (const s of page.slots) {
       if (budget-- <= 0) { s.evidence = null; continue; }
       s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
       try {
         const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null;
+        s.evidence = slotEvidence(snap, catalogue);
       } catch { s.evidence = null; }
     }
   }
@@ -305,7 +312,10 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
-  const page = pageOf(exploringRows(snapshot, names, floor), cur ? cur.o : 0, limit);
+  // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
+  // the catalogue carries; a prior row for an id it does not carry is never
+  // offered here. The catalogue is the one this answer already read.
+  const page = pageOf(exploringRows(snapshot, names, floor, new Set(names.keys())), cur ? cur.o : 0, limit);
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
   return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, ...effective, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
@@ -343,10 +353,11 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   ]);
   const index = slotsIndex(slots, catalog, learn, now);
   const entries = index.pages.flatMap((p) => p.slots);
+  const queueCatalogue = new Set(catalog.pieces.map((p) => p.id));
   let budget = 200;
   for (const s of entries) {
     if (budget-- <= 0) { s.evidence = null; continue; }
-    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
+    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = slotEvidence(snap, queueCatalogue); } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
   // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,

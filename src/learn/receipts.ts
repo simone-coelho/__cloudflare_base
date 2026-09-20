@@ -59,6 +59,20 @@ export interface LiftTerms {
   p_hat: number;
   /** clamp(p̂/p₀), exactly as the decision applied it. */
   lift: number;
+  /**
+   * W25 V1.01 (doc 35 §2 N22, kit 02:316): the OBSERVED exposures behind this
+   * estimate, kept apart from `n0`, the strength the estimate was shrunk with.
+   * An item ranked on an imported prior alone has `n: 0` and `n0: 200`, and a
+   * reader can see that the platform observed nothing: prior strength is never
+   * presented as exposure.
+   */
+  n: number;
+  /** The shrinkage strength: the imported prior's `n_equiv` where one applied, else the slot's n₀. */
+  n0: number;
+  /** The imported prior in force for this cell, when there was one. */
+  prior?: { p: number; n: number };
+  /** The prior document revision this decision was made under; 0 when none. */
+  prior_version: number;
   shown: { p0: string; p_hat: string; lift: string };
 }
 
@@ -119,10 +133,17 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const applied = l.gamma <= 0 ? 'shown on the receipt, not applied (trust 0)'
         : l.applied === 0 ? `shown on the receipt; at trust ${r3(l.gamma)} it moved this score by nothing`
           : `applied at trust ${r3(l.gamma)}`;
+      // W25 V1.01 (N22): where an imported prior carried this estimate, the
+      // sentence names it and its strength beside the observed exposures, so no
+      // reader takes prior strength for something the platform saw. The clause
+      // is written only where the decision recorded a prior, so a receipt
+      // without one keeps the sentence it has always had.
+      const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units), ${applied}.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
+        n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');

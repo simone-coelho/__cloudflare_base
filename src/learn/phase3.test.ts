@@ -56,11 +56,25 @@ describe('imported priors (doc 22 §8)', () => {
       expect(liftFor(snap, 'cold', { ...cell, visit_bucket: '2-3' })).toMatchObject({ level: 1, prior: { p: 0.12, n: 50 } });
     }
     expect(liftFor(snapshot({ rows: [{ ...fine, n_equiv: 20 }] }), 'cold', cell)).toBeNull();
-    // Both rows are accepted by the existing loose grammar. Their old flat keys
-    // collided; this change does not make the second cell a supported ladder key.
+    // Their old flat keys collided; the second cell is not a supported ladder
+    // key, and the canonical grammar refuses it by name (ruling R151; unit
+    // W25.G1.01: `'*'` or a prefix of the ladder order c=, v=, s=, r=, a=).
+    // `indexPriors` below does not validate, so the flat-key separation is
+    // still proved on exactly these two identities.
     const rows = [{ ...fine, item: 'a', p_prior: 0.1 }, { ...fine, item: 'a|c=direct', cell: 'v=1', p_prior: 0.2 }];
-    expect(validatePriors({ rows }).ok).toBe(true);
-    expect(validatePriors({ rows: [...rows, rows[0]] }).ok).toBe(false);
+    const refused = validatePriors({ rows });
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) {
+      expect(refused.errors.join(' ')).toMatch(/rows\[1\]\.cell/);
+      expect(refused.errors.join(' ')).toMatch(/c=.*v=.*s=.*r=.*a=/);
+    }
+    // The duplicate check, on ladder-valid rows, so it proves duplication and
+    // not the grammar: the same slot, item and cell twice is refused by row.
+    const ladder = [{ ...fine, item: 'a', p_prior: 0.1 }, { ...coarse, item: 'a', p_prior: 0.2 }];
+    expect(validatePriors({ rows: ladder }).ok).toBe(true);
+    const duplicated = validatePriors({ rows: [...ladder, ladder[0]!] });
+    expect(duplicated.ok).toBe(false);
+    if (!duplicated.ok) expect(duplicated.errors.join(' ')).toMatch(/rows\[2\]: duplicate/);
     const indexed = indexPriors({ rows }, 'hero');
     expect(indexed.size).toBe(2); expect(indexed.get('a')!.get('c=direct|v=1')).toEqual({ p: 0.1, n: 400 });
     expect(indexed.get('a|c=direct')!.get('v=1')).toEqual({ p: 0.2, n: 400 });

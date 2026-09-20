@@ -40,6 +40,23 @@ W20 G1 — a refused pin is not silent. The snapshot answer (`GET`/`POST /v1/:te
 
 W20 G2 — that member is bounded, and the operator has counters of their own. The answer carries at most 50 entries, in page and slot order, with `refusedCount` (every refusal on the page) and `omittedCount` (how many the sample left out) beside them; the bound is applied before the answer's size guard, so no operator-authored slot document can turn a served snapshot into a 503. The served snapshot is the shopper's surface and stays a per-page fact. What happened over time belongs to the operator: `GET /v1/:tenant/learn/slots?evidence=1` adds `governance` to each slot entry, under the same flag and the same 200-slot budget as `evidence` — `{since, scope, refusedPinCount, refusedPins:[{pinnedPieceId, reason, count}], shortTakeCount, shortTakePositions}`, counting distinct occurrences on both hosts and both arms since the horizon `since` states (30 days, after which the counts restart), with zero reported as zero rather than omitted, and the `refusedPins` detail bounded per slot while the counts stay whole. `scope` states the scope those counts are kept at and always reads `"tenant"`: one counter document per tenant, counted across all of the tenant's brands, while the `evidence` beside it is kept per brand — so a `brand=` page reads its tenant's counts on the row beside that brand's own learning evidence. `POST`/`GET /v1/:tenant/monitor` answers the same two counts summed for the tenant, as `governance: {since, scope, refusedPinCount, shortTakeCount}`; it is read from those counters and never from the monitor's own probe, whose compose of the tenant's page is excluded where the counters are written. Two things guarantee that exclusion and both are part of this contract: the probe composes unsigned with tracking refused and declares `selfCheck` — no shopper granted it anything, its own cookie header withholds tracking consent, and the counters are skipped for any compose that declares the flag — so either guarantor alone already keeps the probe out of a tenant's counts, and neither can be removed without contradicting this reference. `shortTakeCount` counts the times a pinned slot served what it could and still fell short of its `take`, with `shortTakePositions` the positions left empty across them. Where that slot served something it also wrote records, so `explain.shortTake = {take, served, empty, sentence}` rides each of them and `GET /v1/:tenant/visitors/:visitorId/receipts` reads the sentence out on `why`. A slot whose pin was refused wrote no record at all, so it has no receipt and these counters are its only home. The counters hold slot names, the merchandiser's pinned piece ids, refusal reasons and counts — configuration, never shopper state — are written fire and forget after the answer, never read on the decision path, and are a best-effort diagnostic rather than an accounting ledger.
 
+W25 — cold priors, on the operator surfaces. `PUT /content/priors` (JSON rows or `text/csv`) refuses, 422, a
+cell that is not `*` or a prefix of the ladder order `c=`, `v=`, `s=`, `r=`, `a=`, naming the row and the
+expected order; a document whose `cellGrammar {name, version, order}` declares any other grammar, naming the
+migration; and a row whose slot learns in `revenue` or `margin`, naming the slot, the objective and the unit
+a `p_prior` is in. The objective is read from the tenant's own published learning document; when that
+document cannot be read the import is refused (503) rather than published unchecked. `POST
+/v1/:tenant/learn/publish` now publishes a slot whose only evidence is an imported prior (`events: 0`, the
+prior-derived rows present); a slot with neither events nor priors still answers `published: false`.
+`GET /v1/:tenant/lift/rows` carries `priorVersion` — the prior document revision the snapshot was built with,
+0 when none — and every row carries `liftReference` (`slot-rate`, or `none` where the slot has no rate in that
+cell); the operator console's grid CSV gains a last `prior_version` column. `GET /v1/:tenant/learn/slots?evidence=1`
+counts in `evidence.items` only items the tenant's catalogue carries, and `GET /v1/:tenant/learn/exploring`
+lists only those, so a prior for an item the catalogue does not carry is never offered as what exploration
+should serve next. Day reports carry `gridPriors {applied, priorVersion}`, derived from what their grids were
+built with; the day folded from hour aggregates declares `applied: false` because an hour carries no prior
+revision.
+
 `POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
 read on the scheduled run and never on a decision path.
 
