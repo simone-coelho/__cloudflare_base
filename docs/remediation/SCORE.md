@@ -5,14 +5,14 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 9 files · typecheck GREEN
+Units 157/164 · W closed 4/26 (W16–W41) · suite 1988/2076 · residual 88 in 11 files · typecheck GREEN
 
 ## W items
 
 | W | Declared | Green | Closed | Review | Review sha |
 |---|---|---|---|---|---|
 | W05 | 2 | 2 | no | — | — |
-| W06 | 2 | 1 | no | — | — |
+| W06 | 2 | 0 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
 | W16 | 68 | 68 | yes | PASS | b496f72e31a06ee2d997deb3b70b1941fbbf39b7 |
@@ -20,7 +20,8 @@ Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
-| W21 | 10 | 9 | no | — | — |
+| W21 | 16 | 13 | no | — | — |
+| W22 | 10 | 9 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -29,7 +30,7 @@ Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 
 |---|---|---|
 | W05.BASE.01 | green | 1 |
 | W05.BASE.05 | green | 2 |
-| W06.BASE.01 | green | 1 |
+| W06.BASE.01 | red | 1 |
 | W06.BASE.02 | red | 1 |
 | W09.BASE.02 | green | 1 |
 | W11.BASE.01 | green | 2 |
@@ -168,24 +169,48 @@ Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 
 | W21.C1.02 | green | 1 |
 | W21.C1.03 | green | 1 |
 | W21.C1.04 | green | 2 |
+| W21.C1.05 | red | 2 |
+| W21.C1.06 | green | 1 |
+| W21.C1.07 | green | 1 |
 | W21.E1.01 | green | 2 |
 | W21.E1.02 | green | 2 |
 | W21.E1.03 | green | 1 |
 | W21.E1.04 | green | 2 |
 | W21.E1.05 | green | 4 |
+| W21.E1.06 | green | 2 |
+| W21.E1.07 | red | 2 |
+| W21.E1.08 | green | 2 |
 | W21.P1.01 | unspecified | 0 |
+| W22.A1.01 | green | 2 |
+| W22.D1.01 | green | 2 |
+| W22.D1.02 | green | 2 |
+| W22.D1.03 | green | 1 |
+| W22.P1.01 | unspecified | 0 |
+| W22.R1.01 | green | 2 |
+| W22.R1.03 | green | 2 |
+| W22.R1.04 | green | 1 |
+| W22.R1.05 | green | 1 |
+| W22.S1.01 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  W06.12 preserves full managed grouping and positions for byte-heavy100-message cohorts and indivisible fallback
+-  W35.02 visit context unit:W06.BASE.01 a cold /realtime/personalization/:subject read on a consent-only owned record serves without write activity instead of answering 500 for a missing retention birth carries first-paint and live return context into actual both-host cells without read activity
+-  W35.03 recoverable identity transfer W35.04 binds link grants and atomically retains reset erasure and retention barriers through restart and failed commits
+-  W35.03 recoverable identity transfer W35.05 pins prepared transfers to serialized target authority across erasure admission failures and restart
+-  W35.03 recoverable identity transfer W35.06 preserves intent registration and generation witnesses through checkpointed paged source erasure
+-  unit:W21.C1.05 host: both report GETs answer 401 without a credential and 200 with the credential the build POST accepts, in the deployment default auth mode
+-  unit:W21.C1.05 sdk: the shipped console screen renders the measurement for an operator the platform authenticates, and prints no number for one it refuses
+-  unit:W21.E1.07 host: the serving path answers without walking the salt history, states an unknown honestly, and keeps `experiment.id` as the join key
+-  unit:W21.E1.07 logic: past the history the platform can read, the salt version is an explicit unknown rather than a smaller number, and a partial walk is never cached as a number
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 30cec419bf7a0c109945768c2de0ee4e5793caa2e5eaae23a4ba8dbf2853ad28 |
+| units sha256 | 0679c9c5c9ca1a313be3627ccdfe616b08107d7de7b368ea5aa35f5161dbc9b2 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -196,7 +221,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 2783f4d910dafbb2af11dc74fa1ca229fdb004ae24c054d4291b544341468963 |
-| commit | 4389436c81e7939e8a07852d0e8e2c9bcabef912 |
-| generated | 2026-09-20T05:37:54.397Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | 3d8617efc46690a7cff2e342e228a15135c12f90208add11faa871bf84a2be5b |
+| commit | 68112e5b20c018204c08a08cc9c295e4adfa06be |
+| generated | 2026-09-20T06:22:46.885Z |
