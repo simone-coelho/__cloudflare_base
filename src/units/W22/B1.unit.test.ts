@@ -1317,7 +1317,12 @@ describe('unit:W22.A1.01', () => {
     const oYesterday = click(m.env, dYesterday, Date.parse(previousDay + 'T12:05:00Z'), 'w22-b1-contract-yesterday');
     await throughTheLedger(m, [dYesterday], [oYesterday], Date.now());
     await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: previousDay }, W22_LEARN, null, Date.now(), m.env as never);
-    const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { attributionContract?: AttributionContract };
+    const stored = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { _summary?: unknown; attributionContract?: AttributionContract };
+    // The saved document carries the summary prefix the serializer adds; the
+    // plain report underneath is what the serializer takes back.
+    const { _summary, ...plain } = stored;
+    expect(_summary, 'the fixture reads a canonically saved report, summary marker and all').toBeTruthy();
+    const earlier = plain as DayReport & { attributionContract?: AttributionContract };
     earlier.attributionContract = { ...(earlier.attributionContract ?? { name: 'attribution', history: HISTORY,
       windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } }), version: 0 };
     // Written by the engine's own canonical serializer, not by JSON.stringify:
