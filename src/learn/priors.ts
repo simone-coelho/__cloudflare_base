@@ -12,17 +12,97 @@ import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { parseCsv } from '@/content/import';
 
 export interface PriorRow { slot: string; item: string; cell: string; p_prior: number; n_equiv: number; measurementBasis?: import('@/content/types').MeasurementBasis }
-export interface PriorsDoc { version?: string; rows: PriorRow[] }
+/** What a document says about the grammar its cells were written in. */
+export interface DeclaredCellGrammar { name: string; version: number; order: string[] }
+export interface PriorsDoc { version?: string; cellGrammar?: DeclaredCellGrammar; rows: PriorRow[] }
 export const EMPTY_PRIORS: PriorsDoc = { version: 'prior-empty', rows: [] };
 
+/**
+ * W25 G1.01 (F20 §4.7, doc 22 §5.4): the cell grammar IS the ladder grammar.
+ *
+ * A prior's cell is either `*` or a PREFIX of the ladder key order the snapshot
+ * materializes (`levelKeys`, `src/learn/stats.ts`), pair by pair. Anything else
+ * — the pairs in another order, a key the ladder does not have, a level skipped,
+ * a level past the end — names a key no snapshot will ever build, so importing
+ * it used to be a silent no-op: the document was accepted, the operator was told
+ * `ok`, and the prior reached nothing.
+ *
+ * The order is VERSIONED because it has already changed once (CW29 inserted the
+ * journey stage `s=` between the visit bucket and the region), and a file
+ * exported under the older order is a different file even where its key letters
+ * coincide. A document may DECLARE the grammar it was exported under; declaring
+ * anything but the current one is refused with `migration` named, rather than
+ * being read as if the letters meant the same thing. Declaring nothing means the
+ * current grammar, so every document written before this member existed, and
+ * every warehouse CSV, is still read exactly as it was.
+ */
+export interface CellGrammar {
+  /** The grammar's name, so a document says which grammar and not only which revision. */
+  name: string;
+  /** Bumped whenever the ladder order changes. */
+  version: number;
+  /** The ladder's key letters, coarsest first. */
+  order: readonly string[];
+  /** What a file exported under another grammar has to do; named in every refusal. */
+  migration: string;
+}
+
+export const CELL_GRAMMAR: CellGrammar = {
+  name: 'ladder-cell',
+  // 1 was the pre-CW29 ladder (`c=`, `v=`, `r=`, `a=`); 2 carries the journey stage.
+  version: 2,
+  order: ['c', 'v', 's', 'r', 'a'],
+  migration: 're-export the prior file with every cell written as `*` or a prefix of the current ladder order, then import it again',
+};
+
+/** `c=, v=, s=, r=, a=` — the order as a refusal can print it. */
+const orderWords = (order: readonly string[]): string => order.map((k) => `${k}=`).join(', ');
+
+/**
+ * Why this cell is not a ladder cell, or null when it is. Pure and exported so
+ * the import door, the CSV reader and any future writer share one grammar.
+ */
+export function cellGrammarError(cell: string): string | null {
+  if (cell === '*') return null;
+  const order = CELL_GRAMMAR.order;
+  const pairs = cell.split('|');
+  const expected = `'*' or the ladder's own keys in order — ${orderWords(order)} — as a prefix`;
+  if (pairs.length > order.length) return `${expected}; '${cell}' names ${pairs.length} levels and the ladder has ${order.length}`;
+  for (let i = 0; i < pairs.length; i++) {
+    const at = pairs[i]!.indexOf('=');
+    if (at < 1) return `${expected}; '${cell}' is not written as key=value pairs joined by |`;
+    const key = pairs[i]!.slice(0, at);
+    if (key !== order[i]) return `${expected}; '${cell}' has '${key}=' at level ${i + 1}, where this ladder has '${order[i]}='`;
+  }
+  return null;
+}
+
 const SLUG = /^[a-z0-9][a-z0-9:_.-]{0,63}$/i;
-/** '*' or `k=v` pairs joined by '|', in the ladder's order (doc 22 §5.4): the same keys the snapshot uses. */
+/** '*' or `k=v` pairs joined by '|' (doc 22 §5.4). */
 const CELL = /^(\*|[a-z_]+=[^|]*(\|[a-z_]+=[^|]*)*)$/;
+
+/**
+ * The grammar this document declares, checked against the one this engine reads.
+ * Absent is the current grammar; anything else is refused by name.
+ */
+function grammarError(declared: unknown): string | null {
+  if (declared === undefined) return null;
+  const g = declared && typeof declared === 'object' && !Array.isArray(declared) ? declared as Record<string, unknown> : null;
+  const order = g && Array.isArray(g.order) ? (g.order as unknown[]).map((k) => String(k)) : null;
+  const same = !!g && g.name === CELL_GRAMMAR.name && g.version === CELL_GRAMMAR.version
+    && order !== null && order.length === CELL_GRAMMAR.order.length && order.every((k, i) => k === CELL_GRAMMAR.order[i]);
+  if (same) return null;
+  return `cellGrammar: this engine reads ${CELL_GRAMMAR.name} version ${CELL_GRAMMAR.version}, whose cells are ${orderWords(CELL_GRAMMAR.order)} in that order; this document declares ${JSON.stringify(declared)} — ${CELL_GRAMMAR.migration}`;
+}
 
 export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return { ok: false, errors: ['priors: must be an object with rows'] };
   const c = candidate as Record<string, unknown>;
   if (!Array.isArray(c.rows)) return { ok: false, errors: ['rows: array required'] };
+  // A document exported under another grammar is refused whole: its rows mean
+  // something else, so reading them under this ladder would be a guess.
+  const grammar = grammarError(c.cellGrammar);
+  if (grammar) return { ok: false, errors: [grammar] };
   const errors: string[] = [];
   const rows: PriorRow[] = [];
   const seen = new Set<string>();
@@ -44,7 +124,40 @@ export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> 
     if (errors.length === before) rows.push({ slot, item, cell, p_prior: p, n_equiv: n, ...(x.measurementBasis !== undefined ? { measurementBasis: x.measurementBasis as import('@/content/types').MeasurementBasis } : {}) });
   });
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { ...(typeof c.version === 'string' ? { version: c.version } : {}), rows } };
+  return { ok: true, value: {
+    ...(typeof c.version === 'string' ? { version: c.version } : {}),
+    // Retained exactly as the current grammar, so a reader of the stored
+    // document can see which ladder produced its cells.
+    ...(c.cellGrammar !== undefined ? { cellGrammar: { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] } } : {}),
+    rows,
+  } };
+}
+
+/**
+ * W25 Z1.01 (F20 §1.5): is this document's unit the unit the slot learns in?
+ *
+ * `p_prior` is constrained to a probability, and the kit promises "the rate your
+ * team estimated elsewhere IN THE SELECTED OBJECTIVE UNIT". A slot whose
+ * objective is money (`revenue`, `margin`) does not learn a probability, so a
+ * `[0,1]` prior on it is not a weak belief, it is a number in the wrong unit:
+ * applied silently it shrinks the item's estimate toward ~0 money per exposure
+ * and demotes it to the lift floor. The platform refuses the row rather than
+ * guessing a conversion; WHAT a money prior should look like is an owner
+ * decision (D09) and no default is invented here.
+ *
+ * Pure: the caller supplies the objective per slot from the tenant's own
+ * published learn document, so nothing about any tenant's vocabulary is compiled
+ * in. One error per offending row, named by row index, slot, objective and unit.
+ */
+export function priorUnitErrors(doc: PriorsDoc, objectiveOf: (slot: string) => 'unit' | 'revenue' | 'margin' | null | undefined): string[] {
+  const errors: string[] = [];
+  (doc.rows ?? []).forEach((r, i) => {
+    const objective = objectiveOf(r.slot) ?? 'unit';
+    if (objective === 'unit') return;
+    errors.push(`rows[${i}].p_prior: slot "${r.slot}" learns in ${objective}, and an imported prior is a probability (0..1); `
+      + `this engine will not read one unit as the other, so the row is refused instead of being applied in the wrong unit`);
+  });
+  return errors;
 }
 
 /** The five columns, in any order, one row per prior. Blank cell means '*'. */
