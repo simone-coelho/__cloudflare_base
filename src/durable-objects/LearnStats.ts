@@ -6,13 +6,15 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { loadDay, REPORT_LIMITS } from '@/learn/report';
+import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
-import { indexPriors, PRIORS_KIND } from '@/learn/priors';
-import { attributionContractOf } from '@/learn/route';
+import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
+import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
@@ -47,6 +49,49 @@ type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?:
  * place that can tell two outcomes apart, and it does that before it sends.
  */
 const SEEN_KEY = 'learnSeen';
+/**
+ * W23 H1.01: the basis the operator's explicit reset started this object again
+ * on. Its own storage key, written in the same transaction as the reset, so a
+ * snapshot published afterwards can say what it was built from and no reader
+ * mistakes post-reset counters for the tenant's whole history. Absent on an
+ * object that was never repaired; charged against the object's total bound.
+ */
+const REBUILT_KEY = 'learnRebuilt';
+/**
+ * W24 G1.01/G1.02: the authorized ACCUMULATION transition this object is running
+ * under, and the moment its generation started counting.
+ *
+ * It exists because an accumulation change can never arrive on an ordinary
+ * write: `candidate()` refuses one with 409, so counters built under one
+ * objective are never silently reinterpreted under another. The only way past
+ * that refusal is an operator act on `POST /v1/:tenant/learn/generation`, which
+ * discards the counters and starts a fresh generation — and this record is what
+ * the object keeps of it, so that
+ *   · the published snapshot can name when learning restarted, even when the
+ *     fresh generation has counted nothing yet and has no evidence to date
+ *     itself from, and
+ *   · `priorsFor` can tell an accumulation an operator authorized from a
+ *     configuration that simply drifted away from the tenant's document. The
+ *     estimator half is still required to match the published document exactly;
+ *     only the accumulation an audited operation moved this object to is
+ *     accepted beside it, and an ordinary write under the document's own
+ *     configuration is still refused until the document follows.
+ *
+ * Its own storage key, charged against the object's total bound, and discarded
+ * with the counters it describes by every reset.
+ */
+const GENERATION_KEY = 'learnGeneration';
+interface AccumulationTransition {
+  /** The audited operation that authorized it. */
+  operationId: string;
+  /** When the generation started counting: the snapshot's `restartedAt`. */
+  at: number;
+  reward: RewardType;
+  objective: 'unit' | 'revenue' | 'margin';
+  measurementBasis: MeasurementBasis;
+  /** W24 T1.02: the retained day this generation was folded from, when it was. */
+  rebuiltFrom?: { date: string; decisions: number; outcomes: number };
+}
 const SEEN_MAX_BYTES = 32 * 1024;
 const SEEN_MAX_ROWS = 512;
 interface SeenExposure { id: string; digest: string; ts: number }
@@ -162,9 +207,19 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
     }
     const cell = row.cell as unknown as Cell;
     for (const key of levelKeys(cell)) keyBound(key);
-    const ts = row.ts === undefined || row.ts === null ? Date.now() : Number(row.ts);
+    // Retain the absent/null-row contract: only an ABSENT time is the object's
+    // own present. W23 T1.01: a time that is PRESENT must be what the event door
+    // itself requires — a safe integer inside the calendar (`isEventTimestamp`,
+    // `src/events/actionTypes.ts:37`; HANDOFF-2026-09-16 §6 :227 "valid
+    // calendar/integer timestamps") — so this object is never laxer than the
+    // door in front of it. `Number(true)` is 1 and `new Date(1.5)` is a valid
+    // date, so neither a boolean nor a fractional millisecond may be coerced
+    // into evidence; both are refused before any counter is touched.
+    const supplied = row.ts !== undefined && row.ts !== null;
+    const ts = supplied ? Number(row.ts) : Date.now();
     const weight = row.weight === undefined || row.weight === null ? 1 : Number(row.weight);
-    if (!time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
+    if ((supplied && (typeof row.ts !== 'number' || !Number.isSafeInteger(row.ts)))
+      || !time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
     if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     if (row.digest !== undefined && (typeof row.digest !== 'string' || !/^[a-f0-9]{64}$/.test(row.digest))) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
@@ -286,6 +341,21 @@ export class LearnStats {
         const snapshot = await this.serialize(async () => { const d = await this.loadIfAny(); return d ? this.snapshot(d) : null; });
         return json({ ok: true, snapshot });
       }
+      /**
+       * W24 G1.02: the authorized accumulation transition, on its OWN path.
+       * `/generation` is this object's fence endpoint and stays exactly what it
+       * is — the numeric per-item recovery generation a managed plan is pinned
+       * to — and this is the transition that changes what the counters MEAN.
+       */
+      if (path === '/transition') {
+        const b = await input(request);
+        if (!component(b.tenant) || !component(b.brand) || !component(b.slot)
+          || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+          || (b.reward !== undefined && (typeof b.reward !== 'string' || !rewards.has(b.reward)))
+          || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
+          || (b.rebuildFrom !== undefined && (typeof b.rebuildFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.rebuildFrom)))) throw invalid();
+        return await this.serialize(() => this.transition(b));
+      }
       if (path === '/publish') {
         const snap = await this.serialize(() => this.publish());
         return json({ ok: true, published: snap !== null, snapshot: snap });
@@ -301,7 +371,11 @@ export class LearnStats {
               if (!Number.isSafeInteger(fence.whole + 1)) throw recovery();
               await this.state.storage.transaction(async tx => {
                 await tx.put('learnFence', { whole: fence.whole + 1, items: {} });
-                await tx.delete('learn'); await tx.delete(SEEN_KEY);
+                // A basis describes the repair the counters standing now were
+                // started on. These counters are going, so it goes with them
+                // rather than being carried onto evidence it never named, and
+                // so does the accumulation transition that started them (W24).
+                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(REBUILT_KEY); await tx.delete(GENERATION_KEY);
               });
             }
           } finally { this.data = null; }
@@ -409,6 +483,11 @@ export class LearnStats {
       // W22 D1.02: the unmanaged online path's own idempotence. The managed
       // path already proves it with effect markers, so the journal is read only
       // where there are none.
+      // W23 T1.01/T1.02: the object's own present, read once so every row of one
+      // batch is folded against the same clock and the arithmetic cannot depend
+      // on how long the batch took. Rows stamped before it keep their own time
+      // exactly; a row stamped after it is still counted, at the present.
+      const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
@@ -455,8 +534,8 @@ export class LearnStats {
         const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
           visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
-        if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats);
-        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats);
+        if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
+        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
         this.fit(candidate);
         newlyApplied++;
       }
@@ -522,6 +601,114 @@ export class LearnStats {
     if (previous === null || previous > next) await this.state.storage.setAlarm(next);
   }
 
+  /**
+   * W24 G1.02. The whole transition, under this object's own serialization:
+   * the superseded published version is archived before anything replaces it,
+   * the fence advances so nothing prepared against the old generation can land,
+   * the counters go (or are rebuilt from one retained day), and the new
+   * generation is published to the one key the serving path reads.
+   */
+  private async transition(b: Record<string, unknown>): Promise<Response> {
+    const tenant = b.tenant as string, brand = b.brand as string, slot = b.slot as string, operationId = b.operationId as string;
+    const current = await this.loadIfAny();
+    if (current && (current.tenant !== tenant || current.brand !== brand || current.slot !== slot)) throw invalid();
+    // The ESTIMATOR is never the operator's to move here: it is the tenant's
+    // published document's, exactly as an ordinary write reads it.
+    const pin = await pinPublication(this.env, tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+    const dials = learn.value.slots?.[slot];
+    const config: SlotLearnConfig = {
+      reward: (b.reward as RewardType | undefined) ?? current?.config.reward ?? dials?.reward ?? 'click',
+      stats: learn.value.stats ?? DEFAULT_STATS,
+      objective: (b.objective as 'unit' | 'revenue' | 'margin' | undefined) ?? current?.config.objective ?? dials?.objective ?? 'unit',
+      measurementBasis: current?.config.measurementBasis ?? dials?.measurementBasis ?? 'served-v1',
+    };
+    if (!configValid(config)) throw invalid();
+    const at = Date.now();
+    // What this transition SUPERSEDES, preserved under its own version before
+    // the new generation replaces it. A retained archive is never overwritten:
+    // the body already stored under that version is the one it published.
+    let archivedVersion: number | null = null;
+    const head = await this.env.CACHE.get(liftKey(tenant, brand, slot), 'json') as LiftSnapshot | null;
+    if (object(head) && Number.isSafeInteger(head.version) && head.version > 0
+      && head.tenant === tenant && head.brand === brand && head.slot === slot) {
+      const body = JSON.stringify(head);
+      if (utf8.encode(body).length > LEARN_LIMITS.snapshotBytes) throw capacity();
+      try {
+        await this.env.STORAGE.put(liftArchiveKey(tenant, brand, slot, head.version), body, {
+          onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
+        });
+      } catch { throw new Refusal(503, 'statistics archive unavailable'); }
+      archivedVersion = head.version;
+    }
+    const fence = await this.fence(), nextFence: GenerationFence = { whole: fence.whole + 1, items: {} };
+    if (!Number.isSafeInteger(nextFence.whole)) throw recovery();
+    let stats: StatsState = { ...emptyStats(), bounded: { depth: 5, omitted: { n: { s: 0, t: 0 }, s: {} }, omittedEvents: 0, selection: 'first-seen' } };
+    let rebuiltFrom: AccumulationTransition['rebuiltFrom'];
+    if (typeof b.rebuildFrom === 'string') {
+      const day = await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at);
+      stats = { ...day.stats, bounded: stats.bounded };
+      rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes };
+    }
+    const candidate: Stored = { tenant, brand, slot, config, stats };
+    this.fit(candidate);
+    const record: AccumulationTransition = { operationId, at, reward: config.reward,
+      objective: config.objective ?? 'unit', measurementBasis: config.measurementBasis ?? 'served-v1',
+      ...(rebuiltFrom ? { rebuiltFrom } : {}) };
+    // W23 H1.01's vocabulary: a basis describes the repair the counters standing
+    // now were started on. A rebuild has one; a transition that discards them has
+    // none, so any basis describing the discarded counters goes with them.
+    const basis: RebuildBasis | null = rebuiltFrom
+      ? { basis: 'ledger-rebuild', operationId, at, generation: nextFence.whole, date: rebuiltFrom.date } : null;
+    await this.totalBound(candidate, nextFence, undefined, undefined, undefined, record);
+    try {
+      await this.state.storage.transaction(async tx => {
+        await tx.put('learnFence', nextFence);
+        await tx.put('learn', candidate);
+        await tx.put(GENERATION_KEY, record);
+        await tx.delete(SEEN_KEY);
+        if (basis) await tx.put(REBUILT_KEY, basis); else await tx.delete(REBUILT_KEY);
+      });
+    } finally { this.data = null; }
+    // The fresh generation is published at once, so no isolate and no cache can
+    // go on serving the generation this one superseded.
+    let publicationOutcome = 'acknowledged';
+    try { await this.publish(true); } catch { publicationOutcome = 'unknown'; }
+    return json({ ok: true, generation: accumulationGeneration({ objective: record.objective, reward: record.reward, tauLearnMs: config.stats.tauLearnMs }, at),
+      restartedAt: at, archivedVersion, publicationOutcome, ...(rebuiltFrom ? { rebuiltFrom } : {}) });
+  }
+
+  /**
+   * W24 T1.02: one retained day, folded into this slot's counters the way the
+   * batch folds it, under the tenant's own published learning policy. A day the
+   * reader cannot read WHOLE is refused rather than folded in part: a rebuild
+   * that silently dropped evidence would be exactly the untrustworthy rebuild
+   * the ruling forbids.
+   */
+  private async rebuildFromLedger(tenant: string, brand: string, slot: string, config: SlotLearnConfig,
+    learn: Parameters<typeof policyOf>[0], date: string, at: number): Promise<{ stats: StatsState; decisions: number; outcomes: number }> {
+    const decisions = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, date, 'decision', REPORT_LIMITS.records);
+    const outcomes = await loadDay<import('@/ledger/records').OutcomeRecord>(this.env.STORAGE, tenant, date, 'outcome', REPORT_LIMITS.records);
+    if (decisions.truncated || outcomes.truncated) throw capacity();
+    return foldRetainedDay({ tenant, brand, slot, config, policy: policyOf(learn),
+      decisions: decisions.records, outcomes: outcomes.records, at });
+  }
+
+  /** W24 G1.01/G1.02: the authorized transition on record, or undefined. Damaged is refused, never ignored. */
+  private async accumulationTransition(): Promise<AccumulationTransition | undefined> {
+    const value: unknown = await this.state.storage.get(GENERATION_KEY);
+    if (value === undefined) return undefined;
+    if (!fields(value, ['operationId', 'at', 'reward', 'objective', 'measurementBasis', 'rebuiltFrom'])
+      || typeof value.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(value.operationId) || !time(value.at)
+      || typeof value.reward !== 'string' || !rewards.has(value.reward)
+      || !['unit', 'revenue', 'margin'].includes(String(value.objective))
+      || !['served-v1', 'rendered-v1'].includes(String(value.measurementBasis))
+      || (value.rebuiltFrom !== undefined && (!fields(value.rebuiltFrom, ['date', 'decisions', 'outcomes'])
+        || typeof value.rebuiltFrom.date !== 'string' || !Number.isSafeInteger(value.rebuiltFrom.decisions)
+        || !Number.isSafeInteger(value.rebuiltFrom.outcomes)))) throw recovery();
+    return value as unknown as AccumulationTransition;
+  }
+
   private async snapshot(d: Stored): Promise<LiftSnapshot> {
     const priors = await this.priorsFor(d);
     // W22 A1.01: the online path has the tenant's published policy in scope
@@ -547,18 +734,79 @@ export class LearnStats {
       for (let k: string | null = key; k !== null; k = parentKey(k)) slotKeys.add(k);
     }
     if (count + slotKeys.size > LEARN_LIMITS.counters) throw capacity();
-    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract);
+    // W24 G1.01: a generation this object was actually restarted into dates
+    // itself from that restart, and not from evidence it may not have yet.
+    const restarted = await this.accumulationTransition();
+    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at);
     snap.witness = await this.witness(d, await this.fence());
+    // W23 H1.01: only an object that was actually repaired names a basis.
+    const basis = await this.rebuiltFrom();
+    if (basis) snap.rebuiltFrom = basis;
     if (bytes(snap) > LEARN_LIMITS.snapshotBytes) throw capacity();
     return snap;
   }
 
-  private async publish(): Promise<LiftSnapshot | null> {
-    const d = await this.loadIfAny();
-    if (!d || d.stats.events === 0) return null;
+  /**
+   * W25 N1.01 (doc 22 §8, F20 §4.5): the slot this object IS, for a slot that
+   * holds imported priors and has never recorded an event.
+   *
+   * An object learns its tenant, brand and slot from the first write it is sent.
+   * A slot whose only evidence is a prior has had no write, so without this it
+   * could never publish the estimate the prior gives it, and a cold item would
+   * wait for the very exposure the prior exists to avoid needing. The identity
+   * is not guessed: it is the name this object was addressed by, CHECKED against
+   * the namespace the way every other object here checks its own address
+   * (`state.id` against `idFromName`, as `ShopperReflex` and `RegionTrend` do),
+   * so an id that was not derived from a slot name answers nothing at all. The
+   * configuration comes from the tenant's own published learning document, the
+   * same read `priorsFor` verifies this object's stored configuration against.
+   *
+   * Nothing is written to storage here and `this.data` is not set: the estimator
+   * still has no counters, and the first real write creates them as it always
+   * did. This is an address and a published configuration, never evidence.
+   */
+  private async priorOnlyIdentity(): Promise<Stored | null> {
+    const namespace = this.env.LEARN_STATS;
+    const id: unknown = this.state.id;
+    if (!namespace || !id) return null;
+    const declared = (id as { name?: unknown }).name;
+    const named = typeof declared === 'string' ? declared : String(id);
+    const parts = named.split(':');
+    if (parts.length < 3) return null;
+    const [tenant, brand, ...rest] = parts;
+    const slot = rest.join(':');
+    if (!component(tenant) || !component(brand) || !component(slot)) return null;
+    if (namespace.idFromName(statsName(tenant, brand, slot)).toString() !== String(id)) return null;
+    const pin = await pinPublication(this.env, tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+    const dials = learn.value.slots?.[slot];
+    return { tenant, brand, slot, stats: emptyStats(),
+      config: { reward: dials?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
+        objective: dials?.objective ?? 'unit', measurementBasis: dials?.measurementBasis ?? 'served-v1' } };
+  }
+
+  /**
+   * `force` (W24 G1.02): publish even when there is nothing to publish yet. A
+   * generation transition MUST reach `liftKey`, because the point of it is that
+   * the superseded generation stops being served; a fresh generation with
+   * nothing learned yet is exactly what the serving path should read, and
+   * `liftFor` answers "nothing learned" from it as it always has. It is the only
+   * caller that passes it, and it never bypasses W25's gate for anyone else.
+   */
+  private async publish(force = false): Promise<LiftSnapshot | null> {
+    const d = await this.loadIfAny() ?? await this.priorOnlyIdentity();
+    if (!d) return null;
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     const frozen = await this.snapshot(d);
+    // W25 N1.01 (doc 22 §8, F20 §4.5): an item with an imported prior and no
+    // live events yet HAS an estimate — that is what importing a prior is for —
+    // so a slot whose only evidence is its priors publishes it, and a cold item
+    // is ranked on the prior the day it is imported instead of on the day the
+    // slot first records an event. The gate is not lifted, it is asked of the
+    // snapshot rather than of the event counter: a slot with nothing at all to
+    // publish still publishes nothing.
+    if (!force && d.stats.events === 0 && Object.keys(frozen.items).length === 0) return null;
     let version = Math.max(frozen.version, this.lastAllocated + 1);
     try {
       for (let attempt = 0; attempt < 8; attempt++, version++) {
@@ -607,8 +855,29 @@ export class LearnStats {
     const [rev, learn] = await Promise.all([readPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
     const configured = { reward: learn.value.slots?.[d.slot]?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
       objective: learn.value.slots?.[d.slot]?.objective ?? 'unit', measurementBasis: learn.value.slots?.[d.slot]?.measurementBasis ?? 'served-v1' };
-    if (await recoveryDigest(configured) !== await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' })) throw recovery();
+    const stored = await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' });
+    if (await recoveryDigest(configured) !== stored) {
+      // W24 G1.02: an AUTHORIZED transition is the one way this object's
+      // accumulation may stand ahead of the tenant's document. The estimator is
+      // still compared against the document exactly as before — only the
+      // objective, the reward and the measurement basis an audited operation
+      // moved this object to are accepted beside it — so unauthorized drift is
+      // refused as it always was, and an ordinary write under the document's own
+      // configuration still meets `candidate()`'s 409 until the document follows.
+      const authorized = await this.accumulationTransition();
+      if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
+        objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
+    }
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
+    // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
+    // is money does not learn one. The import door refuses such a row, so this
+    // can only be a document retained from before that rule; applying it would
+    // shrink the item toward a rate in the wrong unit and quietly demote it to
+    // the lift floor. The publication is refused instead, naming the unit, so
+    // the operator re-exports the document rather than reading a demotion as
+    // evidence. The refusal is on the prior, never on the slot's own counters.
+    const unit = priorUnitErrors(rev.value, (slot) => (slot === d.slot ? d.config.objective ?? 'unit' : 'unit'));
+    if (unit.length) throw new Refusal(409, `statistics prior unit incompatible: ${unit[0]}`);
     for (const row of rev.value.rows) if (row.slot === d.slot) {
       if (!itemName(row.item)) throw capacity();
       keyBound(row.cell);
@@ -631,13 +900,16 @@ export class LearnStats {
       }
     }
   }
-  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown): Promise<void> {
+  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown, generation?: unknown): Promise<void> {
     // Fixed key inventory: learn, fence, publication identity, one repair
-    // receipt, and the bounded exposure journal (W22 D1.02).
+    // receipt, the bounded exposure journal (W22 D1.02), the rebuild basis
+    // (W23 H1.01) and the accumulation transition on record (W24 G1.02).
     if (bytes(candidate) + bytes(fence ?? await this.fence()) + bytes(await this.state.storage.get('learnRepair') ?? null)
       + bytes(publication ?? await this.state.storage.get('learnPublished') ?? null)
       + bytes(reset ?? await this.state.storage.get('learnReset') ?? null)
-      + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+      + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null)
+      + bytes(generation ?? await this.state.storage.get(GENERATION_KEY) ?? null)
+      + bytes(await this.state.storage.get(REBUILT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
     if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !itemName(b.item) || typeof b.operationId !== 'string'
@@ -679,6 +951,55 @@ export class LearnStats {
     try { await this.publish(); } catch { publicationOutcome = 'unknown'; }
     return json({ ok: true, item, had, resetCompleted: true, publicationOutcome });
   }
+  /**
+   * W23 H1.01. The operator-authorised explicit reset: the damaged counters go,
+   * the generation advances so nothing prepared against the old one can land,
+   * and the object remembers the BASIS it was started again on so its next
+   * published snapshot names it. It is local and it is conditional on this
+   * object's own affected history: it touches no other brand, no other slot and
+   * no other tenant, and a slot that is never called stays byte-identical.
+   * Running any repair against production state is a separate authority
+   * (`W23.P1.01`) and is not this code's to give.
+   */
+  private async explicitReset(operationId: string, digest: string, fence: GenerationFence, publication: unknown): Promise<Response> {
+    const nextFence: GenerationFence = { whole: fence.whole + 1, items: {} };
+    if (!Number.isSafeInteger(nextFence.whole)) throw recovery();
+    const basis: RebuildBasis = { basis: 'explicit-reset', operationId, at: Date.now(), generation: nextFence.whole };
+    const after = await recoveryDigest({ raw: null, fence: nextFence });
+    const receipt = { operationId, before: digest, after, generation: fence.whole };
+    if (bytes(null) + bytes(nextFence) + bytes(receipt) + bytes(basis) + bytes(publication ?? null)
+      + bytes(await this.state.storage.get('learnReset') ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+    try {
+      await this.state.storage.transaction(async tx => {
+        if (await recoveryDigest({ raw: await tx.get('learn') ?? null, fence: await tx.get('learnFence') ?? { whole: 0, items: {} } }) !== digest) throw new Refusal(409, 'statistics recovery precondition changed');
+        await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(GENERATION_KEY);
+        await tx.put('learnFence', nextFence); await tx.put('learnRepair', receipt); await tx.put(REBUILT_KEY, basis);
+      });
+    } finally { this.data = null; }
+    await this.arm();
+    return json({ ok: true, recovered: true, reset: true, digest: after, generation: nextFence.whole });
+  }
+
+  /**
+   * The rebuild basis this object carries, or undefined when it was never
+   * repaired. A marker that is not the shape this object writes is damaged
+   * state, not an absent basis: it is refused rather than published as a
+   * snapshot claiming to hold the tenant's whole history.
+   */
+  private async rebuiltFrom(): Promise<RebuildBasis | undefined> {
+    const value: unknown = await this.state.storage.get(REBUILT_KEY);
+    if (value === undefined) return undefined;
+    // W24 T1.02 adds the second basis: counters started again from one retained
+    // day, which names that day so no reader takes them for the whole history.
+    if (!fields(value, ['basis', 'operationId', 'at', 'generation', 'date'])
+      || (value.basis !== 'explicit-reset' && value.basis !== 'ledger-rebuild')
+      || typeof value.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(value.operationId)
+      || !time(value.at) || !Number.isSafeInteger(value.generation) || (value.generation as number) < 0
+      || (value.basis === 'ledger-rebuild' ? typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date) : value.date !== undefined)) throw recovery();
+    return { basis: value.basis, operationId: value.operationId, at: value.at as number, generation: value.generation as number,
+      ...(typeof value.date === 'string' ? { date: value.date } : {}) };
+  }
+
   private witness(d: Stored, fence: GenerationFence): Promise<string> {
     return recoveryDigest({ tenant: d.tenant, brand: d.brand, slot: d.slot, config: d.config, fence,
       projection: d.stats.bounded ? { depth: d.stats.bounded.depth, closed: d.stats.bounded.closed === true } : null });
@@ -691,13 +1012,25 @@ export class LearnStats {
     const digest = await recoveryDigest({ raw: raw ?? null, fence });
     let healthy = true;
     try { if (raw !== undefined) { stateValid(raw); await this.totalBound(raw); } } catch { healthy = false; }
+    // W23 H1.01 (F18 §6.3, §8: "fixing `bump` does not repair counters whose
+    // `t` is already skewed; those objects must be reset and refolded, or
+    // rebuilt from the ledger"). A state anchored after this object's own clock
+    // is damaged historical state and says so, instead of reporting itself
+    // healthy and being served from. This READ repairs nothing: the anchor is
+    // corrected only when an event is recorded, so an operator sees the damage
+    // for as long as it is there, which is what the explicit reset exists for.
+    if (healthy && raw !== undefined && anchoredAfter((raw as unknown as Stored).stats, Date.now())) healthy = false;
     const publication = await this.state.storage.get<{ digest: string; witness: string; version: number }>('learnPublished');
     if (path !== '/recover') return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot,
       state: raw === undefined ? 'empty' : healthy ? 'healthy' : 'recovery-required', generation: fence.whole, digest, bytes: size,
       publication: publication && /^[a-f0-9]{64}$/.test(publication.digest) && /^[a-f0-9]{64}$/.test(publication.witness) && Number.isSafeInteger(publication.version)
         ? { digest: publication.digest, witness: publication.witness, version: publication.version } : null,
       witness: healthy && raw !== undefined ? await this.witness(raw as unknown as Stored, fence) : null });
-    if (b.intent !== 'coarsen' || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01: two repair intents, both operator-authorised and audited by the
+    // route in front of this object. `coarsen` keeps the evidence and merges it;
+    // `reset` discards damaged counters outright and records the basis, for
+    // state that cannot be merged back into honesty.
+    if ((b.intent !== 'coarsen' && b.intent !== 'reset') || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
       || typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation)) throw invalid();
     const prior = await this.state.storage.get<{ operationId: string; before: string; after: string; generation: number }>('learnRepair');
     if (prior?.operationId === b.operationId) {
@@ -706,6 +1039,9 @@ export class LearnStats {
       return json({ ok: true, recovered: true, digest, generation: fence.whole });
     }
     if (digest !== b.digest || fence.whole !== b.generation || raw === undefined) throw new Refusal(409, 'statistics recovery precondition changed');
+    // An explicit reset is exactly the repair for state no validation can
+    // accept, so it does not demand that the damaged state validate first.
+    if (b.intent === 'reset') return this.explicitReset(b.operationId, digest, fence, publication);
     stateValid(raw, true); // bounded full shape/provenance validation, not a reset
     const candidate = structuredClone(raw);
     if (!candidate.stats.slot['*'] || Object.values(candidate.stats.items).some(map => !map['*'])) throw recovery();

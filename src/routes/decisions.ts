@@ -37,7 +37,7 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -107,6 +107,19 @@ const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const RUNTIME_PIN_SAMPLE = 50;
 const HISTORY_VISITOR = /^[A-Za-z0-9_.-]{1,200}$/;
 const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
+/**
+ * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
+ * mutation is withdrawn for every tenant — `POST learn/cycle` and
+ * `POST learn/proposals/:id/:decision` answer 503 below without reading or
+ * writing anything — and the retained statuses were never verified as applied
+ * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
+ * reports proposal work carries these two facts beside it, so a count is never
+ * read as an action a person can take today. Stamped, not derived from
+ * configuration, because no configuration a tenant can set makes the mutation
+ * available: the routes below refuse unconditionally (F24 §5, document 35 §5
+ * W29). It is stated here, once, beside the constants the same routes share.
+ */
+const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
 function validLedgerSelector(tenant: string, id: string): boolean {
   const carrier = parseId(id);
@@ -212,7 +225,10 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
   const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
-  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+  // W25 V1.01: the grid states WHICH prior document its numbers were built with,
+  // so an export a data scientist downloads can be reconciled against the
+  // document they imported. 0 where the snapshot was built without one.
+  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
 
 /**
@@ -253,13 +269,17 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
     // evidence it sits next to, and never silent: a slot with nothing to report
     // carries zeros, not an absent member.
     const governance = await readSlotGovernance(c.env, tenant, now);
+    // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
+    // for an item it does not carry is not counted as something the slot has
+    // learned about. The catalogue is the one this answer already read.
+    const catalogue = new Set(catalog.pieces.map((p) => p.id));
     let budget = 200;
     for (const page of index.pages) for (const s of page.slots) {
       if (budget-- <= 0) { s.evidence = null; continue; }
       s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
       try {
         const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null;
+        s.evidence = slotEvidence(snap, catalogue);
       } catch { s.evidence = null; }
     }
   }
@@ -292,7 +312,10 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
-  const page = pageOf(exploringRows(snapshot, names, floor), cur ? cur.o : 0, limit);
+  // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
+  // the catalogue carries; a prior row for an id it does not carry is never
+  // offered here. The catalogue is the one this answer already read.
+  const page = pageOf(exploringRows(snapshot, names, floor, new Set(names.keys())), cur ? cur.o : 0, limit);
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
   return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, ...effective, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
 });
@@ -330,10 +353,11 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   ]);
   const index = slotsIndex(slots, catalog, learn, now);
   const entries = index.pages.flatMap((p) => p.slots);
+  const queueCatalogue = new Set(catalog.pieces.map((p) => p.id));
   let budget = 200;
   for (const s of entries) {
     if (budget-- <= 0) { s.evidence = null; continue; }
-    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
+    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = slotEvidence(snap, queueCatalogue); } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
   // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
@@ -342,8 +366,16 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // It is not part of `queueOf`'s pure computation over the published documents:
   // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
+  // W29 U1.01: this answer is the landing page of an operator application, so
+  // its `proposals_pending` must not stand alone while every apply and reject
+  // is withdrawn (503, below). The withdrawal is reported beside the counts,
+  // for the same reason the enrollment counter is: it is not part of `queueOf`'s
+  // pure computation over the published documents, it is what this deployment
+  // can do with them. `proposals_pending` is a count of historical `proposed`
+  // statuses, and the statuses it excludes are stored records, not verified
+  // applications — the same two facts `GET learn/proposals` answers.
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, autonomy: AUTONOMY_WITHDRAWN });
 });
 
 /**
@@ -906,7 +938,14 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined)
     || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined)) return c.json({ ok: false }, 400);
   if (b.operation === 'repair' && (typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation) || Number(b.generation) < 0
-    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || b.intent !== (b.kind === 'stats' ? 'coarsen' : 'compact'))) return c.json({ ok: false }, 400);
+    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset
+    // damaged item and slot state"): statistics have two repair intents. The
+    // merge-and-keep one, `coarsen`, and the explicit `reset` for damaged
+    // counters that cannot be merged back into honesty — the same audited,
+    // human-operator route, the same digest/generation precondition, the same
+    // two audit phases. The ring's only intent is still `compact`.
+    || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
   const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string) : ringName(tenant, b.visitorId as string);
@@ -1001,6 +1040,76 @@ decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
   } catch {
     invalidateLiftCache();
     return c.json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
+  }
+});
+
+/**
+ * POST /v1/:tenant/learn/generation { slot, brand?, reward?, objective?, rebuildFrom? }
+ *
+ * W24 G1.02 (document 35 §5 row W24 :426 "authorized generation transition with
+ * no stale oscillation or mixed cached snapshots … reset as explicit containment
+ * or trustworthy rebuild/promote from retained events"; F19 §7; the authorized
+ * rebuild/promote left OPEN in HANDOFF-2026-09-16 :228).
+ *
+ * The ACCUMULATION semantics of a slot — what a counter means: the objective, the
+ * reward it is filtered to — can never change on an ordinary write. The statistics
+ * object refuses that with 409 so counters built under one objective are never
+ * silently reinterpreted under another. This is the one authorized way past it,
+ * and it is a transition rather than a reinterpretation: the superseded published
+ * version is archived under its own version, the counters are discarded (or
+ * rebuilt from one retained day), a fresh generation starts, and it is published
+ * at once to the key the serving path reads so no isolate goes on serving the
+ * generation it superseded.
+ *
+ * WHO may authorize it in production, and on what evidence, is an owner decision
+ * (D09, W24.P1.01). Until it is settled this carries the operator credential the
+ * other learning operations carry and names no production approver of its own.
+ */
+const TRANSITION_REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
+decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  c.header('Cache-Control', 'no-store');
+  const b = (await c.req.json().catch(() => null)) as { slot?: unknown; brand?: unknown; reward?: unknown; objective?: unknown; rebuildFrom?: unknown } | null;
+  if (!b || typeof b !== 'object' || Array.isArray(b)
+    || Object.keys(b).some(key => !['slot', 'brand', 'reward', 'objective', 'rebuildFrom'].includes(key))
+    || typeof b.slot !== 'string' || !b.slot || b.slot.length > 200
+    || (b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200))
+    || (b.reward !== undefined && (typeof b.reward !== 'string' || !TRANSITION_REWARDS.has(b.reward)))
+    || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
+    || (b.rebuildFrom !== undefined && (typeof b.rebuildFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.rebuildFrom)))
+    // A transition that names nothing would discard a generation's evidence for
+    // no declared change, which is a reset and has its own audited operation.
+    || (b.reward === undefined && b.objective === undefined && b.rebuildFrom === undefined)) {
+    return c.json({ ok: false, error: 'slot, and at least one of reward, objective or rebuildFrom' }, 400);
+  }
+  const brand = (b.brand ?? '').trim() || tenant;
+  if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
+  const supplied = (c.req.header('Idempotency-Key') ?? '').trim();
+  if (supplied && !/^[a-f0-9]{32}$/.test(supplied)) return c.json({ ok: false, error: 'Idempotency-Key must be 32 hexadecimal characters' }, 400);
+  const operationId = supplied || crypto.randomUUID().replace(/-/g, '');
+  try {
+    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+    const response = await stub.fetch('https://learn/transition', { method: 'POST', body: JSON.stringify({
+      tenant, brand, slot: b.slot, operationId,
+      ...(b.reward !== undefined ? { reward: b.reward } : {}), ...(b.objective !== undefined ? { objective: b.objective } : {}),
+      ...(b.rebuildFrom !== undefined ? { rebuildFrom: b.rebuildFrom } : {}),
+    }) });
+    const res = await response.json() as { ok?: unknown; generation?: unknown; restartedAt?: unknown; archivedVersion?: unknown;
+      publicationOutcome?: unknown; rebuiltFrom?: unknown } | null;
+    // Every isolate's per-request lift cache is dropped here for the same reason
+    // publication drops it: what it holds is a generation that no longer stands.
+    invalidateLiftCache();
+    if (!response.ok || !res || res.ok !== true || typeof res.generation !== 'string' || !res.generation
+      || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
+      return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
+    }
+    return c.json({ ok: true, tenant, brand, slot: b.slot, operationId, generation: res.generation,
+      restartedAt: res.restartedAt, archivedVersion: res.archivedVersion ?? null,
+      publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}) });
+  } catch {
+    invalidateLiftCache();
+    return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, 503);
   }
 });
 

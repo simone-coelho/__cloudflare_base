@@ -852,11 +852,23 @@ describe('W10.01 application learning budgets', () => {
     expect(buildSnapshot(healthy, boundedStored(healthy), 'click', T0, DEFAULT_STATS)).not.toHaveProperty('stats');
     expect((await f.request('/publish', {})).status).toBe(200); expect(f.published).toHaveLength(1);
     expect(JSON.parse(f.published[0]!)).not.toHaveProperty('config');
+    // R179 / W25.G1.01: a seven-component cell never reaches this object's
+    // bounds at all — the fixture publishes through `publish(env, PRIORS_KIND,
+    // …)`, which runs `validatePriors` (src/config/publication.ts:441), and the
+    // canonical ladder grammar refuses it at import, by row and by order.
+    const sevenLevels = PRIORS_KIND.validate({ rows: [prior('P', 'c=x|v=1|s=x|r=x|a=x|f=x|g=x')] });
+    expect(sevenLevels.ok).toBe(false);
+    if (!sevenLevels.ok) {
+      expect(sevenLevels.errors.join(' ')).toMatch(/rows\[0\]\.cell/);
+      expect(sevenLevels.errors.join(' ')).toMatch(/c=.*v=.*s=.*r=.*a=/);
+    }
     const priorCases = [
       Array.from({ length: 255 }, (_, i) => prior('P' + i, 'c=other|v=1')),
       Array.from({ length: 4097 }, (_, i) => prior('i' + i)),
       Array.from({ length: 1000 }, (_, i) => prior('界'.repeat(90) + i)),
-      [prior('P', 'c=x|v=1|s=x|r=x|a=x|f=x|g=x')], [prior('P', 'c=' + '界'.repeat(1000))], [prior('constructor')],
+      // `'c=' + '界'.repeat(1000)` is a LADDER-VALID depth-1 key: the oversized
+      // SELECTED key, so the object's own 413 bound is still what refuses it.
+      [prior('P', 'c=' + '界'.repeat(1000))], [prior('constructor')],
     ];
     for (const rows of priorCases) {
       f.prior(rows); const before = [...f.cache.store], publications = f.published.length;
