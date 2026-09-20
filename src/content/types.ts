@@ -159,19 +159,8 @@ export type Assignment = Arm | 'ineligible';
 export interface EnrollmentProvenance {
   /** `${tenant}:${brand}:${effective salt}` — a salt change starts a new experiment. */
   id: string;
-  /**
-   * How many distinct salts this tenant had published up to the pinned learn
-   * revision, counting this one — not the revision of the document that carries
-   * the salt, which moves on every unrelated edit and would split one running
-   * experiment in two (R118(6)).
-   *
-   * W21 E1.07 (NR4): `null` where the published history the platform can read
-   * does not reach the first salt, and where the walk over it could not finish.
-   * A count that cannot see the beginning is not a smaller count; a smaller
-   * number here would silently merge two experiments, so the unknown is stated.
-   * `id` carries the salt itself, so the join key is unaffected either way.
-   */
-  saltVersion: number | null;
+  /** The revision of the published learn document the enrollment was written under. */
+  saltVersion: number;
   /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn. */
   arm: Assignment;
   /**
