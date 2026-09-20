@@ -467,6 +467,29 @@ const openProbe = (window: number): number => openAfter(HOUR12_END, window);
 /** A moment one minute past the published window: the hour is final by declaration. */
 const finalProbe = (window: number): number => HOUR12_END + window + MIN;
 
+/**
+ * The platform's own click window, read off the module: `W30_LEARN` publishes no
+ * `policy`, so `policyOf` answers `DEFAULT_POLICY` (`src/learn/route.ts:19`) and
+ * the window is `DEFAULT_POLICY.windowsMs.click` (`src/learn/policy.ts:28`). The
+ * index signature is optional, so an absent window reads zero and every fixture
+ * precondition below refuses.
+ */
+const CLICK_WINDOW_MS = DEFAULT_POLICY.windowsMs.click ?? 0;
+/**
+ * R206: a cross-hour click that means what its fixture says. Outside the window
+ * `policy.ts:185` refuses the candidate as `outsideWindow` before the ring is
+ * ever consulted, so a no-credit would have TWO causes at once and a build that
+ * miscounted a window refusal as an eviction would pass.
+ */
+/** The evicted-carry-in pair both fixtures use: served 12:45, clicked 13:01 — sixteen minutes, and across the hour boundary. */
+const CARRY_SERVED_AT = T12 + 45 * MIN;
+const CARRY_CLICKED_AT = T12 + H + MIN;
+const expectInsideClickWindow = (servedAt: number, clickedAt: number, where: string): void => {
+  expect(clickedAt - servedAt < CLICK_WINDOW_MS,
+    `${where}: the click is ${(clickedAt - servedAt) / MIN} minutes after the decision it names, against \`DEFAULT_POLICY.windowsMs.click\` = ${CLICK_WINDOW_MS / MIN} minutes read off \`src/learn/policy.ts:28\`. Outside it, \`policy.ts:185\` refuses the candidate as \`outsideWindow\` before the ring is consulted, and the no-credit this fixture is about would have two causes instead of one (R206)`)
+    .toBe(true);
+};
+
 // ===========================================================================
 // unit:W30.R1.01 — the higher-cap repair
 // ===========================================================================
@@ -499,19 +522,35 @@ describe('unit:W30.R1.01', () => {
    * grown prefix, never a requested one (no blanket age cutoff).
    */
   const SERVED = ['cnt-tabby-evening', 'cnt-rogue-work', 'cnt-charms-slg', 'cnt-tabby-work', 'cnt-unknown-taxonomy'];
+  /**
+   * R205: the five objects sit LATE in hour 12 and the click early in hour 13,
+   * so the pair keeps the cross-hour shape this unit needs AND falls inside the
+   * platform's own click window. `W30_LEARN` publishes no `policy`, so
+   * `policyOf` answers `DEFAULT_POLICY` (`src/learn/route.ts:19`) and the window
+   * is `DEFAULT_POLICY.windowsMs.click` (`src/learn/policy.ts:28`), read off the
+   * module below rather than written here. The arithmetic: served 12:45,
+   * clicked 13:05 — twenty minutes, against a thirty-minute window.
+   */
+  const SERVED_AT = (n: number): number => T12 + 40 * MIN + (n + 1) * MIN;   // 12:41 … 12:45
+  const LAST_SERVED_AT = SERVED_AT(SERVED.length - 1);                        // 12:45, the hour's last object
+  const CROSS_HOUR_CLICK_AT = T12 + H + 5 * MIN;                              // 13:05, the next hour
 
   /** Five ledger OBJECTS in hour 12, one per delivery, and a click in hour 13 on the fifth. */
   async function truncatedHour(m: Mounted): Promise<void> {
+    expect(CROSS_HOUR_CLICK_AT - LAST_SERVED_AT < CLICK_WINDOW_MS,
+      `the fixture's cross-hour click must be inside the platform's own click window: served at 12:45 and clicked at 13:05 is ${(CROSS_HOUR_CLICK_AT - LAST_SERVED_AT) / MIN} minutes, against \`DEFAULT_POLICY.windowsMs.click\` = ${CLICK_WINDOW_MS / MIN} minutes read off \`src/learn/policy.ts\`; otherwise \`policy.ts:185\` refuses the candidate as \`outsideWindow\` and the credit below would measure the window instead of the repair (R139's shape, R205)`)
+      .toBe(true);
     const rows: DecisionRecord[] = [];
     for (let n = 0; n < SERVED.length; n++) {
-      const d = decision(m.env, 'v-tabby', T12 + (n + 1) * MIN, SERVED[n]!);
+      const d = decision(m.env, 'v-tabby', SERVED_AT(n), SERVED[n]!);
       rows.push(d);
-      await throughTheLedger(m, [d], [], T12 + (n + 1) * MIN + 1000);
+      await throughTheLedger(m, [d], [], SERVED_AT(n) + 1000);
     }
-    // 13:05, on the item the fifth object served, inside the platform's default
-    // thirty-minute click window (`src/learn/policy.ts` DEFAULT_POLICY): the
-    // credit depends on the repaired hour reaching the ring and on nothing else.
-    await throughTheLedger(m, [], [click(m.env, rows[4]!, T12 + H + 5 * MIN, 'w30-b1-cross-hour')], T12 + H + 6 * MIN);
+    // 13:05, on the item the fifth object served — the object truncation
+    // discards, because `loadHourRecords` reads the hour in time order and cuts
+    // at the cap: the credit depends on the repaired hour reaching the ring and
+    // on nothing else.
+    await throughTheLedger(m, [], [click(m.env, rows[4]!, CROSS_HOUR_CLICK_AT, 'w30-b1-cross-hour')], T12 + H + 6 * MIN);
   }
 
   it('logic: a truncated hour rebuilt at a higher cap re-folds, the rings hold the recovered decisions, the cross-hour credit follows, and a rebuild still short of the count stays truncated', async () => {
@@ -784,11 +823,15 @@ describe('unit:W30.V1.01', () => {
 
     // ── (ii) evicted carry-in ───────────────────────────────────────────────
     const e = await mount();
-    const carry = decision(e.env, 'v-tabby', T12 + MIN, 'cnt-tabby-evening');
-    const newer = decision(e.env, 'v-tabby', T12 + 2 * MIN, 'cnt-rogue-work');
-    await throughTheLedger(e, [carry, newer], [], T12 + 3 * MIN);
+    // R206: served LATE in hour 12 and clicked early in hour 13 — sixteen
+    // minutes apart against the compiled thirty-minute window — so the RING CAP
+    // is the single cause of the no-credit this clause names.
+    expectInsideClickWindow(CARRY_SERVED_AT, CARRY_CLICKED_AT, 'the evicted carry-in fixture (served 12:45, clicked 13:01)');
+    const carry = decision(e.env, 'v-tabby', CARRY_SERVED_AT, 'cnt-tabby-evening');
+    const newer = decision(e.env, 'v-tabby', CARRY_SERVED_AT + MIN, 'cnt-rogue-work');
+    await throughTheLedger(e, [carry, newer], [], CARRY_SERVED_AT + 2 * MIN);
     // The click lands in the NEXT hour, on the decision the cap evicted.
-    await throughTheLedger(e, [], [click(e.env, carry, T12 + H + MIN, 'w30-b1-evicted')], T12 + H + 2 * MIN);
+    await throughTheLedger(e, [], [click(e.env, carry, CARRY_CLICKED_AT, 'w30-b1-evicted')], CARRY_CLICKED_AT + MIN);
     const bounded = { shards: 1, ringCap: 1 };
     await buildHour(e.storage as never, TENANT, { date: DATE, hour: HOUR }, W30_LEARN, T12 + H + 6 * MIN, bounded, e.env as never);
     const thirteen = await buildHour(e.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W30_LEARN, T12 + 2 * H + 6 * MIN, bounded, e.env as never);
@@ -1001,11 +1044,15 @@ describe('unit:W30.F1.01', () => {
     const options = { shards: 1, ringCap: 1, lookbackHours: Math.ceil(window / H) + 4 };
 
     const m = await mount();
-    const carry = decision(m.env, 'v-tabby', T12 + MIN, 'cnt-tabby-evening');
-    const newer = decision(m.env, 'v-tabby', T12 + 2 * MIN, 'cnt-rogue-work');
-    await throughTheLedger(m, [carry, newer], [], T12 + 3 * MIN);
+    // R206: the same pair W30.V1.01 uses — served 12:45, clicked 13:01, sixteen
+    // minutes apart — so the carry-in line the screens must render comes from
+    // the ring cap alone and not from a window refusal.
+    expectInsideClickWindow(CARRY_SERVED_AT, CARRY_CLICKED_AT, 'the screens\' evicted carry-in fixture (served 12:45, clicked 13:01)');
+    const carry = decision(m.env, 'v-tabby', CARRY_SERVED_AT, 'cnt-tabby-evening');
+    const newer = decision(m.env, 'v-tabby', CARRY_SERVED_AT + MIN, 'cnt-rogue-work');
+    await throughTheLedger(m, [carry, newer], [], CARRY_SERVED_AT + 2 * MIN);
     // An outcome in hour 13 on the decision the cap evicted: the carry-in line.
-    await throughTheLedger(m, [], [click(m.env, carry, T12 + H + MIN, 'w30-b1-screen-evicted')], T12 + H + 2 * MIN);
+    await throughTheLedger(m, [], [click(m.env, carry, CARRY_CLICKED_AT, 'w30-b1-screen-evicted')], CARRY_CLICKED_AT + MIN);
     // Each hour is folded while it is still OPEN — the midpoint of its own close
     // grace and the published window — so hour 12 reads `final` at the end and
     // never `repaired`, whatever length the owner gives the window.
@@ -1013,7 +1060,9 @@ describe('unit:W30.F1.01', () => {
     await fold(m, openAfter(T12 + 2 * H, window), options);
     // And a row that arrives after hour 12 is final: the maturity line.
     const pastMaturity = Math.max(finalProbe(window), openAfter(T12 + 2 * H, window) + MIN);
-    await throughTheLedger(m, [], [click(m.env, newer, T12 + 40 * MIN, 'w30-b1-screen-late')], pastMaturity);
+    // The late row is one the fold must never apply, so it is creditable in
+    // principle too: four minutes after the decision it names, still in hour 12.
+    await throughTheLedger(m, [], [click(m.env, newer, CARRY_SERVED_AT + 5 * MIN, 'w30-b1-screen-late')], pastMaturity);
     await fold(m, pastMaturity, options);
     // The day the screens read, saved at the pinned moment (W22.R1.03's own step).
     await publish(m, pastMaturity);
