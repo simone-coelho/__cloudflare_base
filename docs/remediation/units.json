@@ -2449,5 +2449,77 @@
     "status": "no-witness",
     "batch": "W29-B1",
     "residual": "Unclaimed. Blocked on owner decision D05. If autonomy is RETAINED, this becomes the M/L batch: the per-slot-entry `from` precondition and the expected-revision transaction (F24 §6, F15 §5), `page` on the `Proposal` and its id (F24 §4.1), the `pinnedPieceId` symmetry (§4.2), the saturated-dimension fall-through (§4.3), a support statistic that is the move's own (§4.5), a staleness signal on the card (§4.6), the role gate (§4.7), and observation of any autonomous application (§4.10). If autonomy is WITHDRAWN as a capability, the remaining work is the customer-facing amendment of ledger 19 rows 14/15 and doc 22 §11 beyond the \"partly undelivered\" report W29.R1.01 rules. Neither is specifiable today."
+  },
+  {
+    "id": "W31.C1.01",
+    "w": "W31",
+    "criterion": "C1",
+    "outcome": "Full monthly/quarterly/biannual coverage, named day by day, with no favorable standing on incomplete evidence. A 31-, 92- and 184-day window each answer every requested date exactly once across `days` (read) and `missing` (no report), and list every read day whose source is truncated or whose hours were not all folded in `incomplete[{date,truncated,missingHours}]` with the hours ascending; the requested period is echoed, never relabelled (the requested length is `days.length + missing.length`, the read length is `days.length`); a period longer than `MAX_WINDOW_DAYS` = 184 is REFUSED before any storage read with its maximum named (400 at the route). RULED, ABSENT (R21): (1) docs/kit/02-api-reference.md publishes, verbatim, how a customer reads a longer period — 'A period longer than 184 days is read as consecutive windows — two 92-day readings cover half a year — and pooled on your side; the platform refuses a longer range with its maximum named and never shortens the period you asked for.' (F07 §5.2: `MAX_WINDOW_DAYS` cannot express the customer's '6+ months minimum' in one reading); (2) public/console/views-measure.js states the same to the operator beside the maximum it already prints, verbatim: 'Read a longer period as consecutive windows and pool them yourself.' NOT RULED, and why: `requestedDays`/`readDays`/`truncated` on the window answer — F25 §7.1 offers those members only for the branch where a window is SHORTENED, and this repository refuses instead (src/measure/window.ts:64), locked by src/measure/window.test.ts:31 and src/units/W21/B1.unit.test.ts:818.",
+    "legs": [
+      "logic",
+      "host",
+      "sdk"
+    ],
+    "witness": "document 35 §5 row W31 (:433) 'Refuse or explicitly mark incomplete/oversized windows … no favorable standing on incomplete evidence. Full monthly/quarterly/biannual coverage'; F25.md §5.6 ('window.test.ts never exercises the failure … a deliberate cap was never given a way to announce itself'), §7.1, §7.2; F07.md §5.2 ('MAX_WINDOW_DAYS … cannot express the customer’s \"6+ months minimum\" (requirement line 365) in a single reading'); docs/architecture/tapestry_requirements.txt :365; HANDOFF-2026-09-16 :235 (complete monthly/quarterly/biannual coverage OPEN); docs/kit/02-api-reference.md:576; product: src/measure/window.ts:10 MAX_WINDOW_DAYS, :53 datesBetween, :89-144 the per-day pass, src/routes/decisions.ts:1147-1165, public/console/views-measure.js:128-134.",
+    "status": "specified",
+    "batch": "W31-B1",
+    "note": "MEASURED GREEN AT SPEC (locks, not owed work): the day-by-day answer over 31/92/184 days, the ascending hour lists, the 185-day refusal before any storage read, `coverage.status: 'incomplete'`, `inference: 'unavailable'`, no claim vocabulary in either body, and on both screens — the console names each incomplete day of the window it read and the legacy screen says 'Source or visitor coverage is incomplete.' for an incomplete day, with no claim and no NaN on either. The whole `host` leg is green at spec and is a lock; the two RED legs are `logic` (the kit sentence) and `sdk` (the screen sentence).",
+    "seams": "The cluster-aware/revenue analysis and valid inference over a composed period are W31.P1.01 (D04/D09). The 184-day cap itself is W21's (C1.02, locked). Payload bounds are W32's."
+  },
+  {
+    "id": "W31.M1.01",
+    "w": "W31",
+    "criterion": "M1",
+    "outcome": "The window answer states the versions of what it pooled, and incompatible policies are never pooled silently. RULED, ABSENT (R21): (1) `WindowReport.allocation: ReportAllocation | null` — the published allocation (`{version:1, source:'published', share, arms}`) every pooled day agrees on; `null` when a pooled day carries none (unknown, R149) or when two disagree; (2) the compatibility reason `'mixed_allocation'` in `WindowReport['slots'][string]['compatibility']['reasons']` — two pooled days with different published allocations answer `status:'mixed'` with their days and NO pooled arms, exactly as two computations do (F25 §5.7 names holdout shares beside policies, rewards and objectives); ABSENCE is not disagreement: a day written before the field adds no reason and the days still pool; (3) per-slot `WindowReport['slots'][string]['computation']` — `{version, profile:{source,horizonMs,ringCap}, learning, reward, objective, tauLearnMs, measurementBasis} | null`, the one recorded identity the slot pooled under, `null` where the slot is not compatible; (4) the day's `allocation` rides the bounded `_summary` (ReportSummary/canonicalReportJson/summaryShape in src/learn/report.ts), because the window still performs exactly ONE ranged read per day — asserted; (5) docs/kit/03-payload-schemas.md publishes the window members verbatim. TARGET VERSIONS: not ruled as a member of any answer — R108 withdrew target vocabulary from report answers and src/learn/report.test.ts:848 locks it; the per-tenant target rule already lives at logic level in W21.C1.04 (`compareArms` with none supplied answers `{targets:null, standing:'undecided', reason:'no_published_target'}`) and the VALUES are D04/W31.P1.01. This unit LOCKS instead: no `TAPESTRY_TARGETS` in the product, and no target/confidence vocabulary on the window answer.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W31 (:433) 'per-tenant metric/target versions … incompatible policies never pooled silently'; F25.md §5.7 ('windowReport sums holdout rows across days that may have been built under different attribution policies, slot rewards, objectives or holdout shares'), §1.3 (the allocation is what makes sufficiency computable on the customer's side instead of a fixed 95 % and an assumption of equal arms), §5.2 (no compiled customer default); HANDOFF-2026-09-16 :235 (metric versions OPEN); HANDOFF-2026-09-18 §8 D04; product: src/measure/window.ts:12-48 WindowReport, :116-143 the per-slot identity, src/learn/report.ts:455-488 ReportSummary/canonicalReportJson, :630-641 ReportAllocation/publishedAllocation, :1009 and src/learn/hourly.ts:1065 (the day stores it on both build paths).",
+    "status": "specified",
+    "batch": "W31-B1",
+    "note": "MEASURED AT SPEC: the day report stores `allocation` on BOTH build paths, but `ReportSummary` does not carry it, so the window — which reads only the 64 KiB summary prefix — cannot state it today; that is the shape of the fix. W21's `mixed_basis` representation for a reward/objective change is locked here, not re-specified. R10: no existing test fixture carries two differing allocations, so `mixed_allocation` adds no reason to src/measure/window.test.ts:88's exact reasons array.",
+    "seams": "Target VALUES per tenant and valid inference: W31.P1.01 (D04/D09). `compareArms`/`readTargets` in the unimported src/measure/holdout.ts: W21's later unit, not re-ruled here."
+  },
+  {
+    "id": "W31.Z1.01",
+    "w": "W31",
+    "criterion": "Z1",
+    "outcome": "Zero, sparse and unequal-arm evidence is contained, not repaired. An arm with no decisions answers `creditedPerDecision: null` (never 0, never 1, never NaN) while its credits are still reported; an arm that was never randomised (`ineligible`) stands on its own row and is never pooled into the control; an arm below the shipped observation floor `nMin` is reported as the count it is with no sufficiency claim beside it; an unequal allocation is STATED on the answer — the same `WindowReport.allocation` member W31.M1.01 rules, one representation — rather than assumed equal; no NaN, no Infinity, no lift on an arm row, no invented interval, and no claim vocabulary in the body. RULED, ABSENT (R21): both shipped screens print the allocation the day report already carries, verbatim 'Published allocation: 5% to default.', as a MESSAGE LINE beside the arm table (not a row in it: src/console/learning.render.test.ts:306 fixes that table's rows exactly), and a day that carries no allocation prints no such line and leaves no `null`/`undefined`/`NaN` behind.",
+    "legs": [
+      "logic",
+      "sdk"
+    ],
+    "witness": "document 35 §5 row W31 (:433) 'correct zero/sparse/unequal-arm … analysis under W21'; F25.md §1.3 ('the number is fixed at 95 % and assumes equal arms'; the allocation makes sufficiency computable on the customer's side), §5.3, §5.4 (a control rate of zero), §7.4; F07.md §5.3 (NaN reaching the operator verbatim through public/learning.js:298); product: src/learn/report.ts:673-676 attributionArm, :630-641 ReportAllocation, src/measure/window.ts:133-141, public/console/views-measure.js:86 and :206, public/learning.js:420-425.",
+    "status": "specified",
+    "batch": "W31-B1",
+    "note": "MEASURED GREEN AT SPEC (locks): the zero denominator answers `creditedPerDecision: null` on the window; the `ineligible` arm keeps its own row; the sparse arm is reported as its count with `inference: 'unavailable'`; no NaN/Infinity/lift/interval/claim in the body; and BOTH screens print the counts with the shipped em dash for the zero denominator and no fabricated number — measured on both screens before the ruled line, so no lock is hidden behind the first failure. The single RED clause is the allocation: on the answer (shared with W31.M1.01) and on the two screens.",
+    "seams": "The design effect, CVR/RPV/return-rate metrics, the cluster-aware and unequal-arm ANALYSIS and any sufficiency number: W31.P1.01 (D04/D09, DS/C). The enrollment and production control: W21."
+  },
+  {
+    "id": "W31.S1.01",
+    "w": "W31",
+    "criterion": "S1",
+    "outcome": "Lightweight summaries stay separate from full payloads: a 92-day window is pooled from ONE bounded ranged read per day (`{offset:0,length:REPORT_LIMITS.summaryBytes}`), charging exactly the prefix and never parsing a day's grids, while the day objects it did not read are several times that; the day GET's `?slot=` projection narrows `grids` to the requested slot and each item to its single pooled `'*'` level, paged (`total`/`offset`/`limit`/`next`), at under a fifth of the day's bytes; the full payload stays reachable with every pooling level, bounded by `REPORT_LIMITS` (W32's bounds, reused by name, never re-ruled); and the shipped measurement screen asks the mounted route for the window and for the projection (`slot=`, `limit=50`), never for the unprojected day.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W31 (:433) 'Separate lightweight report summaries from full payloads'; F34.md §4.3 ('windowReport parses whole day reports for report.holdout, up to 92 of them, on the view's default load'), §4.4 ('six pooling levels per item and the UI reads one … five sixths … downloaded and discarded'), §6 (the `?slot=` projection with items paged); HANDOFF-2026-09-16 :235 (lightweight summaries EXIST); product: src/learn/report.ts:454-564 (SUMMARY_START, ReportSummary, summaryShape, readWindowSummary), :399-452 readReportView, src/measure/window.ts:90, src/routes/decisions.ts:1166-1186, public/console/views-measure.js:60.",
+    "status": "specified",
+    "batch": "W31-B1",
+    "note": "GREEN-AT-SPEC: measured green in full at the spec head — every clause of reading (e) is already delivered, so this unit is a LOCK and owes the builder nothing except not to reverse it. REVERSING LINES: src/units/W31/B1.unit.test.ts asserts the exact read list `{offset:0,length:REPORT_LIMITS.summaryBytes}` per day (a reader that drops the range or falls back to the full object fails it), the charged bytes equal 92 × summaryBytes, `Object.keys(view.report.grids) === ['hero']` and one `'*'` level per item (a projection that returns the other five levels or every slot fails it), `page.total === 400` with a next cursor, the unprojected read still carrying all 400 items × 6 levels, and the screen's own request paths carrying `slot=`/`limit=50`. This unit is also the guard on W31.M1.01: the allocation must ride the summary, since the window's read list may not grow.",
+    "seams": "The payload bounds themselves and `buildReport`'s quadratic lookup are W32's (F34 §4.2, §6); egress accounting is W36/W37's."
+  },
+  {
+    "id": "W31.P1.01",
+    "w": "W31",
+    "criterion": "P1",
+    "outcome": "The monthly/quarterly/biannual experiment ANALYSIS and the values it reads against: cluster-aware inference (the design effect over correlated decisions per visitor), revenue and return-rate metrics (CVR, RPV, returns — computed nowhere in src/, F07 §5.10), unequal-arm sufficiency, and the per-tenant TARGET VALUES and metric definitions. No test here.",
+    "legs": [],
+    "witness": "document 35 §5 row W31 (:433) 'correct zero/sparse/unequal-arm/cluster/revenue analysis under W21' (OL + DS/C); F25.md §5.3 ('the part of the remedy that actually costs weeks'), §7 ('over-scoped: a new metric pipeline, not a fix to holdout.ts'); F07.md §5.10, §7 ('one clause is not ours to build'); HANDOFF-2026-09-18 §8 D04 (metric/target protocol per tenant) and D09; HANDOFF-2026-09-16 :235 ('diagnostic long-window reporting is implemented, not validated experimental inference').",
+    "status": "no-witness",
+    "batch": "W31-B1",
+    "residual": "Unclaimed. Blocked on owner decisions D04 (the per-tenant metric/target protocol and its values) and D09, and on W21.P1.01's production control. The platform cannot invent a customer's metric definition, target value or inference protocol, and METHOD §6 forbids inventing an open owner decision. What W31-B1 does deliver is the CONTAINMENT the analysis would otherwise be read from: the versions and allocation pooled are stated, incompatible days are withheld, and no standing is produced from incomplete evidence."
   }
 ]
