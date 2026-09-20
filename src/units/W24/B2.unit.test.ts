@@ -512,6 +512,13 @@ describe('unit:W24.R1.03', () => {
     expect(refusedBySlot(receipt) ?? absent('`refusedBySlot` on the outcome receipt', receipt.outcome ?? {}),
       'W24.R1.03 — and the receipt says which slot refused it and why, beside the counts W24-B1 and W23 already put there (ruled member: `refusedBySlot`)')
       .toEqual({ hero: 'reward' });
+    // The receipt's own identity must account for the refusal: `outcomeReply`
+    // validates `total(attributed, eligible, weightSkipped)` (`fan.ts:272`), so
+    // a per-slot refusal is carried in a named count of its own and the
+    // identity includes it (ruling R195 item 3a).
+    expect({ refused: receipt.outcome?.refused, attributed: receipt.outcome?.attributed, eligible: receipt.outcome?.eligible },
+      'W24.R1.03 — and the count of what was refused is on the receipt beside what was attributed and what was eligible, so the reply\'s own identity adds up (ruled member: `refused`, the sum of `refusedBySlot`\'s entries)')
+      .toEqual({ refused: 1, attributed: 1, eligible: 1 });
   });
 
   it('host-internal: an outcome naming NO slot is refused per slot by reward and counted, and a single-slot tenant behaves exactly as W24-B1 measured', async () => {
@@ -519,19 +526,31 @@ describe('unit:W24.R1.03', () => {
     const d = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
     await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: 'v-tabby', records: [d] }, () => configOf({ reward: 'click' }));
     await m.drain();
+    // A real click first, so the slot's series is what a CREDIT put there
+    // (`recordSuccess`), not what an exposure alone would leave — and the clause
+    // then proves both halves: the credited reward stays, the other is refused
+    // (ruling R195 item 1; the same shape as `B1.unit.test.ts:837`).
+    const credited = await fanOutcome(m.env, TENANT, click(m.env, d, ONLINE_TS + 30_000, 'w24-b2-real-click'),
+      DEFAULT_POLICY, BRAND, { hero: configOf({ reward: 'click' }) }, configOf({ reward: 'click' }));
+    await m.drain();
+    expect({ series: seriesOf(m, 'hero'), eligible: credited.outcome?.eligible ?? 0 },
+      'the fixture credits one real click to the slot that learns from clicks').toEqual({ series: ['click'], eligible: 1 });
+
     const anonymous = purchaseOf(m, 'v-tabby', ONLINE_TS + 60_000, 'w24-b2-noslot-purchase');
     const receipt = await fanOutcome(m.env, TENANT, anonymous, DEFAULT_POLICY, BRAND, { hero: configOf({ reward: 'click' }) }, configOf({ reward: 'click' }));
     await m.drain();
     expect({ reachedTheRing: receipt.ring.destinations, series: seriesOf(m, 'hero'), eligible: receipt.outcome?.eligible ?? 0,
       refused: refusedBySlot(receipt) ?? absent('`refusedBySlot` on the outcome receipt', receipt.outcome ?? {}) },
-      'W24.R1.03 — a purchase that names no slot reaches the ring, is refused by the one slot that learns from clicks, and that refusal is counted by name: the residual W24-B1 left open (its implementer\'s residual 1) is closed where the ring groups its batches')
+      'W24.R1.03 — a purchase that names no slot reaches the ring, is refused by the one slot that learns from clicks and adds nothing to the series that slot really learns, and that refusal is counted by name: the residual W24-B1 left open (its implementer\'s residual 1) is closed where the ring groups its batches')
       .toEqual({ reachedTheRing: 1, series: ['click'], eligible: 0, refused: { hero: 'reward' } });
   });
 
   it('host: the shopper\'s own path leaves the same evidence — the purchase-learning slot credited, the click slot untouched', async () => {
     const m = await mount({ learn: learnWithSlots(SLOTS, 'any') });
-    await servedInBothSlots(m, SLOTS);
     const session = await newAnonymousSession(m.env, TENANT);
+    // Served to the shopper the session mints, so the ring the purchase reaches
+    // is her own (ruling R195 item 2).
+    await servedInBothSlots(m, SLOTS, session.subject);
     const chosen = await m.fetch(new Request(`http://shop.test/realtime/session/${session.sessionId}/preferences`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT, [SHOPPER_HEADER]: session.capability },
       body: JSON.stringify({ trackingConsent: true, personalizationEnabled: true,
@@ -593,6 +612,27 @@ describe('unit:W24.R1.04', () => {
     expect({ hero: seriesOf(m, 'hero'), refused: refusedBySlot(refunded) ?? absent('`refusedBySlot` on the outcome receipt', refunded.outcome ?? {}) },
       'W24.R1.04 — a nonpositive value is the money policy\'s business and the money slot\'s alone: the unit slot still counts the event it saw')
       .toEqual({ hero: ['purchase'], refused: { story: 'money' } });
+    expect(refunded.outcome?.money?.reason ?? absent('`money` on the outcome receipt', refunded.outcome ?? {}),
+      'W24.R1.04 — and the reason survives the reply: `outcomeReply` (fan.ts:278-279) carries `money` and `notCredited` back with the rest, so what W24-B1 named on the receipt (`B1.unit.test.ts:903`) still reads (ruling R195 item 3b)')
+      .toBe('money_policy_unset');
+
+    // An all-refused outcome is NEVER journalled as credited: W22's credited
+    // journal remembers whenever `attributed > 0` (`DecisionRing.ts:253-257`),
+    // so a second identical delivery must meet the same per-slot refusal rather
+    // than a dedupe that claims it was already credited (ruling R195 item 3c).
+    const only = await mount({ learn: learnWithSlots({ story: { reward: 'purchase', objective: 'revenue' } }) });
+    const sd = decision(only.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening', 'story');
+    await fanDecisions(only.env, { tenant: TENANT, brand: BRAND, visitor_id: 'v-tabby', records: [sd] }, () => configOf(MIXED.story!));
+    await only.drain();
+    const foreignOnce = purchaseOf(only, 'v-tabby', ONLINE_TS + 60_000, 'w24-b2-journal-once', { currency: 'JPY' });
+    const firstTry = await fanOutcome(only.env, TENANT, foreignOnce, DEFAULT_POLICY, BRAND, { story: configOf(MIXED.story!) }, configOf(MIXED.story!));
+    const secondTry = await fanOutcome(only.env, TENANT, foreignOnce, DEFAULT_POLICY, BRAND, { story: configOf(MIXED.story!) }, configOf(MIXED.story!));
+    await only.drain();
+    expect({ first: refusedBySlot(firstTry) ?? absent('`refusedBySlot` on the outcome receipt', firstTry.outcome ?? {}),
+      second: refusedBySlot(secondTry) ?? absent('`refusedBySlot` on the outcome receipt', secondTry.outcome ?? {}),
+      series: seriesOf(only, 'story') },
+      'W24.R1.04 — an outcome every slot refused is not a credited outcome: it is never written into the credited journal, so the same delivery arriving again is refused again by name rather than answered as already applied (W22 D1.02/D1.04 keep their meaning for outcomes that WERE credited)')
+      .toEqual({ first: { story: 'money' }, second: { story: 'money' }, series: [] });
 
     // "Test old callers" (document 35 §5 row W24): the pre-W24 shape — no
     // `data.slot`, no currency — learns on a unit slot exactly as it did.
