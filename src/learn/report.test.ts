@@ -724,9 +724,13 @@ describe('the day report', () => {
     };
     const before = JSON.stringify(reports);
     const storage = { get: vi.fn(async (key: string) => { const value = Object.entries(reports).find(([date]) => key === reportKey('coach', 'coach', date))?.[1]; const text = JSON.stringify(value); return value ? { size: new TextEncoder().encode(text).length, text: async () => text } : null; }), put: vi.fn(), delete: vi.fn(), list: vi.fn() };
-    const env = { STORAGE: storage } as unknown as Env;
+    // R10/R126(a) with F25 §5.1: the report GETs are behind the build POST's own
+    // operator gate, so this read presents the operator credential. The claim and
+    // every expected value below are unchanged.
+    const env = { STORAGE: storage, JWT_SECRET: reportJwtSecret, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+    const operator = { headers: { Authorization: `Bearer ${await operatorCredential()}` } };
     for (const [date, metadata] of [['2026-09-03', 'recorded'], ['2026-09-04', 'absent'], ['2026-09-05', 'invalid'], ['2026-09-06', 'absent']]) {
-      const response = await decisionRoutes.request(`https://report.test/coach/learn/report?date=${date}`, undefined, env);
+      const response = await decisionRoutes.request(`https://report.test/coach/learn/report?date=${date}`, operator, env);
       expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
       const { report } = await response.json() as { report: typeof raw };
       expect(report.coverage!.metadata).toBe(metadata); expect(report.coverage!.maturity).toBe('unknown');
@@ -815,8 +819,12 @@ describe('the day report', () => {
       }),
       put: vi.fn(), delete: vi.fn(), list: vi.fn(),
     };
-    const env = { STORAGE: storage } as unknown as Env;
-    const response = await decisionRoutes.request('https://report.test/coach/learn/report?date=2026-09-03', undefined, env);
+    // R10/R126(a) with F25 §5.1: the report GETs are behind the build POST's own
+    // operator gate, so this read presents the operator credential. The claim and
+    // every expected value below are unchanged.
+    const env = { STORAGE: storage, JWT_SECRET: reportJwtSecret, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+    const response = await decisionRoutes.request('https://report.test/coach/learn/report?date=2026-09-03',
+      { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, env);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const body = await response.json() as { report: typeof report };
@@ -849,12 +857,16 @@ describe('the day report', () => {
 
   it('W21 rejects invalid, nonexistent, reversed and oversized windows before storage I/O through the actual route', async () => {
     const storage = { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() };
-    const env = { STORAGE: storage } as unknown as Env;
+    // R10/R126(a) with F25 §5.1: the report GETs are behind the build POST's own
+    // operator gate, so this read presents the operator credential. The claim and
+    // every expected value below are unchanged.
+    const env = { STORAGE: storage, JWT_SECRET: reportJwtSecret, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+    const operator = { headers: { Authorization: `Bearer ${await operatorCredential()}` } };
     for (const [from, to] of [
       ['nope', '2026-09-01'], ['2026-02-30', '2026-03-01'], ['2026-09-03', '2026-09-01'],
       ['2026-06-30', '2026-12-31'],
     ]) {
-      const response = await decisionRoutes.request(`https://report.test/coach/learn/report/window?from=${from}&to=${to}`, undefined, env);
+      const response = await decisionRoutes.request(`https://report.test/coach/learn/report/window?from=${from}&to=${to}`, operator, env);
       expect(response.status).toBe(400);
       const body = await response.json() as { ok: boolean; error: string };
       expect(body.ok).toBe(false); expect(body.error).toBeTruthy();

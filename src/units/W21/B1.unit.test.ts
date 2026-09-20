@@ -437,7 +437,10 @@ interface SnapshotAnswer {
   arm: string;
   served: string[];
   /** RULED, ABSENT TODAY (R21): representation (v) above. */
-  experiment?: { id: string; saltVersion: number; arm: Assignment; anchorGeneration: number;
+  // R130/R136: `saltVersion` is `number | null` — an explicit unknown past the
+  // history the platform can read (W21.E1.07). Widening the harness's shape
+  // changes no assertion in this file.
+  experiment?: { id: string; saltVersion: number | null; arm: Assignment; anchorGeneration: number;
     /** Why an assignment is `ineligible`; absent on a randomised assignment (R118(2)). */
     reason?: 'personalization_consent' | 'anchor_unavailable' };
 }
@@ -644,7 +647,10 @@ function outcomeRecord(input: { visitor: string; ts: number; type: string; item:
  * path answered (representation (v)); it is declared here, in the
  * specification's own type, because `DecisionRecord` does not carry it yet.
  */
-type SeededDecision = DecisionRecord & { experiment?: SnapshotAnswer['experiment'] };
+// R136: the seeded row's provenance is this specification's own shape (its
+// `saltVersion` is `number | null`, W21.E1.07's ruled member), so the fixture
+// type replaces the product's member rather than intersecting it.
+type SeededDecision = Omit<DecisionRecord, 'experiment'> & { experiment?: SnapshotAnswer['experiment'] };
 type SeededOutcome = ReturnType<typeof outcomeRecord> & { experiment?: SnapshotAnswer['experiment']; decision_id?: string };
 async function seedLedgerDay(m: Mounted, date: string, decisions: SeededDecision[], outcomes: SeededOutcome[]): Promise<void> {
   const stamp = <T extends { ts: number }>(row: T) => ({ ...row, retention: captureRetention(m.env, TENANT, row.ts) });
