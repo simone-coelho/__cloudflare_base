@@ -798,8 +798,16 @@ describe('unit:W25.E1.01', () => {
         }
         // The warm item has been served and clicked; the cold one never has.
         await feed(m, 'hero', WARM, COACH_CELL, 100, 5);
+        // The revision the import itself answers with, so the receipt below
+        // names the prior document this fixture really published rather than a
+        // restated constant: `mount()` baselines `PRIORS_KIND` at revision 1 and
+        // this import is the second revision, exactly as W25.V1.01:733 reads it.
+        let importedRevision = 0;
         if (withPrior) {
-          expect((await putPriorsCsv(m, warehouseCsv([{ slot: 'hero', item: COLD, cell: 'c=direct|v=1', p_prior: PRIOR_P, n_equiv: 400 }]))).status).toBe(200);
+          const imported = await putPriorsCsv(m, warehouseCsv([{ slot: 'hero', item: COLD, cell: 'c=direct|v=1', p_prior: PRIOR_P, n_equiv: 400 }]));
+          expect(imported.status).toBe(200);
+          importedRevision = imported.body.revision as number;
+          expect(importedRevision, `${host}: the warehouse CSV is the second revision of the prior document`).toBe(2);
         }
         expect((await operatorSend(m, 'POST', `/v1/${TENANT}/learn/publish`, { slot: 'hero', brand: BRAND })).body).toMatchObject({ published: true });
 
@@ -845,7 +853,7 @@ describe('unit:W25.E1.01', () => {
           const receipt = (receipts.body.receipts as Array<Record<string, unknown>>).find(r => r.item === COLD)!;
           expect(receipt, `${host}: the cold item has a receipt`).toBeTruthy();
           expect(receipt.lift_terms, `${host}: the receipt says the estimate is prior-derived, with no observed exposure`)
-            .toMatchObject({ n: 0, n0: 400, prior: { p: PRIOR_P, n: 400 }, prior_version: 1 });
+            .toMatchObject({ n: 0, n0: 400, prior: { p: PRIOR_P, n: 400 }, prior_version: importedRevision });
         }
       }
     }
