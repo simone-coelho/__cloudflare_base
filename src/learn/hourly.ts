@@ -1562,7 +1562,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       // hour unable to say, because a denominator drawn from part of a
       // membership is a wrong number, not a smaller one.
       const record = r.state.enrollment?.[at.date]?.[brand] ?? {};
-      if (ids.some(visitor => !Object.hasOwn(record, visitor))) { unaccounted.add(brand); continue; }
+      if (ids.some(visitor => !record[visitor]?.arms.length)) { unaccounted.add(brand); continue; }
       const ha = (hb.assignments ??= emptyAssignments());
       for (const visitor of ids) {
         const enrolled = record[visitor]!;
