@@ -46,7 +46,9 @@ describe('W15 the receipt as sentences with explicit measurement units', () => {
       'Fatigue: this shopper was served it 1 time in the last 24 hours: -0.1.',
       'Merchandising: season 0.8 at weight 0.2: ×1.1.',
       'Diversity: cnt_b yielded: at most 1 per line in this slot.',
-      'Learned lift 1.37 from channel, visit bucket and journey stage (84 served exposures, 9 weighted credit in unit units), applied at trust 0.5.',
+      // R155 (unit:W26.X1.01): the measured learned-lift sentence states what
+      // the estimate does not correct for (F21 §8, §2 probes 3 and 4).
+      'Learned lift 1.37 from channel, visit bucket and journey stage (84 served exposures, 9 weighted credit in unit units), applied at trust 0.5, not corrected for position or placement.',
     ]);
   });
 
@@ -72,7 +74,9 @@ describe('W15 the receipt as sentences with explicit measurement units', () => {
       explain: { ...base.explain, lift: { reward: 'purchase', objective: 'revenue', measurementBasis: 'rendered-v1', level: 0, level_words: 'everyone', n: 2, s: 80, p0: 20, n0: 30, p_hat: 30, lift: 1.5, gamma: 1 } } };
     const receipt = receiptOf(record, names);
     expect(receipt).toMatchObject({ measurementBasis: 'rendered-v1', at: base.ts, renderedAt: base.ts + 1000, decision_id: base.decision_id });
-    expect(receipt.why[0]).toBe('Client-reported rendering was durably admitted; this is not proof of human visibility.');
+    // R155 (unit:W26.U1.01): the admitted render is the declared exposure unit;
+    // the viewable impression is a different thing and is not counted (F21 §5 item 5).
+    expect(receipt.why[0]).toBe('Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.');
     expect(receipt.why.at(-1)).toContain('2 client-reported renders, 80 weighted credit in revenue units');
     expect(receiptOf(base, names)).toMatchObject({ measurementBasis: 'served-v1', renderedAt: null });
   });

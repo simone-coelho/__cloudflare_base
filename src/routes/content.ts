@@ -27,7 +27,7 @@ import { LegacyDocumentError, readIndex, readVersion, rollback, write, type Docu
 import { assertPublicationBase, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
-import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND } from '@/learn/priors';
+import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, type PriorsDoc } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
@@ -81,6 +81,31 @@ function inputCollection(kind: string, candidate: unknown): void {
     if (kind === 'prior') inputRecords(body.rows);
   }
 }
+/**
+ * W25 Z1.01 (F20 §1.5): the unit a prior is in, against the unit its slot learns
+ * in, at the door a data scientist actually imports through.
+ *
+ * `p_prior` is a probability; a slot whose objective is money does not learn one.
+ * The objective comes from the tenant's own published learning document, never
+ * from a compiled list of slots, so the check holds for any tenant's vocabulary.
+ * A document whose rows do not validate is left to the validator that already
+ * names them; only a document that would otherwise be ACCEPTED is refused here.
+ *
+ * Fail closed: if the learning document cannot be read, the prior cannot be
+ * checked against the unit its slot learns in, and the import is refused rather
+ * than published unchecked. An absent learning document is not an unreadable
+ * one — the compiled default learns in units, and the import proceeds.
+ */
+async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const valid = PRIORS_KIND.validate(candidate);
+  if (!valid.ok) return null;
+  let learn;
+  try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+  catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
+  const errors = priorUnitErrors(valid.value as PriorsDoc, (slot) => learn.slots?.[slot]?.objective ?? 'unit');
+  return errors.length ? { status: 422, errors } : null;
+}
+
 function catalogScope(c: Context<Ctx>): string {
   const tenant = c.get('tenant'), user = c.get('auth')?.user;
   if (!user || (user.type !== 'access' && user.type !== 'service')) throw new PublicationError('Typed access or service credential required', 401, 'operator_required');
@@ -296,6 +321,10 @@ contentRoutes.post('/:kind/validate', async (c) => {
   if (body === null) return c.json({ error: 'body must be JSON' }, 400);
   const candidate = (body as { document?: unknown }).document ?? body;
   inputCollection(k.kind.name, candidate);
+  if (k.kind.name === PRIORS_KIND.name) {
+    const unit = await priorUnitRefusals(c, scope, candidate);
+    if (unit) return c.json({ valid: false, errors: unit.errors }, unit.status);
+  }
   const result = k.kind.validate(candidate);
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
@@ -327,6 +356,10 @@ contentRoutes.put('/:kind', async (c) => {
     note = noteOf(n);
   }
   inputCollection(k.kind.name, candidate);
+  if (k.kind.name === PRIORS_KIND.name) {
+    const unit = await priorUnitRefusals(c, scope, candidate);
+    if (unit) return c.json({ ok: false, errors: unit.errors }, unit.status);
+  }
   // A replacement is self-contained: reject invalid new drafts before any
   // authority read. Original v1 receipt resolution is deliberately read-only
   // and may retain a value that the current write validator no longer admits.

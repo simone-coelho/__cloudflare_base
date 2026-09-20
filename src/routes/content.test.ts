@@ -348,7 +348,10 @@ describe('/content routes', () => {
       ] });
     expect(Number.isFinite(Date.parse(body.pinDiagnostics.checkedAt!))).toBe(true);
     expect(JSON.stringify(body.pinDiagnostics)).not.toMatch(/pinnedPieceId|"home"|"draft"/);
-    const bounded: SlotCatalog = { pages: Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`page${i}`, [{ slot: 'story', take: 1, weights: {}, pinnedPieceId: `private-${i}` }]])) };
+    // R194 (unit:W26.I1.01): sixty PAGES, each with its own slot name — a slot
+    // name may not be reused on another page of the same brand, and the bound
+    // under test is the number of pages, never a shared name.
+    const bounded: SlotCatalog = { pages: Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`page${i}`, [{ slot: `story-${i}`, take: 1, weights: {}, pinnedPieceId: `private-${i}` }]])) };
     const preview = await (await call('/slots/validate?scope=coach', 'POST', bounded)).json() as { pinDiagnostics: SlotDiagnostics };
     expect(preview.pinDiagnostics).toMatchObject({ status: 'available', slotsRevision: null, warningCount: 60, omittedWarningCount: 10 });
     expect(preview.pinDiagnostics.warnings).toHaveLength(50);
@@ -759,7 +762,10 @@ describe('/content routes', () => {
     expect((await request('/rollback/3', 'POST', {})).status).toBe(404);
     expect(await patch(env, SLOTS_KIND, 'coach', DEFAULT_SLOTS, { version: 'unrelated-change' }, { actor: 'ops', expectedRevision: 3, expectedPublication: (await readPublication(env, SLOTS_KIND, 'coach')).publication, operationId: '3:' + crypto.randomUUID() })).toMatchObject({ ok: false });
     expect([...kv.store]).toEqual(before); expect(kv.calls.some(call => call.startsWith('put:'))).toBe(false);
-    const corrected = { ...legacy, pages: { home: [hero, { ...hero, slot: 'story', pinnedPieceId: 'q' }], other: [hero] } };
+    // R194 (unit:W26.I1.01): the second page carries its own slot name; the
+    // claim here is that the corrected document validates, not that two pages
+    // may share one placement name.
+    const corrected = { ...legacy, pages: { home: [hero, { ...hero, slot: 'story', pinnedPieceId: 'q' }], other: [{ ...hero, slot: 'other-hero' }] } };
     expect(await (await request('/validate', 'POST', { document: corrected })).json()).toMatchObject({ valid: true });
     expect(await (await request('', 'PUT', { document: corrected })).json()).toMatchObject({ ok: true, revision: 4 });
     expect(await (await request('')).json()).toMatchObject({ revision: 4, document: { pages: corrected.pages } });

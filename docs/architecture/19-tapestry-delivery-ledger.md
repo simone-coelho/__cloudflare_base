@@ -33,8 +33,8 @@
 | 11 | Visit number (40% buy visit 1 / 60% later; on-model first visit → detail/reviews return) | Doc 1 dimension 2 + seeded-defaults-reweighted story | CW7 (fix visit semantics — see §4 honesty notes) |
 | 12 | Content type + metadata (on-model/silo/zoom/sole/video; video affinity) | Doc 1 dimension 4 + content-feed spec | CW2 catalog `type`, CW3 content dims |
 | 13 | Marketing channel | Doc 1 dimension 3 | CW7 (UTM/referrer capture — doesn't exist yet) |
-| 14 | Per-slot strategies, configured AND autonomous modes | Doc 1 strategies section | CW5 SlotStrategy config |
-| 15 | No black box; visibility into weightings; tune themselves | Doc 1 control section (every constant a visible parameter) | CW0 + CW9 + CW11 explain persistence |
+| 14 | Per-slot strategies, configured AND autonomous modes | Doc 1 strategies section | CW5 SlotStrategy config — **partly undelivered**: configured per-slot strategies are delivered; the autonomous modes are withdrawn pending the W29 safeguards, so `assisted`/`autonomous` is stored but dormant and no proposal can be applied (F24 §5) |
+| 15 | No black box; visibility into weightings; tune themselves | Doc 1 control section (every constant a visible parameter) | CW0 + CW9 + CW11 explain persistence — **partly undelivered**: the weightings and the explanations are visible, but "tune themselves" is withdrawn pending the W29 safeguards; the retained proposal history is unverified and read-only (F24 §5) |
 | 16 | DS team can inject their own math (he valued this — keep it) | Doc 1 four injection surfaces (params / priors import / egress closed loop / co-designed hooks) | CW11 priors import + export |
 | 17 | Adding dimensions later may be hard → review algo up front | Doc 1 "Adding dimensions later" (versioned registry, backfill from retained events) | Registry versioning rides CW0 |
 | 18 | "You tell me what you need to feed your machine" | Doc 1 "feeding the machine" (field-level) + Impl Plan dependencies table | M0 workshops |
