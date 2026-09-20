@@ -6,6 +6,7 @@ import { consumeLedger, consumeSurvivors } from './consume';
 import { expandLedgerMessage, prepareDeliveryClaims } from './writer';
 import { recoveryDigest, recoveryJSON, RECOVERY_LIMITS } from './recovery';
 import { retentionBirth, retentionPolicy, readRetention, type RetentionStamp } from '@/retention';
+import type { CapturedRecord, LedgerStream } from './records';
 import { shopperObjectName } from '@/tenancy/objects';
 import { loadTombstone } from './erasure';
 
@@ -31,8 +32,27 @@ export function recoveryReady(env: Env): boolean {
 }
 
 export type CaseState = 'pending' | 'recovered' | 'suppressed_erased' | 'expired_unrecovered' | 'irrecoverable' | 'disposal_pending';
+/**
+ * W22 D1.03: where a case came from, and therefore what its `tenant` means.
+ *
+ * Absent (the original shape) and `dead-letter` are the same thing: a message
+ * the dead-letter consumer captured, whose tenant is claimed only on a shopper
+ * ownership proof, because such a case can be REDRIVEN back into the ledger and
+ * a queue repair must never turn an operator into fresh shopper authority.
+ *
+ * `consumer-refusal` is the other case this platform now writes: the consumer
+ * REFUSED a row because a different row already holds its logical id (F16
+ * §5(j)). It is never redrivable — it is not a managed delivery, so
+ * `operateQuarantine` refuses to redrive it — and its tenant is not a claim
+ * about a shopper at all: it is the tenant the refused row itself names, on the
+ * tenant's own provisioned queue, which is the scope an operator must be able
+ * to list the refusal in. The discriminator is covered by the case's HMAC
+ * provenance, so no stored byte can turn a dead-letter case into a refusal one.
+ */
+export type CaseOrigin = 'dead-letter' | 'consumer-refusal';
 export interface QuarantineCase {
   version: 1; id: string; digest: string; revision: number; tenant: string | null;
+  origin?: CaseOrigin;
   provenance: string;
   source: { queue: string; message: string }; admittedAt: number; expiresAt: number;
   retention: RetentionStamp | z.infer<typeof policy>; state: CaseState;
@@ -51,7 +71,10 @@ type LoadedCase = { value: QuarantineCase; etag: string };
 async function provenance(env: Env, value: QuarantineCase): Promise<string> {
   if (typeof env.IDENTITY_SALT !== 'string' || env.IDENTITY_SALT.trim().length < 32) throw new Error('Quarantine provenance key unavailable');
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.IDENTITY_SALT.trim()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  // `origin` joins the identity only when the case carries one, so every case
+  // written before it existed keeps exactly the provenance it was signed with.
   const identity = { version: value.version, id: value.id, digest: value.digest, tenant: value.tenant, ownership: value.ownership ?? null,
+    ...(value.origin ? { origin: value.origin } : {}),
     source: value.source, admittedAt: value.admittedAt, expiresAt: value.expiresAt, retention: value.retention, safety: value.safety, records: value.records,
     survivors: value.survivors ?? null, legacyRows: value.legacyRows ?? null };
   return [...new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(recoveryJSON(identity))))]
@@ -72,7 +95,14 @@ export async function loadQuarantine(env: Env, id: string): Promise<LoadedCase |
     || (value.wire !== undefined && (typeof value.wire !== 'string' || await recoveryDigest(value.wire) !== value.digest))
     || typeof value.source?.queue !== 'string' || typeof value.source?.message !== 'string'
     || !Number.isSafeInteger(value.admittedAt) || value.admittedAt < 0 || value.expiresAt < 0
-    || (value.tenant !== null && (!value.ownership || value.ownership.tenant !== value.tenant
+    || (value.origin !== undefined && !['dead-letter', 'consumer-refusal'].includes(value.origin))
+    // A REDRIVABLE case still claims its tenant only on a shopper ownership
+    // proof. A consumer refusal is not redrivable (it is never `managed`) and
+    // carries the tenant its own refused row names; the discriminator is inside
+    // the HMAC above, so this is an additional provenance, never a weaker one.
+    || (value.origin === 'consumer-refusal' && (value.safety !== 'unsafe_history' || value.ownership !== undefined
+      || value.tenant === null || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/.test(value.tenant)))
+    || (value.tenant !== null && value.origin !== 'consumer-refusal' && (!value.ownership || value.ownership.tenant !== value.tenant
       || !idSchema.safeParse(value.ownership.admission).success || !/^[A-Za-z0-9_.-]{1,200}$/.test(value.ownership.subject)
       || !Number.isSafeInteger(value.ownership.expiresAt)))) throw new Error('Quarantine commitment unavailable');
   if (value.tenant) readRetention(value.retention, value.tenant, 'quarantine');
@@ -198,6 +228,51 @@ async function countExhausted(env: Env, recognized: ReturnType<typeof expandLedg
     }
     for (const [tenant, rows] of byTenant) await recordEvidenceLoss(env, tenant, 'retriesExhausted', rows);
   } catch { /* the capture stands whatever the counter does */ }
+}
+
+/**
+ * W22 D1.03 (F16 §5(j)): the consumer refused a row because a DIFFERENT row
+ * already holds its logical id. The two are never merged and never written side
+ * by side; the refused one is captured here, in the tenant's own scope, matched
+ * by the refused event's own logical id, so the refusal reaches an operator
+ * instead of being a silent drop.
+ *
+ * The case id is derived from the refused row's logical id, so a retry of the
+ * same collision reconciles onto the same case instead of writing a new one.
+ * Nothing here re-derives a record's provenance (R101(a)): the wire is the
+ * envelope exactly as the consumer received it.
+ */
+export async function captureRefusal(env: Env, queue: string, stream: LedgerStream, record: CapturedRecord, now = Date.now()): Promise<QuarantineCase | null> {
+  const tenant = record.tenant;
+  if (!tenantConfig(env).provisioned.includes(tenant)) return null;
+  const logicalId = stream === 'decision' ? (record as { decision_id?: string }).decision_id
+    : stream === 'outcome' ? (record as { outcome_id?: string }).outcome_id : (record as { record_id?: string }).record_id;
+  if (typeof logicalId !== 'string' || !logicalId || logicalId.length > 2048) throw new Error('Refused row identity unavailable');
+  const message = `refused:${stream}:${logicalId}`;
+  const text = quarantineWire({ kind: 'ledger', type: stream, version: 1, record });
+  if (byteLength(text) > 256 * 1024) throw new Error('Quarantine body exceeded');
+  const id = await recoveryDigest({ version: 1, queue, messageId: message }), digest = await recoveryDigest(text);
+  const existing = await loadQuarantine(env, id);
+  if (existing) {
+    if (existing.value.digest !== digest) throw new Error('Refusal identity conflict');
+    return existing.value;
+  }
+  const retention = retentionBirth(env, tenant, 'quarantine', record.ts, now);
+  // A refusal case can never outlive the row it holds.
+  let expiresAt = retention.expiresAt;
+  if (record.retention?.ledger) expiresAt = Math.min(expiresAt, readRetention(record.retention.ledger, tenant, 'ledger').expiresAt);
+  const expired = expiresAt <= now;
+  const value: QuarantineCase = { version: 1, id, digest, provenance: '', revision: 1, tenant, origin: 'consumer-refusal',
+    source: { queue, message }, admittedAt: now, expiresAt, retention, state: expired ? 'expired_unrecovered' : 'pending',
+    safety: 'unsafe_history', records: 1, ...(expired ? {} : { wire: text }), terminalLoss: expired ? null : 0 };
+  value.provenance = await provenance(env, value);
+  try { await saveCase(env, value); }
+  catch (error) {
+    const won = await loadQuarantine(env, id);
+    if (!won || won.value.digest !== digest) throw error;
+    return won.value;
+  }
+  return value;
 }
 
 /** The exact sorted owner chain excludes erasure through the actual case PUT.
