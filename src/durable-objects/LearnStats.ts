@@ -7,13 +7,13 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
-import { indexPriors, PRIORS_KIND } from '@/learn/priors';
+import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
 import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
@@ -747,18 +747,66 @@ export class LearnStats {
   }
 
   /**
-   * `force` (W24 G1.02): publish even when the counters are empty. A generation
-   * transition MUST reach `liftKey`, because the point of it is that the
-   * superseded generation stops being served; a fresh generation with nothing
-   * learned yet is exactly what the serving path should read, and `liftFor`
-   * answers "nothing learned" from it as it always has.
+   * W25 N1.01 (doc 22 §8, F20 §4.5): the slot this object IS, for a slot that
+   * holds imported priors and has never recorded an event.
+   *
+   * An object learns its tenant, brand and slot from the first write it is sent.
+   * A slot whose only evidence is a prior has had no write, so without this it
+   * could never publish the estimate the prior gives it, and a cold item would
+   * wait for the very exposure the prior exists to avoid needing. The identity
+   * is not guessed: it is the name this object was addressed by, CHECKED against
+   * the namespace the way every other object here checks its own address
+   * (`state.id` against `idFromName`, as `ShopperReflex` and `RegionTrend` do),
+   * so an id that was not derived from a slot name answers nothing at all. The
+   * configuration comes from the tenant's own published learning document, the
+   * same read `priorsFor` verifies this object's stored configuration against.
+   *
+   * Nothing is written to storage here and `this.data` is not set: the estimator
+   * still has no counters, and the first real write creates them as it always
+   * did. This is an address and a published configuration, never evidence.
+   */
+  private async priorOnlyIdentity(): Promise<Stored | null> {
+    const namespace = this.env.LEARN_STATS;
+    const id: unknown = this.state.id;
+    if (!namespace || !id) return null;
+    const declared = (id as { name?: unknown }).name;
+    const named = typeof declared === 'string' ? declared : String(id);
+    const parts = named.split(':');
+    if (parts.length < 3) return null;
+    const [tenant, brand, ...rest] = parts;
+    const slot = rest.join(':');
+    if (!component(tenant) || !component(brand) || !component(slot)) return null;
+    if (namespace.idFromName(statsName(tenant, brand, slot)).toString() !== String(id)) return null;
+    const pin = await pinPublication(this.env, tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+    const dials = learn.value.slots?.[slot];
+    return { tenant, brand, slot, stats: emptyStats(),
+      config: { reward: dials?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
+        objective: dials?.objective ?? 'unit', measurementBasis: dials?.measurementBasis ?? 'served-v1' } };
+  }
+
+  /**
+   * `force` (W24 G1.02): publish even when there is nothing to publish yet. A
+   * generation transition MUST reach `liftKey`, because the point of it is that
+   * the superseded generation stops being served; a fresh generation with
+   * nothing learned yet is exactly what the serving path should read, and
+   * `liftFor` answers "nothing learned" from it as it always has. It is the only
+   * caller that passes it, and it never bypasses W25's gate for anyone else.
    */
   private async publish(force = false): Promise<LiftSnapshot | null> {
-    const d = await this.loadIfAny();
-    if (!d || (!force && d.stats.events === 0)) return null;
+    const d = await this.loadIfAny() ?? await this.priorOnlyIdentity();
+    if (!d) return null;
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     const frozen = await this.snapshot(d);
+    // W25 N1.01 (doc 22 §8, F20 §4.5): an item with an imported prior and no
+    // live events yet HAS an estimate — that is what importing a prior is for —
+    // so a slot whose only evidence is its priors publishes it, and a cold item
+    // is ranked on the prior the day it is imported instead of on the day the
+    // slot first records an event. The gate is not lifted, it is asked of the
+    // snapshot rather than of the event counter: a slot with nothing at all to
+    // publish still publishes nothing.
+    if (!force && d.stats.events === 0 && Object.keys(frozen.items).length === 0) return null;
     let version = Math.max(frozen.version, this.lastAllocated + 1);
     try {
       for (let attempt = 0; attempt < 8; attempt++, version++) {
@@ -821,6 +869,15 @@ export class LearnStats {
         objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
     }
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
+    // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
+    // is money does not learn one. The import door refuses such a row, so this
+    // can only be a document retained from before that rule; applying it would
+    // shrink the item toward a rate in the wrong unit and quietly demote it to
+    // the lift floor. The publication is refused instead, naming the unit, so
+    // the operator re-exports the document rather than reading a demotion as
+    // evidence. The refusal is on the prior, never on the slot's own counters.
+    const unit = priorUnitErrors(rev.value, (slot) => (slot === d.slot ? d.config.objective ?? 'unit' : 'unit'));
+    if (unit.length) throw new Refusal(409, `statistics prior unit incompatible: ${unit[0]}`);
     for (const row of rev.value.rows) if (row.slot === d.slot) {
       if (!itemName(row.item)) throw capacity();
       keyBound(row.cell);

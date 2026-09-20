@@ -1060,6 +1060,13 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     // Existing anonymous historical max counts are not reconstructed by this fold.
     counts,
     policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison, computation,
+    // W25 O1.01: an hour aggregate carries decayed counters and no prior
+    // revision, so a day summed from hours is built prior-free and says so
+    // rather than leaving the difference from the live table unexplained. Making
+    // the fold prior-aware means carrying the prior revision the hour was
+    // computed under into the aggregate itself; that is owed work, named on the
+    // W25.O1.01 row, not something this declaration may pretend away.
+    gridPriors: { applied: false, priorVersion: 0 },
     // W21 C1.03: the allocation the day was served under is published
     // configuration and is recorded here as it is on a raw-day build.
     allocation: publishedAllocation(learn),

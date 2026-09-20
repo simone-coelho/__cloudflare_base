@@ -18,6 +18,7 @@ import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type R
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
+import type { PriorIndex } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -577,6 +578,24 @@ export interface ReportInput {
   truncated: boolean;
   /** W22 D1.03: conflicts already filed, excluded here instead of refusing the day. */
   resolved?: ResolvedConflicts;
+  /**
+   * W25 O1.01 (F20 §5, §7): the imported priors these grids are to be built
+   * with, in the shape `buildSnapshot` already takes — the prior document's
+   * revision and its resolved index. `indexPriors` resolves one SLOT at a time,
+   * so a caller with more than one slot passes a function and gets asked per
+   * slot; a caller with one index passes it and it is used for every slot it has
+   * rows for. Absent, the grids are built prior-free, exactly as every caller
+   * builds them today, and the report SAYS so in `gridPriors` rather than
+   * leaving a reader to discover it by comparing numbers.
+   */
+  priors?: { version: number; index: PriorIndex | ((slot: string) => PriorIndex | null | undefined) } | null;
+}
+
+/** The prior index in force for one slot, or null where the grid is prior-free. */
+function priorsForSlot(priors: ReportInput['priors'], slot: string): PriorIndex | null {
+  if (!priors) return null;
+  const index = typeof priors.index === 'function' ? priors.index(slot) : priors.index;
+  return index && index.size > 0 ? index : null;
 }
 
 export interface ArmRow {
@@ -633,6 +652,17 @@ export function publishedAllocation(learn: LearnConfig): ReportAllocation {
   const share = finite(learn.holdout?.share) ? Math.min(1, Math.max(0, learn.holdout.share)) : 0;
   return { version: 1, source: 'published', share, arms: [...(learn.holdout?.arms ?? [])] };
 }
+/**
+ * W25 O1.01: a stored report's own declaration about its grids, read back
+ * conservatively. Anything that is not exactly the declaration is unknown, and
+ * unknown is absent — never re-derived as "prior-free".
+ */
+export function validGridPriors(value: unknown): { applied: boolean; priorVersion: number } | null {
+  if (!object(value) || typeof value.applied !== 'boolean' || !finite(value.priorVersion)
+    || value.priorVersion < 0 || !Number.isInteger(value.priorVersion)) return null;
+  return { applied: value.applied, priorVersion: value.priorVersion };
+}
+
 export function validAllocation(value: unknown): ReportAllocation | null {
   if (!object(value) || value.version !== 1 || value.source !== 'published' || !finite(value.share)
     || value.share < 0 || value.share > 1 || !Array.isArray(value.arms) || value.arms.length > REPORT_LIMITS.policies
@@ -737,6 +767,22 @@ export interface DayReport {
   computation?: ComputationBasis | null;
   /** W22 A1.01: the one named, versioned attribution contract this day was built under. Absent on a report built before it existed. */
   attributionContract?: AttributionContract;
+  /**
+   * W25 O1.01 (F20 §5, §10): whether the lift grids in this report were built
+   * with the tenant's imported priors, and which revision of them.
+   *
+   * The live table shrinks a cold item toward its imported prior at the prior's
+   * strength; an offline grid built without the document shrinks the same item
+   * toward the slot at the configured n₀. Those are two different numbers for
+   * the same item, and a data scientist reconciling the report against the table
+   * used to have nothing to tell them apart. This member is DERIVED from what
+   * the grids were actually built with, so `{ applied: false, priorVersion: 0 }`
+   * is a statement about this report's own grids and not a stamp.
+   *
+   * Optional: a report written before this release does not carry it, and
+   * absence means unknown, never "prior-free".
+   */
+  gridPriors?: { applied: boolean; priorVersion: number };
 }
 
 /**
@@ -809,6 +855,9 @@ export function diagnosticDayReport(report: DayReport): DayReport {
   return {
     tenant: report.tenant, brand: report.brand, date: report.date, builtAt: report.builtAt,
     counts: report.counts, policies: report.policies, grids: report.grids, exploration: report.exploration,
+    // W25 O1.01: the declaration belongs to the grids it describes, so it is
+    // carried with them, and only when the stored report really carries one.
+    ...(validGridPriors(report.gridPriors) ? { gridPriors: validGridPriors(report.gridPriors)! } : {}),
     measurement: REPORT_MEASUREMENT, holdout,
     holdoutComparison: Object.fromEntries(Object.keys(holdout).map((slot) => [slot, []])),
     armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
@@ -916,6 +965,8 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const slots = [...slotCounts.keys()].sort();
   const policies: DayReport['policies'] = [];
   const grids: DayReport['grids'] = {};
+  /** W25 O1.01: prior-free until a grid below is actually built with a prior. */
+  let gridPriors: { applied: boolean; priorVersion: number } = { applied: false, priorVersion: 0 };
   const holdout: DayReport['holdout'] = {};
   const holdoutComparison: DayReport['holdoutComparison'] = {};
 
@@ -950,7 +1001,13 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits });
     for (const slot of slots) {
       const st = states.get(slot) ?? emptyStats();
-      (grids[slot] ??= {})[p.name] = buildSnapshot(st, { tenant: i.tenant, brand: i.brand, slot }, slotCfg[slot]?.reward ?? 'click', i.now, statsCfg, null, slotCfg[slot]?.objective ?? 'unit', slotCfg[slot]?.measurementBasis ?? 'served-v1');
+      // W25 O1.01: the declaration below is derived here, from the index this
+      // grid was really handed, so it cannot say one thing while the grid holds
+      // another.
+      const index = priorsForSlot(i.priors, slot);
+      if (index) gridPriors = { applied: true, priorVersion: i.priors!.version };
+      (grids[slot] ??= {})[p.name] = buildSnapshot(st, { tenant: i.tenant, brand: i.brand, slot }, slotCfg[slot]?.reward ?? 'click', i.now, statsCfg,
+        index ? { version: i.priors!.version, index } : null, slotCfg[slot]?.objective ?? 'unit', slotCfg[slot]?.measurementBasis ?? 'served-v1');
     }
     // §10: the arms, under the learning policy only.
     if (role === 'learning') {
@@ -1005,7 +1062,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const report: DayReport = {
     tenant: i.tenant, brand: i.brand, date: i.date, builtAt: i.now,
     counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated },
-    policies, grids, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison,
+    policies, grids, gridPriors, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison,
     armVisitors, visitorOutcomes, allocation: publishedAllocation(i.learn),
     computation: new Set(policies.map(p => p.name)).size === policies.length
       ? computationBasis(i.learn, policies, slots, { source: 'raw-day', horizonMs: null, ringCap: null }) : null,

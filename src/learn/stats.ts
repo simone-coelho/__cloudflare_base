@@ -192,12 +192,27 @@ const stampedAt = (updatedAt: number, ts: number, now: number): number => Math.m
 
 const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effectiveScore(e, now, tau) : 0);
 
+/**
+ * W25 Z1.01 (F20, "a lift of one where there is nothing to compare against"):
+ * WHAT this row's `lift` was measured against.
+ *
+ * `slot-rate` — the slot's own rate in this cell, the definition of lift.
+ * `none` — the slot has no rate in this cell (it has never recorded a success
+ * there, so p₀ is exactly zero) and there is nothing to divide by. The `lift`
+ * number stays 1, because a multiplicative term with no reference must leave the
+ * ranking where it found it; this member is what stops that 1 from being read as
+ * "measured, and equal to the slot", which is a claim no evidence supports.
+ */
+export type LiftReference = 'slot-rate' | 'none';
+
 export interface LevelStat {
   level: Level; key: string; n: number; s: number; p0: number; p_hat: number; lift: number;
   /** The strength the estimate was shrunk with: the imported prior's n_equiv when one applied, else the slot's n₀. */
   n0?: number;
   /** Doc 22 §8: the imported prior in force for this key, when there is one. */
   prior?: { p: number; n: number };
+  /** W25 Z1.01: what `lift` was measured against. Absent on an archive built before it was named. */
+  liftReference?: LiftReference;
 }
 export interface ItemStats { levels: LevelStat[] }
 
@@ -433,7 +448,9 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
       const target = prior ? prior.p : p0slot, n0 = prior ? prior.n : cfg.n0;
       const p_hat = (s + n0 * target) / (n + n0);
       const lift = p0slot > 0 ? Math.min(cfg.liftMax, Math.max(cfg.liftMin, p_hat / p0slot)) : 1;
-      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift, ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
+      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift,
+        liftReference: p0slot > 0 ? 'slot-rate' : 'none',
+        ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
     }
     items[item] = out;
   }
@@ -455,7 +472,12 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
+export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
+  /** W25 Z1.01: what this lift was measured against. Derived for an archive built before the member existed, never guessed: p₀ is on the row. */
+  liftReference: LiftReference }
+
+/** What a row's lift was measured against, from the row itself. */
+export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
 
 /** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
 export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
@@ -467,7 +489,7 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
+      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, liftReference: liftReferenceOf(st), ...(st.prior ? { prior: st.prior } : {}) };
     }
   }
   return null;
