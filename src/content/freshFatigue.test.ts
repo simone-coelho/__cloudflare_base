@@ -58,7 +58,10 @@ describe('CW30 fatigue', () => {
   it('subtracts weight × min(served, cap) / cap for what the ring says was served, itemised, never below zero', () => {
     const out = decideContent(fatigued);
     expect(out.decisions.map((d) => d.contentId)).toEqual(['undated', 'new', 'old']);
-    expect(rec(out, 'new').explain.fatigue).toEqual({ served: 1, windowHours: 168, applied: -0.1, sentence: 'this shopper was served it 1 time in the last 168 hours: -0.1' });
+    // R155 (unit:W26.F1.01): the count is the shopper's history of this piece
+    // across every placement in the brand, and the sentence says so
+    // (HANDOFF-2026-09-16:230, HANDOFF-2026-09-18:322; F21 §6(a)).
+    expect(rec(out, 'new').explain.fatigue).toEqual({ served: 1, windowHours: 168, applied: -0.1, sentence: 'this shopper was served it 1 time anywhere in this brand in the last 168 hours: -0.1' });
     expect(rec(out, 'new').explain.drivers).toContainEqual({ dim: 'fatigue', value: 'served 1 time in 168 h', a: 0.333, weight: -0.3 });
     // Five servings cap at three: the whole 0.3 comes off, and the base cannot go below zero (0.2 − 0.3 → 0, applied −0.2).
     expect(rec(out, 'old').explain.fatigue).toMatchObject({ served: 5, applied: -0.2 });
