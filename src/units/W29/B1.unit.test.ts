@@ -266,9 +266,26 @@ async function operatorCall(m: Mounted, method: 'GET' | 'POST', path: string, to
 // ── the shipped documents, read as the customer reads them ─────────────────
 
 const doc = (path: string) => readFileSync(path, 'utf8');
-/** The one line of a markdown table whose text carries `needle`. */
-const rowWith = (text: string, needle: string): string =>
-  text.split('\n').find(line => line.trimStart().startsWith('|') && line.includes(needle)) ?? '';
+/** The cells of one markdown table line (escaped `\|` is not a separator), or null. */
+const cellsOf = (line: string): string[] | null =>
+  line.trimStart().startsWith('|')
+    ? line.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map(cell => cell.trim())
+    : null;
+/**
+ * The ONE table row whose FIRST cell is `key`, anchored on purpose: a ruling on
+ * a named row must not be satisfiable by a NEW row added earlier in the document
+ * that happens to carry the same words while the named row stays unchanged
+ * (spec-pass finding 1, ruling R171). `exact` for a row number, otherwise the
+ * first cell must carry the needle — a route name, never the description.
+ */
+const anchoredRow = (text: string, key: string, match: 'exact' | 'names' = 'names'): string => {
+  const rows = text.split('\n').filter(line => {
+    const first = cellsOf(line)?.[0];
+    return first !== undefined && (match === 'exact' ? first === key : first.includes(key));
+  });
+  expect(rows.length, `exactly one table row whose first cell ${match === 'exact' ? 'is' : 'names'} \`${key}\``).toBe(1);
+  return rows[0]!;
+};
 /** One `## n · …` section of a design document, heading included. */
 const section = (text: string, heading: string): string => {
   const lines = text.split('\n');
@@ -487,9 +504,10 @@ describe('unit:W29.R1.01', () => {
    * PARTLY UNDELIVERED, which is the second half of F24 §5's condition and the
    * only half not done ("`assisted` and `autonomous` must be removed from the
    * console — not just defaulted off — AND ledger 19 rows 14/15 reported as
-   * partly undelivered"). (B) the kit's own `GET learn/queue` row publishes the
-   * member `autonomy.mutationAvailable` that W29.U1.01 rules on that answer, so
-   * the contract and the answer say one thing.
+   * partly undelivered"). (B) the kit's own `GET learn/queue` row publishes BOTH
+   * members W29.U1.01 rules on that answer — `autonomy.mutationAvailable` and
+   * `autonomy.proposalStatusesVerified` — so the contract and the answer say one
+   * thing. Every row read here is anchored on its own first cell (R171(1)).
    */
   it('logic: the published documents report autonomy as undelivered — the routes, the design section, the customer delivery ledger rows and the work queue contract', () => {
     const kit = doc('docs/kit/02-api-reference.md');
@@ -497,11 +515,11 @@ describe('unit:W29.R1.01', () => {
     const ledger = doc('docs/architecture/19-tapestry-delivery-ledger.md');
 
     // ── locked ───────────────────────────────────────────────────────────────
-    for (const [route, needle] of [['POST learn/cycle', 'learn/cycle['], ['apply|reject', 'learn/proposals/{id}/apply']] as const) {
-      expect(rowWith(kit, needle).toLowerCase(),
+    for (const route of ['POST learn/cycle', 'POST learn/proposals/{id}/apply']) {
+      expect(anchoredRow(kit, route).toLowerCase(),
         `W29.R1.01 (locked, kit 02:577/:579) — the published contract for ${route} says it is unavailable`).toContain('unavailable');
     }
-    expect(rowWith(kit, 'GET learn/proposals').toLowerCase(),
+    expect(anchoredRow(kit, 'GET learn/proposals').toLowerCase(),
       'W29.R1.01 (locked, kit 02:578) — and the retained history is published as read-only and unverified')
       .toMatch(/read-only|unverified/);
     const autonomySection = section(design, '## 11 · Autonomy per slot');
@@ -510,10 +528,13 @@ describe('unit:W29.R1.01', () => {
       .toMatch(/withdrawn[\s\S]*open delivery requirement/);
 
     // ── ruled (A): the customer's own delivery ledger rows ───────────────────
-    for (const call of ['configured AND autonomous modes', 'tune themselves']) {
-      const row = rowWith(ledger, call);
-      expect(row.length,
-        `W29.R1.01 — the delivery ledger still carries the customer's call "${call}" (docs/architecture/19-tapestry-delivery-ledger.md:36-37)`).toBeGreaterThan(0);
+    // Anchored on the ROW NUMBER F24 §5 names, so a new row carrying the same
+    // words elsewhere in the document cannot satisfy the ruling while rows 14
+    // and 15 stay as they are (R171(1)).
+    for (const [number, call] of [['14', 'configured AND autonomous modes'], ['15', 'tune themselves']] as const) {
+      const row = anchoredRow(ledger, number, 'exact');
+      expect(row,
+        `W29.R1.01 — delivery ledger row ${number} is still the row that traces the customer's call "${call}" (docs/architecture/19-tapestry-delivery-ledger.md:36-37), so the ruling lands on the row F24 §5 names`).toContain(call);
       expect(row.toLowerCase(),
         `W29.R1.01 — RULED: F24 §5 makes it the condition of leaving the controls unbuilt that "ledger 19 rows 14/15 [are] reported as partly undelivered". The console half is done; this row still traces the customer's words "${call}" to a build item with no delivery statement at all, so the capability still reads as delivered. The row must report it PARTLY UNDELIVERED and name the W29 withdrawal. It reads: ${row.trim()}`)
         .toMatch(/part(ly|ially) undelivered/);
@@ -523,11 +544,11 @@ describe('unit:W29.R1.01', () => {
     }
 
     // ── ruled (B): the work queue's published contract ───────────────────────
-    const queueRow = rowWith(kit, 'GET learn/queue');
-    expect(queueRow.length, 'the kit publishes a `GET learn/queue` row (kit 02:567)').toBeGreaterThan(0);
-    expect(queueRow,
-      `W29.R1.01 — RULED: the published row for the operator application's landing page says "What needs a person, as counts: proposals pending" and names no availability. It must publish the answer's own \`autonomy.mutationAvailable\` member (W29.U1.01) so the contract and the answer agree that the pending proposals are historical and no apply or reject is available. It reads: ${queueRow.trim()}`)
-      .toMatch(/mutationAvailable/);
+    // Anchored on the route's own first cell, for the same reason (R171(1)).
+    const queueRow = anchoredRow(kit, 'GET learn/queue');
+    expect([/mutationAvailable/, /proposalStatusesVerified/].filter(name => name.test(queueRow)).length,
+      `W29.R1.01 — RULED: the published row for the operator application's landing page says "What needs a person, as counts: proposals pending" and names no availability. It must publish BOTH members W29.U1.01 rules on that same answer — \`autonomy.mutationAvailable\` and \`autonomy.proposalStatusesVerified\` — so the contract and the answer agree that the pending proposals are historical, that no apply or reject is available, and that the statuses the count excludes are not verified applications. It reads: ${queueRow.trim()}`)
+      .toBe(2);
     expect(queueRow.toLowerCase(),
       `W29.R1.01 — and the same row says the pending count is historical (kit 02:606 already states it, three hundred lines away from the row a reader of the route reads). It reads: ${queueRow.trim()}`)
       .toMatch(/historical/);
