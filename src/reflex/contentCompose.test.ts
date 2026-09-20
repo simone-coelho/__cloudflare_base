@@ -325,12 +325,19 @@ describe('W38.05 served explanations', () => {
       // timings, the SHA pin, the workload and the decision count — and only the recorded support
       // differs, by exactly the single entry the rule adds. Any other difference, in `candidates`
       // or anywhere else, still fails this oracle.
+      // R167(3): only the slot the workload's own explore callback names can gain the ruled entry,
+      // asked of the callback itself rather than assumed, so a candidate wrongly added to any other
+      // slot still fails this oracle.
+      const hook = workload(count)[5]!;
+      const exploringSlots = ['pin', 'hero', 'story', 'rail']
+        .filter(slot => hook(slot, [{ id: 'x', score: 1 }, { id: 'y', score: 0 }]) !== null);
+      expect(exploringSlots, 'R167(3) — the workload explores exactly one slot').toEqual(['story']);
       const oracle = (output: ReturnType<typeof composeContentDetailed> | undefined) => {
         if (!output) return output;
         const candidates: typeof output.candidates = {};
         for (const [slot, rows] of Object.entries(output.candidates)) {
           const frozen = expected.candidates[slot] ?? [];
-          const added = rows.filter(row => !frozen.some(kept => kept.contentId === row.contentId));
+          const added = exploringSlots.includes(slot) ? rows.filter(row => !frozen.some(kept => kept.contentId === row.contentId)) : [];
           candidates[slot] = added.length === 1 ? rows.filter(row => row.contentId !== added[0]!.contentId) : rows;
         }
         return { ...output, candidates };

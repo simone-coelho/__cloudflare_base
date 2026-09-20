@@ -96,6 +96,9 @@ import { LearnStats } from '@/durable-objects/LearnStats';
 import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
+import { liftKey } from '@/learn/fan';
+import { recoveryDigest } from '@/ledger/recovery';
+import { DEFAULT_STATS } from '@/learn/stats';
 import { RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import type { Env } from '@/types/env';
@@ -159,7 +162,10 @@ const SCORED_ORDER = ['cnt-evening-tabby', 'cnt-solo-evening', 'cnt-weekend-tabb
 /** A lift snapshot carrying only what exploration reads: the root observation count. */
 const snapshotOf = (observations: Record<string, number>): LiftSnapshot => ({
   tenant: TENANT, brand: TENANT, slot: 'hero', reward: 'click', version: 11, publishedAt: T0, events: 2000,
-  n0: 30, nMin: 30, liftMin: 0.5, liftMax: 2,
+  n0: DEFAULT_STATS.n0, nMin: DEFAULT_STATS.nMin, liftMin: DEFAULT_STATS.liftMin, liftMax: DEFAULT_STATS.liftMax,
+  // `readLift`'s compatibility check (src/content/service.ts:79-84) compares the estimator constants
+  // with the slot's own, so the mounted host reads this snapshot rather than discarding it.
+  tauLearnMs: DEFAULT_STATS.tauLearnMs,
   items: Object.fromEntries(Object.entries(observations).map(([id, n]) => [id,
     { '*': { level: 0 as const, key: '*', n, s: 0, p0: 0.1, p_hat: 0.1, lift: 1 } }])),
   slotRates: { '*': { n: 2000, s: 200, rate: 0.1 } },
@@ -363,6 +369,23 @@ async function publish(m: Mounted, learn: LearnConfig): Promise<void> {
   invalidatePublicationCache();
 }
 
+/**
+ * The slot's lift snapshot, published where the engine reads it. `readLift`
+ * (src/content/service.ts:78-107) refuses a snapshot whose estimator constants
+ * differ from the slot's and one whose witness the statistics object does not
+ * confirm, so the witness is answered here from the snapshot's own digest.
+ */
+async function publishLift(m: Mounted, snapshot: LiftSnapshot): Promise<void> {
+  const witnessed: LiftSnapshot = { ...snapshot, witness: 'b1'.repeat(32) };
+  await m.env.CACHE.put(liftKey(TENANT, TENANT, 'hero'), JSON.stringify(witnessed));
+  const digest = await recoveryDigest(witnessed);
+  m.env.LEARN_STATS = { idFromName: (name: string) => name, get: () => ({ fetch: async () => Response.json({
+    ok: true, state: 'healthy', tenant: TENANT, brand: TENANT, slot: 'hero', witness: witnessed.witness,
+    publication: { witness: witnessed.witness, digest, version: witnessed.version },
+  }) }) } as unknown as DurableObjectNamespace;
+  invalidateLiftCache();
+}
+
 const operatorGet = async (m: Mounted, path: string) => {
   const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, { headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT } }));
   return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
@@ -479,11 +502,22 @@ describe('unit:W28.W1.01', () => {
         `src/learn/explore.ts:88 — live exploration refuses the withdrawn mode for ${visitor}`).toBeNull();
     }
     // … and R159's retained historical replay still reproduces the old sampler, by the marker's own name.
-    const historical = SHOPPERS.slice(0, 40)
-      .map(v => explorationPick({ visitorId: v, slot: 'hero', nowMs: T0, ranked: RANKED, snapshot: snapshotOf({ 'cnt-evening-tabby': 1000, 'cnt-solo-evening': 4, 'cnt-weekend-tabby': 1000 }), cfg }, HISTORICAL_EXPLORATION))
-      .filter(p => p !== null);
+    // Every piece equally under-observed, so the retained sampler's draw sometimes leads with a
+    // piece the score did not, and sometimes agrees with it: both of its branches are exercised.
+    const cold = snapshotOf(Object.fromEntries(PIECES.map(p => [p.id, 4])));
+    const replayed = SHOPPERS.slice(0, 60)
+      .map(v => explorationPick({ visitorId: v, slot: 'hero', nowMs: T0, ranked: RANKED, snapshot: cold, cfg }, HISTORICAL_EXPLORATION));
+    const historical = replayed.filter(p => p !== null);
     expect(historical.length, 'R159 — the retained sampler still answers for an explicitly identified historical replay').toBeGreaterThan(0);
     expect(historical[0]!.mode, 'and it answers as the mode it was').toBe('thompson');
+    // R167(5), R159: the retained sampler's OWN agreement branch (src/learn/explore.ts:104) stays
+    // as it was. W28.C1.01(a) makes a rotation or epsilon draw that agrees with the order an
+    // exploration; it must not reach this branch, because a historical replay has to reproduce the
+    // archived record exactly. `src/learn/phase2.test.ts:79/:88` ("flags only when the sample
+    // disagrees", `flagged` between 20 and 180 of 200) is the frozen statement of the same fact
+    // and is protected by this lock.
+    expect(replayed.filter(p => p === null).length,
+      'R159 — a historical Thompson sample that agrees with the order still answers null, so a replay reproduces the archived record').toBeGreaterThan(0);
 
     // LOCKED: a RETAINED document serves the merchandiser's own ranking, unflagged.
     const retained = decideContent({ ...BASE_DECIDE, learning: learningWith({ mode: 'thompson', share: 1, floor: 50 }) });
@@ -567,18 +601,22 @@ describe('unit:W28.S1.01', () => {
       expect(set.records.every(r => r.explored === false), `${mode} at share zero flags nothing`).toBe(true);
     }
 
-    // N25: the compiled default names itself the default. Every shipped statement of the default
-    // — doc 22 §7's settings table, docs/kit/03-payload-schemas.md's published value, the kit's
-    // "Exploration is off by default" and both editors — says off with no active share. The
-    // constant still says rotation at 0.10, so the code's own default contradicts all of them.
+    // N25, THE TRUE DEFAULT, MEASURED HERE AND LOCKED: a learn document with NO exploration block
+    // gives the decision path no exploration configuration at all (`exploreOf` answers null,
+    // src/content/service.ts:461), so the slot serves the merchandiser's ranking, records the
+    // scored support and flags nothing — whatever any constant says. This is what "off by
+    // default" means, and the kit's own sentence is the statement of it.
+    expect(servedOrder(plain), 'the true default: with no exploration block the ranking serves').toEqual([SCORED_ORDER[0]]);
+    expect(plain.records.every(r => r.explored === false), 'and nothing is flagged').toBe(true);
     expect(KIT_API, 'the kit states the default').toContain('Exploration is off by default');
-    expect(DEFAULT_EXPLORE, 'N25 — the compiled default must state the truth the kit, doc 22 §7 and both editors state: off, with no active share')
+    expect(DEFAULT_EXPLORE, 'N25 / R167(4) — the compiled default is a dead constant today, and it must not contradict the default measured above and stated by the kit, doc 22 §7 and both editors: off, with no active share')
       .toEqual({ mode: 'off', share: 0, floor: 50 });
-    // R162(5): turning the compiled default off is CUSTOMER-VISIBLE — a caller that relied on the
-    // constant for a slot with no exploration block stops rotating at a tenth of its decisions —
-    // so the kit must say what a slot with no exploration block does, beside the sentence above.
-    expect(KIT_API, 'R162(5) — the kit states the customer-visible case: a slot whose learn document carries no exploration block explores nothing')
-      .toMatch(/no exploration block/i);
+    // R167(4), measured: `DEFAULT_EXPLORE.mode` and `.share` have NO reader in this repository —
+    // only `.floor`, at src/routes/decisions.ts:290 — so correcting them serves no decision and
+    // changes no served page. It is a CONSISTENCY member: a constant that names itself the default
+    // and contradicts the measured default above is a false statement in the source, and the next
+    // caller to reach for it inherits the contradiction. The kit's own sentence is the lock; no
+    // witness in this repository fixes any further kit wording, so none is demanded here.
   });
 
   it('host: on the mounted application a learn document with no exploration block explores nothing, and the exploration answer states the compiled default', async () => {
@@ -674,6 +712,20 @@ describe('unit:W28.C1.01', () => {
         { contentId: 'cnt-weekend-tabby', score: SCORE['cnt-weekend-tabby'] },
       ]);
 
+    // R167(6) / F23 §4.1's FIRST lie, on a slot that takes more than one piece: the exploration
+    // named ONE piece, so the position it took is the exploration and the positions the ranking
+    // filled behind it are not. The denominator agrees: `report.ts:850 explorationOpportunity`
+    // counts one opportunity per slot per visitor, not one per served position.
+    const pair = decideContent({ ...BASE_DECIDE, visitorId: inside, candidateLimit: 6, slots: [{ ...HERO, take: 2 }],
+      learning: learningWith({ mode: 'rotation', share: 0.5, floor: 50 }, TAIL_UNDER_FLOOR) });
+    expect(servedOrder(pair), 'the exploration took first position and the ranking filled the second').toEqual(['cnt-unknown', 'cnt-evening-tabby']);
+    expect(pair.records.map(r => r.explored), 'the position the exploration moved is flagged; the one behind it is the ranking’s own').toEqual([true, false]);
+    const pairLearn: LearnConfig = { version: 'rotation-take-two', holdout: { share: 0, salt: '', arms: ['default'] },
+      slots: { hero: { gamma: 0, exploration: { mode: 'rotation', share: 0.5, floor: 50 } } } };
+    expect(reportOver(pair.records, pairLearn).exploration.find(e => e.slot === 'hero'),
+      'F23 §4.1 — one opportunity for the slot, not one per served position, and the one exploration counted in it')
+      .toEqual({ slot: 'hero', decisions: 1, explored: 1, realized: 1, configured: 0.5, mode: 'rotation' });
+
     // LOCKED: the bucket on the receipt is the one that governed the decision (F23's two smaller
     // notes). Every live pick passes the gate, so the bucket it records is the gate's own input.
     expect(record.explain.exploration!.bucket, 'the recorded bucket is the one the gate compared').toBe(bucket);
@@ -685,28 +737,32 @@ describe('unit:W28.C1.01', () => {
    * to an ordinary caller. `src/routes/decisions.ts:539` always passes `offer: { pageInstance }`,
    * so `src/content/service.ts:500`'s `captureRecords` is empty for every caller without a
    * trusted synthetic scope and `fanDecisions` never reaches the ring. The record-level clauses
-   * of this unit therefore live in the logic leg; this leg proves on the mounted application the
-   * one thing the route does answer — that the exploration rule ran, chose, and served — and
-   * LOCKS the exploration answer the operator reads for the same slot.
+   * of this unit therefore live in the logic leg; this leg proves on the mounted application, on
+   * the published lift snapshot the engine really reads, that the exploration rule RAN AND MOVED
+   * the answer — the served piece is not the one the ranking would have served — and LOCKS the
+   * exploration answer the operator reads for the same slot. R167(1): a build that breaks
+   * `explorationPick` reds this leg; measured by reverting `explore.ts` to answer null.
    */
-  it('host: on the mounted application the exploration rule runs on the real page load and the operator answer states the rule that ran', async () => {
+  it('host: on the mounted application the exploration rule moves the served piece away from the ranking leader, and the operator answer states the rule that ran', async () => {
     const m = await mount();
     await publish(m, { version: 'rotation-live', holdout: { share: 0, salt: '', arms: ['default'] },
       slots: { hero: { gamma: 0, exploration: { mode: 'rotation', share: 1, floor: 50 } } } });
+    // The slot's published evidence: every piece is well past the floor except `cnt-weekend`,
+    // which the rule must therefore choose. This shopper has shown nothing yet, so every score is
+    // zero and the ranking is catalogue order, whose leader is `cnt-evening-tabby`.
+    await publishLift(m, snapshotOf(Object.fromEntries(PIECES.map(p => [p.id, p.id === 'cnt-weekend' ? 4 : 500]))));
     const shopper = await shopperOn(m);
     const served = await shopper.snapshot();
     expect(served.status, served.raw.slice(0, 400)).toBe(200);
-    // This shopper has shown nothing yet and no snapshot is published, so every piece is equally
-    // unobserved and the slot ranks in catalogue order. Rotation's rule — fewest observations,
-    // ties by id — chooses `cnt-evening-tabby`, which is also what the ranking would have served:
-    // the exploration rule made this decision and the draw agreed with the order.
-    expect(served.served, 'the exploration rule chose the least-observed piece, which is also the ranking’s leader here').toEqual(['cnt-evening-tabby']);
-    // The control, on a second mounted application with no exploration configured: the ranking
-    // alone serves the same piece, so the page load above is the rule's decision, not the order's.
+    expect(served.served, 'the exploration rule chose the under-observed piece, which is NOT what the ranking would have served').toEqual(['cnt-weekend']);
+    // The control, on a second mounted application with the same catalogue, the same shopper state
+    // and the same snapshot but no exploration configured: the ranking's own leader is served. The
+    // two answers differ, so this leg cannot pass without the rule running.
     const off = await mount();
     await publish(off, { version: 'rotation-off', holdout: { share: 0, salt: '', arms: ['default'] }, slots: { hero: { gamma: 0 } } });
+    await publishLift(off, snapshotOf(Object.fromEntries(PIECES.map(p => [p.id, p.id === 'cnt-weekend' ? 4 : 500]))));
     const withoutRule = await shopperOn(off);
-    expect((await withoutRule.snapshot()).served, 'with no exploration configured the ranking serves the same piece').toEqual(['cnt-evening-tabby']);
+    expect((await withoutRule.snapshot()).served, 'with no exploration configured the ranking’s own leader is served').toEqual(['cnt-evening-tabby']);
 
     const answer = await operatorGet(m, `/v1/${TENANT}/learn/exploring?slot=hero`);
     expect(answer.status).toBe(200);
@@ -771,11 +827,19 @@ describe('unit:W28.D1.01', () => {
     // F23 §4.6: `cooldown` is documented with a default of "Session" and exists in no mode —
     // not in `ExploreConfig`, not in the validator, nowhere in src/. Every mention of it in a
     // published document must therefore be struck or marked not delivered.
-    for (const [name, text] of [['docs/architecture/22-outcome-learning-design.md', DOC22],
-      ['docs/kit/03-payload-schemas.md', KIT_PAYLOADS], ['docs/kit/02-api-reference.md', KIT_API]] as const) {
+    // R167(2): the EXPLORATION context only. `docs/kit/02-api-reference.md:654` uses the same word
+    // for alert egress ("necessary cooldown/recovery metadata remains separate"), which is true,
+    // unrelated and must not be caught by a dial this unit withdraws.
+    const doc22Section = (heading: string, next: string) => DOC22.slice(DOC22.indexOf(heading), DOC22.indexOf(next));
+    const explorationLines = (text: string) => text.split('\n').filter(line => /exploration/i.test(line));
+    for (const [name, text] of [
+      ['docs/architecture/22-outcome-learning-design.md §7', doc22Section('## 7 · Exploration', '## 8 ·')],
+      ['docs/architecture/22-outcome-learning-design.md, the exploration ownership row', explorationLines(DOC22).join('\n')],
+      ['docs/kit/03-payload-schemas.md, the exploration block', explorationLines(KIT_PAYLOADS).join('\n')],
+    ] as const) {
       for (const [index, line] of text.split('\n').entries()) {
         if (!/cooldown/i.test(line)) continue;
-        expect(line, `F23 §4.6 — ${name}:${index + 1} offers \`cooldown\`, which no mode implements; strike it or mark it not delivered`)
+        expect(line, `F23 §4.6 — ${name} still offers \`cooldown\`, which no exploration mode implements; strike it, or mark it not delivered`)
           .toMatch(/not delivered|not implemented|not offered/i);
       }
     }
