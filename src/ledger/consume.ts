@@ -4,7 +4,7 @@
 // queue applies explicit positional dispositions, not a whole-batch success bit.
 
 import type { Env } from '@/types/env';
-import { expandLedgerMessage, persistDeliveries, writeBatches, type LedgerRetryReconciliation, type R2Like } from './writer';
+import { expandLedgerMessage, persistDeliveries, writeBatches, type R2Like } from './writer';
 import type { CapturedMessage } from './records';
 import type { HoldoutConfig } from '@/content/types';
 import type { TenantId } from '@/tenancy/tenant';
@@ -298,14 +298,10 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
       }
     }
     const admittedLegacy: CapturedMessage[] = [], admittedPositions: number[] = [];
-    // W22 D1.03: which envelope each admitted row came from, so a refused row
-    // withholds the acknowledgement of its OWN envelope and of no other.
-    const origin = new Map<CapturedMessage, number>();
     for (const index of legacyIndices) {
       const rows = expandLedgerMessage(bodies[index]);
       try {
         for (const { record } of rows) if (!hidden(barriers.get(record.tenant)!, record)) requireRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
-        for (const row of rows) origin.set(row, index);
         admittedLegacy.push(...rows); admittedPositions.push(index);
       } catch {
         skipped++; error = 'Ledger retention authority unavailable';
@@ -314,32 +310,9 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
     }
     const allowed = admittedLegacy.filter(m => !hidden(barriers.get(m.record.tenant)!, m.record));
     for (const { record } of allowed) pinRetention(env as Env, record.retention?.ledger, record.tenant, 'ledger');
-    // W22 D1.03: the hour is read before it is written, so an identical retry
-    // writes no new object and a colliding DIFFERENT row is refused instead of
-    // being written beside the one already there (F16 §4.3, §5(j)).
-    const reconcile: LedgerRetryReconciliation = { stored: [], refused: [] };
-    const written = await writeBatches(currentOwnerEnvironment(env as Env).STORAGE as unknown as R2Like, allowed, batchId, reconcile);
-    legacyObjects = written.length; legacySuppressed = admittedLegacy.length - allowed.length;
-    legacyWritten = allowed.length - reconcile.refused.length;
-    const refusedBodies = new Set<number>();
-    if (reconcile.refused.length) {
-      error = 'Ledger logical identity conflict';
-      const { captureRefusal } = await import('./quarantine');
-      const { recoveryConfiguration } = await import('./quarantine');
-      // Durable evidence first, and the envelope is never acknowledged: a row
-      // the platform could not place is refused, named, and left to the queue's
-      // own retry and dead-letter path, never quietly dropped.
-      for (const message of reconcile.refused) {
-        refusedBodies.add(origin.get(message)!);
-        try { await captureRefusal(env as Env, recoveryConfiguration(env as Env).sourceQueue, message.type, message.record); }
-        catch { /* the refusal stands whether or not the case could be written */ }
-      }
-      for (const [tenant, rows] of new Map(reconcile.refused.reduce((counts, message) =>
-        counts.set(message.record.tenant, (counts.get(message.record.tenant) ?? 0) + 1), new Map<string, number>()))) {
-        await recordEvidenceLoss(env, tenant, 'consumerSkipped', rows);
-      }
-    }
-    for (const index of admittedPositions) if (!refusedBodies.has(index)) dispositions[index] = 'ack';
+    const written = await writeBatches(currentOwnerEnvironment(env as Env).STORAGE as unknown as R2Like, allowed, batchId);
+    legacyWritten = allowed.length; legacyObjects = written.length; legacySuppressed = admittedLegacy.length - allowed.length;
+    for (const index of admittedPositions) dispositions[index] = 'ack';
   } catch { error = 'Ledger storage or erasure state unavailable'; }
   await reportUnplaced();
   return { written: legacyWritten + (capture?.newlyStored ?? 0), objects: legacyObjects + (capture?.objects ?? 0), skipped,

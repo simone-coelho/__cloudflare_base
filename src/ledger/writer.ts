@@ -65,92 +65,8 @@ export function expandLedgerMessage(body: unknown): CapturedMessage[] {
 }
 export type { LedgerWireMessage };
 
-/**
- * W22 D1.03 (document 35 §5 row W22, "ID collision/retry"; F16 §2.1, §4.3,
- * §5(j)): what the at-least-once queue path must know before it writes.
- *
- * F16 §4.3 rules out content-addressing the batch object — "a Queues retry does
- * not guarantee the same batch composition… The reliable idempotency point on
- * this path is the read, not the write" — so the reconciliation here is a READ
- * of the hour's own objects, per logical id, done by the CONSUMER before it
- * writes. It is not a second store and not an index: the candidate objects are
- * exactly the ones whose id-range, already encoded in their name, can contain
- * the batch's ids, which is the same point lookup `findById` uses.
- *
- * Three outcomes per row, and only these three:
- *   · `stored` — the identical logical row is already in the hour. It is not
- *     written again, and the retry is complete without it.
- *   · `refused` — a DIFFERENT row carries the same logical id. It is never
- *     merged and never written beside the first (F16 §5(j)); the caller
- *     quarantines it and does not acknowledge it.
- *   · everything else is written, exactly as before.
- *
- * A row whose identity is only `legacy` — an old outcome id with no event nonce,
- * which two genuinely distinct events can share — takes part in neither: it is
- * written, because dropping it would drop a real event and refusing it would
- * refuse one.
- */
-export interface LedgerRetryReconciliation {
-  /** Rows the hour already holds under the same logical id, byte-for-byte. */
-  stored: LedgerWriteMessage[];
-  /** Rows refused because a DIFFERENT row already holds their logical id. */
-  refused: LedgerWriteMessage[];
-}
-const idField = (stream: LedgerStream) => stream === 'decision' ? 'decision_id' : stream === 'outcome' ? 'outcome_id' : 'record_id';
-const retryUnavailable = () => new Error('Ledger retry reconciliation unavailable');
-
-/** Every stable logical row the hour already holds whose id-range can contain this batch's ids. */
-async function storedRows(r2: R2Like, prefix: string, stream: LedgerStream, min: number, max: number): Promise<Map<string, Record<string, unknown>>> {
-  const base = `${prefix}/${stream}/`, spend = lookupWork(), budget = { bytes: 0 };
-  const out = new Map<string, Record<string, unknown>>();
-  const cursors = new Set<string>();
-  let cursor: string | undefined, opened = 0;
-  do {
-    spend();
-    const page = await r2.list({ prefix: base, cursor, limit: 1000 });
-    if (!page || !Array.isArray(page.objects) || typeof page.truncated !== 'boolean') throw retryUnavailable();
-    for (const o of page.objects) {
-      spend();
-      if (!o || typeof o.key !== 'string' || !o.key) throw retryUnavailable();
-      // A name whose range cannot be read is opened rather than assumed to be
-      // out of range: this reconciliation may read more than it needs, never less.
-      let overlaps = true;
-      try { const [low, high] = candidateRange(o.key, base); overlaps = low <= max && high >= min; } catch { overlaps = true; }
-      if (!overlaps) continue;
-      if (++opened > LOOKUP_LIMITS.objects) throw retryUnavailable();
-      const object = await r2.get(o.key);
-      if (!object) continue;           // the listing raced a delete: nothing is stored under it
-      const text = await boundedLedgerText(object, budget,
-        (_kind, bytes) => { if (bytes > LOOKUP_LIMITS.bytes) throw retryUnavailable(); }, retryUnavailable);
-      for (let start = 0; start <= text.length;) {
-        spend();
-        const end = text.indexOf('\n', start), line = text.slice(start, end < 0 ? text.length : end);
-        start = end < 0 ? text.length + 1 : end + 1;
-        if (!line) continue;
-        let value: unknown;
-        try { value = JSON.parse(line); } catch { throw retryUnavailable(); }
-        if (!value || typeof value !== 'object' || Array.isArray(value)) throw retryUnavailable();
-        const row = value as Record<string, unknown>;
-        if (logicalIdentity(row, stream) !== 'stable') continue;
-        const id = row[idField(stream)];
-        if (typeof id === 'string' && id && !out.has(id)) out.set(id, row);
-      }
-    }
-    if (page.cursor !== undefined && typeof page.cursor !== 'string') throw retryUnavailable();
-    if (page.truncated && (!page.cursor || cursors.has(page.cursor))) throw retryUnavailable();
-    cursor = page.truncated ? page.cursor : undefined;
-    if (cursor) cursors.add(cursor);
-  } while (cursor);
-  return out;
-}
-
-/**
- * Group messages by stream and hour, write one object per group, return what was written.
- * With `reconcile`, the hour is read first and an identical retry writes nothing
- * at all while a colliding different row is refused (W22 D1.03).
- */
-export async function writeBatches(r2: R2Like, messages: readonly LedgerWriteMessage[], batchId: string,
-  reconcile?: LedgerRetryReconciliation): Promise<WrittenBatch[]> {
+/** Group messages by stream and hour, write one object per group, return what was written. */
+export async function writeBatches(r2: R2Like, messages: readonly LedgerWriteMessage[], batchId: string): Promise<WrittenBatch[]> {
   const groups = new Map<string, { prefix: string; stream: LedgerStream; rows: LedgerWriteMessage[]; min: number; max: number }>();
   for (const m of messages) {
     if (!m || typeof m !== 'object') continue;
@@ -166,28 +82,10 @@ export async function writeBatches(r2: R2Like, messages: readonly LedgerWriteMes
   }
   const written: WrittenBatch[] = [];
   for (const g of groups.values()) {
-    let rows = g.rows;
-    if (reconcile) {
-      const present = await storedRows(r2, g.prefix, g.stream, g.min, g.max);
-      const spend = lookupWork();
-      const pending: LedgerWriteMessage[] = [];
-      for (const m of rows) {
-        const row = m.record as unknown as Record<string, unknown>;
-        const id = row[idField(g.stream)];
-        const prior = typeof id === 'string' ? present.get(id) : undefined;
-        if (!prior || logicalIdentity(row, g.stream) !== 'stable') { pending.push(m); continue; }
-        if (equalLogicalRows(prior, row, spend)) reconcile.stored.push(m);
-        else reconcile.refused.push(m);
-      }
-      rows = pending;
-    }
-    if (!rows.length) continue;
-    const min = rows.reduce((low, m) => Math.min(low, parseId(idOf(m))!.ts), Infinity);
-    const max = rows.reduce((high, m) => Math.max(high, parseId(idOf(m))!.ts), -Infinity);
-    const key = `${g.prefix}/${g.stream}/${ts36(min)}-${ts36(max)}-${batchId}.ndjson`;
-    const body = rows.map((m) => JSON.stringify(m.record)).join('\n') + '\n';
+    const key = `${g.prefix}/${g.stream}/${ts36(g.min)}-${ts36(g.max)}-${batchId}.ndjson`;
+    const body = g.rows.map((m) => JSON.stringify(m.record)).join('\n') + '\n';
     await r2.put(key, body);
-    written.push({ key, count: rows.length, stream: g.stream, prefix: g.prefix });
+    written.push({ key, count: g.rows.length, stream: g.stream, prefix: g.prefix });
   }
   return written;
 }
