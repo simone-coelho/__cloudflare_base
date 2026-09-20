@@ -13,12 +13,22 @@ import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity } from '@/ledger/delivery';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { RING_MAX_AGE_MS } from '@/learn/stats';
 import { deliverStats, emptyStatsDelivery, learningGenerations, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
 
 const RING_MAX = 200;
-const RING_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * How far back this ring reaches. Exported because it is not this object's
+ * private business: the online fan-out declares it as the horizon it actually
+ * applied and the statistics object forgets a delivery at the same moment, so
+ * every reader names the same constant instead of restating its value
+ * (W22 A1.02). It is declared in `@/learn/stats`, which neither this object nor
+ * the fan-out can cycle with, and re-exported here because this is the object
+ * that enforces it.
+ */
+export { RING_MAX_AGE_MS };
 const INDEX_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 /** Application admission budgets, not a native capacity or 200-full-record guarantee. */
 export const RING_LIMITS = { requestBytes: 1024 * 1024, rows: 1000, stateBytes: 1024 * 1024, index: 4096, idBytes: 2048,
