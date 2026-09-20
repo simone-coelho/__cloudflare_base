@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 149/158 · W closed 4/26 (W16–W41) · suite 1975/2062 · residual 87 in 10 files · typecheck GREEN
+Units 153/157 · W closed 4/26 (W16–W41) · suite 1976/2061 · residual 85 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -21,7 +21,7 @@ Units 149/158 · W closed 4/26 (W16–W41) · suite 1975/2062 · residual 87 in 
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
 | W21 | 9 | 8 | no | — | — |
-| W22 | 11 | 5 | no | — | — |
+| W22 | 10 | 9 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -174,16 +174,15 @@ Units 149/158 · W closed 4/26 (W16–W41) · suite 1975/2062 · residual 87 in 
 | W21.E1.03 | green | 1 |
 | W21.E1.04 | green | 2 |
 | W21.P1.01 | unspecified | 0 |
-| W22.A1.01 | red | 2 |
+| W22.A1.01 | green | 2 |
 | W22.D1.01 | green | 2 |
-| W22.D1.02 | red | 2 |
-| W22.D1.03 | red | 1 |
+| W22.D1.02 | green | 2 |
+| W22.D1.03 | green | 1 |
 | W22.P1.01 | unspecified | 0 |
 | W22.R1.01 | green | 2 |
-| W22.R1.02 | red | 1 |
 | W22.R1.03 | green | 2 |
 | W22.R1.04 | green | 1 |
-| W22.R1.05 | red | 1 |
+| W22.R1.05 | green | 1 |
 | W22.S1.01 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
@@ -191,19 +190,17 @@ Units 149/158 · W closed 4/26 (W16–W41) · suite 1975/2062 · residual 87 in 
 
 -  W07.01 preserves successful ledger writes and retries real R2 failures without logging failure details
 -  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
--  unit:W22.A1.01 host: the day report, the window report and the published lift snapshot each name the contract, and a day written under an earlier contract version is never pooled with a later one
--  unit:W22.D1.02 host-internal: a redelivered exposure and a redelivered outcome leave the published lift snapshot exactly where one delivery leaves it, across a restart of both objects
--  unit:W22.D1.02 host: a redelivered outcome — the same event nonce a client retry re-sends — leaves the PUBLISHED lift snapshot an operator reads where one delivery leaves it
--  unit:W22.D1.03 host: an identical retry is a no-op on every sink, a colliding but different event is refused and named, and a batch that failed midway is retried to completeness
--  unit:W22.R1.02 host: an hour whose ledger grew after it was folded is folded again, a failed hour repaired after a later hour still credits across the hour boundary, and the day's distinct visitors survive an out-of-order repair
--  unit:W22.R1.05 host: the export listing states the rows it holds, the distinct rows after dedup and the day report's own counts, agrees when they match, and names the mismatch when the export loses an object
+-  W35.03 recoverable identity transfer W35.04 rotates one device grant recoverably without reopening it or a subsequently revoked replacement
+-  W35.03 recoverable identity transfer W35.05 pins prepared transfers to serialized target authority across erasure admission failures and restart
+-  W35.03 recoverable identity transfer W35.06 preserves intent registration and generation witnesses through checkpointed paged source erasure
+-  the objects W22.04 refuses malformed online outcome identities before reads or credits and preserves nonce and legacy calls
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | d37da6e16fded7a6bd4f33d502c2fa15b8a93fa547fd8f0be664c93815769880 |
+| units sha256 | 095505fa8834d56d0a7fbf883ff549cd9d698532765f806a0f70371e125cc0fc |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -215,6 +212,6 @@ Units 149/158 · W closed 4/26 (W16–W41) · suite 1975/2062 · residual 87 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 434930a36f4aa274f6727ad5ff1a14d4bdd3598260ec225017df791b269404a6 |
-| commit | 7ea8d4564628b90a3af488aae053f015bc259c3a |
-| generated | 2026-09-20T03:46:13.795Z |
+| vitest report sha256 | d3b44bacbb2644a7aff074a4da5d1f0a76eb9e219e1c757c6b71348abe28a9b0 |
+| commit | eb5c2d834f769afb372605502f5d7ef1c481ec35 |
+| generated | 2026-09-20T04:42:16.470Z |
