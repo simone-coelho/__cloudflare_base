@@ -864,7 +864,7 @@ decisionRoutes.get('/:tenant/replay/:id', operatorJwt(), async (c) => {
   if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
   const result = await replayDecision(c.env, found.record);
   witness = structuredClone(requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger'));
-  return c.json({ ok: result.ok, equal: result.equal, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
+  return c.json({ ok: result.ok, equal: result.equal, classification: result.classification, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
   });
   if (response.ok && witness) try { requireRetention(c.env, witness, tenant, 'ledger'); }
   catch { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); }
