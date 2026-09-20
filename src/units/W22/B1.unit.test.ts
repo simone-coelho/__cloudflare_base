@@ -812,62 +812,102 @@ describe('unit:W22.D1.02', () => {
 
 describe('unit:W22.D1.03', () => {
   /**
-   * Three faults document 35 §5 row W22 names together — "ID collision/retry
-   * … partial writes":
-   *  (a) a retry of the same logical event with the same canonical bytes is a
-   *      no-op on every sink (F16 §2.1 measured the opposite: two objects);
-   *  (b) two DIFFERENT events that collide on one logical id are never merged:
-   *      the second is refused or quarantined and NAMED (F16 §5(j));
-   *  (c) a batch write that fails midway is retried to completeness with no
-   *      duplicate and no lost row (F16 §2.2 measured three objects for two
-   *      outcomes after one mid-batch R2 error).
+   * RE-SPECIFIED at ruling R120 item 1. The lead's earlier ruling of WRITE-side
+   * idempotence is withdrawn: F16 §4.3 says content-addressed naming "will not
+   * work" and that "the reliable idempotency point on this path is the read,
+   * not the write", `src/ledger/ledger.test.ts:1445` forbids the consumer
+   * reading the hour at all, and this batch's own green-at-spec units need the
+   * duplicate object to EXIST (W22.D1.01 :580, W22.R1.05 :1441). The contract
+   * is AT-LEAST-ONCE delivery with read-side dedup.
+   *
+   * So clause (a) of the original unit — an identical retry, and every read
+   * path yielding each row once with the copies counted — is FOLDED INTO
+   * W22.D1.01 (its logic leg consumes the redelivery and reads the day report,
+   * the hourly fold and the window report; W22.R1.05 reads the export listing)
+   * and is not repeated here. What remains is the pair of faults document 35 §5
+   * row W22 names that no other unit covers:
+   *  (b) a COLLISION — two genuinely DIFFERENT events under one logical id,
+   *      which at-least-once delivery cannot prevent and the writer really
+   *      stores (measured: the consumer answers `ok`, and the day then holds
+   *      two rows under one `outcome_id`) — is never merged silently, is NAMED
+   *      by the colliding id on an operator-visible answer, and is RECOVERABLE:
+   *      the day reads again once the conflict is filed (F16 §5(j): "The dedup
+   *      work must come with a decision about both — a per-event nonce in the
+   *      id, or an accepted, documented collapse");
+   *  (c) a PARTIAL write: the batch is not acknowledged, it is retried, and the
+   *      read yields both rows once with the copy the retry left counted
+   *      (F16 §2.2 measured three objects for two rows, which at-least-once
+   *      permits — losing a row or double-counting it does not).
+   *
+   * MEASURED at specification, on the product as it stands: the collision is
+   * written (`{written:1, objects:1, ok:true}`, two rows under one id), and
+   * every read path then fails closed WITHOUT naming it — `POST /learn/report`
+   * 400 `invalid raw report input`, `buildHour` and `runDayReport` throw
+   * `ReportInputError`, `GET /v1/:tenant/ledger/:id` 500 with an empty body
+   * (`writer.ts:463 lookupUnavailable()`), no quarantine case is filed (0), and
+   * the window answers 200 with the day merely `missing`. Failing closed for
+   * that day's numbers is the behaviour this unit rules; being unnamed and
+   * unrecoverable is what it refuses.
+   *
+   * RULED, ABSENT TODAY (R21), read off the route's JSON answer so the compiler
+   * count of ruled members stays at five:
+   *   · `conflict: { stream, id }` on the refusal the report route answers;
+   *   · `counts.conflicts: { decisions, outcomes }` on the day the report
+   *     answers once the conflict is filed, in one vocabulary with
+   *     `counts.duplicates`.
    */
-  it('host: an identical retry is a no-op on every sink, a colliding but different event is refused and named, and a batch that failed midway is retried to completeness', async () => {
+  it('host: a collision under one logical id is never merged, is named by that id on an operator answer and on the recovery surface, and the day reads again once it is filed; a partial batch is retried and read once', async () => {
     const m = await mount();
     const d1 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
-    const d2 = decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work');
     const o1 = click(m.env, d1, T12 + 300_000, 'w22-b1-retry-click');
-    const wire = await throughTheLedger(m, [d1, d2], [o1]);
-    const objectsAfterFirst = [...m.storage.objects.keys()].sort();
+    await throughTheLedger(m, [d1], [o1]);
 
-    // (a) the identical retry, the same canonical bytes, through the real consumer.
-    const again = await consumeLedger(m.env, wire, NOW);
-    expect(again.ok, 'the retry is acknowledged, not left to loop').toBe(true);
-    expect([...m.storage.objects.keys()].sort(),
-      'W22.D1.03 — a retry of the same logical events writes no new ledger object (canonical equality and conditional identity, src/ledger/delivery.ts, writer.ts)')
-      .toEqual(objectsAfterFirst);
-    expect(ledgerRows(m, 'decision').map(row => row.decision_id as string).sort(),
-      'W22.D1.03 — and no row is stored twice by the retry').toEqual([d1.decision_id, d2.decision_id].sort());
-    const afterRetry = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    expect((afterRetry.body as { report: DayReport }).report.counts.decisions,
-      'W22.D1.03 — the day report is unmoved by the retry').toBe(2);
-
-    // (b) two DIFFERENT events on one logical id (F16 §5(j)): same
-    //     `outcome_id`, a different item. The engine must never merge them.
+    // (b) two DIFFERENT events under one logical id. Not a redelivery: the
+    //     second carries another `item_id`, so it is a different event even
+    //     under the logical-row equality W21-B1's third build uses (which
+    //     excludes the `experiment` block). At-least-once delivery writes it.
     const collision = { ...o1, item_id: 'cnt-rogue-work' } as OutcomeRecord;
-    const collided = await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW);
-    expect(collided.skipped >= 1 || collided.ok === false,
-      'W22.D1.03 — a second, different event carrying an already-written logical id is refused by the consumer, never written beside the first (canonical equality, src/ledger/delivery.ts)')
-      .toBe(true);
-    expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id),
-      'W22.D1.03 — and the stored ledger still holds exactly the first event under that id')
-      .toEqual([o1.item_id]);
-    // Named, by the id of the event it refused: the quarantine case the
-    // operator recovery surface serves (`GET /operator/ledger-recovery`,
-    // mounted here as `src/index.ts:121` mounts it; `listQuarantine` reads the
-    // same objects this assertion reads). A count alone would not say WHICH
-    // event was refused.
+    const wrote = await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW);
+    expect(wrote.ok, 'the fixture writes the colliding event the way at-least-once delivery does').toBe(true);
+    expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id).sort(),
+      'the day now holds two different events under one logical id, which is the fault under test')
+      .toEqual(['cnt-rogue-work', 'cnt-tabby-evening']);
+
+    const refused = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const refusal = refused.body as { ok?: boolean; conflict?: { stream?: string; id?: string }; report?: DayReport };
+    expect(refusal.report?.counts.outcomes ?? 'no day was answered',
+      'W22.D1.03 — the two events are never merged into one day: the report does not answer a day that counts the colliding id once (F16 §5(j))')
+      .toBe('no day was answered');
+    expect(refusal.conflict ?? `absent: \`conflict\` on the refusal (the answer carries ${Object.keys(refusal).sort().join(', ')})`,
+      'W22.D1.03 — and the refusal NAMES the colliding logical id and its stream, instead of the unnamed "invalid raw report input" an operator cannot act on (ruled member: `conflict` on the report route\'s refusal)')
+      .toEqual({ stream: 'outcome', id: o1.outcome_id });
+
+    // Named on the recovery surface too, by the same id, in this tenant's
+    // scope: the existing quarantine path (`src/ledger/quarantine.ts:109`,
+    // listed by `GET /operator/ledger-recovery`, mounted here as
+    // `src/index.ts:121` mounts it).
     const listing = await listQuarantine(m.env, TENANT);
-    const cases = await Promise.all(listing.items.map(async entry => ({
-      id: entry.id, tenant: entry.tenant,
-      wire: (await m.storage.objects.get(`ledger-quarantine/v1/${entry.id}.json`)) ?? '',
-    })));
+    const cases = listing.items.map(entry => ({ tenant: entry.tenant,
+      wire: m.storage.objects.get(`ledger-quarantine/v1/${entry.id}.json`) ?? '' }));
     expect(cases.filter(entry => entry.tenant === TENANT && entry.wire.includes(o1.outcome_id!)).map(entry => entry.tenant),
-      `W22.D1.03 — the refused event is named by its own logical id on the operator recovery surface, in this tenant's own scope, not swallowed: exactly one quarantine case of ${TENANT} carries ${o1.outcome_id} (the listing held ${listing.items.length} case(s))`)
+      `W22.D1.03 — the conflicting row is filed for recovery under this tenant, carrying ${o1.outcome_id} (the listing held ${listing.items.length} case(s))`)
       .toEqual([TENANT]);
 
+    // RECOVERABLE: with the conflict filed, the day is readable again — the
+    // first event stands, the conflicting row is excluded and counted in the
+    // same vocabulary the duplicates use.
+    const again = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const recovered = (again.body as { report?: { counts?: Record<string, unknown> } }).report?.counts
+      ?? `no report: ${JSON.stringify(again.body).slice(0, 200)}`;
+    expect(typeof recovered === 'string' ? recovered
+      : { decisions: recovered.decisions, outcomes: recovered.outcomes, conflicts: recovered.conflicts },
+      'W22.D1.03 — and once the conflict is filed the day reads again on the existing recovery path: the first event under that id stands, the conflicting row is excluded, and the exclusion is counted (ruled member: `counts.conflicts`, beside `counts.duplicates`)')
+      .toEqual({ decisions: 1, outcomes: 1, conflicts: { decisions: 0, outcomes: 1 } });
+
     // (c) the partial batch of F16 §2.2: R2 accepts the first object of the
-    //     batch and throws on the second, then the whole batch is retried.
+    //     batch and throws on the second, then the whole batch is retried. The
+    //     retry MAY leave a second copy of the object it already wrote; what it
+    //     may not do is lose a row or let a reader count one twice.
     const p = await mount();
     const late = decision(p.env, 'v-charms', T12 + HOUR_MS + 60_000, 'cnt-charms-slg');   // hour 13
     const early = decision(p.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');          // hour 12
@@ -876,17 +916,19 @@ describe('unit:W22.D1.03', () => {
     let seen = 0;
     p.storage.failPutFrom = (key: string) => key.includes('/decision/') && ++seen === 2;
     const firstRun = await consumeLedger(p.env, partial, NOW);
-    expect(firstRun.ok, 'the interrupted batch is not acknowledged').toBe(false);
+    expect(firstRun.ok, 'W22.D1.03 — an interrupted batch is not acknowledged, so the queue redelivers it').toBe(false);
     p.storage.failPutFrom = null;
     const retry = await consumeLedger(p.env, partial, NOW);
-    expect(retry.ok, 'the retried batch is acknowledged').toBe(true);
+    expect(retry.ok, 'W22.D1.03 — and the retry is acknowledged').toBe(true);
     const stored = [...p.storage.objects.keys()].filter(key => key.includes('/decision/'));
     const rows = stored.flatMap(key => p.storage.objects.get(key)!.split('\n').filter(Boolean).map(line => JSON.parse(line) as DecisionRecord));
-    expect(rows.map(row => row.decision_id).sort(),
-      'W22.D1.03 — a batch that failed midway is retried to completeness: both rows are stored, neither twice (F16 §2.2 measured three objects for two rows)')
+    expect([...new Set(rows.map(row => row.decision_id))].sort(),
+      'W22.D1.03 — the retry completes the batch: both rows are in the ledger, neither lost')
       .toEqual([early.decision_id, late.decision_id].sort());
-    expect(stored.length,
-      `W22.D1.03 — and the retry does not leave an extra object behind (${stored.join(', ')})`).toBe(2);
+    const readBack = await operatorPost(p, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect((readBack.body as { report: DayReport }).report.counts,
+      'W22.D1.03 — and the READ yields each row once, with the copy the retry left counted, never a decision counted twice (F16 §2.2, §7.1)')
+      .toMatchObject({ decisions: 2, duplicates: { decisions: rows.length - 2, outcomes: 0 } });
   });
 });
 
