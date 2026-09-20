@@ -461,6 +461,10 @@ describe('unit:W32.S1.01', () => {
     await initialize(env, { pieces } as unknown as ContentCatalog);
     const items: Record<string, Record<string, unknown>> = {};
     for (let i = 0; i < 120; i++) items['piece-' + String(i).padStart(4, '0')] = { '*': { level: 0, key: '*', n: 40 - i / 10, s: 2, p0: 0.05, n0: 30, p_hat: 0.06, lift: 1.1, liftReference: 'slot-rate' } };
+    // W25 V1.01 (F20 §4.4), which a bounded join must not lose: a row for an id
+    // the CATALOGUE does not carry is never offered as something to explore
+    // next. The join is bounded to the page; catalogue MEMBERSHIP is not.
+    items['prior-only-not-in-catalogue'] = { '*': { level: 0, key: '*', n: 0, s: 0, p0: 0.05, n0: 200, p_hat: 0.1, lift: 1, liftReference: 'slot-rate' } };
     kv.store.set(liftKey('coach', 'coach', 'hero'), JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', reward: 'click', objective: 'unit',
       version: T0, publishedAt: T0, events: 900, n0: 30, nMin: 30, liftMin: 0.5, liftMax: 2, priorVersion: 0, items,
       slotRates: { '*': { n: 900, s: 45, rate: 0.05 } } }));
@@ -472,21 +476,29 @@ describe('unit:W32.S1.01', () => {
     const listing = await app.request('http://w/v1/coach/lift/rows?slot=hero&limit=10', { headers }, env);
     expect(listing.status).toBe(200);
     const page = await listing.json() as { total: number; limit: number; rows: Array<{ item: string; name?: string | null; customer_item_id?: string | null; title?: string | null }> };
-    expect(page.total).toBe(120);
+    // The grid lists every row the snapshot holds — including the prior-only id
+    // the catalogue does not carry, which is what an operator must be able to
+    // see — and the page carries the names for the page's own ids.
+    expect(page.total).toBe(121);
     expect(page.rows).toHaveLength(10);
-    for (const row of page.rows) {
+    for (const row of page.rows.filter(r => r.item.startsWith('piece-'))) {
       expect(row.customer_item_id ?? null).toBe('CMP-' + row.item);
       expect(row.title ?? null).toBe('Piece ' + row.item);
     }
+    expect(page.rows.filter(r => r.item.startsWith('piece-')).length).toBeGreaterThan(0);
 
     const exploring = await app.request('http://w/v1/coach/learn/exploring?slot=hero&limit=10', { headers }, env);
     expect(exploring.status).toBe(200);
-    const explore = await exploring.json() as { rows: Array<{ item: string; customer_item_id: string | null; title: string | null }> };
+    const explore = await exploring.json() as { total: number; rows: Array<{ item: string; customer_item_id: string | null; title: string | null }> };
     expect(explore.rows.length).toBeLessThanOrEqual(10);
     for (const row of explore.rows) {
       expect(row.customer_item_id).toBe('CMP-' + row.item);
       expect(row.title).toBe('Piece ' + row.item);
     }
+    // Every offered row is one the catalogue really carries: the snapshot holds
+    // 121 rows and only the 120 catalogue items may be offered.
+    expect(explore.total).toBe(120);
+    expect(explore.rows.map(r => r.item).every(id => id.startsWith('piece-'))).toBe(true);
   });
 });
 
