@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 153/157 · W closed 4/26 (W16–W41) · suite 1976/2061 · residual 85 in 10 files · typecheck GREEN
+Units 136/138 · W closed 4/26 (W16–W41) · suite 1954/2034 · residual 80 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -20,8 +20,6 @@ Units 153/157 · W closed 4/26 (W16–W41) · suite 1976/2061 · residual 85 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
-| W21 | 9 | 8 | no | — | — |
-| W22 | 10 | 9 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -165,42 +163,18 @@ Units 153/157 · W closed 4/26 (W16–W41) · suite 1976/2061 · residual 85 in 
 | W20.G2.08 | green | 1 |
 | W20.G2.09 | green | 2 |
 | W20.G2.10 | green | 1 |
-| W21.C1.01 | green | 2 |
-| W21.C1.02 | green | 1 |
-| W21.C1.03 | green | 1 |
-| W21.C1.04 | green | 2 |
-| W21.E1.01 | green | 2 |
-| W21.E1.02 | green | 2 |
-| W21.E1.03 | green | 1 |
-| W21.E1.04 | green | 2 |
-| W21.P1.01 | unspecified | 0 |
-| W22.A1.01 | green | 2 |
-| W22.D1.01 | green | 2 |
-| W22.D1.02 | green | 2 |
-| W22.D1.03 | green | 1 |
-| W22.P1.01 | unspecified | 0 |
-| W22.R1.01 | green | 2 |
-| W22.R1.03 | green | 2 |
-| W22.R1.04 | green | 1 |
-| W22.R1.05 | green | 1 |
-| W22.S1.01 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
--  W07.01 preserves successful ledger writes and retries real R2 failures without logging failure details
 -  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
--  W35.03 recoverable identity transfer W35.04 rotates one device grant recoverably without reopening it or a subsequently revoked replacement
--  W35.03 recoverable identity transfer W35.05 pins prepared transfers to serialized target authority across erasure admission failures and restart
--  W35.03 recoverable identity transfer W35.06 preserves intent registration and generation witnesses through checkpointed paged source erasure
--  the objects W22.04 refuses malformed online outcome identities before reads or credits and preserves nonce and legacy calls
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 095505fa8834d56d0a7fbf883ff549cd9d698532765f806a0f70371e125cc0fc |
+| units sha256 | 5169c015b8d36eb853fb8d9e2d8b0a8f9bbe16fb941feb55b5e8e05f86e10e70 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -211,7 +185,7 @@ Units 153/157 · W closed 4/26 (W16–W41) · suite 1976/2061 · residual 85 in 
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | d3b44bacbb2644a7aff074a4da5d1f0a76eb9e219e1c757c6b71348abe28a9b0 |
-| commit | eb5c2d834f769afb372605502f5d7ef1c481ec35 |
-| generated | 2026-09-20T04:42:16.470Z |
+| vitest report | vitest-serial.json (outside the checkout) |
+| vitest report sha256 | d771a8b7f03c068f6e4308aad2891594f78089a68091ba0b9e4ed6f9c3ac1455 |
+| commit | 41efb0f27d264641c4590c43a12d01839126edfe |
+| generated | 2026-09-19T23:29:52.687Z |

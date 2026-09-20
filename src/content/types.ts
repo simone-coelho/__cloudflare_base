@@ -161,8 +161,16 @@ export interface EnrollmentProvenance {
   id: string;
   /** The revision of the published learn document the enrollment was written under. */
   saltVersion: number;
-  /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn (`Assignment`). */
-  arm: string;
+  /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn. */
+  arm: Assignment;
+  /**
+   * Why the assignment is `ineligible`, so an analyst need not guess which
+   * population a row belongs to: the shopper withheld personalization consent,
+   * or her persistent enrollment anchor could not be read at that moment and no
+   * arm may be drawn from the id her browser happens to carry (R118(2), (3)).
+   * Absent on a randomised assignment.
+   */
+  reason?: 'personalization_consent' | 'anchor_unavailable';
   /** 1 for the first anchor; only a replacement of the anchor itself advances it. Recognition does not. */
   anchorGeneration: number;
 }

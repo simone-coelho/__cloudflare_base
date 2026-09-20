@@ -20,7 +20,7 @@ import { projectVisit, validEntry, validVisitContext, entryChannelOf, type Chann
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
-import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment } from './holdout';
+import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, saltVersionOf } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
@@ -389,9 +389,12 @@ export async function serveContentDecisions(
   // survives recognition. (`armUnder` labels the refusing shopper `default`
   // today and the ruled `ineligible` waits on the assertions named there.)
   const holdoutInForce: HoldoutConfig = { ...learn.holdout, salt: learn.holdout.salt || brand };
-  const enrolled = personalizes(consent)
-    ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion: learnRev?.revision ?? 0,
-      ...(await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId)) })
+  const saltVersion = await saltVersionOf(env, scope, learnRev?.revision ?? 0, brand, holdoutInForce.salt);
+  // The anchor is looked up only for a shopper who is in the experiment at all.
+  const anchor = personalizes(consent) ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
+  const enrolled = anchor && !anchor.unavailable
+    ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
+      anchor: anchor.anchor, anchorGeneration: anchor.anchorGeneration })
     : null;
   // W21 E1.02 (R108): she is served the site's own defaults either way — the
   // EXPERIENCE is unchanged — and the provenance says which population she is
@@ -399,7 +402,8 @@ export async function serveContentDecisions(
   // drawn, so no anchor is consulted for her and no bucket is taken, and a
   // report can never pool her with the randomised control.
   const enrollment: EnrollmentProvenance | null = enrolled?.provenance
-    ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion: learnRev?.revision ?? 0 }) : null);
+    ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
+      reason: personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
   const arm = armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
@@ -512,7 +516,15 @@ export async function serveContentDecisions(
   const counted = consent.tracking && !synthetic && !r.selfCheck && (governance.refusedPins.length > 0 || governance.shortTakes.length > 0)
     ? recordSlotGovernance(env, scope, governance, now)
     : Promise.resolve();
-  const afterResponse = Promise.all([captured, counted]).then(() => undefined);
+  // W21 E1.05 (R118(3)): a decision that could not read its anchor is counted
+  // for the operator, after the answer, under the same three conditions the
+  // governance counters use — the shopper's tracking refusal means nothing is
+  // written about her request, and neither a synthetic operation nor the
+  // platform's own self-check is the tenant's traffic.
+  const anchorCounted = anchor?.unavailable && consent.tracking && !synthetic && !r.selfCheck
+    ? recordAnchorUnavailable(env, scope, now)
+    : Promise.resolve();
+  const afterResponse = Promise.all([captured, counted, anchorCounted]).then(() => undefined);
 
   const decisions = await Promise.all(set.decisions.map(async (decision, index) => {
     const record = set.records[index]!;
