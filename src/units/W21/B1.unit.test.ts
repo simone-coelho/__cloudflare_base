@@ -416,7 +416,9 @@ interface SnapshotAnswer {
   arm: string;
   served: string[];
   /** RULED, ABSENT TODAY (R21): representation (v) above. */
-  experiment?: { id: string; saltVersion: number; arm: string; anchorGeneration: number };
+  experiment?: { id: string; saltVersion: number; arm: string; anchorGeneration: number;
+    /** Why an assignment is `ineligible`; absent on a randomised assignment (R118(2)). */
+    reason?: 'personalization_consent' | 'anchor_unavailable' };
 }
 
 interface Shopper {
@@ -481,6 +483,29 @@ async function operatorGet(m: Mounted, path: string, authenticated = true): Prom
     headers: { 'X-Tenant': TENANT, ...(authenticated ? { Authorization: `Bearer ${m.operatorToken}` } : {}) },
   }));
   return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
+/**
+ * Publish a new revision of the tenant's learn document through the operator
+ * route the console uses, so a salt rotation in a fixture is the same event a
+ * customer's own rotation is (`PUT /content/learn`, If-Match on the revision and
+ * the publication digest).
+ */
+async function republishLearn(m: Mounted, document: unknown): Promise<number> {
+  const read = await operatorGet(m, `/content/learn?scope=${TENANT}`);
+  expect(read.status, JSON.stringify(read.body)).toBe(200);
+  const publication = read.body.publication as { revision: number; digest: string };
+  const response = await m.fetch(new Request(`${OPERATOR_ORIGIN}/content/learn?scope=${TENANT}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT, 'content-type': 'application/json',
+      'If-Match': `"${read.body.revision as number}/${publication.revision}/${publication.digest}"`,
+      'Idempotency-Key': `${read.body.revision as number}:${crypto.randomUUID()}` },
+    body: JSON.stringify({ document, note: 'w21-b1 fixture rotation' }),
+  }));
+  const body = await response.clone().json().catch(() => ({})) as { revision?: number };
+  expect(response.status, await response.clone().text()).toBe(200);
+  invalidatePublicationCache(); invalidateCache(); invalidateLiftCache();
+  return body.revision ?? 0;
 }
 
 async function operatorPost(m: Mounted, path: string, body: unknown, authenticated = true): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -575,7 +600,8 @@ function outcomeRecord(input: { visitor: string; ts: number; type: string; item:
  * specification's own type, because `DecisionRecord` does not carry it yet.
  */
 type SeededDecision = DecisionRecord & { experiment?: SnapshotAnswer['experiment'] };
-async function seedLedgerDay(m: Mounted, date: string, decisions: SeededDecision[], outcomes: Array<ReturnType<typeof outcomeRecord>>): Promise<void> {
+type SeededOutcome = ReturnType<typeof outcomeRecord> & { experiment?: SnapshotAnswer['experiment']; decision_id?: string };
+async function seedLedgerDay(m: Mounted, date: string, decisions: SeededDecision[], outcomes: SeededOutcome[]): Promise<void> {
   const stamp = <T extends { ts: number }>(row: T) => ({ ...row, retention: captureRetention(m.env, TENANT, row.ts) });
   const bodies: unknown[] = [];
   if (decisions.length) bodies.push({ kind: 'ledger', type: 'decisions', version: 1, records: decisions.map(stamp) });
@@ -953,6 +979,10 @@ const MERGE_POLICY_SENTENCE =
  */
 const ARM_VOCABULARY_SENTENCE =
   '`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.';
+/** The visitor whose record predates the provenance block (W21.E1.02), bucket 0.485563: the control side. */
+const LEGACY_RECORD_SHOPPER = 'vis-00000021-0b01-4000-8000-000000000005';
+/** The consent-transition visitor of the build review's probe (iii), bucket 0.295530: the control side. */
+const TRANSITION_SHOPPER = 'vis-00000021-0b01-4000-8000-00000000001a';
 /** Buckets 0.032036 (control) and 0.906276 (treated). */
 const OUTCOME_CONTROL = 'vis-00000021-0b01-4000-8000-00000000000b';
 const OUTCOME_TREATED = 'vis-00000021-0b01-4000-8000-000000000001';
@@ -1072,9 +1102,29 @@ describe('unit:W21.E1.02', () => {
       expect(withoutConsent.experiment?.id, 'and the assignment names the experiment it is excluded from')
         .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
 
+      expect(withoutConsent.experiment?.reason, 'R118(2) — the assignment names WHY she is ineligible, so an analyst need not guess')
+        .toBe('personalization_consent');
+
       const control = await consenting.snapshot();
       expect(control.arm, 'the randomised control shopper is served the same experience').toBe('default');
       expect(control.experiment?.arm, 'and her assignment is the control arm the hash drew').toBe('default');
+
+      // R118(2) with the build review's F2: her OUTCOME records carry the same
+      // assignment, stamped by the route that records the outcome from her
+      // persistent enrollment and her consent at that moment — not a randomised
+      // arm, and not a block re-derived by a consumer from a later document.
+      expect(await declined.act({ type: 'purchase', data: { orderId: 'w21-b1-ineligible-order', value: 240, currency: 'USD', productIds: ['SKU-TABBY-26'] } }),
+        'her purchase is accepted while she is ineligible').toBe(200);
+      await m.drainLedger();
+      const outcomeKeys = [...m.storage.objects.keys()].filter(key => key.includes('/outcome/'));
+      expect(outcomeKeys.length, 'her purchase reached the ledger').toBeGreaterThan(0);
+      const herOutcome = outcomeKeys.flatMap(key => (m.storage.objects.get(key) ?? '').split('\n').filter(Boolean).map(line =>
+        JSON.parse(line) as { visitor_id: string; type: string; experiment?: SnapshotAnswer['experiment'] }))
+        .find(row => row.visitor_id === DECLINING_SHOPPER && row.type === 'purchase');
+      expect(herOutcome, 'her purchase is on the ledger as an outcome record').toBeTruthy();
+      expect(herOutcome?.experiment?.arm, 'F2 — an ineligible shopper\'s outcome records are ineligible too, never a randomised arm')
+        .toBe('ineligible');
+      expect(herOutcome?.experiment?.reason, 'R118(2) — with the same reason her decision carries').toBe('personalization_consent');
 
       // The day report groups by the ASSIGNMENT wherever a record carries one,
       // and reads a record written before the block existed by its `arm`.
@@ -1086,7 +1136,7 @@ describe('unit:W21.E1.02', () => {
           experiment: withoutConsent.experiment },
         // A record from before the provenance block existed: read by its `arm`,
         // never re-interpreted (the same rule as W21.C1.03's legacy day).
-        decisionRecord({ visitor: 'vis-00000021-0b01-4000-8000-00000000001a', arm: 'default', ts: atUtc(date, 11), item: 'cnt-tabby-evening-edit', index: 0 }),
+        decisionRecord({ visitor: LEGACY_RECORD_SHOPPER, arm: 'default', ts: atUtc(date, 11), item: 'cnt-tabby-evening-edit', index: 0 }),
       ], []);
       const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT });
       expect(built.status, JSON.stringify(built.body)).toBe(200);
@@ -1152,7 +1202,10 @@ describe('unit:W21.E1.03', () => {
       { ...decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: served.arm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
         experiment: served.experiment },
     ], [
-      outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(date, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 }),
+      { ...outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(date, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 }),
+        // The explicit reference the SDK sends when it knows the decision it is
+        // acting on: what an analyst's join is actually made on today.
+        decision_id: `${TENANT}:${atUtc(date, 9).toString(36)}:${PROVENANCE_SHOPPER}:home:hero:0` },
     ]);
     const keys = [...m.storage.objects.keys()].filter(key => key.startsWith(`${TENANT}/${date}/`));
     expect(keys.some(key => key.includes('/decision/')), 'the seeded decision is on the ledger the export reads').toBe(true);
@@ -1195,6 +1248,73 @@ describe('unit:W21.E1.03', () => {
       .toBe(served.experiment?.arm);
     expect(deliveredOutcome.experiment?.anchorGeneration, 'F07 §7(b) — and the generation of the anchor she is enrolled against').toBe(1);
 
+    // R118(1), the specification review's control B: the never-re-derive rule
+    // needs a fixture where a re-derivation would be VISIBLE. Rotate the salt
+    // through the operator route BETWEEN the write and the export read: the
+    // stored decision still names the experiment it was decided under, and a
+    // consumer that re-derived every block from today's document would name
+    // `experiment-b` here and red this leg.
+    const rotatedRevision = await republishLearn(m, { holdout: { share: 0.5, salt: SALT_B, arms: ['default'] },
+      regional: { enabled: false, kBlend: 1, minEvents: 30 }, slots: {} });
+    expect(rotatedRevision, 'the rotation is a new published revision of the learn document').toBeGreaterThan(1);
+    const afterRotation = await operatorGet(m, `/v1/${TENANT}/ledger/${encodeURIComponent(record.decision_id)}`);
+    expect(afterRotation.status, JSON.stringify(afterRotation.body)).toBe(200);
+    const rotatedRecord = (afterRotation.body.record ?? {}) as { experiment?: SnapshotAnswer['experiment'] };
+    expect(rotatedRecord.experiment?.id, 'R101(a) — after a rotation the stored decision still names the experiment it was decided under')
+      .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+    expect(rotatedRecord.experiment?.saltVersion, 'R101(a) — and the salt version it was decided under').toBe(1);
+
+    // R118(7), the specification review's probe (ii): an analyst joining outcomes
+    // to the decisions they credit must not get an empty join across a rotation.
+    // The export therefore carries, beside the outcome's OWN provenance, the
+    // provenance of the decision(s) it credits — RULED MEMBER `creditedDecisions`.
+    const outcomeAfterRotation = await operatorGet(m, `/v1/${TENANT}/ledger/${encodeURIComponent(outcomeRow.outcome_id)}?stream=outcome`);
+    expect(outcomeAfterRotation.status, JSON.stringify(outcomeAfterRotation.body)).toBe(200);
+    const exported = outcomeAfterRotation.body as { record?: { decision_id?: string }; creditedDecisions?: Array<{ decision_id: string; experiment: SnapshotAnswer['experiment'] }> };
+    expect(exported.record?.decision_id, 'the outcome names the decision it credits, which is what the join is made on')
+      .toBe(record.decision_id);
+    expect(exported.creditedDecisions?.map(d => d.decision_id), 'R118(7) — the export names the credited decision beside the outcome')
+      .toEqual([record.decision_id]);
+    expect(exported.creditedDecisions?.[0]?.experiment, 'R118(7) — with that decision\'s own provenance, so the join survives the rotation')
+      .toEqual(served.experiment);
+
+    // R118(6): a learn-document revision that does NOT rotate the salt leaves the
+    // experiment and its salt version alone; the rotation above is what starts a
+    // new experiment, and it increments the salt version by one.
+    const sameSalt = await mount('session');
+    const before = await shopperOn(sameSalt, PROVENANCE_SHOPPER, { tracking: true, personalization: true });
+    const first = await before.snapshot();
+    expect(first.experiment?.saltVersion, 'the first published salt is version 1').toBe(1);
+    await republishLearn(sameSalt, { holdout: { share: 0.5, salt: SALT_A, arms: ['default'] },
+      regional: { enabled: false, kBlend: 1, minEvents: 45 }, slots: {} });
+    const unrotated = await before.snapshot();
+    expect(unrotated.experiment?.id, 'F07 §5.7 — a revision that does not touch the salt is the same experiment')
+      .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+    expect(unrotated.experiment?.saltVersion, 'and the salt version does not churn with the document revision').toBe(1);
+    await republishLearn(sameSalt, { holdout: { share: 0.5, salt: SALT_B, arms: ['default'] },
+      regional: { enabled: false, kBlend: 1, minEvents: 45 }, slots: {} });
+    const rotated = await before.snapshot();
+    expect(rotated.experiment?.id, 'F07 §5.7 — a rotation starts a new experiment id').toBe(`${TENANT}:${TENANT}:${SALT_B}`);
+    expect(rotated.experiment?.saltVersion, 'and increments the salt version by one, so the two experiments are distinguishable').toBe(2);
+
+    // R118(5) with F6: one `outcome_id` delivered twice, differing only by its
+    // provenance block (the ordinary shape of a redelivery that straddles a
+    // rotation), is ONE row — `experiment` is outside logical-row equality
+    // exactly as the delivery field is. Today the second delivery makes
+    // `src/learn/report.ts:176` refuse the whole day.
+    const redelivered = await mount('session');
+    const redeliveryDate = '2026-06-05';
+    const twice = outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(redeliveryDate, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 });
+    await seedLedgerDay(redelivered, redeliveryDate, [
+      decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: 'default', ts: atUtc(redeliveryDate, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
+    ], [
+      { ...twice, experiment: { id: `${TENANT}:${TENANT}:${SALT_A}`, saltVersion: 1, arm: 'default', anchorGeneration: 1 } },
+      { ...twice, experiment: { id: `${TENANT}:${TENANT}:${SALT_B}`, saltVersion: 2, arm: 'default', anchorGeneration: 1 } },
+    ]);
+    const redeliveryReport = await operatorPost(redelivered, `/v1/${TENANT}/learn/report`, { date: redeliveryDate, brand: TENANT });
+    expect(redeliveryReport.status, 'F6 — a redelivery that differs only by provenance must not refuse the day\'s report').toBe(200);
+    expect(dayReportOf(redeliveryReport.body).counts.outcomes, 'F6 — and the two deliveries of one outcome_id are one row').toBe(1);
+
     // A published salt change is a NEW experiment, never a silent re-randomisation
     // of the old one (F07 §5.7: editing the salt re-randomises ~9.7 % of visitors
     // "with no versioning and no freeze").
@@ -1233,14 +1353,25 @@ describe('unit:W21.E1.04', () => {
       // arms are the ones the live path just answered; the records are seeded
       // because a public snapshot is an offer and captures no ledger row
       // (`src/content/service.ts:456-458`).
+      // The third visitor is the build review's probe (iii): ineligible in the
+      // morning, enrolled in the control arm after she grants consent at noon,
+      // and one purchase in the afternoon. R118(4) with F7: that purchase belongs
+      // to the assignment in force AT ITS OWN TIMESTAMP, on exactly one row —
+      // today `buildReport` credits it to every arm she appeared on that day.
       const date = '2026-06-04';
       await seedLedgerDay(m, date, [
         decisionRecord({ visitor: OUTCOME_CONTROL, arm: controlArm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
         decisionRecord({ visitor: OUTCOME_TREATED, arm: treatedArm, ts: atUtc(date, 10), item: 'cnt-rogue-work-edit', index: 0 }),
+        { ...decisionRecord({ visitor: TRANSITION_SHOPPER, arm: 'default', ts: atUtc(date, 9, 15), item: 'cnt-tabby-evening-edit', index: 0 }),
+          experiment: { id: `${TENANT}:${TENANT}:${SALT_A}`, saltVersion: 1, arm: 'ineligible', reason: 'personalization_consent', anchorGeneration: 1 } },
+        { ...decisionRecord({ visitor: TRANSITION_SHOPPER, arm: 'default', ts: atUtc(date, 12), item: 'cnt-tabby-evening-edit', index: 1 }),
+          experiment: { id: `${TENANT}:${TENANT}:${SALT_A}`, saltVersion: 1, arm: 'default', anchorGeneration: 1 } },
       ], [
         outcomeRecord({ visitor: OUTCOME_CONTROL, ts: atUtc(date, 9, 30), type: 'purchase', item: null, index: 0 }),
         outcomeRecord({ visitor: OUTCOME_TREATED, ts: atUtc(date, 10, 20), type: 'purchase', item: 'cnt-rogue-work-edit', index: 0 }),
         outcomeRecord({ visitor: OUTCOME_TREATED, ts: atUtc(date, 10, 40), type: 'purchase', item: null, index: 1 }),
+        { ...outcomeRecord({ visitor: TRANSITION_SHOPPER, ts: atUtc(date, 13), type: 'purchase', item: null, index: 0 }),
+          experiment: { id: `${TENANT}:${TENANT}:${SALT_A}`, saltVersion: 1, arm: 'default', anchorGeneration: 1 } },
       ]);
 
       const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date, brand: TENANT });
@@ -1250,10 +1381,16 @@ describe('unit:W21.E1.04', () => {
       expect(report.visitorOutcomes?.version, 'F07 §7 — visitor-level outcomes are versioned like the rest of the schema').toBe(1);
       expect(report.visitorOutcomes?.basis, 'F07 §2.5 — the denominators are enrolled visitors, not exposures').toBe('enrolled_visitors');
       const arms = Object.fromEntries((report.visitorOutcomes?.arms ?? []).map(a => [a.arm, a]));
-      expect(arms.default?.visitors, 'F07 §2.5 — one enrolled control visitor').toBe(1);
-      expect(arms.default?.byType?.purchase, 'F07 §7 — her purchase counts for the control arm although no served piece matched it').toBe(1);
+      expect(arms.default?.visitors, 'F07 §2.5 — two visitors were enrolled in the control arm on this day').toBe(2);
+      expect(arms.default?.byType?.purchase, 'F07 §7 — each of their purchases counts for the control arm although no served piece matched it').toBe(2);
       expect(arms.personalized?.visitors, 'F07 §2.5 — one enrolled treated visitor').toBe(1);
       expect(arms.personalized?.byType?.purchase, 'F07 §2.5 — his two purchases are one purchasing visitor, not two exposures').toBe(1);
+      // R118(4)/F7: the transition visitor is in the ineligible denominator for the
+      // morning she was ineligible, and her afternoon purchase is NOT hers — it
+      // belongs to the assignment in force when she bought.
+      expect(arms.ineligible?.visitors, 'F07 §2.5 — she was ineligible for part of the day, so she is in that denominator').toBe(1);
+      expect(arms.ineligible?.byType?.purchase ?? 0, 'R118(4) — and her one purchase is counted on exactly one row, the assignment in force at its own timestamp')
+        .toBe(0);
       expect(claimsIn(built.body), 'document 35 :423 — counting business outcomes is not a licence to state a lift').toEqual([]);
     });
   }
