@@ -76,6 +76,30 @@ async function bodyOf(request: Request): Promise<unknown> {
   } finally { reader.releaseLock(); }
 }
 
+/**
+ * W22 D1.02 (F16 §7: "carry a bounded set of recently credited `outcome_id`s in
+ * `DecisionRing`'s stored state … and drop a repeat before `attribute()`";
+ * §2.3 measured one outcome credited twice).
+ *
+ * The journal is this object's own state, under its own key, so it never
+ * competes with the ring for the 200 receipts a visitor keeps. It is BOUNDED
+ * three ways and pruned in this order: an entry past its own online retention
+ * goes first, then an entry older than the ring's horizon, then the oldest
+ * entries until both caps below hold. At the caps it is at most 256 KiB inside
+ * `RING_LIMITS.stateBytes` (1 MiB), and it is charged against the object's
+ * `RING_LIMITS.totalBytes` (4 MiB) together with the ring and the credit plans.
+ *
+ * A repeat that arrives after its entry has been pruned is credited again: the
+ * unit that drives this never claims otherwise, and the residual is named.
+ * Only an outcome whose logical identity is STABLE is journalled — an old
+ * outcome id with no event nonce can be two genuinely distinct events (F16
+ * §5(j)), and dropping the second would drop a real credit.
+ */
+const CREDITED_KEY = 'credited';
+const CREDITED_MAX_BYTES = 256 * 1024;
+const CREDITED_MAX_ROWS = 4096;
+interface CreditedOutcome { id: string; ts: number; expiresAt: number }
+
 interface Stored { ring: DecisionRecord[]; index: Array<{ id: string; ts: number; retention?: RetentionStamp; digest?: string }> }
 interface Subject { tenant: string; visitor_id: string }
 interface CreditPlan { receipt: OutcomeReceipt; batches: Array<{ name: string; body: unknown; received: number }>; retention?: RetentionStamp }
@@ -183,12 +207,31 @@ export class DecisionRing {
           return json({ ok: true, credits: receipt.attributed, receipt });
         }
         if (url.pathname === '/outcome/prepare') return json({ ok: false }, 400);
+        // W22 D1.02 (F16 §7, §2.3): a repeat is recognized BEFORE anything is
+        // sent, so a redelivered outcome leaves every online counter exactly
+        // where one delivery left it.
+        const repeat = await this.serialize(() => this.alreadyCredited(body.outcome!));
         const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig));
+        if (repeat) {
+          // The receipt says what this outcome attributes to and that those
+          // credits are applied in the statistics — which they are, by the
+          // delivery that was journalled. It is not a claim that anything was
+          // sent again: nothing was, which is the whole point.
+          plan.receipt.credits = sumStatsDeliveries(plan.batches.map(batch =>
+            ({ ...emptyStatsDelivery(), destinations: 1, acknowledged: 1, received: batch.received, processed: batch.received })));
+          return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt });
+        }
         // Attribution and fresh barriers are serialized; downstream waits must not hold /recent's lock.
         plan.receipt.credits = sumStatsDeliveries(await Promise.all(plan.batches.map(batch => {
           requireRetention(this.env, body.outcome!.retention?.online, body.tenant!, 'online');
           return deliverStats(this.env.LEARN_STATS, batch.name, 'credits', batch.body, batch.received);
         })));
+        // Journalled only once the credits are actually applied: an outcome
+        // whose delivery was refused or unknown may be redelivered and must be.
+        const delivered = plan.receipt.credits;
+        if (plan.receipt.attributed > 0 && delivered.unknown === 0 && delivered.notAttempted === 0 && delivered.skipped === 0) {
+          await this.serialize(() => this.rememberCredited(body.outcome!, body.tenant!));
+        }
         return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt });
       }
       case '/recent': {
@@ -207,7 +250,7 @@ export class DecisionRing {
           if (generation === undefined && this.env.LEDGER_RECOVERY_ENABLED !== 'true') await this.state.storage.deleteAll();
           else {
             if (!Number.isSafeInteger((generation ?? 0) + 1)) throw new Collision();
-            await this.state.storage.transaction(async tx => { await tx.put('creditGeneration', (generation ?? 0) + 1); await tx.delete('ring'); });
+            await this.state.storage.transaction(async tx => { await tx.put('creditGeneration', (generation ?? 0) + 1); await tx.delete('ring'); await tx.delete(CREDITED_KEY); });
           }
           this.data = { ring: [], index: [] };
         });
@@ -232,7 +275,12 @@ export class DecisionRing {
             }
           });
         });
-        else await this.serialize(async () => { await this.current({ tenant: body.tenant!, visitor_id: body.visitorId! }, true); });
+        // W22 D1.02: every entry of this object's journal is this visitor's, so
+        // her erasure removes the journal with her ring.
+        else await this.serialize(async () => {
+          await this.current({ tenant: body.tenant!, visitor_id: body.visitorId! }, true);
+          await this.state.storage.delete(CREDITED_KEY);
+        });
         await this.cleanupPlans();
         return json({ ok: true, reset: true });
       }
@@ -289,6 +337,16 @@ export class DecisionRing {
   /** Called under local serialization, before any remote alarm work. A valid
    * immutable stamp suffices for expiry; no stamp/config inference is made. */
   private async stripExpiredRing(): Promise<void> {
+    // W22 D1.02: the journal expires on its own stamps first, on the same pass.
+    try {
+      const stored = await this.state.storage.get(CREDITED_KEY);
+      if (Array.isArray(stored)) {
+        const kept = await this.creditedOutcomes();
+        if (kept.length !== stored.length) {
+          if (kept.length) await this.state.storage.put(CREDITED_KEY, kept); else await this.state.storage.delete(CREDITED_KEY);
+        }
+      }
+    } catch { /* expiry of the journal never blocks the ring's own */ }
     const data = await this.load(), subject = stateSubject(data), now = Date.now();
     if (!subject) return;
     const keep = (stamp: unknown) => {
@@ -424,6 +482,53 @@ export class DecisionRing {
     return plan;
   }
 
+  /** The journal as it stands, with every entry that is past its own retention
+   * or past the ring's horizon already gone. Unreadable state answers empty:
+   * a repeat this object cannot recognize is credited again, never refused. */
+  private async creditedOutcomes(): Promise<CreditedOutcome[]> {
+    let stored: unknown;
+    try { stored = await this.state.storage.get(CREDITED_KEY); } catch { return []; }
+    if (!Array.isArray(stored)) return [];
+    const now = Date.now(), out: CreditedOutcome[] = [];
+    for (const entry of stored as unknown[]) {
+      if (!object(entry) || Object.keys(entry).sort().join(',') !== 'expiresAt,id,ts'
+        || typeof entry.id !== 'string' || !entry.id || bytes(entry.id) > RING_LIMITS.idBytes
+        || !Number.isSafeInteger(entry.ts) || !Number.isSafeInteger(entry.expiresAt)) continue;
+      if (entry.expiresAt as number <= now || now - (entry.ts as number) > RING_MAX_AGE_MS) continue;
+      out.push({ id: entry.id, ts: entry.ts as number, expiresAt: entry.expiresAt as number });
+    }
+    return out;
+  }
+  /** Has this exact outcome already been credited, inside the horizon? */
+  private async alreadyCredited(outcome: OutcomeRecord): Promise<boolean> {
+    if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return false;
+    const id = outcome.outcome_id;
+    if (typeof id !== 'string' || !id) return false;
+    return (await this.creditedOutcomes()).some(entry => entry.id === id);
+  }
+  private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
+    try {
+      if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
+      const id = outcome.outcome_id;
+      if (typeof id !== 'string' || !id || bytes(id) > RING_LIMITS.idBytes) return;
+      // The journal never outlives the online retention of the event it records.
+      const expiresAt = readRetention(outcome.retention?.online, tenant, 'online').expiresAt;
+      const now = Date.now();
+      let kept = [...(await this.creditedOutcomes()).filter(entry => entry.id !== id), { id, ts: outcome.ts, expiresAt }]
+        .sort((a, b) => a.ts - b.ts);
+      if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
+      while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
+      if (bytes(JSON.stringify(kept)) > RING_LIMITS.stateBytes) return;
+      await this.totalBound(undefined, undefined, undefined, kept);
+      await this.state.storage.put(CREDITED_KEY, kept);
+      const next = Math.min(...kept.map(entry => entry.expiresAt));
+      if (Number.isFinite(next) && next > now) {
+        const previous = await this.state.storage.getAlarm();
+        if (previous === null || previous > next) await this.state.storage.setAlarm(next);
+      }
+    } catch { /* a credit this object cannot remember is a repeat it may apply again */ }
+  }
+
   private async checkPlan(saved: SavedPlan): Promise<void> {
     if (saved.cleanup) throw new Collision();
     if (!saved.plan.retention || JSON.stringify(saved.plan.retention) !== JSON.stringify(saved.retention)) throw new Collision();
@@ -496,12 +601,13 @@ export class DecisionRing {
     return { plans, next };
   }
 
-  private async totalBound(ring?: Stored, replacement?: { key: string; value: SavedPlan }, repair?: unknown): Promise<void> {
+  private async totalBound(ring?: Stored, replacement?: { key: string; value: SavedPlan }, repair?: unknown, credited?: unknown): Promise<void> {
     const plans = await this.state.storage.list<SavedPlan>({ prefix: 'creditPlan:', limit: RECOVERY_LIMITS.plans + 1 });
     if (replacement) plans.set(replacement.key, replacement.value);
     if (plans.size > RECOVERY_LIMITS.plans) throw new Capacity();
     const savedRing = ring ?? await this.state.storage.get<Stored>('ring') ?? { ring: [], index: [] };
-    let size = bytes(JSON.stringify(savedRing)) + bytes(JSON.stringify(repair ?? await this.state.storage.get('ringRepair') ?? null)) + 256;
+    let size = bytes(JSON.stringify(savedRing)) + bytes(JSON.stringify(repair ?? await this.state.storage.get('ringRepair') ?? null)) + 256
+      + bytes(JSON.stringify(credited ?? await this.state.storage.get(CREDITED_KEY) ?? null));
     for (const [key, value] of plans) {
       const n = bytes(JSON.stringify(value)); if (n > RING_LIMITS.stateBytes) throw new Capacity();
       size += bytes(key) + n;

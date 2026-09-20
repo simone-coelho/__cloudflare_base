@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import type { DecisionRecord } from '@/content/types';
 import { LEDGER_KIND, type LedgerWireMessage, type OutcomeRecord, type CapturedRecord, type CapturedMessage } from './records';
-import { captureReceipt, DELIVERY_FIELD, readDelivery, type CaptureReceipt } from './delivery';
+import { captureReceipt, DELIVERY_FIELD, readDelivery, recordEvidenceLoss, type CaptureReceipt } from './delivery';
 import type { R2Like } from './writer';
 import { ledgerUnderOwners, pinRetention } from '@/identity/sessionAuthority';
 import { requireRetention, type RetentionEnv } from '@/retention';
@@ -125,7 +125,23 @@ async function sendAll(env: ProducerEnv, messages: PreparedMessage[], total: num
   return result;
 }
 
-type ProducerEnv = Pick<Env, 'EVENT_QUEUE' | 'ANALYTICS'> & Partial<Pick<Env, 'STORAGE' | 'LEDGER_RECOVERY_ENABLED' | 'SHOPPER_REFLEX' | 'SESSIONS' | 'TENANTS' | 'DEPLOYMENT_PROFILE' | 'RETENTION'>>;
+type ProducerEnv = Pick<Env, 'EVENT_QUEUE' | 'ANALYTICS'> & Partial<Pick<Env, 'STORAGE' | 'CACHE' | 'LEDGER_RECOVERY_ENABLED' | 'SHOPPER_REFLEX' | 'SESSIONS' | 'TENANTS' | 'DEPLOYMENT_PROFILE' | 'RETENTION'>>;
+
+/**
+ * W22 R1.01: the producer's own loss, counted where an operator reads it
+ * instead of only in a `console.error` (N10; F16 §5(b), §7.3). A record whose
+ * fate the queue could not confirm and which the canonical sink did not capture
+ * either is a row that never reached the ledger.
+ */
+async function reportProducerLoss(env: ProducerEnv, tenant: string, result: LedgerDeliveryReceipt): Promise<LedgerDeliveryReceipt> {
+  // `configuration_unavailable` is the one code that is NOT counted: the
+  // tenant's own configuration is what could not be read, so this producer
+  // cannot establish where a count would belong and must not reach for another
+  // binding to guess. Such a refusal is named as owed work, never as a zero.
+  if (result.code === 'accepted' || result.code === 'empty' || result.code === 'configuration_unavailable' || result.capture?.ok) return result;
+  await recordEvidenceLoss(env, tenant, 'producerFailed', result.records.unknown + result.records.notAttempted);
+  return result;
+}
 export function prepareManaged(type: 'decisions' | 'outcome' | 'product-sort' | 'behavior', values: readonly CapturedRecord[]): PreparedMessage[] {
   // Preserve the full snapshot even if one row cannot fit on the queue: it may
   // still fit the bounded canonical R2 sink. No partial queue send on oversize.
@@ -193,45 +209,48 @@ export function pointForOutcome(analytics: AnalyticsLike | undefined, o: Outcome
 /** Enqueue every record of a served decision set. Resolves without throwing. */
 export async function enqueueDecisions(env: ProducerEnv, records: readonly DecisionRecord[]): Promise<LedgerDeliveryReceipt> {
   if (!records.length) return receipt(0, 0);
+  const tenant = records[0]!.tenant;
+  const lost = (result: LedgerDeliveryReceipt) => reportProducerLoss(env, tenant, result);
   try { for (const row of records) pinRetention(env as RetentionEnv, row.retention?.ledger, row.tenant, 'ledger'); }
-  catch { return finish({ ...receipt(records.length, 0, false), code: 'configuration_unavailable' }); }
+  catch { return lost(finish({ ...receipt(records.length, 0, false), code: 'configuration_unavailable' })); }
   let recovery: boolean;
   try { recovery = env.LEDGER_RECOVERY_ENABLED === 'true'; }
-  catch { return finish({ ...receipt(records.length, 0, false), code: 'configuration_unavailable' }); }
+  catch { return lost(finish({ ...receipt(records.length, 0, false), code: 'configuration_unavailable' })); }
   // A ledger deadline does not authorize the separately configured AE store.
   // Do not even acquire that optional binding without destination authority.
   if (recovery) {
     let managed: PreparedMessage[];
     try { managed = prepareManaged('decisions', records); }
-    catch { return finish({ ...receipt(records.length, 0, false), code: 'serialization_failed' }); }
-    return sendManaged(env, managed, records.length);
+    catch { return lost(finish({ ...receipt(records.length, 0, false), code: 'serialization_failed' })); }
+    return lost(await sendManaged(env, managed, records.length));
   }
   let messages: PreparedMessage[] | null;
   try { messages = prepareDecisions(records); }
-  catch { return finish({ ...receipt(records.length, 0, false), code: 'serialization_failed' }); }
-  if (!messages) return finish({ ...receipt(records.length, 0, false), code: 'oversized_record' });
-  return sendAll(env, messages, records.length);
+  catch { return lost(finish({ ...receipt(records.length, 0, false), code: 'serialization_failed' })); }
+  if (!messages) return lost(finish({ ...receipt(records.length, 0, false), code: 'oversized_record' }));
+  return lost(await sendAll(env, messages, records.length));
 }
 
 export async function enqueueOutcome(env: ProducerEnv, outcome: OutcomeRecord | null): Promise<LedgerDeliveryReceipt> {
   if (!outcome) return receipt(0, 0);
+  const lost = (result: LedgerDeliveryReceipt) => reportProducerLoss(env, outcome.tenant, result);
   try { pinRetention(env as RetentionEnv, outcome.retention?.ledger, outcome.tenant, 'ledger'); }
-  catch { return finish({ ...receipt(1, 0, false), code: 'configuration_unavailable' }); }
+  catch { return lost(finish({ ...receipt(1, 0, false), code: 'configuration_unavailable' })); }
   let recovery: boolean;
   try { recovery = env.LEDGER_RECOVERY_ENABLED === 'true'; }
-  catch { return finish({ ...receipt(1, 0, false), code: 'configuration_unavailable' }); }
+  catch { return lost(finish({ ...receipt(1, 0, false), code: 'configuration_unavailable' })); }
   // Optional AE is independently fail-closed; canonical delivery continues.
   if (recovery) {
     let managed: PreparedMessage[];
     try { managed = prepareManaged('outcome', [outcome]); }
-    catch { return finish({ ...receipt(1, 0, false), code: 'serialization_failed' }); }
-    return sendManaged(env, managed, 1);
+    catch { return lost(finish({ ...receipt(1, 0, false), code: 'serialization_failed' })); }
+    return lost(await sendManaged(env, managed, 1));
   }
   let next: ReturnType<typeof snapshot<OutcomeRecord>>;
   try { next = snapshot(outcome); }
-  catch { return finish({ ...receipt(1, 0, false), code: 'serialization_failed' }); }
+  catch { return lost(finish({ ...receipt(1, 0, false), code: 'serialization_failed' })); }
   const bytes = outcomeFramingBytes + next.bytes;
-  if (bytes > LEDGER_BODY_BYTES) return finish({ ...receipt(1, 0, false), code: 'oversized_record' });
-  return sendAll(env,
-    [{ body: { kind: LEDGER_KIND, type: 'outcome', version: 1, record: next.record }, bytes, records: 1 }], 1);
+  if (bytes > LEDGER_BODY_BYTES) return lost(finish({ ...receipt(1, 0, false), code: 'oversized_record' }));
+  return lost(await sendAll(env,
+    [{ body: { kind: LEDGER_KIND, type: 'outcome', version: 1, record: next.record }, bytes, records: 1 }], 1));
 }

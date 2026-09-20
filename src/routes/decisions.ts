@@ -30,7 +30,10 @@ import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
 import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
-import { readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
+/** W22 D1.03: conflicts one read may file before it answers with the last of them. */
+const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
@@ -619,9 +622,21 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
     if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
   }
   c.header('Cache-Control', 'no-store');
+  // W22 R1.05: a single-date listing reconciles itself with the day the platform
+  // published — the rows the objects hold, the distinct rows after the reader's
+  // own dedup, and the saved report's own counts — so a warehouse loading the
+  // partition and an operator reading the report cannot disagree in silence.
+  // Only a listing that can see the WHOLE day carries it: a window lists several
+  // days, a cursor lists part of one, a `stream` filter hides the other stream,
+  // and a truncated listing has already stopped short. It opens only the objects
+  // it just listed and reads the report by its own key; it lists nothing twice.
+  const counts = windowed || cursor || stream || truncated ? null
+    : await exportReconciliation(c.env.STORAGE as unknown as Parameters<typeof exportReconciliation>[0],
+      { tenant, brand: (c.req.query('brand') ?? '').trim() || tenant, date }, objects.map(o => o.key), tombs);
   // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
   return c.json({ ok: true, tenant, ...(windowed ? { from, to, days: dates.slice(0, listedDays) } : { date }),
     stream: stream ?? 'both', objects, truncated, ...(nextCursor ? { cursor: nextCursor } : {}),
+    ...(counts ? { counts } : {}),
     erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
   });
 });
@@ -974,7 +989,31 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     for (const policy of defaultWindows) policy.windowsMs = learn.policy?.windowsMs ?? {};
     // Doc 31 §3: the day is the sum of its hour aggregates; only custom policies, or a day from before the
     // fold existed, are computed from the records, and such a day must be one a request can read.
-    const report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env);
+    //
+    // W22 D1.03 (F16 §5(j)): at-least-once delivery can put two genuinely
+    // DIFFERENT rows under one logical id, and the reader refuses the day
+    // rather than merge them. A conflict that is not yet filed is FILED here,
+    // durably, in this tenant's own scope and named by that id, and the refusal
+    // carries the id so an operator can act on it. A conflict that is already
+    // filed excludes its row and is counted on the day, so the day reads again.
+    // Bounded: a request files at most this many, then answers with the last.
+    const resolved = new Set<string>();
+    let report: Awaited<ReturnType<typeof runDayReport>> | null = null, conflict: ReportRowConflict | null = null;
+    for (let attempt = 0; attempt <= REPORT_CONFLICTS; attempt++) {
+      try {
+        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env, resolved);
+        conflict = null; break;
+      } catch (error) {
+        if (!(error instanceof ReportRowConflict)) throw error;
+        conflict = error;
+        if (resolved.has(conflictKey(error.stream, error.id))) throw error;   // filed but still refused: do not loop
+        if (await readConflictFiled(c.env, error.stream, error.id)) { resolved.add(conflictKey(error.stream, error.id)); continue; }
+        await captureReadConflict(c.env, error.stream, error.id, error.row as unknown as Parameters<typeof captureReadConflict>[3]);
+        break;
+      }
+    }
+    if (conflict) return c.json({ ok: false, error: conflict.message, code: conflict.code,
+      conflict: { stream: conflict.stream, id: conflict.id } }, 409);
     return c.json({ ok: true, report });
   } catch (e) {
     if (e instanceof ReportBudgetExceeded) return c.json({ ok: false, error: e.message, code: e.code, budget: e.budget, limit: e.limit, observed: e.observed,
