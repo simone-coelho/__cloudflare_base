@@ -2636,5 +2636,45 @@
     "status": "no-witness",
     "batch": "W24-B1",
     "residual": "NO-WITNESS. What is required, and from whom: (1) from the customer business and DS owners (D09) — which currencies the tenant reports in and the rule for converting the others (a rate source and its staleness bound), because no conversion is the platform's to invent; (2) from the same owners — whether a refund SUBTRACTS from the objective it credited, is ignored, or opens a new series, and what a nonpositive or zero value means; (3) from the learning owners — whether margin absence is a zero credit (this batch's ruling) or a documented fallback, and the reward each slot learns from at rollout; (4) from the architecture/delivery owners — who may authorize a generation rebuild/promote in production and under what evidence. Until (1)-(3) are published, W24.R1.02 asserts only that the platform refuses to guess; until (4) is settled, W24.G1.02's route is specified as an operator-credentialed act without naming a production approver. Seams: W22 owns the ledger, the fold and the online journals; W23 owns the reset intent, `rebuiltFrom` and the ingest clamp — this unit reuses those observables by name and does not re-specify them; W27 owns replay; W30 the fold envelope. The build waits for W23-B1's merge. Credential: the operator reads present a SERVICE token, accepted by `operatorJwt()`/`operatorWrites()`. Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.R1.03",
+    "w": "W24",
+    "criterion": "R1",
+    "legs": [
+      "host-internal",
+      "host"
+    ],
+    "outcome": "The reward filter is decided PER CREDITED SLOT inside the ring: an outcome is never dropped before the ring for a reward reason; under `policy.match: 'any'` a purchase naming the click-learning slot still credits the purchase-learning slot while the click slot is refused and named; an outcome naming no slot is refused per slot by reward and counted; and the shopper's own path leaves the same evidence.",
+    "witness": "_evidence/W24-B1/reviewer-build/REPORT.md finding 1 (`src/learn/fan.ts:533-534` decides the filter from the slot the OUTCOME names; under `policy.match: 'any'` — publishable, `src/content/kinds.ts:483` — `policy.ts:147,166` still attributes to another slot's entries, so the drop costs that slot its credit); the W24-B1 implementer's residual 1 (an outcome naming no slot reaches the ring and may credit a slot learning another reward; the union rule that suppressed the ring call broke `src/routes/realtime.sdkContract.test.ts:5599`/`:5617`, W06.10, W09.05 and W22.07, because the ring is the visitor's own record and delivery journal); document 35 §5 row W24 :426 (\"Define reward filter\"); F19 §7 (filtered per slot as `report.ts` does for the batch); product: `src/durable-objects/DecisionRing.ts:461-506` (`outcome()` groups per-slot batches, each with that slot's `config` — the place the rule belongs), `src/learn/hourly.ts:407` (the fold's own per-slot filter).",
+    "status": "specified",
+    "batch": "W24-B2",
+    "residual": "RED on all three legs (log /home/simonecoelho/rem/_evidence/W24-B2/specifier/logs/b2-final.log). MEASURED: the named purchase never reaches the ring (`reachedTheRing: 0`, `notCredited: 'reward'`) so the purchase-learning slot loses its credit; the no-slot purchase DOES reach the ring and credits the click-learning slot (`eligible: 1`) with no per-slot refusal recorded. RULED MEMBER (R21): `refusedBySlot?: Record<string, 'reward' | 'money'>` on `OutcomeReceipt`, typecheck-visible (the one ruled error). The producer-side filter at `fan.ts:533-535` is withdrawn or reduced to what the producer can decide alone; the ring call is NEVER suppressed. Seams: W22 owns the credited journal (`D1.02`, `D1.04`) — a per-slot refusal must not journal a credit; W23 owns `outsideWindow`, and a window refusal and a reward refusal are different counts on the same receipt; W26-B1 is in build with `brandMismatched` and `legacyCredits` there too, and the per-credited-slot placement this batch rules ALSO answers W26's no-slot residual — named, not re-specified. `W24.P1.01` is untouched: the money POLICY VALUES stay the owner's (D09/DS). Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.R1.04",
+    "w": "W24",
+    "criterion": "R1",
+    "legs": [
+      "host-internal"
+    ],
+    "outcome": "The money mechanics are decided per credited slot: on a mixed tenant with no `MoneyPolicy` published, a currency-bearing or nonpositive no-slot outcome credits the unit-objective slot and is refused `money_policy_unset` only by the money-objective slot, never whole; and a caller sending the pre-W24 shape learns exactly as before.",
+    "witness": "_evidence/W24-B1/reviewer-build/REPORT.md finding 2 (`fan.ts:535` takes the money objective for a no-slot outcome from ANY money-objective slot in scope, so one money slot refuses every currency-bearing or nonpositive no-slot outcome for every slot); document 35 §5 row W24 :426 (\"revenue/margin/currency/refund behavior\"; \"test old callers and partial deployment\"); W24.R1.02 (the mechanism; the values are W24.P1.01's); product: `src/learn/fan.ts:520-545`, `src/durable-objects/DecisionRing.ts:461-506`.",
+    "status": "specified",
+    "batch": "W24-B2",
+    "residual": "RED. MEASURED: the mixed-tenant no-slot purchase in an undeclared currency is refused before the ring, so the unit-objective slot is never credited; the same for a nonpositive value. The pre-W24 caller clause is in the same `it` so a fix cannot close the money half by refusing more. Seams: W22 owns the credited journal (`D1.02`, `D1.04`) — a per-slot refusal must not journal a credit; W23 owns `outsideWindow`, and a window refusal and a reward refusal are different counts on the same receipt; W26-B1 is in build with `brandMismatched` and `legacyCredits` there too, and the per-credited-slot placement this batch rules ALSO answers W26's no-slot residual — named, not re-specified. `W24.P1.01` is untouched: the money POLICY VALUES stay the owner's (D09/DS). Customer acceptance and every deployed proof remain OPEN."
+  },
+  {
+    "id": "W24.G1.03",
+    "w": "W24",
+    "criterion": "G1",
+    "legs": [
+      "logic"
+    ],
+    "outcome": "The kit states, beside the transition route, the ORDER an operator must follow — publish the learn document that matches the new accumulation — and what a shopper is served until that is done (no lift for the slot, ordinary exposure writes meeting 409); and the published schema says a margin objective never falls back to the value, with the old sentence gone.",
+    "witness": "_evidence/W24-B1/reviewer-build/REPORT.md finding 3; the W24-B1 build's residual 3 (after an authorized transition the object's accumulation stands ahead of the published document, so writes meet 409 and `readLift`'s compatibility check serves no lift meanwhile); docs/kit/02-api-reference.md:583 (the route, without the order); docs/kit/03-payload-schemas.md:417 (the corrected margin sentence).",
+    "status": "specified",
+    "batch": "W24-B2",
+    "residual": "SPLIT. The margin half is GREEN-AT-SPEC — measured: kit 03 :417 already reads \"margin uses the supplied margin and NEVER falls back to value … an outcome with no margin is worth nothing to margin learning\" and the old \"currently falls back to value\" sentence is gone (the W24-B1 build's own doc change). The ORDER half is RED: the route's section mentions the 409 it is the way past, but tells an operator neither to publish the matching learn document nor what is served until it follows. The clause asks for those two sentences specifically, so the 409 already in the text cannot satisfy it. Seams: W22 owns the credited journal (`D1.02`, `D1.04`) — a per-slot refusal must not journal a credit; W23 owns `outsideWindow`, and a window refusal and a reward refusal are different counts on the same receipt; W26-B1 is in build with `brandMismatched` and `legacyCredits` there too, and the per-credited-slot placement this batch rules ALSO answers W26's no-slot residual — named, not re-specified. `W24.P1.01` is untouched: the money POLICY VALUES stay the owner's (D09/DS). Customer acceptance and every deployed proof remain OPEN."
   }
 ]
