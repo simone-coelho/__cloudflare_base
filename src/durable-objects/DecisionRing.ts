@@ -29,7 +29,7 @@ import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry
  */
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
-import { deliverStats, emptyStatsDelivery, learningGenerations, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { deliverStats, emptyStatsDelivery, learningGenerations, moneyRefusal, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
 
@@ -130,7 +130,26 @@ interface Stored { ring: DecisionRecord[]; index: Array<{ id: string; ts: number
 interface Subject { tenant: string; visitor_id: string }
 interface CreditPlan { receipt: OutcomeReceipt; batches: Array<{ name: string; body: unknown; received: number }>; retention?: RetentionStamp }
 interface ManagedOutcome { tenant: string; brand?: string; outcome: OutcomeRecord; policy: AttributionPolicy;
-  slotConfig?: Record<string, SlotLearnConfig>; defaultSlotConfig?: SlotLearnConfig; version?: number; consentUntil?: number }
+  slotConfig?: Record<string, SlotLearnConfig>; defaultSlotConfig?: SlotLearnConfig; version?: number; consentUntil?: number;
+  /** W24 R1.04: the tenant's published money policy, resolved by the producer and decided here, per slot. */
+  money?: MoneyPolicy | null }
+
+/**
+ * W24 R1.04: the money policy as this object will use it, or null.
+ *
+ * A policy this object cannot read whole is NOT a policy: it is read as unset,
+ * which is fail-closed — a money-objective slot then refuses the outcomes whose
+ * weighing would take a value nobody published, and never credits one under a
+ * rule this object guessed at. The VALUES stay the owner's (W24.P1.01).
+ */
+function moneyPolicyOf(value: unknown): MoneyPolicy | null {
+  if (!object(value)) return null;
+  const currency = value.currency, nonpositive = value.nonpositive;
+  return typeof currency === 'string' && currency.trim().length > 0 && bytes(currency) <= 64
+    && (nonpositive === 'refuse' || nonpositive === 'credit')
+    && Object.keys(value).every(key => key === 'currency' || key === 'nonpositive')
+    ? { currency, nonpositive } : null;
+}
 interface SavedPlan { version: 1; digest: string; generation: number; tenant: string; subject: string; ts: number;
   retention: RetentionStamp; consentUntil: number; plan: CreditPlan; completed: Record<string, StatsDelivery>; cleanup?: true; retired?: true }
 
@@ -237,7 +256,7 @@ export class DecisionRing {
         // sent, so a redelivered outcome leaves every online counter exactly
         // where one delivery left it.
         const repeat = await this.serialize(() => this.alreadyCredited(body.outcome!));
-        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig));
+        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money)));
         if (repeat) {
           // The receipt says what this outcome attributes to and that those
           // credits are applied in the statistics — which they are, by the
@@ -254,6 +273,11 @@ export class DecisionRing {
         })));
         // Journalled only once the credits are actually applied: an outcome
         // whose delivery was refused or unknown may be redelivered and must be.
+        // W24 R1.04: `attributed` counts the slots that were CREDITED, so an
+        // outcome every slot refused is never written into the credited journal
+        // and the same delivery arriving again meets the same per-slot refusal
+        // by name, rather than an answer claiming it was already applied. W22
+        // D1.02/D1.04 keep their meaning for outcomes that WERE credited.
         const delivered = plan.receipt.credits;
         if (plan.receipt.attributed > 0 && delivered.unknown === 0 && delivered.notAttempted === 0 && delivered.skipped === 0) {
           await this.serialize(() => this.rememberCredited(body.outcome!, body.tenant!));
@@ -458,7 +482,7 @@ export class DecisionRing {
     return receipt;
   }
 
-  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false): Promise<CreditPlan> {
+  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null): Promise<CreditPlan> {
     const subject = recordSubject(outcome, 'outcome');
     if (tenant !== subject.tenant || brand !== outcome.brand) throw new Error('Ring scope unavailable');
     const { data: d, cutoff } = await this.current(subject);
@@ -480,7 +504,6 @@ export class DecisionRing {
     const attribution = attributeWindowed(outcome, compatible, policy);
     const credits = attribution.credits.filter(c => !correlated
       || all.some(e => e.id === c.decision_id && e.arm === 'personalized'));
-    plan.receipt.attributed = credits.length;
     // What the reward's own window refused, counted over the same candidates
     // attribution considered. A decision dropped here was matched and too late,
     // never merely unmatched.
@@ -493,6 +516,16 @@ export class DecisionRing {
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
+    /**
+     * W24 R1.03/R1.04 (build review findings 1 and 2): what each slot refused,
+     * decided HERE — per credited slot, with that slot's own configuration —
+     * and never at the producer, which cannot see which slots this outcome
+     * would be credited to. `attributed` counts the slots that were credited
+     * and no others, so a refusal is never read as a credit and W22's credited
+     * journal below never remembers an outcome nothing took.
+     */
+    const refusedBySlot = new Map<string, 'reward' | 'money'>();
+    let moneyRefused: MoneyRefusal | undefined;
     for (const [slot, list] of bySlot) {
       // Only a supplied document default may fill an absent override. A present
       // malformed override refuses the entire plan before any downstream send.
@@ -506,6 +539,25 @@ export class DecisionRing {
         || ![s.n0, s.tauLearnMs, s.nMin, s.liftMin, s.liftMax].every(v => typeof v === 'number' && Number.isFinite(v))
         || s.n0 <= 0 || s.tauLearnMs <= 0 || !Number.isSafeInteger(s.nMin) || s.nMin < 1
         || s.liftMin <= 0 || s.liftMin > 1 || s.liftMax < 1 || s.liftMax <= s.liftMin) throw new Error('Credit configuration unavailable');
+      /**
+       * W24 R1.04 (F19 §5.3): the money mechanics — a currency nobody has
+       * declared, a nonpositive value, a rule nobody published — belong to a
+       * slot whose OBJECTIVE is money, and to no other. `moneyRefusal` answers
+       * null for a unit objective, so a slot that counts events counts this
+       * event whatever currency came with it, and the refusal is named on the
+       * slot that would have weighed money it cannot read.
+       */
+      const unweighable = moneyRefusal(config.objective, outcome, money);
+      if (unweighable) { refusedBySlot.set(slot, 'money'); moneyRefused ??= unweighable; continue; }
+      /**
+       * W24 R1.03 (F19 §7 gap 1, §5.1): and the slot learns against ONE reward,
+       * exactly as the fold filters each hour's credits per slot. A purchase
+       * that happened in a click-learning slot still credits the slot that
+       * learns from purchases; the click-learning slot takes nothing from it
+       * and says so by name.
+       */
+      if (config.reward !== outcome.type) { refusedBySlot.set(slot, 'reward'); continue; }
+      plan.receipt.attributed += list.length;
       // CW27: the credit is worth what the slot's objective says; a worthless credit is not sent.
       const weighed = list.map((c) => ({ ...c, weight: creditWeight(config.objective, outcome) })).filter((c) => c.weight > 0);
       if (managed) for (const credit of weighed) {
@@ -519,6 +571,14 @@ export class DecisionRing {
       plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += list.length - weighed.length;
       if (weighed.length) plan.batches.push({ name: statsName(tenant, brand, slot), received: weighed.length,
         body: { tenant, brand, slot, config, credits: weighed } });
+    }
+    if (refusedBySlot.size) {
+      plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);
+      plan.receipt.refused = refusedBySlot.size;
+      if (moneyRefused) plan.receipt.money = moneyRefused;
+      // "No slot learns from this" is said only when no slot did: an outcome one
+      // slot took and another refused is not an outcome nothing was credited for.
+      if (plan.receipt.attributed === 0) plan.receipt.notCredited = moneyRefused ? 'money' : 'reward';
     }
     return plan;
   }
@@ -620,7 +680,7 @@ export class DecisionRing {
       const generation = await this.state.storage.get<number>('creditGeneration') ?? 0;
       if (!Number.isSafeInteger(generation) || generation < 0) throw new Collision();
       await this.state.storage.put('creditGeneration', generation);
-      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true);
+      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true, moneyPolicyOf(body.money));
       return { plan, generation };
     });
     if (first.existing) return first.existing;
