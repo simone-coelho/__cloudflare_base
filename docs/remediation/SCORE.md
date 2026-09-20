@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 176/182 · W closed 4/26 (W16–W41) · suite 2026/2106 · residual 80 in 10 files · typecheck GREEN
+Units 177/182 · W closed 4/26 (W16–W41) · suite 2027/2106 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -22,7 +22,7 @@ Units 176/182 · W closed 4/26 (W16–W41) · suite 2026/2106 · residual 80 in 
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
 | W21 | 20 | 19 | no | PASS | a6db8d0f53b80d113ee915562d814b06f232f7b5 |
 | W22 | 15 | 14 | no | PASS | 48a74a38e201bd20802edfae81af8303be633099 |
-| W23 | 9 | 7 | no | — | — |
+| W23 | 9 | 8 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -205,7 +205,7 @@ Units 176/182 · W closed 4/26 (W16–W41) · suite 2026/2106 · residual 80 in 
 | W23.O1.01 | green | 3 |
 | W23.O1.02 | green | 3 |
 | W23.P1.01 | unspecified | 0 |
-| W23.T1.01 | red | 3 |
+| W23.T1.01 | green | 3 |
 | W23.T1.02 | green | 2 |
 | W23.T1.03 | green | 1 |
 | W23.X1.01 | green | 2 |
@@ -214,14 +214,14 @@ Units 176/182 · W closed 4/26 (W16–W41) · suite 2026/2106 · residual 80 in 
 
 ## Failing tests outside the baseline
 
--  unit:W23.T1.01 host-internal: an old outcome inside the reward window is credited at its own time, and one beyond the window is not learned from and is named
+_None._
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | f1583d6e58e0c2ca7db0dd25a66c942a9c37a60b41eb70c18767f3cc0b6a313b |
+| units sha256 | 414c597ffe95d71dd6852f2d2db8b923dacb43044c20266635bd2248f771d0a3 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -233,6 +233,6 @@ Units 176/182 · W closed 4/26 (W16–W41) · suite 2026/2106 · residual 80 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | c04dc00f71238fd2b14d3b139c3a7e9fefd754d8500a7658f8e2245b28b1a43b |
-| commit | f7c632a0a8e44b4f3021172f5215842712adaffe |
-| generated | 2026-09-20T11:11:31.072Z |
+| vitest report sha256 | 7e52aae00107b783e177be710a5ddcb089062a0c3ce1ef30cd88544fb5efd1a6 |
+| commit | 3e76ff296bf030f3cbb2fe27f6e2e279d3a698bd |
+| generated | 2026-09-20T11:29:37.616Z |
