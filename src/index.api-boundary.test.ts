@@ -2956,7 +2956,20 @@ it('W01.06 retains populated own-tenant diagnostics and only explicitly granted 
 }, 20_000);
 
 it('W01.06 preserves open and unset diagnostics plus existing preflight and unknown-method behavior', async () => {
+  // R10/R126(a) with F25 §5.1 ("anyone who can view source on the storefront can
+  // read per-arm conversion rates … the console's own error handler expects
+  // 401/403 here"): the two REPORT reads leave the open-mode list — unit
+  // W21.C1.05 rules them behind the build POST's own `operatorJwt()` gate in
+  // every mode — and are asserted 401 here instead. Every other diagnostic
+  // entry's claim, and every expected value in it, is untouched.
+  const reportReads = ['learn/report/window?from=2026-09-06&to=2026-09-06', 'learn/report?date=2026-09-06'];
   for (const mode of ['open', 'unset', 'misspelled']) for (const entry of diagnosticReads('acme')) {
+    if (reportReads.includes(entry.suffix)) {
+      const gated = await probe({ path: `/v1/acme/${entry.suffix}`, mode, operatorDiagnostics: true });
+      expect(gated.status, `${mode} ${entry.suffix} requires an operator credential`).toBe(401);
+      expect(gated.calls, `${mode} ${entry.suffix}`).toEqual([]);
+      continue;
+    }
     const result = await probe({ path: `/v1/acme/${entry.suffix}`, mode, operatorDiagnostics: true });
     expect(result.status, `${mode} ${entry.suffix}`).toBe(200); expect(result.calls).toEqual(entry.calls);
     expect(result.after).toEqual(result.before); expect(result.pending).toBe(0); expect(result.bodyReads).toBe(0); expect(result.logs).toEqual([]);

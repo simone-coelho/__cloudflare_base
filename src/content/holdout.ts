@@ -65,12 +65,16 @@ export async function outcomeEnrollment(
 ): Promise<EnrollmentProvenance | null> {
   try {
     const { LEARN_KIND } = await import('./kinds');
-    const { readPublication } = await import('@/config/publication');
+    const { readPublication, carriedSaltVersion } = await import('@/config/publication');
     const published = await readPublication(env, LEARN_KIND, tenant, true);
     const config = published?.value;
     if (!config?.holdout) return null;
     const holdout: HoldoutConfig = { ...config.holdout, salt: config.holdout.salt || brand };
-    const saltVersion = await saltVersionOf(env, tenant, published.revision, brand, holdout.salt);
+    // W21 E1.07 (NR3, R130): carried on the head this producer already read, so
+    // recording an outcome walks no history either. Used only where the salt it
+    // was computed for is the salt in force; otherwise the explicit unknown.
+    const annotation = carriedSaltVersion(published);
+    const saltVersion = annotation && annotation.salt === holdout.salt ? annotation.version : null;
     if (!personalizing) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'personalization_consent' });
     const anchor = await enrollmentAnchorOf(env, tenant, visitorId);
     if (anchor.unavailable) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'anchor_unavailable' });
@@ -93,32 +97,51 @@ export async function outcomeEnrollment(
  *
  * Cost: nothing at all for a tenant on its first learn revision, and otherwise
  * one bounded walk per (scope, revision) per isolate, cached. The walk reads at
- * most `SALT_HISTORY_READS` earlier revisions; a tenant with a longer history
- * than that is counted over the window it can see, which is stable for a given
- * revision and never churns, and the bound is named as owed work.
+ * most `SALT_HISTORY_READS` earlier revisions.
+ *
+ * W21 E1.07 (NR4): a history longer than that bound is NOT counted over the
+ * window it can see. Counting what is visible made the number go DOWN across a
+ * rotation — a tenant whose salt rotated at revisions 2 and 30 read `2` at
+ * revision 31 and `1` at revision 60 — and gave two different salts the same
+ * count, so a consumer keyed on `(id, saltVersion)` would pool two experiments
+ * that never ran together. A count that cannot see the first salt is unknown,
+ * and says so with `null`. A walk that cannot finish — an unreadable prior
+ * revision, a retained history that starts later — is unknown for the same
+ * reason, and is never cached as a number: the next healthy read is exact.
  */
 const SALT_HISTORY_READS = 24;
-const saltVersions = new Map<string, number>();
+const saltVersions = new Map<string, number | null>();
 export function invalidateSaltVersions(): void { saltVersions.clear(); }
-export async function saltVersionOf(env: Env, scope: string, revision: number, brand: string, salt: string): Promise<number> {
+export async function saltVersionOf(env: Env, scope: string, revision: number, brand: string, salt: string): Promise<number | null> {
+  // A first revision has nothing behind it, so nothing is unseen.
   if (!Number.isSafeInteger(revision) || revision <= 1) return 1;
   const key = `${scope}\u0000${revision}\u0000${salt}`;
   const cached = saltVersions.get(key);
   if (cached !== undefined) return cached;
-  let version = 1, current = salt;
+  let version = 1, current = salt, reachedFirst = false;
   try {
     const { LEARN_KIND } = await import('./kinds');
     const { publicationVersion } = await import('@/config/publication');
-    for (let n = revision - 1, reads = 0; n >= 1 && reads < SALT_HISTORY_READS; n--, reads++) {
+    let n = revision - 1, reads = 0;
+    for (; n >= 1 && reads < SALT_HISTORY_READS; n--, reads++) {
       const prior = await publicationVersion(env, LEARN_KIND, scope, n);
-      if (!prior) break;
+      // A revision the store cannot produce leaves the count unfinished; it is
+      // not evidence that the history ends here.
+      if (!prior) return null;
       const priorSalt = prior.value.holdout?.salt || brand;
       if (priorSalt !== current) { version++; current = priorSalt; }
     }
-  } catch { /* an unreadable history is not a reason to refuse a decision; the count stands at what was read */ }
+    // The walk reached the first published revision only if it ran out of
+    // revisions before it ran out of reads.
+    reachedFirst = n < 1;
+  } catch { return null; /* an unreadable history is not a reason to refuse a decision, and not a licence to guess a count */ }
+  // An exact count and the horizon's unknown are both stable for a given
+  // (scope, revision, salt) and may be remembered; only a walk that failed
+  // midway is left uncached, so the next healthy read is exact.
   if (saltVersions.size >= 256) saltVersions.clear();
-  saltVersions.set(key, version);
-  return version;
+  const answer = reachedFirst ? version : null;
+  saltVersions.set(key, answer);
+  return answer;
 }
 
 /**
@@ -131,7 +154,7 @@ export async function saltVersionOf(env: Env, scope: string, revision: number, b
  * answer the same arm.
  */
 export function enrollmentFor(input: {
-  tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number;
+  tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number | null;
   anchor: string; anchorGeneration: number;
 }): { arm: Arm; provenance: EnrollmentProvenance } {
   const salt = input.holdout.salt || input.brand;
@@ -195,7 +218,7 @@ export async function recordAnchorUnavailable(env: Pick<Env, 'CACHE'>, tenant: s
  * drawn, because she is not randomised at all; `anchorGeneration` is the only
  * generation the platform mints.
  */
-export function ineligibleEnrollment(input: { tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number;
+export function ineligibleEnrollment(input: { tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number | null;
   reason: NonNullable<EnrollmentProvenance['reason']> }): EnrollmentProvenance {
   return {
     id: experimentIdFor(input.tenant, input.brand, input.holdout.salt || input.brand),
