@@ -482,6 +482,16 @@ describe('unit:W25.G1.01', () => {
     expect(staleErrors, 'the refusal names the document field').toMatch(/cellGrammar/);
     expect(staleErrors, 'and the order this engine supports').toMatch(/c=.*v=.*s=.*r=.*a=/);
     expect(staleErrors, 'and the migration by name').toContain(CELL_GRAMMAR.migration);
+    // The VERSION is load-bearing on its own: a file exported under an older
+    // grammar whose key letters happen to coincide with today's is still an
+    // older file, and the version — not a coincidence of letters — is what says
+    // which ladder produced it. Refused, with the same migration named.
+    const olderVersion = { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version - 1, order: [...CELL_GRAMMAR.order] };
+    const byVersion = validatePriors({ cellGrammar: olderVersion, rows: rows('c=direct|v=1') });
+    expect(byVersion.ok, 'an older grammar VERSION is refused even where the order it declares matches').toBe(false);
+    const versionErrors = (byVersion.ok ? [] : byVersion.errors).join(' ');
+    expect(versionErrors, 'the refusal names the document field').toMatch(/cellGrammar/);
+    expect(versionErrors, 'and the migration by name').toContain(CELL_GRAMMAR.migration);
     // Declaring the current grammar is accepted and retained on the document.
     const current = { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] };
     const fresh = validatePriors({ cellGrammar: current, rows: rows('c=direct|v=1') });
@@ -737,8 +747,19 @@ describe('unit:W25.V1.01', () => {
     // the export a data scientist downloads carries the revision too.
     expect(rows.body.priorVersion, 'the lift grid names the prior document revision').toBe(priorVersion);
     const shipped = readFileSync(new URL('../../../public/learning.js', import.meta.url), 'utf8');
-    const gridCsvHeader = shipped.slice(shipped.indexOf('function gridCsv()'), shipped.indexOf('function gridCsv()') + 600);
-    expect(gridCsvHeader, 'and the shipped grid CSV exports it as a column').toContain('prior_version');
+    const gridCsv = shipped.slice(shipped.indexOf('function gridCsv()'), shipped.indexOf('function renderExploring()'));
+    expect(gridCsv, 'the shipped grid CSV names the column in its header row').toMatch(/rows = \[\[[^\]]*'prior_version'/);
+    expect(gridCsv, 'and every exported row carries its value, not just the heading').toMatch(/rows\.push\(\[[^\]]*[Pp]riorVersion/);
+
+    // RED: and no prior for an item the catalogue does not carry is ever
+    // offered to a merchandiser as what exploration should serve next
+    // (F20 §4.4 on `src/learn/rows.ts:118` and `public/learning.js:261`: the
+    // "Under the floor" list must name only items the catalogue has).
+    const exploring = await operatorGet(m, `/v1/${TENANT}/learn/exploring?slot=hero&brand=${BRAND}`);
+    expect(exploring.body).toMatchObject({ ok: true, published: true });
+    const underFloor = (exploring.body.rows as Array<{ item: string }>).map(r => r.item);
+    expect(underFloor, 'the cold catalogue item, which has no observation yet, is what exploration should serve next').toContain(COLD);
+    expect(underFloor.includes(GHOST), 'an item the catalogue does not carry is never offered for exploration').toBe(false);
   });
 });
 
@@ -848,19 +869,37 @@ describe('unit:W25.O1.01', () => {
     record.retention = captureRetention({ TENANTS: JSON.stringify({ provisioned: [TENANT] }),
       RETENTION: JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) }) } as Env, TENANT, record.ts);
 
-    const raw: DayReport = buildReport({
+    const input = (priors?: { version: number; index: ReturnType<typeof indexPriors> }) => ({
       tenant: TENANT, brand: BRAND, date: '2026-09-03', learn,
       learning: { name: 'learning', scope: 'session', match: 'direct', credit: 'last', windowsMs: { click: 1_800_000 } },
       reporting: [], decisions: [record], outcomes: [], now: NOW, truncated: false,
+      ...(priors ? { priors } : {}),
     } as unknown as Parameters<typeof buildReport>[0]);
-    // RED: the report SAYS what its grid was built with. `src/learn/report.ts:932`
-    // and `src/learn/hourly.ts:743` both pass `null` for the priors; W22's fold
-    // carries no prior document and its hour aggregates are compared by a
-    // computation basis that has no prior revision in it (`src/learn/report.ts:92`,
-    // `src/learn/hourly.ts:685-705`), so the honest statement is the declaration,
-    // not a silently prior-free number (F20 §4.10, §7: prior-aware offline grids
-    // are the M part and are not what closes the failure).
-    expect(raw.gridPriors, 'the record-built report declares its grid prior-free').toEqual({ applied: false, priorVersion: 0 });
+    const raw: DayReport = buildReport(input());
+    // RED: the report SAYS what its grid was really built with, DERIVED from the
+    // priors the builder was given — `src/learn/report.ts:932` and
+    // `src/learn/hourly.ts:743` pass `null` today and say nothing at all.
+    expect(raw.gridPriors, 'given no prior document, the record-built report declares its grid prior-free').toEqual({ applied: false, priorVersion: 0 });
+    // and the grid really was built prior-free: one exposure, no credit, the
+    // configured n₀ and p̂ = (0 + 30×0)/(1 + 30) = 0.
+    const plain = raw.grids.hero!.learning!.items[WARM]!['*']!;
+    expect(plain, 'the prior-free grid shrinks toward the slot with the configured n₀').toMatchObject({ n: 1, n0: DEFAULT_STATS.n0 });
+    expect(plain.p_hat).toBe(0);
+
+    // The same builder GIVEN the tenant's prior document builds the grid with
+    // it and says so, which is what lets a data scientist reconcile the report
+    // against the live table: one exposure of the warm item and the `*` prior
+    // (0.1, 200) give p̂ = (0 + 200×0.1)/(1 + 200) = 20/201 at n0 = 200, not
+    // the prior-free (0 + 30×0)/(1 + 30) = 0 at n0 = 30 above. A stamped
+    // `{ applied: false, priorVersion: 0 }` cannot satisfy both answers.
+    // RULED MEMBER: the optional `priors: { version, index }` input of
+    // `buildReport`, the same shape `buildSnapshot` already takes.
+    const document = { version: 12, index: indexPriors({ rows: [{ slot: 'hero', item: WARM, cell: '*', p_prior: PRIOR_P, n_equiv: PRIOR_N }] }, 'hero') };
+    const priored: DayReport = buildReport(input(document));
+    expect(priored.gridPriors, 'given one, it declares the revision it applied').toEqual({ applied: true, priorVersion: 12 });
+    const withPrior = priored.grids.hero!.learning!.items[WARM]!['*']!;
+    expect(withPrior, 'and the grid really is built with it').toMatchObject({ n: 1, n0: PRIOR_N, prior: { p: PRIOR_P, n: PRIOR_N } });
+    expect(withPrior.p_hat).toBeCloseTo(20 / 201, 12);
 
     const policies = policiesOf(learn);
     const hourStats = warmState();
