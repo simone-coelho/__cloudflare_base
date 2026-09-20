@@ -129,9 +129,66 @@ function validOperation(v: unknown): asserts v is Record<string, unknown> & Oper
   required(typeof v.operationId === 'string' && OPERATION.test(v.operationId) && integer(v.expectedRevision)
     && Number(v.operationId.split(':')[0]) === v.expectedRevision && typeof v.initialize === 'boolean' && typeof v.requestDigest === 'string' && HASH.test(v.requestDigest));
 }
+/**
+ * W21 E1.07 (ruling R130): a DERIVED annotation a document carries, so that a
+ * serving read of the head answers it without reading a single earlier revision.
+ *
+ * The salt version freezes a randomisation, and counting the salts behind a
+ * revision needs the revisions behind it. Doing that walk where the shopper
+ * waits cost a cold isolate up to 24 extra object reads on her first decision
+ * (NR3). It is computed HERE instead, once, on the operator's publish — the
+ * request that already knows the history is about to change — and stored beside
+ * the document it describes. The customer's own document is never touched: this
+ * lives on the envelope, is validated as optional so every document published
+ * before it stays readable, and is absent rather than guessed.
+ *
+ * It names the effective salt it was computed for, so a reader uses it only
+ * where that salt is the one in force; anything else is an explicit unknown
+ * rather than a number from another experiment.
+ */
+const DERIVED = 'derived';
+const ENVELOPE_FIELDS = ['schema', 'kind', 'scope', 'revision', 'value', 'actor', 'note', 'at', 'operation', 'digest'];
+export interface CarriedSalt { salt: string; version: number | null }
+const carried = new WeakMap<object, CarriedSalt>();
+/** The salt annotation this revision carries, or `null` where it carries none. */
+export function carriedSaltVersion(revision: object | null | undefined): CarriedSalt | null {
+  return revision && typeof revision === 'object' ? carried.get(revision) ?? null : null;
+}
+/**
+ * The annotation a document about to be published carries. Learn documents only;
+ * every other kind carries nothing, and a count that cannot be established is
+ * `null` rather than a smaller number (W21 E1.07, NR4). It never throws, so a
+ * derived annotation can never refuse a publication.
+ */
+async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, revision: number, value: unknown): Promise<{ derived: CarriedSalt } | Record<string, never>> {
+  if (kind.name !== 'learn') return {};
+  try {
+    const owner = publicationScope(kind, scope);
+    const holdout = (value as { holdout?: { salt?: unknown } } | null | undefined)?.holdout;
+    // The published salt, or the brand fallback the decision service applies.
+    const salt = typeof holdout?.salt === 'string' && holdout.salt.trim() === holdout.salt && holdout.salt ? holdout.salt : owner;
+    if (!text(salt, 256)) return {};
+    const { saltVersionOf } = await import('@/content/holdout');
+    return { derived: { salt, version: await saltVersionOf(env, owner, revision, owner, salt) } };
+  } catch { return {}; }
+}
+/**
+ * A stored revision envelope's own key set. The derived annotation is OPTIONAL
+ * in both directions: a document published before it exists carries none and
+ * still reads, and one that carries it is validated as strictly as the rest.
+ */
+function envelopeFields(value: unknown): asserts value is Record<string, unknown> {
+  required(object(value));
+  fields(value, Object.hasOwn(value, DERIVED) ? [...ENVELOPE_FIELDS, DERIVED] : ENVELOPE_FIELDS);
+  if (!Object.hasOwn(value, DERIVED)) return;
+  const annotation = value[DERIVED];
+  fields(annotation, ['salt', 'version']);
+  required(text(annotation.salt, 256) && (annotation.version === null || (integer(annotation.version) && annotation.version > 0)));
+}
 async function envelope<T>(value: unknown, kind: DocumentKind<T>, scope: string, expected?: number): Promise<Envelope<T>> {
   try {
-    fields(value, ['schema', 'kind', 'scope', 'revision', 'value', 'actor', 'note', 'at', 'operation', 'digest']);
+    envelopeFields(value);
+    required(!Object.hasOwn(value, DERIVED) || kind.name === 'learn');
     required(value.schema === 'catalog-revision/v1' && value.kind === kind.name && value.scope === scope && integer(value.revision) && value.revision > 0
       && (expected === undefined || value.revision === expected) && text(value.actor, 256) && typeof value.note === 'string' && value.note.length <= 500 && integer(value.at));
     validOperation(value.operation); required(value.operation.expectedRevision + 1 === value.revision);
@@ -178,7 +235,7 @@ async function loadHead(storage: R2Bucket, scope: string): Promise<Loaded | null
       && (v.committed === null ? set.operation.initialize : canonical(set.operation.base) === canonical(v.committed)));
     const seen = new Set<string>();
     for (const raw of v.pending.documents) {
-      fields(raw, ['schema', 'kind', 'scope', 'revision', 'value', 'actor', 'note', 'at', 'operation', 'digest']);
+      envelopeFields(raw);
       required(typeof raw.kind === 'string' && typeof raw.scope === 'string'); const key = member({ name: raw.kind }, raw.scope), ref = set.refs[key];
       required(ref && !seen.has(key) && ref.revision === raw.revision && ref.digest === raw.digest); seen.add(key); await validDigest(raw);
     }
@@ -270,7 +327,13 @@ async function retained<T>(storage: R2Bucket, kind: DocumentKind<T>, scope: stri
 }
 function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: DocumentKind<T>): Revision<T> {
   const interpreted = (kind.validateStored ?? kind.validate)(value.value); required(interpreted.ok);
-  return freeze({ revision: value.revision, value: interpreted.value, actor: value.actor, note: value.note, at: value.at, publication: identityOf(set) });
+  const result = freeze({ revision: value.revision, value: interpreted.value, actor: value.actor, note: value.note, at: value.at, publication: identityOf(set) });
+  // W21 E1.07 (R130): the derived annotation travels with the revision object a
+  // reader already holds, so the head read carries it and nothing is serialized
+  // into the delivery contract that was not already there.
+  const annotation = (value as unknown as Record<string, unknown>)[DERIVED];
+  if (annotation && typeof annotation === 'object') carried.set(result, annotation as CarriedSalt);
+  return result;
 }
 export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T>> {
   required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; required(ref);
@@ -381,7 +444,10 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       // joint receipt, and no independently writable pointer can expose them.
       const op = { operationId: i === 0 ? meta.operationId! : current.revision + ':' + meta.operationId!.split(':')[1], expectedRevision: current.revision, requestDigest, initialize: false };
       const document = await envelope(await sealed({ schema: 'catalog-revision/v1' as const, kind: change.kind.name, scope: change.scope,
-        revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op }), change.kind, change.scope);
+        revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op,
+        // W21 E1.07 (R130): computed on the operator's publish, where the history
+        // is already being read, and never on the shopper's decision.
+        ...(await derivedFor(env, change.kind, change.scope, revision, value)) }), change.kind, change.scope);
       serialized(document); documents.push(document);
       const key = member(change.kind, change.scope), old = refs[key];
       refs[key] = { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) };
@@ -487,7 +553,8 @@ export async function initializePublicationSet(env: Env, baselines: PublicationB
       if (!validated.ok) throw new PublicationError('Invalid baseline configuration', 422, 'invalid_baseline');
       const document = await envelope(await sealed({ revision: raw.revision, value: b.retainedValue ? raw.value : validated.value, actor: raw.actor, note: raw.note, at: raw.at,
         schema: 'catalog-revision/v1' as const, kind: b.kind.name, scope: b.scope,
-        operation: { operationId: (raw.revision - 1) + ':' + operationId.split(':')[1], expectedRevision: raw.revision - 1, requestDigest, initialize: true } }), b.kind, b.scope);
+        operation: { operationId: (raw.revision - 1) + ':' + operationId.split(':')[1], expectedRevision: raw.revision - 1, requestDigest, initialize: true },
+        ...(await derivedFor(env, b.kind, b.scope, raw.revision, b.retainedValue ? raw.value : validated.value)) }), b.kind, b.scope);
       serialized(document); documents.push(document);
       refs[key] = { kind: b.kind.name, scope: b.scope, revision: raw.revision, digest: document.digest, minRevision: raw.revision, index: [rowOf(b.kind, document)] };
     }

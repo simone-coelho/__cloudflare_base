@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import { assertOwnerScope, currentOwnerConsent, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
+import { carriedSaltVersion, PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
 import { snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
@@ -20,7 +20,7 @@ import { projectVisit, validEntry, validVisitContext, entryChannelOf, type Chann
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
-import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, saltVersionOf } from './holdout';
+import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
@@ -389,7 +389,16 @@ export async function serveContentDecisions(
   // survives recognition. (`armUnder` labels the refusing shopper `default`
   // today and the ruled `ineligible` waits on the assertions named there.)
   const holdoutInForce: HoldoutConfig = { ...learn.holdout, salt: learn.holdout.salt || brand };
-  const saltVersion = await saltVersionOf(env, scope, learnRev?.revision ?? 0, brand, holdoutInForce.salt);
+  // W21 E1.07 (NR3, ruling R130): the salt version is CARRIED where the head is
+  // read. It used to be walked here — up to 24 prior learn revisions read before
+  // the shopper's first answer on a cold isolate — for a number that is
+  // provenance and never a serving input. The publish that changed the history
+  // computed it; this reads it off the head it already holds, so the decision
+  // performs no read of its own and cannot fail or wait on one. It is used only
+  // where the salt it was computed for is the salt in force; anything else is
+  // the explicit unknown, never a number from another experiment (NR4).
+  const saltCarried = carriedSaltVersion(learnRev);
+  const saltVersion = saltCarried && saltCarried.salt === holdoutInForce.salt ? saltCarried.version : null;
   // The anchor is looked up only for a shopper who is in the experiment at all.
   const anchor = personalizes(consent) ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
   const enrolled = anchor && !anchor.unavailable

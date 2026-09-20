@@ -65,12 +65,16 @@ export async function outcomeEnrollment(
 ): Promise<EnrollmentProvenance | null> {
   try {
     const { LEARN_KIND } = await import('./kinds');
-    const { readPublication } = await import('@/config/publication');
+    const { readPublication, carriedSaltVersion } = await import('@/config/publication');
     const published = await readPublication(env, LEARN_KIND, tenant, true);
     const config = published?.value;
     if (!config?.holdout) return null;
     const holdout: HoldoutConfig = { ...config.holdout, salt: config.holdout.salt || brand };
-    const saltVersion = await saltVersionOf(env, tenant, published.revision, brand, holdout.salt);
+    // W21 E1.07 (NR3, R130): carried on the head this producer already read, so
+    // recording an outcome walks no history either. Used only where the salt it
+    // was computed for is the salt in force; otherwise the explicit unknown.
+    const annotation = carriedSaltVersion(published);
+    const saltVersion = annotation && annotation.salt === holdout.salt ? annotation.version : null;
     if (!personalizing) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'personalization_consent' });
     const anchor = await enrollmentAnchorOf(env, tenant, visitorId);
     if (anchor.unavailable) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'anchor_unavailable' });
