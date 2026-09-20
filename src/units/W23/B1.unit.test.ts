@@ -53,13 +53,24 @@
 //   · `docs/handover/HANDOFF-2026-09-16.md` §6 :227 — "valid calendar/integer
 //     timestamps"; "The user's late-buffered decision is not permission to
 //     reject all old events or treat their receipt as fresh activity."
-//   · GREEN witnesses cited, never edited: `src/routes/realtime.sdkContract.test.ts`
-//     :2572-2574 (the buffered path already refuses a non-integer, negative,
-//     infinite, out-of-calendar or FUTURE original timestamp), :2591-2594 (a
-//     buffered outcome dated 0 or 1 is still transported and still carries its
-//     own old `ts`), :367 (the statistics anchor is the event's own timestamp);
-//     `src/learn/learn.test.ts` :897 (an outcome 31 minutes after a click
-//     decision credits nothing — the window bites in `attribute`).
+//   · Existing tests cited, never edited, with their state AT HEAD measured and
+//     stated — a red test is not a green witness:
+//       — RED at head, in `docs/remediation/baseline-failures.json`:
+//         `src/routes/realtime.sdkContract.test.ts` :2572-2574 and :2591-2594
+//         (the block "W22.07 validates explicit buffered context before effects
+//         and transports zero or very old original outcomes…"). They are cited
+//         as R10 COLLISIONS — assertions a W23 change must not contradict — and
+//         never as proof of today's behaviour. The buffered door's refusal of a
+//         future original time is therefore derived from the product itself:
+//         `src/reflex/bufferedAction.ts:30`, `isEventTimestamp(value.timestamp)
+//         && value.timestamp <= now`, applied at `src/routes/realtime.ts:146`.
+//         `src/learn/holdoutArms.test.ts:234` ("W09.04 conserves fan
+//         destinations…") is RED at head too (measured here:
+//         logs/fix1-holdoutarms.log, 1 failed / 6 passed).
+//       — GREEN at head: `src/routes/realtime.sdkContract.test.ts:367` (the
+//         statistics anchor is the event's own timestamp) and
+//         `src/learn/learn.test.ts:897` (an outcome 31 minutes after a click
+//         decision credits nothing — the window bites in `attribute`).
 //
 // THE READINGS THIS BATCH IS WRITTEN AGAINST (R116)
 //   (a) MEASURED FIRST, unit by unit, before anything was ruled. The probe logs
@@ -121,9 +132,16 @@
 //      estimate and the lift the receipt compares, with the strings it shows
 //      them as. A new MEMBER and never a new `why` sentence, because
 //      `src/learn/receipts.test.ts:41-51` asserts the exact `why` array.
-//   3. `OutcomeReceipt['outsideWindow']` (`src/learn/fan.ts:68`): how many ring
-//      decisions this outcome matched but could not be credited to because it
-//      fell outside the reward's own attribution window.
+//   3. `OutcomeReceipt['outsideWindow']?: number` (`src/learn/fan.ts:68`), OPTIONAL:
+//      how many ring decisions this outcome matched but could not be credited to
+//      because it fell outside the reward's own attribution window. OPTIONAL and
+//      carried through rather than required, because `outcomeReply`
+//      (`src/learn/fan.ts:170-177`) rebuilds a ring reply member by member and
+//      `src/learn/holdoutArms.test.ts:279`/`:300` feed it a fixture body that has
+//      no such member; requiring it there would turn an already-red test (`:234`,
+//      measured red at head) red for a second, W23-caused reason. The object's
+//      own `/outcome` reply must always carry it — that is what this unit
+//      asserts — and `outcomeReply` must pass it on when it is present.
 //   4. `LiftSnapshot['rebuiltFrom']` (`src/learn/stats.ts:128`): the basis a
 //      repaired object's snapshot was built on. Absent on an object that was
 //      never repaired, so no existing snapshot assertion moves.
@@ -246,6 +264,21 @@ function multiset(anchorNow: number, n = 300): Ev[] {
   return events;
 }
 const chronological = (events: Ev[]): Ev[] => events.slice().sort((a, b) => a.ts - b.ts || a.item.localeCompare(b.item));
+/**
+ * F18 §2 C's catch-up shape — "one day replayed last", measured at HEAD at
+ * −46.38 % against the order-independent truth. One day of the fortnight is
+ * withheld and delivered after everything else, which is what a stalled shard,
+ * a drained backlog or a re-read partition does. This is the REPLAY this batch
+ * specifies (R116(b)): the ledger's own events re-delivered late into a fresh
+ * object, never a redelivery of events an object already holds (W22-B1).
+ */
+function catchUp(events: Ev[], anchorNow: number): { ordered: Ev[]; withheld: number } {
+  const chrono = chronological(events);
+  const from = anchorNow - 6 * DAY, until = anchorNow - 5 * DAY;
+  const held = chrono.filter(e => e.ts >= from && e.ts < until);
+  const rest = chrono.filter(e => !(e.ts >= from && e.ts < until));
+  return { ordered: [...rest, ...held], withheld: held.length };
+}
 /** A seeded, reproducible permutation (linear congruential; no wall clock, no Math.random). */
 function permuted(events: Ev[], seed: number): Ev[] {
   const out = events.slice(); let s = seed >>> 0;
@@ -506,12 +539,15 @@ describe('unit:W23.O1.01', () => {
    * permuted/replayed sequences". F18 §2 C measured HEAD at n ∈ [3.20, 10.11]
    * against a true 109.72 over 200 permutations of a 525-event set.
    *
+   * The replay leg is F18 §2 C's catch-up shape, not a re-run of the same
+   * order: a clause that cannot fail proves nothing.
+   *
    * The invariant is algebraic, not a tolerance: with the counter's clock at
    * t = max(anchor, ts) and every contribution discounted to it, the counter at
    * read time T is Σ w_i · e^(−(T − ts_i)/τ) whatever order the events arrive
    * in. Measured today (probe A): GREEN, worst relative spread 3.886e-15.
    */
-  it('logic: one multiset delivered chronologically, under seeded permutations and as an event-time rebuild leaves identical counters, and no counter clock ever moves backward', () => {
+  it('logic: one multiset delivered chronologically, under seeded permutations and with one day replayed last leaves identical counters, and no counter clock ever moves backward', () => {
     const now = Date.parse('2026-09-19T12:00:00.000Z');
     const events = multiset(now);
     // The fixture is a multiset of DISTINCT events (R116(b)); a permutation of it
@@ -526,10 +562,16 @@ describe('unit:W23.O1.01', () => {
     for (const seed of [1, 7, 13, 42, 1009, 65_537, 99_991, 2_147_483_647, 12_345, 777, 31_337, 8_191]) {
       sameCounters(applyLogic(permuted(events, seed)), base, `permutation seed ${seed}`);
     }
-    // "Replayed" (R116(b)): the same event-time sequence rebuilt into a FRESH
-    // object, which is what a ledger replay does; not a redelivery into an
-    // object that already holds those events.
-    sameCounters(applyLogic(chronological(events)), base, 'event-time rebuild');
+    // "Replayed" (R116(b), F18 §2 C): one day of the fortnight withheld and
+    // delivered last — the catch-up shape that cost 46.38 % at HEAD — into a
+    // FRESH object. Re-running the identical chronological order would be a
+    // clause that cannot fail; this one fails under the audited `bump`
+    // (reviewer control R2: reference time 1789384155000 against 1789815853000).
+    const replay = catchUp(events, now);
+    expect(replay.withheld, 'the withheld day must carry real events, or the replay clause proves nothing').toBe(23);
+    expect(replay.ordered.map(e => e.ts).some((ts, i, all) => i > 0 && ts < all[i - 1]!),
+      'the catch-up delivery must really be out of event-time order').toBe(true);
+    sameCounters(applyLogic(replay.ordered), base, 'one day withheld and replayed last (F18 §2 C catch-up shape)');
 
     // A counter's reference time never decreases, event by event, in the worst
     // delivery order: the reversed one.
@@ -551,16 +593,18 @@ describe('unit:W23.O1.01', () => {
       'the published estimates under permutation', []);
   });
 
-  it('host-internal: the real statistics object holds identical counters for the chronological, the permuted and the rebuilt delivery', async () => {
+  it('host-internal: the real statistics object holds identical counters for the chronological, the permuted and the caught-up delivery', async () => {
     const m = await mount();
     const now = Date.now();
     const events = multiset(now, 60);
+    const replay = catchUp(events, now);
+    expect(replay.withheld, 'the withheld day must carry real events').toBeGreaterThan(0);
     await deliver(m, 'coach-chronological', chronological(events));
     await deliver(m, 'coach-permuted', permuted(events, 20_260_919));
-    await deliver(m, 'coach-rebuilt', chronological(events));
+    await deliver(m, 'coach-replayed', replay.ordered);
     const base = storedStats(m, 'coach-chronological');
     sameCounters(storedStats(m, 'coach-permuted'), base, 'the statistics object under a seeded permutation');
-    sameCounters(storedStats(m, 'coach-rebuilt'), base, 'the statistics object under an event-time rebuild');
+    sameCounters(storedStats(m, 'coach-replayed'), base, 'the statistics object under the catch-up shape (one day replayed last)');
     // The object's own clock never moved backward: every anchor is an event time
     // of the multiset, and the root anchor is the newest exposure.
     const newestExposure = Math.max(...events.filter(e => e.kind === 'exposure').map(e => e.ts));
@@ -581,7 +625,7 @@ describe('unit:W23.O1.01', () => {
       const deliveries: Array<[string, Ev[]]> = [
         ['coach-chronological', chronological(events)],
         ['coach-permuted', permuted(events, 20_260_919)],
-        ['coach-rebuilt', chronological(events)],
+        ['coach-replayed', catchUp(events, pinned).ordered],
       ];
       const served: Record<string, Record<string, unknown>> = {};
       for (const [brand, ordered] of deliveries) {
@@ -596,7 +640,7 @@ describe('unit:W23.O1.01', () => {
       }
       // `brand` and `witness` name the object, not the arithmetic: the witness is
       // a digest over tenant/brand/slot/config/fence (`LearnStats.ts:587`).
-      for (const brand of ['coach-permuted', 'coach-rebuilt']) {
+      for (const brand of ['coach-permuted', 'coach-replayed']) {
         sameSnapshot(served[brand]!, served['coach-chronological']!,
           `the snapshot served for ${brand} against the chronological delivery`, ['brand', 'witness']);
       }
@@ -888,8 +932,14 @@ describe('unit:W23.X1.02', () => {
       for (const [name, exact] of [['p0', p0], ['p_hat', pHat], ['lift', lift]] as const) {
         const printed = Number.parseFloat(shown[name]);
         expect(Number.isFinite(printed), `${item}: the receipt prints ${name} as a readable number, got ${JSON.stringify(shown[name])}`).toBe(true);
-        expect(Math.abs(printed - exact) <= 5e-3 * Math.abs(exact),
-          `${item}: the printed ${name} ${shown[name]} must carry at least three significant digits of ${exact}`).toBe(true);
+        // Three SIGNIFICANT digits, not a relative bound: a relative bound near
+        // 5e-3 cannot separate "0.002" (two digits, 2.96e-3 off) from "0.00199"
+        // (three digits, 2.05e-3 off), and "0.002" is exactly what F18 §6.4 says
+        // must stop being printed. `0.00199`, `1.99e-3` and `0.001994089` all
+        // pass; `0.002` and `0.000` do not.
+        expect(printed.toPrecision(3),
+          `${item}: the printed ${name} ${JSON.stringify(shown[name])} must carry three significant digits of ${exact}`)
+          .toBe(exact.toPrecision(3));
       }
       // And it agrees with itself: what it prints for p̂ over what it prints for
       // p₀ is what it prints for the lift (doc 22 §5.2's definition), inside the
@@ -912,9 +962,12 @@ describe('unit:W23.T1.01', () => {
   /**
    * doc 16 §4 :104 "The engine clock is authoritative. Events are stamped on
    * arrival; client timestamps are advisory only — a forged or skewed clock
-   * cannot inflate affinity." The buffered door already holds the engine to it:
-   * `validBufferedAction` refuses `timestamp > now` (`bufferedAction.ts:30`) and
-   * `realtime.sdkContract.test.ts:2574` locks that refusal. The ordinary door
+   * cannot inflate affinity." The buffered door already holds the engine to it,
+   * read off the product and not off a test: `validBufferedAction` requires
+   * `value.timestamp <= now` (`src/reflex/bufferedAction.ts:30`), applied on
+   * every buffered action at `src/routes/realtime.ts:146`. (The test that also
+   * asserts it, `realtime.sdkContract.test.ts:2574`, is RED at head and is cited
+   * only as an R10 collision.) The ordinary door
    * does not: `isEventTimestamp` (`actionTypes.ts:37`) bounds the value only by
    * the calendar, so a year-ahead client stamp becomes the admitted event time
    * of the durable behavior record, of the outcome record and of the retention
@@ -1032,19 +1085,22 @@ describe('unit:W23.T1.01', () => {
    * "Late history" decision points at (HANDOFF §7 :354 "Experiment lifecycle/
    * retained evidence determines eligibility", not an age cutoff inferred from
    * delivery delay). doc 22 §4.1: purchase 7 days. `attribute` already enforces
-   * it (`policy.ts:103`; `learn.test.ts:897` is its GREEN witness) — what is
-   * missing is that the refusal is NAMED, so an operator can tell "nothing
-   * matched" from "it matched, but it was too late to count".
+   * it (`policy.ts:103`; `learn.test.ts:897`, green at head, is its witness) —
+   * what is missing is that the refusal is NAMED, so an operator can tell
+   * "nothing matched" from "it matched, but it was too late to count". The
+   * member is a COUNT of the matches the window refused, which is why the third
+   * outcome below — one that matches no served decision at all — must report
+   * zero rather than a flag.
    *
    * RULED (R21): `OutcomeReceipt['outsideWindow']`.
    */
   it('host-internal: an old outcome inside the reward window is credited at its own time, and one beyond the window is not learned from and is named', async () => {
     const m = await mount();
     const now = Date.now();
-    const served = (visitor: string, ts: number): DecisionRecord => ({
+    const served = (visitor: string, ts: number, item = ITEM_A): DecisionRecord => ({
       decision_id: `${TENANT}:${ts.toString(36)}:${visitor}:home:${SLOT}:0`,
       tenant: TENANT, brand: TENANT, visitor_id: visitor, session_id: 'w23-b1-browsing', identity_anchor: 'visitor',
-      ts, page: 'home', slot: SLOT, position: 0, item_id: ITEM_A, customer_item_id: `CMS-${ITEM_A}`, candidates: [],
+      ts, page: 'home', slot: SLOT, position: 0, item_id: item, customer_item_id: `CMS-${item}`, candidates: [],
       cell: { channel: 'paid_social', visit_bucket: '1', region: 'US-NY', affinity: 'line:Tabby', stage: 'mid' },
       arm: 'personalized', explored: false, authority: 'engine',
       versions: { config: 1, lift: 0, prior: 0, policy: 0 }, config_label: 'w23-b1',
@@ -1058,10 +1114,10 @@ describe('unit:W23.T1.01', () => {
       retention: captureRetention(m.env, TENANT, Math.min(ts, Date.now())),
     } as unknown as OutcomeRecord);
 
-    const outcomeOn = async (visitor: string, decisionTs: number, outcomeTs: number) => {
+    const outcomeOn = async (visitor: string, decisionTs: number, outcomeTs: number, servedItem = ITEM_A) => {
       const ring = m.env.DECISION_RING!.get(m.env.DECISION_RING!.idFromName(ringName(TENANT, visitor)));
       const appended = await ring.fetch('https://learn/append', { method: 'POST',
-        body: JSON.stringify({ tenant: TENANT, visitorId: visitor, records: [served(visitor, decisionTs)] }) });
+        body: JSON.stringify({ tenant: TENANT, visitorId: visitor, records: [served(visitor, decisionTs, servedItem)] }) });
       expect(appended.status, `${visitor}: the served decision is retained`).toBe(200);
       const response = await ring.fetch('https://learn/outcome', { method: 'POST',
         body: JSON.stringify({ tenant: TENANT, brand: TENANT, outcome: purchase(visitor, outcomeTs),
@@ -1085,6 +1141,14 @@ describe('unit:W23.T1.01', () => {
     expect(beyond.attributed, 'an outcome beyond the reward window is not learned from').toBe(0);
     expect(beyond.outsideWindow,
       'and the receipt names it: one decision matched this outcome but lay outside the reward window').toBe(1);
+
+    // And it is a COUNT of what the window refused, never a flag for "nothing
+    // was credited": an outcome whose visitor was served a different piece an
+    // hour ago matches no decision at all, and nothing lay outside the window.
+    const unmatched = await outcomeOn('w23-b1-unmatched', now - HOUR, now, ITEM_C);
+    expect(unmatched.attributed, 'an outcome that matches no served decision credits nothing').toBe(0);
+    expect(unmatched.outsideWindow,
+      'and nothing is named as late, because nothing matched: a miss by item is not a miss by time').toBe(0);
   });
 });
 
@@ -1112,6 +1176,14 @@ describe('unit:W23.T1.02', () => {
    *     101 · e^(−12 h/τ) = 98.62364035187657      (e^(−12 h/τ) = 0.9764716866522433)
    *
    * RULED (R21): the optional final `now` on `recordExposure`/`recordSuccess`.
+   *
+   * WHERE the correction happens, so this unit and W23.H1.01 never demand
+   * opposite things of one object: the anchor is corrected WHEN AN EVENT IS
+   * RECORDED, and only then. Loading the object, `/health`, `/recovery`,
+   * `/snapshot` and `/publish` read damaged state and must never silently repair
+   * it — which is what leaves W23.H1.01's `/health` free to report
+   * `recovery-required` on an object that has had no event since the damage, and
+   * what keeps an operator's explicit reset the only thing that clears history.
    */
   it('logic: a counter anchored ahead of the present is corrected by its next event and decays from the present', () => {
     const now = Date.parse('2026-09-19T12:00:00.000Z');
@@ -1135,6 +1207,13 @@ describe('unit:W23.T1.02', () => {
   });
 
   it('host-internal: the real statistics object corrects a stored future anchor on the next event and its snapshot decays from the present', async () => {
+    // The clock is pinned: the object stamps its own present from `Date.now()`,
+    // and a decayed mass read a few milliseconds after the event that produced it
+    // is not the integer 101 at a 1e-12 bound. Only `Date` is faked; timers stay
+    // real, so the harness's own waits still run.
+    const pinned = Date.parse('2026-09-19T12:00:00.000Z');
+    vi.useFakeTimers({ toFake: ['Date'], now: pinned });
+    try {
     const m = await mount();
     const now = Date.now();
     // Seed the object through its own door, then damage the persisted anchors the
@@ -1155,9 +1234,13 @@ describe('unit:W23.T1.02', () => {
       exposures: [{ item: ITEM_A, cell: cellTabby, ts: Date.now() }] });
     expect(applied.status, 'the next legitimate event is admitted').toBe(200);
     const after = storedStats(m, TENANT).items[ITEM_A]!['*']!.n;
-    expect(after.t <= Date.now() + SECOND,
-      `the stored reference time ${after.t} must be corrected to the object's own clock, not left 24 h ahead`).toBe(true);
+    expect(after.t <= Date.now(),
+      `the stored reference time ${after.t} must be corrected to the object's own clock ${Date.now()}, not left 24 h ahead`).toBe(true);
     exactly(after.s, 101, 'the acknowledged 100 plus one event that is not late');
+    // And the corrected counter decays from the present rather than staying frozen.
+    exactly(effectiveScore(after, Date.now() + 12 * HOUR, TAU), 101 * decayed(12 * HOUR),
+      `twelve hours later the object's counter must read 101·e^(−12 h/τ) = ${101 * decayed(12 * HOUR)}`);
+    } finally { vi.useRealTimers(); }
   });
 });
 
@@ -1229,6 +1312,12 @@ describe('unit:W23.H1.01', () => {
    * W24 owns the generation semantics of the transition; this unit requires only
    * that the reset is explicit, operator-authorised, named on the snapshot, and
    * that no snapshot mixes counters from both sides of it.
+   *
+   * It asks no read path to heal the damage. W23.T1.02 corrects an anchor only
+   * when the next event is RECORDED; load, `/health`, `/recovery`, `/snapshot`
+   * and `/publish` must never repair a stored anchor silently, or the operator
+   * would never see the state the reset exists for. The fixture below therefore
+   * damages the object and reads `/health` with no event in between.
    */
   it('host-internal: a state anchored in the future is not reported healthy', async () => {
     const m = await mount();
@@ -1253,6 +1342,12 @@ describe('unit:W23.H1.01', () => {
   });
 
   it('host: the operator-authorised explicit reset is admitted, the next published snapshot names the basis it was built on and holds no pre-reset evidence, and an unaffected slot is untouched', async () => {
+    // Pinned, as in W23.O1.01's host leg: a published snapshot is decayed to
+    // `Date.now()`, so the post-reset exposure count is an integer only when the
+    // publication is evaluated at the instant the exposures were stamped.
+    const pinned = Date.parse('2026-09-19T12:00:00.000Z');
+    vi.useFakeTimers({ toFake: ['Date'], now: pinned });
+    try {
     const m = await mount('session', { human: true });
     await publishFixture(m);
     const now = Date.now();
@@ -1299,8 +1394,24 @@ describe('unit:W23.H1.01', () => {
       .toEqual([ITEM_B]);
     exactly(snapshot.slotRates['*']!.n, 5, 'the slot carries exactly the five post-reset exposures');
 
+    // The unaffected brand of the same tenant: untouched in store, and its own
+    // publication carries NO rebuild basis — so `rebuiltFrom` cannot be a
+    // constant stamped on every snapshot (repair is conditional on actual
+    // affected history, HANDOFF-2026-09-16 §6 :227).
     expect(JSON.stringify(storedStats(m, 'coach-untouched')),
       'a slot with no affected history is left exactly as it was: repair is conditional on actual affected history')
       .toBe(untouchedBefore);
+    const untouchedPublished = await operatorPost(m, `/v1/${TENANT}/learn/publish`, { slot: SLOT, brand: 'coach-untouched' }, m.accessToken);
+    expect(untouchedPublished.status, 'the unaffected brand publishes too').toBe(200);
+    const untouchedSnapshot = untouchedPublished.body.snapshot as LiftSnapshot;
+    expect(Object.keys(untouchedSnapshot.items).sort(), 'and it still carries its own evidence').toEqual([ITEM_B]);
+    // Its seven exposures were stamped an hour before the pinned publication, so
+    // doc 22 §5.2 puts them at 7·e^(−1 h/τ) = 6.986124880662372 — every one of
+    // them still there, none repaired away.
+    exactly(untouchedSnapshot.slotRates['*']!.n, 7 * decayed(HOUR),
+      `all seven of its exposures, decayed by their own hour: 7·e^(−1 h/τ) = ${7 * decayed(HOUR)}`);
+    expect(Object.hasOwn(untouchedSnapshot as unknown as Record<string, unknown>, 'rebuiltFrom'),
+      'a snapshot from an object that was never repaired names no rebuild basis').toBe(false);
+    } finally { vi.useRealTimers(); }
   });
 });
