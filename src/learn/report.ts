@@ -16,8 +16,8 @@ import { boundedLedgerText, equalLogicalRows, logicalIdentity } from '@/ledger/d
 import type { R2Like } from '@/ledger/writer';
 import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type LiftSnapshot, type StatsConfig } from './stats';
-import { policyOf, slotConfigsOf } from './route';
+import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
+import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -401,14 +401,14 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'attributionContract'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
   // `armVisitors` rides the summary because the window pools it from here; a
   // summary written before it existed simply does not carry the key.
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -426,7 +426,10 @@ export function canonicalReportJson(report: DayReport): string {
     holdout: Object.fromEntries(Object.entries(report.holdout).map(([slot, rows]) =>
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
     ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
-    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors') };
+    armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    // W22 A1.01: the window pools from the summary, so the contract it pooled
+    // under has to be readable without opening the whole grid.
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
   const full = rawReportJson(report);
@@ -665,7 +668,17 @@ export interface DayReport {
   coverage?: ReportCoverage;
   /** Null/absent means unknown. Equality is not experimental compatibility. */
   computation?: ComputationBasis | null;
+  /** W22 A1.01: the one named, versioned attribution contract this day was built under. Absent on a report built before it existed. */
+  attributionContract?: AttributionContract;
 }
+
+/**
+ * W22 A1.01: how far back the DIRECT-RECORD recomputation can credit. It reads
+ * one day of decisions and one day of outcomes and attributes the second
+ * against the first, so whatever the policy asks for, this path cannot see a
+ * decision from the day before: its reach is the day itself.
+ */
+export const RAW_DAY_REACH_MS = 86_400_000;
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
@@ -729,6 +742,7 @@ export function diagnosticDayReport(report: DayReport): DayReport {
     ...(report.hours ? { hours: report.hours } : {}),
     coverage,
     computation: recordedComputation(report.computation),
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
   };
 }
 
@@ -906,6 +920,9 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     armVisitors, visitorOutcomes, allocation: publishedAllocation(i.learn),
     computation: new Set(policies.map(p => p.name)).size === policies.length
       ? computationBasis(i.learn, policies, slots, { source: 'raw-day', horizonMs: null, ringCap: null }) : null,
+    // W22 A1.01: what the tenant's published policy asks for, and the one day
+    // this path could actually read it over.
+    attributionContract: attributionContractOf(i.learn, RAW_DAY_REACH_MS),
     coverage: reportCoverage({ counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated }, hours: { source: 'ledger', built: [], missing: [] } }, {
       version: 1, source: 'ledger', truncated: i.truncated, visitorsIncomplete: null,
       missingHours: [], truncatedHours: [], unadvancedHours: [], unknownHours: [], horizons: [],

@@ -6,12 +6,13 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
 import { liftArchiveKey, liftKey, ONLINE_IDEMPOTENCE_HORIZON_MS, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, PRIORS_KIND } from '@/learn/priors';
+import { attributionContractOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
@@ -516,6 +517,13 @@ export class LearnStats {
 
   private async snapshot(d: Stored): Promise<LiftSnapshot> {
     const priors = await this.priorsFor(d);
+    // W22 A1.01: the online path has the tenant's published policy in scope
+    // here — `priorsFor` has just read the same learn document against which
+    // this object's configuration is checked — so the snapshot declares the
+    // window that document asks for, and the horizon the visitor's ring really
+    // keeps (`ONLINE_IDEMPOTENCE_HORIZON_MS`, the ring's own age limit), never
+    // a constant of its own.
+    const contract = await this.attributionContract(d);
     // Count exactly the item/cell identities the builder will materialize.
     const byItem = new Map(Object.entries(d.stats.items).map(([item, keys]) => [item, new Set(Object.keys(keys))]));
     const slotKeys = new Set(Object.keys(d.stats.slot));
@@ -532,7 +540,7 @@ export class LearnStats {
       for (let k: string | null = key; k !== null; k = parentKey(k)) slotKeys.add(k);
     }
     if (count + slotKeys.size > LEARN_LIMITS.counters) throw capacity();
-    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1');
+    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract);
     snap.witness = await this.witness(d, await this.fence());
     if (bytes(snap) > LEARN_LIMITS.snapshotBytes) throw capacity();
     return snap;
@@ -572,6 +580,17 @@ export class LearnStats {
       await this.state.storage.setAlarm(Date.now() + PUBLISH_DELAY_MS);
       throw new Error('Snapshot publication unavailable');
     }
+  }
+
+  /** The tenant's published attribution policy, as this object's own snapshot
+   * declares it. Absent when the publication cannot be read: the snapshot then
+   * carries no contract rather than a guessed one. */
+  private async attributionContract(d: Stored): Promise<AttributionContract | undefined> {
+    try {
+      const pin = await pinPublication(this.env, d.tenant, true);
+      const learn = await readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin);
+      return attributionContractOf(learn.value, ONLINE_IDEMPOTENCE_HORIZON_MS);
+    } catch { return undefined; }
   }
 
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {

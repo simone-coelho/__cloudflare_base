@@ -25,7 +25,7 @@ import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
 import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
-import { policyOf, slotConfigsOf } from './route';
+import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
   type ComputationBasis, type DuplicateCounts, type DuplicateWitness } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
@@ -617,6 +617,13 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     // Carrying them is a schema change in the hour aggregate and its shard
     // state (F25 §7), named as owed work.
     allocation: publishedAllocation(learn),
+    // W22 A1.01 (F17 P4): the same named contract as every other path, with the
+    // horizon THIS fold really ran under — the least of the hours it summed, so
+    // the day never claims a reach one of its hours did not have. The window
+    // the tenant published stands beside it, so the difference between "seven
+    // days" and "forty-eight hours" is on the answer instead of in the code.
+    attributionContract: attributionContractOf(learn, sorted.length
+      ? Math.min(...sorted.map(a => Number.isFinite(a.horizonMs) && a.horizonMs >= 0 ? a.horizonMs : 0)) : 0),
     armVisitors: null,
     visitorOutcomes: null,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
