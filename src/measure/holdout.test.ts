@@ -4,7 +4,17 @@
 // module's own arithmetic; the words are checked for what they claim.
 
 import { describe, it, expect } from 'vitest';
-import { compareArms, neededPerArm, newcombe, pooled, readTargets, wilson, zFor, TAPESTRY_TARGETS } from '@/measure/holdout';
+import { compareArms, neededPerArm, newcombe, pooled, readTargets, wilson, zFor } from '@/measure/holdout';
+
+/**
+ * R10/R118(9) with the build review's F11 and METHOD §6 (customer-neutral core):
+ * a named customer's numbers are a FIXTURE, not a shipped product constant. The
+ * value is byte-for-byte the one `src/measure/holdout.ts` exported as
+ * `TAPESTRY_TARGETS` (BTIE §6.4.2: minimum +10 %, target +40 %, stretch +60 %
+ * relative); the product export is deleted by the build, and every expected
+ * value in this file is unchanged by the move.
+ */
+const TAPESTRY_TARGETS = { minimum: 0.10, target: 0.40, stretch: 0.60 };
 
 describe('wilson', () => {
   it('matches the formula worked by hand: 10 of 40 at 95% is 0.1419 to 0.4020', () => {
@@ -169,12 +179,30 @@ describe('CW34: the confidence level, and the other one beside it', () => {
 });
 
 describe('CW34: the pre-set targets', () => {
-  it("uses Tapestry's numbers by default and can be switched off", () => {
+  // R10/R118(9), the build review's F10: the name claimed a compiled default this
+  // function no longer has, so it names what the block actually tests. The
+  // assertions and their values are unchanged.
+  it('reads against the numbers the caller gives it, and can be switched off', () => {
     // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
     // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
     const r = compareArms({ n: 1000, s: 30 }, { n: 20000, s: 900 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(r.targets?.targets).toEqual(TAPESTRY_TARGETS);
     expect(compareArms({ n: 10, s: 1 }, { n: 10, s: 2 }, { targets: null }).targets).toBeUndefined();
+  });
+
+  // R118(9) with F25 §5.2 and ruling R108(1d): the replacement lock for the
+  // default this module used to hold, kept beside the test that used to assert
+  // it. A platform that serves more than one customer may not read one
+  // customer's numbers when a caller supplies none; it says so instead.
+  it('supplied no targets, it reads against none and says why', () => {
+    const unsupplied = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 }).targets;
+    expect(unsupplied?.standing, 'F25 §5.2 — with no targets supplied there is no rung to award').toBe('undecided');
+    expect(unsupplied?.reason, 'F25 §5.2 — and the reading names why').toBe('no_published_target');
+    expect(unsupplied?.targets, 'F25 §5.2 — no compiled customer default is read in').toBeNull();
+    // The same counts WITH the caller's numbers still answer a rung, so the
+    // withheld reading is about the missing targets, not about these arms.
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 },
+      { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_minimum');
   });
 
   it('judges on the low end of the interval, not the point estimate', () => {
