@@ -1547,25 +1547,25 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     // R117: the gated synthetic must not hold this ordinary sibling past the product's OWN
     // validation deadline (src/ops/synthetic.ts:633-634, `deadline(() => consumeAuthenticated(
     // raw, queue, body, until), 30000)`, a private literal), so the budget below is that deadline
-    // plus an allowance for THIS harness measured in THIS run, never a bare literal: the original
-    // 2000 ms (so the budget is never stricter than the literal it replaces) plus 500 no-op reads
-    // over the same transport, timed here as the maximum of five. What the allowance covers is the
-    // native queue dispatch, the real ordinary ledger write and the batch's return trip, which
-    // measured 0.12-0.17 s when this file runs alone (a bare read then costs 2-18 ms) and
-    // 2.09-2.13 s in whole-suite runs on the same commits, the machine and not the code being what
-    // moved. Over it all stands a hard ceiling a consumer that held this message for a second
-    // deadline would still exceed, so the claim keeps its teeth on any machine.
-    const VALIDATION_DEADLINE_MS = 30_000, HARNESS_FLOOR_MS = 2_000, HARNESS_ROUND_TRIPS = 500, STUCK_CEILING_MS = VALIDATION_DEADLINE_MS + 10_000;
+    // plus an allowance for THIS harness measured in THIS run, never a bare literal (R123): a
+    // 3000 ms floor, above the worst overhead ever recorded for this test — the 2.13 s of R117's
+    // whole-suite runs — plus 100 no-op reads over the same transport, timed as the maximum of
+    // five, the sum capped at 4000 ms. The probe BOUNDS this harness's transport cost; it does not
+    // predict the overhead, which eleven runs measured flat at 108-216 ms while the probe moved
+    // 2-19 ms (roundTrip 3 → 135 ms, 10 → 147 ms, 19 → 168 ms), so it widens the budget a little
+    // and never past the cap: the largest hold this assertion cannot see stays 4000 ms, the order
+    // of the 2000 ms the bare 32000 ms literal allowed, and a 5 s hold past the deadline reds.
+    const VALIDATION_DEADLINE_MS = 30_000, HARNESS_FLOOR_MS = 3_000, HARNESS_ROUND_TRIPS = 100, HARNESS_CAP_MS = 4_000;
     let roundTrip = 0;
     for (let probe = 0; probe < 5; probe++) { const sent = Date.now(); await send({ w12: 'gate', kind: 'validation' }); roundTrip = Math.max(roundTrip, Date.now() - sent); }
-    const allowance = HARNESS_FLOOR_MS + roundTrip * HARNESS_ROUND_TRIPS;
+    const allowance = Math.min(HARNESS_FLOOR_MS + roundTrip * HARNESS_ROUND_TRIPS, HARNESS_CAP_MS);
     const began = Date.now(), classified = send({ w12: 'queue', queue: 'w1202-source', bodies: [freshEnvelope, ordinaryMessage] });
     for (let attempt = 0; attempt < 100 && !(await send({ w12: 'gate', kind: 'validation' })).entered; attempt++) await new Promise(resolve => setTimeout(resolve, 10));
     expect((await send({ w12: 'gate', kind: 'validation' })).entered).toBe(true); // The gate holds the synthetic before the batch is judged.
     expect(await classified).toEqual({ positions: [['retry', 0], ['ack', 1]] });
     const elapsed = Date.now() - began;
     console.log('W12.02 ordinary sibling ' + JSON.stringify({ roundTrip, allowance, elapsed }));
-    expect(elapsed).toBeLessThan(VALIDATION_DEADLINE_MS + allowance); expect(elapsed).toBeLessThan(STUCK_CEILING_MS);
+    expect(elapsed).toBeLessThan(VALIDATION_DEADLINE_MS + allowance);
     const settled = await ordinary();
     await send({ w12: 'gate', action: 'release', kind: 'validation' }); await new Promise(resolve => setTimeout(resolve, 100));
     expect(await ordinary()).toEqual(settled);
