@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 189/199 · W closed 4/26 (W16–W41) · suite 2050/2132 · residual 82 in 10 files · typecheck GREEN
+Units 191/199 · W closed 4/26 (W16–W41) · suite 2051/2132 · residual 81 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -24,7 +24,7 @@ Units 189/199 · W closed 4/26 (W16–W41) · suite 2050/2132 · residual 82 in 
 | W22 | 15 | 14 | no | PASS | 48a74a38e201bd20802edfae81af8303be633099 |
 | W23 | 9 | 8 | no | — | — |
 | W25 | 7 | 6 | no | — | — |
-| W26 | 7 | 4 | no | — | — |
+| W26 | 7 | 6 | no | — | — |
 | W29 | 3 | 2 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
@@ -222,9 +222,9 @@ Units 189/199 · W closed 4/26 (W16–W41) · suite 2050/2132 · residual 82 in 
 | W25.Z1.01 | green | 2 |
 | W26.C1.01 | green | 2 |
 | W26.F1.01 | green | 1 |
-| W26.I1.01 | red | 2 |
+| W26.I1.01 | green | 2 |
 | W26.P1.01 | unspecified | 0 |
-| W26.R1.01 | red | 3 |
+| W26.R1.01 | green | 3 |
 | W26.U1.01 | green | 2 |
 | W26.X1.01 | green | 2 |
 | W29.P1.01 | unspecified | 0 |
@@ -234,16 +234,15 @@ Units 189/199 · W closed 4/26 (W16–W41) · suite 2050/2132 · residual 82 in 
 
 ## Failing tests outside the baseline
 
--  unit:W26.I1.01 logic: the entry and the receipt carry page, brand, slot and position, and a slot name reused on a second page is refused by name
--  unit:W26.R1.01 host (do): two placements of one piece are two exposures, a named click credits one, a redelivered set counts once, and a legacy outcome is counted as legacy on the report
--  unit:W26.R1.01 host (session): two placements of one piece are two exposures, a named click credits one, a redelivered set counts once, and a legacy outcome is counted as legacy on the report
+-  /content routes W20.01 rejects contradictory pin publication without writes and preserves retained reads through corrected publication
+-  /content routes W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | d9dc0c5ba787ce19a613751c5dcc53b329bc53a2401cce8abb993a1d83325acd |
+| units sha256 | 8260f0e3609a167d99e0697aa897855e2b2bfe21dd15e285bfdeaafb956e2f04 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -255,6 +254,6 @@ Units 189/199 · W closed 4/26 (W16–W41) · suite 2050/2132 · residual 82 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | d1c30779b11d2d0b0b4c3a9c233c75a6d43701b947f97d9c10a6e3831d82eb2c |
-| commit | 73d20d05413dae6ca9e99ccc1cd6aa6b85ea3a50 |
-| generated | 2026-09-20T13:08:03.463Z |
+| vitest report sha256 | 0d527924e88e5e96c82306e52a006e7b50adec9ef9e09cb48cfde9f0a3d68cfa |
+| commit | e192ad4242057ac3b23702f1130347c60194d952 |
+| generated | 2026-09-20T13:25:00.782Z |
