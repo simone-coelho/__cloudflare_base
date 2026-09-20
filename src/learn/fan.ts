@@ -28,12 +28,15 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import type { AttributionPolicy, RingEntry } from './policy';
-import type { StatsConfig } from './stats';
-// The reach is read from the object that enforces it. `DecisionRing` re-exports
-// the declaration in `./stats`, which is where the value lives precisely
-// because that object imports this module: a value declared in either end of
-// that cycle would be read here before it was initialized.
-import { RING_MAX_AGE_MS } from '@/durable-objects/DecisionRing';
+// The ring's own reach, read from the module that declares it and that
+// `@/durable-objects/DecisionRing` re-exports under the same name. It is read
+// from there and NOT from the ring itself because the ring imports this module:
+// measured under this repository's own runner, `import { RING_MAX_AGE_MS } from
+// '@/durable-objects/DecisionRing'` here resolves to `undefined` whenever the
+// ring is the first of the two to load (src/learn/learn.test.ts imports it at
+// line 10, this module at line 12), which silently emptied the statistics
+// object's applied-delivery journal.
+import { RING_MAX_AGE_MS, type StatsConfig } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';

@@ -11,27 +11,29 @@ import type { DecisionRecord } from '@/content/types';
 import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
-import { logicalIdentity } from '@/ledger/delivery';
+import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
-// Must precede the '@/learn/fan' import below: the fan-out binds its own
-// ONLINE_RING_REACH_MS to this object's re-export at module scope, so the
-// module that declares the value has to be evaluated before the fan-out's body.
-import { RING_MAX_AGE_MS } from '@/learn/stats';
-import { deliverStats, emptyStatsDelivery, learningGenerations, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
-import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
-import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
-
-const RING_MAX = 200;
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
  * applied and the statistics object forgets a delivery at the same moment, so
  * every reader names the same constant instead of restating its value
- * (W22 A1.02). It is declared in `@/learn/stats`, which neither this object nor
- * the fan-out can cycle with, and re-exported here because this is the object
- * that enforces it.
+ * (W22 A1.02). The value is declared in `@/learn/stats`, which neither this
+ * object nor the fan-out can cycle with, and re-exported here because this is
+ * the object that enforces it.
+ *
+ * Both lines MUST precede the '@/learn/fan' import below and must stay there:
+ * the fan-out binds its own ONLINE_RING_REACH_MS to this re-export at module
+ * scope, and that import is what starts the fan-out evaluating, so the
+ * declaration and the re-export have to be in place before it runs.
  */
+import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
+import { deliverStats, emptyStatsDelivery, learningGenerations, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
+import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
+
+const RING_MAX = 200;
 const INDEX_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 /** Application admission budgets, not a native capacity or 200-full-record guarantee. */
 export const RING_LIMITS = { requestBytes: 1024 * 1024, rows: 1000, stateBytes: 1024 * 1024, index: 4096, idBytes: 2048,
@@ -107,11 +109,22 @@ async function bodyOf(request: Request): Promise<unknown> {
  * Only an outcome whose logical identity is STABLE is journalled — an old
  * outcome id with no event nonce can be two genuinely distinct events (F16
  * §5(j)), and dropping the second would drop a real credit.
+ *
+ * W22 D1.04: an entry is the outcome's logical id AND the digest of the whole
+ * record it was credited from, exactly as the exposure half of this guarantee
+ * keys on `${decision}:${digest}` (`LearnStats.ts`). The id covers neither the
+ * item, nor the value, nor the products (`records.ts` mints it from the tenant,
+ * the time, the visitor, the event and its nonce), so a different record under
+ * one stable id is a different event and is credited — the ledger names the
+ * same collision and refuses it there — while the SAME record redelivered is
+ * one event and is credited once. An entry stored before this (id only) still
+ * suppresses every repeat of its id: it can lose a credit it cannot tell apart,
+ * never grant one twice, and it ages out within the ring's horizon.
  */
 const CREDITED_KEY = 'credited';
 const CREDITED_MAX_BYTES = 256 * 1024;
 const CREDITED_MAX_ROWS = 4096;
-interface CreditedOutcome { id: string; ts: number; expiresAt: number }
+interface CreditedOutcome { id: string; ts: number; expiresAt: number; digest?: string }
 
 interface Stored { ring: DecisionRecord[]; index: Array<{ id: string; ts: number; retention?: RetentionStamp; digest?: string }> }
 interface Subject { tenant: string; visitor_id: string }
@@ -504,30 +517,59 @@ export class DecisionRing {
     if (!Array.isArray(stored)) return [];
     const now = Date.now(), out: CreditedOutcome[] = [];
     for (const entry of stored as unknown[]) {
-      if (!object(entry) || Object.keys(entry).sort().join(',') !== 'expiresAt,id,ts'
+      // Both shapes are read: this one, and the id-only one written before the
+      // digest existed. An unknown member is still refused.
+      if (!object(entry)) continue;
+      const shape = Object.keys(entry).sort().join(',');
+      if ((shape !== 'expiresAt,id,ts' && shape !== 'digest,expiresAt,id,ts')
         || typeof entry.id !== 'string' || !entry.id || bytes(entry.id) > RING_LIMITS.idBytes
-        || !Number.isSafeInteger(entry.ts) || !Number.isSafeInteger(entry.expiresAt)) continue;
+        || !Number.isSafeInteger(entry.ts) || !Number.isSafeInteger(entry.expiresAt)
+        || (Object.hasOwn(entry, 'digest') && (typeof entry.digest !== 'string' || !/^[a-f0-9]{64}$/.test(entry.digest)))) continue;
       if (entry.expiresAt as number <= now || now - (entry.ts as number) > RING_MAX_AGE_MS) continue;
-      out.push({ id: entry.id, ts: entry.ts as number, expiresAt: entry.expiresAt as number });
+      out.push({ id: entry.id, ts: entry.ts as number, expiresAt: entry.expiresAt as number,
+        ...(typeof entry.digest === 'string' ? { digest: entry.digest } : {}) });
     }
     return out;
+  }
+  /**
+   * The record this outcome IS, as the exposure journal digests the decision it
+   * was served from: two records the one id cannot tell apart are two events.
+   * The comparison is the LEDGER's own — the row without the top-level
+   * provenance `equalLogicalRows` already excludes — so the two sinks call the
+   * same pair of records the same thing, and a redelivery that differs only by
+   * its delivery envelope is still one event.
+   */
+  private async creditedDigest(outcome: OutcomeRecord): Promise<string | null> {
+    try {
+      const row = outcome as unknown as Record<string, unknown>;
+      return await recoveryDigest(Object.fromEntries(Object.entries(row).filter(([key]) => !LOGICAL_EXCLUDED_FIELDS.includes(key))));
+    } catch { return null; }
   }
   /** Has this exact outcome already been credited, inside the horizon? */
   private async alreadyCredited(outcome: OutcomeRecord): Promise<boolean> {
     if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return false;
     const id = outcome.outcome_id;
     if (typeof id !== 'string' || !id) return false;
-    return (await this.creditedOutcomes()).some(entry => entry.id === id);
+    const digest = await this.creditedDigest(outcome);
+    // A digest this object cannot compute recognizes nothing new: the entry
+    // written without one still stops a repeat of its id.
+    return (await this.creditedOutcomes()).some(entry => entry.id === id
+      && (entry.digest === undefined || entry.digest === digest));
   }
   private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
     try {
       if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
       const id = outcome.outcome_id;
       if (typeof id !== 'string' || !id || bytes(id) > RING_LIMITS.idBytes) return;
+      const digest = await this.creditedDigest(outcome);
+      if (digest === null) return;            // unrecordable is remembered as nothing, never as this id
       // The journal never outlives the online retention of the event it records.
       const expiresAt = readRetention(outcome.retention?.online, tenant, 'online').expiresAt;
       const now = Date.now();
-      let kept = [...(await this.creditedOutcomes()).filter(entry => entry.id !== id), { id, ts: outcome.ts, expiresAt }]
+      // Only this exact record's own entry is replaced. An id-only entry from
+      // before the digest is kept: it is what still recognizes ITS repeat.
+      let kept = [...(await this.creditedOutcomes()).filter(entry => !(entry.id === id && entry.digest === digest)),
+        { id, ts: outcome.ts, expiresAt, digest }]
         .sort((a, b) => a.ts - b.ts);
       if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
       while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
