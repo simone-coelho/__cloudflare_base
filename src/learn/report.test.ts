@@ -739,7 +739,8 @@ describe('the day report', () => {
       if (metadata === 'invalid') expect(report.coverage).toMatchObject({ truncated: true, visitorsIncomplete: true, missingHours: [14], truncatedHours: [12], unadvancedHours: [13], unknownHours: [12, 13] });
       expect(report.holdout.hero).toEqual(raw.holdout.hero); expect(report.holdoutComparison.hero).toEqual([]);
     }
-    const response = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-09-03&to=2026-09-07', undefined, env);
+    // R10/R126(a): the window GET is behind the same operator gate as the day GET above.
+    const response = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-09-03&to=2026-09-07', { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, env);
     expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
     const { report: window } = await response.json() as { report: Awaited<ReturnType<typeof windowReport>> };
     expect(window.coverage.days.map(d => d.coverage.metadata)).toEqual(['recorded', 'absent', 'invalid', 'absent']);
@@ -836,7 +837,8 @@ describe('the day report', () => {
     expect(body.report.measurement.inference).toBe('unavailable');
     expect(body.report.hours).toEqual(historic.hours);
     expect(body.report.counts.truncated).toBe(true);
-    const windowResponse = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-09-03&to=2026-09-04&confidence=0.99', undefined, env);
+    // R10/R126(a): the window GET is behind the same operator gate as the day GET above.
+    const windowResponse = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-09-03&to=2026-09-04&confidence=0.99', { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, env);
     expect(windowResponse.status).toBe(200);
     const windowBody = await windowResponse.json() as { report: Awaited<ReturnType<typeof windowReport>> };
     expect(windowBody.report.slots.hero.arms.find((arm) => arm.arm === 'personalized')).toMatchObject({ decisions: 1, credited: 3, creditedPerDecision: 3 });
@@ -878,7 +880,8 @@ describe('the day report', () => {
     storage.get.mockResolvedValue(null);
     for (const [to, length] of [['2026-04-03', 93], ['2026-06-30', 181]] as const) {
       storage.get.mockClear();
-      const response = await decisionRoutes.request(`https://report.test/coach/learn/report/window?from=2026-01-01&to=${to}`, undefined, env);
+      // R10/R126(a): the window GET is behind the same operator gate.
+      const response = await decisionRoutes.request(`https://report.test/coach/learn/report/window?from=2026-01-01&to=${to}`, { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, env);
       expect(response.status).toBe(200);
       const { report } = await response.json() as { report: Awaited<ReturnType<typeof windowReport>> };
       expect(report.from).toBe('2026-01-01'); expect(report.to).toBe(to);
@@ -899,7 +902,8 @@ describe('the day report', () => {
       const bytes = encoder.encode(canonicalReportJson({ ...template, date }));
       return { size: bytes.length, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(bytes.slice(0, REPORT_LIMITS.summaryBytes)); c.close(); } }) };
     });
-    const response = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-07-01&to=2026-12-31', undefined, env);
+    // R10/R126(a): the window GET is behind the same operator gate as the day GET above.
+    const response = await decisionRoutes.request('https://report.test/coach/learn/report/window?from=2026-07-01&to=2026-12-31', { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, env);
     expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
     const { report } = await response.json() as { report: Awaited<ReturnType<typeof windowReport>> };
     expect(report.from).toBe(days[0]); expect(report.to).toBe(days[183]);
