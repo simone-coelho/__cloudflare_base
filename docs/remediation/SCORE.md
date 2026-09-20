@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 165/169 · W closed 4/26 (W16–W41) · suite 2003/2082 · residual 79 in 9 files · typecheck GREEN
+Units 169/173 · W closed 4/26 (W16–W41) · suite 2010/2089 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -20,7 +20,7 @@ Units 165/169 · W closed 4/26 (W16–W41) · suite 2003/2082 · residual 79 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
-| W21 | 16 | 15 | no | — | — |
+| W21 | 20 | 19 | no | — | — |
 | W22 | 15 | 14 | no | PASS | 48a74a38e201bd20802edfae81af8303be633099 |
 | W37 | 1 | 1 | no | — | — |
 
@@ -172,6 +172,8 @@ Units 165/169 · W closed 4/26 (W16–W41) · suite 2003/2082 · residual 79 in 
 | W21.C1.05 | green | 2 |
 | W21.C1.06 | green | 1 |
 | W21.C1.07 | green | 1 |
+| W21.C1.08 | green | 2 |
+| W21.C1.09 | green | 1 |
 | W21.E1.01 | green | 2 |
 | W21.E1.02 | green | 2 |
 | W21.E1.03 | green | 1 |
@@ -180,6 +182,8 @@ Units 165/169 · W closed 4/26 (W16–W41) · suite 2003/2082 · residual 79 in 
 | W21.E1.06 | green | 2 |
 | W21.E1.07 | green | 2 |
 | W21.E1.08 | green | 2 |
+| W21.E1.09 | green | 1 |
+| W21.E1.10 | green | 3 |
 | W21.P1.01 | unspecified | 0 |
 | W22.A1.01 | green | 2 |
 | W22.A1.02 | green | 2 |
@@ -207,7 +211,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | ceff765f7e3bdab6dda46fdde2978d80f724464c88f753f29688700bb6dbeabd |
+| units sha256 | e4831c7220bd90fad4951f4b3d550186cbdd9224bad378af63365dff80e02b0a |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -218,7 +222,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | a9d5bb7127bca42aa04fb2ae11f0f0df9db106ca01fa48c5f74dc7420aa02989 |
-| commit | dc6d12ec0f77cf4b839e8dffe1b410383cc470e2 |
-| generated | 2026-09-20T07:19:27.483Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | ed14a025073c1b08cc24f161addcc4b2627885077134672462a830ef7695b124 |
+| commit | 09d241123c1292b63bc5ba31cd5fe1db0c66c085 |
+| generated | 2026-09-20T08:16:16.996Z |
