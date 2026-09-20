@@ -24,14 +24,32 @@ import { liftArchiveKey } from './fan';
 import type { LiftSnapshot } from './stats';
 
 export interface ReplayDiff { field: string; served: unknown; replayed: unknown }
+/**
+ * What KIND of answer a replay is. A bare `equal: false` cannot be triaged: a
+ * receipt whose served item is right and whose candidate list drifted is not
+ * the same event as a receipt that served a different item, and neither is a
+ * record this build cannot replay at all. Total, and derived from `diff` alone
+ * so it can never disagree with the comparison it summarizes.
+ */
+export type ReplayClassification = 'equal' | 'item' | 'candidates-only' | 'explanation' | 'not-replayable';
 export interface ReplayResult {
   ok: boolean;
   equal: boolean;
+  classification: ReplayClassification;
   reason?: string;
   diff: ReplayDiff[];
   served: DecisionRecord;
   replayed: DecisionRecord | null;
   used: { catalog: number; slots: number; learn: number; lift: number; prior: number } | null;
+}
+
+/** The one derivation of {@link ReplayClassification}: no caller states a class of its own. */
+export function classifyReplay(ok: boolean, diff: ReplayDiff[]): ReplayClassification {
+  if (!ok) return 'not-replayable';
+  if (diff.length === 0) return 'equal';
+  if (diff.some(entry => entry.field === 'item_id')) return 'item';
+  if (diff.every(entry => entry.field === 'candidates')) return 'candidates-only';
+  return 'explanation';
 }
 
 /** What a replay may legitimately differ on: nothing. These are the fields compared, in the order a reader wants them. */
@@ -69,22 +87,47 @@ export function replayDeps(env: Env): ReplayDeps {
       if (retained && retained.revision !== revision) throw new ReplayDependencyError(`configuration dependency ${kind.name}/${revision} has a mismatched revision`);
       return retained?.value ?? null;
     },
+    // An archive that could not be read is not an archive that is gone. A
+    // transport failure or a body that will not parse is a live fault an
+    // operator can act on; reporting it as a permanent absence is a guess, and
+    // the wrong one (F22 §7.2). The private failure text never leaves here: the
+    // caller writes the operator-visible sentence for both diagnoses.
     archive: async (tenant, brand, slot, version) => {
-      try {
-        const obj = await env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version));
-        return obj ? ((await obj.json()) as LiftSnapshot) : null;
-      } catch { return null; }
+      const unreadable = new ReplayDependencyError(`lift dependency ${slot}/${version} could not be read`);
+      let object: R2ObjectBody | null;
+      try { object = await env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version)); }
+      catch { throw unreadable; }
+      if (!object) return null;
+      try { return (await object.json()) as LiftSnapshot; }
+      catch { throw unreadable; }
     },
   };
 }
 
-const fail = (served: DecisionRecord, reason: string): ReplayResult => ({ ok: false, equal: false, reason, diff: [], served, replayed: null, used: null });
+const fail = (served: DecisionRecord, reason: string): ReplayResult =>
+  ({ ok: false, equal: false, classification: 'not-replayable', reason, diff: [], served, replayed: null, used: null });
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
   && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const identity = (value: unknown): value is number => finite(value) && Number.isSafeInteger(value) && value >= 0;
 type Manifest = NonNullable<DecisionInputs['replay']>;
+/** The page manifest grammar this build implements. A record written at a later one is a rollout event. */
+const MANIFEST_VERSION = 1;
+
+/**
+ * A manifest a later build wrote is refused for a reason that NAMES the version
+ * it was handed, instead of being pooled with a corrupt record: rollout is only
+ * a mechanism if an operator can tell "this build is behind that record" from
+ * "this record is damaged". Only a nonnegative safe integer above the version
+ * implemented here qualifies; every other `version` fails the recorded-identity
+ * rule and keeps `invalid page replay manifest`, so nothing arbitrary a record
+ * carries is interpolated into an operator-visible sentence.
+ */
+function manifestVersionRefusal(value: unknown): string | null {
+  if (!object(value) || !identity(value.version) || value.version <= MANIFEST_VERSION) return null;
+  return `page replay manifest version ${value.version} is not supported`;
+}
 
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord): Manifest | null {
   if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance').sort().join(',') !== 'candidateLimit,learning,slots,version'
@@ -92,7 +135,7 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
     || (own(value, 'governance') && value.governance !== 'slot-gates-v1' && value.governance !== 'slot-gates-v2')
-    || value.version !== 1 || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
+    || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
   for (const [index, row] of Array.from(value.slots).entries()) {
@@ -178,7 +221,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const target = page[targetIndex]!;
   const hasManifest = own(inputs, 'replay');
   const manifest = hasManifest ? manifestOf(inputs.replay, page, served) : null;
-  if (hasManifest && !manifest) return fail(served, 'invalid page replay manifest');
+  if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
   const prefixPolicy = manifest?.pins === 'prefix-reserved-v2';
   const pinned = prefixPolicy ? served.position < slotPins(target).length : Boolean(target.pinnedPieceId);
   const pinId = prefixPolicy ? slotPins(target)[served.position] : target.pinnedPieceId;
@@ -260,7 +303,10 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     else delete replayed.inputs.replay;
   }
   const used = { catalog: v.catalog, slots: v.slots, learn: v.learn, lift: snapshots[served.slot]?.version ?? 0, prior: snapshots[served.slot]?.priorVersion ?? 0 };
-  if (!replayed) return { ok: true, equal: false, reason: 'the replay produced no decision for this slot and position', diff: [{ field: 'item_id', served: served.item_id, replayed: null }], served, replayed: null, used };
+  if (!replayed) {
+    const absent: ReplayDiff[] = [{ field: 'item_id', served: served.item_id, replayed: null }];
+    return { ok: true, equal: false, classification: classifyReplay(true, absent), reason: 'the replay produced no decision for this slot and position', diff: absent, served, replayed: null, used };
+  }
   const diff = compareRecords(served, replayed);
-  return { ok: true, equal: diff.length === 0, diff, served, replayed, used };
+  return { ok: true, equal: diff.length === 0, classification: classifyReplay(true, diff), diff, served, replayed, used };
 }
