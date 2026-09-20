@@ -41,7 +41,7 @@ import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, sl
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
-import { DEFAULT_EXPLORE } from '@/learn/explore';
+import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
@@ -305,8 +305,11 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
     readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant),
   ]);
   const ex = learn.slots?.[slot]?.exploration ?? null;
-  const effective = { mode: ex?.mode === 'thompson' ? 'off' : ex?.mode ?? 'off', share: ex?.mode === 'thompson' ? 0 : ex?.share ?? 0,
-    ...(ex?.mode === 'thompson' ? { configuredMode: 'thompson', unsupported: true } : {}) };
+  // W28.W1.01: one representation of "the mode the engine runs, and the retained
+  // setting where they differ" — the same helper the day report's §7 row uses.
+  const eff = effectiveExploration(ex);
+  const effective = { mode: eff.mode ?? 'off', share: eff.unsupported ? 0 : ex?.share ?? 0,
+    ...(eff.unsupported ? { configuredMode: eff.configuredMode, unsupported: true } : {}) };
   const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
   c.header('Cache-Control', 'no-store');
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });

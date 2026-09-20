@@ -26,6 +26,7 @@ import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type Ring
 import { ringEntryOf } from './fan';
 import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
+import { effectiveExploration } from './explore';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
   type ArmVisitors, type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts, type VisitorOutcomes } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
@@ -1067,10 +1068,12 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
       holdoutComparison[slot] = [];
     }
   }
+  // W28.W1.01: the folded day says exactly what the raw day says (`src/learn/report.ts`),
+  // including the retained setting where the engine will not run the configured mode.
   const exploration = slots.map((slot) => {
     const x = hb.exploration[slot] ?? { decisions: 0, explored: 0 };
     const cfg = learn.slots?.[slot]?.exploration ?? null;
-    return { slot, decisions: x.decisions, explored: x.explored, realized: x.decisions ? r3(x.explored / x.decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
+    return { slot, decisions: x.decisions, explored: x.explored, realized: x.decisions ? r3(x.explored / x.decisions) : 0, ...effectiveExploration(cfg) };
   });
   // W21 C1.03/E1.04 (F25 §5.3, F07 §7): the day's per-arm DENOMINATORS, in
   // distinct visitors, summed from the membership each hour carried — never

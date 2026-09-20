@@ -1318,6 +1318,8 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    let byScore = null;
+    let promoted = null;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
       if (pick?.ranking) {
@@ -1325,10 +1327,16 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
       } else if (pick?.first) {
         const i = scored.findIndex((s) => s.p.id === pick.first);
-        if (i > 0) scored.unshift(...scored.splice(i, 1));
+        if (i > 0) {
+          byScore = scored.slice();
+          promoted = pick.first;
+          scored.unshift(...scored.splice(i, 1));
+        }
       }
     }
-    candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit)).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
+    const limit = Math.max(0, candidateLimit);
+    const support = limit > 0 && byScore && promoted !== null ? [scored[0], ...byScore.slice(0, limit).filter((s) => s.p.id !== promoted)] : scored.slice(0, limit);
+    candidates[slot.slot] = support.map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
     const diversity = prefix ? prefix.diversity : slot.diversity;
     const rule = diversity && diversity.max >= 1 && diversity.dimension ? diversity : null;
     const seen = /* @__PURE__ */ new Map();

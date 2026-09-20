@@ -18,6 +18,7 @@ import { attribute, creditWeight, DEFAULT_POLICY, namedSlotOf, type AttributionP
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
+import { effectiveExploration, type ExploreMode } from './explore';
 import type { PriorIndex } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
@@ -707,7 +708,22 @@ export function attributionArm(arm: string, decisions: number, credited: number)
   const creditedPerDecision = decisions > 0 ? credited / decisions : null;
   return { arm, decisions, credited, creditedPerDecision, rate: creditedPerDecision };
 }
-export interface ExploreRow { slot: string; decisions: number; explored: number; realized: number; configured: number | null; mode: string | null }
+/**
+ * §7: what explored in the slot, against the share the slot can actually
+ * reserve. W28.W1.01: `mode` is the mode the engine RAN. Where the retained
+ * document names a mode the engine will not run, the row publishes no share and
+ * names the stored setting in `configuredMode`/`unsupported` — the words
+ * `GET learn/exploring` answers with — so "configured 10%, realized 0%" is never
+ * read off a policy that cannot explore at all.
+ */
+export interface ExploreRow {
+  slot: string; decisions: number; explored: number; realized: number;
+  configured: number | null; mode: string | null;
+  /** The retained setting, where the engine will not run it. Absent for a supported mode. */
+  configuredMode?: ExploreMode;
+  /** Set with `configuredMode`: retained configuration, not an active policy. */
+  unsupported?: boolean;
+}
 
 /** Reported source limitations, not delivery completeness or experimental maturity. */
 export interface ReportCoverage {
@@ -1054,7 +1070,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   const exploration: ExploreRow[] = slots.map((slot) => {
     const { decisions, explored } = slotCounts.get(slot)!;
     const cfg = i.learn.slots?.[slot]?.exploration ?? null;
-    return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, configured: cfg && cfg.mode !== 'off' ? cfg.share : null, mode: cfg?.mode ?? null };
+    return { slot, decisions, explored, realized: decisions ? r3(explored / decisions) : 0, ...effectiveExploration(cfg) };
   });
 
   // W21 E1.04: outcomes by the arm the VISITOR is enrolled in, never by whether

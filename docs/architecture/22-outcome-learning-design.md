@@ -414,9 +414,24 @@ new writes reject it and live decisions ignore retained Thompson dials. Its old 
 only for explicitly identified historical replay, not as an evaluated statistical or reward policy.
 **Epsilon** is uniform random at the configured share, from the same bucket.
 
-Every exploration pick is flagged in the decision record. Exploration outcomes feed learning like any
-other, and the console reports them separately so the exploration share can be verified rather than
-trusted.
+The supported rules are reward-free: rotation ranks on observation counts and epsilon is uniform, so
+neither models the reward. A slot's `reward` and `objective` dials change what the engine LEARNS; they
+do not change what explores, and no supported mode models a unit reward with repeated successes.
+Whether an evaluated, reward-modelling exploration is offered at all — and the full contract such a
+rule would need, with the policy-quality validation it would have to pass — is an open owner decision;
+nothing here is an evaluated exposure or exploration-quality guarantee.
+
+Every exploration pick is flagged in the decision record, including one whose draw agreed with the
+ranking's own leader: the decision was made by the rule, so the realized share counts it. The recorded
+candidate support is the slot's top candidates by score, taken before the pick was moved to the front,
+with the explored piece recorded beside them. Exploration outcomes feed learning like any other, and
+the console reports them separately so the exploration share can be verified rather than trusted. A
+retained dial the engine will not run is reported as the mode it ran — off — beside the stored setting,
+in the day report's §7 row and in `GET learn/exploring` alike, never as a configured share.
+
+A merchandiser's item control governs exploration as well as scoring: an item under `reject` or
+`freeze` is not chosen by a supported mode, because both modes' selection rests on the learned evidence
+the control took out of the item's treatment. It keeps the position its base score earned.
 
 ---
 
@@ -673,7 +688,7 @@ deployment.
 | Statistics | Learn from pinned placements | Marketing | on |
 | Serving | γ trust dial per slot | Marketing | 0 |
 | Serving | Snapshot cadence and worker TTL | Engineering | 60 s, 60 s |
-| Exploration | mode, share, floor, cooldown per slot | Marketing with data science | rotation, 0.10, 50, session |
+| Exploration | mode, share, floor per slot (a `cooldown` dial is not delivered: no mode implements one) | Marketing with data science | off, no active share; the editors initialize 0.10 and 50 when a supported mode is chosen |
 | Priors | Imported prior file and version | Data science | none |
 | External | Model hook: kind, ref, weight, timeout, fallback | Data science | off |
 | Holdout | share, arms, sticky, salt | Data science | 0.05, default, true |
