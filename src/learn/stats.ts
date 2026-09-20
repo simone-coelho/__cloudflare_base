@@ -50,11 +50,54 @@ export interface StatsState {
 }
 export const emptyStats = (): StatsState => ({ items: {}, slot: {}, events: 0, updatedAt: 0 });
 
-function bump(entry: ReflexEntry | undefined, ts: number, w: number, tau: number): ReflexEntry {
-  if (!entry) return { s: w, t: ts };
-  // Keep acknowledged mass at a monotonic reference time; late input ages only itself.
-  const t = Math.max(entry.t, ts);
-  return { s: effectiveScore(entry, t, tau) + w * Math.exp(-(t - ts) / tau), t };
+/**
+ * W23 T1.01 / T1.02 (doc 16 §4 :104 "The engine clock is authoritative … a
+ * forged or skewed clock cannot inflate affinity"; F18 §6.3 "a future-dated
+ * event suspends decay", §8 "the client timestamp clamped").
+ *
+ * `now` is the engine's own present. Three things follow, and nothing else
+ * changes:
+ *   · a contribution stamped AFTER the present is folded in AT the present. It
+ *     is counted in full — never dropped, never refused here — but it cannot
+ *     buy itself a reference time the engine cannot account for.
+ *   · no counter's reference time is left after the present, so a counter that
+ *     a future-dated event already anchored ahead stops being frozen: its next
+ *     event pulls the anchor back to now and it decays from now on. Because
+ *     `effectiveScore` clamps `dt` at zero, the mass acknowledged at that future
+ *     anchor is carried across unchanged — pulled back, never inflated.
+ *   · a legitimately OLD `ts` is untouched: `min(ts, now) === ts`, the anchor is
+ *     still `max(entry.t, ts)`, and the contribution ages by exactly its own
+ *     age. An old event is admitted as old (HANDOFF-2026-09-18 §7 :353/:354).
+ *
+ * The default `Infinity` is the merge primitive's NO-CLAMP behaviour, identical
+ * to this function before W23. `coarsenStats` folds mass that is already stored
+ * and must never silently repair a stored anchor, so it keeps that default.
+ */
+function bump(entry: ReflexEntry | undefined, ts: number, w: number, tau: number, now = Infinity): ReflexEntry {
+  const at = Math.min(ts, now);
+  if (!entry) return { s: w, t: at };
+  // Keep acknowledged mass at a monotonic reference time, never after the
+  // engine's present; late input ages only itself.
+  const t = Math.min(Math.max(entry.t, at), now);
+  return { s: effectiveScore(entry, t, tau) + w * Math.exp(-(t - at) / tau), t };
+}
+
+/**
+ * W23 H1.01: does this state hold a reference time the engine's present cannot
+ * account for? Pure, and read-only by construction — naming damage is not
+ * repairing it (F18 §8: "fixing `bump` does not repair counters whose `t` is
+ * already skewed"). Once every write clamps, only state damaged before the
+ * clamp, or damaged out of band, can answer true.
+ */
+export function anchoredAfter(st: StatsState, now: number): boolean {
+  if (st.updatedAt > now) return true;
+  const maps: Array<Record<string, Counter>> = [st.slot, ...Object.values(st.items)];
+  if (st.bounded) maps.push({ '*': st.bounded.omitted });
+  for (const map of maps) for (const c of Object.values(map)) {
+    if (c.n.t > now) return true;
+    for (const entry of Object.values(c.s)) if (entry && entry.t > now) return true;
+  }
+  return false;
 }
 const counter = (): Counter => ({ n: { s: 0, t: 0 }, s: {} });
 
@@ -92,28 +135,46 @@ function itemAdmitted(st: StatsState, item: string): boolean {
   return false;
 }
 
-export function recordExposure(st: StatsState, item: string, cell: Cell, ts: number, cfg: StatsConfig): void {
+/**
+ * W23 T1.01 / T1.02: the trailing `now` is the engine's present, and it is
+ * OPTIONAL. Every existing caller — including the batch fold over retained
+ * history (`src/learn/hourly.ts`, `src/learn/report.ts`) — keeps its current
+ * signature and gets the engine's own clock, and for a fold of historical rows
+ * `min(ts, now) === ts`, so nothing about a historical rebuild changes
+ * (F18 §3: the batch fold is not the defect). A caller that already knows the
+ * present it is recording against passes it, so the arithmetic cannot depend on
+ * how long the surrounding work took.
+ */
+export function recordExposure(st: StatsState, item: string, cell: Cell, ts: number, cfg: StatsConfig, now: number = Date.now()): void {
   const admitted = itemAdmitted(st, item);
   for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
     const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
-    ic.n = bump(ic.n, ts, 1, cfg.tauLearnMs);
+    ic.n = bump(ic.n, ts, 1, cfg.tauLearnMs, now);
     const sc = (st.slot[k] ??= counter());
-    sc.n = bump(sc.n, ts, 1, cfg.tauLearnMs);
+    sc.n = bump(sc.n, ts, 1, cfg.tauLearnMs, now);
   }
   if (!admitted) st.bounded!.omittedEvents++;
-  st.events += 1; st.updatedAt = Math.max(st.updatedAt, ts);
+  st.events += 1; st.updatedAt = stampedAt(st.updatedAt, ts, now);
 }
 
-export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: RewardType, ts: number, weight: number, cfg: StatsConfig): void {
+export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: RewardType, ts: number, weight: number, cfg: StatsConfig, now: number = Date.now()): void {
   const admitted = itemAdmitted(st, item);
   for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
     const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
-    ic.s[reward] = bump(ic.s[reward], ts, weight, cfg.tauLearnMs);
+    ic.s[reward] = bump(ic.s[reward], ts, weight, cfg.tauLearnMs, now);
     const sc = (st.slot[k] ??= counter());
-    sc.s[reward] = bump(sc.s[reward], ts, weight, cfg.tauLearnMs);
+    sc.s[reward] = bump(sc.s[reward], ts, weight, cfg.tauLearnMs, now);
   }
-  st.updatedAt = Math.max(st.updatedAt, ts);
+  st.updatedAt = stampedAt(st.updatedAt, ts, now);
 }
+
+/**
+ * The state's own last-updated stamp, under the same rule as every counter's
+ * reference time: forward with the evidence, never after the engine's present.
+ * A stamp a future-dated event already pushed ahead is pulled back by the next
+ * event that is recorded, and only by it.
+ */
+const stampedAt = (updatedAt: number, ts: number, now: number): number => Math.min(Math.max(updatedAt, ts), now);
 
 const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effectiveScore(e, now, tau) : 0);
 

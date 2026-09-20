@@ -162,9 +162,19 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
     }
     const cell = row.cell as unknown as Cell;
     for (const key of levelKeys(cell)) keyBound(key);
-    const ts = row.ts === undefined || row.ts === null ? Date.now() : Number(row.ts);
+    // Retain the absent/null-row contract: only an ABSENT time is the object's
+    // own present. W23 T1.01: a time that is PRESENT must be what the event door
+    // itself requires — a safe integer inside the calendar (`isEventTimestamp`,
+    // `src/events/actionTypes.ts:37`; HANDOFF-2026-09-16 §6 :227 "valid
+    // calendar/integer timestamps") — so this object is never laxer than the
+    // door in front of it. `Number(true)` is 1 and `new Date(1.5)` is a valid
+    // date, so neither a boolean nor a fractional millisecond may be coerced
+    // into evidence; both are refused before any counter is touched.
+    const supplied = row.ts !== undefined && row.ts !== null;
+    const ts = supplied ? Number(row.ts) : Date.now();
     const weight = row.weight === undefined || row.weight === null ? 1 : Number(row.weight);
-    if (!time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
+    if ((supplied && (typeof row.ts !== 'number' || !Number.isSafeInteger(row.ts)))
+      || !time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
     if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     if (row.digest !== undefined && (typeof row.digest !== 'string' || !/^[a-f0-9]{64}$/.test(row.digest))) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
@@ -409,6 +419,11 @@ export class LearnStats {
       // W22 D1.02: the unmanaged online path's own idempotence. The managed
       // path already proves it with effect markers, so the journal is read only
       // where there are none.
+      // W23 T1.01/T1.02: the object's own present, read once so every row of one
+      // batch is folded against the same clock and the arithmetic cannot depend
+      // on how long the batch took. Rows stamped before it keep their own time
+      // exactly; a row stamped after it is still counted, at the present.
+      const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
@@ -455,8 +470,8 @@ export class LearnStats {
         const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
           visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
-        if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats);
-        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats);
+        if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
+        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
         this.fit(candidate);
         newlyApplied++;
       }
