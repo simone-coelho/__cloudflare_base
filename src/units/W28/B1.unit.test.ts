@@ -574,6 +574,11 @@ describe('unit:W28.S1.01', () => {
     expect(KIT_API, 'the kit states the default').toContain('Exploration is off by default');
     expect(DEFAULT_EXPLORE, 'N25 — the compiled default must state the truth the kit, doc 22 §7 and both editors state: off, with no active share')
       .toEqual({ mode: 'off', share: 0, floor: 50 });
+    // R162(5): turning the compiled default off is CUSTOMER-VISIBLE — a caller that relied on the
+    // constant for a slot with no exploration block stops rotating at a tenth of its decisions —
+    // so the kit must say what a slot with no exploration block does, beside the sentence above.
+    expect(KIT_API, 'R162(5) — the kit states the customer-visible case: a slot whose learn document carries no exploration block explores nothing')
+      .toMatch(/no exploration block/i);
   });
 
   it('host: on the mounted application a learn document with no exploration block explores nothing, and the exploration answer states the compiled default', async () => {
@@ -648,13 +653,20 @@ describe('unit:W28.C1.01', () => {
 
     // F23 §4.2: the recorded support is sliced AFTER the reorder, so the third-highest scored
     // candidate falls out of the record and a replay or an offline estimator reads a support the
-    // ranking never had. The limit bounds the SCORED support; a served piece is never dropped.
+    // ranking never had.
+    //
+    // THE RULE, narrowly (measured, R162(2)): the slice is taken from the PRE-REORDER score order,
+    // and the ONE piece the exploration named is kept with it. Nothing else changes: a slot with
+    // no exploration pick records exactly what it records today (the probe that widened this to
+    // "every served piece" broke `contentCompose.test.ts:158`, a slot whose take exceeds its
+    // candidate limit and which explores nothing), and the SERVED RANKING is untouched — the
+    // support is captured beside the ranking, never by reordering it.
     const limited = decideContent({ ...BASE_DECIDE, visitorId: inside, candidateLimit: 3,
       learning: learningWith({ mode: 'rotation', share: 0.5, floor: 50 }, TAIL_UNDER_FLOOR) });
     const record = limited.records.find(r => r.slot === 'hero')!;
     expect(servedOrder(limited), 'the exploration served the under-observed piece').toEqual(['cnt-unknown']);
     expect(record.candidates,
-      'F23 §4.2 — the top three BY SCORE are the support, whatever the exploration reordered, and the served piece is recorded with them')
+      'F23 §4.2 — the top three BY SCORE are the support, whatever the exploration reordered, and the piece the exploration named is recorded with them')
       .toEqual([
         { contentId: 'cnt-unknown', score: SCORE['cnt-unknown'] },
         { contentId: 'cnt-evening-tabby', score: SCORE['cnt-evening-tabby'] },
