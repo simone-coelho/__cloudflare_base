@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 11 files · typecheck GREEN
+Units 184/192 · W closed 4/26 (W16–W41) · suite 2040/2120 · residual 80 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -20,10 +20,10 @@ Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
-| W21 | 20 | 19 | no | PASS | a6db8d0f53b80d113ee915562d814b06f232f7b5 |
+| W21 | 20 | 18 | no | PASS | a6db8d0f53b80d113ee915562d814b06f232f7b5 |
 | W22 | 15 | 14 | no | PASS | 48a74a38e201bd20802edfae81af8303be633099 |
 | W23 | 9 | 8 | no | — | — |
-| W25 | 7 | 5 | no | — | — |
+| W25 | 7 | 6 | no | — | — |
 | W29 | 3 | 2 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
@@ -179,7 +179,7 @@ Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 
 | W21.C1.09 | green | 1 |
 | W21.E1.01 | green | 2 |
 | W21.E1.02 | green | 2 |
-| W21.E1.03 | green | 1 |
+| W21.E1.03 | red | 1 |
 | W21.E1.04 | green | 2 |
 | W21.E1.05 | green | 4 |
 | W21.E1.06 | green | 2 |
@@ -212,7 +212,7 @@ Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 
 | W23.T1.03 | green | 1 |
 | W23.X1.01 | green | 2 |
 | W23.X1.02 | green | 1 |
-| W25.E1.01 | red | 1 |
+| W25.E1.01 | green | 1 |
 | W25.G1.01 | green | 2 |
 | W25.N1.01 | green | 2 |
 | W25.O1.01 | green | 1 |
@@ -226,15 +226,14 @@ Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 
 
 ## Failing tests outside the baseline
 
--  W10.01 application learning budgets W10.01 protects restart/reset ambiguity and bounds actual prior expansion and public snapshots
--  unit:W25.E1.01 host: on both hosts, the warehouse CSV imported through the shipped door ranks a cold item by its depth-2 prior on the decision path, its receipt says the estimate is prior-derived with no observed exposure, and the same shopper without the prior is served the other order
+-  unit:W21.E1.03 host: every arm-tagged record names its experiment, salt version, arm and anchor generation, a salt change starts a new experiment, and the authenticated export delivers the window's records
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 6f4c4643ae1f9fc416a409e1ad704224a4b31ef70e37982900596ceb9fc866cc |
+| units sha256 | c4336ba417bf7482432b4d2b8deb59ed8f12d6edf1a6cb919373ee0a43025860 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -246,6 +245,6 @@ Units 184/192 · W closed 4/26 (W16–W41) · suite 2039/2120 · residual 81 in 
 | Input | Value |
 |---|---|
 | vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | f199d0917beca660b2193e1f1735133851f90ce6fcf6a401fa85f0230bb785af |
-| commit | 949251aded2f329abf8fb01fb835652c84830d32 |
-| generated | 2026-09-20T12:21:05.010Z |
+| vitest report sha256 | 551e4b4e2f5eb259e452856d20b6ca9810a8002b2b22ec8d57ad76ba4fa036cf |
+| commit | 07b943dda6177d2a53723a7e38ad2bdb2b7b71e7 |
+| generated | 2026-09-20T12:32:40.783Z |
