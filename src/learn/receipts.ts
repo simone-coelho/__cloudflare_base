@@ -11,6 +11,15 @@ export interface Receipt {
   renderedAt: number | null;
   decision_id: string;
   at: number;
+  /**
+   * W26 I1.01 (F21 §6(b), §8): the placement's identity is page/brand/slot/
+   * position, and the receipt is where it is read. The brand is the one the
+   * DECISION carries — the brand her page was served under — and is never
+   * stamped from the tenant id, which is the default F21 §6(c) condemns and
+   * which is indistinguishable from the truth only for a tenant whose single
+   * brand happens to be named after it.
+   */
+  brand: string;
   page: string;
   slot: string;
   position: number;
@@ -59,6 +68,20 @@ export interface LiftTerms {
   p_hat: number;
   /** clamp(p̂/p₀), exactly as the decision applied it. */
   lift: number;
+  /**
+   * W25 V1.01 (doc 35 §2 N22, kit 02:316): the OBSERVED exposures behind this
+   * estimate, kept apart from `n0`, the strength the estimate was shrunk with.
+   * An item ranked on an imported prior alone has `n: 0` and `n0: 200`, and a
+   * reader can see that the platform observed nothing: prior strength is never
+   * presented as exposure.
+   */
+  n: number;
+  /** The shrinkage strength: the imported prior's `n_equiv` where one applied, else the slot's n₀. */
+  n0: number;
+  /** The imported prior in force for this cell, when there was one. */
+  prior?: { p: number; n: number };
+  /** The prior document revision this decision was made under; 0 when none. */
+  prior_version: number;
   shown: { p0: string; p_hat: string; lift: string };
 }
 
@@ -85,7 +108,15 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // W23 X1.02: set exactly where the learned-lift sentence is written, so the
   // terms and the sentence can never describe two different decisions.
   let liftTerms: LiftTerms | undefined;
-  why.push(r.measurementBasis === 'rendered-v1' ? 'Client-reported rendering was durably admitted; this is not proof of human visibility.' : 'Legacy served-decision exposure; rendering was not confirmed.');
+  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
+  // exposure unit. The VIEWABLE impression is a different thing and the
+  // learning loop counts none of it today (`learningInputOf` in
+  // `src/ledger/records.ts` states the same fact in code), so the receipt that
+  // reports an admitted render says both — no reader may take "rendered" for
+  // "seen", or for the event the platform learns from.
+  why.push(r.measurementBasis === 'rendered-v1'
+    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
+    : 'Legacy served-decision exposure; rendering was not confirmed.');
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else {
@@ -119,10 +150,23 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const applied = l.gamma <= 0 ? 'shown on the receipt, not applied (trust 0)'
         : l.applied === 0 ? `shown on the receipt; at trust ${r3(l.gamma)} it moved this score by nothing`
           : `applied at trust ${r3(l.gamma)}`;
+      // W25 V1.01 (N22): where an imported prior carried this estimate, the
+      // sentence names it and its strength beside the observed exposures, so no
+      // reader takes prior strength for something the platform saw. The clause
+      // is written only where the decision recorded a prior, so a receipt
+      // without one keeps the sentence it has always had.
+      const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
+      // W26 X1.01 (F21 §8, §2 probes 3 and 4): a LEARNED estimate is a ratio of
+      // observed rates and corrects for neither the rank the piece was shown at
+      // nor the placement it was shown in, so the sentence that reports it says
+      // so — the same fact `LiftRow.correction` states on the operator's table.
+      // Only here: a lift a merchandiser FROZE is an instruction, not an
+      // estimate, and nothing was measured for it to be uncorrected of.
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units), ${applied}.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
+        n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
@@ -135,7 +179,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const nm = names.get(r.item_id);
   return {
     measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,
-    decision_id: r.decision_id, at: r.ts, page: r.page, slot: r.slot, position: r.position,
+    decision_id: r.decision_id, at: r.ts, brand: r.brand, page: r.page, slot: r.slot, position: r.position,
     item: r.item_id, customer_item_id: nm?.customerContentId ?? r.customer_item_id ?? null, title: nm?.title ?? null,
     arm: r.arm, explored: r.explored, authority: r.authority,
     context: contextOf(r.cell),

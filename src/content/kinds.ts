@@ -401,6 +401,29 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
   const checked = parseSlotCatalog(candidate, true);
   if (!checked.ok) return checked;
   const errors: string[] = [];
+  /**
+   * W26 I1.01 (F21 §6(b), §8): the learning identity is tenant/brand/slot and
+   * carries no page, so two placements that share a slot name on two pages pool
+   * into ONE statistics object without anyone saying so — a hero on the home
+   * page and a hero on a product page learn from each other's exposures. F21 §8
+   * offers two remedies, "page in `statsName`/`liftKey`, or an enforced global
+   * uniqueness of slot names across pages". The first is a storage migration of
+   * every retained snapshot; this is the second, and it removes the ambiguity
+   * where it is created rather than after the fact.
+   *
+   * It is an AUTHORING rule, applied here and never in `parseSlotCatalog` /
+   * `validateStored`: a document already retained with a cross-page duplicate
+   * keeps reading exactly as it did, because refusing it at read time would
+   * take a tenant's live catalogue away from them to fix a naming problem.
+   */
+  const pageOfSlot = new Map<string, string>();
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    for (const slot of slots) {
+      const owner = pageOfSlot.get(slot.slot);
+      if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: slot name '${slot.slot}' is already used on page '${owner}'; slot names must be unique across the pages of a brand, because one slot name is one statistics object`);
+      else pageOfSlot.set(slot.slot, page);
+    }
+  }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();
     for (const slot of slots) {

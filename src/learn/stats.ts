@@ -192,12 +192,27 @@ const stampedAt = (updatedAt: number, ts: number, now: number): number => Math.m
 
 const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effectiveScore(e, now, tau) : 0);
 
+/**
+ * W25 Z1.01 (F20, "a lift of one where there is nothing to compare against"):
+ * WHAT this row's `lift` was measured against.
+ *
+ * `slot-rate` — the slot's own rate in this cell, the definition of lift.
+ * `none` — the slot has no rate in this cell (it has never recorded a success
+ * there, so p₀ is exactly zero) and there is nothing to divide by. The `lift`
+ * number stays 1, because a multiplicative term with no reference must leave the
+ * ranking where it found it; this member is what stops that 1 from being read as
+ * "measured, and equal to the slot", which is a claim no evidence supports.
+ */
+export type LiftReference = 'slot-rate' | 'none';
+
 export interface LevelStat {
   level: Level; key: string; n: number; s: number; p0: number; p_hat: number; lift: number;
   /** The strength the estimate was shrunk with: the imported prior's n_equiv when one applied, else the slot's n₀. */
   n0?: number;
   /** Doc 22 §8: the imported prior in force for this key, when there is one. */
   prior?: { p: number; n: number };
+  /** W25 Z1.01: what `lift` was measured against. Absent on an archive built before it was named. */
+  liftReference?: LiftReference;
 }
 export interface ItemStats { levels: LevelStat[] }
 
@@ -242,6 +257,26 @@ export interface LiftSnapshot {
   tenant: string; brand: string; slot: string; reward: RewardType;
   /** CW27: what a success was worth when these counts were built. Absent on snapshots from before. */
   objective?: 'unit' | 'revenue' | 'margin';
+  /**
+   * W24 G1.01 (F19 §7 "Stamp a generation on the counters and start a fresh one
+   * when the generation changes … Do not silently keep the counters").
+   *
+   * The ACCUMULATION generation these counters belong to: the objective, the
+   * reward they were filtered to, the decay horizon and the accumulation schema
+   * they were built under, together with the moment that generation started
+   * counting (`accumulationGeneration`). It is deliberately NOT keyed on the
+   * estimator or the presentation dials (`n0`, `nMin`, `liftMin`, `liftMax`):
+   * changing those reinterprets nothing, so the counters and this name carry on.
+   *
+   * A STRING, and distinct from the numeric recovery `generation` of the
+   * statistics object's fence, which counts repairs rather than naming what the
+   * counters mean. Absent on an archive published before this existed.
+   */
+  generation?: string;
+  /** W24 G1.01: when this generation started counting. */
+  restartedAt?: number;
+  /** W24 G1.01: exposures counted since it started, so a receipt can say how much evidence the current generation holds. */
+  exposuresSinceRestart?: number;
   version: number; publishedAt: number; events: number;
   n0: number; nMin: number; liftMin: number; liftMax: number;
   /** Doc 22 §8: the prior document's revision this snapshot was built with; 0 or absent when none. */
@@ -268,13 +303,68 @@ export interface LiftSnapshot {
 
 /** How a repaired object's counters were started again, and under whose operation. */
 export interface RebuildBasis {
-  /** The operator discarded the damaged counters outright. W24 owns the generation semantics of the transition. */
-  basis: 'explicit-reset';
+  /**
+   * `explicit-reset`: the operator discarded the damaged counters outright (W23 H1.01).
+   * `ledger-rebuild`: W24 T1.02 — the operator started the counters again from the
+   * events the platform retained for one day, so the reader knows the object holds
+   * that day's evidence and not the tenant's whole history.
+   */
+  basis: 'explicit-reset' | 'ledger-rebuild';
   /** The audited recovery operation that did it. */
   operationId: string;
   at: number;
   /** The generation the object moved to, so nothing prepared against the old one can be mistaken for post-repair evidence. */
   generation: number;
+  /** W24 T1.02: the retained day a `ledger-rebuild` was folded from. */
+  date?: string;
+}
+
+/**
+ * W24 G1.01: the accumulation schema these counters were built under — what a
+ * counter MEANS, not how it is presented. Bumped only when a change would make
+ * an existing counter mean something else, which is precisely when learning must
+ * start again rather than carry on.
+ */
+export const ACCUMULATION_SCHEMA = 1;
+
+/**
+ * W24 G1.01: the name of an accumulation generation. It covers the accumulation
+ * half only — schema, objective, reward, decay horizon — so two snapshots can be
+ * compared for "same counters, same meaning" without reading the counters, and a
+ * presentation change (n0, nMin, the lift clamps) keeps the name because it
+ * reinterprets nothing.
+ *
+ * `restartedAt` is appended only for counters that were actually RESTARTED, and
+ * it is what separates two runs of one meaning: a slot moved to revenue and back
+ * to unit is not the unit generation it was before, and its name says so. A
+ * generation that has never been restarted has nothing more to be named by, and
+ * in particular is not named by its own evidence — every new event moves a
+ * decayed counter's reference time forward, so a name taken from the counters
+ * would change whenever the slot was served, which is exactly what a generation
+ * must not do.
+ */
+export function accumulationGeneration(a: { objective: 'unit' | 'revenue' | 'margin'; reward: RewardType; tauLearnMs: number }, restartedAt?: number): string {
+  const name = `a${ACCUMULATION_SCHEMA}:${a.objective}:${a.reward}:${a.tauLearnMs}`;
+  return typeof restartedAt === 'number' && Number.isFinite(restartedAt) ? `${name}:${restartedAt}` : name;
+}
+
+/**
+ * W24 G1.01: when the counters standing in this state began, for a state whose
+ * own generation was never stamped — the earliest reference time any counter
+ * carries. An object that has never been restarted has counted since its first
+ * evidence, which is exactly that moment; a state with no evidence at all has
+ * counted since now.
+ */
+function earliestAnchor(st: StatsState, now: number): number {
+  let earliest = Infinity;
+  const consider = (c: Counter | undefined) => {
+    if (!c) return;
+    if (c.n.t > 0) earliest = Math.min(earliest, c.n.t);
+    for (const entry of Object.values(c.s)) if (entry && entry.t > 0) earliest = Math.min(earliest, entry.t);
+  };
+  for (const map of [st.slot, ...Object.values(st.items)]) for (const c of Object.values(map)) consider(c);
+  consider(st.bounded?.omitted);
+  return Number.isFinite(earliest) ? earliest : now;
 }
 
 /**
@@ -286,14 +376,41 @@ export interface RebuildBasis {
  * an item's events at a fine level are the same events at every coarser one,
  * and shrinking toward yourself is not shrinkage. §5.3's example is exact.
  */
-export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1', attributionContract?: AttributionContract): LiftSnapshot {
+export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1', attributionContract?: AttributionContract, restartedAt?: number): LiftSnapshot {
   const tau = cfg.tauLearnMs;
+  /**
+   * W24 T1.02 (F19 §7.3, §4.4, over the retained "item reset retains the slot
+   * denominator", HANDOFF-2026-09-16 :228): the slot's own mass is the mass of
+   * the evidence the platform still HOLDS — the retained items, plus the bucket
+   * of items capacity omitted, which is where their mass went — and not a
+   * separate running total that keeps counting exposures no item can be credited
+   * for. For every state that was only ever written to, the two are the same
+   * number by construction (`recordExposure` bumps the item and the slot
+   * together, and an omitted item's mass goes to `bounded.omitted`); they part
+   * company exactly when an item's evidence is discarded, and then the
+   * denominator must follow the evidence or every later lift is computed against
+   * exposures that can no longer be credited.
+   *
+   * Summed over SORTED item names so the total is order-invariant: two states
+   * holding the same counters produce the same bits whatever order they were
+   * built in (W23's order-invariance, kept).
+   */
+  const retained = Object.keys(st.items).sort().map(item => st.items[item]!);
+  const slotMass = (key: string): { n: number; s: number } => {
+    let n = 0, s = 0;
+    for (const map of retained) {
+      const c = map[key];
+      if (c) { n += ev(c.n, now, tau); s += ev(c.s[reward], now, tau); }
+    }
+    // The omitted bucket is the complete population's root and lives only there.
+    if (key === '*' && st.bounded) { n += ev(st.bounded.omitted.n, now, tau); s += ev(st.bounded.omitted.s[reward], now, tau); }
+    return { n, s };
+  };
   // The slot's rate per level key, shrunk toward the parent key's rate; the root shrinks toward itself.
   const slotRates: LiftSnapshot['slotRates'] = {};
   const slotRate = (key: string): number => {
     if (slotRates[key]) return slotRates[key]!.rate;
-    const c = st.slot[key];
-    const n = c ? ev(c.n, now, tau) : 0, s = c ? ev(c.s[reward], now, tau) : 0;
+    const { n, s } = slotMass(key);
     const parent = parentKey(key);
     const p0 = parent === null ? (n > 0 ? s / n : 0) : slotRate(parent);
     const rate = (s + cfg.n0 * p0) / (n + cfg.n0);
@@ -331,11 +448,18 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
       const target = prior ? prior.p : p0slot, n0 = prior ? prior.n : cfg.n0;
       const p_hat = (s + n0 * target) / (n + n0);
       const lift = p0slot > 0 ? Math.min(cfg.liftMax, Math.max(cfg.liftMin, p_hat / p0slot)) : 1;
-      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift, ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
+      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift,
+        liftReference: p0slot > 0 ? 'slot-rate' : 'none',
+        ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
     }
     items[item] = out;
   }
+  // W24 G1.01: the generation these counters belong to, and what it has seen.
+  // `restartedAt` is supplied by an object that was actually restarted; a state
+  // that was only ever counted into has run since its own earliest evidence.
+  const startedAt = typeof restartedAt === 'number' && Number.isFinite(restartedAt) ? restartedAt : earliestAnchor(st, now);
   return { tenant: ids.tenant, brand: ids.brand, slot: ids.slot, reward, objective, measurementBasis, tauLearnMs: cfg.tauLearnMs, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates,
+    generation: accumulationGeneration({ objective, reward, tauLearnMs: cfg.tauLearnMs }, restartedAt), restartedAt: startedAt, exposuresSinceRestart: st.events,
     ...(attributionContract ? { attributionContract } : {}),
     ...(st.bounded ? { completeness: { depth: st.bounded.depth, omittedItems: st.bounded.closed === true,
       selection: st.bounded.selection, reason: st.bounded.closed ? 'item-capacity' as const : st.bounded.depth < 5 ? 'coarse' as const : 'complete' as const } } : {}) };
@@ -348,7 +472,12 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
+export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
+  /** W25 Z1.01: what this lift was measured against. Derived for an archive built before the member existed, never guessed: p₀ is on the row. */
+  liftReference: LiftReference }
+
+/** What a row's lift was measured against, from the row itself. */
+export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
 
 /** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
 export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
@@ -360,7 +489,7 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
+      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, liftReference: liftReferenceOf(st), ...(st.prior ? { prior: st.prior } : {}) };
     }
   }
   return null;

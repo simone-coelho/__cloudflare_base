@@ -9,11 +9,28 @@
 import type { ItemControl, SlotCatalog, ContentCatalog, LearnConfig } from '@/content/types';
 import { isEligibleAt } from '@/content/lifecycle';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
-import { LEVEL_WORDS, type LiftSnapshot, type Level } from './stats';
+import { LEVEL_WORDS, liftReferenceOf, type LiftReference, type LiftSnapshot, type Level } from './stats';
 import type { SlotGovernance } from './slotGovernance';
+
+/**
+ * W26 X1.01 (F21 §8): what this estimate has been corrected for, by name.
+ *
+ * `uncorrected-v1` is the only value the platform can honestly write today: the
+ * lift is a ratio of observed rates, and nothing in it accounts for the rank a
+ * piece was shown at or for which placement it was shown in. F21 §2 measured
+ * both — a 3.80× spread from rank alone against a true content difference of
+ * 1.00×, and a 3.54× spread from cross-placement credit — so a reader who takes
+ * the table for incremental business lift is reading it wrong, and until now
+ * nothing on the row told them. It is a NAME and not a number: the correction
+ * itself is an owner and Data Science decision (`W26.P1.01`), and when one is
+ * agreed it arrives as a further value here, never as a silent change to `lift`.
+ */
+export type LiftCorrection = 'uncorrected-v1';
 
 export interface LiftRow {
   measurementBasis: 'served-v1' | 'rendered-v1';
+  /** What the estimate corrects for. See `LiftCorrection`: nothing, today. */
+  correction: LiftCorrection;
   objective: 'unit' | 'revenue' | 'margin';
   item: string;
   customer_item_id: string | null;
@@ -29,6 +46,8 @@ export interface LiftRow {
   n0: number;
   /** n over n plus n₀: how much of the estimate is live observation rather than the prior. */
   evidence: number;
+  /** W25 Z1.01: what `lift` was measured against — the slot's rate in this cell, or nothing at all. */
+  liftReference: LiftReference;
   prior: { p: number; n: number } | null;
   control: 'freeze' | 'reject' | null;
 }
@@ -65,11 +84,12 @@ export function rowsOf(snap: LiftSnapshot, names: Names, controls: Record<string
       if (level === 'pooled' ? key !== '*' : key === '*') continue;
       const n0 = st.n0 ?? snap.n0;
       out.push({
-        measurementBasis: snap.measurementBasis ?? 'served-v1', objective: snap.objective ?? 'unit',
+        measurementBasis: snap.measurementBasis ?? 'served-v1', correction: 'uncorrected-v1', objective: snap.objective ?? 'unit',
         item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null,
         key, level: st.level, level_words: LEVEL_WORDS[st.level as Level] ?? String(st.level),
         n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, n0,
         evidence: r3(st.n / (st.n + n0)),
+        liftReference: liftReferenceOf(st),
         prior: st.prior ?? null,
         control: controls?.[id]?.mode ?? null,
       });
@@ -117,10 +137,24 @@ export function decodeCursor(s: string | undefined | null): Cursor | null {
 
 export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number }
 
-/** The items under the slot's observation floor, least observed first: what exploration serves on purpose. */
-export function exploringRows(snap: LiftSnapshot, names: Names, floor: number): ExploringRow[] {
+/**
+ * The items under the slot's observation floor, least observed first: what
+ * exploration serves on purpose.
+ *
+ * W25 V1.01 (F20 §4.4): a snapshot holds one row per item the slot has learned
+ * about AND one per item an imported prior names, and an imported prior can name
+ * an item the tenant's catalogue does not carry — a stale warehouse export, an
+ * id that was retired. Such a row has no observation, so it sorts to the top of
+ * this list and is offered to a merchandiser as the thing exploration should
+ * serve next, which the decision path can never serve. `catalogue`, when the
+ * caller has one, is the set of ids that exist; rows outside it are not offered.
+ * Absent (a caller that has no catalogue in hand), nothing is filtered and the
+ * list is exactly what it was.
+ */
+export function exploringRows(snap: LiftSnapshot, names: Names, floor: number, catalogue?: ReadonlySet<string>): ExploringRow[] {
   const out: ExploringRow[] = [];
   for (const [id, byKey] of Object.entries(snap.items)) {
+    if (catalogue && !catalogue.has(id)) continue;
     const n = byKey['*']?.n ?? 0;
     if (n >= floor) continue;
     const nm = names.get(id);
@@ -172,6 +206,23 @@ export interface SlotIndexEntry {
    * Zero is reported as zero; it reports configuration, never shopper state.
    */
   governance?: SlotGovernance;
+}
+
+/**
+ * What one slot has learned, as the slots index reports it.
+ *
+ * W25 V1.01 (F20 §4.4): `items` counts the items of the TENANT'S CATALOGUE this
+ * slot holds evidence or a prior for. A prior row for an id the catalogue does
+ * not carry is still in the snapshot — it is what the tenant imported — but it
+ * is not something the slot has learned about, because no decision can ever
+ * serve it; counting it told an operator the slot knew about three pieces when
+ * the page can only ever show two.
+ */
+export function slotEvidence(snap: LiftSnapshot | null, catalogue: ReadonlySet<string>): SlotIndexEntry['evidence'] {
+  if (!snap) return null;
+  let items = 0;
+  for (const id of Object.keys(snap.items ?? {})) if (catalogue.has(id)) items++;
+  return { items, events: snap.events, publishedAt: snap.publishedAt };
 }
 
 /** Every slot on every page, grouped by page, with what is configured on it; `q` narrows by slot or page name. */

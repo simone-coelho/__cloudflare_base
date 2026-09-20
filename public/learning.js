@@ -347,9 +347,13 @@
     });
     host.append(h('table', {}, h('thead', {}, thead), h('tbody', {}, ...body)));
   }
+  function levelWords(level) { return LEVEL_WORDS[level]; }
   function gridCsv() {
-    const rows = [['item', 'customer_id', 'cell', 'level', 'measurement_basis', 'objective', 'n', 's', 'p_hat', 'p0', 'lift', 'n0', 'evidence', 'prior_p', 'prior_n']];
-    for (const r of gridRows()) rows.push([r.item, r.name, r.key, LEVEL_WORDS[r.level], S.snapshot.measurementBasis || 'served-v1', S.snapshot.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.prior ? r.prior.p : '', r.prior ? r.prior.n : '']);
+    // W25 V1.01: the download carries the prior document revision its numbers
+    // were built with, so an export can be reconciled against the document that
+    // was imported. Last, so every column a reader already parses keeps its place.
+    const rows = [['item', 'customer_id', 'cell', 'level', 'measurement_basis', 'objective', 'n', 's', 'p_hat', 'p0', 'lift', 'n0', 'evidence', 'prior_p', 'prior_n', 'prior_version']];
+    for (const r of gridRows()) rows.push([r.item, r.name, r.key, levelWords(r.level), S.snapshot.measurementBasis || 'served-v1', S.snapshot.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.prior ? r.prior.p : '', r.prior ? r.prior.n : '', S.snapshot.priorVersion || 0]);
     download(`lift-${S.scope}-${S.slot}-${S.snapshot ? S.snapshot.version : 'none'}.csv`, csv(rows));
   }
   function renderExploring() {
