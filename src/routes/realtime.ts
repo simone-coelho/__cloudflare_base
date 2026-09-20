@@ -154,11 +154,30 @@ realtimeRoutes.post('/action', async (c) => {
     // union by the catalog-aware engine refactor (build-spec §2.1/§2.2). The
     // runtime values are always valid events, so this stays correct post-refactor.
     const cfGeo = ((c.req.raw as unknown as { cf?: { country?: string; regionCode?: string } }).cf) ?? null;
+    // W23 T1.01 (doc 16 §4 :104 "The engine clock is authoritative. Events are
+    // stamped on arrival; client timestamps are advisory only — a forged or
+    // skewed clock cannot inflate affinity"). The engine's own stamp BOUNDS the
+    // admitted event time, and bounds it only from above:
+    //   · a client time after the engine's present is admitted AT the present.
+    //     The event is still counted, still durable, still visible — the clock
+    //     it claimed is what is refused, not the event (F18 §2 F: ten crafted
+    //     future-dated events destroyed 81.8 % of an item's purchase evidence,
+    //     slot-wide, from one self-served visitor id).
+    //   · a client time at or before it is admitted EXACTLY as given. An old
+    //     delivery is admitted as old — the settled buffered/late-history
+    //     decisions (HANDOFF-2026-09-18 §7 :353, :354) — never restamped as
+    //     fresh activity and never rejected for its age.
+    // Malformed times (non-integer, out of calendar, non-numeric) are refused
+    // before this point by `isEventTimestamp` on the schema, and the buffered
+    // door's own `value.timestamp <= now` (`src/reflex/bufferedAction.ts:30`)
+    // still applies to a buffered delivery's original time, unchanged.
+    const engineNow = Date.now();
+    const admittedTimestamp = Math.min(validatedEvent.timestamp ?? engineNow, engineNow);
     const actionEvent = {
       ...validatedEvent,
       eventId: validatedEvent.eventId,
       anonymousId: shopperPrincipal(c.req.raw).kind === 'anonymous' ? shopperPrincipal(c.req.raw).subject : undefined,
-      timestamp: validatedEvent.timestamp ?? Date.now(),
+      timestamp: admittedTimestamp,
       // CW6: coarse request geolocation rides the event so the scoring host can
       // fan the touches into the shopper's region. Aggregates only, never stored per person.
       ...(cfGeo?.country ? { geo: { country: cfGeo.country, regionCode: cfGeo.regionCode ?? null } } : {}),

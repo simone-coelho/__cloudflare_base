@@ -12,7 +12,7 @@ import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
-import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
@@ -462,8 +462,13 @@ export class DecisionRing {
     const subject = recordSubject(outcome, 'outcome');
     if (tenant !== subject.tenant || brand !== outcome.brand) throw new Error('Ring scope unavailable');
     const { data: d, cutoff } = await this.current(subject);
+    // W23 T1.01: `outsideWindow` is on this object's own reply from the start,
+    // so a receipt never leaves the ring silent about what the reward's window
+    // refused — including on the paths that return before attribution runs.
+    // W26 C1.01: `brandMismatched` likewise, so a receipt never leaves the ring
+    // silent about a correlated credit refused for a brand disagreement.
     const plan: CreditPlan = { receipt: { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0,
-      attributed: 0, eligible: 0, weightSkipped: 0, credits: emptyStatsDelivery() }, batches: [] };
+      attributed: 0, eligible: 0, weightSkipped: 0, outsideWindow: 0, brandMismatched: 0, credits: emptyStatsDelivery() }, batches: [] };
     if (managed) plan.retention = requireRetention(this.env, outcome.retention?.online, tenant, 'online');
     if (cutoff !== undefined && outcome.ts <= cutoff) { plan.receipt.cutoffSkipped = 1; return plan; }
     requireRetention(this.env, outcome.retention?.online, tenant, 'online');
@@ -472,9 +477,19 @@ export class DecisionRing {
     const all: RingEntry[] = d.ring.map(ringEntryOf), correlated = Object.hasOwn(outcome, 'decision_id');
     const ring = correlated ? all : all.filter((e) => e.arm === 'personalized' && e.brand === outcome.brand);
     const compatible = ring.filter(e => (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1'));
-    const credits = attribute(outcome, compatible, policy).filter(c => !correlated
+    const attribution = attributeWindowed(outcome, compatible, policy);
+    const credits = attribution.credits.filter(c => !correlated
       || all.some(e => e.id === c.decision_id && e.arm === 'personalized'));
     plan.receipt.attributed = credits.length;
+    // What the reward's own window refused, counted over the same candidates
+    // attribution considered. A decision dropped here was matched and too late,
+    // never merely unmatched.
+    plan.receipt.outsideWindow = attribution.outsideWindow;
+    // W26 C1.01 (F21 §6(c)): and what the BRAND refused — the correlated
+    // decision this outcome named but was served under another brand. Counted
+    // over the same candidates attribution considered, so it reports a refusal
+    // that happened and never a decision this outcome never named.
+    plan.receipt.brandMismatched = attribution.brandMismatched;
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
