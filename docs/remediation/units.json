@@ -2542,5 +2542,71 @@
     "status": "no-witness",
     "batch": "W25-B1",
     "note": "NO TEST IS WRITTEN. No witness in this repository determines any of these values, and METHOD §3's witness rule forbids inventing one; HANDOFF-2026-09-18 §8 D09 assigns them to the customer's business/DS and learning owners, and §7 item 7 forbids a W25/W32 model redesign or a global floor as a substitute. WHAT THE THREE TESTED UNITS DO INSTEAD, and all they do: W25.Z1.01 asserts that the platform REFUSES TO GUESS — an incompatible money prior is refused at import with the unit named, and a missing reference is STATED (`liftReference: 'none'`) rather than reported as a measured lift of one — and W25.G1.01 asserts that a file exported under an older ladder order is refused with the migration named. None of them decides what the right number is. WHAT IS REQUIRED, AND FROM WHOM: from the customer's DS/business owners, in writing, (1) the prior unit per objective and the accepted import shape for a money slot; (2) the zero-reference answer (report nothing, report the prior's own rate, or hold the item out of ranking) and whether it may differ between the operator grid and the decision path; (3) the disposition of pre-CW29 prior files, with the list of files that exist in staging or production (F20 §5 records that this could not be checked without network access). Until these are recorded in LANE-LOG.md this row stays unclaimed and W25 cannot close."
+  },
+  {
+    "id": "W32.L1.01",
+    "w": "W32",
+    "criterion": "L1",
+    "outcome": "The attribution build is bounded and its remaining construction is LINEAR IN SHAPE, never gated on wall clock (N24: \"Node timing is not a reproduced Worker CPU-limit failure\"). `REPORT_LIMITS` is locked member by member (records 50,000 / work 1,000,000 / cells 16,384 / policies 6 / objects 800 / rawBytes 16 MiB / outputBytes 8 MiB / savedBytes 8 MiB / windowBytes 16 MiB / summaryBytes 64 KiB) and a budget that breaks is refused BY NAME through `ReportBudgetExceeded.budget`. The id lookup F34 §4 item 2 found quadratic is measured by a counter on the fixture's own `decision_id` reads at 4,000 and 16,000 records: the reads PER RECORD are the same number at both sizes, with an in-test negative control proving the counter sees a per-outcome scan as 4x. A day whose work really is quadratic in records (one visitor, 1,000 decisions x 200 outcomes) is refused as `work` before any grid is built. The saved day reads back as a paged, slot-projected view stating its own total/offset/limit/next/previous, and the canonical body carries its summary inside `summaryBytes`.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W32 (:434) and §2 N20 (:281), N21 (:283), N24 (:286); docs/architecture/35-verification-reports/F32.md §2.1-§2.7, §4 items 1-10, §6; docs/architecture/35-verification-reports/F34.md §2F, §4 items 2-4, §6; docs/handover/HANDOFF-2026-09-16.md :236; docs/handover/HANDOFF-2026-09-18.md :328, §7 item 7, §8 D09; ruling R186.",
+    "status": "specified",
+    "batch": "W32-B1",
+    "residual": "GREEN AT SPEC, MEASURED, NOTHING RULED ABSENT. Both legs pass at 36d64a9: the index exists (`src/learn/report.ts:926-927`, `decisionsById`), the work budget exists (`:250`, `:271-277`), the paging exists (`readReportView`, `:401-453`). Reversing lines: delete `decisionsById` and resolve through `i.decisions.find(...)` at `:995` and the per-record read equality fails 4:1; delete the `spend(... sortWork(v.count) ...)` charge at `:276` and the one-visitor day builds instead of refusing. The frozen W32.03/.04/.05 tests (`src/learn/report.test.ts:293/:350/:384`, `src/learn/hourly.test.ts:873/:889`) already hold the same bounds through the authenticated routes and are not re-specified here. OWED, NOT SPECIFIED: the whole accepted workload qualification on a real Worker (W32.P1.01)."
+  },
+  {
+    "id": "W32.E1.01",
+    "w": "W32",
+    "criterion": "E1",
+    "outcome": "The catalogue envelope is guarded, SIZED and PUBLISHED. (a) A stored revision carries the document ONCE: the stored envelope's key set is exactly schema/kind/scope/revision/value/actor/note/at/operation/digest and every stored document still reads back whole (F32 §1.1: the `config: value` duplicate). (b) The ceiling is a constant read off the module (`PUBLICATION_MAX_BYTES`, 2 MiB) and the bytes charged against it are answered by a ruled export `documentBytes(value)` = the UTF-8 length of the canonical form; `write()` refuses a document over it with the NAMED `document_too_large` 413 before any put, and the mounted PUT refuses at the same 2 MiB with the named `input_budget_exceeded` 413 carrying budget/limit/observed, never a raw KV 500 through `app.onError`. (c) `GET /content/:kind` answers `envelope: { pieces, bytes, limitBytes }` measured from the document it returns, and the console's catalogue card RENDERS the piece count and the size (and renders no stray value where a deployment answers without the member). (d) The kit PUBLISHES the supported envelope as a measured number, \"up to N content pieces per scope\", and N pieces of the SHIPPED catalogue's own shape (`public/data/coach-content.json`, 671 compact bytes a piece, F32 §2.1's calibration) really fit the ceiling.",
+    "legs": [
+      "logic",
+      "host",
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W32 (:434) and §2 N20 (:281), N21 (:283), N24 (:286); docs/architecture/35-verification-reports/F32.md §2.1-§2.7, §4 items 1-10, §6; docs/architecture/35-verification-reports/F34.md §2F, §4 items 2-4, §6; docs/handover/HANDOFF-2026-09-16.md :236; docs/handover/HANDOFF-2026-09-18.md :328, §7 item 7, §8 D09; ruling R186.",
+    "status": "specified",
+    "batch": "W32-B1",
+    "residual": "MEASURED AT 36d64a9, CLAUSE BY CLAUSE. ALREADY PRESENT (locked, not ruled): the `config` duplicate is gone — `src/config/versionedStore.ts` now delegates to `src/config/publication.ts`, whose envelope key set is fixed at `publication.ts:150` and validated at `:180-187`; the ceiling exists (`PUBLICATION_MAX_BYTES` `:7`, refused in `serialized()` `:56-60`) and `write()` really answers 413 `document_too_large` with zero puts; the isolate cache is BOUNDED and LRU (`:9` CACHE_ENTRIES 32 / CACHE_BYTES 8 MiB, `:305-315`, `:348-352`) and `src/config/versionedStore.test.ts:196-227` already asserts those bounds and the 413; the kit already states 2 MiB. ABSENT (the RED): `documentBytes` is not exported; `GET /content/:kind` answers no `envelope`; the console's catalogue card shows no size or piece count; the kit publishes no \"up to N content pieces per scope\". The sdk leg drives `public/console/*.js` under jsdom the way `src/console/console.render.test.ts` does (the History view's catalogue card), because that is where a catalogue is read in this console. NOT RE-SPECIFIED: retained revision growth — every revision body is kept forever (F32 §4 item 3) — is W11/W15's store history and is named as owed, not built here."
+  },
+  {
+    "id": "W32.S1.01",
+    "w": "W32",
+    "criterion": "S1",
+    "outcome": "Scans, sorts and full-catalogue structures are bounded with decision parity. (a) The operator name join is a ruled export `catalogNames(catalog, ids)` in `src/learn/rows.ts` that answers `customerContentId`/`title` for AT MOST the paged ids and reads the catalogue once per catalogue, not once per request: a second page of the same catalogue re-reads nothing (F32 §4 item 5, the full-catalogue `Map` at `src/routes/decisions.ts:224/:314/:401`). The paged operator surfaces keep answering the page's names out of a 1,200-piece catalogue and never more rows than the page. (b) The priors cross-product keeps its named capacity bound, by both numbers (4,096 rows, 256 KiB, `Prior capacity exceeded`). (c) Decision parity, the clause any bounded ranking must keep: the recorded candidate set is bounded at `candidateLimit` and is SUFFICIENT — the same composer over just those candidates serves the identical decisions and the identical candidate list.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W32 (:434) and §2 N20 (:281), N21 (:283), N24 (:286); docs/architecture/35-verification-reports/F32.md §2.1-§2.7, §4 items 1-10, §6; docs/architecture/35-verification-reports/F34.md §2F, §4 items 2-4, §6; docs/handover/HANDOFF-2026-09-16.md :236; docs/handover/HANDOFF-2026-09-18.md :328, §7 item 7, §8 D09; ruling R186.",
+    "status": "specified",
+    "batch": "W32-B1",
+    "residual": "MEASURED AT 36d64a9. ABSENT (the RED): `catalogNames` is not exported and all three operator routes still build a full-catalogue `Map` per request. ALREADY PRESENT (locked): the priors bound (`src/learn/priors.ts:186`); the candidate bound and the candidate-set sufficiency of the composer (`src/reflex/contentCompose.ts:284`); the host leg is a GENERALITY GUARD and passes today — the answer must not change when the join does. TOP-K IS DELIBERATELY NOT RULED: F32 §2.7's own caveat is that with `ScoreAdjust` configured top-k becomes a two-stage retrieve-then-rerank that CAN change what is served, and W38.05's admitted composer oracle (`src/reflex/contentCompose.test.ts:202-320`) requires the served ranking and `decisions` to stay byte-identical to the retained original; ruling top-k under a parity clause the present full sort already satisfies would be a facade, so what is specified is the parity a top-k must keep. ALSO NOT RULED, NAMED AS OWED: the redundant liveness scan (`src/content/decide.ts:164` `isEligibleAt` beside `src/reflex/contentCompose.ts:148`) has no black-box observable that does not also forbid the correct answer, so it is named rather than specified; the external-model corpus F32 §4 item 6 found at `service.ts:201` no longer exists — external scoring is withdrawn by deployment policy (W34.01, `src/content/service.ts:441-448`), so no full-catalogue corpus is built on the decision path."
+  },
+  {
+    "id": "W32.Z1.01",
+    "w": "W32",
+    "criterion": "Z1",
+    "outcome": "Zero-base honesty and the self-inclusive reference are STATED as mechanism, and no leave-one-out is ruled or built (N21: a model-validation question, not a proved defect). (a) N20 at the receipt: a learned lift that moved an exactly zero final pre-lift base by nothing is reported as having moved nothing (\"it moved this score by nothing\"), while the lift that really moved a score says \"applied at trust\" — the ranking half is W16 C7.01's observable and is reused, not re-specified. (b) N21 at the snapshot: every row NAMES the reference its lift was measured against (`liftReference: 'slot-rate'`, W25's member), and the reference really is the slot's own rate in the cell, which counts the item's own exposures — the fixture shows the slot's n strictly greater than the item's n with `p0` equal to the slot rate. (c) N21 where a customer reads: the kit says that the `slot-rate` reference INCLUDES the item's own exposures, that a lift near one is therefore not proof that ranking has collapsed, and that this is an open model-validation question for which no validation is claimed.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W32 (:434) and §2 N20 (:281), N21 (:283), N24 (:286); docs/architecture/35-verification-reports/F32.md §2.1-§2.7, §4 items 1-10, §6; docs/architecture/35-verification-reports/F34.md §2F, §4 items 2-4, §6; docs/handover/HANDOFF-2026-09-16.md :236; docs/handover/HANDOFF-2026-09-18.md :328, §7 item 7, §8 D09; ruling R186.",
+    "status": "specified",
+    "batch": "W32-B1",
+    "residual": "MEASURED AT 36d64a9. ALREADY PRESENT (locked): the receipt's N20 clause (`src/learn/receipts.ts:133-137`) and `liftReference`/`liftReferenceOf` (`src/learn/stats.ts:206`, `:350`, `:373`). ABSENT (the RED): all three kit sentences — the kit defines `liftReference` (`docs/kit/03-payload-schemas.md:442`) but nowhere says the reference includes the item's own exposures, nowhere says a lift near one is not proof of collapse, and nowhere says the reference is unvalidated. The comparison of alternatives under clamps, shrinkage, context and single-item cases is the DS evaluation and is W32.P1.01, not this unit; no mechanism is ruled for it."
+  },
+  {
+    "id": "W32.P1.01",
+    "w": "W32",
+    "criterion": "P1",
+    "outcome": "no-witness. Three things this batch cannot decide: (1) the WHOLE ACCEPTED WORKLOAD QUALIFICATION — what report envelope and what catalogue ceiling hold at a signed-off workload on a real Worker. N24 says in terms that Node timing is not a reproduced Worker CPU-limit failure, and F34 §2H and F32 §2.2 both record that no workerd benchmark was produced; no unit may invent the number. (2) The MODEL EVALUATION of zero-base influence, receipt honesty and the serving-mixture reference against an agreed objective (document 35 §5 row W32: \"Do not mandate leave-one-out as a proved fix; compare alternatives under clamps, shrinkage, context and single-item cases\"), which is Data Science's and open owner decision D09. (3) Whether the supported envelope becomes a CONTRACT value: the platform can publish a measured number (W32.E1.01) but only the owner can make it a commitment.",
+    "legs": [],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W32 (:434) and §2 N20 (:281), N21 (:283), N24 (:286); docs/architecture/35-verification-reports/F32.md §2.1-§2.7, §4 items 1-10, §6; docs/architecture/35-verification-reports/F34.md §2F, §4 items 2-4, §6; docs/handover/HANDOFF-2026-09-16.md :236; docs/handover/HANDOFF-2026-09-18.md :328, §7 item 7, §8 D09; ruling R186. No witness fixes any of these three: the workload qualification needs a Worker measurement nobody has taken, the model evaluation needs an agreed objective (D09, unresolved), and the contract value needs the owner.",
+    "status": "no-witness",
+    "batch": "W32-B1",
+    "note": "Unclaimed. Nothing in W32-B1 may be read as the accepted workload, as a validated reference, or as a contract commitment to an envelope."
   }
 ]
