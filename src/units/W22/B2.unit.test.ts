@@ -425,7 +425,11 @@ describe('unit:W22.R1.02', () => {
     const r = await mount();
     const d12 = decision(r.env, 'v-rogue', T12 + 59 * 60_000, 'cnt-rogue-work');            // 12:59
     const d13 = decision(r.env, 'v-rogue', T12 + HOUR_MS + 5 * 60_000, 'cnt-tabby-evening'); // 13:05
-    const c14 = click(r.env, d12, T12 + 2 * HOUR_MS + 60_000, 'w22-b1-cross-hour');          // 14:01, on the 12:59 item
+    // 13:10, on the 12:59 item: the following hour, and inside the platform's
+    // default click window of thirty minutes (`src/learn/policy.ts:28`), so the
+    // credit this clause is about depends on the repaired hour reaching the
+    // ring and on nothing else (ruling R139).
+    const c14 = click(r.env, d12, T12 + HOUR_MS + 10 * 60_000, 'w22-b1-cross-hour');
     await throughTheLedger(r, [d12, d13], [c14]);
     const twelve = dayObjects(r, 'decision').find(key => key.startsWith(`${TENANT}/${DATE}/12/`))!;
     const held = r.storage.objects.get(twelve)!;
