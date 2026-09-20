@@ -11,6 +11,15 @@ export interface Receipt {
   renderedAt: number | null;
   decision_id: string;
   at: number;
+  /**
+   * W26 I1.01 (F21 §6(b), §8): the placement's identity is page/brand/slot/
+   * position, and the receipt is where it is read. The brand is the one the
+   * DECISION carries — the brand her page was served under — and is never
+   * stamped from the tenant id, which is the default F21 §6(c) condemns and
+   * which is indistinguishable from the truth only for a tenant whose single
+   * brand happens to be named after it.
+   */
+  brand: string;
   page: string;
   slot: string;
   position: number;
@@ -164,7 +173,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const nm = names.get(r.item_id);
   return {
     measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,
-    decision_id: r.decision_id, at: r.ts, page: r.page, slot: r.slot, position: r.position,
+    decision_id: r.decision_id, at: r.ts, brand: r.brand, page: r.page, slot: r.slot, position: r.position,
     item: r.item_id, customer_item_id: nm?.customerContentId ?? r.customer_item_id ?? null, title: nm?.title ?? null,
     arm: r.arm, explored: r.explored, authority: r.authority,
     context: contextOf(r.cell),
