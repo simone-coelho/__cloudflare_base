@@ -97,6 +97,12 @@
   const r3 = (x) => Math.round(x * 1000) / 1000;
   const pct = (x) => `${Math.round(x * 100)}%`;
   const when = (ms) => (ms ? new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+  /** W31 Z1.01: the published allocation an answer carries, or null where it carries none. */
+  const allocationNote = (a) => {
+    if (!a || a.version !== 1 || a.source !== 'published' || !Number.isFinite(a.share) || a.share < 0 || a.share > 1) return null;
+    if (!Array.isArray(a.arms) || !a.arms.length || !a.arms.every((arm) => typeof arm === 'string' && arm)) return null;
+    return `Published allocation: ${+(a.share * 100).toFixed(2)}% to ${a.arms.join(', ')}.`;
+  };
   const MIN = 60000, HOUR = 3600000, DAY = 86400000;
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const REWARDS = ['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'];
@@ -424,6 +430,11 @@
     const arms = R.holdout[S.slot] || [];
     if (arms.length) {
       host.append(h('div', { class: 'subhead' }, 'Recorded arms, under the learning policy'));
+      // W31 Z1.01 (F25 §1.3): the published allocation the day was served under,
+      // read from the report and never compiled in. A day that records none — or
+      // one that names no arm — states nothing rather than a placeholder.
+      const allocation = allocationNote(R.allocation);
+      if (allocation) host.append(h('div', { class: 'msg' }, allocation));
       // Recompute from raw counts even when an older server sends rates or comparisons.
       host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Arm'), h('th', { class: 'num' }, 'Decisions'), h('th', { class: 'num' }, 'Credited outcomes'), h('th', { class: 'num' }, 'Credits per decision'))), h('tbody', {}, ...arms.map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, a.decisions), h('td', { class: 'num' }, a.credited), h('td', { class: 'num' }, a.decisions > 0 ? r3(a.credited / a.decisions) : '—'))))));
     }
