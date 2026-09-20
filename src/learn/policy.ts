@@ -64,13 +64,20 @@ export interface Credit {
 
 /**
  * CW27 (doc 22 §13): what a credit is worth under the slot's objective. `unit` counts the success;
- * `revenue` weighs it by the outcome's value; `margin` by its margin, or its value when the feed gave
- * none. An outcome with nothing to weigh under a value objective is worth nothing, and the credit is
- * dropped rather than counted as one: a click cannot outrank a purchase on a slot that learns revenue.
+ * `revenue` weighs it by the outcome's value; `margin` by its margin. An outcome with nothing to weigh
+ * under a value objective is worth nothing, and the credit is dropped rather than counted as one: a
+ * click cannot outrank a purchase on a slot that learns revenue.
+ *
+ * W24 R1.02 (F19 §5.2, ruling R144): a margin objective NEVER falls back to the value. `margin ?? value`
+ * put two different quantities in one counter — an order's margin and another order's revenue — so a
+ * series learned under `margin` could not be read as money at all. An outcome the feed gave no margin
+ * for is worth nothing to margin learning and is excluded from it, exactly as an outcome with no value
+ * is excluded from revenue learning. What a MISSING margin should mean instead — a documented fallback,
+ * or this zero — is the learning owners' (W24.P1.01); until they publish one the platform does not guess.
  */
 export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefined, outcome: Pick<OutcomeRecord, 'value' | 'margin'>): number {
   if (!objective || objective === 'unit') return 1;
-  const v = objective === 'margin' ? (outcome.margin ?? outcome.value) : outcome.value;
+  const v = objective === 'margin' ? outcome.margin : outcome.value;
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
 }
 
