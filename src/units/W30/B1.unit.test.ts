@@ -426,6 +426,21 @@ const publish = (m: Mounted, now: number, date = DATE): Promise<DayReport> =>
 const says = (text: string, ...patterns: RegExp[]): boolean =>
   text.split('.').some(sentence => patterns.every(pattern => pattern.test(sentence)));
 
+/** The same question of published PROSE, where a full stop ends a sentence only before whitespace (`coverage.maturity` is one word). */
+const saysInProse = (text: string, ...patterns: RegExp[]): boolean =>
+  text.split(/(?<=[.!?])\s+/).some(sentence => patterns.every(pattern => pattern.test(sentence)));
+
+/** The published kit, read from the repository the way `src/units/W21/B3.unit.test.ts` reads it. */
+const kitFile = (name: string): string => readFileSync(`docs/kit/${name}`, 'utf8');
+/**
+ * R174: what the published coverage paragraph must name. Every one of these is a
+ * member this batch rules; `counts.conflicts` is the day-level member the
+ * aggregate path starts feeding (W22 D1.03's name, W22 R124's residual).
+ */
+const RULED_COVERAGE_MEMBERS = ['refoldHorizonMs', 'maturities', 'lateAfterMaturity', 'carryInHours', 'objectScan', 'recoveryFromMs', 'counts.conflicts'];
+/** The sentence that stops being true the moment an hour can be stated final or open (`docs/kit/02-api-reference.md:586`). */
+const RETIRED_MATURITY_SENTENCE = 'Maturity is always `unknown`';
+
 // ===========================================================================
 // unit:W30.R1.01 — the higher-cap repair
 // ===========================================================================
@@ -803,8 +818,31 @@ describe('unit:W30.F1.01', () => {
    * (`:1116`), so a collision throws `ReportRowConflict` out of `buildHour`
    * for ever, even after the operator surface has filed it (W22.D1.03);
    * the coverage carries no scan bound and no migration bound.
+   *
+   * Ruling R174: this batch BINDS THE KIT, before the build, because the W22
+   * whole-W review found the customer text going stale one commit behind the
+   * behaviour it describes. `docs/kit/02-api-reference.md:586` today says
+   * "Maturity is always `unknown`" and `docs/kit/03-payload-schemas.md:476`
+   * documents the coverage block without any of the members ruled here; both
+   * paragraphs must name every ruled member and keep the top-level
+   * `coverage.maturity: 'unknown'` as what it now is — the LEGACY field an old
+   * report still carries — instead of a statement about the platform.
    */
-  it('logic: the day and the window carry the object-scan bound, the carry-in, the maturity and the migration bound, and a filed collision is counted on the aggregate-built day', async () => {
+  it('logic: the published kit names every ruled coverage member, and the day and the window carry the object-scan bound, the carry-in, the maturity and the migration bound, with a filed collision counted on the aggregate-built day', async () => {
+    // ── R174: the sentences a customer reads ────────────────────────────────
+    for (const file of ['02-api-reference.md', '03-payload-schemas.md']) {
+      const text = kitFile(file);
+      expect(RULED_COVERAGE_MEMBERS.filter(member => !text.includes(member)),
+        `W30.F1.01 (R174) — docs/kit/${file} must name every coverage member this batch rules, and \`counts.conflicts\` on the aggregate-built day, in the paragraph that already describes \`coverage.version:1\`: a customer reading the published contract must be able to see the honesty signals the report now carries (F17 §3.4; W22 whole-W review finding 1, where the kit paragraph was left describing a behaviour the platform no longer had)`)
+        .toEqual([]);
+      expect(saysInProse(text, /maturity/i, /unknown/i, /legacy|older|before this release|already written/i),
+        `W30.F1.01 (R174) — and docs/kit/${file} must say in one sentence what the top-level \`coverage.maturity: 'unknown'\` now is: the LEGACY field kept so a report written before this release still reads, beside the per-hour \`maturities\` this batch adds`)
+        .toBe(true);
+    }
+    expect(kitFile('02-api-reference.md').includes(RETIRED_MATURITY_SENTENCE),
+      `W30.F1.01 (R174) — and docs/kit/02-api-reference.md must no longer publish "${RETIRED_MATURITY_SENTENCE}", which stops being true of the platform the moment an hour can be stated final or open (kit 02:586)`)
+      .toBe(false);
+
     const maturity = maturityWindow();
     expect(typeof maturity === 'number' ? 'published' : absent(MATURITY_EXPORT, hourly),
       'W30.F1.01 — the published re-fold horizon exists before a report can propagate it').toBe('published');
