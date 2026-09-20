@@ -33,6 +33,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { EMPTY_PRIORS, indexPriors, PRIORS_KIND, type PriorsDoc } from '@/learn/priors';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
+import { INPUT_MAX_BYTES } from '@/config/input';
 import { contentRoutes } from '@/routes/content';
 import { decisionRoutes } from '@/routes/decisions';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -224,6 +225,14 @@ describe('unit:W32.L1.01', () => {
 const ENVELOPE_FIELDS = ['actor', 'at', 'digest', 'kind', 'note', 'operation', 'revision', 'schema', 'scope', 'value'];
 /** Kit assertions report the clause, never the whole kit, so a failure is readable. */
 const kitStates = (pattern: RegExp) => pattern.test(KIT);
+/**
+ * The kit's own paragraphs ABOUT THE REFERENCE: the ones that name
+ * `liftReference` or `slot-rate`. A sentence about validation somewhere else in
+ * the kit says nothing about this reference, so N21's clauses are asserted here
+ * and never against the joined kit.
+ */
+const REFERENCE_PROSE = KIT.split(/\n\s*\n/).filter(p => /liftReference|slot-rate/.test(p)).join('\n\n');
+const referenceStates = (pattern: RegExp) => pattern.test(REFERENCE_PROSE);
 
 describe('unit:W32.E1.01', () => {
   it('logic: a stored revision carries the document ONCE, reads back whole, and the bytes the ceiling is charged against are answered by `documentBytes`; the kit publishes the supported envelope as a measured number per scope', async () => {
@@ -321,14 +330,29 @@ describe('unit:W32.E1.01', () => {
     const refused = await app.request('http://w/catalog?scope=coach',
       { method: 'PUT', headers: publicationHeaders(env, auth, 1), body: JSON.stringify({ document: huge }) }, env);
     expect(refused.status).toBe(413);
-    expect(await refused.json()).toMatchObject({ ok: false, code: 'input_budget_exceeded', budget: 'bytes', limit: PUBLICATION_MAX_BYTES });
+    // The budget this door names is its OWN: `INPUT_MAX_BYTES` is the HTTP/import
+    // admission budget (`src/config/input.ts:1-2`), a deliberately separate
+    // constant from the publication ceiling even though the two hold the same
+    // number today. The refusal is asserted against the one it really names, and
+    // the sameness is asserted beside it so that a later divergence is visible
+    // here instead of silently moving which door answers first.
+    expect(await refused.json()).toMatchObject({ ok: false, code: 'input_budget_exceeded', budget: 'bytes', limit: INPUT_MAX_BYTES });
+    expect(INPUT_MAX_BYTES, 'the admission budget and the publication ceiling are distinct constants that hold the same number, which is why this door answers before `write()`')
+      .toBe(PUBLICATION_MAX_BYTES);
     expect(storage.puts).toBe(before);
     expect(storage.objects.size).toBe(revisions);
     expect((await readPublication(env, CONTENT_KIND, 'coach')).revision).toBe(1);
   });
 
   it('sdk: the console\'s catalogue card renders the catalogue\'s piece count and byte size, and renders no stray value when a deployment answers without them', async () => {
-    const ENVELOPE = { pieces: 12, bytes: 3584, limitBytes: PUBLICATION_MAX_BYTES };
+    // The answered DOCUMENT and the answered ENVELOPE deliberately disagree in
+    // length: the envelope describes the stored catalogue (1,240 pieces, 3,584
+    // bytes) while this answer carries only three pieces of it. A console that
+    // recounted the pieces it happens to hold would render "3"; only one that
+    // reads the answer's own `envelope` renders the catalogue's real size. That
+    // is the whole point of the member — F32 §4 item 8 is that echoing whole
+    // documents is what has to stop, so the count may never be a recount.
+    const ENVELOPE = { pieces: 1240, bytes: 3584, limitBytes: PUBLICATION_MAX_BYTES };
     const open = async (envelope: typeof ENVELOPE | null) => {
       const dom = new JSDOM(repoFile('public/console/index.html'),
         { url: 'http://console.test/console/#/history?scope=coach&slot=chero', pretendToBeVisual: true, runScripts: 'outside-only' });
@@ -343,7 +367,7 @@ describe('unit:W32.E1.01', () => {
         if (path === '/auth/authority') return json({ customer: false, stampOwner: true });
         if (path === '/auth/logout') return json({ success: true });
         if (path === '/content/catalog') return json({ ok: true, source: 'stored', revision: 4,
-          document: { pieces: Array.from({ length: 12 }, (_, i) => ({ id: 'p' + i, title: 'P' + i })) }, ...(envelope ? { envelope } : {}) });
+          document: { pieces: Array.from({ length: 3 }, (_, i) => ({ id: 'p' + i, title: 'P' + i })) }, ...(envelope ? { envelope } : {}) });
         if (path.endsWith('/history')) {
           const kind = path.split('/').slice(-2)[0];
           return json({ ok: true, revisions: kind === 'priors' ? [] : [{ revision: 2, version: `${kind}-v1+r2`, actor: 'Local Ops', note: 'the second', at: 1_788_000_000_000 }] });
@@ -377,7 +401,8 @@ describe('unit:W32.E1.01', () => {
     const shown = await open(ENVELOPE);
     try {
       expect(shown.card, 'W32.E1.01: the console must render a catalogue card (the History view names it "The content catalog")').toContain('The content catalog');
-      expect(shown.card, 'W32.E1.01: the catalogue card must show the catalogue\'s piece count').toMatch(/\b12 pieces\b/);
+      expect(shown.card, 'W32.E1.01: the catalogue card must show the catalogue\'s piece count from the answer\'s own `envelope.pieces` (1,240), never a recount of the pieces this answer carried (3)')
+        .toMatch(/\b1,?240 pieces\b/);
       expect(shown.card, 'W32.E1.01: the catalogue card must show the catalogue\'s size against the ceiling (the console renders sizes as KB)').toMatch(/3\.5 KB|3,584 bytes/);
       expect(shown.text).not.toMatch(/\b(null|undefined|NaN)\b/);
     } finally { shown.close(); }
@@ -553,11 +578,15 @@ describe('unit:W32.Z1.01', () => {
     // includes the item's own exposures, that a lift near one is therefore not
     // proof of collapse, and that no validation of the reference is claimed —
     // and it mandates no leave-one-out repair, because none is proved.
-    expect(kitStates(/includes? (?:the )?(?:item|piece)'?s own exposures/i),
-      'W32.Z1.01: the kit must say that the `slot-rate` reference INCLUDES the item\'s own exposures (document 35 §2 N21)').toBe(true);
-    expect(kitStates(/lift (?:near|close to|approaching|of about) one[^.]*(?:does not|is not) (?:prove|proof|evidence)/i),
-      'W32.Z1.01: the kit must say that a lift near one is not proof that ranking has collapsed (N21: "lift approaching one alone does not prove winner-ranking collapse")').toBe(true);
-    expect(kitStates(/(?:model[- ]validation|not (?:yet )?validated|no validation is claimed)/i),
-      'W32.Z1.01: the kit must say that this reference is an open model-validation question and that no validation of it is claimed (N21, D09)').toBe(true);
+    // The anchor itself is real: the kit already has the paragraph that defines
+    // the member, so what follows is about a missing SENTENCE, never a missing
+    // paragraph to search.
+    expect(REFERENCE_PROSE.length, 'the kit must keep the paragraph that defines `liftReference`/`slot-rate`').toBeGreaterThan(0);
+    expect(referenceStates(/includes? (?:the )?(?:item|piece)'?s own exposures/i),
+      'W32.Z1.01: the kit paragraph that defines `liftReference`/`slot-rate` must say that the reference INCLUDES the item\'s own exposures (document 35 §2 N21)').toBe(true);
+    expect(referenceStates(/lift (?:near|close to|approaching|of about) one[^.]*(?:does not|is not) (?:prove|proof|evidence)/i),
+      'W32.Z1.01: the same paragraph must say that a lift near one is not proof that ranking has collapsed (N21: "lift approaching one alone does not prove winner-ranking collapse")').toBe(true);
+    expect(referenceStates(/(?:model[- ]validation|not (?:yet )?validated|no validation is claimed)/i),
+      'W32.Z1.01: the same paragraph must say that this reference is an open model-validation question for which no validation is claimed (N21, D09) — a validation sentence elsewhere in the kit says nothing about this reference').toBe(true);
   });
 });
