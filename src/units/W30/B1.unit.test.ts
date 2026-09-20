@@ -499,19 +499,37 @@ describe('unit:W30.R1.01', () => {
    * grown prefix, never a requested one (no blanket age cutoff).
    */
   const SERVED = ['cnt-tabby-evening', 'cnt-rogue-work', 'cnt-charms-slg', 'cnt-tabby-work', 'cnt-unknown-taxonomy'];
+  /**
+   * R205: the five objects sit LATE in hour 12 and the click early in hour 13,
+   * so the pair keeps the cross-hour shape this unit needs AND falls inside the
+   * platform's own click window. `W30_LEARN` publishes no `policy`, so
+   * `policyOf` answers `DEFAULT_POLICY` (`src/learn/route.ts:19`) and the window
+   * is `DEFAULT_POLICY.windowsMs.click` (`src/learn/policy.ts:28`), read off the
+   * module below rather than written here. The arithmetic: served 12:45,
+   * clicked 13:05 — twenty minutes, against a thirty-minute window.
+   */
+  const SERVED_AT = (n: number): number => T12 + 40 * MIN + (n + 1) * MIN;   // 12:41 … 12:45
+  const LAST_SERVED_AT = SERVED_AT(SERVED.length - 1);                        // 12:45, the hour's last object
+  const CROSS_HOUR_CLICK_AT = T12 + H + 5 * MIN;                              // 13:05, the next hour
+  /** The index signature is optional, so an absent window reads zero and the fixture check refuses. */
+  const CLICK_WINDOW_MS = DEFAULT_POLICY.windowsMs.click ?? 0;
 
   /** Five ledger OBJECTS in hour 12, one per delivery, and a click in hour 13 on the fifth. */
   async function truncatedHour(m: Mounted): Promise<void> {
+    expect(CROSS_HOUR_CLICK_AT - LAST_SERVED_AT < CLICK_WINDOW_MS,
+      `the fixture's cross-hour click must be inside the platform's own click window: served at 12:45 and clicked at 13:05 is ${(CROSS_HOUR_CLICK_AT - LAST_SERVED_AT) / MIN} minutes, against \`DEFAULT_POLICY.windowsMs.click\` = ${CLICK_WINDOW_MS / MIN} minutes read off \`src/learn/policy.ts\`; otherwise \`policy.ts:185\` refuses the candidate as \`outsideWindow\` and the credit below would measure the window instead of the repair (R139's shape, R205)`)
+      .toBe(true);
     const rows: DecisionRecord[] = [];
     for (let n = 0; n < SERVED.length; n++) {
-      const d = decision(m.env, 'v-tabby', T12 + (n + 1) * MIN, SERVED[n]!);
+      const d = decision(m.env, 'v-tabby', SERVED_AT(n), SERVED[n]!);
       rows.push(d);
-      await throughTheLedger(m, [d], [], T12 + (n + 1) * MIN + 1000);
+      await throughTheLedger(m, [d], [], SERVED_AT(n) + 1000);
     }
-    // 13:05, on the item the fifth object served, inside the platform's default
-    // thirty-minute click window (`src/learn/policy.ts` DEFAULT_POLICY): the
-    // credit depends on the repaired hour reaching the ring and on nothing else.
-    await throughTheLedger(m, [], [click(m.env, rows[4]!, T12 + H + 5 * MIN, 'w30-b1-cross-hour')], T12 + H + 6 * MIN);
+    // 13:05, on the item the fifth object served — the object truncation
+    // discards, because `loadHourRecords` reads the hour in time order and cuts
+    // at the cap: the credit depends on the repaired hour reaching the ring and
+    // on nothing else.
+    await throughTheLedger(m, [], [click(m.env, rows[4]!, CROSS_HOUR_CLICK_AT, 'w30-b1-cross-hour')], T12 + H + 6 * MIN);
   }
 
   it('logic: a truncated hour rebuilt at a higher cap re-folds, the rings hold the recovered decisions, the cross-hour credit follows, and a rebuild still short of the count stays truncated', async () => {
