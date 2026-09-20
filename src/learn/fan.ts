@@ -28,7 +28,12 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import type { AttributionPolicy, RingEntry } from './policy';
-import { RING_MAX_AGE_MS, type StatsConfig } from './stats';
+import type { StatsConfig } from './stats';
+// The reach is read from the object that enforces it. `DecisionRing` re-exports
+// the declaration in `./stats`, which is where the value lives precisely
+// because that object imports this module: a value declared in either end of
+// that cycle would be read here before it was initialized.
+import { RING_MAX_AGE_MS } from '@/durable-objects/DecisionRing';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -56,9 +61,6 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
  *     idempotence beyond it. A repeat arriving after it is applied again, and
  *     no unit claims otherwise.
  *
- * The constant is read from `./stats`, not from the ring itself: `DecisionRing`
- * imports this module, so a binding defined there would be read here across an
- * import cycle, before initialization, whenever the ring loaded first.
  */
 export const ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;
 

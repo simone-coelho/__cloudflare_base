@@ -13,6 +13,9 @@ import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity } from '@/ledger/delivery';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+// Must precede the '@/learn/fan' import below: the fan-out binds its own
+// ONLINE_RING_REACH_MS to this object's re-export at module scope, so the
+// module that declares the value has to be evaluated before the fan-out's body.
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 import { deliverStats, emptyStatsDelivery, learningGenerations, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
