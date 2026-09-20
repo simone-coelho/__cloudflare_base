@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 191/199 · W closed 4/26 (W16–W41) · suite 2053/2132 · residual 79 in 9 files · typecheck GREEN
+Units 206/218 · W closed 4/26 (W16–W41) · suite 2084/2165 · residual 81 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -25,7 +25,10 @@ Units 191/199 · W closed 4/26 (W16–W41) · suite 2053/2132 · residual 79 in 
 | W23 | 9 | 8 | no | — | — |
 | W24 | 7 | 6 | no | — | — |
 | W25 | 7 | 6 | no | — | — |
+| W26 | 7 | 6 | no | — | — |
+| W27 | 6 | 5 | no | — | — |
 | W29 | 3 | 2 | no | — | — |
+| W30 | 6 | 4 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -227,21 +230,41 @@ Units 191/199 · W closed 4/26 (W16–W41) · suite 2053/2132 · residual 79 in 
 | W25.P1.01 | unspecified | 0 |
 | W25.V1.01 | green | 2 |
 | W25.Z1.01 | green | 2 |
+| W26.C1.01 | green | 2 |
+| W26.F1.01 | green | 1 |
+| W26.I1.01 | green | 2 |
+| W26.P1.01 | unspecified | 0 |
+| W26.R1.01 | green | 3 |
+| W26.U1.01 | green | 2 |
+| W26.X1.01 | green | 2 |
+| W27.E1.01 | green | 2 |
+| W27.F1.01 | green | 4 |
+| W27.M1.01 | green | 2 |
+| W27.O1.01 | green | 2 |
+| W27.P1.01 | unspecified | 0 |
+| W27.R1.01 | green | 2 |
 | W29.P1.01 | unspecified | 0 |
 | W29.R1.01 | green | 2 |
 | W29.U1.01 | green | 2 |
+| W30.C1.01 | green | 1 |
+| W30.F1.01 | green | 2 |
+| W30.M1.01 | green | 2 |
+| W30.P1.01 | unspecified | 0 |
+| W30.R1.01 | red | 2 |
+| W30.V1.01 | green | 2 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  unit:W30.R1.01 host-internal: the catch-up run itself repairs the truncated hour at the raised cap, re-folds the later hour that depends on it, and the published day carries the recovered credit
+-  unit:W30.R1.01 logic: a truncated hour rebuilt at a higher cap re-folds, the rings hold the recovered decisions, the cross-hour credit follows, and a rebuild still short of the count stays truncated
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 1af9b43d1973bf8faa65951f026b9c4b2d0e18023dae71fa9102b40735e073e6 |
+| units sha256 | ca012af2c13be724e301d5698acd8c041fe7af72679a7cf1d15a820fcc8fafca |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -252,7 +275,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | bc807bd3e61cfea3ec57b1cfab178882cd5cedde5afcfcd7daa5c73a6e334288 |
-| commit | 021a3b13f85b85016471fc028feb294c6fa81554 |
-| generated | 2026-09-20T13:28:10.543Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | 8354d1f1e2a5a3d7890ac1cc99cf97c0192f67bcf9f7f227ff2f95f9c5964b1e |
+| commit | 4c6609730bb15f71401803ff44550f38fce30376 |
+| generated | 2026-09-20T14:18:21.576Z |
