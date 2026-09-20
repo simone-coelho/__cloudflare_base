@@ -1049,13 +1049,20 @@ const MERGE_POLICY_SENTENCE =
  */
 /**
  * Ruling R118(10) with the build review's F3: the canonical nightly report takes
- * the hour-aggregate branch, which groups by the arm SERVED until W21-B2 carries
- * the assignment into the aggregate. The kit says so plainly — unflattering and
- * required, because a customer reading an `ineligible` row on one path and not
- * on the other must know which is which.
+ * the hour-aggregate branch, which groups by the arm SERVED until the aggregate
+ * carries the assignment. The kit said so plainly — unflattering and required,
+ * because a customer reading an `ineligible` row on one path and not on the
+ * other must know which is which.
+ *
+ * R10 CORRECTION, W21-B3 (ruling R146(a); this line is the expectation only, and
+ * the assertion at `:1249` is otherwise unchanged): W21.C1.08 delivers the
+ * assignment on the hour-aggregate branch, so the DEFERRAL this constant used to
+ * hold is retired with it and the sentence the kit publishes in its place is the
+ * one below — the same sentence `src/units/W21/B3.unit.test.ts` rules, verbatim,
+ * so the two files can never demand different words of one paragraph.
  */
 const NIGHTLY_GROUPING_SENTENCE =
-  'Until the hour aggregates carry the experimental assignment, the canonical nightly report groups by the arm served, so an `ineligible` assignment is counted in `default` on that path.';
+  'The canonical nightly report groups by the experimental assignment on every path: `ineligible` is its own row, never part of `default`, and a day summed from hours folded before this release answers `armVisitors: null` and names those hours in `coverage.unassignedHours`.';
 const ARM_VOCABULARY_SENTENCE =
   '`arm` is the experience served; `experiment.arm` is the experimental assignment, and `ineligible` is never control.';
 /** The visitor whose record predates the provenance block (W21.E1.02), bucket 0.485563: the control side. */
@@ -1244,10 +1251,10 @@ describe('unit:W21.E1.02', () => {
       const kit = readFileSync(new URL('../../../docs/kit/02-api-reference.md', import.meta.url), 'utf8');
       expect(kit.includes(ARM_VOCABULARY_SENTENCE),
         `R108(2) — docs/kit/02-api-reference.md must publish the distinction in these words: "${ARM_VOCABULARY_SENTENCE}"`).toBe(true);
-      // R118(10) with F3: the two report paths do not group alike yet, and the
-      // customer is told which is which rather than left to discover it.
+      // R118(10) with F3, corrected under R10 by W21-B3 (R146(a)): the two report
+      // paths group alike, and the customer is told so in these words.
       expect(kit.includes(NIGHTLY_GROUPING_SENTENCE),
-        `R118(10) — docs/kit/02-api-reference.md must publish the deferral in these words: "${NIGHTLY_GROUPING_SENTENCE}"`).toBe(true);
+        `R146(a) — docs/kit/02-api-reference.md must publish the delivered grouping in these words: "${NIGHTLY_GROUPING_SENTENCE}"`).toBe(true);
     });
   }
 });

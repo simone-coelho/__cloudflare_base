@@ -1035,12 +1035,20 @@ describe('unit:W22.R1.03', () => {
     const d12 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
     const d13 = decision(m.env, 'v-rogue', T12 + HOUR_MS + 60_000, 'cnt-rogue-work');
     await throughTheLedger(m, [d12, d13], []);
-    // Hour 13 first: the shard's high-water mark then leaves hour 12's fold
-    // with `ringsFolded: false` (hourly.ts:291, :126, :400).
+    // Both hours are folded, out of order, and then hour 12 is REPLAYED over an
+    // unchanged ledger. That replay is what honestly reports
+    // `ringsFolded: false` once the folded hours are a per-hour set (W22.R1.02,
+    // ruling R140): its rows are already in the rings, so the rebuild adds
+    // nothing to them — the shape `src/learn/hourly.test.ts` asserts at W30.01
+    // (:1011-1012) and W30.02 (:944-946). The out-of-order pair alone no longer
+    // produces it, and this fixture must not depend on the high-water mark
+    // W22.R1.02 removes.
     await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR + 1 }, W22_LEARN, NOW, {}, m.env as never);
     await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, {}, m.env as never);
+    const replayed = await buildHour(m.storage as never, TENANT, { date: DATE, hour: HOUR }, W22_LEARN, NOW, {}, m.env as never);
+    expect(replayed.ringsFolded, 'the fixture exists to carry an hour whose rings did not advance: a replay over an unchanged ledger').toBe(false);
     const twelve = JSON.parse(m.storage.objects.get(hourKey(TENANT, DATE, HOUR))!) as { ringsFolded: boolean };
-    expect(twelve.ringsFolded, 'the fixture exists to carry an hour whose rings did not advance').toBe(false);
+    expect(twelve.ringsFolded, 'and that is the hour the day report reads').toBe(false);
   }
 
   it('host: the day report and the window report list the hours that were never folded and the hours whose rings did not advance', async () => {

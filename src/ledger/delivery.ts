@@ -99,8 +99,16 @@ export function logicalIdentity(row: Record<string, unknown>, stream: LedgerStre
  * per-record lookup (src/ledger/writer.ts) — a record that IS the same record.
  * The identity of the record is unchanged by it, so it is excluded here, in the
  * one place both callers share.
+ *
+ * W22 D1.04 (ruling R135): `event_id_source` is transport provenance too. It
+ * says where the event's nonce came from — the caller supplied it, or the
+ * request did — and it does not enter `outcome_id` (`records.ts`), so two
+ * deliveries of one event can carry different values for it and are still ONE
+ * event. Excluded on both sinks: the ledger never files them as a conflict, and
+ * the online credited journal, which digests this same logical row, credits
+ * them once.
  */
-export const LOGICAL_EXCLUDED_FIELDS: readonly string[] = [DELIVERY_FIELD, 'experiment'];
+export const LOGICAL_EXCLUDED_FIELDS: readonly string[] = [DELIVERY_FIELD, 'experiment', 'event_id_source'];
 
 /** Compare complete JSON rows after identity validation; only top-level transport and experiment provenance are excluded. */
 export function equalLogicalRows(first: Record<string, unknown>, second: Record<string, unknown>, spend: (n?: number) => void): boolean {

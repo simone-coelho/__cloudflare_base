@@ -28,7 +28,15 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import type { AttributionPolicy, RingEntry } from './policy';
-import type { StatsConfig } from './stats';
+// The ring's own reach, read from the module that declares it and that
+// `@/durable-objects/DecisionRing` re-exports under the same name. It is read
+// from there and NOT from the ring itself because the ring imports this module:
+// measured under this repository's own runner, `import { RING_MAX_AGE_MS } from
+// '@/durable-objects/DecisionRing'` here resolves to `undefined` whenever the
+// ring is the first of the two to load (src/learn/learn.test.ts imports it at
+// line 10, this module at line 12), which silently emptied the statistics
+// object's applied-delivery journal.
+import { RING_MAX_AGE_MS, type StatsConfig } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -42,8 +50,10 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
 
 /**
  * The online path's own horizon, used for two things that must never drift
- * apart. The visitor's `DecisionRing` keeps seven days of receipts
- * (`DecisionRing.ts` RING_MAX_AGE_MS), so:
+ * apart. It IS the visitor ring's own reach — `RING_MAX_AGE_MS`, exported by
+ * the object that enforces it (`@/durable-objects/DecisionRing`) and re-exported
+ * here under the name the online path already reads — so there is one constant
+ * and not a second copy of its value (W22 A1.02):
  *   · W22 A1.01 — whatever window the tenant's published policy asks for, this
  *     is the horizon the online path can actually apply, which is what its
  *     snapshot's `appliedWindowsMs` declares.
@@ -53,8 +63,9 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
  *     `DecisionRing` forget a delivery at the same moment, and neither claims
  *     idempotence beyond it. A repeat arriving after it is applied again, and
  *     no unit claims otherwise.
+ *
  */
-export const ONLINE_RING_REACH_MS = 7 * 24 * 60 * 60 * 1000;
+export const ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
 export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
@@ -84,6 +95,19 @@ export interface StatsDelivery extends DestinationCounts {
 export interface OutcomeReceipt {
   version: 1; kind: 'outcome'; received: 1; cutoffSkipped: number;
   attributed: number; eligible: number; weightSkipped: number; credits: StatsDelivery;
+  /**
+   * W23 T1.01: how many ring decisions this outcome matched but could not be
+   * credited to, because more time had passed than the reward's own attribution
+   * window allows (doc 22 §4.1). Zero when nothing matched it at all: a miss by
+   * item is not a miss by time, and an operator can tell the two apart.
+   *
+   * OPTIONAL, and carried through rather than required, because `outcomeReply`
+   * below rebuilds a ring reply member by member and the object's reply is not
+   * the only body that reaches it: `src/learn/holdoutArms.test.ts:279`/`:300`
+   * feed it a synthetic receipt that has no such member and must still be
+   * accepted as valid. The visitor's own `DecisionRing` always sets it.
+   */
+  outsideWindow?: number;
 }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
@@ -188,9 +212,12 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
-    || (r.cutoffSkipped === 1 && r.attributed !== 0)) return null;
+    || (r.cutoffSkipped === 1 && r.attributed !== 0)
+    // W23 T1.01: present or absent, never malformed.
+    || (r.outsideWindow !== undefined && !count(r.outsideWindow))) return null;
   const credits: StatsDelivery = { ...r.credits };
-  return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits };
+  return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits,
+    ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
