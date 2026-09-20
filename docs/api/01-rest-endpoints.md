@@ -51,6 +51,10 @@ prior-derived rows present); a slot with neither events nor priors still answers
 `GET /v1/:tenant/lift/rows` carries `priorVersion` — the prior document revision the snapshot was built with,
 0 when none — and every row carries `liftReference` (`slot-rate`, or `none` where the slot has no rate in that
 cell); the operator console's grid CSV gains a last `prior_version` column. `GET /v1/:tenant/learn/slots?evidence=1`
+Every row also carries `correction`, what the estimate has been corrected for. Its only value today is
+`uncorrected-v1`: the lift accounts for neither the position a piece was shown at nor the placement it was
+shown in, so the table is a diagnostic and not evidence of incremental business lift. The shopper's own
+receipt says the same thing in words on its learned-lift sentence. `GET /v1/:tenant/learn/slots?evidence=1`
 counts in `evidence.items` only items the tenant's catalogue carries, and `GET /v1/:tenant/learn/exploring`
 lists only those, so a prior for an item the catalogue does not carry is never offered as what exploration
 should serve next. Day reports carry `gridPriors {applied, priorVersion}`, derived from what their grids were

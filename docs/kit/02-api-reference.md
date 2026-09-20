@@ -293,6 +293,19 @@ Online outcome fan-out and direct ring admission reject malformed supplied nonce
 
 Direct attribution now requires an exact, case-sensitive slot match when an outcome names a nonblank slot, for every reward including featured-product purchases. A named miss receives no credit in another slot. Missing/null/blank slots and the SDK's literal `unknown` retain broad legacy matching; `match:any` remains intentionally broad. The shared rule applies to online credits, hourly reconstruction and raw-record reports without changing scope, windows or first/last selection. A real slot named `unknown` remains ambiguous. The named-slot guard alone does not add correlated decision/page/brand/position identity, change global-item fatigue or served/rendered/viewable units, or provide SDK/dedup acceptance; see the optional exact decision selector in [the integration guide](01-integration-guide.md). Existing counters, snapshots and stored reports are not repaired; new recomputation can differ under the unchanged policy label.
 
+An outcome carries the brand its action named (`data.brand`), and only the tenant's own brand when the
+action named none, so a click and the exposure it answers land in one statistics object. A correlated
+outcome whose brand disagrees with the brand of the decision it names is refused as before and is now
+COUNTED: the outcome receipt carries `brandMismatched` beside `attributed`, so that refusal is no longer
+indistinguishable from "nothing matched". The shopper's receipt (`GET
+/v1/{tenant}/visitors/{visitorId}/receipts`) carries `brand` beside `page`, `slot` and `position`, the
+brand the decision was served under and never the tenant id. A day report's `policies[]` rows carry
+`legacyCredits` beside `credits`: how many of that policy's credits came from an outcome that named
+neither a placement nor a decision, and were therefore spread by the legacy rule over every placement of
+the item — still credited, and now visible as the guess it is. `legacyCredits` is absent on day reports
+retained before it existed. None of this adds a new exposure unit, repairs a historical counter or
+snapshot, or corrects any estimate for position or placement.
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.
