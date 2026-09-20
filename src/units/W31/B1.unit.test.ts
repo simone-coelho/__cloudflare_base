@@ -168,7 +168,7 @@ import { tenantMiddleware } from '@/tenancy/middleware';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { DEFAULT_STATS } from '@/learn/stats';
 import {
-  attributionArm, canonicalReportJson, computationBasis, publishedAllocation, readReportView,
+  attributionArm, canonicalReportJson, computationBasis, effectiveReportPolicy, publishedAllocation, readReportView,
   reportCoverage, reportKey, REPORT_LIMITS, REPORT_MEASUREMENT,
   type ArmRow, type DayReport, type ReportAllocation, type SavedReportReader,
 } from '@/learn/report';
@@ -197,8 +197,8 @@ const W31_CATALOGUE = { version: 'w31-b1-coach-catalogue', pieces: [
 ] };
 const W31_SLOTS: SlotCatalog = { version: 'w31-b1-coach-slots',
   pages: { home: [{ slot: SLOT, take: 1, weights: { occasion: 0.35, line: 0.25 } }] } };
-const learnDocument = (share = 0.05) => ({
-  holdout: { share, salt: 'w31-b1-experiment', arms: ['default'] },
+const learnDocument = (share = 0.05, arms: string[] = ['default']) => ({
+  holdout: { share, salt: 'w31-b1-experiment', arms },
   regional: { enabled: false, kBlend: 1, minEvents: 30 },
   slots: {},
 });
@@ -460,7 +460,8 @@ interface RuledWindowReport {
     compatibility: { status: string; reasons: string[]; days: string[] };
     /** RULED, ABSENT TODAY (R21): representation (iii). */
     computation?: { version: number; reward: string; objective: string; tauLearnMs: number; measurementBasis: string;
-      profile: { source: string; horizonMs: number | null; ringCap: number | null } } | null;
+      profile: { source: string; horizonMs: number | null; ringCap: number | null };
+      learning: { scope: string; match: string; credit: string; windowsMs: Record<string, number> } } | null;
   }>;
 }
 interface RuledDayReport {
@@ -493,15 +494,23 @@ const publicFile = (file: string) => readFileSync(new URL(`../../../public/${fil
  * for, which one reading cannot express.
  */
 const KIT_WINDOW_COMPOSITION =
-  'A period longer than 184 days is read as consecutive windows — two 92-day readings cover half a year — and pooled on your side; the platform refuses a longer range with its maximum named and never shortens the period you asked for.';
+  'A period longer than 184 days is read as consecutive windows — two 184-day readings cover a year — and pooled on your side; the platform refuses a longer range with its maximum named and never shortens the period you asked for.';
 /**
  * RULED SENTENCE 2 (R21, F25 §5.7 with §1.3). The window's own allocation
  * members, published beside the day report's.
  */
 const KIT_WINDOW_ALLOCATION =
   'The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.';
-/** RULED LINE 3 (R21, F25 §1.3): what both shipped screens print beside the arms. */
-const SCREEN_ALLOCATION = 'Published allocation: 5% to default.';
+/**
+ * RULED LINE 3 (R21, F25 §1.3): what both shipped screens print beside the
+ * arms, for the allocation the day they are showing actually carries. Two
+ * different published shares are driven below, so a hardcoded sentence — the
+ * compiled customer default F25 §5.2 forbids, in the rendering layer — cannot
+ * pass this unit.
+ */
+const screenAllocation = (share: number) => `Published allocation: ${Math.round(share * 100)}% to default.`;
+const SCREEN_ALLOCATION = screenAllocation(0.05);
+const SCREEN_ALLOCATION_HALF = screenAllocation(0.5);
 /** RULED LINE 4 (R21, F07 §5.2): the composition rule where the operator asks for the period. */
 const SCREEN_COMPOSITION = 'Read a longer period as consecutive windows and pool them yourself.';
 
@@ -695,6 +704,13 @@ describe('unit:W31.C1.01', () => {
 describe('unit:W31.M1.01', () => {
   const EQUAL = publishedAllocation(learnDocument(0.5) as unknown as LearnConfig);
   const UNEQUAL = publishedAllocation(learnDocument(0.05) as unknown as LearnConfig);
+  /**
+   * A SECOND tenant's published allocation — a different share AND a different
+   * arm set — so the member cannot be satisfied by a stamped
+   * `{share: 0.05, arms: ['default']}`, which is the compiled customer default
+   * F25 §5.2 forbids wearing a new name.
+   */
+  const OTHER_TENANT = publishedAllocation(learnDocument(0.2, ['default', 'no_learning']) as unknown as LearnConfig);
   const ROWS: Rows = { [SLOT]: [{ arm: 'default', decisions: 40, credited: 2 }, { arm: 'personalized', decisions: 760, credited: 61 }] };
   const three = ['2026-05-01', '2026-05-02', '2026-05-03'];
   const ids = { tenant: TENANT, brand: TENANT, from: three[0]!, to: three[2]! };
@@ -715,10 +731,22 @@ describe('unit:W31.M1.01', () => {
     // of read from a fixed confidence and an assumption of equal arms.
     expect(report.allocation, 'F25 §1.3/§5.7 — src/measure/window.ts must state the published allocation every pooled day agrees on')
       .toEqual({ version: 1, source: 'published', share: 0.05, arms: ['default'] });
+    // And it is READ from the days, not stamped: a second tenant's window,
+    // published at a different share with a different arm set, answers that one
+    // (F25 §5.2 — one customer's numbers are never the platform's default).
+    const other = new FakeR2();
+    for (const date of three) other.put({ date, holdout: ROWS, allocation: OTHER_TENANT });
+    expect(pooled(await windowReport(other, ids)).allocation,
+      'F25 §5.2 — the allocation stated is the one the pooled days carry, whatever it is')
+      .toEqual({ version: 1, source: 'published', share: 0.2, arms: ['default', 'no_learning'] });
+
     // RULED MEMBER 3 (R21): the recorded computation the slot pooled under.
     expect(report.slots[SLOT]!.computation, 'document 35 :433 — the window states the metric versions it pooled, per slot')
       .toMatchObject({ version: 4, reward: 'click', objective: 'unit', tauLearnMs: DEFAULT_STATS.tauLearnMs,
         measurementBasis: 'served-v1', profile: { source: 'hourly-ring', horizonMs: HORIZON_MS, ringCap: 200 } });
+    expect(report.slots[SLOT]!.computation!.learning,
+      'document 35 :433 — including the learning policy the pooled days were attributed under, as the basis records it')
+      .toEqual(effectiveReportPolicy(DEFAULT_POLICY));
     // The versions W21 already carries stay on the answer, named the same way.
     expect(report.armVisitors, 'W21 C1.03 — the per-arm denominators, pooled as visitor-days')
       .toEqual({ version: 1, basis: 'visitor_days', arms: [{ arm: 'default', visitors: 120 }, { arm: 'personalized', visitors: 2280 }] });
@@ -790,7 +818,8 @@ describe('unit:W31.M1.01', () => {
     expect(windowOf(agreed.body).allocation, 'F25 §1.3 — the route answers the allocation the window pooled under')
       .toEqual({ version: 1, source: 'published', share: 0.05, arms: ['default'] });
     expect(windowOf(agreed.body).slots[SLOT]!.computation, 'document 35 :433 — and the metric versions it pooled')
-      .toMatchObject({ version: 4, reward: 'click', objective: 'unit', measurementBasis: 'served-v1' });
+      .toMatchObject({ version: 4, reward: 'click', objective: 'unit', measurementBasis: 'served-v1',
+        learning: effectiveReportPolicy(DEFAULT_POLICY) });
     expect(INFERENCE_VOCABULARY.test(JSON.stringify(agreed.body)), 'R108 — with no target or confidence vocabulary').toBe(false);
 
     const changed = await mount();
@@ -841,7 +870,7 @@ describe('unit:W31.Z1.01', () => {
   };
   const UNEQUAL = publishedAllocation(learnDocument(0.05) as unknown as LearnConfig);
 
-  it('logic: a zero-decision arm, an arm below the observation floor and an unequal allocation are reported as the counts and the allocation they are, with no rate, no interval and no fabricated number', async () => {
+  it('logic: a zero-decision arm, an arm below the observation floor and an unequal allocation are reported as the counts and the allocation they are, with no lift, no interval and no fabricated number', async () => {
     const r2 = new FakeR2();
     r2.put({ date: DATE, holdout: ROWS, allocation: UNEQUAL });
     const report = pooled(await windowReport(r2, { tenant: TENANT, brand: TENANT, from: DATE, to: DATE }));
@@ -878,23 +907,33 @@ describe('unit:W31.Z1.01', () => {
   });
 
   it('sdk: both shipped screens print the counts, the em dash where there is no denominator and the published allocation, and never a fabricated number or a standing', async () => {
+    /** The day both screens open on: a zero-count arm beside the two randomised ones. */
+    const SCREEN_ARMS: Rows = { [SLOT]: [
+      { arm: 'default', decisions: 407, credited: 29 },
+      { arm: 'personalized', decisions: 612, credited: 55 },
+      { arm: 'ineligible', decisions: 0, credited: 0 },
+    ] };
     const m = await mount();
-    for (const date of SCREEN_DAYS) m.store({ date, items: SCREEN_ITEMS, holdout: {
-      [SLOT]: [
-        { arm: 'default', decisions: 407, credited: 29 },
-        { arm: 'personalized', decisions: 612, credited: 55 },
-        { arm: 'ineligible', decisions: 0, credited: 0 },
-      ],
-    }, allocation: UNEQUAL });
+    for (const date of SCREEN_DAYS) m.store({ date, items: SCREEN_ITEMS, holdout: SCREEN_ARMS, allocation: UNEQUAL });
+
+    // The SAME screens over a second tenant's published allocation — half the
+    // traffic held out instead of a twentieth — so the rendered sentence is read
+    // from the day and cannot be a hardcoded one (F25 §5.2).
+    const half = await mount(0.5);
+    for (const date of SCREEN_DAYS) half.store({ date, items: SCREEN_ITEMS, holdout: SCREEN_ARMS,
+      allocation: publishedAllocation(learnDocument(0.5) as unknown as LearnConfig) });
 
     // Both screens are read BEFORE anything is asserted, so every lock is
     // measured on both and the ruled line is not hidden behind a first failure.
     const rendered: Array<readonly [string, string]> = [];
+    const renderedHalf: Array<readonly [string, string]> = [];
     for (const which of ['console', 'learning'] as const) {
       const screen = await openScreen(m, which);
       rendered.push([which, screen.text()] as const); screen.close();
+      const other = await openScreen(half, which);
+      renderedHalf.push([which, other.text()] as const); other.close();
     }
-    for (const [which, text] of rendered) {
+    for (const [which, text] of [...rendered, ...renderedHalf]) {
       expect(text, `${which}: the arm table the operator reads`).toContain('407');
       expect(text, `${which}: F25 §5.4 — a zero denominator prints the shipped em dash, never a number`).toContain('—');
       expect(FABRICATED.test(text), `${which}: F07 §5.3 — no NaN or Infinity is printed`).toBe(false);
@@ -921,6 +960,13 @@ describe('unit:W31.Z1.01', () => {
     // `src/console/learning.render.test.ts:306` fixes that table's rows exactly.
     for (const [which, text] of rendered) {
       expect(text, `${which}: F25 §1.3 — the screen must print, verbatim: "${SCREEN_ALLOCATION}"`).toContain(SCREEN_ALLOCATION);
+    }
+    // And the same screens over the second tenant's day print THAT allocation:
+    // the sentence is read from the report, never compiled in.
+    for (const [which, text] of renderedHalf) {
+      expect(text, `${which}: F25 §5.2 — and at a 50 % published share it must print, verbatim: "${SCREEN_ALLOCATION_HALF}"`)
+        .toContain(SCREEN_ALLOCATION_HALF);
+      expect(text.includes(SCREEN_ALLOCATION), `${which}: F25 §5.2 — never another tenant's share`).toBe(false);
     }
   });
 });
@@ -954,9 +1000,13 @@ describe('unit:W31.S1.01', () => {
     expect(r2.reads, 'F34 §4.3 — one read per day, each a bounded summary prefix')
       .toEqual(QUARTER.map(date => ({ key: reportKey(TENANT, TENANT, date), range: { offset: 0, length: REPORT_LIMITS.summaryBytes } })));
     expect(QUARTER, 'the quarter F34 §4.3 measures').toHaveLength(92);
-    expect(chargedBytes, 'F34 §4.3 — the window is charged the bounded prefix, never the day')
+    // The two byte figures below are this FIXTURE's arithmetic over what the
+    // reader asked for — the measurement of what the window read is the read
+    // list above. They state the size of what the range spares: every day
+    // object is larger than the prefix, so the bound, not the day, is the cost.
+    expect(chargedBytes, 'fixture arithmetic — each day delivers the bounded prefix and no more')
       .toBe(QUARTER.length * REPORT_LIMITS.summaryBytes);
-    expect(fullBytes, 'F34 §4.3 — while the day objects it never parsed are several times that').toBeGreaterThan(chargedBytes * 2);
+    expect(fullBytes, 'fixture arithmetic — while the day objects the window never parsed are several times that').toBeGreaterThan(chargedBytes * 2);
 
     // (b) And the pooled counts are exactly the days' own sums.
     expect(report.slots[SLOT]!.arms.find(arm => arm.arm === 'personalized'), 'the pooled treated counts of 92 days')
