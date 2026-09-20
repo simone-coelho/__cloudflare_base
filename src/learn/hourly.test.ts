@@ -1220,7 +1220,7 @@ describe('the hourly fold', () => {
     expect(agg.brands.coach!.visitorsIncomplete).toBeUndefined();
   });
 
-  it('W06.07 keeps legacy uncertainty visible, never recreates orphan membership, and clears all seen metadata on forward rollover', async () => {
+  it('W06.07 keeps legacy uncertainty visible, never recreates orphan membership, and prunes seen metadata by date on forward rollover', async () => {
     const r2 = new FakeR2(), key = shardKey('coach', 0), at = T12 + MIN;
     const entry = (visitor: string, ts: number, brand = 'coach') => ({ ...compactOf(dec(visitor, 'session', ts, 'item')).entry, brand });
     const initial: ShardState = { ...emptyShard(0), through: T12, seenDate: ids.date,
@@ -1250,12 +1250,25 @@ describe('the hourly fold', () => {
     // Anonymous historical max counts remain historical; uncertainty survives the merge.
     expect(reportFromHours([agg, later], ids, learn, NOW, { pending: 5, missing: [] }).counts).toMatchObject({ visitors: 1, truncated: true });
     await buildHour(r2, 'coach', { date: '2026-09-04', hour: 0 }, learn, NOW + 24 * H, { shards: 1 });
+    // W22.R1.02 (F17 §6 item 3; ruling R133). `seen`, `seenAt` and
+    // `seenIncomplete` keep their meaning — the membership of `seenDate` — so
+    // every stored shard and every literal in this file still reads, and the
+    // rollover still starts the new date empty. What the rollover no longer
+    // does is FORGET: the previous date's membership is pruned BY DATE into
+    // `seenDays`, because an hour of that date can still be repaired.
     expect(r2.json<ShardState>(key)).toMatchObject({ seenDate: '2026-09-04', seen: {} });
     expect(r2.json<ShardState>(key).seenAt).toBeUndefined();
     expect(r2.json<ShardState>(key).seenIncomplete).toBeUndefined();
-    const before = [...r2.objects], writes = r2.puts.length;
-    await expect(buildHour(r2, 'coach', { date: ids.date, hour: 15 }, learn, NOW, { shards: 1 })).rejects.toThrow('newer than requested date');
-    expect([...r2.objects]).toEqual(before); expect(r2.puts).toHaveLength(writes);
+    expect((r2.json<ShardState>(key) as { seenDays?: Record<string, Record<string, string[]>> }).seenDays?.[ids.date])
+      .toEqual({ coach: [], maple: ['untouched'] });
+    // And an hour of that older date is repairable: it folds, it writes its
+    // aggregate, and it leaves the newer date's membership alone (F17 P7).
+    const writes = r2.puts.length;
+    const repaired = await buildHour(r2, 'coach', { date: ids.date, hour: 15 }, learn, NOW, { shards: 1 });
+    expect(repaired.hour).toBe(15);
+    expect(r2.keys(`aggregates/coach/${ids.date}/`)).toContain(hourKey('coach', ids.date, 15));
+    expect(r2.puts.length).toBeGreaterThan(writes);
+    expect(r2.json<ShardState>(key)).toMatchObject({ seenDate: '2026-09-04', seen: {} });
   });
 
   it('W06.07 fails closed on malformed seen state and retries a failed cleanup without publishing an hour', async () => {
@@ -1336,7 +1349,7 @@ describe('the hourly fold', () => {
     expect((await loadHours(r2, 'coach', '2026-09-02', now)).missing).toHaveLength(24);
   });
 
-  it('W06.07 catch-up leaves older missing hours pending without starving an eligible current date', async () => {
+  it('W06.07 catch-up repairs the oldest missing hour across a date boundary and leaves the current date\'s membership alone', async () => {
     class Traced extends FakeR2 {
       listed: string[] = [];
       override async list(opts: { prefix: string }) { this.listed.push(opts.prefix); return super.list(opts); }
@@ -1349,15 +1362,21 @@ describe('the hourly fold', () => {
     ledger(r2, [dec('old', 'session', midnight - 2 * H + MIN, 'old'), dec('old', 'session', midnight - H + MIN, 'old'), current], []);
     const olderRows = [...r2.objects].filter(([k]) => k.startsWith(`coach/${ids.date}/`));
     const result = await catchUp(r2, 'coach', learn, midnight + H + 7 * MIN, { lookbackHours: 3, maxHours: 1, shards: 1 });
-    expect(result.built).toEqual([{ date: currentDate, hour: 0, decisions: 1, outcomes: 0, objects: 1, truncated: false }]);
-    expect(result.failed).toEqual([22, 23].map(hour => ({ date: ids.date, hour, error: `Hourly seen state is newer than requested date: ${currentDate}` })));
+    // W22.R1.02 (F17 §6 item 3; ruling R133): an hour of the older date is no
+    // longer doomed by the shard having seen a newer one. Oldest first, one
+    // hour per run: hour 22 is repaired and written, hour 23 and the current
+    // date's hour 0 stay pending, and no hour fails.
+    expect(result.built).toEqual([{ date: ids.date, hour: 22, decisions: 1, outcomes: 0, objects: 1, truncated: false }]);
+    expect(result.failed).toEqual([]);
     expect(result.pending).toBe(2);
     expect(r2.listed).toContain(`coach/${ids.date}/22/`);
-    expect(r2.listed).not.toContain(`coach/${ids.date}/23/`); // The typed floor avoids a second doomed read.
-    expect(ringContents(r2.objects.get(key))).toEqual(ringContents(stored));
+    expect(r2.listed).not.toContain(`coach/${ids.date}/23/`); // One hour per run; the next run takes 23.
+    // The repair adds the older hour's decision to the rings and takes nothing
+    // away: the current date's own membership and ledger rows are untouched.
+    expect(r2.json<ShardState>(key)).toMatchObject({ seenDate: currentDate, seen: { coach: ['current'] } });
     expect([...r2.objects].filter(([k]) => k.startsWith(`coach/${ids.date}/`))).toEqual(olderRows);
-    expect(r2.keys(`aggregates/coach/${ids.date}/`)).toEqual([]);
-    expect(r2.keys(`aggregates/coach/${currentDate}/`)).toEqual([hourKey('coach', currentDate, 0)]);
+    expect(r2.keys(`aggregates/coach/${ids.date}/`)).toEqual([hourKey('coach', ids.date, 22)]);
+    expect(r2.keys(`aggregates/coach/${currentDate}/`)).toEqual([]);
   });
 
   it('the day report comes from the hours when they exist, from the records otherwise, and a big day without hours is refused', async () => {
