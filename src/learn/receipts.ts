@@ -99,7 +99,15 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // W23 X1.02: set exactly where the learned-lift sentence is written, so the
   // terms and the sentence can never describe two different decisions.
   let liftTerms: LiftTerms | undefined;
-  why.push(r.measurementBasis === 'rendered-v1' ? 'Client-reported rendering was durably admitted; this is not proof of human visibility.' : 'Legacy served-decision exposure; rendering was not confirmed.');
+  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
+  // exposure unit. The VIEWABLE impression is a different thing and the
+  // learning loop counts none of it today (`learningInputOf` in
+  // `src/ledger/records.ts` states the same fact in code), so the receipt that
+  // reports an admitted render says both — no reader may take "rendered" for
+  // "seen", or for the event the platform learns from.
+  why.push(r.measurementBasis === 'rendered-v1'
+    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
+    : 'Legacy served-decision exposure; rendering was not confirmed.');
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else {

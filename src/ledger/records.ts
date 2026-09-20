@@ -219,10 +219,38 @@ export interface ActionLike {
  * in `data.event`, which is how the SDK sends content interactions and the
  * conversion until the server names them first-class (CW3).
  */
-export function rewardOf(action: ActionLike): { type: RewardType; event: string } | null {
+export function rewardOf(action: Pick<ActionLike, 'type' | 'data'>): { type: RewardType; event: string } | null {
   const name = action.type === 'custom' && typeof action.data?.event === 'string' ? action.data.event : action.type;
   const type = REWARD_OF[name];
   return type ? { type, event: name } : null;
+}
+
+/**
+ * W26 U1.01 (F21 §5 item 5): what the learning loop counts, said in one place a
+ * caller can read.
+ *
+ * The wire carries events the loop learns from and events it does not, and
+ * until now the difference was only an ABSENCE — `REWARD_OF` has no
+ * `content_impression` row, so a viewable impression is thrown away silently
+ * and an integrator reading the event list cannot tell a signal that is counted
+ * from one that is accepted and discarded. This states it: `counted: false`
+ * with the reason, or `counted: true` with the reward and the event name the
+ * outcome record will carry.
+ *
+ * It is DERIVED from `rewardOf` — the function `outcomeFromAction` itself
+ * consults — and never from a second table, so the declaration cannot drift
+ * away from the engine when a reward is added or removed. It decides nothing
+ * and gates nothing: it only reports what the engine already does.
+ */
+export type LearningInput =
+  | { counted: true; reward: RewardType; event: string }
+  | { counted: false; reason: 'not-a-learning-input' };
+
+export function learningInputOf(action: Pick<ActionLike, 'type' | 'data'>): LearningInput {
+  const reward = rewardOf(action);
+  return reward === null
+    ? { counted: false, reason: 'not-a-learning-input' }
+    : { counted: true, reward: reward.type, event: reward.event };
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);

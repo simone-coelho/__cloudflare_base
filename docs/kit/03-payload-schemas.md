@@ -18,7 +18,7 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `page_view` | `path` |
 | `product_view`, `add_to_cart`, `wishlist_add` | `productId`, plus the registry's attributes when the brand scores them from the event: `line`, `category`, `subcategory`, `silhouette`, `occasion` (a list), `price_usd` |
 | `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }` |
-| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position`; original event nonce/time are mandatory |
+| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position`; original event nonce/time are mandatory. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
 | `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType` |
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
