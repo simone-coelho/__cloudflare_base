@@ -12,6 +12,8 @@
 // because importing a `.test.ts` would register its whole suite a second time.
 
 
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import * as jose from 'jose';
@@ -31,9 +33,11 @@ import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { captureRetention, RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
+import { fanDecisions, fanOutcome, statsName } from '@/learn/fan';
 import { catchUp, hourKey, runDayReport, shardOf } from '@/learn/hourly';
+import { DEFAULT_POLICY } from '@/learn/policy';
 import type { DayReport } from '@/learn/report';
-import { DEFAULT_STATS } from '@/learn/stats';
+import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import { contentRoutes } from '@/routes/content';
 import { decisionRoutes } from '@/routes/decisions';
 import realtimeRoutes from '@/routes/realtime';
@@ -303,6 +307,11 @@ async function mount(options: { queueFails?: boolean; statsStatus?: () => number
   return { env, storage, queued, rings, stats, restartObjects: () => { for (const again of rebuild) again(); }, fetch: fetchOne, drain, operatorToken };
 }
 
+async function operatorGet(m: Mounted, path: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, { headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT } }));
+  return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
 async function operatorPost(m: Mounted, path: string, body: unknown = {}): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, {
     method: 'POST', headers: { Authorization: `Bearer ${m.operatorToken}`, 'X-Tenant': TENANT, 'content-type': 'application/json' }, body: JSON.stringify(body),
@@ -504,5 +513,238 @@ describe('unit:W22.R1.02', () => {
     expect((currentDay.body as { report: DayReport }).report.counts.visitors,
       'W22.R1.02 — and the repair of the older date does not cost the current day its own distinct visitors: five shoppers were served on this date, and the hour folded after the repair still knows about the four that came before it, because `seen` is kept per date instead of being wiped whenever a shard folds an hour of another date (F17 P7 measured four visitors where eight were served; hourly.ts:316-318, mergeBrand :175)')
       .toBe(5);
+  });
+});
+
+// ===========================================================================
+// The four units the W22-B1 BUILD review added (ruling R131, findings 1-4).
+// Each is measured on the merged product at f0421eb before it is ruled.
+// ===========================================================================
+
+const BRAND_B = 'coach-outlet';
+
+/** A second brand of the same tenant: the same record shape, another brand. */
+const otherBrand = <T extends { brand: string }>(row: T): T => ({ ...row, brand: BRAND_B });
+
+/** The published lift snapshot an operator reads: publish the slot, then read it. */
+async function publishedLift(m: Mounted, slot = 'hero', brand = BRAND): Promise<LiftSnapshot | null> {
+  const published = await operatorPost(m, `/v1/${TENANT}/learn/publish`, { slot, brand });
+  expect(published.status, `POST /v1/:tenant/learn/publish answers: ${JSON.stringify(published.body).slice(0, 200)}`).toBe(200);
+  const read = await operatorGet(m, `/v1/${TENANT}/lift?slot=${slot}&brand=${brand}`);
+  expect(read.status, `GET /v1/:tenant/lift answers: ${JSON.stringify(read.body).slice(0, 200)}`).toBe(200);
+  return (read.body as { snapshot?: LiftSnapshot | null }).snapshot ?? null;
+}
+const creditedNow = (snapshot: LiftSnapshot | null): number => snapshot?.items['cnt-tabby-evening']?.['*']?.s ?? 0;
+
+// ===========================================================================
+// unit:W22.D1.04 — the credited-outcome journal keys on the record, not the id
+// ===========================================================================
+
+describe('unit:W22.D1.04', () => {
+  /**
+   * The W22-B1 build review, finding 1: `DecisionRing.ts:503-509` matches a
+   * credited outcome on `entry.id === id` alone, and `CreditedOutcome` is
+   * `{id, ts, expiresAt}`. The id is
+   * `tenant:ts36:visitor:event:n1:eventId` (`src/ledger/records.ts:270`) and
+   * covers neither `item_id`, nor `value`, nor `products`. So the very fixture
+   * W22.D1.03 rules as a NAMED conflict on the ledger — two different records
+   * under one stable id — is silently collapsed to one credit online, while
+   * the exposure half of the same guarantee already keys on
+   * `${row.decision}:${row.digest}` (`LearnStats.ts:449`) "because a different
+   * record under the same id is a different event and is applied, never
+   * silently dropped (F16 §5(j))". One representation, both halves.
+   *
+   * The two halves this unit holds together: a different RECORD under one id is
+   * a different event and is credited; the SAME record redelivered is one event
+   * and is credited once (W22.D1.02, which this unit must not undo).
+   */
+  it('host: two different outcome records under one stable id each credit the published snapshot, and an identical redelivery of either credits nothing more', async () => {
+    const m = await mount();
+    const slotConfig = () => ({ reward: 'click' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+    const d1 = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening');
+    const first = click(m.env, d1, ONLINE_TS + 60_000, 'w22-b2-digest-click');
+    // A genuinely different event that the engine's own id cannot tell apart:
+    // the same `outcome_id`, another item. `logicalIdentity` calls it `stable`.
+    const second = { ...first, item_id: 'cnt-rogue-work' } as OutcomeRecord;
+    await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: d1.visitor_id, records: [d1] }, slotConfig);
+
+    await fanOutcome(m.env, TENANT, first, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await m.drain();
+    const afterFirst = creditedNow(await publishedLift(m));
+    expect(afterFirst > 0, `the fixture's first credit must be published: ${afterFirst}`).toBe(true);
+
+    await fanOutcome(m.env, TENANT, second, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await m.drain();
+    const afterSecond = creditedNow(await publishedLift(m));
+    expect(afterSecond / afterFirst,
+      `W22.D1.04 — a DIFFERENT record under one stable \`outcome_id\` is a different event and is credited: the credited-outcome journal keys on the record's digest as the exposure journal does (LearnStats.ts:449 \`${'${row.decision}:${row.digest}'}\`; DecisionRing.ts:503-509 matches on the id alone today). One credit published ${afterFirst}, two published ${afterSecond}`)
+      .toBeCloseTo(2, 3);
+
+    await fanOutcome(m.env, TENANT, first, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await fanOutcome(m.env, TENANT, second, DEFAULT_POLICY, BRAND, { hero: slotConfig() }, slotConfig());
+    await m.drain();
+    expect(creditedNow(await publishedLift(m)) / afterSecond,
+      'W22.D1.04 — and redelivering either of them credits nothing more: the same record under the same id is one event (W22.D1.02, F16 §7)')
+      .toBeCloseTo(1, 3);
+  });
+});
+
+// ===========================================================================
+// unit:W22.D1.05 — a conflict belongs to its own brand
+// ===========================================================================
+
+describe('unit:W22.D1.05', () => {
+  /**
+   * The W22-B1 build review, finding 2: `ReportRowConflict` is raised in
+   * `loadDay` before the brand filter, and `runReport` (`report.ts:1190`) sets
+   * `counts.conflicts` from `d.conflicts`/`o.conflicts` without the
+   * `row.brand === ids.brand` filter the `duplicates` line right above it
+   * applies. A conflict in one brand refuses, and then decorates, another
+   * brand's day. Duplicates and conflicts are one vocabulary (W22.D1.03) and
+   * must have one scope.
+   */
+  it('host: a conflict in one brand neither blocks nor decorates another brand of the same tenant, and is named on its own brand', async () => {
+    const m = await mount();
+    const clean = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const cleanClick = click(m.env, clean, T12 + 120_000, 'w22-b2-brand-a-click');
+    const other = otherBrand(decision(m.env, 'v-rogue', T12 + 180_000, 'cnt-rogue-work'));
+    const otherClick = otherBrand(click(m.env, other, T12 + 240_000, 'w22-b2-brand-b-click'));
+    await throughTheLedger(m, [clean, other], [cleanClick, otherClick]);
+    // The collision lives in brand B only.
+    const collision = { ...otherClick, item_id: 'cnt-charms-slg' } as OutcomeRecord;
+    expect((await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW)).ok,
+      'the fixture writes brand B\'s colliding event the way at-least-once delivery does').toBe(true);
+
+    const brandA = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const answeredA = (brandA.body as { report?: DayReport }).report;
+    expect({ status: brandA.status, counts: answeredA ? { decisions: answeredA.counts.decisions, outcomes: answeredA.counts.outcomes,
+      conflicts: (answeredA.counts as { conflicts?: unknown }).conflicts ?? 'none' } : `no report: ${JSON.stringify(brandA.body).slice(0, 180)}` },
+      'W22.D1.05 — the brand that has no conflict is answered: its own decision and outcome, and no conflict of its own (report.ts:1190 filters `conflicts` by brand as the `duplicates` line above it already does)')
+      .toEqual({ status: 200, counts: { decisions: 1, outcomes: 1, conflicts: 'none' } });
+
+    // And brand B's own day names it, then reads again with the exclusion counted.
+    const refusedB = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND_B });
+    expect((refusedB.body as { conflict?: { stream?: string; id?: string } }).conflict
+      ?? `absent: \`conflict\` on brand B's refusal (${JSON.stringify(refusedB.body).slice(0, 180)})`,
+      'W22.D1.05 — the brand that HAS the conflict is the one refused, and its refusal names the colliding id (W22.D1.03)')
+      .toEqual({ stream: 'outcome', id: otherClick.outcome_id });
+    const brandB = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND_B });
+    const answeredB = (brandB.body as { report?: DayReport }).report;
+    expect(answeredB ? { decisions: answeredB.counts.decisions, outcomes: answeredB.counts.outcomes,
+      conflicts: (answeredB.counts as { conflicts?: unknown }).conflicts } : `no report: ${JSON.stringify(brandB.body).slice(0, 180)}`,
+      'W22.D1.05 — and once filed, brand B reads again with the exclusion counted on ITS day')
+      .toEqual({ decisions: 1, outcomes: 1, conflicts: { decisions: 0, outcomes: 1 } });
+  });
+});
+
+// ===========================================================================
+// unit:W22.R1.06 — the export reconciliation is scoped like the report
+// ===========================================================================
+
+/** The ruled member W22.R1.05 built, read off the listing's JSON answer. */
+interface ExportCounts {
+  rows: { decisions: number; outcomes: number };
+  distinct: { decisions: number; outcomes: number };
+  report: { decisions: number; outcomes: number };
+  agrees: boolean;
+}
+
+describe('unit:W22.R1.06', () => {
+  /**
+   * The W22-B1 build review, finding 3: `exportReconciliation`
+   * (`report.ts:1111-1145`) counts `distinct` over every row of the day's
+   * objects while `report` comes from ONE brand's saved day, so a tenant with
+   * two brands can never agree — `agrees` is structurally false, and an
+   * operator reading a healthy multi-brand day is told the export disagrees
+   * with the report. The listing takes the same `brand` selector the report
+   * route takes, and scopes `distinct` to it.
+   */
+  it('host: for a tenant with two brands, the listing counts the rows of the brand it was asked for and agrees with that brand\'s published day', async () => {
+    const m = await mount();
+    const a = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
+    const aClick = click(m.env, a, T12 + 120_000, 'w22-b2-export-a');
+    const b = otherBrand(decision(m.env, 'v-rogue', T12 + 180_000, 'cnt-rogue-work'));
+    const bClick = otherBrand(click(m.env, b, T12 + 240_000, 'w22-b2-export-b'));
+    await throughTheLedger(m, [a, b], [aClick, bClick]);
+    const built = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect(built.status, `the report route answers: ${JSON.stringify(built.body).slice(0, 200)}`).toBe(200);
+    expect((built.body as { report: DayReport }).report.counts.decisions,
+      'the fixture publishes brand A\'s day: one decision, one outcome').toBe(1);
+
+    const listed = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}&brand=${BRAND}`);
+    expect(listed.status, `the export listing answers: ${JSON.stringify(listed.body).slice(0, 200)}`).toBe(200);
+    const counts = (listed.body as { counts?: ExportCounts }).counts
+      ?? `absent: \`counts\` on the listing (${Object.keys(listed.body).sort().join(', ')})`;
+    expect(typeof counts === 'string' ? counts : { distinct: counts.distinct, report: counts.report, agrees: counts.agrees },
+      'W22.R1.06 — the listing is scoped by the same `brand` selector the report route takes, so a two-brand tenant reconciles: brand A holds one distinct decision and one distinct outcome, exactly the day published for brand A, and they agree (report.ts:1111-1145)')
+      .toEqual({ distinct: { decisions: 1, outcomes: 1 }, report: { decisions: 1, outcomes: 1 }, agrees: true });
+    expect(typeof counts === 'string' ? counts : counts.rows,
+      'W22.R1.06 — while `rows` still says what the objects of that brand physically hold, so a warehouse job reading them can check itself')
+      .toEqual({ decisions: 1, outcomes: 1 });
+  });
+});
+
+// ===========================================================================
+// unit:W22.A1.01 companion — one constant for the ring's reach
+// ===========================================================================
+
+describe('unit:W22.A1.02', () => {
+  /**
+   * The W22-B1 build review, finding 4: `ONLINE_RING_REACH_MS`
+   * (`src/learn/fan.ts:56`) is a second literal `7 * 24 * 60 * 60 * 1000`
+   * duplicating `RING_MAX_AGE_MS` (`src/durable-objects/DecisionRing.ts:21`),
+   * which is not exported. The online snapshot's declared `appliedWindowsMs`
+   * is derived from the copy, so it silently stops describing the ring the
+   * moment either literal moves. W22.A1.01 rules that a path declares the
+   * horizon it ACTUALLY applied; this unit rules that there is one constant to
+   * declare.
+   */
+  it('logic: the ring exports the one constant for its reach and the fan-out reads it instead of restating the number', async () => {
+    const ring = await import('@/durable-objects/DecisionRing') as Record<string, unknown>;
+    expect(ring.RING_MAX_AGE_MS ?? `absent: \`RING_MAX_AGE_MS\` is not exported by src/durable-objects/DecisionRing.ts (it exports ${Object.keys(ring).sort().join(', ')})`,
+      'W22.A1.02 — the object that owns the ring exports the reach it enforces, so every reader can name the same number (build review finding 4)')
+      .toBe(7 * 24 * 60 * 60 * 1000);
+    const fan = await import('@/learn/fan') as Record<string, unknown>;
+    expect(fan.ONLINE_RING_REACH_MS === ring.RING_MAX_AGE_MS,
+      `W22.A1.02 — and the fan-out's reach IS that constant, not a copy of its value (fan.ts has ${String(fan.ONLINE_RING_REACH_MS)}, the ring has ${String(ring.RING_MAX_AGE_MS)})`)
+      .toBe(true);
+    const source = readFileSync('src/learn/fan.ts', 'utf8');
+    expect(source.includes('RING_MAX_AGE_MS'),
+      'W22.A1.02 — read in the source: `src/learn/fan.ts` names the ring\'s own constant')
+      .toBe(true);
+    expect(/ONLINE_RING_REACH_MS\s*=\s*7\s*\*/.test(source),
+      'W22.A1.02 — and no longer restates the literal seven days beside it, which is how the two drifted apart')
+      .toBe(false);
+  });
+
+  it('host: the published snapshot declares the ring\'s own constant as the horizon it applied, where the published policy asks for more than the ring holds', async () => {
+    // A tenant that asks for TEN days of purchase history: longer than the ring
+    // can hold, so the horizon the online path declares is the ring's reach
+    // itself and nothing else — the one number this unit is about.
+    const TEN_DAYS = 10 * DAY_MS;
+    const askedForMore = { ...W22_LEARN, policy: { scope: 'session', match: 'direct', credit: 'last',
+      windowsMs: { purchase: TEN_DAYS } } } as unknown as LearnConfig;
+    const m = await mount({ learn: askedForMore });
+    const storyConfig = () => ({ reward: 'purchase' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+    const policy = { ...DEFAULT_POLICY, windowsMs: { ...DEFAULT_POLICY.windowsMs, purchase: TEN_DAYS } };
+    const story = decision(m.env, 'v-tabby', ONLINE_TS, 'cnt-tabby-evening', 'story');
+    const bought = { ...outcomeFromAction({ type: 'purchase', userId: story.visitor_id, sessionId: story.session_id ?? undefined,
+      timestamp: ONLINE_TS + 60_000, eventId: 'w22-b2-reach-purchase', eventIdSource: 'provided',
+      data: { contentId: story.item_id, slot: 'story', value: 495, currency: 'USD' } } as never, TENANT, BRAND)!,
+      retention: captureRetention(m.env as never, TENANT, ONLINE_TS + 60_000, ONLINE_TS + 60_000) } as OutcomeRecord;
+    await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: story.visitor_id, records: [story] }, storyConfig);
+    await fanOutcome(m.env, TENANT, bought, policy, BRAND, { story: storyConfig() }, storyConfig());
+    await m.drain();
+    const snapshot = await publishedLift(m, 'story');
+    const ring = await import('@/durable-objects/DecisionRing') as Record<string, unknown>;
+    const contract = (snapshot as unknown as { attributionContract?: { appliedWindowsMs?: Record<string, number>; windowsMs?: Record<string, number> } } | null)?.attributionContract;
+    // Compared against the ring's OWN export, with no literal of this file's
+    // beside it: while the constant is not exported there is nothing for the
+    // declaration to follow, and once it is, a change to the ring moves both
+    // sides of this assertion together.
+    const reach = ring.RING_MAX_AGE_MS ?? 'absent: `RING_MAX_AGE_MS` is not exported by src/durable-objects/DecisionRing.ts, so no reader can name the reach the ring enforces';
+    expect({ asked: contract?.windowsMs?.purchase, applied: contract?.appliedWindowsMs?.purchase },
+      'W22.A1.02 — the horizon the online path declares is the ring\'s own exported constant, never the longer window the policy asked for, so the declaration follows the ring when the ring changes (W22.A1.01; build review finding 4)')
+      .toEqual({ asked: TEN_DAYS, applied: reach });
   });
 });
