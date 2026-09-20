@@ -2234,5 +2234,99 @@
     "status": "specified",
     "batch": "W22-B2",
     "residual": "RED on both legs (log /home/simonecoelho/rem/_evidence/W22-B1/specifier/logs/b2-new-units-run2.log): `RING_MAX_AGE_MS` is not exported, and the host leg compares the snapshot's applied window against that export with no literal of its own beside it. The host fixture publishes a TEN-day purchase window, longer than the ring can hold, so the declared horizon is the ring's reach and nothing else. NEGATIVE CONTROL, in a scratch copy never written into the checkout (/home/simonecoelho/rem/_evidence/W22-B1/specifier/control/DecisionRing-shortreach.ts with vitest.a102.config.mjs, log /home/simonecoelho/rem/_evidence/W22-B1/specifier/logs/b2-a102-control.log): with the ring exporting THREE days the snapshot still declares seven (`applied: 604800000` where the ring says `259200000`), so the assertion has teeth — it fails exactly when the declaration stops following the ring. Neither leg adds a compiler error: both read the export through a namespace import, so the typechecks stay clean. Seams: W22-B1 is merged at f0421eb and every member this unit reads is the one that build created; W23 owns order-invariant counters and the ingest clamp, W24 accumulation generations, W27 replay, W30 the fold envelope. The operator reads present a SERVICE token, which `operatorJwt()`/`operatorWrites()` accept. Customer acceptance and every deployed proof remain OPEN. SPEC-FIX ONE (R133 item 2): the two source assertions are replaced by the import assertions a stamped constant cannot pass — `src/learn/fan.ts` IMPORTS `RING_MAX_AGE_MS` from the ring's module and `ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;` — with the `= 7 *` regex kept as a third guard, and the file is read through `new URL('../../learn/fan.ts', import.meta.url)` instead of a cwd-relative path (the reviewer's run read another repository's file). BUILD NOTE: `src/durable-objects/DecisionRing.ts:16` already imports `@/learn/fan`, so importing the constant back from the ring's own module closes a cycle that TDZ-throws when the ring loads first; the constant must live in a shared module that `DecisionRing` re-exports, which satisfies both assertions. SPEC-FIX TWO (R137 item 1): the import regex accepts the module that DECLARES the constant — `'(./stats|@/learn/stats|@/durable-objects/DecisionRing)'` — because the builder measured that importing `RING_MAX_AGE_MS` back from `@/durable-objects/DecisionRing` into `fan.ts` resolves to `undefined` under Vite's hoisting whenever the ring loads first (the ring already imports `@/learn/fan`); the constant is declared in `src/learn/stats.ts`, re-exported by the ring, and imported by `fan.ts` from `./stats`. The `ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;` assertion and the `= 7 *` guard are unchanged, so a stamped literal still cannot pass."
+  },
+  {
+    "id": "W26.U1.01",
+    "w": "W26",
+    "criterion": "U1",
+    "outcome": "The exposure unit is declared and carried, never inferred: a `served-v1` exposure and a `rendered-v1` acknowledgement never pool into one statistics object or one fatigue count; a record that declares `rendered-v1` without its durable acknowledgement is refused, so no receipt can claim an unrendered placement; and the viewable impression is explicitly NOT a learning input — `src/ledger/records.ts` exports `learningInputOf(action)` answering `{counted:false,reason:'not-a-learning-input'}` for `content_impression` and `{counted:true,reward,event}` for a reward-bearing event, `docs/kit/03-payload-schemas.md` says so where it documents `content_impression`, and the rendered-v1 receipt sentence reads 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W26 :428 ('defined served/rendered/viewable unit'); F21 §5 item 5 ('the impression is not used by the learning loop at all — `rewardOf` has no `content_impression` row... it exists on the wire and is thrown away') and item 4 (the five-way taxonomy is over-scoped as a gate, so the unit is DECLARED, not built); F21 §6(e) the receipt overclaims on an unrendered slot; HANDOFF-2026-09-16:230 ('Served vs rendered vs viewable unit and denominator remain unresolved'); ruling R153(b).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state measured at 0662c0c: (i) served/rendered never pooling — GREEN-AT-SPEC (`src/learn/fan.ts:280`, `src/learn/policy.ts:101`, `src/durable-objects/DecisionRing.ts:474`, `src/content/service.ts:81`); (ii) no rendered claim on an unrendered placement — GREEN-AT-SPEC at the source, not at the sentence: `validDecisionMeasurement` (`src/ledger/records.ts:111-118`) refuses a rendered-v1 record with no acknowledgement and `src/content/service.ts:500-501` captures no serve-time exposure for a rendered-v1 slot, so the state F21 §6(e) describes is unreachable today; (iii) the denominator naming its basis — GREEN-AT-SPEC (`src/routes/decisions.ts:214` answers `measurementBasis`, `src/learn/report.ts:132` carries it per slot in the computation basis); (iv) the viewable impression's status stated — RED, both in code and in the kit. NOT ruled here: adding a `viewable-v1` basis or gating exposures on a viewability event (F21 §5 item 4 calls the five-way taxonomy over-scoped; the agreed unit is W26.P1.01's). R10: the ruled sentence extends the string `src/learn/receipts.test.ts:75` asserts exactly."
+  },
+  {
+    "id": "W26.I1.01",
+    "w": "W26",
+    "criterion": "I1",
+    "outcome": "The placement's identity is page/brand/slot/position on the decision record, the ring entry AND the receipt — `receiptOf` carries `brand` beside the page, slot and position it already carries — and a slot name may not be reused on a second page of the same brand: `validateSlotCatalog` refuses the catalogue and the error names the slot and the page it is already used on, so one tenant/brand/slot statistics object can never pool two placements unknowingly.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W26 :428 ('page/brand/slot/position identity'); F21 §6(b) ('`statsName(tenant, brand, slot)` and `liftKey(...)` carry no page, and `validateSlot` forbids duplicate slot names only within a page. So `home/hero` and `pdp/hero` share one statistics object, one baseline rate, one lift table, one gamma, one reward and one objective'); F21 §8 the M ('Page in `statsName`/`liftKey`, OR an enforced global uniqueness of slot names across pages'); HANDOFF-2026-09-16:230 ('Statistics object is tenant/brand/slot, not page'); ruling R153(c).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state at 0662c0c: page/brand/slot/position on the record and on `ringEntryOf` — GREEN-AT-SPEC (`src/learn/fan.ts:288`); `brand` on the receipt — RED (`src/learn/receipts.ts:96-105` has page, slot, position, no brand); the cross-page slot-name refusal — RED (`src/content/kinds.ts:259` scopes `seen` to one page, `:391`). OWED, not ruled: page inside `statsName`/`liftKey` is a storage migration of every published snapshot and archive key — this unit LOCKS today's `coach:coach:hero` shape so the builder cannot half-migrate it, and the owed work stays named for the whole-W review. Customer acceptance of the uniqueness rule (an existing tenant may already publish `home/hero` and `pdp/hero`) is OPEN and belongs with W26.P1.01."
+  },
+  {
+    "id": "W26.C1.01",
+    "w": "W26",
+    "criterion": "C1",
+    "outcome": "Named-placement credit is locked as it stands (the named slot constrains an interaction credit, the SDK's literal `unknown` and an absent slot stay legacy-broad, and a product-named reward keeps the featured-product rule), and the outcome's brand is resolved from the decision the shopper acted on: an action naming its brand produces an outcome carrying that brand rather than the tenant id, and an outcome whose brand disagrees with the correlated decision in the ring is refused AND COUNTED — `brandMismatched` on the outcome receipt, through the ring's own answer and the fan-out's receipt projection — never silently pooled or silently dropped.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W26 :428 ('named-placement credit'); F21 §8 items 1-3 (the S fix: `placement: 'named'|'any'`, the `unknown` sentinel, product-named rewards keep CW32) and the M ('`brand` on the online `RingEntry`, and the outcome's brand resolved from the decision rather than defaulted to the tenant at `src/routes/realtime.ts:126`'); F21 §6(c) ('the first tenant that actually uses brands... puts the numerator in one statistics object and the denominator in another'); ruling R153(a), (d).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state at 0662c0c: the named-slot containment, the `unknown` sentinel and the featured-product rule — GREEN-AT-SPEC (`src/learn/policy.ts:96-108`, delivered by the earlier W26.01/W26.02 work); brand on the ring entry — GREEN-AT-SPEC (`src/learn/fan.ts:288`); the outcome's brand from the action — RED (`src/routes/realtime.ts:203` passes only the tenant, `src/ledger/records.ts:260` defaults `brand = tenant`); the mismatch counted — RED (`src/learn/policy.ts:88` refuses the credit and the receipt says `attributed: 0`, indistinguishable from 'nothing matched'). The brand the action names is client-supplied, exactly as the `?brand=` that fanned the denominator already is (`src/content/service.ts:130`); it is not new authority, and a lying brand still earns no credit because the correlated decision refuses it — now visibly. `brandMismatched` must be OPTIONAL in `fanOutcome`'s wire validation (`src/learn/fan.ts:196-204`) so an older object's receipt is still accepted: `src/learn/holdoutArms.test.ts:279` posts a receipt without it."
+  },
+  {
+    "id": "W26.F1.01",
+    "w": "W26",
+    "criterion": "F1",
+    "outcome": "Fatigue stays brand-wide and global-item across placements — the same piece served in the hero, in the rail, on another page or in another arm is one shopper-level count inside the brand — and the platform says that truly: the `servedCounts` JSDoc says the count is across every placement in the brand instead of 'that slot's fatigue window', and the receipt sentence reads 'this shopper was served it N times anywhere in this brand in the last H hours: A'. No slot, page or arm restriction is added.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "HANDOFF-2026-09-16:230 ('W26.04 live fatigue now filters to brand, retaining intended cross-placement global-item history. Do not accidentally add slot/page/arm fatigue restrictions as a \"fix.\"'); HANDOFF-2026-09-18:322 ('Do not silently restrict intended cross-placement fatigue'); document 35 §5 row W26 :428 ('Agree and test global-item versus placement-specific fatigue'); F21 §6(a) (the JSDoc/code contradiction and 'the receipt sentence implies the slot'); ruling R153(e).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state at 0662c0c: the cross-placement brand-wide count — GREEN-AT-SPEC (`src/learn/fan.ts:277-280` reads the whole ring; `src/content/service.ts:458` filters the ring to the requested brand); the JSDoc — RED (`src/learn/fan.ts:270` still says 'that slot's fatigue window'); the sentence — RED (`src/content/decide.ts:415`). RULED AGAINST: F21 §8 item 5 proposes `if (e.slot === s.slot && ...)` — a slot restriction — and the settled decision in both handovers forbids it; the contradiction is closed by fixing the words, not the numbers. R10: `src/content/freshFatigue.test.ts:61` asserts the old sentence inside a `toEqual`, so it must be updated with the ruling (it is the only frozen assertion on the composed sentence; `src/learn/receipts.test.ts:32/:46` supply their own sentence in the fixture and are unaffected)."
+  },
+  {
+    "id": "W26.X1.01",
+    "w": "W26",
+    "criterion": "X1",
+    "outcome": "Position stays on the ring entry and on the batch fold, and the lift table and the receipt STATE what they do not correct for: every `LiftRow` carries `correction: 'uncorrected-v1'` (through `rowsOf` and the operator route that reads it) and the learned-lift sentence ends '..., not corrected for position or placement.' No correction is applied and no number changes.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "document 35 §5 row W26 :428 ('position effects'); F21 §2 probe 3 (a 3.80x rank-1 to rank-5 spread against a true content difference of 1.00x, saturating the clamp) and probe 4 (3.54x from cross-placement credit); F21 §8 ('until that lands, the honest position for the pilot is... report the lift table as a diagnostic that is not corrected for position or placement — not as evidence of incremental business lift'); HANDOFF-2026-09-16:230 ('position effects require agreement'); ruling R153(f).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state at 0662c0c: `position` on the entry and in `compactOf` — GREEN-AT-SPEC (`src/learn/fan.ts:288`, `src/learn/hourly.ts:74`); the statement — RED on both surfaces (`src/learn/rows.ts:65-73`, `src/learn/receipts.ts:86`). NOT ruled: the correction itself — position in the pooling key or in the statistics identity is Data Science's decision under W26.P1.01, and `Level`, `LEVEL_WORDS`, `depth()`/`parentKey()`, `liftFor`, `buildSnapshot`, replay and `foldDecisions` all assume today's ladder (F21 §4). The ruled member is a name, never a number. R10: `src/learn/receipts.test.ts:49` asserts the learned-lift sentence exactly inside a `toEqual` of the whole `why` array; `src/console/console.render.test.ts:581-584` reads the download CSV by column POSITION, so a new column must go after `credit_per_exposure_p_hat`, not between the existing ones."
+  },
+  {
+    "id": "W26.R1.01",
+    "w": "W26",
+    "criterion": "R1",
+    "outcome": "The counts are right for a repeated piece, a replay, a refresh and a legacy outcome: the same piece served in two placements on one page is two exposures, one in each placement's own statistics object; a click naming the hero credits the hero alone; a redelivered decision set is one exposure and one ring row; the shipped SDK sends one impression per placement and a refresh that re-delivers the same set sends no second one; and an unknown legacy outcome — no slot and no decision reference — is still credited under the declared legacy rule but is COUNTED AS LEGACY on the day report (`policies[].legacyCredits`), never presented as a named-placement credit.",
+    "legs": [
+      "host",
+      "sdk"
+    ],
+    "witness": "document 35 §5 row W26 :428 ('prove repeated item/product across slots/pages, replay and SDK refresh produce correct counts'; 'unknown legacy outcomes'); F16/W22's logical identity and redelivery-once; F34 §2A-§2B (the SDK duplication paths — W17 owns the lifecycle remedy, this unit owns the COUNT); F21 §2 probe 1/1c (a click naming one placement paying another); ruling R153(g).",
+    "status": "specified",
+    "batch": "W26-B1",
+    "residual": "Clause state at 0662c0c: two placements = two exposures, one credit for the named placement, a redelivered set counted once (`append duplicates: 2`, the exposure unchanged), and the SDK's one-impression-per-placement across a refresh — all GREEN-AT-SPEC (`src/learn/fan.ts:308`, `src/durable-objects/DecisionRing.ts:475`, W22 D1.02's journal, `src/sdk/listen.ts:112-118` `painted` keyed by [slot, order, contentId] and preserved across an unchanged delivery); the legacy credit COUNTED AS LEGACY — RED (`src/learn/report.ts:705` `policies[]` carries `credits` only; the day report answers `credits: 3` for one named and one legacy outcome with no way to tell them apart). The legacy RULE itself — whether an unplaced, uncorrelated outcome should credit every placement at all — is NOT ruled here: it is W26.P1.01's (OL/D + DS). Both hosts are driven (`REFLEX_HOST` 'session' and 'do'). The fold path (`src/learn/hourly.ts`) must carry the same counter as the raw path or a day built from aggregates will answer without it; W30 owns the fold envelope."
+  },
+  {
+    "id": "W26.P1.01",
+    "w": "W26",
+    "criterion": "P1",
+    "outcome": "OWNER DECISION, not a unit of work: the agreed served/rendered/viewable exposure unit and the denominator every report answers under; the position-effect policy (whether the lift table is corrected, stratified or constrained to one placement, and at what per-slot dial); and the legacy-outcome rule (what an outcome with no slot and no decision reference may credit). Until these are answered the platform NAMES its basis, STATES its non-correction and COUNTS legacy credits separately — W26.U1.01, W26.X1.01 and W26.R1.01 — and guesses nothing.",
+    "legs": [],
+    "witness": "HANDOFF-2026-09-16:230 ('Served vs rendered vs viewable unit and denominator remain unresolved... unknown legacy outcomes and position effects require agreement'); document 35 §5 row W26 owner 'OL/D + DS'; F21 §5 item 4 (the five-way taxonomy is over-scoped as a pilot gate) and §8 (position bucketing is a per-slot Data-Science dial, doc 22 line 668); HANDOFF-2026-09-18 §8 D04/D09.",
+    "status": "no-witness",
+    "batch": "W26-B1",
+    "residual": "No witness determines the VALUES. Document 35 requires the unit to be 'defined' and the position effects and legacy outcomes to be 'agreed'; nothing in document 35, the finding reports, the requirements or the settled decisions in HANDOFF-2026-09-18 §7 fixes which unit is counted, which denominator a report must answer under, whether a position correction is applied, or what an unplaced uncorrelated outcome may credit. Specifying any of them here would be an invented value. Owner: OL/D + Data Science (D04, D09). Unclaimed."
   }
 ]
