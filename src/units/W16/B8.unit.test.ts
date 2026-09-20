@@ -939,7 +939,7 @@ describe('unit:W16.C6.13', () => {
     const browser = (answers: Array<Record<string, unknown>>) => {
       const store = new Map<string, string>();
       const calls: Array<{ url: string; body: { continuity?: { proof?: unknown; operationId?: unknown } } }> = [];
-      let clock = T0, uuids = 0, sessions = 0, answered = 0;
+      const clock = T0; let uuids = 0, sessions = 0, answered = 0;
       const host = memoryHost({
         acquireAuthorityLock: authorityLocks(),
         now: () => clock,
