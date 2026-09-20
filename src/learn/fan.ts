@@ -146,14 +146,38 @@ export interface OutcomeReceipt {
   version: 1; kind: 'outcome'; received: 1; cutoffSkipped: number;
   attributed: number; eligible: number; weightSkipped: number; credits: StatsDelivery;
   /**
-   * W24 R1.01/R1.02: this outcome was never offered to the visitor's ring, and
-   * why — `reward` because no slot that could have been credited learns from
-   * this reward, `money` because the platform will not weigh it without a
-   * published policy. Absent on every outcome that was attributed normally.
+   * W24 R1.01/R1.02, as W24 R1.03/R1.04 place it: NO slot the ring would have
+   * credited took this outcome, and why — `reward` because none of them learns
+   * from this reward, `money` because the platform will not weigh it in the
+   * objective's own unit without a published policy. Absent whenever at least
+   * one slot was credited, so it always reads "no slot learns from this" and
+   * never "this one did not, that one did", which `refusedBySlot` says instead.
    */
   notCredited?: 'reward' | 'money';
   /** W24 R1.02: the money the platform refused to weigh, named. */
   money?: MoneyRefusal;
+  /**
+   * W24 R1.03/R1.04: one entry per slot the visitor's ring WOULD have credited
+   * and did not, naming which rule refused it — `reward` when the slot learns
+   * against another reward, `money` when the slot's objective is money and the
+   * platform will not weigh this outcome in it. The decision is per credited
+   * slot, made where the ring groups its per-slot batches, so an outcome is
+   * never dropped for one slot's reason on another slot's behalf.
+   *
+   * OPTIONAL and absent when nothing was refused, and carried through rather
+   * than required, for the same reason `outsideWindow` is: `outcomeReply`
+   * rebuilds a ring reply member by member and the object's own reply is not
+   * the only body that reaches it.
+   */
+  refusedBySlot?: Record<string, 'reward' | 'money'>;
+  /**
+   * W24 R1.03: how many slots refused it — the number of `refusedBySlot`'s
+   * entries, carried as a count so the receipt's own arithmetic accounts for
+   * the refusal beside `attributed` and `eligible`. `attributed` counts the
+   * slots that were credited and no others, so `attributed = eligible +
+   * weightSkipped` still holds and a refusal is never read as a credit.
+   */
+  refused?: number;
   /**
    * W23 T1.01: how many ring decisions this outcome matched but could not be
    * credited to, because more time had passed than the reward's own attribution
@@ -280,20 +304,54 @@ function appendReply(value: unknown, received: number): AppendReceipt | null {
   return r.version === 2 && count(r.duplicates) && total(received, r.accepted, r.duplicates, r.cutoffSkipped)
     ? { ...counts, version: 2, duplicates: r.duplicates } : null;
 }
+/**
+ * W24 R1.03/R1.04: the per-slot refusals on a ring reply, read back. A map of
+ * slot names to the rule that refused each one, or null when the member is
+ * anything else — a refusal the caller cannot read is a malformed reply, never
+ * a silent credit. Built with `Object.fromEntries` so a slot named `__proto__`
+ * becomes an own property rather than reaching a setter.
+ */
+function refusalsBySlot(value: unknown): Record<string, 'reward' | 'money'> | null {
+  if (!object(value)) return null;
+  const entries = Object.entries(value);
+  if (!entries.length || entries.some(([slot, reason]) => !slot || (reason !== 'reward' && reason !== 'money'))) return null;
+  return Object.fromEntries(entries) as Record<string, 'reward' | 'money'>;
+}
+/** W24 R1.02: the money refusal on a ring reply, read back; null when malformed. */
+function moneyReply(value: unknown): MoneyRefusal | null {
+  if (!object(value) || value.reason !== 'money_policy_unset'
+    || Object.keys(value).some(key => key !== 'reason' && key !== 'code')
+    || (value.code !== undefined && typeof value.code !== 'string')) return null;
+  return { ...(typeof value.code === 'string' ? { code: value.code } : {}), reason: 'money_policy_unset' };
+}
 function outcomeReply(value: unknown): OutcomeReceipt | null {
   if (!object(value) || value.ok !== true || !object(value.receipt)) return null;
   const r = value.receipt;
+  // W24 R1.03: the refusal members, present or absent, never malformed — and
+  // `refused` IS the number of entries in `refusedBySlot`, so a reply cannot
+  // claim a count its own named refusals do not carry.
+  const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
+  const money = r.money === undefined ? undefined : moneyReply(r.money);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
     || (r.cutoffSkipped === 1 && r.attributed !== 0)
     // W23 T1.01, W26 C1.01: present or absent, never malformed.
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
-    || (r.brandMismatched !== undefined && !count(r.brandMismatched))) return null;
+    || (r.brandMismatched !== undefined && !count(r.brandMismatched))
+    || refusedBySlot === null || money === null
+    || (r.refused !== undefined && !count(r.refused))
+    || (refusedBySlot !== undefined && r.refused !== Object.keys(refusedBySlot).length)
+    // "No slot learns from this" is a statement about an outcome nothing took.
+    || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
   const credits: StatsDelivery = { ...r.credits };
   return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits,
     ...(r.outsideWindow !== undefined ? { outsideWindow: r.outsideWindow as number } : {}),
-    ...(r.brandMismatched !== undefined ? { brandMismatched: r.brandMismatched as number } : {}) };
+    ...(r.brandMismatched !== undefined ? { brandMismatched: r.brandMismatched as number } : {}),
+    ...(refusedBySlot !== undefined ? { refusedBySlot } : {}),
+    ...(r.refused !== undefined ? { refused: r.refused as number } : {}),
+    ...(money !== undefined ? { money } : {}),
+    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
@@ -506,25 +564,6 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
   return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
-/**
- * W24 R1.01 (F19 §7 gap 1, §5.1): the slot configuration that DECIDES this
- * outcome, which is the configuration of the slot the outcome itself names.
- *
- * Only a named slot decides. An outcome that names none is still the visitor's
- * own event and still goes to her ring: which slots it could be credited to is
- * not knowable until attribution has run there, and the caller has no business
- * guessing. The residual that leaves is stated on the call below.
- */
-function decisiveConfig(outcome: OutcomeRecord, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): SlotLearnConfig | null {
-  const named = typeof outcome.slot === 'string' && outcome.slot.trim().length > 0 && outcome.slot !== 'unknown' ? outcome.slot : null;
-  if (named === null) return null;
-  const configured = object(slotConfig) && Object.prototype.hasOwnProperty.call(slotConfig, named) ? slotConfig[named] : defaultSlotConfig;
-  return object(configured) ? configured as SlotLearnConfig : null;
-}
-function configsInScope(slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): SlotLearnConfig[] {
-  return [...(object(slotConfig) ? Object.values(slotConfig) : []), ...(defaultSlotConfig ? [defaultSlotConfig] : [])].filter((c): c is SlotLearnConfig => object(c));
-}
-
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
 export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
@@ -540,42 +579,34 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     if (tombstone && outcome.ts <= tombstone.erased_at) { out.cutoffSkipped = 1; return out; }
     pinRetention(env as RetentionEnv, outcome.retention?.online, tenant, 'online');
     /**
-     * W24 R1.01 (F19 §7 gap 1): the online credit path is filtered to the slot's
-     * configured reward, where the batch fold already filters it
-     * (`src/learn/report.ts`, `src/learn/hourly.ts` "the slot learns against one
-     * reward"). It is done HERE, at the producer, and never at the statistics
-     * object: that object's guard is a compatibility check on the accumulation
-     * tuple and not a reward filter, and a credit of another reward posted to it
-     * directly is still accepted, exactly as before.
+     * W24 R1.03/R1.04 (build review findings 1 and 2; F19 §7 gap 1, §5.1): the
+     * reward filter and the money mechanics are decided PER CREDITED SLOT,
+     * inside `DecisionRing.outcome()` where the ring groups its per-slot
+     * batches with each slot's own `config` — the way the fold filters each
+     * hour's credits per slot (`src/learn/hourly.ts`, `src/learn/report.ts`
+     * "the slot learns against one reward").
      *
-     * W24 R1.02: and the same refusal covers money the platform will not weigh,
-     * because sending it would let the visitor's ring weigh it by a value whose
-     * unit nobody has declared.
+     * The producer's own filter is WITHDRAWN rather than reduced, and nothing
+     * is decided here: the producer cannot see which slots this outcome would
+     * be credited to. The slot an outcome NAMES is only the slot it happened
+     * in; under a published `policy.match: 'any'` (`src/content/kinds.ts`) the
+     * credit goes to every slot whose ring entry the policy matches, so
+     * dropping the outcome for the named slot's reward cost a second,
+     * legitimately purchase-learning slot its credit, and taking a money
+     * objective from ANY money slot in scope refused every unit-objective slot
+     * its credits too. Keeping half the rule here as well would state the same
+     * rule in two places and let them drift.
      *
-     * RESIDUAL, named rather than guessed at: this closes the case the outcome
-     * itself decides — it names the slot it happened in, and that slot learns
-     * from another reward. An outcome that names NO slot still goes to the ring,
-     * which attributes it and may then credit a slot that learns another reward;
-     * closing that half means filtering each credited slot where the ring groups
-     * the credits (`DecisionRing.outcome`), the way the fold filters each hour's
-     * credits per slot, and that file is outside this batch's scope. Suppressing
-     * the ring call instead would be wrong twice over: the ring is the visitor's
-     * own record and her delivery journal, not only a credit engine.
+     * An outcome is therefore NEVER dropped before the ring for a reward or an
+     * objective reason: the ring is the visitor's own record and her delivery
+     * journal, not only a credit engine. The tenant's published money policy is
+     * carried to it unchanged — resolved at the producer, decided where the
+     * slot is known — and the statistics object's own guard remains a
+     * compatibility check on the accumulation tuple, never a reward filter.
      */
-    const decisive = decisiveConfig(outcome, slotConfig, defaultSlotConfig), scope = configsInScope(slotConfig, defaultSlotConfig);
-    const learns = decisive === null || decisive.reward === outcome.type;
-    const weighing = decisive ? decisive.objective : scope.map(c => c.objective).find(o => o === 'revenue' || o === 'margin');
-    const refused = moneyRefusal(weighing, outcome, money);
-    if (!learns || refused) {
-      // A receipt that says nothing was attributed and why, so an operator can
-      // tell "no slot learns from this" from "nothing matched it".
-      out.outcome = { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0, attributed: 0, eligible: 0,
-        weightSkipped: 0, outsideWindow: 0, credits: emptyStatsDelivery(),
-        notCredited: refused ? 'money' : 'reward', ...(refused ? { money: refused } : {}) };
-      return reportFanOutLoss(env, tenant, finish(out));
-    }
     out.ring.destinations = 1; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
+      ...(money === undefined || money === null ? {} : { money }),
       ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
