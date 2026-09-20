@@ -369,6 +369,45 @@
     ));
     if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, `${S.snapshot.measurementBasis || 'served-v1'} exposures`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'To the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
   }
+  /**
+   * W30 (F17 SS3.4): the per-hour honesty signals a day summed from hour
+   * aggregates now carries, rendered ONLY where the source really states them,
+   * so a report written before this release renders exactly as it did. The
+   * wording matches the modern console screen's: it is the same statement.
+   */
+  function foldCoverageNotes(coverage) {
+    const notes = [];
+    if (!coverage || coverage.version !== 1) return notes;
+    const hourRows = (value, keys) => Array.isArray(value) && value.length > 0 && value.length <= 24
+      && value.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && keys.every(key => Number.isInteger(row[key]) && row[key] >= 0)) ? value : null;
+    const many = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const horizon = coverage.refoldHorizonMs;
+    if (Number.isFinite(horizon) && horizon >= 0) notes.push(`Published re-fold horizon: ${horizon / 3600000}h measured from the end of each hour.`);
+    const maturities = Array.isArray(coverage.maturities) && coverage.maturities.length > 0 && coverage.maturities.length <= 24
+      && coverage.maturities.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && ['open', 'final', 'repaired'].includes(row.maturity)) ? coverage.maturities : null;
+    if (maturities) {
+      const hoursOf = (state) => maturities.filter(row => row.maturity === state).map(row => row.hour);
+      const settledHours = hoursOf('final'), openHours = hoursOf('open'), repairedHours = hoursOf('repaired');
+      if (settledHours.length) notes.push(`Hours past that horizon and final, which the platform will not re-fold on its own: ${settledHours.join(', ')}.`);
+      if (openHours.length) notes.push(`Hours still inside it, whose ledger is still re-checked: ${openHours.join(', ')}.`);
+      if (repairedHours.length) notes.push(`Hours whose aggregate was written after they were already final, so their numbers were repaired rather than first folded: ${repairedHours.join(', ')}.`);
+    }
+    const late = hourRows(coverage.lateAfterMaturity, ['objects']);
+    if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${many(row.objects, 'object')})`).join(', ')}.`);
+    const carry = hourRows(coverage.carryInHours, ['evicted', 'unplaced']);
+    const reached = carry ? carry.filter(row => row.evicted > 0 || row.unplaced > 0) : [];
+    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day)`).join(', ')}.`);
+    if (reached.some(row => row.evicted > 0)) notes.push('A full attribution ring is uncertainty about a credit, not proof that one was owed.');
+    const scan = hourRows(coverage.objectScan, ['objects', 'read']);
+    if (scan) notes.push(`Ledger objects the fold opened, of those each built hour holds: ${scan.map(row => `${row.hour}: ${row.read} of ${row.objects}`).join(', ')}.`);
+    const from = coverage.recoveryFromMs;
+    if (Number.isFinite(from) && from > 0 && from < 8640000000000000) {
+      notes.push(`Repair reaches back no further than ${new Date(from).toISOString().slice(0, 13)}:00Z, the earliest hour these rings still admit.`);
+    }
+    return notes;
+  }
   function renderReport() {
     reportContext();
     if (S.draft) renderExploring();
@@ -406,6 +445,7 @@
     host.append(h('div', { class: 'msg' }, known
       ? `Minimum reported contributing horizon: ${Math.min(...horizons.map(x => x.horizonMs)) / 3600000}h; not a completeness guarantee.` : 'Minimum contributing horizon: unknown.'));
     if (coverage && Array.isArray(coverage.unadvancedHours) && coverage.unadvancedHours.length) host.append(h('div', { class: 'msg' }, 'Unadvanced ring progress does not mean every reported credit is wrong.'));
+    for (const note of foldCoverageNotes(coverage)) host.append(h('div', { class: 'msg' }, note));
     const grid = R.grids[S.slot];
     if (!grid) { host.append(h('div', { class: 'empty' }, `No decisions for ${S.slot} on that day.`)); return; }
     const names = R.policies.map((p) => p.name);
