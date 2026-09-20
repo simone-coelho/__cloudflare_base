@@ -166,6 +166,19 @@ customer IDs default to `id`, tags to `{}`, and lifecycle to `live`. Catalog PUT
 CSV blank cells mean omitted, not cleared. Supplied canonical fields take precedence over aliases,
 including malformed values: JSON nulls refuse except the supported `art: null`.
 
+**How big a catalog may be.** One stored configuration document is limited to 2 MiB of actual UTF-8
+bytes, measured on its canonical form (keys sorted, no insignificant whitespace), and the catalog is
+one such document per scope. Measured against the piece shape this repository's own shipped catalog
+uses — 667 canonical bytes for an average piece and 815 for its largest — that envelope holds
+**up to 2,000 content pieces per scope** with room to spare (1.28 MiB at the shipped shape; 1.78 MiB
+at the heavier shape the platform's own scale measurement used). `GET /content/catalog` answers the
+two numbers for your catalog as they stand, as `envelope: { pieces, bytes, limitBytes }` beside the
+document, and the console's History screen shows them on the catalog card, so the ceiling is a number
+you watch rather than one you discover as a refused publish. A document over the ceiling is refused
+with `413` and `code: "document_too_large"`, and nothing is stored. This is a measured application
+envelope, not a deployed-capacity, latency or SLO commitment: a larger corpus is a conversation about
+sharding the catalog, not a number to raise here.
+
 Supplied arrays, tags and merchandising replace that whole field; `merchandising: {}` clears its
 signals. In a merge, a nonempty window replaces only its supplied bounds, preserving an omitted
 expiry. Explicit JSON `window: {}` clears both bounds. CSV uses `status`, `windowFrom` and `windowTo`;
@@ -452,6 +465,19 @@ slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `
 reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
 named. `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
+
+**What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
+slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
+is part of the mixture it is being divided by, so the more of a slot's traffic one piece takes, the
+closer its own reference moves to its own rate. Read `lift` accordingly. A lift near one is not proof
+that ranking has collapsed, and it is not proof that the piece is average — it is equally consistent
+with a piece that dominates the slot it is measured in, and with a slot whose pieces genuinely
+perform alike. This is an open model-validation question, not a defect with a proved repair: no
+validation of `liftReference` against an agreed objective is claimed here, and the platform mandates
+no leave-one-out or held-out reference in its place, because comparing the alternatives under the
+clamps, the shrinkage, the context ladder and the single-item case is an evaluation your data-science
+owners make. What the platform commits to is naming the reference on every row, so nothing about it
+has to be assumed.
 
 `slotRates` is the mass of the evidence the platform still HOLDS — the retained items plus the bucket of
 items capacity omitted — so an item whose evidence was discarded leaves no denominator counting exposures
