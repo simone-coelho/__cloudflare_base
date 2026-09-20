@@ -19,10 +19,19 @@ export interface WorkQueue {
   items_rejected: number;
   /** Visitors erased whose ledger rows are still to be rewritten. */
   erasures_pending: number;
+  /**
+   * W21 E1.05 (R118(3)): decisions in the last thirty days that could not read
+   * the shopper's persistent enrollment anchor. Each one was served the site's
+   * own default and recorded as an ineligible assignment rather than being
+   * re-randomised, so this is not lost traffic — it is a store that needs a
+   * person to look at it before the experiment's population drifts.
+   */
+  enrollment_anchor_unavailable: number;
   slots_total: number;
 }
 
-export function queueOf(input: { proposals: readonly Proposal[]; slots: readonly SlotIndexEntry[]; learn: LearnConfig; erasuresPending: number }): WorkQueue {
+export function queueOf(input: { proposals: readonly Proposal[]; slots: readonly SlotIndexEntry[]; learn: LearnConfig; erasuresPending: number;
+  anchorUnavailable?: number }): WorkQueue {
   let frozen = 0, rejected = 0;
   for (const d of Object.values(input.learn.slots ?? {})) for (const c of Object.values(d.items ?? {})) { if (c.mode === 'freeze') frozen++; else if (c.mode === 'reject') rejected++; }
   return {
@@ -32,6 +41,7 @@ export function queueOf(input: { proposals: readonly Proposal[]; slots: readonly
     items_frozen: frozen,
     items_rejected: rejected,
     erasures_pending: input.erasuresPending,
+    enrollment_anchor_unavailable: input.anchorUnavailable ?? 0,
     slots_total: input.slots.length,
   };
 }

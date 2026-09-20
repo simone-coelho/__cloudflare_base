@@ -49,6 +49,36 @@ export function bucketOf(visitorId: string, salt: string): number {
 export const experimentIdFor = (tenant: string, brand: string, salt: string): string => `${tenant}:${brand}:${salt}`;
 
 /**
+ * W21 E1.02/E1.03 (ruling R118(1)): the experiment provenance an OUTCOME record
+ * carries, resolved where the outcome is RECORDED.
+ *
+ * It belongs to the producer, not to the queue consumer. The producer knows her
+ * consent at that moment, reads outside any namespace fence a synthetic
+ * operation may have put around the queue, and cannot lose a ledger message by
+ * failing: a consumer that reached the tenant's publication documents instead
+ * dead-lettered the message inside such a fence and added a storage read to
+ * every batch. Here the block is an annotation computed beside the record and
+ * nothing more: any failure leaves the outcome unstamped and the record intact.
+ */
+export async function outcomeEnrollment(
+  env: Env, tenant: TenantId, brand: string, visitorId: string, personalizing: boolean,
+): Promise<EnrollmentProvenance | null> {
+  try {
+    const { LEARN_KIND } = await import('./kinds');
+    const { readPublication } = await import('@/config/publication');
+    const published = await readPublication(env, LEARN_KIND, tenant, true);
+    const config = published?.value;
+    if (!config?.holdout) return null;
+    const holdout: HoldoutConfig = { ...config.holdout, salt: config.holdout.salt || brand };
+    const saltVersion = await saltVersionOf(env, tenant, published.revision, brand, holdout.salt);
+    if (!personalizing) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'personalization_consent' });
+    const anchor = await enrollmentAnchorOf(env, tenant, visitorId);
+    if (anchor.unavailable) return ineligibleEnrollment({ tenant, brand, holdout, saltVersion, reason: 'anchor_unavailable' });
+    return enrollmentFor({ tenant, brand, holdout, saltVersion, anchor: anchor.anchor, anchorGeneration: anchor.anchorGeneration }).provenance;
+  } catch { return null; }
+}
+
+/**
  * W21 E1.03 (ruling R118(6)): the version of the SALT, which is not the version
  * of the document that carries it.
  *
@@ -115,6 +145,46 @@ export function enrollmentFor(input: {
       anchorGeneration: input.anchorGeneration,
     },
   };
+}
+
+/**
+ * W21 E1.05 (ruling R118(3)): how often a decision could not read an enrollment
+ * anchor, for the operator's work queue.
+ *
+ * A shopper served the site's default because her anchor could not be read is a
+ * correct answer and a silent one: nothing about it is visible to the person who
+ * runs the tenant unless it is counted. This is a per-tenant COUNT over a
+ * bounded window and nothing else — no visitor id, no session, no arm — written
+ * after the answer, never on the shopper's time, and never able to fail a
+ * decision. It rides the same operator cache the slot-governance counters use,
+ * so no binding and no store is added.
+ */
+export const ENROLLMENT_HEALTH_HORIZON_MS = 30 * 86_400_000;
+export const enrollmentHealthKey = (tenant: string): string => `enrollment-health:v1:${tenant}`;
+interface EnrollmentHealth { version: 1; since: number; anchorUnavailable: number }
+const healthDocument = (raw: unknown, now: number): EnrollmentHealth | null => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as { version?: unknown; since?: unknown; anchorUnavailable?: unknown };
+  if (value.version !== 1 || typeof value.since !== 'number' || !Number.isSafeInteger(value.since)
+    || value.since < 0 || value.since > now || now - value.since >= ENROLLMENT_HEALTH_HORIZON_MS) return null;
+  const count = value.anchorUnavailable;
+  return { version: 1, since: value.since,
+    anchorUnavailable: typeof count === 'number' && Number.isSafeInteger(count) && count >= 0 ? count : 0 };
+};
+/** Never throws: an unreadable counter answers zero at a horizon of now. */
+export async function readEnrollmentHealth(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<{ since: number; anchorUnavailable: number }> {
+  try {
+    const stored = healthDocument(await env.CACHE.get(enrollmentHealthKey(tenant), 'json'), now);
+    return stored ? { since: stored.since, anchorUnavailable: stored.anchorUnavailable } : { since: now, anchorUnavailable: 0 };
+  } catch { return { since: now, anchorUnavailable: 0 }; }
+}
+export async function recordAnchorUnavailable(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<void> {
+  try {
+    const previous = healthDocument(await env.CACHE.get(enrollmentHealthKey(tenant), 'json'), now);
+    const next: EnrollmentHealth = { version: 1, since: previous?.since ?? now, anchorUnavailable: (previous?.anchorUnavailable ?? 0) + 1 };
+    await env.CACHE.put(enrollmentHealthKey(tenant), JSON.stringify(next),
+      { expirationTtl: Math.floor(ENROLLMENT_HEALTH_HORIZON_MS / 1000) });
+  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
 }
 
 /**

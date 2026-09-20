@@ -20,7 +20,7 @@ import { projectVisit, validEntry, validVisitContext, entryChannelOf, type Chann
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
-import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, saltVersionOf } from './holdout';
+import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, saltVersionOf } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
@@ -516,7 +516,15 @@ export async function serveContentDecisions(
   const counted = consent.tracking && !synthetic && !r.selfCheck && (governance.refusedPins.length > 0 || governance.shortTakes.length > 0)
     ? recordSlotGovernance(env, scope, governance, now)
     : Promise.resolve();
-  const afterResponse = Promise.all([captured, counted]).then(() => undefined);
+  // W21 E1.05 (R118(3)): a decision that could not read its anchor is counted
+  // for the operator, after the answer, under the same three conditions the
+  // governance counters use — the shopper's tracking refusal means nothing is
+  // written about her request, and neither a synthetic operation nor the
+  // platform's own self-check is the tenant's traffic.
+  const anchorCounted = anchor?.unavailable && consent.tracking && !synthetic && !r.selfCheck
+    ? recordAnchorUnavailable(env, scope, now)
+    : Promise.resolve();
+  const afterResponse = Promise.all([captured, counted, anchorCounted]).then(() => undefined);
 
   const decisions = await Promise.all(set.decisions.map(async (decision, index) => {
     const record = set.records[index]!;

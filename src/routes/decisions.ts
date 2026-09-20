@@ -42,6 +42,7 @@ import { DEFAULT_EXPLORE } from '@/learn/explore';
 import type { ContentCatalog, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
+import { readEnrollmentHealth } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
 import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
@@ -299,7 +300,12 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
     try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn, erasuresPending: tombs.size }) });
+  // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
+  // read from the same operator cache the governance counters use; unreadable
+  // answers zero rather than failing the queue.
+  const health = await readEnrollmentHealth(c.env, tenant, now);
+  return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
+    erasuresPending: tombs.size, anchorUnavailable: health.anchorUnavailable }) });
 });
 
 /**
