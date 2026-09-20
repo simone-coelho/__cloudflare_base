@@ -516,6 +516,38 @@ grouped by the arm SERVED, as they always were, and its `armVisitors` and `visit
 `null` rather than a number the source cannot support — and `null` when the stored report does not
 record the member at all.
 
+`coverage` says the same kind of thing about the HOURS a day was summed from, and every member below
+is additive and optional: a report written before this release carries none of them and is still read
+as recorded. The top-level `coverage.maturity` still reads `unknown`, and it is the LEGACY field about
+outcome maturity, kept so a report already written before this release still reads; it is not a
+statement that the platform cannot say what an hour is.
+
+`refoldHorizonMs` is the published re-fold horizon the day was built under, measured from each hour's
+own END. `maturities` is `[ { hour, maturity } ]` per built hour: `open` while the hour is inside that
+horizon and its ledger prefix is still re-checked, `final` past it, and `repaired` where the hour's
+aggregate was WRITTEN after it became final — a rebuild asked for at a higher object cap, or a first
+fold that reached the hour late. An hour is in exactly one of the three, so a repair can never quietly
+replace numbers you have already read as final. `lateAfterMaturity` is `[ { hour, objects } ]`: ledger
+objects that reached an hour's prefix after that hour was final. They are counted and named and applied
+nowhere, and the rows stay in the ledger — this is a declaration about what the numbers include, not an
+age cutoff that discards late data. `carryInHours` is `[ { hour, evicted, unplaced } ]`: the outcomes of
+each built hour whose earlier decisions the fold could not reach — `evicted` where the visitor's
+attribution ring held its full capacity at the moment the outcome was attributed and nothing was
+credited, so a decision the cap or the horizon removed may be the one that would have been, and
+`unplaced` where no decision of the visitor's own date could be found for the outcome at all. Neither
+is a claim that a credit was owed; a day with any `unplaced` reports `status: "incomplete"` rather than
+a visitor-level number that is quietly short. `objectScan` is `[ { hour, objects, read } ]`: how many
+ledger objects each built hour holds and how many the fold really OPENED, so the object-scan cap is
+visible where an hour hit it and the hours beside it report what they really read. `recoveryFromMs` is
+the migration bound — the earliest hour a repair can still put into the batch rings, because a
+version-1 shard state remembers only a high-water mark and recovery therefore begins at the first
+version-2 fold and no further back; `0` where no shard imposes one.
+
+`counts.conflicts` is `{ decisions, outcomes }`, rows excluded because two genuinely different rows
+share one logical id and an operator surface has already filed that conflict. It is now carried on a
+day built from the hour aggregates as well as on one recomputed from the day's records, and it is
+omitted — never published as a zero — when there is no collision, exactly as `counts.duplicates` is.
+
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and
 every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }` — the copies the read
