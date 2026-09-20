@@ -219,7 +219,15 @@ export interface ActionLike {
  * in `data.event`, which is how the SDK sends content interactions and the
  * conversion until the server names them first-class (CW3).
  */
-export function rewardOf(action: Pick<ActionLike, 'type' | 'data'>): { type: RewardType; event: string } | null {
+/**
+ * Just enough of an action to say what reward it carries: the wire type, and a
+ * `custom` event's real name in `data.event`. Everything else an action holds is
+ * optional here, so a caller that has only the wire type — a declaration, a
+ * diagnostic — can ask without inventing a visitor.
+ */
+export type RewardActionLike = Pick<ActionLike, 'type' | 'data'> & Partial<Omit<ActionLike, 'type' | 'data'>>;
+
+export function rewardOf(action: RewardActionLike): { type: RewardType; event: string } | null {
   const name = action.type === 'custom' && typeof action.data?.event === 'string' ? action.data.event : action.type;
   const type = REWARD_OF[name];
   return type ? { type, event: name } : null;
@@ -246,7 +254,7 @@ export type LearningInput =
   | { counted: true; reward: RewardType; event: string }
   | { counted: false; reason: 'not-a-learning-input' };
 
-export function learningInputOf(action: Pick<ActionLike, 'type' | 'data'>): LearningInput {
+export function learningInputOf(action: RewardActionLike): LearningInput {
   const reward = rewardOf(action);
   return reward === null
     ? { counted: false, reason: 'not-a-learning-input' }
