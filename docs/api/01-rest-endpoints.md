@@ -61,6 +61,22 @@ should serve next. Day reports carry `gridPriors {applied, priorVersion}`, deriv
 built with; the day folded from hour aggregates declares `applied: false` because an hour carries no prior
 revision.
 
+W28 — exploration, reported as it ran. `GET /v1/:tenant/learn/exploring` and the day report's
+`exploration` row now say the same thing in the same words: the mode the engine RAN. Where a retained
+learn document names a mode the engine will not run (Thompson is withdrawn; new writes refuse it), the
+row reads `mode: "off"` with `configured: null` and names the stored setting as `configuredMode` with
+`unsupported: true`, so no reader sees a configured share for a policy that cannot explore; a supported
+mode carries neither member and is reported exactly as it is configured. `explored` on a decision
+record is now true for every decision the exploration rule made, including one whose draw landed on the
+ranking's own leader, so the report's realized share can be compared with the configured share instead
+of being trusted. The `candidates` support a record carries is the slot's top candidates by score taken
+BEFORE that pick was moved to the front, with the explored piece recorded beside them — a record-level
+correction only; the served ranking is unchanged by it. An item under a merchandiser `reject` or
+`freeze` is not chosen by a supported exploration mode, because both modes select on the learned
+evidence the control removed from that item's treatment; it keeps the position its base score earned
+and is never recorded as an exploration pick. No `cooldown` dial exists in any mode, and none is
+offered. A retained historical replay still reproduces the archived sampler exactly as it was.
+
 `POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
 read on the scheduled run and never on a decision path.
 

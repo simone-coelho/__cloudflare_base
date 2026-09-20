@@ -291,7 +291,7 @@ export function composeContentDetailed(
     }
 
     const limit = Math.max(0, candidateLimit);
-    const support = byScore && promoted !== null
+    const support = limit > 0 && byScore && promoted !== null
       ? [scored[0]!, ...byScore.slice(0, limit).filter((s) => s.p.id !== promoted)]
       : scored.slice(0, limit);
     candidates[slot.slot] = support.map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
