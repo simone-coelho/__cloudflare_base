@@ -587,10 +587,17 @@ describe('unit:W24.G1.01', () => {
       accumulation({ reward: 'purchase', objective: 'revenue' }));
     await moved.drain();
     const fresh = await snapshotOf(moved);
+    // `items[…].n` is a DECAYED accumulator, not a tally: `d3` is stamped
+    // `ONLINE_TS + 180_000`, 1.95 h before the snapshot is built, and with
+    // `tauLearnMs = 21 days` its mass there is exp(-1.95h/21d) = 0.99614. One
+    // exposure and no more is therefore the counter ROUNDED — the form the rest
+    // of this batch uses for a decayed counter (W24.T1.02's denominator) —
+    // never the bare 1, which would only hold if the counter's reference time
+    // were the snapshot's (ruling R182).
     expect(fresh === null ? 'no snapshot: the object still holds the old generation\'s configuration'
       : { applied: accepted.ok, generationChanged: generationOf(fresh).generation !== generationOf(before!).generation,
-        objective: fresh.objective, reward: fresh.reward, counters: fresh.items['cnt-tabby-evening']?.['*']?.n },
-      'W24.G1.01 — after the authorized transition the write is taken under a FRESH generation: the counters start again under the new objective, the snapshot names both, and nothing from the old objective is carried into it (F19 §7 "Do not silently keep the counters")')
+        objective: fresh.objective, reward: fresh.reward, counters: Math.round(fresh.items['cnt-tabby-evening']?.['*']?.n ?? 0) },
+      'W24.G1.01 — after the authorized transition the write is taken under a FRESH generation: the counters start again under the new objective — one exposure, decayed from its own event time — the snapshot names both, and nothing from the old objective is carried into it (F19 §7 "Do not silently keep the counters")')
       .toEqual({ applied: true, generationChanged: true, objective: 'revenue', reward: 'purchase', counters: 1 });
   });
 });
