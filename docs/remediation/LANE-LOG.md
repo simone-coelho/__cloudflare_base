@@ -314,7 +314,7 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | L156 | W21-B2 specification pass (SPEC) | rem-reviewer SPEC | `/home/simonecoelho/rem/review-base1b` · detached at `df72591` | dispatched; brief `_evidence/W21-B2/reviewer-spec/BRIEF.md` (forty-five minutes) · **done**: 5 HONEST, E1.07 NOT HONEST; R130 |
 | L157 | W22-B1 build review (BUILD) | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base1c` · detached at `35ca359` | dispatched; brief `_evidence/W22-B1/reviewer-build/BRIEF.md` (ninety minutes, one suite run) · **PASS** 9/9; merged at `f0421eb` |
 | L158 | W21-B2 build | rem-implementer | `/home/simonecoelho/rem/build-w16b7` · `rem/w21-b2-build` from `1ad3514` | dispatched; brief `_evidence/W21-B2/implementer/BRIEF.md`; re-merges integration when W22-B1 lands |
-| L159 | W22-B1 merge and regeneration | lead | `lead-validate` at `f0421eb` | `regen-when-quiet-10.sh` → `_evidence/integration/f0421eb` |
+| L159 | W22-B1 merge and regeneration | lead | `lead-validate` at `f0421eb` | `regen-when-quiet-10.sh` → `_evidence/integration/f0421eb` · run clean; score at `5292e52` |
 | L160 | W22-B2 specification | rem-specifier (the L129 agent) | `rem/w22-b2-spec` at `d415574` | **specified**: `R1.02` + `D1.04`, `D1.05`, `R1.06`, `A1.02` (R131); six tests RED; report `_evidence/W22-B2/specifier/REPORT.md`; the pass (L162) follows when a slot frees |
 | L161 | W22-B2 build | rem-implementer | `/home/simonecoelho/rem/build-w20b3` · `rem/w22-b2-build` from `d415574` | dispatched; brief `_evidence/W22-B2/implementer/BRIEF.md` |
 | L162 | W22-B2 specification pass (SPEC) | rem-reviewer SPEC | `/home/simonecoelho/rem/review-base1b` · detached at `d415574` | dispatched; brief `_evidence/W22-B2/reviewer-spec/BRIEF.md` |
@@ -468,3 +468,4 @@ Plan: BASE-2 (L3) and BASE-1a (L4) run now in disjoint files. BASE-1b (shopperRe
 | `d0ddea8` | 2026-09-20 | SCORE and baseline from the serial run on `897dc38` (TOOLS-2a): `Units 136/148 · W closed 4/26 · suite 1955/2034 · residual 79 in 9 files · typecheck GREEN` — `W12.02` green again; W21-B1's run follows |
 | `99feb76` | 2026-09-20 | SCORE from the serial run on `d0ddea8` (W21-B1 merged): `Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 9 files · typecheck GREEN` |
 | `f0421eb` | 2026-09-20 | Merge W22-B1 (reviewer PASS at `35ca359`): online idempotence, the named collision, loss counters, reconciliation, the attribution contract, export counts; units.json 158 rows; score pending |
+| `5292e52` | 2026-09-20 | SCORE from the serial run on `f0421eb` (W22-B1 merged): `Units 154/158 · W closed 4/26 (W16–W41) · suite 1987/2066 · residual 79 in 9 files · typecheck GREEN` |
