@@ -145,7 +145,7 @@ import { fanDecisions, fanOutcome, ringName, statsName } from '@/learn/fan';
 import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport, shardOf } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
-import { loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
+import { canonicalReportJson, loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import { windowReport, type WindowReport } from '@/measure/window';
 import type { MonitorResult } from '@/ops/monitor';
@@ -812,62 +812,102 @@ describe('unit:W22.D1.02', () => {
 
 describe('unit:W22.D1.03', () => {
   /**
-   * Three faults document 35 §5 row W22 names together — "ID collision/retry
-   * … partial writes":
-   *  (a) a retry of the same logical event with the same canonical bytes is a
-   *      no-op on every sink (F16 §2.1 measured the opposite: two objects);
-   *  (b) two DIFFERENT events that collide on one logical id are never merged:
-   *      the second is refused or quarantined and NAMED (F16 §5(j));
-   *  (c) a batch write that fails midway is retried to completeness with no
-   *      duplicate and no lost row (F16 §2.2 measured three objects for two
-   *      outcomes after one mid-batch R2 error).
+   * RE-SPECIFIED at ruling R120 item 1. The lead's earlier ruling of WRITE-side
+   * idempotence is withdrawn: F16 §4.3 says content-addressed naming "will not
+   * work" and that "the reliable idempotency point on this path is the read,
+   * not the write", `src/ledger/ledger.test.ts:1445` forbids the consumer
+   * reading the hour at all, and this batch's own green-at-spec units need the
+   * duplicate object to EXIST (W22.D1.01 :580, W22.R1.05 :1441). The contract
+   * is AT-LEAST-ONCE delivery with read-side dedup.
+   *
+   * So clause (a) of the original unit — an identical retry, and every read
+   * path yielding each row once with the copies counted — is FOLDED INTO
+   * W22.D1.01 (its logic leg consumes the redelivery and reads the day report,
+   * the hourly fold and the window report; W22.R1.05 reads the export listing)
+   * and is not repeated here. What remains is the pair of faults document 35 §5
+   * row W22 names that no other unit covers:
+   *  (b) a COLLISION — two genuinely DIFFERENT events under one logical id,
+   *      which at-least-once delivery cannot prevent and the writer really
+   *      stores (measured: the consumer answers `ok`, and the day then holds
+   *      two rows under one `outcome_id`) — is never merged silently, is NAMED
+   *      by the colliding id on an operator-visible answer, and is RECOVERABLE:
+   *      the day reads again once the conflict is filed (F16 §5(j): "The dedup
+   *      work must come with a decision about both — a per-event nonce in the
+   *      id, or an accepted, documented collapse");
+   *  (c) a PARTIAL write: the batch is not acknowledged, it is retried, and the
+   *      read yields both rows once with the copy the retry left counted
+   *      (F16 §2.2 measured three objects for two rows, which at-least-once
+   *      permits — losing a row or double-counting it does not).
+   *
+   * MEASURED at specification, on the product as it stands: the collision is
+   * written (`{written:1, objects:1, ok:true}`, two rows under one id), and
+   * every read path then fails closed WITHOUT naming it — `POST /learn/report`
+   * 400 `invalid raw report input`, `buildHour` and `runDayReport` throw
+   * `ReportInputError`, `GET /v1/:tenant/ledger/:id` 500 with an empty body
+   * (`writer.ts:463 lookupUnavailable()`), no quarantine case is filed (0), and
+   * the window answers 200 with the day merely `missing`. Failing closed for
+   * that day's numbers is the behaviour this unit rules; being unnamed and
+   * unrecoverable is what it refuses.
+   *
+   * RULED, ABSENT TODAY (R21), read off the route's JSON answer so the compiler
+   * count of ruled members stays at five:
+   *   · `conflict: { stream, id }` on the refusal the report route answers;
+   *   · `counts.conflicts: { decisions, outcomes }` on the day the report
+   *     answers once the conflict is filed, in one vocabulary with
+   *     `counts.duplicates`.
    */
-  it('host: an identical retry is a no-op on every sink, a colliding but different event is refused and named, and a batch that failed midway is retried to completeness', async () => {
+  it('host: a collision under one logical id is never merged, is named by that id on an operator answer and on the recovery surface, and the day reads again once it is filed; a partial batch is retried and read once', async () => {
     const m = await mount();
     const d1 = decision(m.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');
-    const d2 = decision(m.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work');
     const o1 = click(m.env, d1, T12 + 300_000, 'w22-b1-retry-click');
-    const wire = await throughTheLedger(m, [d1, d2], [o1]);
-    const objectsAfterFirst = [...m.storage.objects.keys()].sort();
+    await throughTheLedger(m, [d1], [o1]);
 
-    // (a) the identical retry, the same canonical bytes, through the real consumer.
-    const again = await consumeLedger(m.env, wire, NOW);
-    expect(again.ok, 'the retry is acknowledged, not left to loop').toBe(true);
-    expect([...m.storage.objects.keys()].sort(),
-      'W22.D1.03 — a retry of the same logical events writes no new ledger object (canonical equality and conditional identity, src/ledger/delivery.ts, writer.ts)')
-      .toEqual(objectsAfterFirst);
-    expect(ledgerRows(m, 'decision').map(row => row.decision_id as string).sort(),
-      'W22.D1.03 — and no row is stored twice by the retry').toEqual([d1.decision_id, d2.decision_id].sort());
-    const afterRetry = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    expect((afterRetry.body as { report: DayReport }).report.counts.decisions,
-      'W22.D1.03 — the day report is unmoved by the retry').toBe(2);
-
-    // (b) two DIFFERENT events on one logical id (F16 §5(j)): same
-    //     `outcome_id`, a different item. The engine must never merge them.
+    // (b) two DIFFERENT events under one logical id. Not a redelivery: the
+    //     second carries another `item_id`, so it is a different event even
+    //     under the logical-row equality W21-B1's third build uses (which
+    //     excludes the `experiment` block). At-least-once delivery writes it.
     const collision = { ...o1, item_id: 'cnt-rogue-work' } as OutcomeRecord;
-    const collided = await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW);
-    expect(collided.skipped >= 1 || collided.ok === false,
-      'W22.D1.03 — a second, different event carrying an already-written logical id is refused by the consumer, never written beside the first (canonical equality, src/ledger/delivery.ts)')
-      .toBe(true);
-    expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id),
-      'W22.D1.03 — and the stored ledger still holds exactly the first event under that id')
-      .toEqual([o1.item_id]);
-    // Named, by the id of the event it refused: the quarantine case the
-    // operator recovery surface serves (`GET /operator/ledger-recovery`,
-    // mounted here as `src/index.ts:121` mounts it; `listQuarantine` reads the
-    // same objects this assertion reads). A count alone would not say WHICH
-    // event was refused.
+    const wrote = await consumeLedger(m.env, [{ kind: 'ledger', type: 'outcome', version: 1, record: collision }], NOW);
+    expect(wrote.ok, 'the fixture writes the colliding event the way at-least-once delivery does').toBe(true);
+    expect(ledgerRows(m, 'outcome').filter(row => row.outcome_id === o1.outcome_id).map(row => row.item_id).sort(),
+      'the day now holds two different events under one logical id, which is the fault under test')
+      .toEqual(['cnt-rogue-work', 'cnt-tabby-evening']);
+
+    const refused = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const refusal = refused.body as { ok?: boolean; conflict?: { stream?: string; id?: string }; report?: DayReport };
+    expect(refusal.report?.counts.outcomes ?? 'no day was answered',
+      'W22.D1.03 — the two events are never merged into one day: the report does not answer a day that counts the colliding id once (F16 §5(j))')
+      .toBe('no day was answered');
+    expect(refusal.conflict ?? `absent: \`conflict\` on the refusal (the answer carries ${Object.keys(refusal).sort().join(', ')})`,
+      'W22.D1.03 — and the refusal NAMES the colliding logical id and its stream, instead of the unnamed "invalid raw report input" an operator cannot act on (ruled member: `conflict` on the report route\'s refusal)')
+      .toEqual({ stream: 'outcome', id: o1.outcome_id });
+
+    // Named on the recovery surface too, by the same id, in this tenant's
+    // scope: the existing quarantine path (`src/ledger/quarantine.ts:109`,
+    // listed by `GET /operator/ledger-recovery`, mounted here as
+    // `src/index.ts:121` mounts it).
     const listing = await listQuarantine(m.env, TENANT);
-    const cases = await Promise.all(listing.items.map(async entry => ({
-      id: entry.id, tenant: entry.tenant,
-      wire: (await m.storage.objects.get(`ledger-quarantine/v1/${entry.id}.json`)) ?? '',
-    })));
+    const cases = listing.items.map(entry => ({ tenant: entry.tenant,
+      wire: m.storage.objects.get(`ledger-quarantine/v1/${entry.id}.json`) ?? '' }));
     expect(cases.filter(entry => entry.tenant === TENANT && entry.wire.includes(o1.outcome_id!)).map(entry => entry.tenant),
-      `W22.D1.03 — the refused event is named by its own logical id on the operator recovery surface, in this tenant's own scope, not swallowed: exactly one quarantine case of ${TENANT} carries ${o1.outcome_id} (the listing held ${listing.items.length} case(s))`)
+      `W22.D1.03 — the conflicting row is filed for recovery under this tenant, carrying ${o1.outcome_id} (the listing held ${listing.items.length} case(s))`)
       .toEqual([TENANT]);
 
+    // RECOVERABLE: with the conflict filed, the day is readable again — the
+    // first event stands, the conflicting row is excluded and counted in the
+    // same vocabulary the duplicates use.
+    const again = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    const recovered = (again.body as { report?: { counts?: Record<string, unknown> } }).report?.counts
+      ?? `no report: ${JSON.stringify(again.body).slice(0, 200)}`;
+    expect(typeof recovered === 'string' ? recovered
+      : { decisions: recovered.decisions, outcomes: recovered.outcomes, conflicts: recovered.conflicts },
+      'W22.D1.03 — and once the conflict is filed the day reads again on the existing recovery path: the first event under that id stands, the conflicting row is excluded, and the exclusion is counted (ruled member: `counts.conflicts`, beside `counts.duplicates`)')
+      .toEqual({ decisions: 1, outcomes: 1, conflicts: { decisions: 0, outcomes: 1 } });
+
     // (c) the partial batch of F16 §2.2: R2 accepts the first object of the
-    //     batch and throws on the second, then the whole batch is retried.
+    //     batch and throws on the second, then the whole batch is retried. The
+    //     retry MAY leave a second copy of the object it already wrote; what it
+    //     may not do is lose a row or let a reader count one twice.
     const p = await mount();
     const late = decision(p.env, 'v-charms', T12 + HOUR_MS + 60_000, 'cnt-charms-slg');   // hour 13
     const early = decision(p.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening');          // hour 12
@@ -876,17 +916,19 @@ describe('unit:W22.D1.03', () => {
     let seen = 0;
     p.storage.failPutFrom = (key: string) => key.includes('/decision/') && ++seen === 2;
     const firstRun = await consumeLedger(p.env, partial, NOW);
-    expect(firstRun.ok, 'the interrupted batch is not acknowledged').toBe(false);
+    expect(firstRun.ok, 'W22.D1.03 — an interrupted batch is not acknowledged, so the queue redelivers it').toBe(false);
     p.storage.failPutFrom = null;
     const retry = await consumeLedger(p.env, partial, NOW);
-    expect(retry.ok, 'the retried batch is acknowledged').toBe(true);
+    expect(retry.ok, 'W22.D1.03 — and the retry is acknowledged').toBe(true);
     const stored = [...p.storage.objects.keys()].filter(key => key.includes('/decision/'));
     const rows = stored.flatMap(key => p.storage.objects.get(key)!.split('\n').filter(Boolean).map(line => JSON.parse(line) as DecisionRecord));
-    expect(rows.map(row => row.decision_id).sort(),
-      'W22.D1.03 — a batch that failed midway is retried to completeness: both rows are stored, neither twice (F16 §2.2 measured three objects for two rows)')
+    expect([...new Set(rows.map(row => row.decision_id))].sort(),
+      'W22.D1.03 — the retry completes the batch: both rows are in the ledger, neither lost')
       .toEqual([early.decision_id, late.decision_id].sort());
-    expect(stored.length,
-      `W22.D1.03 — and the retry does not leave an extra object behind (${stored.join(', ')})`).toBe(2);
+    const readBack = await operatorPost(p, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
+    expect((readBack.body as { report: DayReport }).report.counts,
+      'W22.D1.03 — and the READ yields each row once, with the copy the retry left counted, never a decision counted twice (F16 §2.2, §7.1)')
+      .toMatchObject({ decisions: 2, duplicates: { decisions: rows.length - 2, outcomes: 0 } });
   });
 });
 
@@ -974,158 +1016,6 @@ describe('unit:W22.R1.01', () => {
   });
 });
 
-// ===========================================================================
-// unit:W22.R1.02 — late arrivals are re-folded
-// ===========================================================================
-
-describe('unit:W22.R1.02', () => {
-  /**
-   * F17 P1: an outcome delivered into an hour already folded "is durably in R2,
-   * is never read again, is counted nowhere, and no field of the report says a
-   * repair is pending". §6 item 1 rules the cheap close: `HourAggregate`
-   * already stores `objects`, so `catchUp` can list the hour prefix and rebuild
-   * when the count exceeds it. F17 P3b: `folded = ctx.from > state.through`
-   * (`hourly.ts:291`) is a monotonic high-water mark, so a repaired hour can
-   * never put its decisions into the rings; §6 item 2 rules a per-hour set.
-   * F17 P7: the day's distinct-visitor count must survive an out-of-order
-   * repair.
-   *
-   * The fold is the cron's, run exactly as `src/index.ts:270-277` runs it; the
-   * observable is read through the mounted operator report route.
-   */
-  /**
-   * The cron's own call, with the cron's own options: `catchUp(env.STORAGE,
-   * tenant, learn, Date.now(), {}, env)` (`src/index.ts:272`), so the default
-   * 26-hour lookback and two-hours-per-run budget are the ones under test. One
-   * five-minute run folds at most two hours, so the fixture runs the cron until
-   * it has caught up, exactly as a quarter of an hour of real runs would.
-   */
-  async function fold(m: Mounted, now: number): Promise<{ built: string[]; failed: string[] }> {
-    const built: string[] = [], failed: string[] = [];
-    for (let run = 0; run < 20; run++) {
-      const result = await catchUp(m.storage as never, TENANT, W22_LEARN, now, {}, m.env as never);
-      for (const hour of result.built) built.push(`${hour.date} ${hour.hour}`);
-      for (const hour of result.failed) failed.push(`${hour.date} ${hour.hour}`);
-      if (!result.built.length) break;
-    }
-    return { built, failed };
-  }
-
-  it('host: an hour whose ledger grew after it was folded is folded again, a failed hour repaired after a later hour still credits across the hour boundary, and the day\'s distinct visitors survive an out-of-order repair', async () => {
-    // ── P1: the late arrival ────────────────────────────────────────────────
-    const m = await mount();
-    const d1 = decision(m.env, 'v-tabby', T12 + 10 * 60_000, 'cnt-tabby-evening');
-    await throughTheLedger(m, [d1], []);
-    await fold(m, T12 + HOUR_MS + 5 * 60_000 + 1000);                // 13:05, hour 12 closes
-    expect(m.storage.objects.has(hourKey(TENANT, DATE, HOUR)), 'hour 12 is folded before the late row arrives').toBe(true);
-
-    const lateClick = click(m.env, d1, T12 + 30 * 60_000, 'w22-b1-late-click');   // happened 12:30
-    await throughTheLedger(m, [], [lateClick], T12 + HOUR_MS + 6 * 60_000);       // written at 13:06
-    await fold(m, T12 + HOUR_MS + 10 * 60_000);                                   // 13:10
-
-    const afterLate = await operatorPost(m, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    expect(afterLate.status, `the report route answers: ${JSON.stringify(afterLate.body).slice(0, 300)}`).toBe(200);
-    const late = (afterLate.body as { report: DayReport }).report;
-    expect({ decisions: late.counts.decisions, outcomes: late.counts.outcomes },
-      'W22.R1.02 — a record delivered into an already-folded hour, inside the maturity window, is counted after the next catch-up: the hour\'s stored object count is compared with the prefix and the hour is rebuilt (F17 P1, §6 item 1)')
-      .toEqual({ decisions: 1, outcomes: 1 });
-    expect(late.policies.find(row => row.role === 'learning')?.credits,
-      'W22.R1.02 — and the credit the late click earns is in the day\'s learning policy').toBe(1);
-
-    // ── P3b: the failed hour repaired after a later hour ────────────────────
-    const r = await mount();
-    const d12 = decision(r.env, 'v-rogue', T12 + 59 * 60_000, 'cnt-rogue-work');            // 12:59
-    const d13 = decision(r.env, 'v-rogue', T12 + HOUR_MS + 5 * 60_000, 'cnt-tabby-evening'); // 13:05
-    const c14 = click(r.env, d12, T12 + 2 * HOUR_MS + 60_000, 'w22-b1-cross-hour');          // 14:01, on the 12:59 item
-    await throughTheLedger(r, [d12, d13], [c14]);
-    const twelve = dayObjects(r, 'decision').find(key => key.startsWith(`${TENANT}/${DATE}/12/`))!;
-    const held = r.storage.objects.get(twelve)!;
-    r.storage.objects.delete(twelve);                                   // hour 12 unreadable on the first run
-    await fold(r, T12 + 3 * HOUR_MS);                                   // folds 13 and 14 without 12
-    r.storage.objects.set(twelve, held);                                // the hour is readable again
-    await fold(r, T12 + 3 * HOUR_MS + 60_000);                          // the repair run
-
-    const repaired = await operatorPost(r, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    const repairedReport = (repaired.body as { report: DayReport }).report;
-    expect(repairedReport.counts.decisions,
-      'W22.R1.02 — the repaired hour\'s decisions are counted').toBe(2);
-    expect(repairedReport.policies.find(row => row.role === 'learning')?.credits,
-      'W22.R1.02 — and its cross-hour credit survives the repair: the folded hours are a per-hour set, not a monotonic high-water mark, so a repaired hour still enters the visitor\'s ring (F17 P3b, §6 item 2; hourly.ts:291 `folded = ctx.from > state.through`)')
-      .toBe(1);
-
-    // ── P7: the distinct-visitor count across an out-of-order repair ────────
-    // Two visitors are served in the previous day's last hour and NOWHERE else,
-    // so the number moves with the repair: if the repaired hour never folds,
-    // the previous day's report is short by exactly those two, and if the
-    // repair wipes the current day's `seen`, the current day's report is short
-    // by the visitors folded before it. Both days are asserted, and the fold is
-    // the cron's own, with the cron's cross-date 26-hour lookback.
-    const v = await mount();
-    const PREVIOUS = '2026-09-02';
-    const previousHour = Date.UTC(2026, 8, 2, 23, 0, 0);
-    // Two shoppers of the previous day who share a shard with a shopper of the
-    // current day, so the repair really meets a shard whose `seenDate` is the
-    // newer date: that is the state `hourly.ts:289` refuses and `:316-318`
-    // would wipe. With 64 shards this is an ordinary collision, chosen here
-    // instead of being left to luck.
-    const shardOfToday = shardOf('v-tabby');
-    const sameShard = (prefix: string) => {
-      for (let n = 0; n < 512; n++) if (shardOf(`${prefix}-${n}`) === shardOfToday) return `${prefix}-${n}`;
-      throw new Error('no visitor id of this prefix shares the shard');
-    };
-    const yesterdayVisitors = [sameShard('v-yesterday-tabby'), sameShard('v-yesterday-rogue')];
-    expect(new Set([...yesterdayVisitors.map(id => shardOf(id)), shardOfToday]).size,
-      'the fixture puts the previous day\'s shoppers on the same shard as a current-day shopper').toBe(1);
-    const yesterday = [
-      decision(v.env, yesterdayVisitors[0]!, previousHour + 10 * 60_000, 'cnt-tabby-evening'),
-      decision(v.env, yesterdayVisitors[1]!, previousHour + 20 * 60_000, 'cnt-rogue-work'),
-    ];
-    const today = [
-      decision(v.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
-      decision(v.env, 'v-rogue', T12 + 120_000, 'cnt-rogue-work'),
-      decision(v.env, 'u-unknown', T12 + HOUR_MS + 60_000, 'cnt-tabby-evening'),
-      decision(v.env, 'v-charms', T12 + HOUR_MS + 120_000, 'cnt-charms-slg'),
-    ];
-    // A fifth shopper of the current day, on the same shard, in an hour that is
-    // still OPEN while the repair runs: her hour is folded only afterwards, so
-    // it is the first fold to READ the `seen` state the repair left behind.
-    const lateVisitor = sameShard('v-late-tabby');
-    const laterHour = decision(v.env, lateVisitor, T12 + 2 * HOUR_MS + 60_000, 'cnt-charms-slg');   // 14:01
-    today.push(laterHour);
-    await throughTheLedger(v, [...yesterday, ...today], []);
-    const previousKey = [...v.storage.objects.keys()].find(key => key.startsWith(`${TENANT}/${PREVIOUS}/23/`))!;
-    // UNREADABLE, not absent: the hour's own object throws on read, so the fold
-    // FAILS on it (an empty hour would simply be folded and finished with).
-    v.storage.failGetFor = (key: string) => key === previousKey;
-    const firstPass = await fold(v, T12 + 3 * HOUR_MS);           // today's hours fold; the old hour fails
-    expect(firstPass.built, 'the fixture folds the current day while the previous day\'s hour cannot be read')
-      .toContain(`${DATE} ${HOUR}`);
-    expect(firstPass.failed, 'and that unreadable hour is a failure of the run, not an empty hour it finished with')
-      .toContain(`${PREVIOUS} 23`);
-    v.storage.failGetFor = null;                                  // the previous day's hour returns
-    const repairPass = await fold(v, T12 + 3 * HOUR_MS + 60_000); // the out-of-order repair run
-
-    expect(repairPass.built,
-      'W22.R1.02 — the previous day\'s hour is folded when it becomes readable, after the current day\'s hours have already been folded: `seen` is kept per date instead of being wiped whenever the shard\'s date changes, so an older hour is repairable rather than refused for ever (F17 P7, §6 item 3; hourly.ts:289 SeenDateAhead, :316-318 the wipe)')
-      .toContain(`${PREVIOUS} 23`);
-    const previousDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: PREVIOUS, brand: BRAND });
-    expect(previousDay.status, `the previous day's report answers: ${JSON.stringify(previousDay.body).slice(0, 300)}`).toBe(200);
-    expect((previousDay.body as { report: DayReport }).report.counts.visitors,
-      'W22.R1.02 — and the two visitors served only in that repaired hour are counted on their own day')
-      .toBe(2);
-    // The hour that was still open during the repair is folded now, so the
-    // number the day reports is computed FROM the state the repair left: a fold
-    // that wiped the newer date's `seen` while folding the older hour can only
-    // count this last hour's own shopper, and the day comes out short.
-    expect((await fold(v, T12 + 4 * HOUR_MS)).built,
-      'the fixture folds the current day\'s last hour after the repair, so this hour is the first to read what the repair left behind')
-      .toContain(`${DATE} ${HOUR + 2}`);
-    const currentDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    expect((currentDay.body as { report: DayReport }).report.counts.visitors,
-      'W22.R1.02 — and the repair of the older date does not cost the current day its own distinct visitors: five shoppers were served on this date, and the hour folded after the repair still knows about the four that came before it, because `seen` is kept per date instead of being wiped whenever a shard folds an hour of another date (F17 P7 measured four visitors where eight were served; hourly.ts:316-318, mergeBrand :175)')
-      .toBe(5);
-  });
-});
 
 // ===========================================================================
 // unit:W22.R1.03 — explicit completeness reaches the reader
@@ -1427,10 +1317,20 @@ describe('unit:W22.A1.01', () => {
     const oYesterday = click(m.env, dYesterday, Date.parse(previousDay + 'T12:05:00Z'), 'w22-b1-contract-yesterday');
     await throughTheLedger(m, [dYesterday], [oYesterday], Date.now());
     await runReport(m.storage as never, { tenant: TENANT, brand: BRAND, date: previousDay }, W22_LEARN, null, Date.now(), m.env as never);
-    const earlier = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { attributionContract?: AttributionContract };
+    const stored = JSON.parse(m.storage.objects.get(reportKey(TENANT, BRAND, previousDay))!) as DayReport & { _summary?: unknown; attributionContract?: AttributionContract };
+    // The saved document carries the summary prefix the serializer adds; the
+    // plain report underneath is what the serializer takes back.
+    const { _summary, ...plain } = stored;
+    expect(_summary, 'the fixture reads a canonically saved report, summary marker and all').toBeTruthy();
+    const earlier = plain as DayReport & { attributionContract?: AttributionContract };
     earlier.attributionContract = { ...(earlier.attributionContract ?? { name: 'attribution', history: HISTORY,
       windowsMs: { ...DEFAULT_POLICY.windowsMs }, appliedWindowsMs: { ...DEFAULT_POLICY.windowsMs } }), version: 0 };
-    m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), JSON.stringify(earlier));
+    // Written by the engine's own canonical serializer, not by JSON.stringify:
+    // a saved report is a `_summary`-marked document with its framing newline,
+    // and `src/measure/window.test.ts:147` requires the window to REFUSE the
+    // shape a bare stringify produces (R120 item 4). Only the contract version
+    // moves back.
+    m.storage.objects.set(reportKey(TENANT, BRAND, previousDay), canonicalReportJson(earlier));
     m.storage.versions.set(reportKey(TENANT, BRAND, previousDay), (m.storage.versions.get(reportKey(TENANT, BRAND, previousDay)) ?? 0) + 1);
     const mixed = await operatorGet(m, `/v1/${TENANT}/learn/report/window?from=${previousDay}&to=${ONLINE_DATE}&brand=${BRAND}`);
     const mixedReport = (mixed.body as { report?: WindowReport }).report;
@@ -1574,8 +1474,14 @@ describe('unit:W22.R1.05', () => {
 
     // The sink mismatch, at the export: an object the report counted is no
     // longer in the partition a warehouse would load.
-    const dropped = dayObjects(m, 'outcome')[0]!;
-    m.storage.objects.delete(dropped);
+    // Every object that carries that outcome goes, its redelivered copy
+    // included: the export is short of the row, not merely of one of its
+    // copies. (R120 item 3: the two clauses of this unit must be able to hold
+    // on one product — the first needs the duplicate present, this one needs
+    // the row itself gone.)
+    const carrying = dayObjects(m, 'outcome').filter(key => (m.storage.objects.get(key) ?? '').includes(outcomes[0]!.outcome_id!));
+    expect(carrying.length, 'the fixture holds that outcome in two objects: the original and its redelivery').toBe(2);
+    for (const key of carrying) m.storage.objects.delete(key);
     const after = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}`);
     const mismatch = exportCounts(after.body) ?? absent('`counts` on GET /v1/:tenant/ledger/batches', after.body);
     expect(typeof mismatch === 'string' ? mismatch : { distinct: mismatch.distinct, report: mismatch.report, agrees: mismatch.agrees },
