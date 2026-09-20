@@ -300,7 +300,22 @@ export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, 
   } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
-/** CW30: slot → item → times served inside that slot's fatigue window, from the ring entries. */
+/**
+ * CW30: slot → item → how many times this shopper was served that item, from
+ * the ring entries, inside the window the slot's own fatigue rule sets.
+ *
+ * W26 F1.01 (F21 §6(a)): the count is this shopper's history of the ITEM
+ * across every placement in the brand — every slot, every page, either arm —
+ * and only the WINDOW and the basis come from the slot being scored. That is
+ * the settled behaviour (HANDOFF-2026-09-16:230 "W26.04 live fatigue now
+ * filters to brand, retaining intended cross-placement global-item history. Do
+ * not accidentally add slot/page/arm fatigue restrictions as a 'fix.'";
+ * HANDOFF-2026-09-18:322), and it is what a shopper means by "I keep seeing
+ * this": she does not see slots. The ring this reads is already one brand's,
+ * so the brand is the scope and no filter here narrows it further. The doc said
+ * "that slot's" and the code never did; the words were the defect, not the
+ * number.
+ */
 export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ slot: string; fatigue?: { weight: number; windowHours: number }; measurementBasis?: import('@/content/types').MeasurementBasis }>, now: number): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const s of slots) {
