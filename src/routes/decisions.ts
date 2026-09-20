@@ -107,6 +107,19 @@ const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const RUNTIME_PIN_SAMPLE = 50;
 const HISTORY_VISITOR = /^[A-Za-z0-9_.-]{1,200}$/;
 const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
+/**
+ * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
+ * mutation is withdrawn for every tenant — `POST learn/cycle` and
+ * `POST learn/proposals/:id/:decision` answer 503 below without reading or
+ * writing anything — and the retained statuses were never verified as applied
+ * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
+ * reports proposal work carries these two facts beside it, so a count is never
+ * read as an action a person can take today. Stamped, not derived from
+ * configuration, because no configuration a tenant can set makes the mutation
+ * available: the routes below refuse unconditionally (F24 §5, document 35 §5
+ * W29). It is stated here, once, beside the constants the same routes share.
+ */
+const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
 function validLedgerSelector(tenant: string, id: string): boolean {
   const carrier = parseId(id);
@@ -342,8 +355,16 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // It is not part of `queueOf`'s pure computation over the published documents:
   // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
+  // W29 U1.01: this answer is the landing page of an operator application, so
+  // its `proposals_pending` must not stand alone while every apply and reject
+  // is withdrawn (503, below). The withdrawal is reported beside the counts,
+  // for the same reason the enrollment counter is: it is not part of `queueOf`'s
+  // pure computation over the published documents, it is what this deployment
+  // can do with them. `proposals_pending` is a count of historical `proposed`
+  // statuses, and the statuses it excludes are stored records, not verified
+  // applications — the same two facts `GET learn/proposals` answers.
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, autonomy: AUTONOMY_WITHDRAWN });
 });
 
 /**
