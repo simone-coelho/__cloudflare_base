@@ -906,7 +906,14 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined)
     || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined)) return c.json({ ok: false }, 400);
   if (b.operation === 'repair' && (typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation) || Number(b.generation) < 0
-    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId) || b.intent !== (b.kind === 'stats' ? 'coarsen' : 'compact'))) return c.json({ ok: false }, 400);
+    || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
+    // W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset
+    // damaged item and slot state"): statistics have two repair intents. The
+    // merge-and-keep one, `coarsen`, and the explicit `reset` for damaged
+    // counters that cannot be merged back into honesty — the same audited,
+    // human-operator route, the same digest/generation precondition, the same
+    // two audit phases. The ring's only intent is still `compact`.
+    || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
   const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string) : ringName(tenant, b.visitorId as string);

@@ -31,11 +31,46 @@ export interface Receipt {
   journey?: DecisionRecord['journey'];
   score_base: number;
   score_final: number;
+  /**
+   * W23 X1.02 (F18 §2 E, §6.4; doc 22 §12.1 "a script can recompute"): the three
+   * terms the learned-lift sentence compares, as the decision recorded them, and
+   * the strings this receipt shows them as. A MEMBER and never a new or altered
+   * `why` sentence, because `src/learn/receipts.test.ts:41-51` asserts the exact
+   * `why` array of a receipt.
+   *
+   * Fixed three-decimal display cannot tell a 0.0016 baseline from a 0.002 one,
+   * so a receipt at a rare rate printed "lift 1.949" beside terms that read
+   * 0.004 / 0.002 = 2 and contradicted itself. `shown` therefore carries
+   * SIGNIFICANT digits: the same number of meaningful figures at every
+   * magnitude, so what the receipt prints for p̂ over what it prints for p₀ is
+   * what it prints for the lift. Absent when the decision applied no learned
+   * lift, so no receipt names terms its own sentences do not.
+   */
+  lift_terms?: LiftTerms;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
 
+/** The lift a receipt reports, as exact numbers and as the strings it prints. */
+export interface LiftTerms {
+  /** The slot's own rate in this cell — the baseline the lift is measured against. */
+  p0: number;
+  /** The item's shrunk estimate in this cell. */
+  p_hat: number;
+  /** clamp(p̂/p₀), exactly as the decision applied it. */
+  lift: number;
+  shown: { p0: string; p_hat: string; lift: string };
+}
+
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
+/**
+ * F18 §6.4: "display significant digits, not decimals". Three is what the
+ * existing sentence already shows for a lift near one (1.949), and it is the
+ * smallest number of figures that separates a 0.00199 baseline from a 0.002 one.
+ * Magnitude-free, so it holds for any tenant's rates, however rare.
+ */
+const SIGNIFICANT_DIGITS = 3;
+const shownAs = (x: number): string => (Number.isFinite(x) ? x.toPrecision(SIGNIFICANT_DIGITS) : String(x));
 
 export function contextOf(cell: DecisionRecord['cell']): string {
   const stage = cell.stage && cell.stage !== 'unknown' ? ({ early: 'exploring', mid: 'considering', late: 'deciding' } as Record<string, string>)[cell.stage] ?? cell.stage : 'stage unknown';
@@ -47,6 +82,9 @@ export function contextOf(cell: DecisionRecord['cell']): string {
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
   const e = r.explain;
+  // W23 X1.02: set exactly where the learned-lift sentence is written, so the
+  // terms and the sentence can never describe two different decisions.
+  let liftTerms: LiftTerms | undefined;
   why.push(r.measurementBasis === 'rendered-v1' ? 'Client-reported rendering was durably admitted; this is not proof of human visibility.' : 'Legacy served-decision exposure; rendering was not confirmed.');
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
@@ -84,6 +122,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
         : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units), ${applied}.`);
+      liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
+        shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
     if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
@@ -101,6 +141,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     context: contextOf(r.cell),
     ...(r.journey ? { journey: r.journey } : {}),
     score_base: r3(e.score_base), score_final: r3(e.score_final),
+    ...(liftTerms ? { lift_terms: liftTerms } : {}),
     why,
   };
 }
