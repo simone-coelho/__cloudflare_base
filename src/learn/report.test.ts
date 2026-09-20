@@ -147,6 +147,19 @@ function barrier() {
   return { ready, release, hold: async () => { entered(); await wait; } };
 }
 
+/**
+ * R10/R126(a): the operator credential the report routes require, signed with
+ * this file's own synthetic material. Nothing else in the file authenticates,
+ * because nothing else in it calls a gated route.
+ */
+const reportJwtSecret = 'w21-b2-report-test-operator-signing-material';
+async function operatorCredential(): Promise<string> {
+  const { SignJWT } = await import('jose');
+  return new SignJWT({ sub: 'ops', type: 'service' }).setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('2h')
+    .sign(new TextEncoder().encode(reportJwtSecret));
+}
+
 describe('the day report', () => {
   it('W22.02 refuses incomplete listed raw input before canonical replacement and retries restored input', async () => {
     for (const fault of ['missing-decision', 'missing-outcome', 'malformed', 'cursor-missing', 'cursor-repeat']) {
@@ -252,7 +265,13 @@ describe('the day report', () => {
     expect(canonical.computation).toMatchObject({ version: 4, profile: { source: 'raw-day', horizonMs: null, ringCap: null },
       slots: [{ slot: 'hero', reward: 'click', objective: 'unit', tauLearnMs: stats.DEFAULT_STATS.tauLearnMs }] });
     expect(recordedComputation(canonical.computation)).toEqual(canonical.computation);
-    const response = await decisionRoutes.request('https://report.test/coach/learn/report?date=' + f.ids.date + '&slot=hero', undefined, { STORAGE: f.storage } as unknown as Env);
+    // R10/R126(a) with F25 §5.1: the day report GET is behind the build POST's
+    // own operator gate, so this read presents the operator credential. The
+    // test's own claim — that a canonical read answers the recorded computation
+    // basis — and every expected value below are unchanged.
+    const operatorEnv = { STORAGE: f.storage, JWT_SECRET: reportJwtSecret, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+    const response = await decisionRoutes.request('https://report.test/coach/learn/report?date=' + f.ids.date + '&slot=hero',
+      { headers: { Authorization: `Bearer ${await operatorCredential()}` } }, operatorEnv);
     expect(response.status).toBe(200);
     expect((await response.json() as { report: DayReport }).report.computation).toEqual(canonical.computation);
     const request = { ...f.ids, learn, reporting: [], decisions: [dec('a', 'v', 's', T0, 'a')], outcomes: [out('v', 's', T0 + 1, 'click', 'a')], now: f.now, truncated: false };
