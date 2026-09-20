@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 136/148 · W closed 4/26 (W16–W41) · suite 1955/2034 · residual 79 in 9 files · typecheck GREEN
+Units 145/148 · W closed 4/26 (W16–W41) · suite 1973/2052 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -20,7 +20,7 @@ Units 136/148 · W closed 4/26 (W16–W41) · suite 1955/2034 · residual 79 in 
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 22 | 21 | no | — | — |
 | W20 | 19 | 19 | yes | PASS | bd35e5ce82b49b55a2b766367b8de3f059b10354 |
-| W21 | 10 | 0 | no | — | — |
+| W21 | 10 | 9 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -164,15 +164,15 @@ Units 136/148 · W closed 4/26 (W16–W41) · suite 1955/2034 · residual 79 in 
 | W20.G2.08 | green | 1 |
 | W20.G2.09 | green | 2 |
 | W20.G2.10 | green | 1 |
-| W21.C1.01 | unspecified | 0 |
-| W21.C1.02 | unspecified | 0 |
-| W21.C1.03 | unspecified | 0 |
-| W21.C1.04 | unspecified | 0 |
-| W21.E1.01 | unspecified | 0 |
-| W21.E1.02 | unspecified | 0 |
-| W21.E1.03 | unspecified | 0 |
-| W21.E1.04 | unspecified | 0 |
-| W21.E1.05 | unspecified | 0 |
+| W21.C1.01 | green | 2 |
+| W21.C1.02 | green | 1 |
+| W21.C1.03 | green | 1 |
+| W21.C1.04 | green | 2 |
+| W21.E1.01 | green | 2 |
+| W21.E1.02 | green | 2 |
+| W21.E1.03 | green | 1 |
+| W21.E1.04 | green | 2 |
+| W21.E1.05 | green | 4 |
 | W21.P1.01 | unspecified | 0 |
 | W37.BASE.01 | green | 1 |
 
@@ -197,6 +197,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | e8378b8b86d41ac3f78099d672882dc64cb4ddc8014ff62c89b71f88fa17031c |
-| commit | 42b14c64ec020b382f489c92035c670076db184d |
-| generated | 2026-09-20T05:23:03.213Z |
+| vitest report sha256 | 2783f4d910dafbb2af11dc74fa1ca229fdb004ae24c054d4291b544341468963 |
+| commit | 4389436c81e7939e8a07852d0e8e2c9bcabef912 |
+| generated | 2026-09-20T05:37:54.397Z |
