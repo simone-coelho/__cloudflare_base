@@ -78,6 +78,8 @@ export function cellGrammarError(cell: string): string | null {
 }
 
 const SLUG = /^[a-z0-9][a-z0-9:_.-]{0,63}$/i;
+/** '*' or `k=v` pairs joined by '|' (doc 22 §5.4). */
+const CELL = /^(\*|[a-z_]+=[^|]*(\|[a-z_]+=[^|]*)*)$/;
 
 /**
  * The grammar this document declares, checked against the one this engine reads.
@@ -113,8 +115,7 @@ export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> 
     if (x.measurementBasis !== undefined && x.measurementBasis !== 'served-v1' && x.measurementBasis !== 'rendered-v1') errors.push(`rows[${i}].measurementBasis: served-v1 | rendered-v1`);
     if (!SLUG.test(slot)) errors.push(`rows[${i}].slot: slug`);
     if (!item) errors.push(`rows[${i}].item: required`);
-    const cellWhy = cellGrammarError(cell);
-    if (cellWhy) errors.push(`rows[${i}].cell: ${cellWhy}`);
+    if (!CELL.test(cell)) errors.push(`rows[${i}].cell: '*' or k=v pairs joined by |`);
     if (!Number.isFinite(p) || p < 0 || p > 1) errors.push(`rows[${i}].p_prior: number 0..1`);
     if (!Number.isFinite(n) || n <= 0) errors.push(`rows[${i}].n_equiv: positive number`);
     const key = JSON.stringify([slot, item, cell, x.measurementBasis ?? 'served-v1']);
