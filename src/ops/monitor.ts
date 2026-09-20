@@ -171,6 +171,10 @@ import { IDENTITY_MATERIAL_UNAVAILABLE, requiresSafeIdentity, validateIdentityMa
 import { RETENTION_CATEGORIES, retentionPolicy, retentionBirth, requireRetention, type RetentionStamp } from '@/retention';
 import { configuredDestinations, configuredOperationalDestinations, type OperationalDestination } from '@/connectors/config';
 import { SLOT_GOVERNANCE_SCOPE, tenantSlotGovernance, type TenantSlotGovernance } from '@/learn/slotGovernance';
+import { EVIDENCE_LOSS_PATHS, readEvidenceLoss, type EvidenceLoss, type EvidenceLossPath } from '@/ledger/delivery';
+import { readWindowSummary, reportPrefix } from '@/learn/report';
+import { statsName } from '@/learn/fan';
+import type { LiftSnapshot } from '@/learn/stats';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
 export interface MonitorResult {
@@ -201,6 +205,49 @@ export interface MonitorResult {
    * these are the tenant's counts, across every brand of it.
    */
   governance?: TenantSlotGovernance;
+  /**
+   * W22 R1.01 (N10; F16 §5(b), §5(c), §5(g), §7.2–7.4): the tenant's
+   * evidence-loss counters since the horizon they state — the four ways a row
+   * of evidence is lost, in ONE vocabulary: the producer could not hand it to
+   * the queue, the consumer could not place it, its fan-out post was attempted
+   * and refused, or its retries were exhausted and it was captured to
+   * quarantine. A tenant that lost nothing reads zero on every path, never an
+   * absent member. Absent only on a legacy record that carries none, and on a
+   * run whose counter store could not be read, so no result states a zero it
+   * did not observe. Never read on a decision path.
+   */
+  evidenceLoss?: EvidenceLoss;
+  /**
+   * W22 R1.04 (F16 §2.5, §7): the scheduled cross-sink comparison — the online
+   * lift each slot's statistics object currently holds against the credits the
+   * day report published for the same slot. F16 §2.5 measured the two stores
+   * disagreeing "permanently, with no log line, no counter and no alarm
+   * anywhere"; this is the alarm. `compared` is how many (brand, slot) pairs
+   * the run really compared, so a clean result is never an empty one, and each
+   * disagreement carries both numbers and the threshold it passed. Absent on a
+   * legacy record and on a run that could not read one of the two sinks.
+   */
+  reconciliation?: SinkReconciliation;
+}
+
+/** One (brand, slot) pair the two sinks disagreed about, with both numbers. */
+export interface SinkDisagreement {
+  brand: string;
+  slot: string;
+  /** Credits the slot's statistics object currently holds, at its own decay. */
+  online: number;
+  /** Credits the published day report counted for the same slot's learning arm. */
+  ledger: number;
+  difference: number;
+  /** What the difference had to exceed to be named; stated on every row. */
+  threshold: number;
+}
+export interface SinkReconciliation {
+  /** Epoch milliseconds: the day the comparison read. */
+  since: number;
+  /** (brand, slot) pairs actually compared; zero is never a clean result. */
+  compared: number;
+  disagreements: SinkDisagreement[];
 }
 
 export interface Thresholds { decisionMs: number }
@@ -232,6 +279,39 @@ const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined
     shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
 };
 
+/** The four loss counters a kept result carries, projected as safely as its
+ * checks: a horizon and four plain numbers, or nothing at all. A record written
+ * before W22 R1.01, or one whose counter store was unreadable, carries none and
+ * keeps its former shape. The vocabulary is the platform's, applied here, so no
+ * stored byte can add a fifth path or rename one. */
+const safeEvidenceLoss = (value: unknown): MonitorResult['evidenceLoss'] | undefined => {
+  const since = field(value, 'since');
+  if (typeof since !== 'number' || EVIDENCE_LOSS_PATHS.some(path => typeof field(value, path) !== 'number')) return undefined;
+  const counts = Object.fromEntries(EVIDENCE_LOSS_PATHS.map(path =>
+    [path, bounded(field(value, path), Number.MAX_SAFE_INTEGER)])) as Record<EvidenceLossPath, number>;
+  return { since: bounded(since, 8_640_000_000_000_000), ...counts };
+};
+
+/** The cross-sink comparison a kept result carries, projected the same way:
+ * two numbers, and a bounded list of rows whose members are rebuilt here rather
+ * than copied through. A row that does not carry all five numbers is dropped. */
+const RECONCILED_ROWS = 64;
+const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | undefined => {
+  const since = field(value, 'since'), compared = field(value, 'compared'), rows = field(value, 'disagreements');
+  if (typeof since !== 'number' || typeof compared !== 'number' || !Array.isArray(rows)) return undefined;
+  const disagreements: SinkDisagreement[] = [];
+  for (let index = 0; index < Math.min(rows.length, RECONCILED_ROWS); index++) {
+    const row = field(rows, String(index));
+    const brand = field(row, 'brand'), slot = field(row, 'slot');
+    const numbers = ['online', 'ledger', 'difference', 'threshold'].map(key => field(row, key));
+    if (typeof brand !== 'string' || !isValidTenantId(brand) || typeof slot !== 'string' || !slot || slot.length > 256
+      || numbers.some(n => typeof n !== 'number')) continue;
+    const [online, ledger, difference, threshold] = numbers.map(n => bounded(n, Number.MAX_SAFE_INTEGER));
+    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold! });
+  }
+  return { since: bounded(since, 8_640_000_000_000_000), compared: bounded(compared, Number.MAX_SAFE_INTEGER), disagreements };
+};
+
 /** One safe projection for origin, historical reads and alert construction.
  * Unknown keys, raw details and hostile accessors are never copied/coerced. */
 export function projectMonitor(value: unknown, tenant: string, environment: string): MonitorResult {
@@ -244,12 +324,16 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
   if (Array.isArray(originalProblems) && originalProblems.length <= CHECKS.length + 1
     && Array.from({ length: originalProblems.length }, (_, i) => field(originalProblems, String(i))).includes('decision: LATENCY_EXCEEDED')) problems.push('decision: LATENCY_EXCEEDED');
   const governance = safeGovernance(field(value, 'governance'));
+  const evidenceLoss = safeEvidenceLoss(field(value, 'evidenceLoss'));
+  const reconciliation = safeReconciliation(field(value, 'reconciliation'));
   return { at: bounded(field(value, 'at'), 8_640_000_000_000_000),
     tenant: isValidTenantId(tenant) ? tenant : 'unknown', environment: environmentOf(environment),
     ok: field(value, 'ok') === true, checks, problems,
     alert: { kind: kind === 'problem' || kind === 'recovery' ? kind : null,
       status: ['not-needed', 'sent', 'no-webhook', 'cooling-down', 'failed', 'held'].includes(status as string) ? status as NonNullable<MonitorResult['alert']>['status'] : 'not-needed' },
-    ...(governance ? { governance } : {}) };
+    ...(governance ? { governance } : {}),
+    ...(evidenceLoss ? { evidenceLoss } : {}),
+    ...(reconciliation ? { reconciliation } : {}) };
 }
 type Admission = { destination: OperationalDestination; stamp: RetentionStamp };
 async function admit(env: Env, tenant: string, kind: OperationalDestination['kind'], at: number): Promise<Admission | null> {
@@ -364,6 +448,82 @@ export async function runChecks(env: Env, tenant: string, now = Date.now()): Pro
   return checks;
 }
 
+/**
+ * W22 R1.04 (F16 §7): "run a nightly comparison of the published lift snapshot
+ * against the day report's learning grid, alerting past a threshold."
+ *
+ * The two sinks hold the same credits by two different roads: the statistics
+ * object counted them online, as they happened; the day report counted them
+ * from the ledger the queue wrote. They are compared per (brand, slot) on the
+ * most recent day the platform actually published for this tenant, which is the
+ * only day both sinks can be expected to cover.
+ *
+ * Both sides are integers of credits. The online side is a decayed accumulator
+ * read at its own clock, so the comparison carries a stated RELATIVE tolerance
+ * rather than demanding equality of two numbers that age differently; at unit
+ * scale the tolerance is zero, which is where a single lost or doubled credit
+ * shows. Nothing here is read on a decision path, and nothing is re-derived:
+ * each side reports what its own store already holds.
+ */
+const RECONCILIATION_TOLERANCE = 0.05;
+/** Brands, and slots per brand, one run will compare; the pairs are bounded by both. */
+const RECONCILED_BRANDS = 16, RECONCILED_SLOTS = 32;
+const onlineCredits = (snapshot: unknown): number | null => {
+  const root = (snapshot as LiftSnapshot | null)?.slotRates?.['*'];
+  return root && Number.isFinite(root.s) && root.s >= 0 ? Math.round(root.s) : null;
+};
+
+export async function reconcileSinks(env: Env, tenant: string, now: number): Promise<SinkReconciliation | undefined> {
+  try {
+    if (!isValidTenantId(tenant) || !env.LEARN_STATS) return undefined;
+    const prefix = reportPrefix(tenant);
+    const listed = await monitorDeadline(env.STORAGE.list({ prefix, limit: 1000 }));
+    const published = new Map<string, string[]>();
+    for (const object of listed.objects) {
+      const rest = object.key.slice(prefix.length), cut = rest.lastIndexOf('/');
+      if (!object.key.startsWith(prefix) || cut <= 0 || !rest.endsWith('.json')) continue;
+      const brand = rest.slice(0, cut), date = rest.slice(cut + 1, -5);
+      if (!isValidTenantId(brand) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      published.set(date, [...(published.get(date) ?? []), brand]);
+    }
+    // The newest published day that is not in the future for this run.
+    const today = new Date(now).toISOString().slice(0, 10);
+    const date = [...published.keys()].filter(value => value <= today).sort().at(-1);
+    const since = date ? Date.parse(date + 'T00:00:00Z') : now;
+    if (!date || !Number.isFinite(since)) return { since: now, compared: 0, disagreements: [] };
+    const brands = (published.get(date) ?? []).sort().slice(0, RECONCILED_BRANDS);
+    const budget = { bytes: 0, cells: 0 };
+    let compared = 0;
+    const disagreements: SinkDisagreement[] = [];
+    for (const brand of brands) {
+      const report = await readWindowSummary(env.STORAGE as never, { tenant, brand, date }, budget).catch(() => null);
+      if (!report) continue;
+      for (const slot of Object.keys(report.holdout ?? {}).sort().slice(0, RECONCILED_SLOTS)) {
+        // Doc 22 §10: only the personalized arm ever reaches the online
+        // statistics, so only its credits are the online store's counterpart.
+        const rows = report.holdout[slot] ?? [];
+        const ledger = rows.filter(row => row.arm === 'personalized').reduce((sum, row) => sum + (Number.isFinite(row.credited) ? row.credited : 0), 0);
+        let online: number | null = null;
+        try {
+          const namespace = env.LEARN_STATS;
+          const answer = await monitorDeadline(namespace.get(namespace.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/snapshot'));
+          if (!answer.ok) continue;
+          const body = await answer.json() as { ok?: unknown; snapshot?: unknown };
+          if (body.ok !== true) continue;
+          online = body.snapshot === null ? 0 : onlineCredits(body.snapshot);
+        } catch { continue; }
+        if (online === null) continue;   // a sink that could not be read is not a sink that agreed
+        compared++;
+        const difference = Math.abs(online - ledger);
+        const threshold = Math.floor(RECONCILIATION_TOLERANCE * Math.max(online, ledger));
+        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold });
+        if (disagreements.length >= RECONCILED_ROWS) break;
+      }
+    }
+    return { since, compared, disagreements };
+  } catch { return undefined; }
+}
+
 /** One run for one tenant: checks, the kept result, the analytics point, and the alert with its cooldown. */
 export async function runMonitor(env: Env, tenant: string, now = Date.now(), thresholds: Thresholds = DEFAULT_THRESHOLDS): Promise<MonitorResult> {
   if (!tenantConfig(env).provisioned.includes(tenant)) throw new Error('Monitor scope unavailable');
@@ -374,8 +534,14 @@ export async function runMonitor(env: Env, tenant: string, now = Date.now(), thr
   // read here and not probed: the checks above are the platform testing itself,
   // and their own compose is excluded from the counters (`selfCheck`).
   const governance = await tenantSlotGovernance(env, tenant, now);
+  // W22 R1.01 and R1.04: what this tenant lost, and whether its two learning
+  // sinks still agree. Both are read here, on the scheduled run, and neither is
+  // ever read on a decision path.
+  const evidenceLoss = await readEvidenceLoss(env, tenant, now);
+  const reconciliation = await reconcileSinks(env, tenant, now);
   const result: MonitorResult = { at: now, tenant, environment: environmentOf(env.ENVIRONMENT), ok: problems.length === 0, checks, problems,
-    alert: { kind: null, status: 'not-needed' }, ...(governance ? { governance } : {}) };
+    alert: { kind: null, status: 'not-needed' }, ...(governance ? { governance } : {}),
+    ...(evidenceLoss ? { evidenceLoss } : {}), ...(reconciliation ? { reconciliation } : {}) };
   let previous: MonitorResult | null = null;
   let savedRecovery: unknown;
   try {

@@ -1,7 +1,7 @@
 import type { Env } from '@/types/env';
 import { z } from 'zod';
 import { tenantConfig } from '@/tenancy/middleware';
-import { readDelivery, byteLength, digest as wireDigest, DELIVERY_FIELD, validCaptureReceipt, type DeliverySurvivors, type Delivery, type CaptureReceipt } from './delivery';
+import { readDelivery, byteLength, digest as wireDigest, DELIVERY_FIELD, recordEvidenceLoss, validCaptureReceipt, type DeliverySurvivors, type Delivery, type CaptureReceipt } from './delivery';
 import { consumeLedger, consumeSurvivors } from './consume';
 import { expandLedgerMessage, prepareDeliveryClaims } from './writer';
 import { recoveryDigest, recoveryJSON, RECOVERY_LIMITS } from './recovery';
@@ -164,7 +164,9 @@ export async function captureQuarantine(env: Env, queue: string, messageId: stri
   value.provenance = await provenance(env, value);
   if (recognized.length) {
     const { ledgerUnderOwners } = await import('@/identity/sessionAuthority');
-    return ledgerUnderOwners<QuarantineCase>(env, { kind: 'quarantine', value, wire: text });
+    const captured = await ledgerUnderOwners<QuarantineCase>(env, { kind: 'quarantine', value, wire: text });
+    await countExhausted(env, recognized);
+    return captured;
   }
   try { await saveCase(env, value); }
   catch (error) {
@@ -173,7 +175,29 @@ export async function captureQuarantine(env: Env, queue: string, messageId: stri
     if (!won || won.value.digest !== digest || won.value.source.queue !== queue || won.value.source.message !== messageId) throw error;
     return won.value;
   }
+  await countExhausted(env, recognized);
   return value;
+}
+
+/**
+ * W22 R1.01: a message whose retries were exhausted is a row that never reached
+ * the ledger, counted against the tenant its own records name (N10; F16 §7.2).
+ * It is counted once per newly admitted case: a repeated DLQ delivery of the
+ * same message returns the existing case above without reaching here. The case
+ * itself may carry no tenant — shopper ownership is a separate, stronger proof —
+ * so the count is attributed from the recognized rows, never invented.
+ */
+async function countExhausted(env: Env, recognized: ReturnType<typeof expandLedgerMessage>): Promise<void> {
+  try {
+    if (!recognized.length) return;
+    const provisioned = tenantConfig(env).provisioned;
+    const byTenant = new Map<string, number>();
+    for (const message of recognized) {
+      const tenant = message.record.tenant;
+      if (provisioned.includes(tenant)) byTenant.set(tenant, (byTenant.get(tenant) ?? 0) + 1);
+    }
+    for (const [tenant, rows] of byTenant) await recordEvidenceLoss(env, tenant, 'retriesExhausted', rows);
+  } catch { /* the capture stands whatever the counter does */ }
 }
 
 /** The exact sorted owner chain excludes erasure through the actual case PUT.

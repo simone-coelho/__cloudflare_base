@@ -32,7 +32,7 @@ import type { StatsConfig } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
-import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES } from '@/ledger/delivery';
+import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES, recordEvidenceLoss } from '@/ledger/delivery';
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { pinRetention } from '@/identity/sessionAuthority';
 import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
@@ -176,6 +176,20 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const credits: StatsDelivery = { ...r.credits };
   return { version: 1, kind: 'outcome', received: 1, cutoffSkipped: r.cutoffSkipped, attributed: r.attributed, eligible: r.eligible, weightSkipped: r.weightSkipped, credits };
 }
+/**
+ * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
+ * refusal F16 §5(c) says every caller records as delivered. A destination that
+ * was never called (`notAttempted`) is a binding that is absent, not a post
+ * that was refused, and is not counted here.
+ */
+export function fanOutRejectedRows(out: LearningReceipt): number {
+  return out.exposures.rowsUnknown + (out.outcome?.credits.rowsUnknown ?? 0)
+    + (out.ring.unknown ? out.received : 0);
+}
+async function reportFanOutLoss(env: Partial<Pick<Env, 'CACHE'>>, tenant: string, out: LearningReceipt): Promise<LearningReceipt> {
+  await recordEvidenceLoss(env, tenant, 'fanOutRejected', fanOutRejectedRows(out));
+  return out;
+}
 function finish(out: LearningReceipt): LearningReceipt {
   out.ok = out.code === 'complete' && total(out.ring.destinations, out.ring.acknowledged, out.ring.unknown, out.ring.notAttempted)
     && out.ring.acknowledged === out.ring.destinations && isStatsDelivery(out.exposures)
@@ -274,7 +288,7 @@ export async function prepareExposureEffects(env: Env, records: DecisionRecord[]
 }
 
 /** After a decision set is served: the ring gets the full records, each slot's object gets its exposures. */
-export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
+export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
   const out = receipt('decisions', Array.isArray(set.records) ? set.records.length : 0);
   try {
     const { tenant, brand, visitor_id: visitorId, records: input } = set, budget = admission();
@@ -343,11 +357,11 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     if (ring.state === 'acknowledged') out.append = ring.receipt;
     out.exposures = sumStatsDeliveries(stats);
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
-  return finish(out);
+  return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }): Promise<LearningReceipt> {
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -366,5 +380,5 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
-  return finish(out);
+  return reportFanOutLoss(env, tenant, finish(out));
 }

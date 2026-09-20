@@ -224,3 +224,94 @@ export async function digest(body: string): Promise<string> {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
   return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
+
+// ── W22 R1.01: one vocabulary for every way evidence is lost ─────────────────
+//
+// N10 and F16 §5(b), §5(c), §5(g), §7.2–7.4: a producer rejection, a row the
+// consumer could not place, a fan-out post that was not accepted and a message
+// whose retries were exhausted are four different holes in the same evidence,
+// and today each of them is a `console` line at most. They are counted here,
+// per tenant, since a stated horizon, in ONE vocabulary that the ops monitor
+// answers with — beside `governance`, which the decision path's own refusals
+// use (`src/learn/slotGovernance.ts`), and in the same shape:
+//   · Never read on a decision path. The four recording sites only WRITE, after
+//     the work they describe has already failed, and every failure is swallowed.
+//   · No shopper state: a tenant, a horizon and four counts. No visitor, no
+//     session, no record id, no payload.
+//   · BOUNDED: four integers and a horizon, one document per tenant.
+//   · Never silent: a tenant that lost nothing reads zero on every path, with
+//     the horizon those zeros are measured from, never an absent member.
+//
+// Like the governance counters these are a FLOOR within their horizon, not an
+// accounting ledger: the read-modify-write is last-write-wins, so concurrent
+// drops may collapse into one increment. The counter claims only "this
+// happened, at least this often, since `since`".
+export type EvidenceLossPath = 'producerFailed' | 'consumerSkipped' | 'fanOutRejected' | 'retriesExhausted';
+export const EVIDENCE_LOSS_PATHS: readonly EvidenceLossPath[] = ['producerFailed', 'consumerSkipped', 'fanOutRejected', 'retriesExhausted'];
+export interface EvidenceLoss {
+  /** Epoch milliseconds: the horizon these counts start at. */
+  since: number;
+  /** Records the producer could not hand to the queue (`src/ledger/enqueue.ts`). */
+  producerFailed: number;
+  /** Rows the consumer could not place (`src/ledger/consume.ts`). */
+  consumerSkipped: number;
+  /** Rows whose fan-out post was attempted and not accepted (`src/learn/fan.ts`). */
+  fanOutRejected: number;
+  /** Rows captured from the dead-letter queue after their retries were exhausted. */
+  retriesExhausted: number;
+}
+/** The window the counts are measured over; a platform constant, always stated on the answer. */
+export const EVIDENCE_LOSS_HORIZON_MS = 30 * 86_400_000;
+export const evidenceLossKey = (tenant: string): string => `evidence-loss:v1:${tenant}`;
+const EVIDENCE_TENANT = /^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/;
+type LossStore = { CACHE?: { get(key: string, type: 'json'): Promise<unknown>; put(key: string, value: string, options?: { expirationTtl?: number }): Promise<unknown> } };
+const lossCount = (value: unknown): number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+
+function lossDocument(raw: unknown, now: number): EvidenceLoss | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (value.version !== 1) return null;
+  const since = value.since;
+  if (typeof since !== 'number' || !Number.isSafeInteger(since) || since < 0 || since > now
+    || now - since >= EVIDENCE_LOSS_HORIZON_MS) return null;
+  return { since, producerFailed: lossCount(value.producerFailed), consumerSkipped: lossCount(value.consumerSkipped),
+    fanOutRejected: lossCount(value.fanOutRejected), retriesExhausted: lossCount(value.retriesExhausted) };
+}
+
+/**
+ * What the ops monitor answers with. `undefined` only when the store could not
+ * be read, so a monitor result never states a zero it did not observe; an
+ * absent document is a tenant that lost nothing, at a horizon of now.
+ */
+export async function readEvidenceLoss(env: LossStore, tenant: string, now: number): Promise<EvidenceLoss | undefined> {
+  try {
+    if (!EVIDENCE_TENANT.test(tenant) || !env.CACHE) return undefined;
+    const raw = await env.CACHE.get(evidenceLossKey(tenant), 'json');
+    return lossDocument(raw, now) ?? { since: now, producerFailed: 0, consumerSkipped: 0, fanOutRejected: 0, retriesExhausted: 0 };
+  } catch { return undefined; }
+}
+
+/**
+ * Add one occurrence set to a tenant's counters. Fire and forget: it resolves
+ * whatever happens, and the platform's own monitoring probe never counts
+ * against the tenant it is probing (R94(1)) — the synthetic scope is excluded
+ * here, exactly as the decision path's governance counters exclude it.
+ */
+export async function recordEvidenceLoss(env: LossStore, tenant: string, path: EvidenceLossPath, occurrences: number, now = Date.now()): Promise<void> {
+  try {
+    if (!EVIDENCE_TENANT.test(tenant) || !env.CACHE || !EVIDENCE_LOSS_PATHS.includes(path)
+      || !Number.isSafeInteger(occurrences) || occurrences <= 0) return;
+    // Imported here rather than at module scope: the monitoring boundary itself
+    // loads the ledger consumer, so a static edge would close an import cycle.
+    const { syntheticOperation } = await import('@/ops/synthetic');
+    if (syntheticOperation()) return;
+    const previous = lossDocument(await env.CACHE.get(evidenceLossKey(tenant), 'json'), now);
+    const document: EvidenceLoss = previous ?? { since: now, producerFailed: 0, consumerSkipped: 0, fanOutRejected: 0, retriesExhausted: 0 };
+    const next = document[path] + occurrences;
+    if (!Number.isSafeInteger(next)) return;
+    document[path] = next;
+    await env.CACHE.put(evidenceLossKey(tenant), JSON.stringify({ version: 1, ...document }),
+      { expirationTtl: Math.floor(EVIDENCE_LOSS_HORIZON_MS / 1000) });
+  } catch { /* a loss counter never fails the work that lost the row, and never retries */ }
+}
