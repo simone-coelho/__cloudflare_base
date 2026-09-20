@@ -180,8 +180,11 @@ export class ReportRowIdentity {
   private work = 0;
   private conflicted: DuplicateCounts = { decisions: 0, outcomes: 0 };
   /** `resolved` holds the conflicts an operator surface already carries; a row
-   * whose conflict is filed is excluded and COUNTED instead of refusing the day. */
-  constructor(private tenant: string, private resolved: ResolvedConflicts = new Set<string>()) {}
+   * whose conflict is filed is excluded and COUNTED instead of refusing the day.
+   * `brand`, when the caller is reading ONE brand's day, is that brand: every
+   * row is still admitted and deduplicated, and what belongs to the brand is
+   * what the caller counts (W22 R1.06, W22 D1.05). */
+  constructor(private tenant: string, private resolved: ResolvedConflicts = new Set<string>(), private brand?: string) {}
   private spend(n = 1): void { bound('work', this.work += n); }
   admit(value: unknown, stream: 'decision' | 'outcome'): boolean {
     this.spend(); rowShape(value, stream);
@@ -1093,6 +1096,14 @@ export async function countDayObjects(r2: R2Like, tenant: string, date: string, 
  * be shown to match, including when the read stopped short: it never claims an
  * agreement it did not observe.
  *
+ * W22 R1.06: every one of those counts is scoped to `ids.brand`, the same
+ * selector the report route takes, because `report` is one brand's saved day.
+ * A tenant's objects hold every brand it serves, so counting all of them
+ * against one brand's report made `agrees` structurally false for any
+ * multi-brand tenant and told an operator reading a healthy day that the export
+ * disagreed. Admission is NOT scoped: every row of the day is still validated
+ * and deduplicated exactly as before, and only the counters are the brand's.
+ *
  * It opens no object the listing did not already name and lists nothing a
  * second time: the caller passes the keys it has just listed, and the report is
  * a point read of its own key. The comparison is over the ledger's own logical
@@ -1112,7 +1123,7 @@ export async function exportReconciliation(
 ): Promise<ExportReconciliation | null> {
   try {
     validateReportIds(ids);
-    const identity = new ReportRowIdentity(ids.tenant);
+    const identity = new ReportRowIdentity(ids.tenant, undefined, ids.brand);
     const rows = { decisions: 0, outcomes: 0 };
     const distinct = { decisions: 0, outcomes: 0 };
     const budget: RawReadBudget = { objects: 0, bytes: 0 };
@@ -1132,8 +1143,12 @@ export async function exportReconciliation(
         offset = end < 0 ? text.length : end + 1;
         if (!line) continue;
         const row: unknown = JSON.parse(line);
+        // Admitted first, so a row of any brand is validated and deduplicated
+        // exactly as it was; counted second, and only for the brand asked for.
+        const admitted = identity.admit(row, stream);
+        if ((row as { brand?: unknown }).brand !== ids.brand) continue;
         rows[field]++;
-        if (!identity.admit(row, stream)) continue;
+        if (!admitted) continue;
         bound('records', distinct[field] + 1);
         if (!hidden(tombs, row as { visitor_id: string; ts: number })) distinct[field]++;
       }
