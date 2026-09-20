@@ -195,11 +195,15 @@ export class ReportRowIdentity {
     const id = row[stream === 'decision' ? 'decision_id' : 'outcome_id'];
     const key = JSON.stringify([row.tenant, stream, id]), prior = this.rows.get(key);
     if (!prior) { this.rows.set(key, { row, stream, count: 0 }); return true; }
-    // Old timestamp-derived outcome IDs can represent separate identical events.
-    if (identity === 'legacy' || !equalLogicalRows(prior.row, row, n => this.spend(n))) {
-      // W22 D1.03: two different rows under one logical id are never merged.
-      // Either the conflict is already filed — then this row is excluded and
-      // counted — or the read fails closed and NAMES it.
+    // Old timestamp-derived outcome IDs can represent separate identical events:
+    // such an id cannot prove an exact retry, and it cannot name a conflict
+    // either — neither row can be shown to be the intruder — so it keeps the
+    // unnamed refusal it has always had and is never filed or excluded.
+    if (identity === 'legacy') throw new ReportInputError();
+    if (!equalLogicalRows(prior.row, row, n => this.spend(n))) {
+      // W22 D1.03: two different rows under one STABLE logical id are never
+      // merged. Either the conflict is already filed — then this row is
+      // excluded and counted — or the read fails closed and NAMES it.
       const key = conflictKey(stream, String(id));
       if (!this.resolved.has(key)) throw new ReportRowConflict(stream, String(id), row);
       this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
