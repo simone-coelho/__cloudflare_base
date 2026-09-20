@@ -161,18 +161,8 @@ export interface EnrollmentProvenance {
   id: string;
   /** The revision of the published learn document the enrollment was written under. */
   saltVersion: number;
-  /**
-   * The assignment: an `Assignment` by value — a randomised arm, or `ineligible`
-   * for a shopper who was never drawn.
-   *
-   * Typed `string` rather than `Assignment` for two reasons: this block is part
-   * of a STORED record, so a row written by an older or a later writer may carry
-   * a value this build's union does not list and the reader must not assume a
-   * closed set; and the batch's own harness types the member `string`
-   * (`src/units/W21/B1.unit.test.ts:1181,1183` assign it into a seeded record),
-   * which an implementer may not edit. R118(9)'s narrowing is owed and named.
-   */
-  arm: string;
+  /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn. */
+  arm: Assignment;
   /**
    * Why the assignment is `ineligible`, so an analyst need not guess which
    * population a row belongs to: the shopper withheld personalization consent,
