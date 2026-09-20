@@ -414,7 +414,7 @@ what it changes.
 | `slots.{slot}.gamma` | The trust dial; zero is not a learning-ingestion kill switch | 0 |
 | `slots.{slot}.measurementBasis` | `served-v1` or `rendered-v1`; basis changes require compatible state/reset generation, never historical relabel | `served-v1` |
 | `slots.{slot}.reward` | The reward the slot learns against | `click` |
-| `slots.{slot}.objective` | `unit`, `revenue` or `margin`; unit credits are event weights, revenue uses value, margin uses supplied margin and currently falls back to value when absent | `unit` |
+| `slots.{slot}.objective` | `unit`, `revenue` or `margin`; unit credits are event weights, revenue uses value, margin uses the supplied margin and NEVER falls back to value — an outcome with no margin is worth nothing to margin learning, because a margin series weighed with a revenue number is two units in one counter | `unit` |
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| off, share, floor }`; new writes reject Thompson, retained settings are inactive | off |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
@@ -430,9 +430,26 @@ revision.
 ## The lift snapshot
 
 `GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, version, publishedAt, events, n0, nMin, liftMin,
-liftMax, priorVersion, items, slotRates, attributionContract }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
+liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
 p_hat, lift, prior? }` with the symbols defined above; `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
+
+`slotRates` is the mass of the evidence the platform still HOLDS — the retained items plus the bucket of
+items capacity omitted — so an item whose evidence was discarded leaves no denominator counting exposures
+it can no longer be credited for. For a slot that has only ever been counted into, that is the same
+number as the running slot total it replaced.
+
+`generation`, `restartedAt` and `exposuresSinceRestart` name the ACCUMULATION generation these counters
+belong to. `generation` is a string over the accumulation half only — schema, objective, reward and the
+decay horizon — with the restart moment appended once the counters have actually been restarted; it is
+not the numeric recovery generation of the statistics object's own fence. Changing an estimator or
+presentation dial (`n0`, `nMin`, `liftMin`, `liftMax`) keeps the counters and keeps this name, because it
+reinterprets nothing. Changing what a counter MEANS cannot happen on an ordinary write at all: the
+statistics object answers 409 `statistics configuration incompatible` and stores nothing, and the one
+authorized way past it is `POST /v1/{tenant}/learn/generation`, which starts a fresh generation instead of
+reinterpreting or silently keeping what was counted before. `restartedAt` is when the generation started —
+the moment of that transition, or the counters' own earliest evidence for a generation never restarted —
+and `exposuresSinceRestart` is what it has counted since. Absent on a snapshot archived before they existed.
 
 `attributionContract` is the one named, versioned attribution contract every path that reports
 attribution now carries — this snapshot, the day report and the window report — so two numbers can be
@@ -492,7 +509,7 @@ for recovery in your tenant's own scope, and reads again on the next call with t
 counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
 
 Aggregates only; no visitor id
-in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin falls back to value), not currency conversion or probability.
+in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
 
 ## Socket frames
 
