@@ -75,8 +75,11 @@
 //        the units that demand them; everything else here is a lock.
 
 import { describe, it, expect } from 'vitest';
+import { Hono } from 'hono';
+import * as jose from 'jose';
 
-import { initializePublicationSet, invalidatePublicationCache, pinPublication, publishSet, type PublicationBaseline } from '@/config/publication';
+import { memoryStore } from '@/auth/store';
+import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache } from '@/config/versionedStore';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { decideContent } from '@/content/decide';
@@ -84,6 +87,10 @@ import { invalidateLiftCache } from '@/content/service';
 import type { ContentPiece, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
 import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
 import { LearnStats } from '@/durable-objects/LearnStats';
+import { ShopperReflex } from '@/durable-objects/ShopperReflex';
+import { issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { consumeLedger } from '@/ledger/consume';
+import { writeTombstone } from '@/ledger/erasure';
 import { HISTORICAL_EXPLORATION } from '@/learn/explore';
 import { liftArchiveKey, liftKey, statsName } from '@/learn/fan';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
@@ -93,6 +100,9 @@ import { HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, HISTORICAL_PINS, HISTO
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { captureRetention, RetentionUnavailable, type RetentionCategory, type RetentionPolicy } from '@/retention';
+import { decisionRoutes } from '@/routes/decisions';
+import realtimeRoutes from '@/routes/realtime';
+import { tenantMiddleware } from '@/tenancy/middleware';
 import type { Env } from '@/types/env';
 
 // ===========================================================================
@@ -385,6 +395,140 @@ function trackedDeps(w: World): ReplayDeps & { archives: string[] } {
 }
 
 // ===========================================================================
+// The mounted application, in process, the way `src/index.ts` mounts it, on
+// both shopper-state hosts (`REFLEX_HOST`: the session store and the Durable
+// Object). `AUTH_MODE: 'enforced'` so the operator gate and the subject audit
+// on `GET /v1/:tenant/replay/:id` are the production ones.
+// ===========================================================================
+
+const OPERATOR_SECRET = 'w27-b1-synthetic-operator-signing-material';
+const OPERATOR_ORIGIN = 'http://console.test';
+const SITE_ORIGIN = 'https://synthetic.invalid';
+const HOSTS = ['session', 'do'] as const;
+
+interface Mounted extends World {
+  fetch: (request: Request) => Promise<Response>;
+  drain: () => Promise<void>;
+  operatorToken: string;
+  audit: ReturnType<typeof memoryStore>;
+  queued: unknown[];
+}
+
+async function mounted(host: 'session' | 'do', learn: LearnFixture = {}): Promise<Mounted> {
+  const w = await world(learn);
+  const pending: Promise<unknown>[] = [];
+  const queued: unknown[] = [];
+  const audit = memoryStore();
+  const shoppers = new Map<string, ShopperReflex>();
+  const ring = { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ ok: true, ring: 0, records: [], index: [],
+    receipt: { version: 1, kind: 'append', received: 0, accepted: 0, duplicates: 0, cutoffSkipped: 0, retained: 0, indexed: 0 } }) }) };
+  Object.assign(w.env as unknown as Record<string, unknown>, {
+    REFLEX_HOST: host, SESSIONS: new UnitKV(), AUTH_MODE: 'enforced', ACCOUNTS: audit,
+    JWT_SECRET: OPERATOR_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+    IDENTITY_SALT: 'w27-b1-synthetic-identity-audit-material',
+    IDENTITY_SECRETS: `${TENANT}:w27-b1-identity-assertion-material`,
+    DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
+    PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
+    DECISION_RING: ring,
+    EVENT_QUEUE: {
+      send: async (body: unknown) => { queued.push(body); },
+      sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) queued.push(message.body); },
+    },
+    SHOPPER_REFLEX: { idFromName: (n: string) => n, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      let object = shoppers.get(name);
+      if (!object) {
+        const data = new Map<string, unknown>(); const alarms: number[] = []; const sockets: WebSocket[] = [];
+        const state = { id: name, getWebSockets: () => sockets, waitUntil: (p: Promise<unknown>) => pending.push(p), storage: {
+          get: async (k: string | string[]) => structuredClone(Array.isArray(k) ? new Map(k.map(v => [v, data.get(v)])) : data.get(k)),
+          put: async (k: string | Record<string, unknown>, v?: unknown) => {
+            if (typeof k === 'string') data.set(k, structuredClone(v)); else for (const [key, value] of Object.entries(k)) data.set(key, structuredClone(value));
+          },
+          list: async (options?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }) =>
+            structuredClone(new Map([...data].filter(([key]) => key.startsWith(options?.prefix ?? '') && (!options?.startAfter || key > options.startAfter))
+              .sort(([a], [b]) => (options?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, options?.limit))),
+          transaction: async (run: (tx: DurableObjectTransaction) => Promise<unknown>) => {
+            const candidate = structuredClone(data);
+            let nextAlarm: number | undefined;
+            const tx = { list: async () => structuredClone(candidate), get: async (key: string) => structuredClone(candidate.get(key)),
+              delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+              put: async (values: string | Record<string, unknown>, value?: unknown) => {
+                if (typeof values === 'string') candidate.set(values, structuredClone(value));
+                else for (const [key, item] of Object.entries(values)) candidate.set(key, structuredClone(item));
+              },
+              deleteAlarm: async () => { alarms.length = 0; }, setAlarm: async (at: number) => { nextAlarm = at; },
+            } as unknown as DurableObjectTransaction;
+            const result = await run(tx);
+            data.clear(); for (const [key, value] of candidate) data.set(key, value);
+            if (nextAlarm !== undefined) alarms.push(nextAlarm);
+            return result;
+          },
+          deleteAll: async () => data.clear(), delete: async (k: string) => data.delete(k),
+          setAlarm: async (at: number) => { alarms.push(at); }, getAlarm: async () => alarms.at(-1) ?? null,
+        } } as unknown as DurableObjectState;
+        object = new ShopperReflex(state, w.env); shoppers.set(name, object);
+      }
+      return object.fetch(new Request(input, init));
+    } }) },
+  });
+
+  const app = new Hono<{ Bindings: Env }>();
+  app.use('*', tenantMiddleware());
+  app.route('/realtime', realtimeRoutes);
+  app.route('/v1', decisionRoutes);
+  const fetchOne = async (request: Request): Promise<Response> => app.fetch(request, w.env, {
+    waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {},
+  } as unknown as ExecutionContext);
+  const drain = async () => { while (pending.length) await Promise.all(pending.splice(0)); await new Promise(resolve => setTimeout(resolve, 5)); };
+  const operatorToken = await new jose.SignJWT({ type: 'service', roles: ['admin'] }).setProtectedHeader({ alg: 'HS256' })
+    .setSubject('ops').setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('5m')
+    .sign(new TextEncoder().encode(OPERATOR_SECRET));
+  return { ...w, fetch: fetchOne, drain, operatorToken, audit, queued };
+}
+
+interface ReplayAnswer { status: number; noStore: boolean; body: Record<string, unknown> }
+async function replayRequest(m: Mounted, id: string, token: string | null = m.operatorToken): Promise<ReplayAnswer> {
+  const response = await m.fetch(new Request(`${OPERATOR_ORIGIN}/v1/${TENANT}/replay/${encodeURIComponent(id)}`, {
+    headers: { 'X-Tenant': TENANT, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  }));
+  return { status: response.status, noStore: response.headers.get('cache-control') === 'no-store',
+    body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
+/**
+ * The coupled page in the ledger the endpoint reads: decided by the real
+ * `decideContent` from the snapshots the real statistics object published, and
+ * written by the real ledger consumer into the same R2 the route's `findById`
+ * scans. F22 §4.5 ("Nothing exercises the endpoint") is about the join from a
+ * stored receipt to `GET /v1/:tenant/replay/:id`, which is what this builds.
+ */
+async function ledgeredPage(m: Mounted): Promise<{ records: DecisionRecord[]; chero: LiftSnapshot; story: LiftSnapshot; visitorId: string; objectKey: string }> {
+  await observe(m, 'chero', [{ item: 'cnt-charms-slg', exposures: 100, clicks: 90 }, { item: 'cnt-tabby-evening', exposures: 100, clicks: 1 },
+    { item: 'cnt-rogue-work', exposures: 100, clicks: 1 }, { item: 'cnt-unknown-signal', exposures: 100, clicks: 1 }]);
+  await observe(m, 'story', [{ item: 'cnt-tabby-evening', exposures: 100, clicks: 5 }]);
+  const chero = await m.publish('chero'), story = await m.publish('story');
+  invalidateLiftCache();
+
+  const records = decidePage(m, { chero, story });
+  expect(records.map(record => record.slot), 'the whole coupled page is decided').toEqual(['merch', 'chero', 'story']);
+  const visitorId = records[0]!.visitor_id;
+  const consumed = await consumeLedger(m.env, [{ kind: 'ledger', type: 'decisions', version: 1, records }]);
+  expect(consumed, `the real consumer must write the page: ${JSON.stringify(consumed)}`).toMatchObject({ ok: true });
+  expect(consumed.written).toBeGreaterThan(0);
+  const objectKey = [...m.storage.objects.keys()].find(key => key.includes('/decision/') && key.endsWith('.ndjson'));
+  expect(objectKey, 'the decision batch object the point lookup reads').toBeDefined();
+  return { records, chero, story, visitorId, objectKey: objectKey! };
+}
+
+/** Rewrite one stored decision row, the way a tampered or drifted receipt reads. */
+function tamper(m: Mounted, objectKey: string, id: string, change: (record: DecisionRecord) => void): void {
+  const lines = m.storage.objects.get(objectKey)!.split('\n').filter(Boolean).map(line => JSON.parse(line) as DecisionRecord);
+  const target = lines.find(record => record.decision_id === id);
+  expect(target, 'the row to rewrite is in the batch object').toBeDefined();
+  change(target!);
+  m.storage.objects.set(objectKey, lines.map(record => JSON.stringify(record)).join('\n') + '\n');
+}
+
+// ===========================================================================
 // unit:W27.M1.01 — the immutable manifest and archive-before-visible, LOCKED.
 //
 // Reading R159(a): the forward mechanism EXISTS. This unit is the regression
@@ -652,6 +796,46 @@ describe('unit:W27.F1.01', () => {
     expect(malformed).toMatchObject({ ok: false, equal: false, replayed: null,
       reason: `lift dependency chero/${snapshots.chero.version} could not be read` });
   });
+
+  for (const host of HOSTS) {
+    it(`host (${host}): the endpoint names a dependency it could not read apart from one that is absent, and refuses an erased subject`, async () => {
+      const m = await mounted(host);
+      const page = await ledgeredPage(m);
+      const later = page.records.find(record => record.slot === 'story')!;
+      const cheroKey = liftArchiveKey(TENANT, BRAND, 'chero', page.chero.version);
+
+      // Control: the endpoint replays the coupled page it was served.
+      const control = await replayRequest(m, later.decision_id);
+      expect(control.status).toBe(200);
+      expect(control.body, JSON.stringify(control.body.reason)).toMatchObject({ ok: true, equal: true });
+
+      // Absent: the sibling archive is gone, and the answer names slot and version.
+      const retained = m.storage.objects.get(cheroKey)!;
+      m.storage.objects.delete(cheroKey);
+      const absent = await replayRequest(m, later.decision_id);
+      expect(absent.status).toBe(200); expect(absent.noStore).toBe(true);
+      expect(absent.body).toMatchObject({ ok: false, equal: false, replayed: null,
+        reason: `lift dependency chero/${page.chero.version} is not in the archive` });
+      m.storage.objects.set(cheroKey, retained);
+
+      // Unreadable: the object is there and the store failed. A support engineer
+      // is owed the difference; the private failure text is never disclosed.
+      m.storage.failGet = key => key === cheroKey;
+      const unreadable = await replayRequest(m, later.decision_id);
+      m.storage.failGet = null;
+      expect(unreadable.status).toBe(200);
+      expect(unreadable.body).toMatchObject({ ok: false, equal: false, replayed: null,
+        reason: `lift dependency chero/${page.chero.version} could not be read` });
+      expect(JSON.stringify(unreadable.body)).not.toContain('synthetic object-store read failure');
+
+      // An erased visitor's receipt is refused before it is replayed at all
+      // (src/ledger/erasure.ts:7 — the replay honours the tombstone).
+      await writeTombstone(m.storage as unknown as Parameters<typeof writeTombstone>[0], TENANT, page.visitorId, 'w27-b1-fixture', Date.now());
+      const erased = await replayRequest(m, later.decision_id);
+      expect(erased.status).toBe(410);
+      expect(erased.body).toMatchObject({ ok: false, error: 'erased at the visitor\'s request' });
+    });
+  }
 });
 
 // ===========================================================================
@@ -768,4 +952,92 @@ describe('unit:W27.O1.01', () => {
     const within = await replayDecision(shortEnv, fresh, replayDeps(shortEnv));
     expect(within, within.reason).toMatchObject({ ok: true, equal: true });
   });
+});
+
+// ===========================================================================
+// unit:W27.E1.01 — the endpoint, end to end, on both hosts (F22 §4.5:
+// "Nothing exercises the endpoint … That is why this survived to the audit").
+//
+// THE MEMBER THIS UNIT RULES BY NAME (R21): `classification` on `ReplayResult`,
+// forwarded by `GET /v1/:tenant/replay/:id`. F22 §4.6 names the failure mode
+// this closes: a `candidates`-only `equal:false` on a receipt whose served item
+// is correct is "the more corrosive one in a customer audit — the receipt is
+// materially right and the tool says it is not". A bare `equal:false` cannot be
+// triaged. The taxonomy is total and derived from `diff` alone:
+//   'equal'           — `diff` is empty;
+//   'item'            — `diff` contains `item_id` (a different item was served);
+//   'candidates-only' — `candidates` is the ONLY field that differs;
+//   'explanation'     — any other field differs while the item is the same;
+//   'not-replayable'  — `ok:false`; the `reason` says why.
+// ===========================================================================
+
+describe('unit:W27.E1.01', () => {
+  for (const host of HOSTS) {
+    it(`host (${host}): the operator endpoint replays the served coupled page equal, audited and no-store, and classifies a difference by kind`, async () => {
+      const m = await mounted(host);
+      const page = await ledgeredPage(m);
+      const earlier = page.records.find(record => record.slot === 'chero')!;
+      const later = page.records.find(record => record.slot === 'story')!;
+
+      // The coupling happened on the real serving path of this host: the lift
+      // moved the earlier slot, and the later slot inherited the piece it left.
+      expect([earlier.item_id, later.item_id]).toEqual(['cnt-charms-slg', 'cnt-tabby-evening']);
+      expect(later.inputs!.replay!.slots).toEqual([{ slot: 'merch', lift: 0, prior: 0 },
+        { slot: 'chero', lift: page.chero.version, prior: page.chero.priorVersion ?? 0 },
+        { slot: 'story', lift: page.story.version, prior: page.story.priorVersion ?? 0 }]);
+
+      // The operator gate: no token, no read and no audit entry.
+      const closed = m.audit.log.length;
+      expect((await replayRequest(m, later.decision_id, null)).status).toBe(401);
+      expect(m.audit.log.length).toBe(closed);
+
+      // The answer: equal, no-store, audited admitted-then-result, and the
+      // consumed target snapshot named.
+      const answer = await replayRequest(m, later.decision_id);
+      expect(answer.status).toBe(200); expect(answer.noStore).toBe(true);
+      expect(answer.body, JSON.stringify(answer.body.reason)).toMatchObject({ ok: true, equal: true, classification: 'equal',
+        used: { catalog: 1, slots: 1, learn: 1, lift: page.story.version, prior: page.story.priorVersion ?? 0 } });
+      expect(answer.body.diff).toEqual([]);
+      const entries = m.audit.log.slice(closed).map(entry => JSON.parse(entry.detail!) as { phase: string; operation: string; status?: number; subjectRef?: string });
+      expect(entries.map(entry => entry.phase)).toEqual(['admitted', 'result']);
+      expect(entries[1]).toMatchObject({ operation: 'replay', status: 200 });
+      expect(entries[1]!.subjectRef).toMatch(/^[a-f0-9]{64}$/);
+      expect(JSON.stringify(m.audit.log)).not.toContain(page.visitorId);
+
+      // The engine states the classification; the route forwards it.
+      const engine: ReplayResult = await replayDecision(m.env, later, replayDeps(m.env));
+      expect((engine as unknown as Record<string, unknown>).classification).toBe('equal');
+
+      // A receipt whose served ITEM is right and whose candidate list is not is
+      // not the same event as a receipt that served a different item, and the
+      // answer says which it is instead of one undifferentiated `equal:false`.
+      const original = m.storage.objects.get(page.objectKey)!;
+      const cases: Array<{ classification: string; fields: string[]; change: (record: DecisionRecord) => void }> = [
+        { classification: 'candidates-only', fields: ['candidates'], change: record => { record.candidates = record.candidates.slice(0, -1); } },
+        { classification: 'item', fields: ['item_id'], change: record => { record.item_id = 'cnt-rogue-work'; } },
+        { classification: 'explanation', fields: ['explain.score_base'], change: record => { record.explain.score_base = 0.123; } },
+      ];
+      for (const scenario of cases) {
+        tamper(m, page.objectKey, later.decision_id, scenario.change);
+        const differed = await replayRequest(m, later.decision_id);
+        expect(differed.status, scenario.classification).toBe(200);
+        expect(differed.body, scenario.classification).toMatchObject({ ok: true, equal: false, classification: scenario.classification });
+        expect((differed.body.diff as Array<{ field: string }>).map(entry => entry.field), scenario.classification).toEqual(scenario.fields);
+        m.storage.objects.set(page.objectKey, original);
+      }
+      // A page that cannot be replayed at all is its own class, with the reason.
+      const cheroKey = liftArchiveKey(TENANT, BRAND, 'chero', page.chero.version);
+      const retained = m.storage.objects.get(cheroKey)!;
+      m.storage.objects.delete(cheroKey);
+      const refused = await replayRequest(m, later.decision_id);
+      expect(refused.body).toMatchObject({ ok: false, equal: false, classification: 'not-replayable',
+        reason: `lift dependency chero/${page.chero.version} is not in the archive` });
+      m.storage.objects.set(cheroKey, retained);
+
+      // And the whole exchange is customer-neutral: no piece of the answer
+      // depends on who the tenant is beyond the documents it published.
+      const again = await replayRequest(m, later.decision_id);
+      expect(again.body).toMatchObject({ ok: true, equal: true, classification: 'equal' });
+    });
+  }
 });
