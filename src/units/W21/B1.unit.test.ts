@@ -188,6 +188,7 @@ import { signAssertion } from '@/identity/assertion';
 import { consumeLedger } from '@/ledger/consume';
 import { captureRetention } from '@/retention';
 import { reportKey, REPORT_MEASUREMENT } from '@/learn/report';
+import { ts36 } from '@/ledger/records';
 import * as measureHoldout from '@/measure/holdout';
 import { configuredDestinations } from '@/connectors/config';
 import type { Env } from '@/types/env';
@@ -414,6 +415,16 @@ async function mount(host: 'session' | 'do', learn: LearnFixture = {}): Promise<
   return { env, storage, sessions, cache, fetch: fetchOne, drain, drainLedger, operatorToken };
 }
 
+/**
+ * The experimental ASSIGNMENT vocabulary (representation (iv)/(v)): the three
+ * arms a randomised visitor can be enrolled in, and the one value that says she
+ * is not in the experiment. Declared here so the harness's answer shape is as
+ * narrow as the product member the build types `Assignment`
+ * (`src/content/types.ts`, R118(h)); the product type is not imported because
+ * this specification must typecheck before the build exports it.
+ */
+type Assignment = 'personalized' | 'default' | 'no_learning' | 'ineligible';
+
 const HOSTS = ['session', 'do'] as const;
 
 /** The published assignment, as `src/content/service.ts:376` composes it. */
@@ -426,7 +437,7 @@ interface SnapshotAnswer {
   arm: string;
   served: string[];
   /** RULED, ABSENT TODAY (R21): representation (v) above. */
-  experiment?: { id: string; saltVersion: number; arm: string; anchorGeneration: number;
+  experiment?: { id: string; saltVersion: number; arm: Assignment; anchorGeneration: number;
     /** Why an assignment is `ineligible`; absent on a randomised assignment (R118(2)). */
     reason?: 'personalization_consent' | 'anchor_unavailable' };
 }
@@ -602,11 +613,26 @@ function decisionRecord(input: { visitor: string; arm: string; ts: number; item:
   } as unknown as DecisionRecord;
 }
 
-function outcomeRecord(input: { visitor: string; ts: number; type: string; item: string | null; index: number }) {
+/**
+ * An outcome row as the ledger holds it. With `eventId` the row carries the
+ * STABLE logical identity `outcomeFromAction` produces for a nonce-bearing
+ * event (`src/ledger/records.ts:262-266`): `event_id`, `event_id_source` and the
+ * `:n1:` id form, which `logicalIdentity` (`src/ledger/delivery.ts:80-85`)
+ * accepts as an exact retry. Without it the row is a LEGACY outcome, whose
+ * timestamp-derived id can be two real events, and a second copy of it is
+ * refused by `src/learn/report.ts:176` before equality is ever consulted.
+ */
+function outcomeRecord(input: { visitor: string; ts: number; type: string; item: string | null; index: number; eventId?: string }) {
+  // The wire event names `rewardOf` maps (`src/ledger/records.ts:191-198`), so a
+  // nonce-bearing row of either kind has a valid stable identity.
+  const event = input.type === 'purchase' ? 'purchase' : 'content_click';
   return {
-    outcome_id: `${TENANT}:${input.ts.toString(36)}:${input.visitor}:${input.type}:${input.index}`,
+    outcome_id: input.eventId
+      ? `${TENANT}:${ts36(input.ts)}:${input.visitor}:${event}:n1:${input.eventId}`
+      : `${TENANT}:${input.ts.toString(36)}:${input.visitor}:${input.type}:${input.index}`,
+    ...(input.eventId ? { event_id: input.eventId, event_id_source: 'provided' as const } : {}),
     tenant: TENANT, brand: TENANT, visitor_id: input.visitor, session_id: `s-${input.visitor}`, ts: input.ts,
-    type: input.type, event: input.type === 'purchase' ? 'order_completed' : 'content_click',
+    type: input.type, event,
     item_id: input.item, slot: input.item ? 'hero' : null, value: input.type === 'purchase' ? 210 : null,
     currency: input.type === 'purchase' ? 'USD' : null, margin: null, products: null, arm: null,
   };
@@ -1351,11 +1377,14 @@ describe('unit:W21.E1.03', () => {
     // R118(5) with F6: one `outcome_id` delivered twice, differing only by its
     // provenance block (the ordinary shape of a redelivery that straddles a
     // rotation), is ONE row — `experiment` is outside logical-row equality
-    // exactly as the delivery field is. Today the second delivery makes
-    // `src/learn/report.ts:176` refuse the whole day.
+    // exactly as the delivery field is. The row carries the STABLE logical
+    // identity a nonce-bearing event has, so the case this clause rules is the
+    // provenance difference and nothing else.
     const redelivered = await mount('session');
     const redeliveryDate = '2026-06-05';
-    const twice = outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(redeliveryDate, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 });
+    const twice = outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(redeliveryDate, 9, 5), type: 'click',
+      item: 'cnt-tabby-evening-edit', index: 0, eventId: 'w21-b1-redelivery-nonce' });
+    expect(twice.event_id_source, 'the fixture row is the nonce-bearing shape `outcomeFromAction` produces').toBe('provided');
     await seedLedgerDay(redelivered, redeliveryDate, [
       decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: 'default', ts: atUtc(redeliveryDate, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
     ], [
@@ -1365,6 +1394,22 @@ describe('unit:W21.E1.03', () => {
     const redeliveryReport = await operatorPost(redelivered, `/v1/${TENANT}/learn/report`, { date: redeliveryDate, brand: TENANT });
     expect(redeliveryReport.status, 'F6 — a redelivery that differs only by provenance must not refuse the day\'s report').toBe(200);
     expect(dayReportOf(redeliveryReport.body).counts.outcomes, 'F6 — and the two deliveries of one outcome_id are one row').toBe(1);
+
+    // The legacy rule stays exactly where it is: an outcome with no `event_id`
+    // has a timestamp-derived id that two REAL events can share
+    // (`src/ledger/delivery.ts:87`), so a second row under one such id is refused
+    // before equality is consulted (`src/learn/report.ts:176`) whatever it
+    // carries. This clause exists so the guarantee above can never be read as a
+    // licence to weaken that refusal.
+    const legacyTwice = await mount('session');
+    const legacyDate = '2026-06-06';
+    const idLess = outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(legacyDate, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 });
+    await seedLedgerDay(legacyTwice, legacyDate, [
+      decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: 'default', ts: atUtc(legacyDate, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
+    ], [idLess, { ...idLess }]);
+    const legacyReport = await operatorPost(legacyTwice, `/v1/${TENANT}/learn/report`, { date: legacyDate, brand: TENANT });
+    expect(legacyReport.status, 'two legacy-identity rows under one outcome_id remain refused: an id-less outcome cannot prove an exact retry')
+      .toBe(400);
 
     // A published salt change is a NEW experiment, never a silent re-randomisation
     // of the old one (F07 §5.7: editing the salt re-randomises ~9.7 % of visitors
