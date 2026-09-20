@@ -422,16 +422,27 @@ what it changes.
 
 ## The priors document
 
-Rows of `{ slot, item, cell, p_prior, n_equiv, measurementBasis? }`, or corresponding CSV columns. Missing basis is served-v1; priors must match the configured denominator, never carry served pseudo-counts into rendered measurement. `cell` is `*` for
-everyone or `channel=…|visit=…` pairs in the ladder's order; `p_prior` is the rate your team estimated
-elsewhere in the selected objective unit; `n_equiv` is how many exposures it should be worth. The imported value supplies the smoothing target and strength, not a replacement for the slot's own `p0` lift denominator. Every receipt names the prior document's
-revision.
+Rows of `{ slot, item, cell, p_prior, n_equiv, measurementBasis? }`, or corresponding CSV columns, with the optional document member
+`cellGrammar { name, version, order }`. Missing basis is served-v1; priors must match the configured denominator, never carry served pseudo-counts into rendered measurement. `cell` is `*` for
+everyone or `k=v` pairs joined by `|` in the ladder's own order and as a PREFIX of it: `c=`, `v=`, `s=`, `r=`, `a=`
+(channel, visit bucket, journey stage, region, affinity). A cell in another order, with a key the ladder
+does not have, with a level skipped, or with a level past the end is refused by row, naming the expected
+order, because it would name a cell no snapshot ever builds. The ladder order is versioned: `cellGrammar`
+declares the grammar a file was exported under, anything but the current one is refused with the migration
+named, and a document that declares nothing is read under the current grammar. `p_prior` is the rate your team estimated
+elsewhere in the selected objective unit, and because it is a probability it is refused for a slot whose
+objective is `revenue` or `margin`, naming the slot, its objective and the unit; `n_equiv` is how many exposures it should be worth. The imported value supplies the smoothing target and strength, not a replacement for the slot's own `p0` lift denominator. Every receipt names the prior document's
+revision. A slot whose only evidence is an imported prior publishes a snapshot with `events: 0` and its
+prior-derived rows; a slot with neither events nor priors publishes nothing.
 
 ## The lift snapshot
 
 `GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, version, publishedAt, events, n0, nMin, liftMin,
 liftMax, priorVersion, items, slotRates, attributionContract }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
-p_hat, lift, prior? }` with the symbols defined above; `slotRates` is cell key → the slot's own `{ n, s,
+p_hat, lift, liftReference, prior? }` with the symbols defined above; `liftReference` is `slot-rate` where the
+slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `p0: 0` is read as "no
+reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
+named. `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
 
 `attributionContract` is the one named, versioned attribution contract every path that reports
