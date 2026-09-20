@@ -27,7 +27,7 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 }
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
-import type { AttributionPolicy, RingEntry } from './policy';
+import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
 // from there and NOT from the ring itself because the ring imports this module:
@@ -36,7 +36,7 @@ import type { AttributionPolicy, RingEntry } from './policy';
 // ring is the first of the two to load (src/learn/learn.test.ts imports it at
 // line 10, this module at line 12), which silently emptied the statistics
 // object's applied-delivery journal.
-import { RING_MAX_AGE_MS, type StatsConfig } from './stats';
+import { emptyStats, recordExposure, recordSuccess, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -92,9 +92,68 @@ export interface StatsDelivery extends DestinationCounts {
   received: number; processed: number; skipped: number; rowsUnknown: number; rowsNotAttempted: number; alarmsUnknown: number;
   newlyApplied?: number; alreadyApplied?: number; suppressed?: number;
 }
+/**
+ * W24 R1.02 (F19 §5.3 "the currency is never read and a refund never
+ * subtracts"; document 35 §5 row W24 :426 "revenue/margin/currency/refund
+ * behavior"): the tenant's published money policy — WHAT the numbers on an
+ * outcome mean when a slot learns money.
+ *
+ * The VALUES are the customer's business and data-science owners' (D09,
+ * W24.P1.01): which currency the counters are in and how another one converts,
+ * whether a refund subtracts from the objective it credited, and what a
+ * nonpositive value means. None of them is the platform's to invent, so until
+ * one is published this is ABSENT and the platform refuses the outcomes it
+ * would have to guess about, naming the refusal rather than silently adding,
+ * dropping or subtracting.
+ */
+export interface MoneyPolicy {
+  /** The currency the slot's money counters are in. An outcome in another one needs a declared conversion. */
+  currency: string;
+  /** What a value at or below zero means for the objective it would credit. */
+  nonpositive: 'refuse' | 'credit';
+}
+/** W24 R1.02: money the platform will not weigh, and why. */
+export interface MoneyRefusal { code?: string; reason: 'money_policy_unset' }
+
+/**
+ * W24 R1.02: may this outcome be weighed in the objective's own unit? Null when
+ * there is nothing to decide — a unit objective counts events, not money — and
+ * otherwise a named refusal whenever answering would take a policy VALUE nobody
+ * has published. General: it names no currency, no rate and no refund rule of
+ * its own, and every one of them comes from `policy` when a tenant publishes it.
+ */
+export function moneyRefusal(objective: 'unit' | 'revenue' | 'margin' | undefined,
+  outcome: Pick<OutcomeRecord, 'value' | 'margin' | 'currency'>, policy?: MoneyPolicy | null): MoneyRefusal | null {
+  if (!objective || objective === 'unit') return null;
+  const declared = typeof outcome.currency === 'string' && outcome.currency.trim() ? outcome.currency.trim() : undefined;
+  const amount = objective === 'margin' ? outcome.margin : outcome.value;
+  const nonpositive = typeof amount === 'number' && Number.isFinite(amount) && amount <= 0;
+  if (!policy) {
+    // Nothing is published. An outcome that states its currency cannot be added
+    // to counters whose currency nobody declared, and a refund or a zero cannot
+    // be applied under a rule nobody wrote.
+    if (declared !== undefined) return { code: declared, reason: 'money_policy_unset' };
+    return nonpositive ? { reason: 'money_policy_unset' } : null;
+  }
+  // A currency other than the declared one needs a conversion rule and a rate
+  // source, which the policy does not carry: it is named, never guessed at.
+  if (declared !== undefined && declared.toUpperCase() !== policy.currency.toUpperCase()) return { code: declared, reason: 'money_policy_unset' };
+  if (nonpositive && policy.nonpositive === 'refuse') return { ...(declared !== undefined ? { code: declared } : {}), reason: 'money_policy_unset' };
+  return null;
+}
+
 export interface OutcomeReceipt {
   version: 1; kind: 'outcome'; received: 1; cutoffSkipped: number;
   attributed: number; eligible: number; weightSkipped: number; credits: StatsDelivery;
+  /**
+   * W24 R1.01/R1.02: this outcome was never offered to the visitor's ring, and
+   * why — `reward` because no slot that could have been credited learns from
+   * this reward, `money` because the platform will not weigh it without a
+   * published policy. Absent on every outcome that was attributed normally.
+   */
+  notCredited?: 'reward' | 'money';
+  /** W24 R1.02: the money the platform refused to weigh, named. */
+  money?: MoneyRefusal;
   /**
    * W23 T1.01: how many ring decisions this outcome matched but could not be
    * credited to, because more time had passed than the reward's own attribution
@@ -415,8 +474,25 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
   return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
+/**
+ * W24 R1.01 (F19 §7 gap 1, §5.1): which slot configuration decides whether this
+ * outcome may be credited at all. An outcome that NAMES its slot is decided by
+ * that slot's own configuration; one that names none can only be decided by the
+ * configurations in scope together. Nothing in scope decides nothing: a caller
+ * that supplied no configuration is left exactly as it was.
+ */
+function decisiveConfig(outcome: OutcomeRecord, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): SlotLearnConfig | null {
+  const named = typeof outcome.slot === 'string' && outcome.slot.trim().length > 0 && outcome.slot !== 'unknown' ? outcome.slot : null;
+  if (named === null) return null;
+  const configured = object(slotConfig) && Object.prototype.hasOwnProperty.call(slotConfig, named) ? slotConfig[named] : defaultSlotConfig;
+  return object(configured) ? configured as SlotLearnConfig : null;
+}
+function configsInScope(slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): SlotLearnConfig[] {
+  return [...(object(slotConfig) ? Object.values(slotConfig) : []), ...(defaultSlotConfig ? [defaultSlotConfig] : [])].filter((c): c is SlotLearnConfig => object(c));
+}
+
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }): Promise<LearningReceipt> {
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -429,6 +505,31 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     out.code = 'complete';
     if (tombstone && outcome.ts <= tombstone.erased_at) { out.cutoffSkipped = 1; return out; }
     pinRetention(env as RetentionEnv, outcome.retention?.online, tenant, 'online');
+    /**
+     * W24 R1.01 (F19 §7 gap 1): the online credit path is filtered to the slot's
+     * configured reward, where the batch fold already filters it
+     * (`src/learn/report.ts`, `src/learn/hourly.ts` "the slot learns against one
+     * reward"). It is done HERE, at the producer, and never at the statistics
+     * object: that object's guard is a compatibility check on the accumulation
+     * tuple and not a reward filter, and a credit of another reward posted to it
+     * directly is still accepted, exactly as before.
+     *
+     * W24 R1.02: and the same refusal covers money the platform will not weigh,
+     * because sending it would let the visitor's ring weigh it by a value whose
+     * unit nobody has declared.
+     */
+    const decisive = decisiveConfig(outcome, slotConfig, defaultSlotConfig), scope = configsInScope(slotConfig, defaultSlotConfig);
+    const learns = decisive ? decisive.reward === outcome.type : scope.length === 0 || scope.some(c => c.reward === outcome.type);
+    const weighing = decisive ? decisive.objective : scope.map(c => c.objective).find(o => o === 'revenue' || o === 'margin');
+    const refused = moneyRefusal(weighing, outcome, money);
+    if (!learns || refused) {
+      // A receipt that says nothing was attributed and why, so an operator can
+      // tell "no slot learns from this" from "nothing matched it".
+      out.outcome = { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0, attributed: 0, eligible: 0,
+        weightSkipped: 0, outsideWindow: 0, credits: emptyStatsDelivery(),
+        notCredited: refused ? 'money' : 'reward', ...(refused ? { money: refused } : {}) };
+      return reportFanOutLoss(env, tenant, finish(out));
+    }
     out.ring.destinations = 1; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
       ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);
@@ -436,4 +537,55 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
   return reportFanOutLoss(env, tenant, finish(out));
+}
+
+/**
+ * W24 T1.02 (document 35 §5 row W24 :426 "Implement reset as explicit
+ * containment or trustworthy rebuild/promote from retained events"; F19 §7 "the
+ * M piece, reusing report.ts / hourly.ts").
+ *
+ * The counters one day of RETAINED evidence produces for one slot, folded the
+ * way the batch already folds it: the personalized decisions of that slot are
+ * its exposures, and every outcome is attributed against its own visitor's ring
+ * under the tenant's published learning policy, filtered to the slot's reward
+ * (`report.ts`, `hourly.ts`) and weighed by its objective. Pure, so the same
+ * day always folds to the same counters and a reader can recompute them.
+ *
+ * `at` is the moment the rebuilt generation STARTS. The retained evidence is
+ * admitted at that moment rather than at its original event times, because a
+ * rebuild starts a generation now out of what the platform still holds: it is
+ * not a reconstruction of the decay an object that had been counting all along
+ * would show, and the snapshot says so through `rebuiltFrom` and `restartedAt`.
+ */
+export function foldRetainedDay(input: {
+  tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
+  decisions: readonly DecisionRecord[]; outcomes: readonly OutcomeRecord[]; at: number;
+}): { stats: StatsState; decisions: number; outcomes: number } {
+  const stats = emptyStats();
+  const basis = input.config.measurementBasis ?? 'served-v1';
+  const rings = new Map<string, RingEntry[]>(), seen = new Set<string>();
+  let decisions = 0, outcomes = 0;
+  for (const d of input.decisions) {
+    if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
+    seen.add(d.decision_id);
+    rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
+    if (d.slot !== input.slot || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
+    recordExposure(stats, d.item_id, d.cell, input.at, input.config.stats, input.at);
+    decisions++;
+  }
+  for (const o of input.outcomes) {
+    if (!object(o) || o.tenant !== input.tenant || o.brand !== input.brand) continue;
+    const ring = rings.get(o.visitor_id);
+    if (!ring) continue;
+    let credited = false;
+    for (const c of attribute(o, ring, input.policy)) {
+      if (c.slot !== input.slot || c.reward !== input.config.reward) continue;  // the slot learns against one reward
+      const weight = creditWeight(input.config.objective, o);
+      if (weight <= 0) continue;
+      recordSuccess(stats, c.item, c.cell, c.reward, input.at, weight, input.config.stats, input.at);
+      credited = true;
+    }
+    if (credited) outcomes++;
+  }
+  return { stats, decisions, outcomes };
 }
