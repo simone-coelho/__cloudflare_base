@@ -563,6 +563,23 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     if (values.length !== 1 || (values[0] !== 'true' && values[0] !== 'false')) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     consent[key] = values[0] === 'true';
   }
+  /**
+   * Named conditions the caller asserts for this request, as `ctx.<name>=value`.
+   * Garrett's weather arrives here: `?ctx.weather=snow`. They gate pieces that
+   * carry a matching `eligibleWhen` rule and do nothing else — a signal here can
+   * never boost a piece, re-rank the slot, or become behavioural evidence about
+   * the shopper. Bounded hard, because the query string is caller-controlled.
+   */
+  const eligibilityContext: Record<string, string> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (!key.startsWith('ctx.')) continue;
+    const name = key.slice(4);
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) return c.json({ ok: false, error: 'Invalid context signal name' }, 400);
+    if (typeof value !== 'string' || !value.trim() || value.length > 64) return c.json({ ok: false, error: 'Invalid context signal value' }, 400);
+    if (Object.keys(eligibilityContext).length >= 8) return c.json({ ok: false, error: 'Too many context signals' }, 400);
+    eligibilityContext[name] = value.trim();
+  }
+
   const sessionId = principal.sessionId;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
@@ -572,8 +589,18 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   const out = await serveContentDecisions(c.env, {
     tenant, brand, page, visitorId, sessionId, channel, entry, cf, cookieHeader: c.req.header('Cookie') ?? null, consent,
     stateTenant: c.get('tenant'), principal, capability: capabilityToken(c.req.raw)!,
-    offer: { pageInstance: context.pageInstance },
+    // The offer envelope is the RENDERED-measurement path, and it only does
+    // anything when the caller supplies a page instance (see service.ts:568 —
+    // without one, no render offer is minted). Passing it unconditionally had
+    // one effect and one only: it suppressed served-v1 ledger capture
+    // (service.ts:527) for every caller that never opted into rendered
+    // measurement, so their decisions were never written and a day report
+    // counted zero exposures against real outcomes. The documented default is
+    // that a missing basis stays served-v1, so send the envelope only when the
+    // caller actually asked for the other path.
+    ...(context.pageInstance ? { offer: { pageInstance: context.pageInstance } } : {}),
     browsingSessionId: (context.browsingSessionId ?? '').trim().slice(0, 128) || undefined,
+    ...(Object.keys(eligibilityContext).length ? { context: eligibilityContext } : {}),
   });
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));

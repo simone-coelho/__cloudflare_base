@@ -1,0 +1,839 @@
+{
+ "version": "content-shn-grown-to-twenty",
+ "pieces": [
+  {
+   "id": "shn_bea_01",
+   "customerContentId": "SHN-BEA-01",
+   "type": "promotion",
+   "title": "Spring Beauty Event",
+   "subtitle": "Serums, creams and the season’s freshest skincare.",
+   "tags": {
+    "category": [
+     "Beauty & Wellness"
+    ],
+    "subcategory": [
+     "Skincare"
+    ],
+    "brand": [
+     "Solene"
+    ],
+    "offerType": [
+     "Limited Time",
+     "The Lantern Pick"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T18:04:14.534Z",
+    "to": "2026-09-25T18:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-BEA-01.jpg",
+   "freshnessDate": "2026-09-23T04:04:14.534Z",
+   "inStock": true,
+   "merchandising": {
+    "promotion": 1
+   }
+  },
+  {
+   "id": "shn_bea_02",
+   "customerContentId": "SHN-BEA-02",
+   "type": "promotion",
+   "title": "Everyday Glow Picks",
+   "subtitle": "The bath and body edit our customers keep reordering.",
+   "tags": {
+    "category": [
+     "Beauty & Wellness"
+    ],
+    "subcategory": [
+     "Bath & Body"
+    ],
+    "brand": [
+     "Fieldnote"
+    ],
+    "offerType": [
+     "Best Seller"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T02:04:14.534Z",
+    "to": "2026-09-26T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-BEA-02.jpg",
+   "freshnessDate": "2026-09-22T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_jew_01",
+   "customerContentId": "SHN-JEW-01",
+   "type": "promotion",
+   "title": "Fashion Essentials",
+   "subtitle": "Watches, hoops and the pieces that finish an outfit.",
+   "tags": {
+    "category": [
+     "Jewelry"
+    ],
+    "subcategory": [
+     "Earrings"
+    ],
+    "brand": [
+     "Larkspur Silver"
+    ],
+    "offerType": [
+     "Clearance"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T02:04:14.534Z",
+    "to": "2026-09-29T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-JEW-01.jpg",
+   "freshnessDate": "2026-09-21T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_jew_02",
+   "customerContentId": "SHN-JEW-02",
+   "type": "promotion",
+   "title": "The Jewelry Vault",
+   "subtitle": "Fine gold and sterling, valued for the season.",
+   "tags": {
+    "category": [
+     "Jewelry"
+    ],
+    "subcategory": [
+     "Necklaces & Pendants"
+    ],
+    "brand": [
+     "Vireo Fine"
+    ],
+    "offerType": [
+     "Featured Value"
+    ],
+    "priceBand": [
+     "elevated"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T23:04:14.534Z",
+    "to": "2026-09-26T23:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-JEW-02.jpg",
+   "freshnessDate": "2026-09-20T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_fas_01",
+   "customerContentId": "SHN-FAS-01",
+   "type": "promotion",
+   "title": "Cozy Layers Shop",
+   "subtitle": "Knits, wraps and everything worth layering.",
+   "tags": {
+    "category": [
+     "Fashion"
+    ],
+    "subcategory": [
+     "Tops & Knits"
+    ],
+    "brand": [
+     "Nell & Bray"
+    ],
+    "offerType": [
+     "Just Reduced"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T20:04:14.534Z",
+    "to": "2026-09-27T20:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-FAS-01.jpg",
+   "freshnessDate": "2026-09-19T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_fas_02",
+   "customerContentId": "SHN-FAS-02",
+   "type": "promotion",
+   "title": "Summer Sandals",
+   "subtitle": "Sandals, slides and warm-weather footwear.",
+   "tags": {
+    "category": [
+     "Fashion"
+    ],
+    "subcategory": [
+     "Shoes & Slippers"
+    ],
+    "brand": [
+     "Trueform"
+    ],
+    "offerType": [
+     "Limited Time"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T14:04:14.534Z",
+    "to": "2026-09-26T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-FAS-02.jpg",
+   "freshnessDate": "2026-09-18T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_hom_01",
+   "customerContentId": "SHN-HOM-01",
+   "type": "promotion",
+   "title": "Refresh Your Home",
+   "subtitle": "Everything for a lighter, brighter room.",
+   "tags": {
+    "category": [
+     "For the Home"
+    ],
+    "subcategory": [
+     "Decor & Accents"
+    ],
+    "brand": [
+     "Wren Hollow"
+    ],
+    "offerType": [
+     "Featured Value"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T18:04:14.534Z",
+    "to": "2026-09-25T18:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-HOM-01.jpg",
+   "freshnessDate": "2026-09-23T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_hom_02",
+   "customerContentId": "SHN-HOM-02",
+   "type": "promotion",
+   "title": "Bedding & Bath Event",
+   "subtitle": "Sheets, coverlets and towels, on Easy Pay.",
+   "tags": {
+    "category": [
+     "For the Home"
+    ],
+    "subcategory": [
+     "Bedding"
+    ],
+    "brand": [
+     "Havenmoor"
+    ],
+    "offerType": [
+     "Easy Pay Event"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T02:04:14.534Z",
+    "to": "2026-09-26T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-HOM-02.jpg",
+   "freshnessDate": "2026-09-22T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_kit_01",
+   "customerContentId": "SHN-KIT-01",
+   "type": "promotion",
+   "title": "Final Hours: Top Kitchen Picks",
+   "subtitle": "Ends tonight — the last of the season’s picks.",
+   "tags": {
+    "category": [
+     "Kitchen & Table"
+    ],
+    "subcategory": [
+     "Countertop Cooking"
+    ],
+    "brand": [
+     "Marlow & Bell"
+    ],
+    "offerType": [
+     "Best Seller"
+    ],
+    "priceBand": [
+     "elevated"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T02:04:14.534Z",
+    "to": "2026-09-29T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-KIT-01-final.jpg",
+   "freshnessDate": "2026-09-21T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_kit_02",
+   "customerContentId": "SHN-KIT-02",
+   "type": "promotion",
+   "title": "Cookware Clearance",
+   "subtitle": "Dutch ovens, skillets and sets, reduced.",
+   "tags": {
+    "category": [
+     "Kitchen & Table"
+    ],
+    "subcategory": [
+     "Cookware & Dutch Ovens"
+    ],
+    "brand": [
+     "Copperline"
+    ],
+    "offerType": [
+     "Clearance"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-20T02:04:14.534Z",
+    "to": "2026-09-23T03:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-KIT-02.jpg",
+   "freshnessDate": "2026-09-20T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_ele_01",
+   "customerContentId": "SHN-ELE-01",
+   "type": "promotion",
+   "title": "Smart Home Savings",
+   "subtitle": "Displays, speakers and everyday smart devices.",
+   "tags": {
+    "category": [
+     "Electronics & Tech"
+    ],
+    "subcategory": [
+     "Smart Home"
+    ],
+    "brand": [
+     "Halo Field"
+    ],
+    "offerType": [
+     "Just Reduced"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T20:04:14.534Z",
+    "to": "2026-09-27T20:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-ELE-01.jpg",
+   "freshnessDate": "2026-09-19T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_ele_02",
+   "customerContentId": "SHN-ELE-02",
+   "type": "promotion",
+   "title": "Sound & Listening",
+   "subtitle": "Headphones and speakers, on Easy Pay.",
+   "tags": {
+    "category": [
+     "Electronics & Tech"
+    ],
+    "subcategory": [
+     "Headphones & Speakers"
+    ],
+    "brand": [
+     "Quilla Audio"
+    ],
+    "offerType": [
+     "Easy Pay Event"
+    ],
+    "priceBand": [
+     "elevated"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T14:04:14.534Z",
+    "to": "2026-09-26T02:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-ELE-02.jpg",
+   "freshnessDate": "2026-09-18T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_kit_03",
+   "customerContentId": "SHN-KIT-03",
+   "type": "promotion",
+   "title": "Tabletop & Entertaining",
+   "subtitle": "Plates, boards and the table you set.",
+   "tags": {
+    "category": [
+     "Kitchen & Table"
+    ],
+    "subcategory": [
+     "Tabletop & Serveware"
+    ],
+    "brand": [
+     "Marlow & Bell"
+    ],
+    "offerType": [
+     "Featured Value"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-23T04:02:14.534Z",
+    "to": "2026-09-27T04:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-KIT-03.jpg",
+   "freshnessDate": "2026-09-23T04:02:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_bea_03",
+   "customerContentId": "SHN-BEA-03",
+   "type": "promotion",
+   "title": "Hello Spring Beauty",
+   "subtitle": "Colour, brushes and the spring refresh.",
+   "tags": {
+    "category": [
+     "Beauty & Wellness"
+    ],
+    "subcategory": [
+     "Cosmetics"
+    ],
+    "brand": [
+     "Fieldnote"
+    ],
+    "offerType": [
+     "Best Seller"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T22:04:14.534Z",
+    "to": "2026-09-27T22:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-BEA-03.jpg",
+   "freshnessDate": "2026-09-19T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_jew_03",
+   "customerContentId": "SHN-JEW-03",
+   "type": "promotion",
+   "title": "Gifts Under $50",
+   "subtitle": "Small pieces, easy to give.",
+   "tags": {
+    "category": [
+     "Jewelry"
+    ],
+    "subcategory": [
+     "Bracelets & Anklets"
+    ],
+    "brand": [
+     "Coronet"
+    ],
+    "offerType": [
+     "Featured Value"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T16:04:14.534Z",
+    "to": "2026-09-26T04:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-JEW-03.jpg",
+   "freshnessDate": "2026-09-18T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_fas_03",
+   "customerContentId": "SHN-FAS-03",
+   "type": "promotion",
+   "title": "Extra Markdowns",
+   "subtitle": "Final reductions across the fashion floor.",
+   "tags": {
+    "category": [
+     "Fashion"
+    ],
+    "subcategory": [
+     "Bottoms"
+    ],
+    "brand": [
+     "Trueform"
+    ],
+    "offerType": [
+     "Clearance"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T20:04:14.534Z",
+    "to": "2026-09-25T20:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-FAS-03.jpg",
+   "freshnessDate": "2026-09-23T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_hom_03",
+   "customerContentId": "SHN-HOM-03",
+   "type": "promotion",
+   "title": "Lighting Event",
+   "subtitle": "Lamps and shades to warm a room.",
+   "tags": {
+    "category": [
+     "For the Home"
+    ],
+    "subcategory": [
+     "Lighting"
+    ],
+    "brand": [
+     "Lumen House"
+    ],
+    "offerType": [
+     "Limited Time"
+    ],
+    "priceBand": [
+     "elevated"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T04:04:14.534Z",
+    "to": "2026-09-26T04:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-HOM-03.jpg",
+   "freshnessDate": "2026-09-22T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_hom_04",
+   "customerContentId": "SHN-HOM-04",
+   "type": "promotion",
+   "title": "Storage & Organisation",
+   "subtitle": "Baskets, bins and everything tidied away.",
+   "tags": {
+    "category": [
+     "For the Home"
+    ],
+    "subcategory": [
+     "Storage & Organization"
+    ],
+    "brand": [
+     "Wren Hollow"
+    ],
+    "offerType": [
+     "Just Reduced"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T04:04:14.534Z",
+    "to": "2026-09-29T04:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-HOM-04.jpg",
+   "freshnessDate": "2026-09-21T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_kit_04",
+   "customerContentId": "SHN-KIT-04",
+   "type": "promotion",
+   "title": "Coffee & Tea Shop",
+   "subtitle": "Presses, kettles and the morning ritual.",
+   "tags": {
+    "category": [
+     "Kitchen & Table"
+    ],
+    "subcategory": [
+     "Coffee & Tea"
+    ],
+    "brand": [
+     "Fresco Nine"
+    ],
+    "offerType": [
+     "Best Seller"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-23T01:04:14.534Z",
+    "to": "2026-09-27T01:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-KIT-04.jpg",
+   "freshnessDate": "2026-09-20T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_ele_03",
+   "customerContentId": "SHN-ELE-03",
+   "type": "promotion",
+   "title": "Personal Tech Deals",
+   "subtitle": "Trackers, chargers and everyday tech.",
+   "tags": {
+    "category": [
+     "Electronics & Tech"
+    ],
+    "subcategory": [
+     "Personal Tech"
+    ],
+    "brand": [
+     "Halo Field"
+    ],
+    "offerType": [
+     "Clearance"
+    ],
+    "priceBand": [
+     "entry"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-21T22:04:14.534Z",
+    "to": "2026-09-27T22:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-ELE-03.jpg",
+   "freshnessDate": "2026-09-19T04:04:14.534Z",
+   "inStock": true
+  },
+  {
+   "id": "shn_kit_90",
+   "customerContentId": "SHN-KIT-90",
+   "type": "promotion",
+   "title": "Snow Day Comfort Cooking",
+   "subtitle": "Dutch ovens, braisers and everything for a long slow simmer.",
+   "tags": {
+    "category": [
+     "Kitchen & Table"
+    ],
+    "subcategory": [
+     "Cookware & Dutch Ovens"
+    ],
+    "brand": [
+     "Copperline"
+    ],
+    "offerType": [
+     "Limited Time"
+    ],
+    "priceBand": [
+     "core"
+    ]
+   },
+   "slotTypes": [
+    "top-offers",
+    "banner-category",
+    "banner-search"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "window": {
+    "from": "2026-09-22T04:04:14.534Z",
+    "to": "2026-09-28T04:04:14.534Z"
+   },
+   "renderUrl": "/top-offers/art/SHN-KIT-90.jpg",
+   "freshnessDate": "2026-09-23T04:04:14.534Z",
+   "inStock": true,
+   "eligibleWhen": {
+    "regions": [
+     "US-WA",
+     "US-OR"
+    ],
+    "context": {
+     "weather": [
+      "snow"
+     ]
+    }
+   }
+  }
+ ]
+}

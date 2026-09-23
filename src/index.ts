@@ -40,6 +40,7 @@ import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
 import { generateSceneToR2 } from '@/services/sceneGen';
 import { shotRoutes } from '@/routes/shot';
+import { demoBootstrapRoutes } from '@/routes/demoBootstrap';
 import { geoRoutes } from '@/routes/geo';
 import { funnelRoutes } from '@/routes/funnel';
 import { funnelSimRoutes } from '@/routes/funnelSim';
@@ -124,6 +125,11 @@ app.route('/v1', identityRoutes);
 app.route('/ai', aiRoutes);
 app.route('/ai/scene', aiSceneRoutes);
 app.route('/__shot', shotRoutes);
+// Demo scope bootstrap. Creates a configuration publication set for a demo
+// tenant that has none, once, and can never overwrite one. The route itself
+// answers 404 on the customer profile and 403 outside development, and refuses
+// any scope that already has a head; see src/routes/demoBootstrap.ts.
+app.route('/ops/demo-bootstrap', demoBootstrapRoutes);
 app.route('/geo', geoRoutes);
 app.route('/funnel', funnelRoutes);
 app.route('/funnel/sim', funnelSimRoutes);

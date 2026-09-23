@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="edge-sdk-key" content="demo-site" />
+<title>Lantern &amp; Lane — Our Best Promotions For You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<link rel="stylesheet" href="top-offers.css" />
+</head>
+<body>
+<a class="skip" href="#stage">Skip to the page</a>
+
+<!-- The director's hand. It glides to a real control, ripples, and fires that
+     control's own click handler — never a shortcut around it. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#233047" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<header class="masthead">
+  <div class="masthead-in">
+    <a class="brand" href="#" id="homeLink" data-nav="home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="img" focusable="false">
+          <circle cx="16" cy="16" r="15" fill="#EF7A5E" />
+          <path d="M12 9h8l1.5 4H10.5L12 9Z" fill="#fff" />
+          <rect x="11" y="13" width="10" height="9" rx="1" fill="#fff" />
+          <path d="M14 22v2h4v-2" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="brand-words"><b>Lantern &amp; Lane</b><small>Shop the day&rsquo;s best</small></span>
+    </a>
+    <nav class="mastnav" id="mastnav" aria-label="Departments"></nav>
+    <div class="mast-tools">
+      <button type="button" class="textsize" id="textSize" aria-live="polite">Text size 16px</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="stage" id="stage">
+
+    <!-- ── The homepage ─────────────────────────────────────────────────── -->
+    <section class="view view--home" id="viewHome">
+      <!-- Their homepage is a mix of static and personalised modules, and
+           Garrett's question was whether OUR module cares where it sits when
+           that order changes daily. These are the static neighbours it has to
+           move among. -->
+      <section class="strip strip--static" data-mod="tv" style="order:1">
+        <span class="strip-k">static</span><b>Watch Live</b>
+        <span>On air now &middot; tonight&rsquo;s schedule</span>
+      </section>
+
+      <section class="module" id="topOffersModule" style="order:2" aria-labelledby="moduleHeading">
+        <p class="module-where" id="moduleWhere">Module <b>2</b> of 5 on today&rsquo;s page &middot; slot <b>top-offers</b></p>
+        <h1 id="moduleHeading">Our Best Promotions For You</h1>
+
+        <!-- Before and after, on every press. A module that quietly swaps one
+             card among four lookalikes has changed nothing the room can see. -->
+        <section class="changes" id="changes" aria-live="polite">
+          <div class="changes-before">
+            <span class="changes-cap">What was on screen before this press</span>
+            <div class="ghosts" id="ghosts"><span class="ghost-empty">The visitor had not seen the module yet.</span></div>
+          </div>
+          <div class="changes-what">
+            <span class="changes-cap">What changed</span>
+            <ul class="deltas" id="deltas"><li class="delta-none">Press a beat to begin.</li></ul>
+          </div>
+        </section>
+
+        <!-- The site's own default markup, restored whenever the engine answers
+             with nothing. A bad answer must never be a blank module. -->
+        <!-- The before row, at the SAME size as the four beneath it, so the
+             room compares like with like instead of squinting at thumbnails. -->
+        <section class="beforerow" id="beforeRow" hidden>
+          <p class="rowlabel">What was on screen before this press</p>
+          <div class="four" id="beforeFour"></div>
+        </section>
+        <p class="rowlabel rowlabel--now" id="nowLabel" hidden>What is on screen now</p>
+
+        <div class="four" id="four" aria-live="polite" aria-busy="true">
+          <article class="promo"><div class="frame"></div><div class="pbody">
+            <h3 class="ptitle">Today&rsquo;s promotions</h3><p class="pblurb">Loading the module&hellip;</p></div></article>
+          <article class="promo"><div class="frame"></div><div class="pbody">
+            <h3 class="ptitle">Today&rsquo;s promotions</h3><p class="pblurb">Loading the module&hellip;</p></div></article>
+          <article class="promo"><div class="frame"></div><div class="pbody">
+            <h3 class="ptitle">Today&rsquo;s promotions</h3><p class="pblurb">Loading the module&hellip;</p></div></article>
+          <article class="promo"><div class="frame"></div><div class="pbody">
+            <h3 class="ptitle">Today&rsquo;s promotions</h3><p class="pblurb">Loading the module&hellip;</p></div></article>
+        </div>
+        <p class="engine-down" id="engineDown" hidden></p>
+      </section>
+
+      <section class="strip strip--static" data-mod="dept" style="order:3">
+        <span class="strip-k">static</span><b>Shop by Department</b>
+        <span>Beauty &middot; Jewelry &middot; Fashion &middot; Home &middot; Kitchen &middot; Electronics</span>
+      </section>
+      <section class="strip strip--static" data-mod="deal" style="order:4">
+        <span class="strip-k">static</span><b>Today&rsquo;s Big Deal</b>
+        <span>One item, one price, today only</span>
+      </section>
+
+      <section class="pool" style="order:5" aria-labelledby="poolHeading">
+        <div class="pool-head">
+          <h2 id="poolHeading"><span id="poolCount">&mdash;</span> Available Promotions</h2>
+          <p class="pool-sub">Every piece the CMS has live right now, and where each one is in its window.</p>
+        </div>
+        <div class="poolgrid" id="pool"></div>
+      </section>
+    </section>
+
+    <!-- ── A category page. Landing here IS the page view event. ────────── -->
+    <section class="view" id="viewCategory" hidden>
+      <nav class="crumbs" id="catCrumbs"></nav>
+      <h1 class="viewtitle" id="catTitle"></h1>
+      <p class="viewsub" id="catSub"></p>
+      <!-- Garrett's SECOND use case: one container, category and search pages
+           only, the same pool and the same windows — and it must not show to a
+           new customer. -->
+      <section class="banner" id="banner" hidden></section>
+      <div class="grid" id="catGrid"></div>
+    </section>
+
+    <!-- ── A product page. Opening it IS the product view event. ────────── -->
+    <section class="view" id="viewProduct" hidden>
+      <nav class="crumbs" id="pdpCrumbs"></nav>
+      <div class="pdp">
+        <div class="pdp-media"><img id="pdpImage" alt="" /></div>
+        <div class="pdp-buy">
+          <p class="pdp-brand" id="pdpBrand"></p>
+          <h1 class="pdp-title" id="pdpTitle"></h1>
+          <p class="pdp-item" id="pdpItem"></p>
+          <div class="pdp-price" id="pdpPrice"></div>
+          <p class="pays" id="pdpPays"></p>
+          <ul class="pdp-bullets" id="pdpBullets"></ul>
+          <button class="cta cta--big" type="button" id="pdpAdd">Add to Cart</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── This session: the cause, beside the effect, at all times ───────── -->
+  <!-- One component, four tabs. Stacked panels made the page scroll for depth,
+       which on stage means nobody ever sees the lower ones. -->
+  <aside class="why" aria-label="What this visitor is doing and what it changed">
+    <!-- Signals sits outside the tabs on purpose: it is the only panel that
+         changes on every single action, so it must never be behind a tab the
+         room has to remember to open. -->
+    <section class="signalcard">
+      <h2>What has been signalled</h2>
+      <p class="thin-note" style="margin-top:0;margin-bottom:10px">Read from the visitor's profile, not from the cards on
+        screen — a signal shows the moment it is sent, whether or not a promotion carrying it is being served.</p>
+      <div id="vectors" class="vectors"></div>
+      <p class="thin-note">Affinity is <b>a = R / (R + K)</b> with <b>K = 1.8</b>: a fourth touch on one department
+        reads <b>4 / 5.8 = 0.69</b> and clears the <b>0.60</b> entry threshold. The engine&rsquo;s shipped constants,
+        not demo tuning.</p>
+    </section>
+
+    <div class="whytabs" role="tablist">
+      <button type="button" role="tab" id="tab-session" aria-controls="panel-session" aria-selected="true">This session</button>
+      <button type="button" role="tab" id="tab-why" aria-controls="panel-why" aria-selected="false">Why these four</button>
+      <button type="button" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false">What it learned</button>
+      <button type="button" role="tab" id="tab-next" aria-controls="panel-next" aria-selected="false">Roadmap</button>
+    </div>
+    <div class="whypanels">
+      <section class="whypanel" id="panel-session" role="tabpanel" aria-labelledby="tab-session">
+        <ol class="journey" id="journey"><li class="journey-empty">Nobody has arrived yet.</li></ol>
+      </section>
+
+      <section class="whypanel" id="panel-why" role="tabpanel" aria-labelledby="tab-why" hidden>
+        <div id="drivers" class="drivers"><p class="thin-note">Press a beat to begin.</p></div>
+      </section>
+
+      <section class="whypanel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+        <div id="reportBody"><p class="thin-note">Press <b>Build today&rsquo;s report</b> to read what the module
+          has learned so far. It is built from the ledger, not from anything this page is holding.</p></div>
+        <button type="button" class="cta" id="buildReport" style="margin-top:12px">Build today&rsquo;s report</button>
+      </section>
+
+      <section class="whypanel" id="panel-next" role="tabpanel" aria-labelledby="tab-next" hidden>
+        <ul class="dials">
+          <li style="border-left-color:var(--ok);border-left-style:solid">
+            <span class="dialflag" style="background:#E3F3EB;color:var(--ok)">built</span>
+            <b>eligibleWhen: { regions, context }</b>
+            <span>Garrett&rsquo;s snow rule, evaluated beside the window and the stock flag, before any scoring.
+              A condition the request does not carry fails closed.</span></li>
+          <li><span class="dialflag">designed</span><b>personalizeAfter: { pages: 5 }</b>
+            <span>Jamie&rsquo;s rule. The page enforces it today and says so on every receipt; it belongs on the slot.</span></li>
+          <li><span class="dialflag">designed</span><b>memory: { long: 0.3, moment: 0.7 }</b>
+            <span>Beauty over time against electronics right now, as two numbers a merchandiser can weigh.</span></li>
+        </ul>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<!-- ── Predict, then prove ──────────────────────────────────────────────────
+     Declare the arithmetic before the act; run the real engine; show that the
+     declaration held. Ported from the Meridian band, because an outcome with a
+     meter beside it asks the room to take the causation on trust, and this does
+     not. -->
+<div class="pd-back" id="pdBack" hidden role="dialog" aria-modal="true" aria-labelledby="pdKicker">
+  <div class="pd-box">
+    <div class="pd-head">
+      <span class="pd-k" id="pdKicker">Predict, then prove</span>
+      <span class="pd-mode" id="pdMode">before the next act</span>
+    </div>
+
+    <div class="pd-grid">
+      <section class="pd-card pd-done">
+        <h3 class="pd-h">What the visitor has done</h3>
+        <div class="pd-body"><ol id="pdDone"></ol></div>
+      </section>
+
+      <section class="pd-card pd-watch">
+        <h3 class="pd-h">What we are watching for</h3>
+        <div class="pd-body"><ol id="pdAct"></ol></div>
+        <div class="pd-arith">
+          <p class="pd-arith-k">The arithmetic &middot; score before &rarr; after &middot; entry threshold</p>
+          <div id="pdArith"></div>
+        </div>
+      </section>
+
+      <section class="pd-card pd-will">
+        <h3 class="pd-h">What will change if they do it</h3>
+        <div class="pd-body">
+          <ul id="pdWill"></ul>
+          <p class="pd-arith-k" style="margin:12px 0 7px">The four containers right now</p>
+          <div id="pdNow"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="pd-why" id="pdWhyWrap" hidden>
+      <p class="pd-why-head" id="pdWhyHead">Why &mdash; every decision the last press made</p>
+      <div class="pd-why-grid">
+        <div class="pd-why-table">
+          <table>
+            <thead><tr><th>What</th><th>Why &mdash; the number</th><th>Against</th><th>Authority</th></tr></thead>
+            <tbody id="pdWhy"></tbody>
+          </table>
+        </div>
+        <div class="pd-map">
+          <div class="pd-map-cols">
+            <div><p class="pd-map-k">The module now</p><div id="pdMapNow"></div></div>
+            <div class="pd-arrow">&rarr;</div>
+            <div><p class="pd-map-k">After</p><div id="pdMapAfter"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="pd-foot">
+      <p class="pd-note" id="pdNote">Computed from the visitor&rsquo;s real profile on the engine&rsquo;s own published
+        constants. Nothing has happened yet; press the button and the engine decides for real.</p>
+      <button type="button" class="pd-go" id="pdGo">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Always reachable, in either tense: press it before a beat to say what is
+     about to happen, or after one to say why it did. Never a gate. -->
+<button type="button" class="pd-pill" id="pdPill">Explain &mdash; predict &amp; prove</button>
+
+<div class="director" role="group" aria-label="Director">
+  <div class="director-in">
+    <div class="beatline">
+      <span class="beatno" id="beatNo">Ready</span>
+      <p class="engineline" id="engineLine">A brand-new visitor arrives on the homepage, and the module holds
+        QVC&rsquo;s four defined promotions until they have seen five pages.</p>
+      <div class="beatnav">
+        <button type="button" class="nextbeat" id="nextBeat">Next &rarr;<span id="nextLabel">1 &middot; A visitor arrives</span></button>
+        <button type="button" class="director-handle" id="explainBtn" title="Press E anywhere">Explain</button>
+        <button type="button" class="director-handle" id="directorHandle" aria-expanded="false" aria-controls="directorMore">All beats</button>
+      </div>
+    </div>
+    <div class="director-more" id="directorMore">
+      <div class="presses" id="presses"></div>
+      <div class="weather" id="weather"></div>
+      <div class="director-foot">
+        <span class="status" id="status">idle</span>
+        <span class="legend"><i class="legend-dot legend-dot--shopper"></i>the visitor
+          <i class="legend-dot legend-dot--merch"></i>the merchandiser</span>
+        <button type="button" class="tokenbtn" id="tokenBtn">Merchandiser sign-in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- This page calls the engine routes directly, because every one of them is
+     driven and asserted headlessly by scripts/rehearse-top-offers-page.mjs, and
+     the page's own script is then run end to end by
+     scripts/rehearse-top-offers-dom.mjs. The SDK wraps these same routes and is
+     what a customer integrates. -->
+<script src="/edge-auth.js"></script>
+<script src="top-offers.js"></script>
+</body>
+</html>

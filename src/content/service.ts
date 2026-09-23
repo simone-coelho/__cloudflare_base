@@ -51,6 +51,13 @@ export interface ServeRequest {
   browsingSessionId?: string | null;
   cf?: CfLike | null;
   channel?: string | null;
+  /**
+   * Named conditions the caller asserts are true for this request — Garrett's
+   * weather, and the same door for device, campaign or customer type. They gate
+   * pieces that carry a matching `eligibleWhen` rule and nothing else: a signal
+   * here can never boost, re-rank or become behavioural evidence.
+   */
+  context?: Readonly<Record<string, string>>;
   /** Observed arrival context, not an override of an established visit entry. */
   entry?: ChannelSignals;
   nowMs?: number;
@@ -465,6 +472,26 @@ export async function serveContentDecisions(
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.browsingSessionId || r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
+    // Garrett's targeting rule needs two things: where she is, and whatever
+    // condition the caller says holds right now.
+    //
+    // An ASSERTED region wins over the edge's own, and deliberately. The edge
+    // resolves location from the connection, which is coarse and sometimes only
+    // a country; the integrator often knows better — a server-side caller has
+    // the customer's account region, and a page may carry a chosen store or a
+    // delivery postcode. The edge value is the fallback when nothing is
+    // asserted, so an integration that says nothing behaves exactly as before.
+    //
+    // The trust boundary, stated: this input is caller-controlled, and it can
+    // only ever admit content the merchandiser already published with a rule
+    // naming that region. It grants no access, moves no affinity and is never
+    // stored as evidence about the shopper. Region rides consent exactly as the
+    // learning cell does — a shopper who withholds tracking is located by
+    // nobody, asserted or not.
+    eligibility: {
+      region: consent.tracking ? (r.context?.region ?? regionKeyOf(r.cf) ?? null) : null,
+      ...(r.context ? { signals: r.context } : {}),
+    },
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
     learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf },

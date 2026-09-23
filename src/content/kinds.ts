@@ -31,7 +31,7 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
-  'tags', 'slotTypes', 'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
+  'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
   'featuredProductIds', 'inStock']);
 
 /**
@@ -120,6 +120,43 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
     }
   }
+  // Garrett's targeting rule. Bounded on every axis, because it is authored by a
+  // feed and it decides whether a piece may be served at all.
+  let eligibleWhen: { regions?: string[]; context?: Record<string, string[]> } | undefined;
+  if (p.eligibleWhen !== undefined) {
+    if (!isRecord(p.eligibleWhen)) errors.push(`${at}.eligibleWhen: object with regions and/or context`);
+    else {
+      const extra = Object.keys(p.eligibleWhen).filter((k) => !['regions', 'context'].includes(k));
+      if (extra.length) errors.push(`${at}.eligibleWhen: unknown member(s) ${extra.join(', ')}; expected regions and/or context`);
+      const rule: { regions?: string[]; context?: Record<string, string[]> } = {};
+      if (p.eligibleWhen.regions !== undefined) {
+        const raw = p.eligibleWhen.regions;
+        if (!Array.isArray(raw) || !raw.length || raw.length > 64
+          || !raw.every((v) => isStr(v) && /^[A-Za-z]{2}(-[A-Za-z0-9]{1,3})?$/.test(v))) {
+          errors.push(`${at}.eligibleWhen.regions: 1..64 region keys such as US or US-WA`);
+        } else rule.regions = raw.map((v) => v.trim().toUpperCase());
+      }
+      if (p.eligibleWhen.context !== undefined) {
+        const raw = p.eligibleWhen.context;
+        if (!isRecord(raw) || !Object.keys(raw).length || Object.keys(raw).length > 8) {
+          errors.push(`${at}.eligibleWhen.context: object of 1..8 signal names → accepted values`);
+        } else {
+          const ctx: Record<string, string[]> = {};
+          for (const [name, values] of Object.entries(raw)) {
+            if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) { errors.push(`${at}.eligibleWhen.context.${name}: signal name must be 1..32 letters, digits or underscore`); continue; }
+            if (!Array.isArray(values) || !values.length || values.length > 32
+              || !values.every((v) => isStr(v) && v.trim() && v.length <= 64)) {
+              errors.push(`${at}.eligibleWhen.context.${name}: 1..32 non-empty values of at most 64 characters`); continue;
+            }
+            ctx[name] = values.map((v) => v.trim());
+          }
+          if (Object.keys(ctx).length) rule.context = ctx;
+        }
+      }
+      if (!rule.regions && !rule.context) errors.push(`${at}.eligibleWhen: name at least one of regions or context`);
+      else eligibleWhen = rule;
+    }
+  }
   let merchandising: Record<string, number> | undefined;
   if (p.merchandising !== undefined) {
     if (!isRecord(p.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → number 0..1`);
@@ -167,6 +204,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(isStr(p.renderUrl) ? { renderUrl: p.renderUrl } : {}),
     ...(isStr(p.excerpt) ? { excerpt: p.excerpt } : {}),
     ...(window && (window.from || window.to) ? { window } : {}),
+    ...(eligibleWhen ? { eligibleWhen } : {}),
   };
 }
 

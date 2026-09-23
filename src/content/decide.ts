@@ -11,7 +11,7 @@ import type {
 } from './types';
 import { validateSeedRules } from './kinds';
 import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
-import { isEligibleAt } from './lifecycle';
+import { isEligibleAt, type EligibilityContext } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
@@ -43,6 +43,13 @@ export interface DecideInput {
    */
   regional?: (RegionalBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
   cell: Cell;
+  /**
+   * Where and under what conditions this request is happening, for the pieces
+   * that carry an `eligibleWhen` rule (Garrett's "snowing in the Pacific
+   * Northwest"). Absent means no rule can pass, which leaves every catalog
+   * without rules behaving exactly as before.
+   */
+  eligibility?: EligibilityContext;
   arm: Arm;
   versions: DecisionVersions;
   configLabel: string;
@@ -161,7 +168,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
     byId.set(piece.id, piece);
-    if (isEligibleAt(piece, i.nowMs)) eligible.push(piece);
+    if (isEligibleAt(piece, i.nowMs, i.eligibility)) eligible.push(piece);
   }
 
   // The learning layer: lift^γ on the base score, looked up at the finest level

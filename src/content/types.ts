@@ -29,7 +29,38 @@ export interface ContentPiece extends ContentPieceLike {
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
   window?: { from?: string; to?: string };
+  /**
+   * QVC/Garrett (2026-09-11): "Do you have options for location? What about
+   * weather forecast? It's snowing in the Pacific Northwest, we might want to
+   * display relevant content to those customers."
+   *
+   * That is a TARGETING RULE, not an affinity: it decides whether the piece may
+   * be served at all, beside the window and the stock flag, and it is evaluated
+   * BEFORE scoring so a gated piece cannot be chosen however well it would have
+   * scored. It never boosts anything — a piece that passes its rule is then
+   * ranked on exactly the same terms as everything else.
+   *
+   * `regions` are the engine's own region keys (country, or country-region, as
+   * `regionKeyOf` builds them: "US", "US-WA"). A piece listing "US-WA" is
+   * eligible for a shopper in Washington; listing "US" covers the country.
+   * `context` names signals the page or a scheduled job supplies on the request,
+   * each with the values that admit the piece. Every named condition must hold,
+   * and a condition the request does not carry FAILS — an unknown weather is not
+   * snow, and silence must never open a gate.
+   */
+  eligibleWhen?: EligibilityRule;
   excerpt?: string;
+}
+
+/**
+ * A piece's own eligibility rule. Absent means "eligible wherever and whenever
+ * its window says", which is every piece that has never heard of this feature.
+ */
+export interface EligibilityRule {
+  /** Region keys that admit the piece. Absent means every region. */
+  regions?: string[];
+  /** Named request signals, each with the values that admit the piece. */
+  context?: Record<string, string[]>;
 }
 
 /** The `content` document kind: the catalog for a scope. */
