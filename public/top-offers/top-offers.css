@@ -557,11 +557,18 @@ p { margin: 0; }
 
 /* ── 4 · The right column is one component with tabs, not a tall stack ──── */
 .why { position: sticky; top: 14px; }
-.whytabs { display: flex; gap: 4px; border-bottom: 1px solid var(--greige-3); padding: 0 4px; background: var(--paper); }
+/* Four labels on one row of a 356px column. They were `white-space: nowrap` at
+ * their natural width, which totals ~397px — so "Roadmap" rendered straight
+ * over the right border. Equal flex shares with a zero basis make overflow
+ * impossible BY CONSTRUCTION rather than by fitting: each button gets a quarter
+ * of the row whatever the column is, and a label too long for its share wraps
+ * inside the button instead of escaping it. */
+.whytabs { display: flex; gap: 2px; border-bottom: 1px solid var(--greige-3); padding: 0 4px; background: var(--paper); }
 .whytabs button {
+  flex: 1 1 0; min-width: 0;
   font-family: var(--font-b); font-size: 12.5px; font-weight: 600; color: var(--muted);
-  background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 9px; cursor: pointer;
-  white-space: nowrap;
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px 4px; cursor: pointer;
+  white-space: normal; overflow-wrap: break-word; line-height: 1.25; text-align: center;
 }
 .whytabs button:hover { color: var(--ink); }
 .whytabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--coral); }

@@ -92,6 +92,17 @@ console.log('\n── The unsigned-read trap');
   ok(`every band grid track can shrink (${tracks.length} checked)`, unbounded.length === 0,
     unbounded.map((m) => `.${m[1]} → ${m[2].trim()}`).join(' ~ '));
 
+  // The four tab labels at their natural width total more than the 356px
+  // column, so `white-space: nowrap` rendered "Roadmap" straight over the right
+  // border. The fix is equal flex shares with a zero basis: a button cannot
+  // outgrow its quarter of the row, whatever the label says. Assert the
+  // construction, because a width that merely happens to fit today is one
+  // renamed tab away from clipping again.
+  const tabRule = /\.whytabs button \{([^}]*)\}/.exec(css)?.[1] ?? '';
+  ok('the tab buttons cannot outgrow their row', /flex:\s*1\s+1\s+0/.test(tabRule) && /min-width:\s*0/.test(tabRule),
+    tabRule.replace(/\s+/g, ' ').trim().slice(0, 120));
+  ok('a tab label wraps instead of overflowing', !/white-space:\s*nowrap/.test(tabRule));
+
 }
 
 // ── Everything below uses only what the page has ─────────────────────────────
