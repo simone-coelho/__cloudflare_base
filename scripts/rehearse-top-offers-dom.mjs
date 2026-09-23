@@ -176,7 +176,17 @@ const press = async (i) => {
   await elements.presses._fire('click', {
     target: { closest: (sel) => (sel === '.press' ? { dataset: { i: String(i) } } : null) },
   });
-  return settle(`beat ${i + 1}`);
+  const settled = await settle(`beat ${i + 1}`);
+  // The page refuses to invent a module: when the snapshot does not answer,
+  // refresh() returns early and leaves the PREVIOUS four and the PREVIOUS
+  // deltas on screen. That is the correct refusal, but on 2026-09-23 it cost
+  // an hour — beat 11 showed beat 10's cards and beat 10's delta lines, and it
+  // read like a ranking bug. Assert it here so a transient failure names itself
+  // instead of impersonating one.
+  ok(`   ↳ beat ${i + 1}: the decision service answered`,
+    elements.engineDown.hidden === true,
+    String(elements.engineDown.textContent || '').slice(0, 160));
+  return settled;
 };
 
 const BEAT_COUNT = (elements.presses.innerHTML.match(/<button/g) || []).length;

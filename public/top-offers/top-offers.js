@@ -899,7 +899,7 @@
       declare: ["<b>Asserts</b> region = US-FL &mdash; nothing about the visitor changes"],
       acts: [],
       will: ["The winter promotion <b>disappears from the module</b>", "It is still published and still inside its window &mdash; it is simply no longer allowed to be shown", "Everything below it moves up one container"],
-      line: 'Nothing about their changed. Only the asserted region did, and the winter promotion is gone — it is still '
+      line: 'Nothing about the visitor changed. Only the asserted region did, and the winter promotion is gone — it is still '
         + 'published, still inside its window, and still not eligible. That is a rule on the piece, not a preference.',
       async run() {
         state.region = 'US-FL';
