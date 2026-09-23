@@ -261,7 +261,7 @@ for (let i = 0; i < BEAT_COUNT; i += 1) {
   // moved, or it did not and says why not. A press that silently does nothing
   // is the thing that made this demo look like a slideshow.
   // Legible means: it moved the module and named what moved, OR it did not and
-  // said why not in terms of her own signal against the threshold.
+  // said why not in terms of the visitor's own signal against the threshold.
   ok(`   ↳ beat ${i + 1} is legible`,
     changed.length > 0 || /(Nothing moved|has not been asked again|holding)/.test(deltaNone()),
     deltaNone() || '(empty)');
@@ -280,12 +280,12 @@ for (let i = 0; i < BEAT_COUNT; i += 1) {
 
   if (i === 1) {
     const cook = meters().find((m) => m.value === 'Kitchen & Table' && m.dim === 'category');
-    ok(`   ↳ her cook signal is visible at ${cook ? cook.a : 'nothing'} even though the module has not moved`,
+    ok(`   ↳ the cook signal is visible at ${cook ? cook.a : 'nothing'} even though the module has not moved`,
       Boolean(cook && cook.a > 0), JSON.stringify(meters()));
   }
-  if (i === 1) ok('   ↳ her session records the department she opened',
+  if (i === 1) ok('   ↳ the session records the department they opened',
     journey().some((j) => /viewed Kitchen & Table/.test(j)), journey().join(' | '));
-  if (i === 2) ok('   ↳ her session records the product she opened',
+  if (i === 2) ok('   ↳ the session records the product they opened',
     journey().some((j) => /^opened /.test(j)), journey().join(' | '));
   // Jamie's rule: their defined defaults until five lifetime pages.
   if (i <= 2) ok('   ↳ the module is holding QVC\'s defined defaults',
@@ -326,7 +326,7 @@ for (let i = 0; i < BEAT_COUNT; i += 1) {
 
   if (i === 4) {
     ok(`   ↳ four cook touches put the meter at ${cookMeter()}, past 0.60`, cookMeter() >= 0.6, String(cookMeter()));
-    ok('   ↳ and the module is not what she arrived to',
+    ok('   ↳ and the module is not what they arrived to',
       JSON.stringify(c) !== JSON.stringify(openingCards), c.join(' | '));
     const cook = (elements.drivers.innerHTML.match(/category Kitchen &amp; Table/g) || []).length;
     ok(`   ↳ the category cap holds cook at two containers (${cook})`, cook === 2, String(cook));
@@ -334,7 +334,7 @@ for (let i = 0; i < BEAT_COUNT; i += 1) {
 }
 
 // ── The before/after row must actually show BEFORE ──────────────────────────
-// It did not: one variable held both "what she saw" and "what she sees", and
+// It did not: one variable held both "what was seen" and "what is seen", and
 // the second overwrote the first before the strip was ever pressed, so the page
 // drew the same four twice and called it a comparison.
 console.log('\n── Before and after are two different rows');
@@ -351,7 +351,7 @@ console.log('\n── Before and after are two different rows');
   console.log(`   now:    ${now.join(' | ')}`);
 }
 
-console.log('\n── Her session, as the room saw it');
+console.log('\n── The session, as the room saw it');
 journey().forEach((j) => console.log(`   · ${j}`));
 
 console.log('\n── What the module ended up showing');

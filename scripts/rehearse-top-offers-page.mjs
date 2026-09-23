@@ -154,7 +154,7 @@ try {
   ok('1 · four containers, no affinity driver', b1.length === 4
     && b1.every((d) => !(d.explain?.drivers ?? []).some((x) => x.dim !== 'freshness')));
 
-  // Her exact journey, as the page performs it: department, product, two other
+  // The exact journey, as the page performs it: department, product, two other
   // departments, department, product. Two suites replaying different journeys
   // would produce different numbers and one of them would be lying.
   await view('Kitchen & Table', 'Cookware & Dutch Ovens');

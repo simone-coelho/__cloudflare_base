@@ -15,10 +15,10 @@
 //
 // Each carries exactly the metadata Jamie named — category, subcategory, brand —
 // plus the badge from Garrett's own screenshot as `offerType`, and a price band.
-// Twelve live on a typical day growing to twenty, her numbers from 22 September.
+// Twelve live on a typical day growing to twenty, Jamie's numbers from 22 September.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** The six departments Jamie listed, in her order. */
+/** The six departments Jamie listed, in Jamie's order. */
 export const CATEGORIES = ['Beauty & Wellness', 'Jewelry', 'Fashion', 'For the Home',
   'Kitchen & Table', 'Electronics & Tech'];
 

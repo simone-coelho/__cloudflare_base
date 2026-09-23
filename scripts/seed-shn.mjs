@@ -106,7 +106,7 @@ const artUrl = (id) => (existsSync(new URL(`${id}.jpg`, artDir)) ? `/top-offers/
 
 const BAND_PRICE = { entry: 29.98, core: 79.98, elevated: 199.98, premium: 449.98 };
 
-/** Windows in her range: three to seven days, staggered so the pool looks live. */
+/** Windows in the range Jamie gave: three to seven days, staggered so the pool looks live. */
 function windowFor(index, anchor, opts = {}) {
   if (opts.closesIn !== undefined) return { from: iso(anchor - 3 * DAY), to: iso(anchor + opts.closesIn) };
   const lives = [3 * DAY, 5 * DAY, 7 * DAY, 4 * DAY, 6 * DAY, 3 * DAY + 12 * HOUR][index % 6];
@@ -165,10 +165,10 @@ function slotsDoc({ promotion = 0, pinned = null } = {}) {
     slot: 'top-offers',
     take: 4,
     weights: { category: 0.40, subcategory: 0.22, brand: 0.18, offerType: 0.12, priceBand: 0.08 },
-    // Two promotions per category (her number) means four containers already
+    // Two promotions per category (Jamie's number) means four containers already
     // span at least two categories by construction, so at twelve this cap is a
     // no-op and we say so rather than claim it is doing work. It binds at the
-    // twenty she wants to grow to, where some categories carry three.
+    // twenty Jamie wants to grow to, where some categories carry three.
     diversity: { dimension: 'category', max: 2 },
     freshness: { weight: 0.08, halfLifeDays: 5 },
     merchandising: { promotion, maxBoost: 1.6, minBoost: 0.7 },
@@ -198,7 +198,7 @@ const shifted = (pieces, byMs) => pieces.map((p) => ({ ...p,
 /** Two hours pass, so EXPIRING_ID's window has closed. */
 const clock = shifted(basePieces, 2 * HOUR);
 
-/** The arrival — a new promotion follows the one that left, her own sentence. */
+/** The arrival — a new promotion follows the one that left, Jamie's own sentence. */
 const arrivalPromo = GROWTH.find((p) => p.id === ARRIVAL_ID);
 const arrival = [...clock, pieceOf(arrivalPromo, basePieces.length, anchor, {
   window: { from: iso(anchor - 2 * MINUTE), to: iso(anchor + 4 * DAY) },
@@ -256,7 +256,7 @@ const BEATS = {
   // MEASURED against the field the beat actually acts on, not guessed. At that
   // point the ranked scores are 0.4440 / 0.3840 / 0.3300 (the pick) / 0.3300.
   // The promotion term is a multiplier, so 0.25 puts the pick at 0.4125: past
-  // second place and short of first. Her own cook affinity still leads.
+  // second place and short of first. The visitor's own cook affinity still leads.
   //
   // Note what is NOT claimed here. The slot's 1.6x clamp would allow 0.5280,
   // which is above first place — so in THIS field the clamp is not what holds
@@ -290,13 +290,13 @@ const LEARN_BASELINE = {
 };
 
 /**
- * THE SHOP SHE WALKS THROUGH — products, not promotions.
+ * THE SHOP THE VISITOR WALKS THROUGH — products, not promotions.
  *
  * This is the distinction their site already makes and ours must too. The
- * MODULE decides promotions; the SHOP is where she browses, and browsing is
+ * MODULE decides promotions; the SHOP is where the visitor browses, and browsing is
  * what builds the affinity the module then reads. A department page view and a
  * product view carry category, subcategory and brand, which is exactly the
- * metadata Jamie said travels with each piece of content — so the signal she
+ * metadata Jamie said travels with each piece of content — so the signal the visitor
  * produces and the pieces it scores speak the same vocabulary.
  *
  * The rows come from the generated packshot catalog; none of that demo's

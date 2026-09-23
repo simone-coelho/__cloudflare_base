@@ -297,7 +297,7 @@ p { margin: 0; }
 .pdp-bullets { margin: 4px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: var(--charcoal); }
 .cta--big { margin-top: 8px; align-self: flex-start; padding: 13px 34px; font-size: 15px; }
 
-/* ── Her session: the cause, written down as it happens ─────────────────── */
+/* ── This session: the cause, written down as it happens ─────────────────── */
 .whyblock--session { border-left: 3px solid var(--coral); }
 .journey { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
 .journey li {
@@ -346,7 +346,7 @@ p { margin: 0; }
 .legend-dot--shopper { background: var(--coral); }
 .legend-dot--merch { background: var(--flag-bg); margin-left: 8px; }
 
-/* The masthead nav is a real control she clicks, not a label. */
+/* The masthead nav is a real control the visitor clicks, not a label. */
 .mastnav button {
   font: inherit; font-size: 13.5px; color: var(--charcoal); background: none; border: 0;
   border-bottom: 2px solid transparent; padding: 3px 0; cursor: pointer; white-space: nowrap;

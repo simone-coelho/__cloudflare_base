@@ -212,7 +212,7 @@
     : '');
 
   /**
-   * The Contextual Banner — Garrett's second use case, in his words: "a single
+   * The Contextual Banner — Garrett's second use case, in their words: "a single
    * container which generally only has a single piece of content… only displays
    * on specific page types such as category and search pages… it should NOT
    * display to NEW customers."
@@ -930,7 +930,7 @@
       will: ["The module renders <b>two</b> containers instead of four",
         "They are the <b>top two</b> of the same ranking &mdash; nothing is re-decided",
         "Same slot name, so every exposure and click it has already earned still counts"],
-      line: 'His other question: what if the layout wants two pieces tomorrow and four the day after? That is '
+      line: 'Garrett&rsquo;s other question: what if the layout wants two pieces tomorrow and four the day after? That is '
         + '<b>one field</b> on a published document, with full history and rollback. The module takes the top two of '
         + 'the same ranking, and keeps everything it has learned.',
       async run() {
