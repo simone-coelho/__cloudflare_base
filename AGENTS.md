@@ -43,3 +43,48 @@ Preserve pre-existing worktree material. The owner's settings deny `git checkout
 ## Durable handoff
 
 The lead updates LANE-LOG.md whenever lanes, commits, rulings or authority change, and keeps RESUME.md to a few lines pointing at METHOD.md and LANE-LOG.md. A new lead starts from those two files and the score, not from chat recollection. Unresolved requirements and named residuals stay visible in LANE-LOG.md.
+
+---
+
+# Demo operations
+
+**Not part of the remediation programme above.** These are operating rules for the hosted demos; they authorize
+nothing in document 35 and nothing above authorizes them.
+
+## The demo worker
+
+Demo surfaces live on the DEFAULT wrangler environment — `edge-platform`, `ENVIRONMENT=development`,
+`DEPLOYMENT_PROFILE=demo`, deployed with plain `npx wrangler deploy`. Staging and production are
+`DEPLOYMENT_PROFILE=customer`: `/ops/demo-bootstrap` refuses there by design, the customer-stamp workflow
+deliberately omits demo bindings and assets, and demo API roots are 404'd under `AUTH_MODE=enforced`. A demo
+does not go there. `npm run deploy staging|production` is the guarded customer-stamp workflow and is a
+different thing entirely.
+
+## A reseed must be followed by a deploy
+
+`scripts/seed-shn.mjs` (and any seed shaped like it) **re-anchors every content window to now and rewrites the
+beat documents under `public/`**. The worker reads those documents from its own `ASSETS` binding when it applies
+a beat. So after seeding a deployed demo, redeploy:
+
+```bash
+node scripts/seed-shn.mjs --base https://<worker> --token <operator token>
+npx wrangler deploy
+```
+
+Skip the deploy and the served assets drift from what was published: a beat then applies a *different* document
+than the one that was seeded, and the demo misbehaves in a way that looks like an engine fault. This is the
+coupling to remember — seeding a hosted demo is two steps, never one.
+
+## No demo page carries a credential
+
+`public/` is served wholesale (`wrangler.toml [assets]`), so a token written into a static directory is a
+credential anyone with the URL can fetch. A demo page names an action and the worker performs it
+(`src/routes/topOffers.ts` is the pattern): mounted only where `DEPLOYMENT_PROFILE` is `demo`, accepting a
+closed set of names and no caller-supplied document, minting genuine short-lived operator authority and
+re-entering the ordinary route pipeline. Never hand the configuration store a permissive `authorize` to skip
+that — it is shorter and it is a hole in the authority model.
+
+A demo page must send `X-Tenant` on its own API calls. Without it the app-level tenant middleware falls back to
+the default tenant, which a single-tenant demo worker does not provision, and every call fails with "Tenant
+unavailable" before reaching the handler. This passes locally whenever the local registry happens to contain the
+default tenant, so it surfaces only once deployed.
