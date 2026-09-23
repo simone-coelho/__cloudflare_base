@@ -94,7 +94,7 @@
    */
   async function applyBeat(kind, name, note) {
     const res = await fetch('/top-offers/api/beat', { method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'X-Tenant': TENANT },
       body: JSON.stringify({ kind, name, note }) });
     const body = await res.json().catch(() => null);
     if (!res.ok || !body || body.ok !== true) {
@@ -604,7 +604,7 @@
     el.reportBody.innerHTML = '<p class="thin-note">Reading the ledger&hellip;</p>';
     try {
       const res = await fetch('/top-offers/api/report', { method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'X-Tenant': TENANT },
         body: JSON.stringify({ date, slot: SLOT, build: Boolean(build) }) });
       const body = await res.json().catch(() => null);
       if (!res.ok || !body || !body.report) throw new Error((body && body.error) || `no report for ${date}`);

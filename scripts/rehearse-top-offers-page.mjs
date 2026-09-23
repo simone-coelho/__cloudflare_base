@@ -55,8 +55,10 @@ console.log('\n── No merchandiser credential is published, anywhere');
   // The page used to read a token the seed wrote here. `public/` is served
   // wholesale, so on a hosted worker that file is a credential anyone can
   // fetch. It is gone, and this check is what keeps it gone.
+  // Not served is what matters, not which refusal: a hosted worker answers 403
+  // for an absent asset where the dev server answers 404.
   const leaked = await page('beats/operator.local.json');
-  ok(`beats/operator.local.json → ${leaked.status} (must not exist)`, leaked.status === 404,
+  ok(`beats/operator.local.json → ${leaked.status} (must not be served)`, leaked.status !== 200,
     'a merchandiser token is being served as a static asset');
 
   const source = await (await page('top-offers.js')).text();
@@ -109,7 +111,7 @@ async function api(path, payload, extra) {
  */
 async function publish(kind, name, note) {
   const res = await fetch(`${base}/top-offers/api/beat`, { method: 'POST',
-    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, name, note }) });
+    headers: { 'content-type': 'application/json', 'X-Tenant': TENANT }, body: JSON.stringify({ kind, name, note }) });
   const body = await res.json().catch(() => ({}));
   if (body.ok !== true) throw new Error(`applying ${name} failed: ${body.error ?? res.status}`);
 }

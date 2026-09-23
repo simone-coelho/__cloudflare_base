@@ -118,13 +118,15 @@ export function topOffersRoutes(dispatch: Dispatch) {
     // and publication digest it was authored against, exactly as the operator
     // console does it. This is an in-process dispatch, not a network call.
     const read = await dispatch(new Request(url, { headers: auth }), c.env, c.executionCtx);
-    if (read.status === 401 || read.status === 403) {
-      return c.json({ ok: false, error: `the demo operator has no grant on "${TENANT}"` }, 503);
-    }
     const base = await read.json().catch(() => null) as
-      { revision?: number; publication?: { revision: number; digest: string } } | null;
+      { revision?: number; publication?: { revision: number; digest: string }; error?: string } | null;
+    if (read.status === 401 || read.status === 403) {
+      return c.json({ ok: false, stage: 'read', status: read.status,
+        error: base?.error ?? `the demo operator has no grant on "${TENANT}"` }, 503);
+    }
     if (!read.ok || !base?.publication) {
-      return c.json({ ok: false, error: `no publication base for ${kind} — run /ops/demo-bootstrap` }, 503);
+      return c.json({ ok: false, stage: 'read', status: read.status,
+        error: base?.error ?? `no publication base for ${kind} — run /ops/demo-bootstrap` }, 503);
     }
 
     const write = await dispatch(new Request(url, {
@@ -140,7 +142,8 @@ export function topOffersRoutes(dispatch: Dispatch) {
 
     const result = await write.json().catch(() => null) as { ok?: boolean; revision?: number; error?: string } | null;
     if (!write.ok || result?.ok !== true) {
-      return c.json({ ok: false, error: result?.error ?? `publishing ${kind} failed` }, 502);
+      return c.json({ ok: false, stage: 'write', status: write.status,
+        error: result?.error ?? `publishing ${kind} failed` }, 502);
     }
     return c.json({ ok: true, kind, name, revision: result.revision });
   });
