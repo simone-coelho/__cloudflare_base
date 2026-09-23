@@ -893,6 +893,26 @@ body { padding-bottom: 118px; }
   font-family: var(--font-m); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--muted); background: var(--greige-2); padding: 3px 7px; border-radius: 4px;
 }
+/* A tint each, so the neighbour modules read as blocks of content rather than
+ * empty containers. Three rules bound the choice:
+ *   • Red is reserved for price, and amber (--flag-bg) is QVC's own
+ *     low-availability treatment — an amber strip would read as a scarcity
+ *     flag on a page that deliberately refuses urgency theatre.
+ *   • They are COOL and desaturated; the module's ground is warm blush with a
+ *     coral border, so it stays the warmest thing on the page and keeps the eye.
+ *   • Light enough that charcoal body copy stays above 7:1 (the 50+ audience
+ *     constraint is a contrast floor, not a preference).
+ * The left border is a deeper draw of the same hue: identity, not decoration. */
+.strip--static[data-mod="tv"]   { background: #E9EEF6; border-left-color: #8FA6C6; }
+.strip--static[data-mod="dept"] { background: #E7EEE8; border-left-color: #8FB196; }
+.strip--static[data-mod="deal"] { background: #EFEAF4; border-left-color: #A99BBE; }
+
+/* The chip sat on greige, which goes muddy over a tint. White holds on all three. */
+.strip--static .strip-k { background: rgba(255, 255, 255, .82); border: 1px solid rgba(35, 48, 71, .14); color: var(--charcoal); }
+/* --muted falls to 4.5:1 over these tints, under the floor at 13px. The
+   description line takes charcoal on a tinted strip and nowhere else. */
+.strip--static span:not(.strip-k) { color: var(--charcoal); }
+
 .strip b { font-family: var(--font-d); font-size: 15px; font-weight: 600; color: var(--ink); }
 .strip span:not(.strip-k) { font-size: 13px; color: var(--muted); }
 .module { border-left: 3px solid var(--coral); transition: order 0s; }
