@@ -29,7 +29,8 @@
  *   POST /realtime/session/preferences         their explicit consent choice
  *   POST /realtime/action                      behaviour, and the click reward
  *   GET  /v1/:tenant/decisions/snapshot        the four, with their receipts
- *   GET/PUT /content/:kind, /config/reflex     the merchandiser's publishes
+ *   POST /top-offers/api/beat                  the merchandiser's publishes, applied
+ *                                              server-side by name (no browser credential)
  */
 (() => {
   'use strict';
@@ -44,7 +45,7 @@
     four: $('four'), pool: $('pool'), poolCount: $('poolCount'), vectors: $('vectors'),
     drivers: $('drivers'), whyHead: $('whyHead'), journey: $('journey'),
     beatNo: $('beatNo'), engineLine: $('engineLine'), presses: $('presses'), status: $('status'),
-    engineDown: $('engineDown'), textSize: $('textSize'), tokenBtn: $('tokenBtn'),
+    engineDown: $('engineDown'), textSize: $('textSize'),
     cursor: $('demo-cursor'), mastnav: $('mastnav'), ghosts: $('ghosts'), deltas: $('deltas'), weather: $('weather'),
     beforeRow: $('beforeRow'), beforeFour: $('beforeFour'), nowLabel: $('nowLabel'),
     directorHandle: $('directorHandle'), nextBeat: $('nextBeat'), nextLabel: $('nextLabel'),
@@ -79,35 +80,27 @@
     return { status: res.status, ok: res.ok, body: await res.json().catch(() => ({})) };
   }
 
-  let merchandiser = '';
-  const storedToken = () => { try { return (sessionStorage.getItem('tuning-token') || '').trim(); } catch { return ''; } };
 
   /**
-   * The operator headers, attached HERE rather than left to edge-auth.js, which
-   * deliberately never signs a GET (public/edge-auth.js:52). A publish has to
-   * READ the current revision and publication digest before it can write against
-   * them, and that read is an operator read like any other.
+   * A beat is applied BY NAME. The page holds no merchandiser credential at all:
+   * it names one of the demo's own published documents and the worker applies
+   * it (src/routes/topOffers.ts), minting short-lived operator authority and
+   * going through the ordinary /content pipeline.
+   *
+   * It used to publish directly, carrying a token the seed wrote into the beats
+   * directory. That is fine on loopback and wrong anywhere else — `public/` is
+   * served wholesale, so a token there is a credential anyone can fetch. The
+   * demo is hosted, so the credential had to stop being the browser's problem.
    */
-  const operatorHeaders = (extra) => ({ 'X-Tenant': TENANT,
-    ...(merchandiser ? { Authorization: `Bearer ${merchandiser}` } : {}), ...(extra || {}) });
-
-  async function adoptLocalToken() {
-    if (!merchandiser) merchandiser = storedToken();
-    if (!merchandiser) {
-      try {
-        const res = await fetch('beats/operator.local.json', { cache: 'no-store' });
-        if (res.ok) {
-          const body = await res.json();
-          if (body && typeof body.token === 'string' && body.token.trim()) {
-            merchandiser = body.token.trim();
-            try { sessionStorage.setItem('tuning-token', merchandiser); } catch { /* private window */ }
-          }
-        }
-      } catch { /* no local token; the sign-in button is the other way in */ }
+  async function applyBeat(kind, name, note) {
+    const res = await fetch('/top-offers/api/beat', { method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind, name, note }) });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.ok !== true) {
+      throw new Error((body && body.error) || `applying ${name} failed (${res.status})`);
     }
-    if (!merchandiser) return 'none';
-    const probe = await fetch(`/content/catalog?scope=${TENANT}`, { headers: operatorHeaders() });
-    return probe.ok ? 'ok' : `refused (${probe.status})`;
+    return body.revision;
   }
 
   const fetchJson = (name) => fetch(name, { cache: 'no-store' }).then((r) => {
@@ -115,29 +108,6 @@
     return r.json();
   });
   const fetchDoc = (name) => fetchJson(`beats/${name}.json`);
-
-  async function publish(kind, document_, note_) {
-    const path = kind === 'reflex' ? '/config/reflex' : `/content/${kind}`;
-    const url = `${path}?scope=${TENANT}`;
-    const read = await fetch(url, { headers: operatorHeaders() });
-    if (read.status === 401 || read.status === 403) {
-      throw new Error('the merchandiser is not signed in — run scripts/seed-shn.mjs, or use Merchandiser sign-in');
-    }
-    const base = await read.json().catch(() => null);
-    if (!read.ok || !base || base.ok === false) throw new Error((base && base.error) || `could not read the current ${kind}`);
-    if (!base.publication) throw new Error(`the ${kind} document has no publication base`);
-    const res = await fetch(url, { method: 'PUT',
-      headers: operatorHeaders({ 'content-type': 'application/json',
-        'If-Match': `"${base.revision}/${base.publication.revision}/${base.publication.digest}"`,
-        'Idempotency-Key': `${base.revision}:${crypto.randomUUID()}` }),
-      body: JSON.stringify(kind === 'reflex' ? { config: document_, note: note_ } : { document: document_, note: note_ }) });
-    if (res.status === 401 || res.status === 403) {
-      throw new Error('the merchandiser is not signed in — run scripts/seed-shn.mjs, or use Merchandiser sign-in');
-    }
-    const body = await res.json().catch(() => null);
-    if (!res.ok || !body || body.ok !== true) throw new Error((body && body.error) || `publishing the ${kind} failed`);
-    return body.revision;
-  }
 
   // ── This session, written down as it happens ───────────────────────────────
   function note(verb, what, detail) {
@@ -633,12 +603,9 @@
     const date = new Date().toISOString().slice(0, 10);
     el.reportBody.innerHTML = '<p class="thin-note">Reading the ledger&hellip;</p>';
     try {
-      if (build) {
-        const made = await fetch(`/v1/${TENANT}/learn/report`, { method: 'POST',
-          headers: operatorHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ date }) });
-        if (!made.ok) throw new Error(`the report could not be built (${made.status})`);
-      }
-      const res = await fetch(`/v1/${TENANT}/learn/report?date=${date}&slot=${SLOT}`, { headers: operatorHeaders() });
+      const res = await fetch('/top-offers/api/report', { method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date, slot: SLOT, build: Boolean(build) }) });
       const body = await res.json().catch(() => null);
       if (!res.ok || !body || !body.report) throw new Error((body && body.error) || `no report for ${date}`);
       renderReport(body.report);
@@ -761,8 +728,8 @@
       async run() {
         await useCatalog('catalog-1');
         await newVisitor();
-        await publish('slots', await fetchDoc('slots-1'), 'the opening slots');
-        await publish('catalog', state.catalog, 'the opening pool: twelve promotions, two per department');
+        await applyBeat('slots', 'slots-1', 'the opening slots');
+        await applyBeat('catalog', 'catalog-1', 'the opening pool: twelve promotions, two per department');
         await openHome(true);   // their first page on the website
       } },
 
@@ -819,7 +786,7 @@
         + 'promotion takes the container. <b>No test ended. No winner was declared. Nobody configured anything.</b>',
       async run() {
         await useCatalog('catalog-clock');
-        await publish('catalog', state.catalog, 'the clock passes a window');
+        await applyBeat('catalog', 'catalog-clock', 'the clock passes a window');
         note('published', 'The CMS clock moved on', 'one promotion is now outside its window');
         await openHome(true, false);
       } },
@@ -834,7 +801,7 @@
         + '&ldquo;a new offer always follows one that leaves&rdquo;.',
       async run() {
         await useCatalog('catalog-arrival');
-        await publish('catalog', state.catalog, 'a new promotion follows the one that left');
+        await applyBeat('catalog', 'catalog-arrival', 'a new promotion follows the one that left');
         note('published', 'A new promotion went live', 'never clicked \u00b7 placed on its tags alone');
         await openHome(true, false);
       } },
@@ -847,7 +814,7 @@
         + 'and everything it has learned do not. A new id would restart learning at the worst possible moment.',
       async run() {
         await useCatalog('catalog-final');
-        await publish('catalog', state.catalog, 'the closing creative, same id');
+        await applyBeat('catalog', 'catalog-final', 'the closing creative, same id');
         note('published', 'Final Hours creative', 'same content id, so the learning survives');
         await openHome(true, false);
       } },
@@ -862,8 +829,8 @@
         + 'merchandiser&rsquo;s call, and the next beat is what to do when they want it first regardless.',
       async run() {
         await useCatalog('catalog-showcase');
-        await publish('slots', await fetchDoc('slots-promo'), 'the merchandiser reinforces the day\u2019s pick');
-        await publish('catalog', state.catalog, 'the pick carries its promotion signal');
+        await applyBeat('slots', 'slots-promo', 'the merchandiser reinforces the day\u2019s pick');
+        await applyBeat('catalog', 'catalog-showcase', 'the pick carries its promotion signal');
         note('tuned', 'Promotion weight \u2192 0.25', 'third \u2192 second \u00b7 their own affinity still leads');
         await openHome(true, false);
       } },
@@ -875,7 +842,7 @@
       line: 'When they want it first for <b>everyone</b>, that is a pin, not a heavier weight. It takes container one '
         + 'and the receipt says ranking was skipped. The override is visible <b>as</b> an override.',
       async run() {
-        await publish('slots', await fetchDoc('slots-pin'), 'the day\u2019s pick pinned to container one');
+        await applyBeat('slots', 'slots-pin', 'the day\u2019s pick pinned to container one');
         note('tuned', 'The pick is pinned', 'container one for everyone \u00b7 ranking skipped');
         await openHome(true, false);
       } },
@@ -934,8 +901,7 @@
         + '<b>one field</b> on a published document, with full history and rollback. The module takes the top two of '
         + 'the same ranking, and keeps everything it has learned.',
       async run() {
-        const doc = await fetchDoc('slots-take2');
-        await publish('slots', doc, 'tomorrow the layout wants two pieces');
+        await applyBeat('slots', 'slots-take2', 'tomorrow the layout wants two pieces');
         note('published', 'take: 4 \u2192 2', 'one field \u00b7 same slot, same learning');
         await openHome(true, false);
       } },
@@ -1210,10 +1176,6 @@
     el.engineLine.innerHTML = BEATS[i].line;
     say('working…');
     try {
-      const credential = await adoptLocalToken();
-      if (credential !== 'ok') throw new Error(credential === 'none'
-        ? 'no merchandiser token — run scripts/seed-shn.mjs, or use Merchandiser sign-in'
-        : `the merchandiser token was ${credential} — re-run scripts/seed-shn.mjs`);
       if (!state.shopper) await newVisitor();   // any beat may be pressed first
       await BEATS[i].run();
       say('done', 'good');
@@ -1353,14 +1315,6 @@
     apply();
   })();
 
-  el.tokenBtn.addEventListener('click', () => {
-    const next = window.prompt('Merchandiser operator token (node scripts/dev-token.mjs)', storedToken());
-    if (next === null) return;
-    merchandiser = next.trim();
-    try { sessionStorage.setItem('tuning-token', merchandiser); } catch { /* private window */ }
-    void adoptLocalToken().then((c) => say(c === 'ok' ? 'signed in' : `the token was ${c}`, c === 'ok' ? 'good' : 'bad'));
-  });
-
   (async () => {
     try {
       state.shop = await fetchJson('products.json');
@@ -1378,10 +1332,7 @@
       // AFTER the catalog, not before: the titles and the creative come from it,
       // and a default set rendered without it shows bare ids.
       render(defaultFour(), true);
-      const credential = await adoptLocalToken();
-      if (credential === 'ok') say(`shop loaded · ${state.shop.products.length} products · merchandiser signed in — press 1`, 'good');
-      else if (credential === 'none') say('shop loaded, but there is no merchandiser token — run scripts/seed-shn.mjs', 'bad');
-      else say(`shop loaded, but the merchandiser token was ${credential} — re-run scripts/seed-shn.mjs`, 'bad');
+      say(`shop loaded · ${state.shop.products.length} products — press 1`, 'good');
     } catch (error) { say(error.message, 'bad'); engineDown(error.message); }
   })();
 })();

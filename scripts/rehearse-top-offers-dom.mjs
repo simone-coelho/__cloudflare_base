@@ -33,7 +33,7 @@ const ok = (label, condition, detail = '') => {
 
 // ── The smallest DOM the page actually touches ───────────────────────────────
 const IDS = ['four', 'pool', 'poolCount', 'vectors', 'drivers', 'whyHead', 'journey',
-  'beatNo', 'engineLine', 'presses', 'status', 'engineDown', 'textSize', 'tokenBtn',
+  'beatNo', 'engineLine', 'presses', 'status', 'engineDown', 'textSize',
   'demo-cursor', 'mastnav', 'ghosts', 'deltas', 'weather', 'beforeRow', 'beforeFour', 'nowLabel',
   'directorHandle', 'nextBeat', 'nextLabel', 'pdBack', 'pdMode', 'pdDone', 'pdAct', 'pdArith', 'pdWill',
   'pdWhyWrap', 'pdWhy', 'pdMapNow', 'pdMapAfter', 'pdGo', 'pdPill', 'pdNote', 'pdWhyHead', 'explainBtn', 'pdNow', 'reportBody', 'buildReport', 'banner', 'topOffersModule', 'moduleWhere',
@@ -162,7 +162,7 @@ const settle = async (label) => {
 console.log('\n── What the page says before a single press');
 const opening = await settle('startup');
 console.log(`   status: "${opening}"`);
-ok('the shop and the merchandiser credential both loaded', /signed in/i.test(opening), opening);
+ok('the shop loaded and the page asked for no credential', /shop loaded/i.test(opening), opening);
 ok('the department nav rendered', (elements.mastnav.innerHTML.match(/data-category/g) || []).length === 6,
   String((elements.mastnav.innerHTML.match(/data-category/g) || []).length));
 

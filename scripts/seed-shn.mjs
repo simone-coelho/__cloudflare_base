@@ -363,18 +363,11 @@ const token = await resolveToolToken({ token: tokenFromArgs(process.argv), paylo
 const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Tenant': scope };
 
 /**
- * The merchandiser's own token, for the director bar. LOOPBACK ONLY: against any
- * other target this is skipped and the presenter signs in through the page's own
- * button, because a token in a static asset directory on a shared host is a
- * credential anyone can fetch. The file is gitignored and never deployed.
+ * No merchandiser token is written any more, anywhere. The page applies beats
+ * BY NAME through /top-offers/api/beat and the worker holds the credential
+ * (src/routes/topOffers.ts), because `public/` is served wholesale and a token
+ * in a static directory on a hosted worker is a credential anyone can fetch.
  */
-if (isLoopbackTarget(base)) {
-  const merchandiser = await resolveToolToken({ token: tokenFromArgs(process.argv),
-    payload: { sub: 'operator', roles: ['operator'] }, expiresIn: '12h', allowMint: true });
-  writeFileSync(new URL('operator.local.json', beatsDir),
-    `${JSON.stringify({ token: merchandiser, note: 'local dev only; loopback seed; never deployed' }, null, 1)}\n`);
-  console.log('operator: wrote a 12-hour merchandiser token for the director bar (loopback only)');
-}
 
 /**
  * One versioned publish, with the preconditions the configuration authority

@@ -50,12 +50,22 @@ for (const name of ['catalog-1', 'catalog-clock', 'catalog-arrival', 'catalog-fi
 }
 const anchor = await beat('anchor');
 
-console.log('\n── The merchandiser credential the browser finds for itself');
-const tokenRes = await page('beats/operator.local.json');
-ok(`beats/operator.local.json → ${tokenRes.status}`, tokenRes.ok,
-  'the seed did not leave one, or the worker was not restarted after it did');
-const operator = tokenRes.ok ? (await tokenRes.json()).token : '';
-ok('the file carries a token', Boolean(operator && operator.trim()));
+console.log('\n── No merchandiser credential is published, anywhere');
+{
+  // The page used to read a token the seed wrote here. `public/` is served
+  // wholesale, so on a hosted worker that file is a credential anyone can
+  // fetch. It is gone, and this check is what keeps it gone.
+  const leaked = await page('beats/operator.local.json');
+  ok(`beats/operator.local.json → ${leaked.status} (must not exist)`, leaked.status === 404,
+    'a merchandiser token is being served as a static asset');
+
+  const source = await (await page('top-offers.js')).text();
+  ok('the page source carries no bearer token', !/Bearer\s|eyJ[A-Za-z0-9_-]{10}/.test(source));
+  ok('the page makes no /content or /config call of its own',
+    !/fetch\(\s*`?\/(?:content|config)\//.test(source),
+    'the merchandiser half must go through /top-offers/api/beat');
+  ok('the page applies beats by name', /\/top-offers\/api\/beat/.test(source));
+}
 
 // ── The trap the page fell into twice ────────────────────────────────────────
 // edge-auth.js signs writes but NEVER a GET (public/edge-auth.js:52), and a
@@ -80,11 +90,6 @@ console.log('\n── The unsigned-read trap');
   ok(`every band grid track can shrink (${tracks.length} checked)`, unbounded.length === 0,
     unbounded.map((m) => `.${m[1]} → ${m[2].trim()}`).join(' ~ '));
 
-  const source = await (await page('top-offers.js')).text();
-  const calls = [...source.matchAll(/fetch\(\s*(?:url|`[^`]*(?:\/content\/|\/config\/)[^`]*`)[^)]*\)/g)].map((m) => m[0]);
-  const unsignedCalls = calls.filter((c) => !c.includes('operatorHeaders'));
-  ok(`every /content and /config call in the page is signed (${calls.length} found)`,
-    calls.length > 0 && unsignedCalls.length === 0, unsignedCalls.join(' ~ '));
 }
 
 // ── Everything below uses only what the page has ─────────────────────────────
@@ -97,23 +102,16 @@ async function api(path, payload, extra) {
   return { status: res.status, ok: res.ok, body: await res.json().catch(() => ({})) };
 }
 
-/** The page's publish, with the token edge-auth.js would have attached. */
-async function publish(kind, document, note) {
-  const path = kind === 'reflex' ? '/config/reflex' : `/content/${kind}`;
-  const url = `${base}${path}?scope=${TENANT}`;
-  // Exactly what the page sends: the credential on BOTH halves of the handshake.
-  const auth = { 'X-Tenant': TENANT, Authorization: `Bearer ${operator}` };
-  const read = await fetch(url, { headers: auth });
-  if (read.status === 401 || read.status === 403) throw new Error(`the merchandiser token was refused (${read.status})`);
-  const current = await read.json();
-  if (!current?.publication) throw new Error(`no publication base for ${kind}`);
-  const res = await fetch(url, { method: 'PUT',
-    headers: { ...auth, 'content-type': 'application/json',
-      'If-Match': `"${current.revision}/${current.publication.revision}/${current.publication.digest}"`,
-      'Idempotency-Key': `${current.revision}:${crypto.randomUUID()}` },
-    body: JSON.stringify(kind === 'reflex' ? { config: document, note } : { document, note }) });
+/**
+ * A beat, applied exactly as the page applies it: by NAME, through the demo's
+ * own route, holding no credential. If this ever needs a token again, the page
+ * needs one too, and that is the bug.
+ */
+async function publish(kind, name, note) {
+  const res = await fetch(`${base}/top-offers/api/beat`, { method: 'POST',
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, name, note }) });
   const body = await res.json().catch(() => ({}));
-  if (body.ok !== true) throw new Error(`publishing ${kind} failed: ${body.error ?? res.status}`);
+  if (body.ok !== true) throw new Error(`applying ${name} failed: ${body.error ?? res.status}`);
 }
 
 async function newVisitor() {
@@ -148,8 +146,8 @@ try {
 console.log('\n── The eight beats, through the page\'s own path');
 try {
   await newVisitor();
-  await publish('slots', await beat('slots-1'), 'page rehearsal: the opening slot');
-  await publish('catalog', await beat('catalog-1'), 'page rehearsal: the opening pool');
+  await publish('slots', 'slots-1', 'page rehearsal: the opening slot');
+  await publish('catalog', 'catalog-1', 'page rehearsal: the opening pool');
   const b1 = await four();
   ok('1 · four containers, no affinity driver', b1.length === 4
     && b1.every((d) => !(d.explain?.drivers ?? []).some((x) => x.dim !== 'freshness')));
@@ -174,26 +172,26 @@ try {
   const cook = b3.filter((d) => (d.explain?.drivers ?? []).some((x) => x.value === 'Kitchen & Table')).length;
   ok(`3 · the category cap holds cook at two (saw ${cook})`, cook === 2);
 
-  await publish('catalog', await beat('catalog-clock'), 'page rehearsal: two hours pass');
+  await publish('catalog', 'catalog-clock', 'page rehearsal: two hours pass');
   ok('4 · the expired offer left the four', !ids(await four()).includes(anchor.expiringId));
 
-  await publish('catalog', await beat('catalog-arrival'), 'page rehearsal: a new offer arrives');
+  await publish('catalog', 'catalog-arrival', 'page rehearsal: a new offer arrives');
   ok('5 · the new offer reached the four with no history', ids(await four()).includes(anchor.arrivalId));
 
   const before = (await four()).find((d) => d.customerContentId === anchor.swapId);
-  await publish('catalog', await beat('catalog-final'), 'page rehearsal: the closing creative');
+  await publish('catalog', 'catalog-final', 'page rehearsal: the closing creative');
   const after = (await four()).find((d) => d.customerContentId === anchor.swapId);
   ok('6 · the creative swap did not move the score', Boolean(before && after)
     && Math.abs(Number(before.score) - Number(after.score)) < 1e-9);
 
-  await publish('slots', await beat('slots-promo'), 'page rehearsal: the pick reinforced');
-  await publish('catalog', await beat('catalog-showcase'), 'page rehearsal: the pick carries its signal');
+  await publish('slots', 'slots-promo', 'page rehearsal: the pick reinforced');
+  await publish('catalog', 'catalog-showcase', 'page rehearsal: the pick carries its signal');
   const b7 = ids(await four());
   ok(`7 · the promotion weight lifts the pick to position ${b7.indexOf(anchor.showcaseId) + 1}, and not to first`,
     b7.indexOf(anchor.showcaseId) === 1,
     'the slot clamps the boost at 1.6x precisely so a weight cannot take container one');
 
-  await publish('slots', await beat('slots-pin'), 'page rehearsal: the pick pinned');
+  await publish('slots', 'slots-pin', 'page rehearsal: the pick pinned');
   ok('8 · the pin puts it in container one', ids(await four())[0] === anchor.showcaseId);
 
   // Garrett's rule, all four corners. Both halves are required and a missing

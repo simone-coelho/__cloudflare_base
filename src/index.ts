@@ -48,6 +48,7 @@ import { experimentRoutes } from '@/routes/experiment'; // A/B + CMAB workstream
 import { signalRoutes } from '@/routes/signals'; // Signal-Led Moment DETECT layer (owner: ab-cmab)
 import { liveRoutes } from '@/routes/live'; // The Bright Hour storefront API (docs/qvc)
 import { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk (Beat 2)
+import { topOffersRoutes } from '@/routes/topOffers'; // Lantern & Lane merchandiser half (docs/qvc)
 
 import { routeAgentRequest } from 'agents';
 
@@ -143,6 +144,10 @@ app.route('/live/api', liveRoutes);
 // mount so the storefront's data plane and the desk's never share a handler;
 // every write it makes lands under the `bh:offerdesk:` KV prefix.
 app.route('/live/ops-api', liveOpsRoutes);
+// The Top Offers demo's merchandiser half. It re-enters this same app with a
+// short-lived operator token so the page never holds a credential; mounted
+// only where DEPLOYMENT_PROFILE is 'demo' (the route refuses otherwise).
+app.route('/top-offers/api', topOffersRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {
