@@ -1,0 +1,22 @@
+{
+  "name": "@emdash/closure-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A fail-closed, fixed-denominator work-order ledger for agent-led delivery programs.",
+  "type": "module",
+  "exports": {
+    ".": "./src/core.mjs",
+    "./cli": "./src/cli.mjs"
+  },
+  "bin": {
+    "closure-ledger": "./bin/closure-ledger.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check:example": "node ./bin/closure-ledger.mjs check --program ./examples/basic/program.json",
+    "status:example": "node ./bin/closure-ledger.mjs status --program ./examples/basic/program.json"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

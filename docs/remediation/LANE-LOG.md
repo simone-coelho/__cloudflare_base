@@ -1,5 +1,7 @@
 # Lane log — remediation W16–W41
 
+> **Frozen 2026-09-23 at R210 / L225. Superseded by the Closure Ledger** (see [AGENTS.md](../../AGENTS.md)). No further entries.
+
 Dated, append-only. The lead writes it; agents read it. Newest entries at the bottom of each section.
 
 ## Authority

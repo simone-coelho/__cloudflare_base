@@ -1,0 +1,1292 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "cloudflare-base-remediation",
+    "title": "Remediation W16-W41 (document 35 section 5)",
+    "ticketIds": [
+      "W16",
+      "W17",
+      "W18",
+      "W19",
+      "W20",
+      "W21",
+      "W22",
+      "W23",
+      "W24",
+      "W25",
+      "W26",
+      "W27",
+      "W28",
+      "W29",
+      "W30",
+      "W31",
+      "W32",
+      "W33",
+      "W34",
+      "W35",
+      "W36",
+      "W37",
+      "W38",
+      "W39",
+      "W40",
+      "W41"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "TBD: replace with one exact integration command",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "W16",
+      "title": "TBD: W16 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W17",
+      "title": "TBD: W17 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W18",
+      "title": "TBD: W18 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W19",
+      "title": "TBD: W19 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W20",
+      "title": "TBD: W20 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W21",
+      "title": "TBD: W21 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W22",
+      "title": "TBD: W22 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W23",
+      "title": "TBD: W23 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W24",
+      "title": "TBD: W24 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W25",
+      "title": "TBD: W25 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W26",
+      "title": "TBD: W26 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W27",
+      "title": "TBD: W27 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W28",
+      "title": "TBD: W28 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W29",
+      "title": "TBD: W29 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W30",
+      "title": "TBD: W30 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W31",
+      "title": "TBD: W31 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W32",
+      "title": "TBD: W32 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W33",
+      "title": "TBD: W33 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W34",
+      "title": "TBD: W34 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W35",
+      "title": "TBD: W35 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W36",
+      "title": "TBD: W36 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W37",
+      "title": "TBD: W37 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W38",
+      "title": "TBD: W38 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W39",
+      "title": "TBD: W39 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W40",
+      "title": "TBD: W40 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "W41",
+      "title": "TBD: W41 title",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "TBD: authoritative source",
+        "locator": "TBD: exact locator",
+        "requirement": "TBD: copy the authoritative requirement verbatim"
+      },
+      "outcome": "TBD: one observable outcome",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "TBD: exact observable behavior",
+          "proof": "TBD: exact proof"
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "TBD: one finite implementation action"
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "TBD: exact writable path"
+      ],
+      "acceptanceCommand": "TBD: one exact ticket command",
+      "specificationGate": {
+        "specifier": "TBD: specification actor",
+        "reviewer": "TBD: independent reviewer actor",
+        "reviewedRevision": "TBD: exact reviewed test revision",
+        "verdict": "PASS",
+        "evidence": [
+          "TBD: specification review evidence"
+        ],
+        "negativeControlEvidence": [
+          "TBD: negative-control evidence"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command returns PASS.",
+        "The program integration gate returns PASS once.",
+        "A distinct verifier records PASS at the exact artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
