@@ -32,10 +32,25 @@
 //   (c) P3 "the bundles stay reproducible": `node scripts/build-sdk.mjs --check`
 //       passes, and it covers every JS file the package exports — a byte changed
 //       in any of them fails the check naming that file.
-//       The SIZE CHECK half of P3 is NOT specified here: no witness states a
-//       published size budget for either bundle (searched: docs/kit, src/sdk,
-//       scripts/build-sdk.mjs, the PS guide, document 35 and its reports). The
-//       budget is the owner's number; this file does not invent one.
+//       P3 "a size check fails when a bundle exceeds its budget" (decision D3, the
+//       owner's approval of the step-3 amendments, 2026-09-24, row A40: "each
+//       bundle's measured size at the W40 build rounded up to the next 5 KB,
+//       recorded in packages/sdk/package.json"):
+//         · the budget is recorded in packages/sdk/package.json as `sizeBudget`, an
+//           object whose keys are the JS files the package exports (as written in
+//           `exports`, resolved from packages/sdk) and whose values are whole bytes;
+//         · the measured size is the bundle file's byte length — what the build
+//           itself reports ("<file>: <n> bytes", scripts/build-sdk.mjs:47);
+//         · 5 KB is 5 × 1024 bytes: the repository states every byte budget in
+//           binary units (docs/kit/02-api-reference.md "256 KiB", "2 MiB";
+//           PUBLICATION_MAX_BYTES and LEARN_LIMITS are powers of 1024);
+//         · the size check is `node scripts/build-sdk.mjs --check`, the command the
+//           program's integration gate already runs, so every integration enforces
+//           the budget. A bundle exactly at its budget passes; one byte over fails,
+//           naming the bundle.
+//       The "less than 5 KB above" clause holds at the W40 build; after W40 a
+//       bundle that shrinks past its slack fails it, and D3 makes the new budget
+//       the owner's decision.
 //   (d) P4 "a versioned path": the path the customer is told to pin — the
 //       script-tag and module URLs in docs/kit/01-integration-guide.md that carry
 //       the src/sdk/version.ts version. "Long-lived Cache-Control" is read as
@@ -50,7 +65,7 @@
 // No test here publishes, installs or touches the network (D2 / LIVE2).
 
 import { describe, it, expect } from 'vitest';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync, copyFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -74,7 +89,9 @@ const SDK_NAME = /^(@[a-z0-9][a-z0-9._~-]*\/)?edge-personalization$/;
 /** One year: the repository's own immutable-asset lifetime (src/routes/aiScene.ts:29). */
 const LONG_LIVED_SECONDS = 31_536_000;
 
-interface PackageJson { name?: unknown; version?: unknown; types?: unknown; typings?: unknown; exports?: unknown }
+interface PackageJson { name?: unknown; version?: unknown; types?: unknown; typings?: unknown; exports?: unknown; sizeBudget?: unknown }
+/** Decision D3's step: 5 KB, in the repository's binary byte units. */
+const FIVE_KB = 5 * 1024;
 
 function readPackage(): PackageJson & { name: string } {
   expect(existsSync(PKG_JSON), 'packages/sdk/package.json — the SDK package manifest — does not exist').toBe(true);
@@ -276,6 +293,53 @@ describe('unit:W40.P3', () => {
         const tampered = check(copy);
         writeFileSync(target, original);
         expect(`${tampered.status}: ${tampered.stderr}${tampered.stdout}`, `a changed ${file} fails the reproducibility check by name`)
+          .toMatch(new RegExp(`^[1-9]\\d*: [\\s\\S]*${file.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
+      }
+    } finally { rmSync(copy, { recursive: true, force: true }); }
+  }, 180_000);
+
+  it('logic: packages/sdk/package.json records each exported bundle\'s size budget — its measured size rounded up to the next 5 KB (decision D3) — and node scripts/build-sdk.mjs --check fails, naming the bundle, when a bundle exceeds its budget', () => {
+    const pkg = readPackage();
+    const exported = [...new Set(exportTargets(pkg.exports).filter(target => /\.[cm]?js$/.test(target)).map(target => resolve(PKG_DIR, target)))];
+    expect(exported.length, 'the package exports its ESM and IIFE bundles').toBeGreaterThanOrEqual(2);
+    const recorded = pkg.sizeBudget;
+    expect(recorded !== null && typeof recorded === 'object' && !Array.isArray(recorded),
+      `W40.P3 — packages/sdk/package.json records the bundles' size budgets (sizeBudget, decision D3): ${JSON.stringify(recorded)}`).toBe(true);
+    const budgets = new Map(Object.entries(recorded as Record<string, unknown>).map(([file, bytes]) => [resolve(PKG_DIR, file), bytes]));
+    const measured = exported.map(file => ({ file: relative(ROOT, file).split(sep).join('/'), size: statSync(file).size, budget: budgets.get(file) }));
+    expect(measured.map(({ file, size, budget }) => ({ file, wholeBytes: Number.isSafeInteger(budget), atLeastItsSize: (budget as number) >= size,
+      aMultipleOf5KB: (budget as number) % FIVE_KB === 0, lessThan5KBAbove: (budget as number) - size < FIVE_KB })),
+      `W40.P3 — each exported bundle's budget is its measured size rounded up to the next 5 KB (${FIVE_KB} bytes): ${JSON.stringify(measured)}`)
+      .toEqual(measured.map(({ file }) => ({ file, wholeBytes: true, atLeastItsSize: true, aMultipleOf5KB: true, lessThan5KBAbove: true })));
+
+    // The size check itself, on a faithful copy whose recorded budgets are moved
+    // around the unchanged, reproducible bundles.
+    const check = (root: string) => spawnSync(process.execPath, [join(root, 'scripts', 'build-sdk.mjs'), '--check'], { cwd: root, encoding: 'utf8' });
+    const copy = mkdtempSync(join(tmpdir(), 'w40-size-'));
+    try {
+      cpSync(join(ROOT, 'src'), join(copy, 'src'), { recursive: true });
+      mkdirSync(join(copy, 'scripts'));
+      copyFileSync(join(ROOT, 'scripts', 'build-sdk.mjs'), join(copy, 'scripts', 'build-sdk.mjs'));
+      copyFileSync(join(ROOT, 'package.json'), join(copy, 'package.json'));
+      cpSync(join(ROOT, 'public', 'sdk'), join(copy, 'public', 'sdk'), { recursive: true });
+      cpSync(PKG_DIR, join(copy, 'packages', 'sdk'), { recursive: true, filter: from => !from.split(sep).includes('node_modules') });
+      symlinkSync(join(ROOT, 'node_modules'), join(copy, 'node_modules'), 'dir');
+      const manifest = join(copy, 'packages', 'sdk', 'package.json'), original = readFileSync(manifest, 'utf8');
+      const withBudget = (file: string, bytes: number) => {
+        const edited = JSON.parse(original) as { sizeBudget: Record<string, number> };
+        for (const key of Object.keys(edited.sizeBudget)) if (resolve(PKG_DIR, key) === resolve(ROOT, file)) edited.sizeBudget[key] = bytes;
+        writeFileSync(manifest, JSON.stringify(edited, null, 2));
+      };
+      const control = check(copy);
+      expect(control.status, `the untouched copy passes the check: ${control.stderr}`).toBe(0);
+      for (const { file, size } of measured) {
+        withBudget(file, size);
+        const atBudget = check(copy);
+        withBudget(file, size - 1);
+        const over = check(copy);
+        writeFileSync(manifest, original);
+        expect(atBudget.status, `W40.P3 — ${file} exactly at its budget (${size} bytes) passes the size check: ${atBudget.stderr}`).toBe(0);
+        expect(`${over.status}: ${over.stderr}${over.stdout}`, `W40.P3 — ${file} one byte over its budget (${size - 1}) fails node scripts/build-sdk.mjs --check, naming the bundle`)
           .toMatch(new RegExp(`^[1-9]\\d*: [\\s\\S]*${file.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
       }
     } finally { rmSync(copy, { recursive: true, force: true }); }
