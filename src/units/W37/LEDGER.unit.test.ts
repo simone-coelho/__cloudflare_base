@@ -72,6 +72,8 @@ import { rollupTenant } from '@/reflex/regionTrend';
 import { signAssertion } from '@/identity/assertion';
 import { isShopperId } from '@/identity/shopperId';
 import { customerRequest } from '@/customerBoundary';
+import { memoryStore, type AuditRow } from '@/auth/store';
+import { operatorJwt } from '@/middleware/operatorAuth';
 import { catchUp } from '@/learn/hourly';
 import { canonical as stampCanonical, sha256 as stampSha256, validateDesired, validateTransition } from '../../../scripts/stamp-workflow.mjs';
 import { bundleNativeWorker, nativeScratchDirectory, openNativeRuntime, type NativeRuntime } from '../_native';
@@ -893,6 +895,21 @@ describe('unit:W37.T6', () => {
 // route is reachable on a customer stamp only if the customer surface admits
 // it as it admits the erase route (src/customerBoundary.ts:96, the logic leg).
 //
+// THE EXPORT'S AUDIT (lead ruling 2026-09-24, completing "mirroring the erase
+// route"): the erase route runs through `auditedSubjectOperation`
+// (src/routes/identity.ts:536), so the export is audited the same way. In
+// enforced mode — the only mode that audits (src/auth/subjectAudit.ts:176; kit
+// 02 :573 "valid open/demo operations remain unaudited") — a successful export
+// writes the entries the erase writes for the same selector at the same tenant:
+// the minimized `subject_operation` v2 records of the tenant-admin audit view
+// (kit 02 :573, `GET /v1/{tenant}/audit`), one admitted and one result, with the
+// erase's action, tenant, actor, members, selector (its kind and keyed
+// references) and subject reference, named for the export (operation and route);
+// a refused export writes what a refused erase writes and releases nothing of
+// hers. The erase itself is measured as the witness in the same world, never
+// transcribed. A control shows the leg fails for an export that answers her
+// correctly but writes no audit entry.
+//
 // THE FIXTURE: one browser shops both non-default brands, acme and globex, the
 // day before (the kit's Coach taxonomy with an unknown category and a
 // cross-category occasion list; a rendered decision, its impression and a
@@ -1145,6 +1162,38 @@ function foreignCarried(answer: unknown, theirs: T5Entry[], own: T5Entry[]): str
   return theirs.filter(entry => !mine.has(canonical(entry.value)) && carries(seen, entry)).map(entry => `${entry.store} ${entry.member}`);
 }
 
+/** A subject-audit row as the audit store keeps it (src/auth/store.ts:48), its detail parsed. */
+interface AuditLine { id: number; action: string; tenant?: string; actorId?: string | null; detail: Record<string, any> }
+const auditLines = (rows: AuditRow[]): AuditLine[] =>
+  rows.map(row => ({ id: row.id, action: row.action, tenant: row.tenant, actorId: row.actorId, detail: (JSON.parse(row.detail ?? 'null') ?? {}) as Record<string, any> }));
+/**
+ * What an export's audit lacks against the erase's, for the same selector at the same tenant (lead ruling
+ * 2026-09-24: the export is audited as the erase route is, src/routes/identity.ts:536). Phase by phase, the
+ * erase's entries: the same action, tenant, actor, members, record version, method, selector and subject
+ * reference; named for the export (its operation and its route); one request of the export's own; the result's
+ * status the export's own answer; and no entry the erase does not write. Named `<phase>: <what>`.
+ */
+function exportAuditGaps(exported: { status: number; lines: AuditLine[] }, erased: { lines: AuditLine[] }): string[] {
+  const gaps: string[] = [], request = exported.lines[0]?.detail.requestId;
+  erased.lines.forEach((e, index) => {
+    const x = exported.lines[index], phase = String(e.detail.phase);
+    if (!x) { gaps.push(`${phase}: no subject-audit entry`); return; }
+    const same = (what: string, mine: unknown, theirs: unknown) => {
+      if (canonical(mine) !== canonical(theirs)) gaps.push(`${phase}: ${what} ${canonical(mine)}, where the erase writes ${canonical(theirs)}`);
+    };
+    same('action', x.action, e.action); same('tenant', x.tenant, e.tenant); same('actor', x.actorId, e.actorId);
+    same('members', Object.keys(x.detail).sort(), Object.keys(e.detail).sort());
+    for (const member of ['v', 'method', 'phase', 'selector', 'subjectRef']) same(member, x.detail[member], e.detail[member]);
+    if (!/export/.test(String(x.detail.operation))) gaps.push(`${phase}: operation ${String(x.detail.operation)} is not named for the export`);
+    const route = String(e.detail.route).replace(/\/erase$/, '/export');
+    if (x.detail.route !== route) gaps.push(`${phase}: route ${String(x.detail.route)}, not the export's ${route}`);
+    if (x.detail.requestId !== request || x.detail.requestId === e.detail.requestId) gaps.push(`${phase}: not one request of the export's own`);
+    if (phase === 'result' && x.detail.status !== exported.status) gaps.push(`result: status ${String(x.detail.status)}, where the export answered ${exported.status}`);
+  });
+  for (const x of exported.lines.slice(erased.lines.length)) gaps.push(`${String(x.detail.phase)}: an entry the erase does not write (${x.action} ${String(x.detail.operation)})`);
+  return gaps;
+}
+
 describe('unit:W37.T5', () => {
   for (const kind of ['session', 'do'] as const) {
     it(`host (${kind}): the per-shopper export of each non-default brand returns her own identity link, decisions, ring and every stream of the partition, never the other brand's, and nothing of her once she is erased`, async () => {
@@ -1334,6 +1383,100 @@ describe('unit:W37.T5', () => {
         }
       } finally { vi.useRealTimers(); }
     }, 120_000);
+
+    it(`host (${kind}): POST /v1/{tenant}/identity/export is audited as the erase route is (auditedSubjectOperation, src/routes/identity.ts:536) — in enforced mode a successful export of the shopper of each non-default brand writes the subject-audit entries the erase writes for the same selector, named for the export, for the tenant and the selector's kind, listed in the tenant's audit view; a refused export writes what a refused erase writes and releases nothing of hers`, async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        const w = await t5World(kind);
+        const date = new Date(w.served).toISOString().slice(0, 10);
+        const truth: Record<string, T5Entry[]> = {};
+        for (const tenant of [ACME, GLOBEX]) truth[tenant] = await w.exportTruth(tenant, w.personIds(w.shoppers[tenant]!), date);
+        const capability: Record<string, Awaited<ReturnType<typeof newAnonymousSession>>> = { [ACME]: await newAnonymousSession(w.h.env, ACME), [GLOBEX]: await newAnonymousSession(w.h.env, GLOBEX) };
+
+        // The same stamp, enforced — the only mode that audits (src/auth/subjectAudit.ts:176) — with an audit store
+        // that can refuse a phase, and explicit operator grants (src/middleware/operatorAuth.ts:11).
+        const accounts = memoryStore(), append = accounts.auditOperations.bind(accounts);
+        let refuse: 'admitted' | 'result' | null = null;
+        vi.spyOn(accounts, 'auditOperations').mockImplementation(async rows => {
+          if (refuse && JSON.parse(rows[0]!.detail!).phase === refuse) throw new Error('synthetic audit store refusal');
+          await append(rows);
+        });
+        Object.assign(w.h.env, { AUTH_MODE: 'enforced', ACCOUNTS: accounts, TENANTS: JSON.stringify({ provisioned: [ACME, GLOBEX],
+          operatorGrants: { 'w37-operator': [ACME, GLOBEX], [`w37-${ACME}-operator`]: [ACME], [`w37-${GLOBEX}-operator`]: [GLOBEX] } }) });
+        const token = (sub: string) => new SignJWT({ sub, type: 'service', roles: ['admin'], permissions: ['*'] })
+          .setProtectedHeader({ alg: 'HS256' }).setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(SECRET));
+        const bearer = `Bearer ${await token('w37-operator')}`;
+        type Audited = { status: number; body: Record<string, any>; lines: AuditLine[] };
+        const audited = async (send: () => Response | Promise<Response>): Promise<Audited> => {
+          const start = accounts.log.length, response = await send();
+          const body = await response.json().catch(() => ({})) as Record<string, any>;
+          return { status: response.status, body, lines: auditLines(accounts.log.slice(start)) };
+        };
+        const refusing = async (phase: 'admitted' | 'result', send: () => Promise<Audited>) => { refuse = phase; try { return await send(); } finally { refuse = null; } };
+
+        // CONTROL: an export that answers her correctly, behind the same ingress and operator authentication, and writes no audit entry.
+        const unaudited = new Hono<{ Bindings: Env }>();
+        unaudited.use('*', tenantMiddleware()); unaudited.use('/v1/:tenant/*', sdkKey());
+        unaudited.post('/v1/:tenant/identity/export', operatorJwt() as unknown as Parameters<typeof unaudited.use>[1],
+          c => c.json({ ok: true, tenant: c.req.param('tenant'), export: truth[c.req.param('tenant')]!.map(entry => entry.value) }));
+
+        for (const [tenant, other, selector] of [[ACME, GLOBEX, { shopperId: w.shoppers[ACME]!.shopperId }], [GLOBEX, ACME, { visitorId: w.shoppers[GLOBEX]!.visitorId }]] as Array<[string, string, { visitorId?: string; shopperId?: string }]>) {
+          const s = w.shoppers[tenant]!, label = `W37.T5 export audit — ${kind} ${tenant} ${Object.keys(selector)[0]}`;
+          const route = (name: 'erase' | 'export', body: unknown = selector, options: { path?: string; tenant?: string; headers?: Record<string, string>; grant?: { capability: string } } = {}) =>
+            audited(() => w.h.call(`/v1/${options.path ?? tenant}/identity/${name}`, { tenant: options.tenant ?? tenant, body, headers: options.headers ?? { Authorization: bearer }, ...(options.grant ? { grant: options.grant } : {}) }));
+
+          // Everything that reads her runs while her data is there; the erase, the witness, runs last.
+          const control = await audited(() => unaudited.request(new Request(`https://w37.synthetic.invalid/v1/${tenant}/identity/export`, { method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant, Authorization: bearer }, body: JSON.stringify(selector) }), undefined, w.h.env,
+            { waitUntil: () => undefined, passThroughOnException() {}, props: {} } as unknown as ExecutionContext));
+          const exported = await route('export');
+          const otherOperator = `Bearer ${await token(`w37-${other}-operator`)}`;
+          const refusals: Array<[string, (name: 'erase' | 'export') => Promise<Audited>]> = [
+            ['no operator token', name => route(name, selector, { headers: {} })],
+            ['a shopper capability instead of an operator token', name => route(name, selector, { headers: {}, grant: capability[tenant]! })],
+            ['no selector', name => route(name, {})],
+            ['an account id beside the selector', name => route(name, { ...selector, accountId: T5_ACCOUNT })],
+            ['a browser id where the shopper id belongs', name => route(name, { shopperId: s.visitorId })],
+            ['an unregistered tenant', name => route(name, selector, { path: INITECH, tenant: INITECH })],
+            ['another tenant named beside the path', name => route(name, selector, { tenant: other })],
+            ['an operator granted only the other brand', name => route(name, selector, { headers: { Authorization: otherOperator } })],
+            ['the audit store refusing the admission', name => refusing('admitted', () => route(name))],
+          ];
+          const refused: Array<[string, Audited, Audited]> = [];
+          for (const [refusal, send] of refusals) refused.push([refusal, await send('export'), await send('erase')]);
+          const resultRefusedExport = await refusing('result', () => route('export'));
+          const erased = await route('erase');
+          refused.push(['the audit store refusing the result', resultRefusedExport, await refusing('result', () => route('erase'))]);
+          const view = await audited(() => w.h.call(`/v1/${tenant}/audit?limit=100`, { tenant, headers: { Authorization: bearer } }));
+
+          // CONTROL (the witness, measured): the erase writes one admitted and one result subject_operation entry, named for the erase,
+          // for this tenant and the selector's kind (kit 02 :573).
+          expect(erased.lines.map(line => [line.action, line.tenant, line.detail.operation, line.detail.phase, line.detail.selector?.kind]), `${label}: the erase's own audit`).toEqual([
+            ['subject_operation', tenant, 'identity_erase', 'admitted', 'identity'], ['subject_operation', tenant, 'identity_erase', 'result', 'identity']]);
+          // CONTROL: the export that answers her correctly but writes no audit entry fails this leg, on the audit alone.
+          expect(control.status, `${label} control: the unaudited export answers the operator`).toBe(200);
+          expect(exportGaps(control.body, truth[tenant]!, truth[tenant]!), `${label} control: the unaudited export carries every ruled datum of hers`).toEqual([]);
+          expect(control.lines, `${label} control: the unaudited export writes no audit entry`).toEqual([]);
+          expect(exportAuditGaps(control, erased), `${label} control: this leg names what the unaudited export did not write`).toEqual(['admitted: no subject-audit entry', 'result: no subject-audit entry']);
+
+          // The ruling: a successful export writes the subject-audit entries the erase writes, named for the export.
+          expect(exportAuditGaps(exported, erased), `${label}: a successful POST /v1/${tenant}/identity/export writes the subject-audit entries the erase writes for the same selector, named for the export`).toEqual([]);
+          expect(exported.status, `${label}: the export succeeded`).toBe(200);
+          expect(view.status, `${label}: the tenant's audit view answers`).toBe(200);
+          const listed = new Map(((view.body.entries ?? []) as Array<{ id: number; detail: unknown }>).map(entry => [entry.id, canonical(entry.detail)]));
+          expect([...erased.lines, ...exported.lines].filter(line => listed.get(line.id) !== canonical(line.detail)).map(line => `${String(line.detail.operation)} ${String(line.detail.phase)}`),
+            `${label}: the tenant's audit view lists the export's entries as it lists the erase's (kit 02 :573)`).toEqual([]);
+
+          // A refused export writes what a refused erase writes, and releases nothing of hers.
+          for (const [refusal, x, e] of refused) {
+            expect(e.status, `${kind} ${tenant} ${refusal}: the erase route refuses it`).toBeGreaterThanOrEqual(400);
+            const released = truth[tenant]!.filter(entry => carries(carried(x.body), entry)).map(entry => `${entry.store} ${entry.member}`);
+            expect({ status: x.status, audit: exportAuditGaps(x, e), released }, `${label}: ${refusal} — the refused export writes what the refused erase writes, and releases nothing of hers`)
+              .toEqual({ status: e.status, audit: [], released: [] });
+          }
+        }
+      } finally { vi.useRealTimers(); }
+    }, 180_000);
   }
 
   it('logic: a customer stamp admits POST /v1/{tenant}/identity/export for each non-default brand exactly as it admits the erase route (src/customerBoundary.ts:96), and no other method on it', () => {
