@@ -233,19 +233,19 @@
         {
           "id": "D2",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from LANE-LOG R81(b) and R85(b)",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from LANE-LOG R81(b) and R85(b)",
           "effect": "No device binding is built; the kit sentence that the proof is a bearer credential stays."
         },
         {
           "id": "D3",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from LANE-LOG R85(c) and R88(b)",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from LANE-LOG R85(c) and R88(b)",
           "effect": "Tenant audiences keyed on journey_stage read the per-visit stage; a has-purchased audience is not part of W16."
         },
         {
           "id": "D4",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from LANE-LOG R85(d)",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from LANE-LOG R85(d)",
           "effect": "Ingest is not refused while the publication is unreadable; decisions remain fail closed."
         }
       ],
@@ -593,7 +593,7 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled from LANE-LOG R87 and units.json W19.P1.01",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled from LANE-LOG R87 and units.json W19.P1.01",
           "effect": "W19 closes on linkage; inheritance from featured products belongs to the vector-embeddings design outside document 35, which the owner places."
         }
       ],
@@ -771,13 +771,13 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from LANE-LOG R103(c) and R111",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from LANE-LOG R103(c) and R111",
           "effect": "The engine keeps de-duplicating within one page decision; guide sentences promising cross-page prevention are corrected under R7."
         },
         {
           "id": "D2",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from docs/kit/03-payload-schemas.md and LANE-LOG R103(c)",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from docs/kit/03-payload-schemas.md and LANE-LOG R103(c)",
           "effect": "No declarable fallback is built; guide sentences promising one are corrected under R7."
         },
         {
@@ -1092,7 +1092,7 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled from units.json W22.P1.01, F16.md §7 and F17.md §6",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled from units.json W22.P1.01, F16.md §7 and F17.md §6",
           "effect": "The durable ingestion log stays a later architecture item; W22 closes on the reconciliation that is built."
         },
         {
@@ -2125,7 +2125,7 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled from document 35 §5 row W28, HANDOFF-2026-09-18 §6 W28 row and units.json W28.P1.01",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled from document 35 §5 row W28, HANDOFF-2026-09-18 §6 W28 row and units.json W28.P1.01",
           "effect": "The withdrawal is the delivered branch; an evaluated exploration would be new scope."
         },
         {
@@ -2260,7 +2260,7 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built and reported from LANE-LOG R166 and units.json W29.P1.01",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built and reported from LANE-LOG R166 and units.json W29.P1.01",
           "effect": "The scoped policy, age, pin, step and evidence gates and the transactional apply of full autonomy are not built; retaining autonomy would be new scope."
         },
         {
@@ -2978,7 +2978,7 @@
         {
           "id": "D1",
           "status": "RESOLVED",
-          "authorityRef": "Owner decision in the freeze review of this program; pre-filled as built from HANDOFF-2026-09-18 §6 W34 row",
+          "authorityRef": "Owner decision at the freeze of this program on 2026-09-24 (\"Let's go with your recommendation\"); pre-filled as built from HANDOFF-2026-09-18 §6 W34 row",
           "effect": "The policy stays off; a learned runtime model or an offline table would be new scope."
         },
         {
