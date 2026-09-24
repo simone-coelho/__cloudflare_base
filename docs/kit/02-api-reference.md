@@ -392,6 +392,16 @@ her browser happens to be carrying: she is served the site's own defaults, the a
 `GET /v1/{tenant}/learn/queue` as `enrollment_anchor_unavailable`.
 `enrollment_anchor_unavailable` is a lower bound: concurrent anchor failures can collapse into one increment, so read it as a floor and never as an exact count.
 
+`record_unreadable` is the third reason. Her stored record exists but cannot be read out, because the
+retained-data authority it was born under is no longer the one in force (for example, you published
+the next revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then
+still answers `200`, with the site's default decision: every slot in your catalogue's own order, with
+no affinity, journey stage or visit from that record. The answer says
+`experiment: { arm: "ineligible", reason: "record_unreadable" }` and each receipt's note says the
+same, so a client can tell it apart from a refusal (`personalization_consent`) and from an expired
+session (`401`, no decision at all). Nothing of the record is read, projected or renewed. Only
+what her own current consent already covers is written.
+
 The canonical nightly report groups by the experimental assignment on every path: `ineligible` is its own row, never part of `default`, and a day summed from hours folded before this release answers `armVisitors: null` and names those hours in `coverage.unassignedHours`.
 The day report built on demand from the day's records groups by the assignment.
 

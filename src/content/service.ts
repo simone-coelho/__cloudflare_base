@@ -30,7 +30,7 @@ import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
-import { captureRetention } from '@/retention';
+import { captureRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
 import { syntheticOperation } from '@/ops/synthetic';
@@ -149,7 +149,20 @@ interface ShopperRead {
   consent: Consent;
   visit?: VisitContext | null;
   lastSeen?: number | null;
+  /**
+   * W16 R5 (LANE-LOG R19, R98(b)): her stored record exists but cannot be read
+   * out — the retained-data authority its profile stamp was born under is no
+   * longer the one in force (`requireRetention`). Nothing of the record is
+   * carried (no affinity, stage or visit), and the decision serves the site's
+   * default, naming why. Distinct from a refusal (her own choice) and from an
+   * expired session (no answer at all).
+   */
+  unreadable?: true;
 }
+
+/** Her record could not be read out: the answer carries nothing of it (W16 R5). */
+const unreadableShopper = (sessionId: string, state: DecisionSources['state'], consent: Consent): ShopperRead =>
+  ({ affinity: null, sessionId, isNewSession: null, state, stage: null, consent, visit: null, lastSeen: null, unreadable: true });
 
 /**
  * One owned read, with necessary refusal persistence before any profile view.
@@ -171,8 +184,16 @@ async function readShopper(
       ].join('; ') };
       const res = await stub.fetch('https://shopper-reflex/snapshot?projection=content', { headers });
       if (!res.ok) throw new SessionAccessError();
-      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number } };
+      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
+      // W16 R5: the object answered that her record cannot be read out. Only a
+      // consenting shopper's record is ever read, so only she can be told so; a
+      // refusal is answered as the refusal it is.
+      if (body.record !== undefined) {
+        const consent = intersectConsent(storedConsent(body.consent), hints);
+        if (body.record !== 'unreadable' || body.affinity != null || body.journeyStage != null || body.visit != null) throw new SessionAccessError();
+        if (personalizes(consent)) return unreadableShopper(principal.sessionId, 'do', consent);
+      }
       if (body.visit != null && (!validVisitContext(body.visit) || (body.visit.lastSeen !== undefined
         && (typeof body.visit.lastSeen !== 'number' || !Number.isFinite(body.visit.lastSeen) || body.visit.lastSeen < 0)))) throw new SessionAccessError();
       const consent = intersectConsent(storedConsent(body.consent), hints);
@@ -189,7 +210,16 @@ async function readShopper(
     const sessionData = await manager.readRaw(sessionId, true);
     const consent = intersectConsent(await currentOwnerConsent() ?? consentOf(sessionData), hints);
     if (!personalizes(consent)) await manager.restrictConsent(sessionId, consent, { sessionId, data: sessionData });
-    if (personalizes(consent) && sessionData) pinProfileRetention(env, sessionData, tenant);
+    if (personalizes(consent) && sessionData) {
+      // W16 R5: a record whose profile stamp the authority in force no longer
+      // honours is not read out, and refusing to SERVE her page is not a
+      // retention remedy: she is served the site's default, named unreadable.
+      try { pinProfileRetention(env, sessionData, tenant); }
+      catch (error) {
+        if (!(error instanceof RetentionUnavailable)) throw error;
+        return unreadableShopper(sessionId, 'session', consent);
+      }
+    }
     if (personalizes(consent) && !cfg) throw new ReflexConfigUnavailableError(tenant);
     return {
       affinity: personalizes(consent) && sessionData?.reflex && cfg ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
@@ -369,18 +399,23 @@ export async function serveContentDecisions(
   lap('shopper');
   const consent = shopper.consent;
   if (consent.tracking) requireConsentPurpose(consent, personalizes(consent) ? 'personalization' : 'tracking');
+  // W16 R5: an unreadable record is served the site's default decision under her
+  // own consent — nothing of the record is an input, she is drawn into no arm,
+  // and nothing is written that her consent does not already cover.
+  const unreadable = shopper.unreadable === true;
+  const personalized = personalizes(consent) && !unreadable;
   const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined);
   const cell = cellFor({
-    cf: consent.tracking ? r.cf : null, snap: personalizes(consent) ? shopper.affinity : null, cfg,
+    cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
     // A caller cannot relabel an already-established visit. The explicit
     // channel is only a bounded fallback when owned state has no entry yet.
     channel: consent.tracking ? visit.entryChannel ?? entryChannelOf(r.channel) : null,
-    visitNumber: personalizes(consent) ? visit.visitNumber : null,
+    visitNumber: personalized ? visit.visitNumber : null,
     // R32(2): the ONE mapping point from the reported vocabulary to the
     // persisted cell token, so the ladder key and every learning statistic keyed
     // on `s=mid` are exactly what they were before C4. `cellFor` records
     // anything it does not recognise as unknown.
-    stage: personalizes(consent) && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
+    stage: personalized && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
   });
   // W21 E1 (F07 §1.4, §7(b)): consent first, then enrollment. A shopper without
   // personalization consent is not drawn into the experiment at all; a
@@ -400,7 +435,7 @@ export async function serveContentDecisions(
   const saltCarried = carriedSaltVersion(learnRev);
   const saltVersion = saltCarried && saltCarried.salt === holdoutInForce.salt ? saltCarried.version : null;
   // The anchor is looked up only for a shopper who is in the experiment at all.
-  const anchor = personalizes(consent) ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
+  const anchor = personalized ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
   const enrolled = anchor && !anchor.unavailable
     ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
       anchor: anchor.anchor, anchorGeneration: anchor.anchorGeneration })
@@ -412,8 +447,8 @@ export async function serveContentDecisions(
   // report can never pool her with the randomised control.
   const enrollment: EnrollmentProvenance | null = enrolled?.provenance
     ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
-      reason: personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
-  const arm = armUnder(consent, enrolled?.arm ?? 'default');
+      reason: unreadable ? 'record_unreadable' : personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
+  const arm = unreadable ? 'default' : armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
 
@@ -421,7 +456,7 @@ export async function serveContentDecisions(
   // from the object; blended into a COPY of the affinity view. Off for the
   // holdout's default arm, since defaults are the point of that arm.
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
-  let affinity: { dims: Record<string, Record<string, number>> } | null = personalizes(consent) ? shopper.affinity : null;
+  let affinity: { dims: Record<string, Record<string, number>> } | null = personalized ? shopper.affinity : null;
   let regional: Parameters<typeof decideContent>[0]['regional'] = null;
   if (regionalCfg.enabled && arm !== 'default') {
     const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
@@ -486,12 +521,14 @@ export async function serveContentDecisions(
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
-  if (personalizes(consent) && shopper.stage) {
+  if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
     for (const record of set.records) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
+  // W16 R5: and one whose record could not be read sees that, not a choice she never made.
+  else if (unreadable) for (const rec of set.records) rec.explain.note = "the site's defaults: the shopper's stored record is unreadable under the retention policy in force";
   // The owner drains actual private I/O. In durable mode the shared admission
   // must finish before either ledger or learning effects can start.
   // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).
@@ -559,7 +596,7 @@ export async function serveContentDecisions(
       journey: journeySource,
       external: external ? { kind: external.kind, ref: external.ref, ok: false, ms: 0, version: null, reason: external.reason } : null,
       state: shopper.state,
-      consent: { ...consent, personalized: personalizes(consent) },
+      consent: { ...consent, personalized },
       timings,
     },
   };

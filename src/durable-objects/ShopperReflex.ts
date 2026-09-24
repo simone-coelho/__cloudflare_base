@@ -695,7 +695,16 @@ export class ShopperReflex {
           const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
-          if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
+          // W16 R5: a record whose profile stamp the authority in force no longer
+          // honours is not read out; the decision is told so and serves the
+          // site's default. Nothing else is absorbed here.
+          if (this.affinity) {
+            try { pinProfileRetention(this.env, this.affinity, principal.tenant); }
+            catch (error) {
+              if (!(error instanceof RetentionUnavailable)) throw error;
+              return json({ ok: true, consent, affinity: null, journeyStage: null, visit: null, record: 'unreadable' });
+            }
+          }
           const at = Date.now();
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
