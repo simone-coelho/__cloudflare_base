@@ -377,6 +377,83 @@ async function sdkSequenceOn(host: Host, t0: number, clock: { mockImplementation
   return normalizer()(seen) as unknown[];
 }
 
+// ── A1 · the host leg: she chose tracking only, then signs in ───────────────
+// The sequence the W41 specifier measured at base 4fbdddc (evidence
+// /home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md, item 3):
+// a shopper who signs in after choosing tracking only (personalization off) is
+// answered 401 "Shopper session unavailable" on her first /realtime/action on
+// the session host, while the object host admits her. Witnesses:
+// docs/kit/02-api-reference.md:447 ("Tracking-only measurement remains
+// permitted; both switches are required for personalization"; linking does not
+// renew or change her choice), settled decision D06-W05 (explicit choice), and
+// docs/api/01-rest-endpoints.md:26 (the object host answers the identical shape).
+const TRACKING_ONLY_PERSON = 'w35-ledger-tracking-only-person';
+async function trackingOnlySignInOn(host: Host, t0: number, clock: { mockReturnValue(value: number): unknown }): Promise<Observed> {
+  let now = t0; clock.mockReturnValue(now);
+  const tick = (ms = 1000) => { now += ms; clock.mockReturnValue(now); };
+  invalidateCache(); invalidateLiftCache();
+  const h = harness(host); h.env.LEDGER_RECOVERY_ENABLED = 'true';
+  await publish(h.env, TENANT, { content: { pieces: PIECES }, slots: SLOTS, learn: LEARN });
+  const checkpoints: Record<string, unknown> = {}, anchors: Record<string, unknown> = {};
+  /** Every answer to a request she makes with her signed-in grant, in order: none may be a refusal. */
+  const admitted: Array<[string, number]> = [];
+  const answer = (b: Json) => ({ success: b.success, dropped: b.dropped ?? null, signals: b.signals ?? null, sessionId: b.sessionId ?? null, error: b.error ?? null });
+  const action = async (who: Shopper, label: string, event: { type: string; data: Json; entry?: unknown }, eventId: string) => {
+    tick(); const response = await act(h, who, event, { eventId, timestamp: now });
+    const b = await body(response); admitted.push([label, response.status]);
+    checkpoints[label] = [response.status, answer(b)];
+    return [response.status, b.success ?? null] as const;
+  };
+  // Her reads, with the same projections as the one-sequence host leg above.
+  const reads = async (who: Shopper, label: string) => {
+    const reflex = await h.call('/realtime/reflex', { capability: who.capability });
+    const reflexBody = await body(reflex); admitted.push([`${label} · GET /realtime/reflex`, reflex.status]);
+    const { now: _now, ...reflexAnswer } = reflexBody; void _now;
+    checkpoints[`${label} · GET /realtime/reflex`] = [reflex.status, reflexAnswer];
+    const segments = await h.call(`/realtime/segments/${who.subject}`, { capability: who.capability });
+    const { timestamp: _t1, ...segmentsAnswer } = await body(segments); void _t1; admitted.push([`${label} · GET /realtime/segments`, segments.status]);
+    checkpoints[`${label} · GET /realtime/segments`] = [segments.status, segmentsAnswer];
+    const personalization = await h.call(`/realtime/personalization/${who.subject}`, { capability: who.capability });
+    const { timestamp: _t2, ...personalizationAnswer } = await body(personalization); void _t2; admitted.push([`${label} · GET /realtime/personalization`, personalization.status]);
+    checkpoints[`${label} · GET /realtime/personalization`] = [personalization.status, personalizationAnswer];
+    const snapshot = await h.call(`/v1/${TENANT}/decisions/snapshot`, { capability: who.capability, body: { page: 'home', pageInstance: `w35-tracking-only-${label.replace(/[^a-z0-9]/gi, '-')}` } });
+    const set = await body(snapshot) as { arm?: string; experiment?: unknown; decisions?: Array<{ contentId: string; slot: string; explain?: { drivers?: Array<{ dim: string; value: string }> } }>; sources?: { journey?: unknown; consent?: { tracking?: boolean; personalization?: boolean; personalized?: boolean } } };
+    admitted.push([`${label} · decision snapshot`, snapshot.status]);
+    checkpoints[`${label} · decision snapshot`] = [snapshot.status, { arm: set.arm, experiment: set.experiment ?? null,
+      decisions: (set.decisions ?? []).map(d => ({ contentId: d.contentId, slot: d.slot, drivers: (d.explain?.drivers ?? []).map(x => `${x.dim}:${x.value}`) })),
+      journey: set.sources?.journey ?? null, consent: set.sources?.consent ? { tracking: set.sources.consent.tracking, personalization: set.sources.consent.personalization, personalized: set.sources.consent.personalized } : null }];
+    const sort = await h.call('/sort', { capability: who.capability, body: { userId: who.subject, sessionId: who.sessionId, candidates: CANDIDATES } });
+    const sorted = await body(sort) as { order?: unknown; items?: unknown; persistence?: { status?: string }; configVersion?: unknown };
+    admitted.push([`${label} · POST /sort`, sort.status]);
+    checkpoints[`${label} · POST /sort`] = [sort.status, { order: sorted.order ?? null, items: sorted.items ?? null, configVersion: sorted.configVersion ?? null, persistence: sorted.persistence?.status ?? null }];
+    return reflexBody;
+  };
+
+  // Sarah lands from Instagram and chooses tracking only; she has made no event yet.
+  const sarah = await openSession(h);
+  checkpoints['explicit choice (tracking on, personalization off)'] = (await choose(h, sarah, true, false)).status;
+  // She signs in: a first link of this browser to a new person.
+  tick(); const linked = await signedLink(h, sarah, TRACKING_ONLY_PERSON);
+  const link = await body(linked) as { outcome?: string; shopperId?: string; audiences?: unknown; changes?: unknown; carry?: string; session?: Shopper & { consent?: { tracking?: boolean; personalization?: boolean } } };
+  checkpoints['link · answer'] = [linked.status, { outcome: link.outcome ?? null, shopperId: link.shopperId ?? null, audiences: link.audiences ?? null, changes: link.changes ?? null,
+    carry: link.carry ?? null, session: link.session ? { kind: link.session.kind, consent: { tracking: link.session.consent?.tracking, personalization: link.session.consent?.personalization } } : null }];
+  const person = link.session as Shopper;
+  // Her first /realtime/action as the signed-in person, then her browsing, a cross-category view among it.
+  anchors.firstAction = await action(person, 'signed in, tracking only · her first action (page_view, from Instagram)', { type: 'page_view', data: {}, entry: INSTAGRAM }, 'w35-tracking-only-0');
+  await action(person, 'signed in, tracking only · product_view (Tabby crossbody)', { type: 'product_view', data: TABBY_450 }, 'w35-tracking-only-1');
+  await action(person, 'signed in, tracking only · product_view (Lowline, another category)', { type: 'product_view', data: LOWLINE }, 'w35-tracking-only-2');
+  await h.drain(); tick();
+  anchors.trackingOnly = await reads(person, 'signed in, tracking only');
+  // She turns personalization on with her signed-in grant, and browses on.
+  tick(); const on = await choose(h, person, true, true); admitted.push(['explicit choice (personalization on)', on.status]);
+  checkpoints['explicit choice (personalization on), signed in'] = on.status;
+  await action(person, 'signed in, personalization on · product_view (Rogue)', { type: 'product_view', data: ROGUE }, 'w35-tracking-only-3');
+  await h.drain(); tick();
+  anchors.optedIn = await reads(person, 'signed in, personalization on');
+  anchors.admitted = admitted;
+  return { checkpoints, anchors };
+}
+
 describe('unit:W35.A1', () => {
   it('host: one event sequence — Sarah\'s Instagram visit with a cross-category and an unknown product, her rendered hero, a newsletter return visit, a personalization withdrawal and return, her sign-in from two devices and her erasure — leaves the same session, identity, visit, channel and consent state and the same link, erase, sort and fatigue results on the session host and the object host', async () => {
     const t0 = Date.now(), clock = vi.spyOn(Date, 'now').mockReturnValue(t0);
@@ -427,6 +504,32 @@ describe('unit:W35.A1', () => {
       expect.soft(updates(host).length, `W35.A1 (${host} host) — the SDK receives personalization updates during the journey`).toBeGreaterThan(0);
       expect.soft(updates(host).map(u => u.update.journeyStage), `W35.A1 (${host} host) — every update names a journey word (kit 03:545)`)
         .toEqual(updates(host).map(() => expect.stringMatching(/^(exploring|thinking|deciding)$/)));
+    }
+  }, 120_000);
+
+  it('host: a shopper who chooses tracking only (personalization off) and then signs in — her first /realtime/action as the signed-in person, her browsing and reads, her turning personalization on and her next view — is answered the same by the session host and the object host, and neither host refuses her', async () => {
+    const t0 = Date.now(), clock = vi.spyOn(Date, 'now').mockReturnValue(t0);
+    const observed: Partial<Record<Host, Observed>> = {};
+    try {
+      // The object host first: it is the host measured admitting her at base.
+      for (const host of ['do', 'session'] as const) observed[host] = await trackingOnlySignInOn(host, t0, clock);
+    } finally { clock.mockRestore(); vi.restoreAllMocks(); }
+    const session = observed.session!, object = observed.do!;
+    for (const key of Object.keys(object.checkpoints)) {
+      expect.soft(normalizer()(session.checkpoints[key]), `W35.A1 (tracking only, then signed in) — ${key}: both hosts answer her the same (docs/api/01-rest-endpoints.md:26)`)
+        .toEqual(normalizer()(object.checkpoints[key]));
+    }
+    expect.soft(Object.keys(session.checkpoints), 'W35.A1 (tracking only, then signed in) — the session host reaches every checkpoint of the sequence').toEqual(Object.keys(object.checkpoints));
+    for (const [host, run] of [['object', object], ['session', session]] as const) {
+      expect.soft(run.anchors.firstAction, `W35.A1 (${host} host) — her first /realtime/action after signing in with tracking only is admitted, never answered "Shopper session unavailable" (kit 02:447: tracking-only measurement remains permitted)`)
+        .toEqual([200, true]);
+      const admitted = run.anchors.admitted as Array<[string, number]>;
+      expect.soft(admitted, `W35.A1 (${host} host) — no request she makes with her signed-in grant is refused: she consented to tracking (kit 02:447; D06-W05)`)
+        .toEqual(admitted.map(([label]) => [label, 200]));
+      expect.soft(run.anchors.trackingOnly, `W35.A1 (${host} host) — signed in with tracking only, her reads carry no profile and her own switches, carried to the person (kit 02:447; D06-W05)`)
+        .toMatchObject({ affinity: null, consent: { tracking: true, personalization: false } });
+      expect.soft(run.anchors.optedIn, `W35.A1 (${host} host) — once she turns personalization on, both switches are on and the view she makes next shapes her taste (kit 02:447: both switches are required for personalization)`)
+        .toMatchObject({ consent: { tracking: true, personalization: true }, affinity: { dims: { line: { [ROGUE.line]: expect.any(Number) } } } });
     }
   }, 120_000);
 });
