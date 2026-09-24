@@ -310,13 +310,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "9830cce5e66871fe513006eaee8fee555b0716de on rem/spec-w16: src/units/W16 (the batch tests of W16-B1 to W16-B9 and LEDGER.unit.test.ts)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W16/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-R3R5-controls.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-R3-legacy-control.log"
         ]
       },
       "doneWhen": [
@@ -1152,13 +1157,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "18487e8abbbfd0b3ea0b7103d1d6d936632a7f35 on rem/spec-w21-w22: src/units/W22 and the W22-named legacy tests (R3 removed, decision D3)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W21-W22/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W22-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W22-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W22-legacy-only.log"
         ]
       },
       "doneWhen": [
@@ -1853,13 +1863,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "f41b4ca5fbcf580c5a633ace82f21b7b4f4622f7 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W26-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-split-writes.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-uncredited-uncorrelated.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -2018,13 +2034,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "afef56ba33e38199309aa432bf68986a34129ebb on rem/spec-w27: src/units/W27 and the W27-named legacy tests (R2 removed, decision D3)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/W27-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-legacy-only.log"
         ]
       },
       "doneWhen": [
@@ -3230,13 +3250,22 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "7841d763346e7eb31e2c2afb9c13671cd9f939dc on rem/spec-w35: src/units/W35 and the W35-named legacy tests (step-3 corrections of W35.01, W35.03, W35.08 and the competing-links expectation)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W35-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/W35-flake.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/logs/w35-controls.txt",
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/logs/w35-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -3522,13 +3551,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "4649023dbe6d7eb284b2354812b3f69d17581aac on rem/spec-w37: src/units/W37 and the W37-named legacy tests (13 stale corrections; W37.04 left as a defect)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/W37-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/controls-summary.log",
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/acceptance.log"
         ]
       },
       "doneWhen": [
@@ -3705,13 +3740,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "ffb05baf47ef6a9658df0f791b14346667681214 on rem/spec-w38: src/units/W38 and the W38-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W38/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/W38-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/control-purge-no-carry.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/acceptance-full.log"
         ]
       },
       "doneWhen": [
@@ -3851,13 +3891,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "de4c04d05b98b08e9eedd21573e01c3ada4da6bf on rem/spec-w38-w39: src/units/W39",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W38-W39/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/W39-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/logs/W39-acceptance-de4c04d.log"
         ]
       },
       "doneWhen": [
@@ -3994,13 +4037,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "0349bc265319cc591cf423c22431782e1d55f411 on rem/spec-w40: src/units/W40 with src/units/_native.ts and src/units/_cloudflare.mjs",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/W40-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect1-unversioned-immutable.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect2-header-not-uploaded.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-acceptance-0349bc2.log"
         ]
       },
       "doneWhen": [
