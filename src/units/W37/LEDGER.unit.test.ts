@@ -70,6 +70,8 @@ import { reportKey } from '@/learn/report';
 import { consumeLedger } from '@/ledger/consume';
 import { rollupTenant } from '@/reflex/regionTrend';
 import { signAssertion } from '@/identity/assertion';
+import { isShopperId } from '@/identity/shopperId';
+import { customerRequest } from '@/customerBoundary';
 import { catchUp } from '@/learn/hourly';
 import { canonical as stampCanonical, sha256 as stampSha256, validateDesired, validateTransition } from '../../../scripts/stamp-workflow.mjs';
 import { bundleNativeWorker, nativeScratchDirectory, openNativeRuntime, type NativeRuntime } from '../_native';
@@ -816,7 +818,7 @@ describe('unit:W37.T6', () => {
 // "Prove two non-default brands across event, decision, identity, sort, egress
 // and erasure."
 //
-// THE INTERFACES ARE THE DOCUMENTED ONES, nothing new:
+// THE INTERFACES: the documented ones, and the one export route the lead ruled:
 //   · erasure — operator `POST /v1/{tenant}/identity/erase` with the subject
 //     selector, resumed with the same selector until it is no longer pending
 //     (docs/kit/02-api-reference.md:42); the ledger half's scheduled rewrite
@@ -832,7 +834,9 @@ describe('unit:W37.T6', () => {
 //     `GET ledger/{id}`, `GET ledger/batches` with each stream, kit :176) and
 //     the R2 partition they list, which "is the export" (doc 22 §12.4); the
 //     same list the privacy sweep names as the subject reads and exports
-//     (35-verification-reports/sweep-data-privacy-and-lifecycle.md:341-348).
+//     (35-verification-reports/sweep-data-privacy-and-lifecycle.md:341-348) —
+//     and, for the stores no documented read returns, the ruled
+//     `POST identity/export` below, which answers all of it at once.
 //
 // THE STORES MEASURED (every binding of the mounted host that can hold a
 // shopper's data): KV SESSIONS (session, user pointer, identity links), KV
@@ -869,12 +873,25 @@ describe('unit:W37.T6', () => {
 // `identityRetired:`). Nothing else of that tenant may still carry her
 // identifiers.
 //
-// NOT SPECIFIED HERE (no witness): an export of the profile, consent and segment
-// stores (SHOPPER_REFLEX `affinity`/`consent`/`pipeline`, SESSIONS
-// `t:{tenant}:session:*`, CACHE `t:{tenant}:profile:*`). D2 asks the export to
-// reach every store, but no documented per-shopper operator read returns them
-// and no witness names the surface or its content; the report returns that
-// member to the owner.
+// THE RULED EXPORT SURFACE (lead ruling 2026-09-24, an interface choice under D2
+// "every store"): `POST /v1/{tenant}/identity/export`, with the erase route's
+// selector (`{ visitorId?, shopperId? }`, at least one), operator authentication
+// and tenant scope. It answers that shopper's data from every store the erasure
+// reaches — her SHOPPER_REFLEX `affinity`, `consent` and `pipeline`, her SESSIONS
+// `t:{tenant}:session:*` and CACHE `t:{tenant}:profile:*` records, and what the
+// documented operator reads above already return — for shoppers of two
+// non-default brands, never another tenant's or brand's data, and nothing of
+// hers after her erasure. The shopper-facing read still never carries the
+// account id (kit 02 :350, src/identity/store.ts:14, locked by
+// src/routes/identity.test.ts:552). The erasure's reach decides the subject:
+// a browser selector resolves to its person and every browser linked to her
+// (src/identity/erase.ts:425-431), so both selectors answer the same person.
+// The export legs require each ruled datum AS STORED (or, for a documented
+// read, as that read returns it) somewhere in the answer, at any depth and
+// under any name: the ruling names the records, not a projection of them. A
+// KV record may be answered as its stored text or as the parsed object. The
+// route is reachable on a customer stamp only if the customer surface admits
+// it as it admits the erase route (src/customerBoundary.ts:96, the logic leg).
 //
 // THE FIXTURE: one browser shops both non-default brands, acme and globex, the
 // day before (the kit's Coach taxonomy with an unknown category and a
@@ -1051,7 +1068,81 @@ async function t5World(kind: 'session' | 'do') {
     vi.setSystemTime(erasedAt);
     return { answer, rewrites };
   };
-  return { h, kind, served, shoppers, operator, identifiers, holding, erasureRecord, tenantState, identities, exported, partitionRows, rowId, erase };
+
+  /**
+   * What the ruled export must answer for the person with these ids at this
+   * tenant (lead ruling on D2): every value the documented operator reads return
+   * for her, and every value the ruled store members hold for her — SHOPPER_REFLEX
+   * `affinity`, `consent` and `pipeline` of each of her objects, SESSIONS
+   * `t:{tenant}:session:*` and CACHE `t:{tenant}:profile:*` records whose subject
+   * is one of her ids. Each entry is labelled with the store that holds it.
+   */
+  const exportTruth = async (tenant: string, ids: string[], date: string): Promise<T5Entry[]> => {
+    const entries: T5Entry[] = [];
+    const add = (store: string, member: string, value: unknown, raw?: string) => { if (value !== undefined && value !== null) entries.push({ store, member, value, ...(raw === undefined ? {} : { raw }) }); };
+    for (const id of ids) {
+      if (isShopperId(id)) {
+        const person = await operator(tenant, `/identity/shopper/${id}`);
+        if (person.status === 200) add('SESSIONS', `GET identity/shopper/${id}`, person.body.shopper);
+      } else add('SESSIONS', `GET identity/visitor/${id} link`, (await operator(tenant, `/identity/visitor/${id}`)).body.link);
+      // The receipts are read from her own ring (src/routes/decisions.ts:385-387), the record by id from R2.
+      for (const receipt of (await operator(tenant, `/visitors/${id}/receipts`)).body.receipts ?? []) {
+        add('DECISION_RING', `GET visitors/${id}/receipts ${receipt.decision_id}`, receipt);
+        const record = await operator(tenant, `/ledger/${encodeURIComponent(receipt.decision_id)}`);
+        if (record.status === 200) add('STORAGE', `GET ledger/${receipt.decision_id}`, record.body.record);
+      }
+      for (const entry of (await operator(tenant, `/visitors/${id}/recent`)).body.ring ?? []) add('DECISION_RING', `GET visitors/${id}/recent ${entry.decision_id}`, entry);
+    }
+    for (const stream of T5_STREAMS) for (const object of ((await operator(tenant, `/ledger/batches?date=${date}&stream=${stream}`)).body.objects ?? []) as Array<{ key: string }>)
+      for (const line of (h.storage.data.get(object.key) ?? '').split('\n').filter(Boolean)) {
+        const row = JSON.parse(line) as Record<string, any>;
+        if (ids.includes(row.visitor_id)) add('STORAGE', `GET ledger/batches ${stream} ${object.key} ${rowId(row)}`, row);
+      }
+    for (const id of ids) {
+      const name = shopperObjectName(tenant, id), object = h.item('SHOPPER_REFLEX', name);
+      for (const key of ['affinity', 'consent', 'pipeline']) add('SHOPPER_REFLEX', `${name} ${key}`, object?.data.get(key));
+    }
+    for (const [store, data, prefix] of [['SESSIONS', h.sessions.data, `t:${tenant}:session:`], ['CACHE', h.cache.data, `t:${tenant}:profile:`]] as const)
+      for (const [key, raw] of data) {
+        if (!key.startsWith(prefix)) continue;
+        const value = JSON.parse(raw) as { userId?: string };
+        if (ids.includes(value?.userId ?? '')) add(store, key, value, raw);
+      }
+    return entries;
+  };
+  /** Her ids at a tenant: her person and every browser linked to her. */
+  const personIds = (s: T5Shopper) => [s.visitorId, s.shopperId];
+  const bearer = async () => `Bearer ${await operatorToken()}`;
+  return { h, kind, served, shoppers, operator, bearer, identifiers, holding, erasureRecord, tenantState, identities, exported, partitionRows, rowId, erase, exportTruth, personIds };
+}
+
+interface T5Entry { store: string; member: string; value: unknown; raw?: string }
+
+/** A value's canonical JSON: object keys sorted at every depth, array order kept. */
+const canonical = (value: unknown) => JSON.stringify(value, (_key, v: unknown) =>
+  v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
+/** Every value an answer carries, at any depth and under any name, in canonical form. */
+function carried(answer: unknown): Set<string> {
+  const seen = new Set<string>();
+  const walk = (value: unknown) => { seen.add(canonical(value)); if (value && typeof value === 'object') for (const child of Object.values(value)) walk(child); };
+  walk(answer);
+  return seen;
+}
+const carries = (seen: Set<string>, entry: T5Entry) => seen.has(canonical(entry.value)) || (entry.raw !== undefined && seen.has(canonical(entry.raw)));
+/**
+ * The ruled data an export answer omits: each entry of `before` (the stores and reads
+ * just before the call) the answer carries neither as it was before nor as the same
+ * member stands just after the call. Named `<store> <member>`.
+ */
+function exportGaps(answer: unknown, before: T5Entry[], after: T5Entry[]): string[] {
+  const seen = carried(answer), now = new Map(after.map(entry => [`${entry.store} ${entry.member}`, entry]));
+  return before.filter(entry => !carries(seen, entry) && !(now.has(`${entry.store} ${entry.member}`) && carries(seen, now.get(`${entry.store} ${entry.member}`)!)))
+    .map(entry => `${entry.store} ${entry.member}`);
+}
+/** The entries of `theirs` an answer carries that are not also equal to an entry of `own`. */
+function foreignCarried(answer: unknown, theirs: T5Entry[], own: T5Entry[]): string[] {
+  const seen = carried(answer), mine = new Set(own.map(entry => canonical(entry.value)));
+  return theirs.filter(entry => !mine.has(canonical(entry.value)) && carries(seen, entry)).map(entry => `${entry.store} ${entry.member}`);
 }
 
 describe('unit:W37.T5', () => {
@@ -1158,5 +1249,97 @@ describe('unit:W37.T5', () => {
         }
       } finally { vi.useRealTimers(); }
     }, 120_000);
+
+    it(`host (${kind}): POST /v1/{tenant}/identity/export, with the erase route's selector, operator authentication and tenant scope, answers the shopper of each non-default brand her SHOPPER_REFLEX affinity, consent and pipeline, her SESSIONS session and CACHE profile records and all the documented operator reads return, never the other brand's data or the account id, and nothing of hers once she is erased`, async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        const w = await t5World(kind);
+        const date = new Date(w.served).toISOString().slice(0, 10);
+        const exportOf = (tenant: string, selector: { visitorId?: string; shopperId?: string }) => w.operator(tenant, '/identity/export', selector);
+        const truth: Record<string, T5Entry[]> = {};
+        for (const tenant of [ACME, GLOBEX]) {
+          truth[tenant] = await w.exportTruth(tenant, w.personIds(w.shoppers[tenant]!), date);
+          // CONTROL: the fixture put her into every ruled store this host keeps shopper data in, so an export that omits one cannot pass.
+          expect([...new Set(truth[tenant]!.map(entry => entry.store))], `${kind} ${tenant}: her ruled data is in every store this host keeps it in`)
+            .toEqual(expect.arrayContaining(kind === 'session' ? ['CACHE', 'DECISION_RING', 'SESSIONS', 'SHOPPER_REFLEX', 'STORAGE'] : ['DECISION_RING', 'SESSIONS', 'SHOPPER_REFLEX', 'STORAGE']));
+          expect(truth[tenant]!.filter(entry => entry.store === 'SHOPPER_REFLEX').map(entry => entry.member.split(' ').pop()).sort(), `${kind} ${tenant}: both her objects hold each ruled member`)
+            .toEqual(['affinity', 'affinity', 'consent', 'consent', 'pipeline', 'pipeline']);
+          if (kind === 'session') expect(truth[tenant]!.filter(entry => entry.member.startsWith(`t:${tenant}:session:`) || entry.member.startsWith(`t:${tenant}:profile:`)).map(entry => entry.store).sort(),
+            `session ${tenant}: her browser's and her person's session records, and her profile copy`).toEqual(['CACHE', 'SESSIONS', 'SESSIONS']);
+        }
+
+        // Her export at each non-default brand, by either selector: every ruled datum of hers, and nothing of the other brand's.
+        for (const [tenant, other] of [[ACME, GLOBEX], [GLOBEX, ACME]] as const) {
+          const s = w.shoppers[tenant]!, o = w.shoppers[other]!;
+          for (const selector of [{ shopperId: s.shopperId }, { visitorId: s.visitorId }] as Array<{ visitorId?: string; shopperId?: string }>) {
+            const label = `W37.T5 export — ${kind} ${tenant} ${Object.keys(selector)[0]}`;
+            const before = await w.exportTruth(tenant, w.personIds(s), date);
+            const answer = await exportOf(tenant, selector);
+            const after = await w.exportTruth(tenant, w.personIds(s), date);
+            expect(answer.status, `${label}: POST /v1/${tenant}/identity/export answers the operator with her export: ${JSON.stringify(answer.body).slice(0, 200)}`).toBe(200);
+            expect(answer.body.ok ?? answer.body.success, `${label}: a success answer (kit 02 :31)`).toBe(true);
+            expect(exportGaps(answer.body, before, after), `${label}: the export carries every ruled datum of hers, from every store`).toEqual([]);
+            expect(foreignCarried(answer.body, truth[other]!, before), `${label}: the export carries nothing of ${other}'s`).toEqual([]);
+            const text = JSON.stringify(answer.body);
+            expect([o.shopperId, o.linkedSessionId, o.orderId, o.decisions.visitor, o.decisions.shopper, ...o.grantIds].filter(id => text.includes(id)), `${label}: no identifier of ${other}'s person`).toEqual([]);
+            expect(text.includes(T5_ACCOUNT), `${label}: the export never carries the account id (kit 02 :350)`).toBe(false);
+          }
+          // The other brand's path never answers her: her person id names nobody there.
+          const across = await exportOf(other, { shopperId: s.shopperId }), acrossText = JSON.stringify(across.body);
+          expect(foreignCarried(across.body, truth[tenant]!, truth[other]!), `W37.T5 export — ${kind}: ${other}'s export of ${tenant}'s person id carries nothing of hers`).toEqual([]);
+          expect([s.linkedSessionId, s.orderId, s.decisions.visitor, s.decisions.shopper, ...s.grantIds].filter(id => acrossText.includes(id)), `W37.T5 export — ${kind}: ${other}'s export carries no identifier of ${tenant}'s person`).toEqual([]);
+        }
+
+        // The erase route's selector, operator authentication and tenant scope: every request below the erase route
+        // refuses before it reads a subject, and the export refuses it with the same status.
+        const nobody = { shopperId: 'sh_' + 'f'.repeat(32) }, bearer = await w.bearer(), capability = await newAnonymousSession(w.h.env, ACME);
+        const globexOperator = await new SignJWT({ sub: 'w37-globex-operator', type: 'service', roles: ['admin'], permissions: ['*'] })
+          .setProtectedHeader({ alg: 'HS256' }).setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(SECRET));
+        const enforced = host(kind, { enforced: true, extra: { TENANTS: JSON.stringify({ provisioned: [ACME, GLOBEX], operatorGrants: { 'w37-globex-operator': [GLOBEX] } }) } });
+        const refusals: Array<[string, (route: string) => Promise<Response>]> = [
+          ['no operator token', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: nobody })],
+          ['a shopper capability instead of an operator token', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: nobody, grant: capability })],
+          ['no selector', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: {}, headers: { Authorization: bearer } })],
+          ['an account id beside the selector', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: { ...nobody, accountId: T5_ACCOUNT }, headers: { Authorization: bearer } })],
+          ['a browser id where the shopper id belongs', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: { shopperId: w.shoppers[ACME]!.visitorId }, headers: { Authorization: bearer } })],
+          ['an unregistered tenant', route => w.h.call(`/v1/${INITECH}/identity/${route}`, { tenant: INITECH, body: nobody, headers: { Authorization: bearer } })],
+          ['another tenant named beside the path', route => w.h.call(`/v1/${ACME}/identity/${route}`, { tenant: GLOBEX, body: nobody, headers: { Authorization: bearer } })],
+          ['an operator granted only the other brand (enforced)', route => enforced.call(`/v1/${ACME}/identity/${route}`, { tenant: ACME, body: nobody, headers: { Authorization: `Bearer ${globexOperator}` } })],
+        ];
+        for (const [refusal, send] of refusals) {
+          const erase = (await send('erase')).status, exported = (await send('export')).status;
+          expect(erase, `${kind} ${refusal}: the erase route refuses it`).toBeGreaterThanOrEqual(400);
+          expect(exported, `W37.T5 export — ${kind}: ${refusal} — refused exactly as the erase route refuses it`).toBe(erase);
+        }
+
+        // Nothing of hers once she is erased, at either brand; the other brand's shopper keeps her whole export.
+        for (const [tenant, other] of [[ACME, GLOBEX], [GLOBEX, ACME]] as const) {
+          const s = w.shoppers[tenant]!, o = w.shoppers[other]!;
+          const { answer } = await w.erase(s);
+          expect(answer.body.status, `${kind} ${tenant}: the erasure completes its local steps`).toBe('local_complete');
+          for (const selector of [{ shopperId: s.shopperId }, { visitorId: s.visitorId }] as Array<{ visitorId?: string; shopperId?: string }>) {
+            const label = `W37.T5 export — ${kind} ${tenant} ${Object.keys(selector)[0]} after her erasure`, own = Object.values(selector)[0];
+            const erased = await exportOf(tenant, selector), text = JSON.stringify(erased.body), seen = carried(erased.body);
+            expect([200, 404], `${label}: the export route still answers the operator: ${text.slice(0, 200)}`).toContain(erased.status);
+            expect(typeof erased.body.ok, `${label}: a JSON answer in the kit's convention (kit 02 :31)`).toBe('boolean');
+            expect([...truth[tenant]!, ...truth[other]!].filter(entry => carries(seen, entry)).map(entry => `${entry.store} ${entry.member}`), `${label}: nothing of hers, and nothing of ${other}'s, is exported`).toEqual([]);
+            expect(w.identifiers(s).filter(id => id !== own && text.includes(id)), `${label}: no identifier of hers but the selector`).toEqual([]);
+            expect(text.includes(T5_ACCOUNT), `${label}: never the account id`).toBe(false);
+          }
+          if (tenant === ACME) {
+            const kept = await exportOf(other, { shopperId: o.shopperId });
+            expect(kept.status, `W37.T5 export — ${kind}: ${other}'s shopper is still exported after ${tenant}'s erasure`).toBe(200);
+            expect(exportGaps(kept.body, truth[other]!, await w.exportTruth(other, w.personIds(o), date)), `W37.T5 export — ${kind}: ${tenant}'s erasure takes nothing from ${other}'s export`).toEqual([]);
+          }
+        }
+      } finally { vi.useRealTimers(); }
+    }, 120_000);
   }
+
+  it('logic: a customer stamp admits POST /v1/{tenant}/identity/export for each non-default brand exactly as it admits the erase route (src/customerBoundary.ts:96), and no other method on it', () => {
+    for (const tenant of [ACME, GLOBEX]) for (const method of ['POST', 'GET', 'PUT', 'DELETE']) {
+      const admitted = (route: string) => customerRequest(new Request(`https://shop.${tenant}.example/v1/${tenant}/identity/${route}`, { method }), `/v1/${tenant}/identity/${route}`);
+      expect(admitted('export'), `W37.T5 export — ${tenant} ${method}: the customer surface admits the export as it admits the erase route`).toEqual(admitted('erase'));
+    }
+  });
 });
