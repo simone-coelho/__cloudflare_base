@@ -514,7 +514,8 @@ test('Offline actual Worker/SDK/customer-assets package is pinned once; not a cl
   for(const [path,proof]of barriers){assert.equal(sources.get(path).sha256,proof.sha256);if(path!=='src/index.ts')for(const imported of sources.get(path).imports)assert.ok(barriers.has(imported),'effective enforcement dependency '+imported);}
   console.log('Actual enforcement closure '+barriers.size+' pins; every customer-bound DO and background root plus transitive imports verified');
   assert.equal(config.env.staging.d1_databases[0].migrations_dir,'migrations/product');assert.equal(config.env.production.d1_databases[0].migrations_dir,'migrations/product');
-  assert.equal(config.vars.JWT_SECRET,undefined);assert.equal(config.d1_databases[0].migrations_dir,'migrations');
+  // W39 H2 (src/units/W39/LEDGER.unit.test.ts): the default local database applies product migrations only; the demo chain is an explicit request.
+  assert.equal(config.vars.JWT_SECRET,undefined);assert.equal(config.d1_databases[0].migrations_dir,'migrations/product');
   for(const mutate of [a=>delete a.verification,a=>a.verification={evidence:'claimed',sha256:'d'.repeat(64)},
     a=>a.verification.checks[0].exitCode=1,a=>a.verification.checks[1].command='true',
     a=>a.verification.checks[0].completedAt='invalid',a=>a.sourcePins.push(clone(a.sourcePins[0])),

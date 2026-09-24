@@ -20,6 +20,11 @@ const family = [
   ['console-operator', 'console-preview-admin', ['admin'], 600], ['holdout-proof', 'holdout-proof', ['operator'], 900],
   ['identity-proof', 'identity-proof', undefined, 600],
 ];
+// W39 H3 (src/units/W39/LEDGER.unit.test.ts): a content seed takes a named tenant (no default)
+// and refuses a remote target before any request. These arrangements give the two seeds the
+// tenant and the local target every case below already meant; what each case asserts is unchanged.
+const SEEDS = new Set(['import-content', 'seed-coach-content']);
+const scoped = (name, args = []) => SEEDS.has(name) ? ['--scope', 'acme', ...args] : args;
 
 // Bundle the real shared verifier in memory. No source/build file is written.
 const bundled = await build({ stdin: { contents: "export { jwt } from './src/middleware/auth.ts';", resolveDir: ROOT, loader: 'ts' },
@@ -123,13 +128,13 @@ for (const [name, sub, roles, lifetime] of family) {
   test(`${name}: unsafe configuration stops before operational or configuration-file effects`, async () => {
     for (const env of [{}, { ...CONFIG, JWT_SECRET: PLACEHOLDER }, { ...CONFIG, JWT_SECRET: 'short' }, { ...CONFIG, JWT_ISSUER: '' },
       { ...CONFIG, JWT_AUDIENCE: '' }, { ...CONFIG, OPERATOR_TOKEN: '' }]) {
-      const result = await adapter(name, env);
+      const result = await adapter(name, env, scoped(name));
       assert.match(result.error?.message ?? '', /Operator credentials unavailable/);
       assert.deepEqual(result.operations, []); assert.deepEqual(result.reads, []); assert.deepEqual(result.acquired, []); assert.deepEqual(result.output, []);
     }
   });
   test(`${name}: explicit settings preserve claims, lifetime, verifier compatibility and adapter use`, async () => {
-    const result = await adapter(name, CONFIG);
+    const result = await adapter(name, CONFIG, scoped(name));
     assert.equal(result.acquired.length, 1);
     const token = result.acquired[0], payload = await claims(token);
     assert.equal(payload.sub, sub); assert.deepEqual(payload.roles, roles); assert.equal(payload.type, 'service'); assert.equal(payload.exp-payload.iat, lifetime);
@@ -148,24 +153,28 @@ for (const [name, sub, roles, lifetime] of family) {
     }
   });
   test(`${name}: OPERATOR_TOKEN passes through without signing configuration`, async () => {
-    const result = await adapter(name, { OPERATOR_TOKEN: 'synthetic-opaque-bearer' });
+    const result = await adapter(name, { OPERATOR_TOKEN: 'synthetic-opaque-bearer' }, scoped(name));
     assert.deepEqual(result.acquired, ['synthetic-opaque-bearer']);
     if (name !== 'dev-token') assert.equal(result.operations.length, 1);
   });
 }
 
 for (const name of ['acceptance-run', 'import-content', 'seed-coach-content']) test(`${name}: CLI precedence and remote token path; no ambiguous local mint`, async () => {
-  const result = await adapter(name, { OPERATOR_TOKEN: 'env-opaque' }, ['--base', 'https://remote.example.invalid', '--token', 'cli-opaque']);
+  // W39 H3: a seed's precedence case runs against a local target (a remote one is refused outright).
+  const result = await adapter(name, { OPERATOR_TOKEN: 'env-opaque' }, scoped(name, ['--base', SEEDS.has(name) ? 'http://127.0.0.1:9100' : 'https://remote.example.invalid', '--token', 'cli-opaque']));
   assert.deepEqual(result.acquired, ['cli-opaque']); assert.equal(result.operations.length, 1);
   for (const args of [['--token'], ['--token', ''], ['--token', '--scope', 'acme']]) {
-    const invalid = await adapter(name, { ...CONFIG, OPERATOR_TOKEN: 'env-opaque' }, args);
+    const invalid = await adapter(name, { ...CONFIG, OPERATOR_TOKEN: 'env-opaque' }, scoped(name, args));
     assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/); assert.deepEqual(invalid.operations, []);
   }
   for (const base of ['https://localhost.example.invalid', 'https://remote.example.invalid', 'http://localhost@remote.example.invalid']) {
-    const invalid = await adapter(name, CONFIG, ['--base', base]);
-    assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/); assert.deepEqual(invalid.operations, []);
+    const invalid = await adapter(name, CONFIG, scoped(name, ['--base', base]));
+    // W39 H3: a seed refuses the remote target itself, whichever refusal it reaches first; nothing is minted or sent.
+    if (SEEDS.has(name)) { assert.ok(invalid.error); assert.deepEqual(invalid.acquired, []); }
+    else assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/);
+    assert.deepEqual(invalid.operations, []);
   }
-  assert.equal((await adapter(name, CONFIG, ['--base', 'http://[::1]:9100'])).acquired.length, 1);
+  assert.equal((await adapter(name, CONFIG, scoped(name, ['--base', 'http://[::1]:9100']))).acquired.length, 1);
 });
 
 test('console remains local-only, while existing remote-capable proof scripts remain usable', async () => {
