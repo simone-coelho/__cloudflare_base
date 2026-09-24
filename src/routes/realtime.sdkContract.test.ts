@@ -53,7 +53,7 @@ import { CatalogService } from '@/services/CatalogService';
 import { RegionTrend } from '@/durable-objects/RegionTrend';
 import { objectName as regionObjectName, trendKey, readTrend, invalidateTrendCache, type IngestFrame } from '@/reflex/regionTrend';
 import { DEFAULT_REFLEX_CONFIG, emptyState, audienceKey, nextCrossing, tick as tickReflex, type ReflexConfig } from '@/reflex/core';
-import { reflexScopeForTenant, writeReflexConfig, readReflexConfigRevision, REFLEX_KIND, ReflexConfigUnavailableError } from '@/reflex/configStore';
+import { reflexScopeForTenant, writeReflexConfig, readReflexConfigRevision, REFLEX_KIND, ReflexConfigUnavailableError, compiledDefaultFor } from '@/reflex/configStore';
 import { applyHistory, parseHistoryCsv, type HistoryReport } from '@/identity/history';
 import { memoryStore, type OperationAuditDetail, type AuditEntry } from '@/auth/store';
 import * as historyModule from '@/identity/history';
@@ -285,6 +285,19 @@ function expectColdOff(f: ReturnType<typeof boundary>, g: { tenant: string; subj
   expect([...item.data.keys()]).toEqual(['grantAuthority']);
   expect(item.data.get('grantAuthority')).toMatchObject({ grants: expect.any(Object) });
   expect(storedConsent(item.data.get('consent'))).toEqual({ tracking: false, personalization: false });
+}
+
+// W37 step-3 arrangement: the default tenant's two demo scopes share ONE publication
+// root (src/config/publication.ts:66-69, the 'brighthour' reflex scope is owned by
+// 'coach'), so a Coach shopper served the BrightHour surface needs both compiled demo
+// tunings published as members of that one set, as the demo's own fixtures do
+// (src/demos/brighthour/composer.test.ts:961-969, surface.test.ts:182-189).
+async function demoPublication(f: ReturnType<typeof boundary>, tune: (config: ReflexConfig) => ReflexConfig = config => config) {
+  const at = 1, baseline = (kind: PublicationBaseline['kind'], scope: string, value: unknown): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at, actor: 'synthetic-fixture', note: '', value } });
+  await initializePublicationSet(f.env, [baseline(REFLEX_KIND, 'coach', tune(await compiledDefaultFor('coach'))), baseline(REFLEX_KIND, 'brighthour', tune(await compiledDefaultFor('brighthour'))),
+    baseline(CONTENT_KIND, 'coach', { pieces: [] }), baseline(SLOTS_KIND, 'coach', { pages: {} }), baseline(LEARN_KIND, 'coach', { holdout: { share: 0, salt: 'fixture', arms: ['default'] } })],
+  '0:' + crypto.randomUUID());
 }
 
 async function positiveChoice(f: ReturnType<typeof boundary>, grant: Awaited<ReturnType<typeof newAnonymousSession>>) {
@@ -3580,6 +3593,7 @@ describe('W37.06 tenant-owned audience names and legacy ODP boundary', () => {
             expect(body.odp).toBeUndefined(); expect(body.update?.data.segments.slice().sort()).toEqual(expected.slice().sort());
             expect(body.update?.data.affinity?.odpConfirmed).toEqual([]);
           };
+          await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
           const initial = await f.call('/realtime/action', g.capability, event('owned', 'brighthour'), g.tenant);
           expect(initial.status).toBe(200);
           assertUpdate(await initial.json(), ['line_tabby_affinity', 'taste_owned_affinity']);
@@ -3667,6 +3681,7 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
           const b = await issueSessionCapability(f.env, { tenant: specs[1]!.tenant, subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
           for (const [i, g] of [a, b].entries()) {
             const s = specs[i]!;
+            await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
             const response = await f.call('/realtime/action', g.capability, event(g, product.id, s.value, surface), g.tenant);
             expect(response.status).toBe(200);
             const body = await response.json() as { dropped?: string; update?: { data: unknown } };
@@ -3704,9 +3719,13 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
     try {
       for (const s of specs) {
         const g = await newAnonymousSession(f.env, s.tenant), demo = demos[1]!;
+        await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
         expect((await f.call('/realtime/action', g.capability, event(g, demo.product.id, s.value, demo.surface), g.tenant)).status).toBe(200);
         const item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
-        const ws = { deserializeAttachment: () => ({ shopperId: g.subject, principal: g }), send: vi.fn(), close: vi.fn() };
+        // W37 step-3 STALE arrangement (W04): a socket attachment holds the VERIFIED principal
+        // handleUpgrade serializes, which assertOwned checks against the grant authority.
+        const principal = await verifySessionCapability(f.env, g.capability, g.tenant);
+        const ws = { deserializeAttachment: () => ({ shopperId: g.subject, principal }), send: vi.fn(), close: vi.fn() };
         item.sockets.push(ws as unknown as WebSocket);
         const pushed = (source: string) => {
           const frames = ws.send.mock.calls.map(call => JSON.parse(call[0]));
@@ -3722,7 +3741,9 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
         expect((await f.call(`/realtime/personalization/${g.subject}`, g.capability, undefined, g.tenant)).status).toBe(200);
         expect(resolve).toHaveBeenCalledWith(g.tenant, 'coach');
         ws.send.mockClear(); item.shopper = new ShopperReflex(item.state, f.env);
-        const crossing = item.alarms.at(-1)!; expect(crossing).toBeGreaterThan(Date.now()); clock.mockReturnValue(crossing + 5);
+        // W37 step-3 STALE arrangement: Date.now() is an integer; the decay crossing is not, and
+        // retention admission requires a safe-integer clock (src/retention.ts:42, :98).
+        const crossing = item.alarms.at(-1)!; expect(crossing).toBeGreaterThan(Date.now()); clock.mockReturnValue(Math.ceil(crossing) + 5);
         resolve.mockClear(); await item.shopper.alarm(); pushed('reflex_alarm');
         expect(resolve).toHaveBeenCalledWith(g.tenant, 'coach');
         expect((item.data.get('affinity') as AffinityRecord).reflex.audiences).toEqual([]);
@@ -3738,11 +3759,12 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
     try {
       for (const host of ['session', 'do']) {
-        invalidateCache(); const f = boundary(host);
+        invalidateCache(); const f = boundary(host); await demoPublication(f); // W37 step-3 STALE arrangement (W11): both demo tunings published.
         for (const { surface, product } of demos) {
           const service = await demoRegistry.catalogServiceFor(surface);
           expect(await demoRegistry.resolveTenantCatalog('coach', surface)).toBe(service);
           const g = await newAnonymousSession(f.env, 'coach');
+          await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
           let update: { data: { recommendations: Array<{ id: string }>; sortOrder: string[] } } | undefined;
           for (let n = 0; n < 4; n++) {
             const response = await f.call('/realtime/action', g.capability, event(g, product.id, 'caller-must-not-win', surface), g.tenant);
@@ -3806,16 +3828,22 @@ describe('W37.04 tenant-owned runtime configuration', () => {
         invalidateCache(); const f = boundary(host); await configured(f);
         const a = await newAnonymousSession(f.env, specs[0]!.tenant);
         const b = await issueSessionCapability(f.env, { tenant: specs[1]!.tenant, subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
+        await positiveChoice(f, a); await positiveChoice(f, b); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
         const resolver = vi.spyOn(demoRegistry, 'resolveTenantReflexConfig');
         for (const [i, g] of [a, b].entries()) {
           const s = specs[i]!; resolver.mockClear();
           expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200);
-          expect(resolver).toHaveBeenCalledTimes(1);
+          // W37 step-3 STALE count (W37.BASE.01, R54): the session host resolves the tenant's authority
+          // once before the record is read (src/services/RealtimeSegmentEngine.ts:1152) and once to
+          // score (:478); every resolution names this tenant.
+          expect(resolver).toHaveBeenCalledTimes(host === 'do' ? 1 : 2);
+          expect(resolver.mock.calls.every(([, tenant]) => tenant === g.tenant)).toBe(true);
           expect(raw(f, g).reflex).toMatchObject({ configVersion: `w3704-${g.tenant}+r2`, dims: { [s.dim]: { [s.value]: { s: s.weight } } } });
           expect(Object.keys(raw(f, g).reflex.dims)).toEqual([s.dim]);
           if (host === 'do') {
             const item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
-            const ws = { deserializeAttachment: () => ({ shopperId: g.subject, principal: g }), send: vi.fn(), close: vi.fn() };
+            const principal = await verifySessionCapability(f.env, g.capability, g.tenant); // W37 step-3 STALE arrangement (W04): verified socket principal.
+            const ws = { deserializeAttachment: () => ({ shopperId: g.subject, principal }), send: vi.fn(), close: vi.fn() };
             item.sockets.push(ws as unknown as WebSocket); resolver.mockClear();
             await item.shopper.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ type: 'action', event: event(g, 'coach') }));
             expect(ws.close).not.toHaveBeenCalled(); expect(resolver).toHaveBeenCalledTimes(1);
@@ -3839,7 +3867,10 @@ describe('W37.04 tenant-owned runtime configuration', () => {
           const content = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`, g.capability, undefined, g.tenant);
           expect(content.status).toBe(200);
           expect(await content.json()).toMatchObject({ sources: { config: { label: `w3704-${g.tenant}+r2`, revision: 2 } },
-            records: [{ item_id: s.winner, versions: { config: 2 }, inputs: { affinity: { [s.dim]: { [s.value]: score } } } }] });
+            // W37 step-3 STALE shape (W15, docs/kit/02-api-reference.md:181): the public snapshot is an
+            // offer and carries no private records; the served item, config version and tenant affinity
+            // input are its `versions` and `decisions[].explain.drivers`.
+            versions: { config: 2 }, decisions: [{ contentId: s.winner, explain: { drivers: [{ dim: s.dim, value: s.value, a: score }] } }] });
           await f.drain();
         }
         resolver.mockRestore();
@@ -3847,7 +3878,11 @@ describe('W37.04 tenant-owned runtime configuration', () => {
           const s = specs[i]!, item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
           const lastSeen = (item.data.get('affinity') as AffinityRecord).lastSeen;
           const expected = lastSeen + s.tau * Math.log((2 * s.weight) * (1 - 0.2) / (s.K * 0.2));
-          expect(item.alarms.at(-1)).toBeCloseTo(expected, 0);
+          // W37 step-3 STALE expectation (R46(h)/(i)): scheduleProjectionAlarm keeps the nearest armed
+          // deadline (ShopperReflex.ts:3510), so the armed alarm is the first event's crossing from THIS
+          // tenant's tau/K/thetaOut; the exit is still observed at the two-event crossing below.
+          const first = lastSeen + s.tau * Math.log(s.weight * (1 - 0.2) / (s.K * 0.2));
+          expect(item.alarms.at(-1)).toBeCloseTo(first, 0);
           item.shopper = new ShopperReflex(item.state, f.env); clock.mockReturnValue(Math.ceil(expected) + 5);
           const peer = [a, b][1 - i]!, peerBefore = structuredClone(raw(f, peer));
           await item.shopper.alarm();
@@ -3866,22 +3901,16 @@ describe('W37.04 tenant-owned runtime configuration', () => {
     try {
       for (const host of ['session', 'do']) {
         invalidateCache(); const f = boundary(host); await configured(f);
-        for (const s of specs) {
-          const visitor = { tenant: s.tenant, subject: 'w3704-shared-history' };
-          const sid = 's-w3704-history-' + s.tenant, now = Date.now();
-          const reflex: AffinityRecord['reflex'] = { v: 1, dims: {}, audiences: [], configVersion: `w3704-${s.tenant}+r2` };
-          if (host === 'session') {
-            await new SessionManager(f.env, { tenant: s.tenant }).createOrUpdateSession(sid, visitor.subject, {
-              reflex, preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },
-            });
-          } else {
-            await internal(f, visitor, '/identity/export');
-            const item = f.objects.get(shopperObjectName(s.tenant, visitor.subject))!;
-            item.data.set('affinity', { shopperId: visitor.subject, reflex, odpSeed: [], odpSeedAt: 0, odpRecentEvents: [], lastSeen: 0, configVersion: reflex.configVersion });
-            item.data.set('pipeline', { attributes: {}, segments: [], journeyStage: 'early', sessionId: sid, visitorId: visitor.subject, firstSeen: now, sessionCount: 0 });
-            item.data.set('consent', { tracking: true, personalization: true });
-            item.shopper = new ShopperReflex(item.state, f.env);
-          }
+        // W37 step-3 STALE arrangement (D06-W05, W04): history and link apply only to an owned,
+        // explicitly consenting profile; a legacy non-grant subject with boolean consent is refused
+        // (profile_missing / consent_refused). The same identity is minted in both tenants.
+        const a = await newAnonymousSession(f.env, specs[0]!.tenant);
+        const b = await issueSessionCapability(f.env, { tenant: specs[1]!.tenant, subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
+        for (const [i, s] of specs.entries()) {
+          const visitor = [a, b][i]!;
+          await positiveChoice(f, visitor);
+          expect((await f.call('/realtime/action', visitor.capability, { userId: visitor.subject, sessionId: visitor.sessionId, type: 'page_view', source: 'sdk', data: {} }, s.tenant)).status).toBe(200);
+          await f.drain();
           const report = await applyHistory(f.env, s.tenant, [{ visitorId: visitor.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red', mood: 'blue' } }]);
           expect(report).toMatchObject({ applied: 1, shoppers: 1 });
           const before = host === 'do' ? f.objects.get(shopperObjectName(s.tenant, visitor.subject))!.data.get('affinity') as AffinityRecord
@@ -4042,6 +4071,7 @@ it('W37.02 sends scored content to two verified tenant populations on both hosts
       } as unknown as DurableObjectNamespace;
       const a = await newAnonymousSession(f.env, 'meridian');
       const b = await issueSessionCapability(f.env, { tenant: 'brighthour', subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
+      await positiveChoice(f, a); await positiveChoice(f, b); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
       const legacy = 'old mixed population sentinel'; f.cache.data.set('trend:brighthour:US-NY', legacy);
       const content = (g: typeof a, type = 'video') => ({ userId: g.subject, sessionId: g.sessionId, type: 'custom', surface: 'coach', source: 'sdk',
         geo: { country: 'XX', regionCode: 'FORGED' }, data: { event: 'content_click', contentType: type } });
@@ -4063,7 +4093,8 @@ it('W37.02 sends scored content to two verified tenant populations on both hosts
       expect((await f.call('/realtime/action', a.capability, content(a), a.tenant)).status).toBe(200);
       if (host === 'do') {
         const item = f.objects.get(shopperObjectName(a.tenant, a.subject))!;
-        const socket = { deserializeAttachment: () => ({ shopperId: a.subject, principal: a }), close: vi.fn() };
+        const principal = await verifySessionCapability(f.env, a.capability, a.tenant); // W37 step-3 STALE arrangement (W04): verified socket principal.
+        const socket = { deserializeAttachment: () => ({ shopperId: a.subject, principal }), close: vi.fn() };
         await item.shopper.webSocketMessage(socket as unknown as WebSocket, JSON.stringify({ type: 'action', event: content(a) }));
         expect(socket.close).not.toHaveBeenCalled();
         expect((item.data.get('affinity') as { reflex: { dims: Record<string, Record<string, { s: number }>> } }).reflex.dims.contentType!.video!.s).toBeGreaterThan(2.9);
@@ -4078,7 +4109,8 @@ it('W37.02 sends scored content to two verified tenant populations on both hosts
       // The real tenant carries a registered customer category; the default
       // tenant still looks up its demo product and has no population reader.
       const product = (await demoRegistry.catalogServiceFor('brighthour')).getAllProducts()[0]!;
-      const c = await newAnonymousSession(f.env, 'coach');
+      await demoPublication(f); // W37 step-3 STALE arrangement (W11): Coach's BrightHour demo scope is published.
+      const c = await newAnonymousSession(f.env, 'coach'); await positiveChoice(f, c); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
       for (const g of [b, c]) {
         expect((await f.call('/realtime/action', g.capability, { userId: g.subject, sessionId: g.sessionId, type: 'product_view', source: 'sdk', surface: 'brighthour', data: { productId: product.id, ...(g.tenant === 'coach' ? {} : { category: 'customer-regional' }) } }, g.tenant, undefined, { country: 'US', regionCode: 'NY' })).status).toBe(200);
       }
@@ -4228,6 +4260,9 @@ describe('W37.03 tenant-owned DO audiences', () => {
   it('qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores', async () => {
     invalidateCache();
     const f = boundary('do'); f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'kate-spade'] });
+    // W37 step-3 STALE arrangement (W09): with tracking on the ledger producer needs a delivering
+    // queue, or its evidence-loss counter (evidence-loss:v1:<tenant>) is written to CACHE.
+    f.env.EVENT_QUEUE = { send: async () => {}, sendBatch: async () => {} } as unknown as Queue;
     const remote = vi.fn(async () => { throw new Error('Unexpected external request'); }); vi.stubGlobal('fetch', remote);
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
     const seed = vi.spyOn(KvAudienceStore.prototype, 'seed'), qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');
@@ -4236,6 +4271,10 @@ describe('W37.03 tenant-owned DO audiences', () => {
       await getConnectors(f.env).audiences.createAudience(audience(99));
       await getConnectors(f.env, 'meridian').audiences.createAudience(audience(1));
       await getConnectors(f.env, 'kate-spade').audiences.createAudience(audience(2, 'coach'));
+      // W37 step-3 STALE arrangement (W11 publication authority; W04 24-hour grant): each tenant's
+      // configuration is published, with a horizon that puts the decay crossing inside the socket's grant.
+      for (const tenant of ['meridian', 'kate-spade']) await fixturePublication(f.env, tenant, [{ kind: REFLEX_KIND, scope: reflexScopeForTenant(tenant),
+        revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value: { ...DEFAULT_REFLEX_CONFIG, eventAttributes: 'event-when-unknown', tauMs: 60_000 } } }]);
       const authored = [...f.cache.data];
       const a = await newAnonymousSession(f.env, 'meridian');
       const b = await issueSessionCapability(f.env, { ...owner(a), tenant: 'kate-spade', kind: 'anonymous' });
@@ -4243,14 +4282,16 @@ describe('W37.03 tenant-owned DO audiences', () => {
         config.mockClear(); catalog.mockClear();
         const cold = await f.call(`/realtime/segments/${g.subject}`, g.capability, undefined, g.tenant);
         expect(cold.status).toBe(200); expect(await cold.json()).toMatchObject({ segments: [] });
-        expect(itemFor(f, g).data.size).toBe(0);
+        expect([...itemFor(f, g).data.keys()]).toEqual(['grantAuthority']); // W37 step-3 STALE (W04): the owned read adopts the grant authority only, as expectColdOff asserts.
         expect(config).not.toHaveBeenCalled(); expect(catalog).not.toHaveBeenCalled();
+        await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
         const put = vi.spyOn(itemFor(f, g).state.storage, 'put');
         expect((await f.call('/realtime/action', g.capability, { ...event(g), audienceOwner: owner(b) }, g.tenant)).status).toBe(200);
         expect(put).toHaveBeenCalledTimes(1); expect(put).toHaveBeenCalledWith(expect.objectContaining({ audienceOwner: owner(g), affinity: expect.any(Object), pipeline: expect.any(Object) }));
         expect(itemFor(f, g).data.get('audienceOwner')).toEqual(owner(g));
         expect((itemFor(f, g).data.get('pipeline') as PipelineRecord).segments).toEqual(g === a ? ['w3703_shared'] : []);
-        const ws = socket(g); itemFor(f, g).sockets.push(ws as unknown as WebSocket);
+        const principal = await verifySessionCapability(f.env, g.capability, g.tenant); // W37 step-3 STALE arrangement (W04): verified socket principal.
+        const ws = { ...socket(g), deserializeAttachment: () => ({ shopperId: g.subject, principal }) }; itemFor(f, g).sockets.push(ws as unknown as WebSocket);
         await itemFor(f, g).shopper.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ type: 'action', event: event(g) }));
         expect(ws.close).not.toHaveBeenCalled();
         expect((itemFor(f, g).data.get('pipeline') as PipelineRecord).segments).toEqual(g === a ? [] : ['w3703_shared']);
@@ -4259,7 +4300,8 @@ describe('W37.03 tenant-owned DO audiences', () => {
       }
       const aBefore = structuredClone([...itemFor(f, a).data]);
       expect((await direct(itemFor(f, a), '/ingest', event(b), b)).status).toBe(401);
-      const crossed = socket(b);
+      const crossedPrincipal = await verifySessionCapability(f.env, b.capability, b.tenant); // W37 step-3: b's own verified principal, refused on a's object.
+      const crossed = { ...socket(b), deserializeAttachment: () => ({ shopperId: b.subject, principal: crossedPrincipal }) };
       await itemFor(f, a).shopper.webSocketMessage(crossed as unknown as WebSocket, JSON.stringify({ type: 'action', event: event(b) }));
       expect(crossed.close).toHaveBeenCalledWith(1008, 'Shopper session unavailable'); expect([...itemFor(f, a).data]).toEqual(aBefore);
 
@@ -4291,6 +4333,7 @@ describe('W37.03 tenant-owned DO audiences', () => {
   it('contains unbound/corrupt/forwarded/refused alarms and preserves consent, signed adoption, reset and retention', async () => {
     invalidateCache();
     const f = boundary('do'), g = await newAnonymousSession(f.env, 'meridian');
+    await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
     expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200);
     const item = itemFor(f, g), baseline = structuredClone([...item.data]);
     const seed = vi.spyOn(KvAudienceStore.prototype, 'seed'), qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');
@@ -4306,13 +4349,24 @@ describe('W37.03 tenant-owned DO audiences', () => {
         else if (condition === 'sid') item.data.set('audienceOwner', { ...owner(g), sessionId: 'different' });
         else if (condition === 'visitor') (item.data.get('pipeline') as PipelineRecord).visitorId = 'different';
         else if (condition === 'forward') item.data.set('forwardTo', 'linked-person');
-        else if (condition === 'refusal') item.data.set('consent', { tracking: true, personalization: false });
+        // W37 step-3 STALE arrangement (D06-W05): a refusal is the explicit instruction with the purpose
+        // withdrawn; a legacy boolean record is no choice and is pruned by the alarm.
+        else if (condition === 'refusal') { const chosen = storedConsent(item.data.get('consent')).instruction!;
+          item.data.set('consent', { ...chosen, personalization: { ...chosen.personalization!, value: false } }); }
         restart(f, g);
         if (condition === 'actual-object') item.shopper = new ShopperReflex({ ...item.state, id: 'wrong-object' } as unknown as DurableObjectState, f.env);
         const before = structuredClone([...item.data]);
         qualified.mockClear(); seed.mockClear(); config.mockClear(); item.alarms.length = 0;
-        await item.shopper.alarm();
-        expect([...item.data], condition).toEqual(before); expect(item.alarms, condition).toHaveLength(1);
+        // W37 step-3 STALE expectation (R46(e)/(g), R28): a wrong actual object is refused with the typed
+        // owner error (ShopperReflex.ts:1566), writing nothing; every other condition returns quietly.
+        if (condition === 'actual-object') await expect(item.shopper.alarm(), condition).rejects.toBeInstanceOf(SessionAccessError);
+        else await item.shopper.alarm();
+        // W37 step-3 STALE expectation (R46(i)): the harness records every setAlarm; the armed alarm is
+        // the last one, the nearest deadline the object owns (consent or retention expiry).
+        const armedConsent = storedConsent(item.data.get('consent')).instruction;
+        const nearest = Math.min((item.data.get('affinity') as AffinityRecord).retention!.expiresAt,
+          ...CONSENT_SWITCHES.flatMap(key => armedConsent?.[key] ? [armedConsent[key]!.chosenAt + CONSENT_LIFETIME_MS] : []));
+        expect([...item.data], condition).toEqual(before); expect(item.alarms.length, condition).toBeGreaterThan(0); expect(item.alarms.at(-1), condition).toBe(nearest);
         expect(qualified, condition).not.toHaveBeenCalled(); expect(seed, condition).not.toHaveBeenCalled(); expect(config, condition).not.toHaveBeenCalled();
         if (['invalid', 'foreign', 'subject', 'sid'].includes(condition)) {
           expect((await direct(item, '/segments', undefined, g)).status).toBe(401);
@@ -4334,19 +4388,26 @@ describe('W37.03 tenant-owned DO audiences', () => {
       expect((await direct(item, '/reset', {}, g)).status).toBe(200);
       expect([...item.data.keys()]).toEqual(['grantAuthority']);
       expect((await direct(item, '/segments', { segment: 'after-reset' }, g)).status).toBe(401);
-      const retained = await newAnonymousSession(f.env, 'meridian');
+      // W37 step-3 STALE arrangement (W06): retention is the configured policy's stamp, not
+      // REFLEX_RETENTION_DAYS; the profile expires at its own stamp.
+      const retained = await newAnonymousSession(f.env, 'meridian'); await positiveChoice(f, retained);
       expect((await f.call('/realtime/action', retained.capability, event(retained), retained.tenant)).status).toBe(200);
       const retainedItem = itemFor(f, retained);
-      f.env.REFLEX_RETENTION_DAYS = '0.00000001';
-      (retainedItem.data.get('affinity') as AffinityRecord).lastSeen = Date.now() - 1000; restart(f, retained);
-      await retainedItem.shopper.alarm(); expect([...retainedItem.data.keys()]).toEqual(['grantAuthority']);
-      expect((await direct(retainedItem, '/segments', { segment: 'after-retention' }, retained)).status).toBe(401);
+      const expiry = (retainedItem.data.get('affinity') as AffinityRecord).retention!.expiresAt; restart(f, retained);
+      const later = vi.spyOn(Date, 'now').mockReturnValue(expiry + 1);
+      try { await retainedItem.shopper.alarm(); } finally { later.mockRestore(); }
+      expect([...retainedItem.data.keys()]).toEqual(['grantAuthority']);
+      // The expired profile's consent went with it, so a manual assignment is the
+      // consent refusal (ShopperReflex.ts:617-619) and adopts nothing.
+      expect((await direct(retainedItem, '/segments', { segment: 'after-retention' }, retained)).status).toBe(403);
+      expect([...retainedItem.data.keys()]).toEqual(['grantAuthority']);
 
       const cold = await newAnonymousSession(f.env, 'meridian');
       expect((await f.call('/realtime/action', cold.capability, { ...event(cold), data: { consent: { tracking: false } } }, cold.tenant)).status).toBe(200);
       const coldItem = itemFor(f, cold);
-      expect(coldItem.data.get('consent')).toEqual({ tracking: false, personalization: true });
-      expect([...coldItem.data.keys()].sort()).toEqual(['consent', 'grantAuthority']);
+      // R38(b) with D06-W05: a never-chosen shopper's refusal mints no record.
+      expect(coldItem.data.has('consent')).toBe(false);
+      expect([...coldItem.data.keys()].sort()).toEqual(['grantAuthority']);
       expect((await direct(coldItem, '/segments', { segment: 'refused' }, cold)).status).toBe(403);
       expect(coldItem.data.has('audienceOwner')).toBe(false);
     } finally { await f.drain(); vi.restoreAllMocks(); }
@@ -4518,14 +4579,16 @@ describe('W37.03 tenant-owned DO audiences', () => {
 
   it('retains signed default Coach and BrightHour demo generation and separate surface qualification', async () => {
     invalidateCache();
-    const f = boundary('do');
+    // W37 step-3 STALE arrangement (W11; W04 24-hour grant): both demo tunings are published, with a
+    // horizon that puts the decay crossing inside the socket's grant.
+    const f = boundary('do'); await demoPublication(f, config => ({ ...config, tauMs: 60_000 }));
     await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_coach', surface: 'coach' });
     await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_brighthour', surface: 'brighthour' });
     const seed = vi.spyOn(KvAudienceStore.prototype, 'seed');
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
     try {
       for (const surface of ['coach', 'brighthour'] as const) {
-        const g = await newAnonymousSession(f.env, 'coach');
+        const g = await newAnonymousSession(f.env, 'coach'); await positiveChoice(f, g); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
         expect((await f.call('/realtime/action', g.capability, event(g, surface), g.tenant)).status).toBe(200);
         const item = restart(f, g);
         expect(item.data.get('audienceOwner')).toEqual(owner(g));
@@ -4539,11 +4602,16 @@ describe('W37.03 tenant-owned DO audiences', () => {
         const memberships = [...(item.data.get('affinity') as AffinityRecord).reflex.audiences];
         expect(memberships.length).toBeGreaterThan(0);
         restart(f, g);
-        const ws = socket(g); item.sockets.push(ws as unknown as WebSocket);
+        const principal = await verifySessionCapability(f.env, g.capability, g.tenant); // W37 step-3 STALE arrangement (W04): verified socket principal.
+        const ws = { ...socket(g), deserializeAttachment: () => ({ shopperId: g.subject, principal }) }; item.sockets.push(ws as unknown as WebSocket);
+        // W37 step-3 STALE arrangement (R46(h)/(i)): the nearest armed crossing may precede the exit, and
+        // workerd consumes a fired alarm; fire each armed alarm, at an integer clock, until the exit qualifies.
         const crossing = item.alarms.at(-1)!; expect(crossing).toBeGreaterThan(Date.now());
-        clock.mockReturnValue(crossing + 5);
         const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments'); qualified.mockClear();
-        await item.shopper.alarm();
+        for (let fired = 0; fired < 3 && !qualified.mock.calls.length; fired++) {
+          clock.mockReturnValue(Math.ceil(item.alarms.at(-1)!) + 5); item.alarms.length = 0;
+          await item.shopper.alarm();
+        }
         expect(qualified).toHaveBeenCalledTimes(1); expect(qualified.mock.calls[0]![1]).toHaveProperty('surface', surface);
         expect(memberships.some(k => !(item.data.get('affinity') as AffinityRecord).reflex.audiences.includes(k))).toBe(true);
         expect((item.data.get('pipeline') as PipelineRecord).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);
@@ -4596,6 +4664,7 @@ describe('W37.01 tenant-owned local audiences', () => {
       f.sessions.data.set(`session:${a.sessionId}`, 'default-session-sentinel');
       f.sessions.data.set(`user:${a.subject}`, 'default-pointer-sentinel');
       const defaultSessions = [...f.sessions.data];
+      await positiveChoice(f, a); await positiveChoice(f, b); // W37 step-3 STALE arrangement (D06-W05, src/content/consent.ts:6-8): only an explicit choice grants tracking/personalization.
       for (const [tenant, views] of [['meridian', 1], ['kate-spade', 2]] as const) {
         const published = await operator(tenant, 'audiences/publish', { audience: audience(views) }, token);
         expect(published.status).toBe(200); expect(await published.json()).toMatchObject({ success: true, audience: { key: 'w3701_shared_key', status: 'published' } });
@@ -4633,7 +4702,8 @@ describe('W37.01 tenant-owned local audiences', () => {
   });
 
   it('uses tenant-scoped default constructors and returns from non-default seeding before any environment or catalog access', async () => {
-    const f = boundary();
+    // W37 step-3 STALE arrangement (T1): connectors resolve only registered tenants (src/connectors/config.ts:110-111).
+    const f = boundary(); f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'kate-spade'] });
     const remote = vi.fn(async () => { throw new Error('Unexpected external request'); }); vi.stubGlobal('fetch', remote);
     try {
       await getConnectors(f.env).audiences.createAudience(audience(99));
@@ -4644,16 +4714,19 @@ describe('W37.01 tenant-owned local audiences', () => {
       expect(await getConnectors(f.env, 'meridian').segments.fetchQualifiedSegments('synthetic', ctx)).toEqual(['w3701_shared_key']);
       expect(await getConnectors(f.env, 'kate-spade').segments.fetchQualifiedSegments('synthetic', ctx)).toEqual([]);
       const a = await newAnonymousSession(f.env, 'meridian'), b = await newAnonymousSession(f.env, 'kate-spade');
-      for (const grant of [a, b]) {
-        await new SessionManager(f.env, { tenant: grant.tenant, principal: grant }).createOrUpdateSession(grant.sessionId, grant.subject, { surface: 'brighthour', attributes: { page_views: 0 } });
-      }
+      // W37 step-3 STALE arrangement (W04, D06-W05): a session is written only inside its owner's
+      // operation, so each shopper is created by its explicit choice and read through the route that
+      // runs the engine inside that operation (src/routes/realtime.ts:696-710).
+      for (const grant of [a, b]) await positiveChoice(f, grant);
       const resolveCatalog = vi.spyOn(demoRegistry, 'catalogServiceFor');
       const resolveConfig = vi.spyOn(demoRegistry, 'resolveReflexConfig');
       const products = vi.spyOn(CatalogService.prototype, 'getAllProducts');
       const seed = vi.spyOn(KvAudienceStore.prototype, 'seed');
       const before = [...f.cache.data];
-      expect(await new RealtimeSegmentEngine(f.env, undefined, { tenant: a.tenant, principal: a }).getUserSegments(a.subject)).toEqual(['w3701_shared_key']);
-      expect(await new RealtimeSegmentEngine(f.env, undefined, { tenant: b.tenant, principal: b }).getUserSegments(b.subject)).toEqual([]);
+      for (const [grant, expected] of [[a, ['w3701_shared_key']], [b, []]] as const) {
+        const read = await f.call(`/realtime/segments/${grant.subject}`, grant.capability, undefined, grant.tenant);
+        expect(read.status).toBe(200); expect(await read.json()).toMatchObject({ segments: expected });
+      }
       const access = vi.fn((_: object, key: PropertyKey): never => { throw new Error(`Unexpected seed access: ${String(key)}`); });
       for (const tenant of ['meridian', 'kate-spade']) for (const surface of ['coach', 'brighthour'] as const) {
         await ensureAudiencesSeeded(new Proxy({}, { get: access }) as Env, new Proxy({}, { get: access }) as CatalogService, surface, tenant);
