@@ -3,7 +3,10 @@
 // (docs/remediation/delivery-control/program.json, ticket W26) states it:
 //
 //   R2  page is part of the storage identity, so a retained catalogue with a
-//       cross-page duplicate never pools silently.
+//       cross-page duplicate never pools silently — written and READ: serving,
+//       the operator's lift reads, the monitor, the managed exposure path and
+//       the recovery record follow the page-separated object (pending
+//       amendment A16 grants those read paths).
 //   R3  The SDK sends data.brand.
 //   R4  brandMismatched is counted for uncorrelated outcomes as well, or the
 //       limit is stated.
@@ -47,12 +50,16 @@ import { invalidatePublicationCache, initializePublicationSet, type PublicationB
 import { invalidateCache } from '@/config/versionedStore';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { contentRoutes } from '@/routes/content';
-import { invalidateLiftCache } from '@/content/service';
+import { invalidateLiftCache, serveContentDecisions } from '@/content/service';
 import type { Cell, ContentPiece, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
-import { ts36, type OutcomeRecord } from '@/ledger/records';
+import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
+import { newAnonymousSession, SHOPPER_HEADER, verifySessionCapability } from '@/identity/sessionCapability';
+import { consumeLedger } from '@/ledger/consume';
+import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
+import { outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { fanDecisions, fanOutcome, ringName, statsName, type SlotLearnConfig } from '@/learn/fan';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
@@ -67,6 +74,9 @@ import { createEmit } from '@/sdk/emit';
 import { createListen } from '@/sdk/listen';
 import { offeredSet, testHost } from '@/sdk/testHost';
 import { tenantMiddleware } from '@/tenancy/middleware';
+import { shopperObjectName } from '@/tenancy/objects';
+import type { TenantId } from '@/tenancy/tenant';
+import type { SinkReconciliation } from '@/ops/monitor';
 import type { Env } from '@/types/env';
 
 // ---------------------------------------------------------------------------
@@ -89,6 +99,8 @@ const COACH_CELL: Cell = { channel: 'paid_social', visit_bucket: '1', region: 'U
 const TABBY = 'tabby-in-motion-film';
 const WILLOW = 'willow-slg-editorial';
 const ROGUE = 'rogue-occasion-lookbook';
+/** A piece of the tenant's second brand, which this visitor was never served. */
+const OTHER_BRAND_PIECE = 'kate-spade-knott-editorial';
 const piece = (id: string, type: string, tags: Record<string, string[]>): ContentPiece => ({
   id, customerContentId: `cms-${id}`, type, title: id, tags, slotTypes: ['hero', 'rail'], lifecycle: { status: 'live' },
 });
@@ -119,6 +131,8 @@ const SLOT_CONFIG: Record<string, SlotLearnConfig> = {
   rail: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS, measurementBasis: 'served-v1' },
 };
 const CLICK_CONFIG: SlotLearnConfig = { reward: 'click', objective: 'unit', stats: DEFAULT_STATS };
+/** The same learning document with the hero counted by its durably admitted render (`rendered-v1`, W15): the managed path. */
+const RENDERED_LEARN: LearnConfig = { ...LEARN, slots: { hero: { reward: 'click', measurementBasis: 'rendered-v1' }, rail: { reward: 'click' } } };
 
 // ---------------------------------------------------------------------------
 // Bindings: the same in-memory doubles the repository's own boundary suites use.
@@ -175,7 +189,12 @@ interface Registry { data: Map<string, unknown>; object: { fetch: (request: Requ
 interface Mounted {
   env: Env;
   cache: UnitKV;
+  storage: UnitR2;
   stats: Map<string, Registry>;
+  /** The shoppers' own objects: the owner that holds her consent and her recovery records. */
+  shoppers: Map<string, Registry>;
+  /** Every body the real producer handed to the queue binding, in order. */
+  queued: unknown[];
   fetch: (request: Request) => Promise<Response>;
   operatorToken: string;
   drain: () => Promise<void>;
@@ -185,9 +204,9 @@ interface Mounted {
  * The routes production serves, mounted as `src/index.ts` mounts them, over the
  * real Durable Object classes, for the Tapestry tenant.
  */
-async function mount(options: { slots?: SlotCatalog; retainedSlots?: boolean } = {}): Promise<Mounted> {
+async function mount(options: { slots?: SlotCatalog; retainedSlots?: boolean; learn?: LearnConfig; recovery?: boolean } = {}): Promise<Mounted> {
   invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
-  const pending: Promise<unknown>[] = [];
+  const pending: Promise<unknown>[] = [], queued: unknown[] = [];
   const storage = new UnitR2(), cache = new UnitKV(), sessions = new UnitKV();
   const shoppers = new Map<string, Registry>(), rings = new Map<string, Registry>(), stats = new Map<string, Registry>();
   const env = {
@@ -195,10 +214,12 @@ async function mount(options: { slots?: SlotCatalog; retainedSlots?: boolean } =
     CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: 'session',
     JWT_SECRET: OPERATOR_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: `${TENANT}:w26-ledger-identity-material`,
     TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }),
-    LEDGER_RECOVERY_ENABLED: 'false',
+    // `recovery` binds the durable rendered admission (W15), the owner-held
+    // path that runs the managed exposure fan-in (`src/ledger/recovery.ts`).
+    LEDGER_RECOVERY_ENABLED: options.recovery ? 'true' : 'false',
     PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
     DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
-    EVENT_QUEUE: { send: async () => undefined, sendBatch: async () => undefined },
+    EVENT_QUEUE: { send: async (body: unknown) => { queued.push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) queued.push(message.body); } },
   } as unknown as Env;
   env.RETENTION = JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) });
 
@@ -255,7 +276,7 @@ async function mount(options: { slots?: SlotCatalog; retainedSlots?: boolean } =
     // historical bytes" (`src/config/publication.ts`): read under
     // `validateStored`, never re-validated as a new write.
     baseline(SLOTS_KIND, options.slots ?? UNIQUE_SLOTS, options.retainedSlots === true),
-    baseline(LEARN_KIND, LEARN),
+    baseline(LEARN_KIND, options.learn ?? LEARN),
     baseline(PRIORS_KIND, EMPTY_PRIORS),
     { kind: REFLEX_KIND, scope: reflexScopeForTenant(TENANT), revision: { revision: 1, at: 1, actor: 'w26-ledger-fixture', note: 'fixture',
       value: { ...DEFAULT_REFLEX_CONFIG, eventAttributes: 'event-when-unknown' } } },
@@ -273,7 +294,7 @@ async function mount(options: { slots?: SlotCatalog; retainedSlots?: boolean } =
   const fetchOne = async (request: Request) => app.fetch(request, env,
     { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
   const drain = async () => { while (pending.length) await Promise.all(pending.splice(0)); await new Promise(r => setTimeout(r, 5)); };
-  return { env, cache, stats, fetch: fetchOne, operatorToken, drain };
+  return { env, cache, storage, stats, shoppers, queued, fetch: fetchOne, operatorToken, drain };
 }
 
 /** A served decision, in the shape the engine writes and the ring keeps. */
@@ -308,6 +329,96 @@ async function statisticsObjects(m: Mounted): Promise<Array<{ name: string; item
     if (body.snapshot) out.push({ name, items: body.snapshot.items as never });
   }
   return out;
+}
+
+/** Publishes every statistics object that holds evidence, each through its own `/publish`, whatever the build names it. */
+async function publishEvery(m: Mounted): Promise<void> {
+  for (const o of await statisticsObjects(m)) {
+    const published = await m.env.LEARN_STATS!.get(m.env.LEARN_STATS!.idFromName(o.name)).fetch('https://learn/publish', { method: 'POST' });
+    expect(await published.json(), `PRECONDITION: ${o.name} publishes its snapshot`).toMatchObject({ ok: true, published: true });
+  }
+}
+
+type Grant = Awaited<ReturnType<typeof newAnonymousSession>>;
+type Answer = { status: number; body: Record<string, unknown> };
+
+/** A request the shopper's browser makes with her own grant. */
+async function asShopper(m: Mounted, grant: Grant, path: string, body?: unknown): Promise<Answer> {
+  const response = await m.fetch(new Request(`https://shop.invalid${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }));
+  const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  await m.drain();
+  return answer;
+}
+
+/** A request the Tapestry operator makes with her signed token. */
+async function asOperator(m: Mounted, method: 'GET' | 'POST', path: string, body?: unknown): Promise<Answer> {
+  const response = await m.fetch(new Request(`https://ops.invalid${path}`, {
+    method, headers: { 'X-Tenant': TENANT, Authorization: `Bearer ${m.operatorToken}`, 'Content-Type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }));
+  const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  await m.drain();
+  return answer;
+}
+
+/** Sarah, with tracking and personalization on by her own explicit choice (HANDOFF-2026-09-18 §7, consent). */
+async function consentingShopper(m: Mounted): Promise<Grant> {
+  const grant = await newAnonymousSession(m.env, TENANT);
+  const chosen = await asShopper(m, grant, `/realtime/session/${grant.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
+    choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
+  expect(chosen.status, `PRECONDITION: her explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 200)})`).toBe(200);
+  return grant;
+}
+
+/**
+ * The decision the serving route composes for her page: `GET /v1/:tenant/decisions/snapshot`
+ * calls `serveContentDecisions` exactly so (`src/routes/decisions.ts`), inside the owner
+ * operation `requireShopper` holds, and answers without the records; the records are read
+ * here, one layer in, as src/units/W25/B1.unit.test.ts reads them.
+ */
+async function servePage(m: Mounted, grant: Grant, page: string) {
+  const live = await verifySessionCapability(m.env, grant.capability, TENANT);
+  const owner = {};
+  return runOwnerOperation(owner, m.env, async () => {
+    admitOwnerPrincipal(owner, live);
+    return serveContentDecisions(m.env, { tenant: TENANT, brand: BRAND, page, visitorId: live.subject, sessionId: live.sessionId,
+      cookieHeader: null, stateTenant: TENANT as TenantId, principal: live, capability: grant.capability, offer: { pageInstance: `w26-ledger-${page}` } });
+  }, m.env.SESSIONS as unknown as Parameters<typeof runOwnerOperation>[3], undefined,
+    (async () => m.shoppers.get(shopperObjectName(TENANT as TenantId, live.subject))?.data.get('consent')) as unknown as Parameters<typeof runOwnerOperation>[5]);
+}
+
+/**
+ * What each hero placement of the retained catalogue has learned from: every
+ * piece, 32 times on the home page and 64 times on the product page, and the
+ * rail (unique to the home page) the lookbook 32 times — each count above the
+ * estimator's `nMin` (30, DEFAULT_STATS), so every piece has a learned lift on
+ * each page, and no two of the three tables (home, product page, both pooled)
+ * hold the same count.
+ */
+const HERO_EXPOSURES = { home: 32, pdp: 64 } as const;
+const RAIL_EXPOSURES = 32;
+
+/** The retained catalogue's two pages served through the real fan-in, one page at a time, and every object published. */
+async function learnedWorld(m: Mounted): Promise<void> {
+  const at = Date.now() - 5 * 60_000;
+  const refused: unknown[] = [];
+  for (let k = 0; k < HERO_EXPOSURES.pdp; k++) {
+    const visitor = `v-w26-ledger-${k}`;
+    for (const page of ['home', 'pdp'] as const) {
+      if (k >= HERO_EXPOSURES[page]) continue;
+      const offset = page === 'home' ? 0 : 5;
+      const records = [TABBY, WILLOW, ROGUE].map((item, i) => record(m.env, { page, slot: 'hero', item_id: item, ts: at + k * 10 + offset + i, visitor_id: visitor }));
+      if (page === 'home' && k < RAIL_EXPOSURES) records.push(record(m.env, { page, slot: 'rail', item_id: ROGUE, ts: at + k * 10 + 3, visitor_id: visitor }));
+      const receipt = await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: visitor, records }, slot => SLOT_CONFIG[slot]!);
+      if (!receipt.ok) refused.push({ visitor, page, receipt });
+    }
+  }
+  expect(refused, 'PRECONDITION: every page\'s served set reached the fan-in whole').toEqual([]);
+  await publishEvery(m);
 }
 
 // ===========================================================================
@@ -384,6 +495,141 @@ describe('unit:W26.R2', () => {
       'W26.R2: the two pages\' hero snapshots are published under two keys (F21 §8 "Page in `statsName`/`liftKey`")')
       .toEqual([[TABBY], [WILLOW]]);
   });
+
+  // -------------------------------------------------------------------------
+  // The read side. F21 §8 puts the page in `statsName`/`liftKey` so that the
+  // two placements are two things; a build that splits the WRITES and keeps
+  // READING the page-less name serves, reports, monitors and cleans up against
+  // an object nothing writes to — or against the other page's — which is the
+  // silent pooling R198 names, moved one step along. Every reader of the
+  // identity follows it (pending amendment A16 grants the read paths): serving
+  // (`src/content/service.ts:85`, `readLift` and its live witness), the
+  // operator's lift reads (`src/routes/decisions.ts:219`, `:432`), the
+  // monitor's cross-sink comparison (`src/ops/monitor.ts:509`), and the
+  // managed exposure path with the recovery record that names its cleanup
+  // (`src/learn/fan.ts:471-474`, `src/ledger/recovery.ts:204`). Each leg finds
+  // the objects by what they hold, never by a name, so it holds whatever
+  // page-qualified name the build chooses.
+  // -------------------------------------------------------------------------
+
+  it('host: serving (src/content/service.ts:85, the lift snapshot and its live witness) reads the page it composes — her product page\'s hero is decided with the product page\'s own learned lift and her home page\'s hero with the home page\'s, never with both pages pooled', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
+    await learnedWorld(m);
+    const sarah = await consentingShopper(m);
+    for (const page of ['home', 'pdp'] as const) {
+      const served = await servePage(m, sarah, page);
+      expect(served.arm, `PRECONDITION: on the ${page} page she is served the personalized experience`).toBe('personalized');
+      const hero = served.records.find(r => r.slot === 'hero');
+      expect(hero?.item_id, `PRECONDITION: the ${page} page serves its hero`).toEqual(expect.any(String));
+      // `explain.lift` is the learned lift the decision read for the piece it
+      // served (shown at trust 0, `src/content/decide.ts`); its `n` says which
+      // table it came from: 32 on the home page, 64 on the product page, 96
+      // pooled, none from an object nothing wrote to.
+      expect(hero?.explain.lift ? Math.round(hero.explain.lift.n) : `the ${page} hero was decided with no learned lift`,
+        `W26.R2: the ${page} page's hero must be decided with the ${page} page's own learned lift — ${HERO_EXPOSURES[page]} exposures of the piece it served — never the pooled table of both pages' heroes nor a page-less snapshot nothing writes (F21 §6(b), §8; A16)`)
+        .toBe(HERO_EXPOSURES[page]);
+    }
+  });
+
+  it('host: the operator\'s lift reads (src/routes/decisions.ts:219 `GET /v1/:tenant/lift/rows`, :432 `GET /v1/:tenant/lift`) answer the page they are asked for — `page=pdp` the product page\'s hero table and `page=home` the home page\'s — while a slot unique to one page keeps answering without one', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
+    await learnedWorld(m);
+    for (const page of ['home', 'pdp'] as const) {
+      const count = HERO_EXPOSURES[page];
+      const rows = await asOperator(m, 'GET', `/v1/${TENANT}/lift/rows?slot=hero&brand=${BRAND}&page=${page}`);
+      expect({ status: rows.status, published: rows.body.published,
+        rows: ((rows.body.rows ?? []) as Array<{ item: string; n: number }>).map(row => [row.item, Math.round(row.n)]).sort() },
+      `W26.R2: the lift table the operator reads for the ${page} page's hero must be that page's own — every piece at ${count} exposures — never both pages pooled nor a page-less key nothing publishes (F21 §6(b) "one lift table"; A16)`)
+        .toEqual({ status: 200, published: true, rows: [[ROGUE, count], [TABBY, count], [WILLOW, count]] });
+      const table = await asOperator(m, 'GET', `/v1/${TENANT}/lift?slot=hero&brand=${BRAND}&page=${page}`);
+      const snapshot = table.body.snapshot as { items?: Record<string, Record<string, { n: number }>> } | null | undefined;
+      expect(snapshot?.items ? Object.fromEntries(Object.entries(snapshot.items).map(([item, cells]) => [item, Math.round(cells['*']?.n ?? 0)])) : `no snapshot (${table.status})`,
+        `W26.R2: the snapshot in force the operator reads for the ${page} page's hero must be that page's own (A16)`)
+        .toEqual({ [ROGUE]: count, [TABBY]: count, [WILLOW]: count });
+    }
+    // LOCKED (B1:490-491, :527-531): a slot name unique to one page is read
+    // without a page, from the object it has always had.
+    const rail = await asOperator(m, 'GET', `/v1/${TENANT}/lift/rows?slot=rail&brand=${BRAND}`);
+    expect(((rail.body.rows ?? []) as Array<{ item: string; n: number }>).map(row => [row.item, Math.round(row.n)]),
+      'a slot name unique to one page keeps its page-less read').toEqual([[ROGUE, RAIL_EXPOSURES]]);
+  });
+
+  it('host: the monitor\'s cross-sink comparison (src/ops/monitor.ts:509) reads the objects the two hero placements are learned in — the online credits of both pages\' heroes agree with the day\'s ledger and the scheduled run reports them in agreement, never as a disagreement against an object nothing writes to', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
+    const at = Date.now() - 2 * 3_600_000, date = new Date(at).toISOString().slice(0, 10);
+    const decisions: DecisionRecord[] = [], outcomes: OutcomeRecord[] = [], refused: unknown[] = [];
+    // Ten shoppers click the Tabby film in the home page's hero, twelve the
+    // Willow editorial in the product page's hero: one placement each, so every
+    // click names exactly the placement it credits.
+    for (const [page, item, clicks] of [['home', TABBY, 10], ['pdp', WILLOW, 12]] as const) {
+      for (let k = 0; k < clicks; k++) {
+        const visitor = `v-w26-ledger-${page}-${k}`, ts = at + k * 1000;
+        const served = record(m.env, { page, slot: 'hero', item_id: item, ts, visitor_id: visitor, session_id: `s-${visitor}` });
+        const clicked = { ...outcomeFromAction({ type: 'content_click', userId: visitor, sessionId: `s-${visitor}`, timestamp: ts + 60_000,
+          eventId: `w26-ledger-click-${page}-${k}`, eventIdSource: 'provided', data: { contentId: item, slot: 'hero', brand: BRAND } } as never, TENANT, BRAND)!,
+        retention: captureRetention(m.env as never, TENANT, ts + 60_000, Date.now()) } as OutcomeRecord;
+        const exposed = await fanDecisions(m.env, { tenant: TENANT, brand: BRAND, visitor_id: visitor, records: [served] }, slot => SLOT_CONFIG[slot]!);
+        const credited = await fanOutcome(m.env, TENANT, clicked, DEFAULT_POLICY, BRAND, SLOT_CONFIG, CLICK_CONFIG);
+        if (!exposed.ok || credited.outcome?.attributed !== 1) refused.push({ page, visitor, exposed, credited });
+        decisions.push(served); outcomes.push(clicked);
+      }
+    }
+    expect(refused, 'PRECONDITION: every exposure and every click reached the online sink').toEqual([]);
+    const holders = (await statisticsObjects(m)).filter(o => TABBY in o.items || WILLOW in o.items);
+    expect(holders.map(o => Object.keys(o.items).sort()).sort(),
+      'PRECONDITION (the write leg above): the two pages\' hero credits are held in two statistics objects, one per page')
+      .toEqual([[TABBY], [WILLOW]]);
+
+    // The same events through the real producer, the real consumer and the report route.
+    await enqueueDecisions(m.env, decisions);
+    for (const outcome of outcomes) await enqueueOutcome(m.env, outcome);
+    const written = await consumeLedger(m.env, m.queued.splice(0), Date.now());
+    expect(written, 'PRECONDITION: the real consumer wrote the day').toMatchObject({ ok: true });
+    const report = await asOperator(m, 'POST', `/v1/${TENANT}/learn/report`, { date, brand: BRAND });
+    expect(report.status, `PRECONDITION: the day's report is built (${JSON.stringify(report.body).slice(0, 200)})`).toBe(200);
+    const hero = ((report.body.report as { holdout?: Record<string, Array<{ arm: string; credited: number }>> } | undefined)?.holdout?.hero ?? []);
+    expect(hero.filter(row => row.arm === 'personalized').reduce((sum, row) => sum + row.credited, 0),
+      'PRECONDITION: the day\'s ledger credits the hero with both pages\' clicks').toBe(22);
+
+    const run = await asOperator(m, 'POST', `/v1/${TENANT}/monitor`);
+    const reconciliation = (run.body.result as { reconciliation?: SinkReconciliation } | undefined)?.reconciliation;
+    expect(reconciliation ? { heroCompared: reconciliation.compared >= 1, disagreements: reconciliation.disagreements } : `no reconciliation (${run.status}: ${JSON.stringify(run.body).slice(0, 200)})`,
+      'W26.R2: the scheduled comparison must read the online credits where both pages\' hero placements are learned — 22, as the ledger says — and report the two sinks in agreement, never compare the ledger with a page-less object nothing writes to or with one page\'s object alone (F16 §7; A16)')
+      .toEqual({ heroCompared: true, disagreements: [] });
+  });
+
+  it('host: the managed exposure path (src/learn/fan.ts:471-474, prepared by the owner\'s recovery) and the recovery record\'s cleanup destinations (src/ledger/recovery.ts:204) follow the page-separated object — her rendered hero on the home page and on the product page is admitted durably, each exposure lands in its own page\'s statistics object, and every object that holds one of her exposures is named for her cleanup', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true, learn: RENDERED_LEARN, recovery: true });
+    const sarah = await consentingShopper(m);
+    const acks: unknown[] = [];
+    for (const page of ['home', 'pdp'] as const) {
+      const pageInstance = `w26-ledger-render-${page}`;
+      const snapshot = await asShopper(m, sarah, `/v1/${TENANT}/decisions/snapshot`, { page, pageInstance, brand: BRAND });
+      const hero = ((snapshot.body.decisions ?? []) as Array<{ slot: string; contentId: string; decisionId?: string; renderOffer?: string }>).find(d => d.slot === 'hero');
+      expect(hero?.renderOffer, `PRECONDITION: the ${page} page's hero is offered for a render acknowledgement (${snapshot.status}: ${JSON.stringify(snapshot.body).slice(0, 200)})`).toMatch(/^ro1\./);
+      const ack = await asShopper(m, sarah, '/realtime/action', { type: 'content_impression', source: 'sdk', userId: sarah.subject, sessionId: sarah.sessionId,
+        timestamp: Date.now(), eventId: crypto.randomUUID(), data: { contentId: hero!.contentId, decisionId: hero!.decisionId, renderOffer: hero!.renderOffer,
+          page, pageInstance, slot: 'hero', position: 0 } });
+      acks.push([page, ack.status, (ack.body.render as { status?: string } | undefined)?.status ?? null]);
+    }
+    expect(acks, 'PRECONDITION: both renders are admitted durably (W15)').toEqual([['home', 200, 'durable'], ['pdp', 200, 'durable']]);
+
+    // The managed exposure: each render is one exposure, in its own page's object.
+    const holders = (await statisticsObjects(m))
+      .map(o => ({ name: o.name, exposures: Object.values(o.items).reduce((sum, cells) => sum + (cells['*']?.n ?? 0), 0) }))
+      .filter(o => o.exposures > 0);
+    expect(holders.map(o => Math.round(o.exposures)),
+      'W26.R2: the managed exposures of her two rendered heroes must land in two statistics objects, one per page, each prepared against and accepted by its own page\'s object (fan.ts:471-474; A16)')
+      .toEqual([1, 1]);
+    // The recovery record names the objects its effects went to, so her
+    // erasure and the record's expiry clean them (`disposeOwnerRecovery`).
+    const owner = m.shoppers.get(shopperObjectName(TENANT as TenantId, sarah.subject));
+    const named = [...new Set([...(owner?.data ?? new Map<string, unknown>())]
+      .filter(([key]) => key.startsWith('recoveryOperation:'))
+      .flatMap(([, meta]) => (meta as { destinations?: string[] }).destinations ?? []))].sort();
+    expect(named, 'W26.R2: every statistics object that holds one of her managed exposures must be named among her recovery records\' cleanup destinations, so her erasure reaches it (recovery.ts:204; A16)')
+      .toEqual(expect.arrayContaining(holders.map(o => o.name)));
+  });
 });
 
 // ===========================================================================
@@ -405,7 +651,7 @@ describe('unit:W26.R3', () => {
    * (`src/sdk/listen.ts`, `brand: core.config.brand`); every reward-bearing
    * action it sends must carry the same value.
    */
-  it('sdk: a client configured for the Coach brand of the Tapestry tenant sends data.brand coach on every reward-bearing action it emits — a content click, a completed video, an add to bag, a wishlist add and a purchase — from the source entry and from the shipped bundle', async () => {
+  it('sdk: a client configured for the Coach brand of the Tapestry tenant sends data.brand coach on every reward-bearing action it emits — a content click, a dwell on the piece, a completed video, an add to bag, a wishlist add and a purchase — from the source entry and from the shipped bundle', async () => {
     const dom = new JSDOM(`<main><div id="hero" data-op-content="${TABBY}" data-op-slot="hero"></div></main>`, { url: 'https://shop.example/home' });
     const win = dom.window as unknown as { document: { getElementById(id: string): unknown }; close(): void };
     try {
@@ -421,6 +667,7 @@ describe('unit:W26.R3', () => {
         emit: {
           rendered: (slot: string, contentId: string, el?: unknown) => Promise<unknown>;
           contentClick: (contentId: string, slot: string) => Promise<unknown>;
+          contentDwell: (contentId: string, slot: string, ms: number) => Promise<unknown>;
           videoComplete: (contentId: string, slot: string) => Promise<unknown>;
           addToCart: (productId: string, attrs?: Record<string, unknown>) => Promise<unknown>;
           wishlistAdd: (productId: string, attrs?: Record<string, unknown>) => Promise<unknown>;
@@ -451,19 +698,23 @@ describe('unit:W26.R3', () => {
         client.listen.apply(set);
         await client.emit.rendered('hero', TABBY, win.document.getElementById('hero'));
         await client.emit.contentClick(TABBY, 'hero');
+        // `content_dwell` is reward-bearing (`src/ledger/records.ts:203`, reward
+        // `dwell`; kit 03:22 "the same, plus `ms`"), sent by the explicit API
+        // (`src/sdk/emit.ts:362`) and by the declarative observer (`:223`)
+        // through the same `track`.
+        await client.emit.contentDwell(TABBY, 'hero', 4200);
         await client.emit.videoComplete(TABBY, 'hero');
         await client.emit.addToCart('CH-TABBY-26', { line: 'Tabby', category: 'Handbags', price_usd: 495 });
         await client.emit.wishlistAdd('CH-ROGUE-25', { line: 'Rogue', category: 'Handbags', price_usd: 695 });
         await client.emit.purchase({ orderId: 'w26-ledger-order', value: 495, currency: 'USD', items: [{ productId: 'CH-TABBY-26', quantity: 1, price: 495 }] });
         const sent = f.calls.filter(call => call.url.endsWith('/action')).map(call => JSON.parse(call.init!.body!) as Sent);
         // PRECONDITION: each reward-bearing action reached the wire at all.
-        const rewarded = ['content_click', 'video_complete', 'add_to_cart', 'wishlist_add', 'purchase'];
+        const rewarded = ['content_click', 'content_dwell', 'video_complete', 'add_to_cart', 'wishlist_add', 'purchase'];
         expect(rewarded.filter(type => !sent.some(e => e.type === type)), `${label}: PRECONDITION — every reward-bearing action was sent`).toEqual([]);
-        for (const type of rewarded) {
-          expect(sent.filter(e => e.type === type).map(e => e.data.brand),
-            `W26.R3: ${label} must send data.brand — the brand the page was served under, the one the decision request carried — on ${type} (kit 03:26; LANE-LOG R198)`)
-            .toEqual([BRAND]);
-        }
+        // One comparison over every reward-bearing type, so a run names each type that lacks the brand.
+        expect(Object.fromEntries(rewarded.map(type => [type, sent.filter(e => e.type === type).map(e => e.data.brand)])),
+          `W26.R3: ${label} must send data.brand — the brand the page was served under, the one the decision request carried — on every reward-bearing action (kit 03:26; LANE-LOG R198)`)
+          .toEqual(Object.fromEntries(rewarded.map(type => [type, [BRAND]])));
       }
     } finally { win.close(); }
   });
@@ -492,7 +743,7 @@ describe('unit:W26.R4', () => {
    * Exactly one must hold — a count the kit denies, or a kit that promises a
    * count the ring does not make, is the mismatch this criterion exists to end.
    */
-  it('host: an outcome naming no decision whose brand disagrees with the placement it could credit is counted as brandMismatched on the outcome receipt, or the kit states that brandMismatched counts correlated outcomes only — and never both', async () => {
+  it('host: an outcome naming no decision whose brand disagrees with the placement it could credit is counted as brandMismatched on the outcome receipt, or the kit states that brandMismatched counts correlated outcomes only — and never both; a click under the placement\'s own brand and an other-brand click on a piece never served are never counted', async () => {
     const m = await mount();
     const now = Date.now() - 60_000;
     const served = record(m.env, { page: 'home', slot: 'hero', item_id: TABBY, ts: now });
@@ -502,14 +753,30 @@ describe('unit:W26.R4', () => {
 
     // The control: the same uncorrelated click under the decision's own brand is credited.
     const matched = click(m.env, { item_id: TABBY, slot: 'hero', ts: now + 1_000, brand: BRAND });
-    expect(await fanOutcome(m.env, TENANT, matched, DEFAULT_POLICY, BRAND, SLOT_CONFIG, CLICK_CONFIG),
-      'the uncorrelated click under the placement\'s own brand is credited').toMatchObject({ outcome: { attributed: 1 } });
+    const matchedReceipt = await fanOutcome(m.env, TENANT, matched, DEFAULT_POLICY, BRAND, SLOT_CONFIG, CLICK_CONFIG) as { outcome?: { attributed?: number; brandMismatched?: number } };
+    expect(matchedReceipt, 'the uncorrelated click under the placement\'s own brand is credited').toMatchObject({ outcome: { attributed: 1 } });
+    // CONTROL against over-counting: a click whose brand IS the placement's
+    // disagrees with nothing, whatever the tenant's own id is.
+    expect(matchedReceipt.outcome?.brandMismatched ?? 0,
+      'W26.R4: the click under the placement\'s own brand is no brand mismatch — brandMismatched is 0 or absent on its receipt').toBe(0);
 
     // The case: an uncorrelated click whose brand is another brand of the tenant.
     const mismatched = click(m.env, { item_id: TABBY, slot: 'hero', ts: now + 2_000, brand: OTHER_BRAND,
       outcome_id: `${TENANT}:${ts36(now + 2_000)}:v-w26-ledger:content_click` });
     const receipt = await fanOutcome(m.env, TENANT, mismatched, DEFAULT_POLICY, OTHER_BRAND, SLOT_CONFIG, CLICK_CONFIG) as { outcome?: { attributed?: number; brandMismatched?: number } };
     expect(receipt.outcome?.attributed, 'LOCKED: the other brand\'s click credits nothing (`src/learn/policy.ts`)').toBe(0);
+
+    // CONTROL against over-counting: an uncorrelated click of the other brand on
+    // one of ITS pieces this visitor was never served disagrees with no
+    // placement — there is none it could have credited — so it is no brand
+    // mismatch either: neither "the brand is not the tenant" nor "an
+    // uncorrelated outcome that earned no credit" is the count.
+    const unserved = click(m.env, { item_id: OTHER_BRAND_PIECE, slot: 'hero', ts: now + 3_000, brand: OTHER_BRAND,
+      outcome_id: `${TENANT}:${ts36(now + 3_000)}:v-w26-ledger:content_click` });
+    const unservedReceipt = await fanOutcome(m.env, TENANT, unserved, DEFAULT_POLICY, OTHER_BRAND, SLOT_CONFIG, CLICK_CONFIG) as { outcome?: { attributed?: number; brandMismatched?: number } };
+    expect(unservedReceipt.outcome?.attributed, 'LOCKED: a click on a piece never served credits nothing').toBe(0);
+    expect(unservedReceipt.outcome?.brandMismatched ?? 0,
+      'W26.R4: an other-brand click on a piece no placement served is no brand mismatch — brandMismatched is 0 or absent on its receipt').toBe(0);
 
     const counted = receipt.outcome?.brandMismatched === 1;
     const stated = statesUncorrelatedLimit(read('docs/kit/02-api-reference.md') + '\n' + read('docs/kit/03-payload-schemas.md'));
