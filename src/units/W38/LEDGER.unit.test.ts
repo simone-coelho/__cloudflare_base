@@ -93,7 +93,7 @@ import { SignJWT } from 'jose';
 import type { Env } from '@/types/env';
 import { memoryStore } from '@/auth/store';
 import { INPUT_MAX_BYTES } from '@/config/input';
-import { initializePublicationSet, readPublication, type PublicationBaseline } from '@/config/publication';
+import { carriedSaltVersion, initializePublicationSet, readPublication, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache, readRevision, readVersion, type DocumentKind } from '@/config/versionedStore';
 import { retentionConfiguration, type RetentionPolicy } from '@/retention';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -638,6 +638,12 @@ describe('unit:W38.B4', () => {
     expect(await ledger(A), 'W38.B4 — under coach\'s 30-day configuration setting exactly the revisions older than it that are neither current, previous nor named by a stored replay manifest are purged: content 1·3·4, learn 1, prior 1·3·4 (atelier\'s page naming ITS content 3 keeps none of coach\'s); content 2·5·6, learn 2·3·4·5, prior 2·5·6 and the current slots, reflex and proposals stay readable')
       .toEqual({ content: { purged: [1, 3, 4], retained: [2, 5, 6], unreadable: [] }, slots: kept(1), learn: { purged: [1], retained: [2, 3, 4, 5], unreadable: [] },
         reflex: kept(1), prior: { purged: [1, 3, 4], retained: [2, 5, 6], unreadable: [] }, proposals: kept(1) });
+    // W21 E1.07 (R130): a learn revision carries the salt version its publication derived from the learn history
+    // (src/config/publication.ts derivedFor → src/content/holdout.ts saltVersionOf). coach's five learn revisions all
+    // carry the salt 'w38-b4', a history well inside the 24-revision horizon, so the count is 1 — purging revision 1
+    // must not turn it into the unknown a walk that cannot reach revision 1 answers (src/units/W21/B2.unit.test.ts:939-942).
+    expect(carriedSaltVersion(await readPublication(env, LEARN_KIND, A)), 'W38.B4 — after the purge removed coach\'s learn revision 1, coach\'s current learn revision still carries its W21 salt version: salt w38-b4, version 1 (the only salt coach ever published)')
+      .toEqual({ salt: 'w38-b4', version: 1 });
     expect(await replay(A, pageA.id), 'W38.B4 — coach\'s stored page still replays equal after the purge: every revision its manifest names was retained').toEqual({ status: 200, ok: true, equal: true, reason: null });
     expect(await ledger(B), 'W38.B4 — atelier\'s registry has no configuration setting, so nothing of atelier\'s is purged (decision D3: unset means nothing is purged)')
       .toEqual({ content: kept(1, 2, 3, 4, 5), slots: kept(1), learn: kept(1, 2, 3), reflex: kept(1), prior: kept(1), proposals: kept(1) });
