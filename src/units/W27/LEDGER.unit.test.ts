@@ -1,8 +1,8 @@
 // src/units/W27/LEDGER.unit.test.ts
 // W27 — the Closure Ledger acceptance tests for the criteria of the frozen work
-// order that the W27-B1 units do not already prove: R2, R3 and R4 (LANE-LOG
-// R200, the later W27 unit). M1, R1, O1, F1 and E1 are proven by
-// `src/units/W27/B1.unit.test.ts` and are not restated here.
+// order that the W27-B1 units do not already prove: R3 and R4 (LANE-LOG R200,
+// the later W27 unit; R2 was dropped by the owner, decision D3). M1, R1, O1, F1
+// and E1 are proven by `src/units/W27/B1.unit.test.ts` and are not restated here.
 //
 // One `describe('unit:W27.<criterion>')` per criterion, one `it` per leg.
 //
@@ -17,11 +17,10 @@
 //   · docs/kit/02-api-reference.md:312 — "Publication failure schedules another
 //     attempt in 30 seconds and still fails".
 //   · the W27-B1 build review (`_evidence/W27-B1/reviewer-build/REPORT.md`,
-//     findings 1 and 2) and LANE-LOG R161 / R200, which route three residuals
-//     here: `replay.ts:308`'s "no decision for this slot and position" answered
-//     `ok:true` with an `item_id` diff; a corrupt manifest at version ≥ 2
-//     reported only as a rollout event; `LearnStats.ts:587`'s raw `setAlarm`,
-//     which "can push an earlier effect-expiry alarm later" (R161).
+//     finding 2) and LANE-LOG R161 / R200, which route two residuals here: a
+//     corrupt manifest at version ≥ 2 reported only as a rollout event;
+//     `LearnStats.ts:587`'s raw `setAlarm`, which "can push an earlier
+//     effect-expiry alarm later" (R161).
 //
 // ONE REPRESENTATION with W27-B1: the same Coach home page — `merch` (a genuine
 // catalogue pin) → `chero` (the learning slot) → `story` (the coupled later
@@ -47,9 +46,8 @@ import { consumeLedger } from '@/ledger/consume';
 import { learningEffectId } from '@/ledger/recovery';
 import { liftArchiveKey, statsName } from '@/learn/fan';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
-import { classifyReplay, replayDecision, replayDeps } from '@/learn/replay';
+import { replayDecision, replayDeps } from '@/learn/replay';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
-import { HISTORICAL_GOVERNANCE_V1, HISTORICAL_PINS_V1 } from '@/reflex/contentCompose';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { captureRetention, retentionBirth, type RetentionCategory, type RetentionPolicy } from '@/retention';
@@ -106,9 +104,6 @@ const learnDocument = () => ({
   },
 });
 const SLOT_CONFIG = { reward: 'click' as const, objective: 'unit' as const, stats: DEFAULT_STATS };
-
-/** The sentence the engine already writes for this case (`src/learn/replay.ts:308`). */
-const NO_DECISION = 'the replay produced no decision for this slot and position';
 
 // ===========================================================================
 // The stores and the real statistics object (W27-B1's harness, plus the
@@ -287,15 +282,6 @@ const recordFor = (records: DecisionRecord[], slot: string): DecisionRecord => {
   return structuredClone(found!);
 };
 
-/** The same receipt addressed to another position of its slot: the decision id is the record's own coordinates. */
-function addressedTo(record: DecisionRecord, position: number): DecisionRecord {
-  const moved = structuredClone(record);
-  moved.position = position;
-  const nonce = Object.prototype.hasOwnProperty.call(moved, 'request_id') ? `:n1:${moved.request_id}` : '';
-  moved.decision_id = `${moved.tenant}:${moved.ts.toString(36)}:${moved.visitor_id}:${moved.page}:${moved.slot}:${position}${nonce}`;
-  return moved;
-}
-
 // ===========================================================================
 // The mounted application on both shopper hosts (W27-B1's harness), with the
 // operator gate and the subject audit enforced.
@@ -381,79 +367,6 @@ function tamper(m: Mounted, objectKey: string, id: string, change: (record: Deci
   change(target!);
   m.storage.objects.set(objectKey, lines.map(record => JSON.stringify(record)).join('\n') + '\n');
 }
-
-// ===========================================================================
-// unit:W27.R2 — a slot and position the replay could not decide is answered
-// with a stated classification, not `ok` with an item diff.
-//
-// Today (`src/learn/replay.ts:306-308`) the replay that produces no record for
-// the served slot and position answers `{ ok: true, equal: false,
-// classification: 'item', diff: [{ field: 'item_id', replayed: null }] }` —
-// the same class as a receipt that served a DIFFERENT piece. The kit's closed
-// vocabulary (02-api-reference.md:327) has exactly one class for an answer
-// that is not a comparison of two decisions: `not-replayable`, which is
-// `ok:false` with the `reason`, and — the class being "derived from `diff`
-// alone" — no diff entry of its own. The reason is the engine's own sentence.
-//
-// COLLISIONS, for the owner's ruling before any build (they lock the present
-// `ok: true`): `src/learn/phase3.test.ts:341` (legacy W27.03, in this ticket's
-// LG1 set) and `src/learn/phase3.test.ts:595` (legacy W20.01).
-// ===========================================================================
-
-describe('unit:W27.R2', () => {
-  it('logic: a receipt whose slot and position the replay does not decide is not-replayable with its reason, never an item difference', async () => {
-    const w = await world();
-    const snapshots = await coupledSnapshots(w);
-    const later = recordFor(decidePage(w, snapshots), 'story');
-
-    // Control: the receipt as served replays equal.
-    const control = await replayDecision(w.env, later, replayDeps(w.env));
-    expect(control, control.reason).toMatchObject({ ok: true, equal: true, classification: 'equal', diff: [] });
-
-    // (a) A receipt naming the compiled empty catalogue (revision 0, the
-    //     "absent dependency" convention, kit :325): every dependency is read
-    //     and the replay decides nothing for this slot.
-    const emptied = structuredClone(later);
-    emptied.versions.catalog = 0;
-    // (b) A receipt of the `reserved-eligible-v1` generation addressed to a
-    //     position its slot (take 1) never fills.
-    const v1 = recordFor(decidePage(w, snapshots, [undefined, HISTORICAL_PINS_V1, undefined, HISTORICAL_GOVERNANCE_V1]), 'story');
-    expect(await replayDecision(w.env, v1, replayDeps(w.env)), 'control: the v1-generation receipt replays at its own position')
-      .toMatchObject({ ok: true, equal: true });
-    const unfilled = addressedTo(v1, 1);
-
-    for (const [name, receipt] of [['the compiled empty catalogue', emptied], ['a position the slot never fills', unfilled]] as const) {
-      const answer = await replayDecision(w.env, receipt, replayDeps(w.env));
-      expect(answer.classification,
-        `W27.R2 (${name}) — kit 02:327: a replay that produced no decision for the served slot and position is not a served-item difference; it is \`not-replayable\` with the reason, not \`${answer.classification}\``)
-        .toBe('not-replayable');
-      expect(answer, `W27.R2 (${name}) — ok:false, the engine's own sentence, nothing reconstructed in its place`)
-        .toMatchObject({ ok: false, equal: false, classification: 'not-replayable', reason: NO_DECISION, replayed: null, diff: [] });
-      // The class is the one derivation's answer for this result (replay.ts:47).
-      expect(classifyReplay(answer.ok, answer.diff)).toBe(answer.classification);
-    }
-  });
-
-  for (const host of HOSTS) {
-    it(`host (${host}): the operator endpoint answers a stored receipt the replay cannot decide as not-replayable, no-store, with its reason`, async () => {
-      const m = await mounted(host);
-      const page = await ledgeredPage(m);
-      const later = page.records.find(record => record.slot === 'story')!;
-
-      const control = await replayRequest(m, later.decision_id);
-      expect(control.status).toBe(200);
-      expect(control.body, JSON.stringify(control.body.reason)).toMatchObject({ ok: true, equal: true, classification: 'equal' });
-
-      tamper(m, page.objectKey, later.decision_id, record => { record.versions.catalog = 0; });
-      const answer = await replayRequest(m, later.decision_id);
-      expect(answer.status).toBe(200); expect(answer.noStore).toBe(true);
-      expect(answer.body.classification,
-        `W27.R2 — the endpoint forwards the engine's class: a slot and position the replay did not decide is \`not-replayable\`, not \`${String(answer.body.classification)}\``)
-        .toBe('not-replayable');
-      expect(answer.body).toMatchObject({ ok: false, equal: false, classification: 'not-replayable', reason: NO_DECISION, replayed: null, diff: [] });
-    });
-  }
-});
 
 // ===========================================================================
 // unit:W27.R3 — a corrupt manifest at version ≥ 2 is refused as corrupt, not
