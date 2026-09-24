@@ -629,12 +629,16 @@ describe('unit:W36.S5', () => {
       expect(back.client.visitorId, 'S5 — the returning page is the same visitor').toBe(visitor);
       expect(back.client.core.profileSessionId, 'S5 — on the same session').toBe(profileSession);
       await back.client.core.send('add_to_cart', { product_id: product });
+      const decidedAgain = await back.client.listen.hydrate({ page: 'home' });
+      expect(decidedAgain?.page, 'fixture: the decision snapshot answered for her returning page').toBe('home');
       const again = await back.client.core.postJson('/sort', { userId: visitor, candidates: CANDIDATES });
       expect(again.status).toBe(200);
       await m.drain(); await m.sessions.propagate();
-      const returningCalls = back.traffic.filter(t => ['/realtime/action', '/sort'].includes(t.path));
+      const returningCalls = back.traffic.filter(t => ['/realtime/action', `/v1/${TENANT}/decisions/snapshot`, '/sort'].includes(t.path));
+      expect(new Set(returningCalls.map(t => t.path)), 'fixture: the returning flow made an event, a decision and a sort call').toEqual(new Set(['/realtime/action', `/v1/${TENANT}/decisions/snapshot`, '/sort']));
       expect(returningCalls.map(t => capabilitySession(t.capability)), 'S5 — every call of the returning flow carries the same session')
         .toEqual(returningCalls.map(() => profileSession));
+      for (const t of returningCalls) expect(t.status, `S5 — ${t.path} is served on that session on the returning page`).toBe(200);
       expect(sessionKeys(m).filter(k => k !== `session:${profileSession}`), 'S5 — the returning flow created no second session record').toEqual([]);
       expect(outcomes(m.queued).filter(o => o.visitor_id === visitor).length, 'S5 — both pages\' events reached her one ledger identity').toBe(2);
       back.client.destroy();
