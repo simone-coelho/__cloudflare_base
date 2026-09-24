@@ -2,7 +2,8 @@
 // W16 — the six LOCAL criteria the frozen work order still owes (R1–R6).
 //
 // Work order: ticket W16 in `docs/remediation/delivery-control/program.json`
-// (frozen by the owner 2026-09-24). Criteria C2–C8 are proven by the merged units
+// (frozen by the owner 2026-09-24; R3 and R5 as amended by A8 and A9, approved
+// 2026-09-24, rem/integration 1676a97). Criteria C2–C8 are proven by the merged units
 // in this directory (`unit:W16.C2.*` … `unit:W16.C8.*`) and are NOT rewritten
 // here. DECISION (DC1–DC4) and DEFERRED_LIVE (LV1–LV3) criteria are proved by
 // their records, not by tests.
@@ -24,34 +25,40 @@
 //      imports them." Origin: REPORT-DELTA §5 row 3 ("no guard exists"), R96(a),
 //      R98(a). "Deprecated" is read as the TypeScript `@deprecated` JSDoc tag on
 //      the declaration; the guard is the second clause of this unit.
-//  R3  "The literal 'early' floor at RealtimeSegmentEngine.ts line 858 goes
-//      through the one persisted-stage mapping point, and the kit states that a
-//      legacy record without a stage adopts as early." Origin: REPORT-DELTA §5
-//      rows 2 and 4, R96(b)/(c), R98(a). The mapping point is `PERSISTED_STAGE`
-//      (JourneyStage.ts:131-139, R32(2)). The KIT SENTENCE half is a document
-//      sentence: per the criterion's proof it is closed by the reviewer reading
-//      `docs/kit/02-api-reference.md`, not by this file.
+//  R3  "Every literal persisted-stage floor (RealtimeSegmentEngine.ts around
+//      lines 815 and 858, ShopperReflex.ts around lines 637, 1189 and 2885) goes
+//      through the one persisted-stage mapping point or is shown to be the
+//      documented legacy-record floor, and the kit states that a legacy record
+//      without a stage adopts as early." Origin: REPORT-DELTA §5 rows 2 and 4,
+//      R96(b)/(c), R98(a); amendment A8. The mapping point is `PERSISTED_STAGE`
+//      (JourneyStage.ts:131-139, R32(2)). One leg per floor; the documented
+//      legacy-record floor is admitted only where the input is a legacy record.
+//      The KIT SENTENCE half is a document sentence: per the criterion's proof
+//      it is closed by the reviewer reading `docs/kit/02-api-reference.md`, not
+//      by this file.
 //  R4  "Continuity follow-ups (LANE-LOG R81(c)): linking or sign-in retires the
 //      shopper's own recognition descriptor; the broker (cookie) mode
 //      lost-response retry succeeds exactly once; a provisional subject holds no
 //      state of its own after recognition." Origin: R81(c), R72(c) (no silent
 //      identity merge; single use, rotation, one retry — R48(a)), the W16-B8
 //      delta review "Not measured" list, whole-W16 review §8.
-//  R5  "A client can tell a refusing shopper from an unreadable record on the
-//      public route that serves the decision (LANE-LOG R19 and R98(b))." R19
-//      names that route: `POST /v1/:tenant/decisions/snapshot` behind
-//      `requireShopper`. The unreadable record is the one this ticket already
-//      arranges for W16.C5.06 (R63): the tenant publishes the next revision of
-//      its profile retention policy, so her stored profile stamp is unusable.
+//  R5  "On the public decision route an unreadable record is served the
+//      default decision (200, catalogue order) with a stable member naming it
+//      unreadable, distinct from a refusal and from an expired session (LANE-LOG
+//      R19 and R98(b))." Amendment A9. R19 names that route:
+//      `POST /v1/:tenant/decisions/snapshot` behind `requireShopper`. The
+//      unreadable record is the one this ticket already arranges for W16.C5.06
+//      (R63): the tenant publishes the next revision of its profile retention
+//      policy, so her stored profile stamp is unusable.
 //  R6  "One native (workerd) leg proves the continuity consume-and-rotate
 //      atomicity and restart behavior that C6.02, C6.08 and C6.11 prove against
 //      doubles." Origin: R48(c); `C6.unit.test.ts` "LIMITS OF THIS FILE". The
 //      shared Miniflare setup lives in `src/units/_native.ts`.
 //
-// NO NEW WIRE OR STORAGE MEMBER IS RULED HERE. Every leg asserts an outcome a
-// client, an operator or the object's own storage can already observe; where
-// the witness names no representation (R5), the leg is representation-agnostic
-// and says so.
+// NO WIRE OR STORAGE MEMBER IS NAMED HERE. Every leg asserts an outcome a
+// client, an operator or the object's own storage can observe. R5 demands a
+// member whose name or value says "unreadable" — the criterion's own word —
+// and leaves the member's name and place in the answer to the build.
 //
 // The host legs drive the real mounted app (`tenantMiddleware`, the realtime,
 // decision and identity routes, mounted as `src/index.ts` mounts them) and the
@@ -827,51 +834,112 @@ describe('unit:W16.R2', () => {
 });
 
 // ===========================================================================
-// R3 — the literal floor goes through the one persisted-stage mapping point
+// R3 — every literal persisted-stage floor goes through the one mapping point,
+// or is shown to be the documented legacy-record floor
 // ===========================================================================
 
+/**
+ * A permutation of the three persisted tokens: every reported word maps to a
+ * DIFFERENT valid token, so a floor that reads the mapping point follows it and
+ * a literal does not. `deciding → 'early'` keeps the permuted grammar a grammar.
+ */
+const PERMUTED_STAGE: Record<JourneyWord, 'early' | 'mid' | 'late'> = { exploring: 'mid', thinking: 'late', deciding: 'early' };
+/** What the kit documents for a record written before the stored stage existed (the criterion's own words: "adopts as early"). */
+const DOCUMENTED_LEGACY_FLOOR = 'early';
+
+/**
+ * Run one whole scenario — from her first request to the observation — with the
+ * one mapping point permuted in place, and restore it whatever happens. The
+ * window covers the whole scenario, not only the read, so a repair that gives a
+ * record its stage when the record is born (through the mapping point) is
+ * measured exactly like a repair at the floor itself.
+ */
+async function underPermutedMapping<T>(run: () => Promise<T>): Promise<T> {
+  const original = { ...PERSISTED_STAGE };
+  expect({ tokens: JOURNEY_STAGES.map(word => PERMUTED_STAGE[word]).sort(), first: PERMUTED_STAGE[FIRST_JOURNEY_STAGE], shipped: original[FIRST_JOURNEY_STAGE] },
+    'the permutation uses exactly the three persisted tokens and moves the first stage off the shipped token')
+    .toEqual({ tokens: ['early', 'late', 'mid'], first: 'mid', shipped: 'early' });
+  Object.assign(PERSISTED_STAGE, PERMUTED_STAGE);
+  try { return await run(); } finally { Object.assign(PERSISTED_STAGE, original); }
+}
+
 describe('unit:W16.R3', () => {
-  // The CODE half of R3. "Goes through the one mapping point" is measured as
-  // what it means: the floor a session record WITHOUT a stored stage is given
-  // follows `PERSISTED_STAGE[FIRST_JOURNEY_STAGE]`. The leg permutes the mapping
-  // point's three tokens in place for the duration of one request and restores
-  // it in `finally`; a floor that reads the mapping point follows the
-  // permutation, a literal does not. (Constraint for the build: the mapping
-  // point stays the one record at JourneyStage.ts:135 that every writer reads.)
+  // The CODE half of R3, one leg per literal floor the criterion names:
+  // RealtimeSegmentEngine.ts ~815 and ~858, ShopperReflex.ts ~637, ~1189 and
+  // ~2885. The mapping point is `PERSISTED_STAGE` (JourneyStage.ts:131-139,
+  // R32(2)); a floor that goes through it is `PERSISTED_STAGE[FIRST_JOURNEY_STAGE]`
+  // (the form RealtimeSegmentEngine.ts:985 and the adoption sites
+  // ShopperReflex.ts:3001/:3449 already use). "Goes through the one mapping
+  // point" is measured as what it means: every leg runs its scenario twice —
+  // once as shipped (the CONTROL: the floor is the first reported stage in the
+  // persisted grammar) and once with the mapping point permuted for the whole
+  // scenario — and the floor must follow the permutation. (Constraint for the
+  // build: the mapping point stays the one mutable record at JourneyStage.ts:135
+  // that every writer reads at call time.)
   //
-  // Where line 858 runs: `RealtimeSegmentEngine.getPersonalizationConfig`,
-  // reached with a stored record by `getSessionPersonalizationConfig`, which the
-  // session host's mounted `GET /realtime/personalization/:userId` runs
-  // (src/routes/realtime.ts:412). (The event path never reaches the floor with
-  // an unstaged record: it writes the stage before it decides.) The floored
-  // stage is the config's `journeyStage` and its `cookieUpdates.opt_journey_stage`
-  // (RealtimeSegmentEngine.ts:858, :901, :925-932). HOST-INTERNAL (R19): the
-  // route runs the method and discards both, so no public route carries the
-  // floored value; the leg drives the mounted route and reads the value that
-  // method resolved to on that request (a call-through spy). Missing public
-  // observable, named for the review: the stage `getSessionPersonalizationConfig`
-  // floors. Session host only: the line R3 names is the session host's engine.
+  // "Or is shown to be the documented legacy-record floor": that disposition is
+  // what the kit sentence documents — a record written BEFORE the stored stage
+  // existed, carrying none, adopts as early. It is admissible only for a legacy
+  // record. Every input below except the one legacy leg is NOT a legacy record:
+  // a record born during the scenario (her session before its first event, the
+  // record a segment assignment, a first event or a sign-in fold births) or a
+  // refusal answer that floors whatever is stored. A floor those inputs reach is
+  // not the legacy-record floor, so for them the floor follows the mapping point
+  // — whether the repair is at the floor or gives the record its stage at birth.
+  // The legacy leg accepts either the mapping point or the documented floor.
+  //
+  // HOST-INTERNAL (R19) throughout: the mounted routes that run these floors
+  // either discard the floored value (`GET /realtime/personalization/:userId`
+  // answers without `journeyStage` or the cookie updates, src/routes/realtime.ts
+  // :412-:430) or store it in the shopper object, which no public route exposes.
+  // The legs drive the mounted route and read the value that route resolved (a
+  // call-through spy on `getSessionPersonalizationConfig`, which the route runs)
+  // or the record the real object stored. Missing public observable, named for
+  // the review: the floored stage on each of these paths.
   //
   // The KIT half ("the kit states that a legacy record without a stage adopts as
   // early", docs/kit/02-api-reference.md) is a document sentence: per the
   // criterion's proof it is closed by the reviewer reading the changed sentence.
-  it('host-internal: a session record that carries no stored stage is given the floor the one persisted-stage mapping point names for the first reported stage, never a literal', async () => {
+
+  /** The mounted read, and the floored stage the session host's engine resolved on it. */
+  const flooredOnRead = async (h: HostFixture, shopper: { subject: string; capability: string }, spy: { mockClear: () => void; mock: { calls: unknown[]; results: Array<{ value: unknown }> } }) => {
+    spy.mockClear();
+    const response = await h.f.call(`/realtime/personalization/${shopper.subject}`, { capability: shopper.capability });
+    expect(response.status, `the mounted read answers: ${(await response.clone().text()).slice(0, 200)}`).toBe(200);
+    await h.f.drain();
+    expect(spy.mock.calls.length, 'the mounted read ran getSessionPersonalizationConfig').toBe(1);
+    const config = await spy.mock.results[0]!.value as { journeyStage?: unknown; cookieUpdates?: Record<string, unknown> } | null;
+    return { journeyStage: config?.journeyStage, cookie: config?.cookieUpdates?.opt_journey_stage };
+  };
+  /** The stage the real shopper object stored on its pipeline record. */
+  const storedStage = (h: HostFixture, subject: string) =>
+    (h.objectData(subject).get('pipeline') as { journeyStage?: unknown } | undefined)?.journeyStage ?? 'no pipeline record stored';
+
+  it('host-internal (RealtimeSegmentEngine.ts ~858, session host): her session read before its first event — a record born this visit, not a legacy one — is floored through the one mapping point', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     const spy = vi.spyOn(RealtimeSegmentEngine.prototype, 'getSessionPersonalizationConfig');
-    const original = { ...PERSISTED_STAGE };
-    /** A permutation of the three persisted tokens: every reported word maps to a DIFFERENT valid token. */
-    const permuted: Record<JourneyWord, 'early' | 'mid' | 'late'> = { exploring: 'mid', thinking: 'late', deciding: 'early' };
-    expect(JOURNEY_STAGES.map(word => permuted[word]).sort(), 'the permutation uses exactly the three persisted tokens').toEqual(['early', 'late', 'mid']);
-    /** The mounted read, and the floored stage the engine resolved on it. */
-    const flooredOnRead = async (h: HostFixture, shopper: { subject: string; capability: string }) => {
-      spy.mockClear();
-      const response = await h.f.call(`/realtime/personalization/${shopper.subject}`, { capability: shopper.capability });
-      expect(response.status, `the mounted read answers: ${(await response.clone().text()).slice(0, 200)}`).toBe(200);
-      await h.f.drain();
-      expect(spy, 'the mounted read ran getSessionPersonalizationConfig').toHaveBeenCalledTimes(1);
-      const config = await spy.mock.results[0]!.value as { journeyStage?: unknown; cookieUpdates?: Record<string, unknown> } | null;
-      return { journeyStage: config?.journeyStage, cookie: config?.cookieUpdates?.opt_journey_stage };
-    };
+    try {
+      /** A consenting shopper who has made her explicit choice and not yet interacted, read on the mounted route. */
+      const scenario = async () => {
+        const h = await hostFixture('session');
+        const her = await h.identitySession({});
+        expect(her.status, `the fixture's own establish must succeed: ${her.bodyText}`).toBe(200);
+        await h.choose(her);
+        clock.mockReturnValue(T0 + STEP_MS);
+        return flooredOnRead(h, her, spy);
+      };
+      expect(await scenario(), 'W16.R3 control — as shipped, her unstaged session is floored at the first reported stage in the persisted grammar')
+        .toEqual({ journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], cookie: PERSISTED_STAGE[FIRST_JOURNEY_STAGE] });
+      clock.mockReturnValue(T0);
+      expect.soft(await underPermutedMapping(scenario),
+        'W16.R3 (~858) — a session born this visit is floored through PERSISTED_STAGE[FIRST_JOURNEY_STAGE]: the floor follows the one mapping point')
+        .toEqual({ journeyStage: PERMUTED_STAGE[FIRST_JOURNEY_STAGE], cookie: PERMUTED_STAGE[FIRST_JOURNEY_STAGE] });
+    } finally { spy.mockRestore(); clock.mockRestore(); }
+  });
+
+  it('host-internal (RealtimeSegmentEngine.ts ~858, session host): a LEGACY record — written before the stored stage existed, carrying none — is floored through the one mapping point or at the documented legacy-record floor, and at nothing else', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const spy = vi.spyOn(RealtimeSegmentEngine.prototype, 'getSessionPersonalizationConfig');
     /** Strip the stored stage from both copies the session host holds: the KV record and the object's projection of it. */
     const makeLegacy = (h: HostFixture, shopper: { subject: string; sessionId: string }) => {
       const key = h.sessionRecordKey(shopper.sessionId);
@@ -887,32 +955,141 @@ describe('unit:W16.R3', () => {
       data.set(projectionKey, { ...projection, value: JSON.stringify(inner) });
       h.f.restart(shopper.subject);
     };
-    try {
-      // CONTROL, unpermuted: today's floor equals the mapping point's first stage.
-      const control = await hostFixture('session');
-      const first = await control.newShopper({ clock, from: T0, events: [VIEW_TABBY_QUILTED] });
-      makeLegacy(control, first);
-      clock.mockReturnValue(T0 + STEP_MS);
-      expect(await flooredOnRead(control, first), 'W16.R3 control — an unstaged record is floored at the first reported stage in the persisted grammar')
-        .toEqual({ journeyStage: original[FIRST_JOURNEY_STAGE], cookie: original[FIRST_JOURNEY_STAGE] });
-
-      // A LEGACY record — written before the stored stage existed, so its
-      // metadata carries none: the record the kit sentence speaks of. Her visit
-      // is the ordinary one: a Tabby view, the cross-category wallet, a line
-      // nobody knows.
-      clock.mockReturnValue(T0 + 2 * STEP_MS);
+    /**
+     * Her visit is the ordinary one: a Tabby view, the cross-category wallet, a
+     * line nobody knows. Her record is then made legacy — the record the kit
+     * sentence speaks of — and read once. A legacy record was written before
+     * this scenario, so only the read can run under a permuted mapping point.
+     */
+    const scenario = async (read: (run: () => Promise<{ journeyStage: unknown; cookie: unknown }>) => Promise<{ journeyStage: unknown; cookie: unknown }>) => {
+      clock.mockReturnValue(T0);
       const h = await hostFixture('session');
-      const legacy = await h.newShopper({ clock, from: T0 + 2 * STEP_MS, events: [VIEW_TABBY_QUILTED, VIEW_TABBY_WALLET_SLG, VIEW_UNKNOWN_LINE] });
+      const legacy = await h.newShopper({ clock, from: T0, events: [VIEW_TABBY_QUILTED, VIEW_TABBY_WALLET_SLG, VIEW_UNKNOWN_LINE] });
       makeLegacy(h, legacy);
-      clock.mockReturnValue(T0 + 6 * STEP_MS);
-      Object.assign(PERSISTED_STAGE, permuted);
-      let floored: { journeyStage: unknown; cookie: unknown };
-      try { floored = await flooredOnRead(h, legacy); }
-      finally { Object.assign(PERSISTED_STAGE, original); }
-      expect.soft(floored,
-        'W16.R3 — a record with no stored stage is floored through PERSISTED_STAGE[FIRST_JOURNEY_STAGE], so the floor follows the one mapping point')
-        .toEqual({ journeyStage: permuted[FIRST_JOURNEY_STAGE], cookie: permuted[FIRST_JOURNEY_STAGE] });
-    } finally { Object.assign(PERSISTED_STAGE, original); spy.mockRestore(); clock.mockRestore(); }
+      clock.mockReturnValue(T0 + 4 * STEP_MS);
+      return read(async () => flooredOnRead(h, legacy, spy));
+    };
+    try {
+      expect(await scenario(async run => run()), 'W16.R3 control — as shipped, a legacy record is floored at the first reported stage in the persisted grammar')
+        .toEqual({ journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], cookie: PERSISTED_STAGE[FIRST_JOURNEY_STAGE] });
+      const floored = await scenario(async run => underPermutedMapping(run));
+      expect.soft([
+        { journeyStage: PERMUTED_STAGE[FIRST_JOURNEY_STAGE], cookie: PERMUTED_STAGE[FIRST_JOURNEY_STAGE] },
+        { journeyStage: DOCUMENTED_LEGACY_FLOOR, cookie: DOCUMENTED_LEGACY_FLOOR },
+      ], 'W16.R3 (~858, legacy record) — floored through the one mapping point, or at the documented legacy-record floor the kit states')
+        .toContainEqual(floored);
+    } finally { spy.mockRestore(); clock.mockRestore(); }
+  });
+
+  it('host-internal (RealtimeSegmentEngine.ts ~815, session host): the answer the engine resolves for a shopper who refused personalization floors her stage through the one mapping point', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const spy = vi.spyOn(RealtimeSegmentEngine.prototype, 'getSessionPersonalizationConfig');
+    try {
+      /** She allows tracking and refuses personalization, browses (a Tabby view, the wallet, a line nobody knows), and is read. */
+      const scenario = async () => {
+        const h = await hostFixture('session');
+        const her = await h.identitySession({});
+        expect(her.status, `the fixture's own establish must succeed: ${her.bodyText}`).toBe(200);
+        await h.choose(her, { tracking: true, personalization: false });
+        for (const [index, event] of [VIEW_TABBY_QUILTED, VIEW_TABBY_WALLET_SLG, VIEW_UNKNOWN_LINE].entries()) {
+          clock.mockReturnValue(T0 + (index + 1) * STEP_MS);
+          const answered = await h.action(her.capability, event);
+          expect(answered.status, `the fixture's own browsing must be accepted: ${answered.text.slice(0, 160)}`).toBe(200);
+        }
+        clock.mockReturnValue(T0 + 5 * STEP_MS);
+        const floored = await flooredOnRead(h, her, spy);
+        return floored.journeyStage;
+      };
+      expect(await scenario(), 'W16.R3 control — as shipped, the refusal answer is floored at the first reported stage in the persisted grammar')
+        .toBe(PERSISTED_STAGE[FIRST_JOURNEY_STAGE]);
+      clock.mockReturnValue(T0);
+      expect.soft(await underPermutedMapping(scenario),
+        'W16.R3 (~815) — the refusal answer floors the stage through PERSISTED_STAGE[FIRST_JOURNEY_STAGE]: the floor follows the one mapping point')
+        .toBe(PERMUTED_STAGE[FIRST_JOURNEY_STAGE]);
+    } finally { spy.mockRestore(); clock.mockRestore(); }
+  });
+
+  it('host-internal (ShopperReflex.ts ~637): a segment assigned to a consenting shopper who has no record yet births her record with the floor the one mapping point names, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        /** She makes her explicit choice and, before any interaction, is assigned a segment through the mounted route. */
+        const scenario = async () => {
+          clock.mockReturnValue(T0);
+          const h = await hostFixture(host);
+          const her = await h.identitySession({});
+          expect(her.status, `${host}: the fixture's own establish must succeed: ${her.bodyText}`).toBe(200);
+          await h.choose(her);
+          clock.mockReturnValue(T0 + STEP_MS);
+          const response = await h.f.call(`/realtime/segments/${her.subject}`, { capability: her.capability,
+            body: { segment: 'coach-tabby-loyalist', source: 'manual', userId: her.subject, sessionId: her.sessionId } });
+          expect(response.status, `${host}: the fixture's own assignment must be accepted: ${(await response.clone().text()).slice(0, 200)}`).toBe(200);
+          await h.f.drain();
+          return storedStage(h, her.subject);
+        };
+        expect(await scenario(), `${host}: W16.R3 control — as shipped, the record the assignment births carries the first reported stage in the persisted grammar`)
+          .toBe(PERSISTED_STAGE[FIRST_JOURNEY_STAGE]);
+        expect.soft(await underPermutedMapping(scenario),
+          `${host}: W16.R3 (~637) — the record a segment assignment births is floored through PERSISTED_STAGE[FIRST_JOURNEY_STAGE]: the floor follows the one mapping point`)
+          .toBe(PERMUTED_STAGE[FIRST_JOURNEY_STAGE]);
+      }
+    } finally { clock.mockRestore(); }
+  });
+
+  it('host-internal (ShopperReflex.ts ~1189, object host): the first event of a shopper who allows tracking and refuses personalization births her record with the floor the one mapping point names', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      /** Her explicit choice (tracking yes, personalization no), then her first event: a Tabby product view. */
+      const scenario = async () => {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture('do');
+        const her = await h.identitySession({});
+        expect(her.status, `the fixture's own establish must succeed: ${her.bodyText}`).toBe(200);
+        await h.choose(her, { tracking: true, personalization: false });
+        clock.mockReturnValue(T0 + STEP_MS);
+        const answered = await h.action(her.capability, VIEW_TABBY_QUILTED);
+        expect(answered.status, `the fixture's own first event must be accepted: ${answered.text.slice(0, 160)}`).toBe(200);
+        return storedStage(h, her.subject);
+      };
+      expect(await scenario(), 'W16.R3 control — as shipped, the record her first event births carries the first reported stage in the persisted grammar')
+        .toBe(PERSISTED_STAGE[FIRST_JOURNEY_STAGE]);
+      expect.soft(await underPermutedMapping(scenario),
+        'W16.R3 (~1189) — the record a first event births is floored through PERSISTED_STAGE[FIRST_JOURNEY_STAGE]: the floor follows the one mapping point')
+        .toBe(PERMUTED_STAGE[FIRST_JOURNEY_STAGE]);
+    } finally { clock.mockRestore(); }
+  });
+
+  it('host-internal (ShopperReflex.ts ~2885): a sign-in through the real SDK that folds a consenting shopper with no record into an account with none births the person\'s record with the floor the one mapping point names, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        /** Her first load and explicit choice, then a login through the real SDK before any interaction. */
+        const scenario = async () => {
+          clock.mockReturnValue(T0);
+          const h = await hostFixture(host);
+          const browser = sdkBrowser(h);
+          const first = await browser.load();
+          expect(first.adopted, `${host}: load 1 establishes her session`).toBe(true);
+          await browser.choose();
+          const anonymous = browser.subject();
+          const exp = Math.floor(Date.now() / 1000) + 300, account = 'coach-account-w16-r3-fold';
+          const assertion = await signAssertion('backend-proof', TENANT, first.core.visitorId, account, exp);
+          const signedIn = await createIdentity(first.core).identify(account, { assertion, exp, source: 'login' });
+          expect(signedIn, `${host}: the fixture's own login must succeed: ${JSON.stringify(signedIn)}`).toMatchObject({ ok: true });
+          await h.f.drain();
+          // The person's object: the one object of this tenant, other than her
+          // anonymous one, that now holds the identity members.
+          const person = [...h.f.objects].filter(([name, item]) => name !== shopperObjectName(TENANT, anonymous) && item.data.has('identityMembers'));
+          expect(person.length, `${host}: the login folded her into exactly one person's object`).toBe(1);
+          return (person[0]![1].data.get('pipeline') as { journeyStage?: unknown } | undefined)?.journeyStage ?? 'no pipeline record stored';
+        };
+        expect(await scenario(), `${host}: W16.R3 control — as shipped, the record the fold births carries the first reported stage in the persisted grammar`)
+          .toBe(PERSISTED_STAGE[FIRST_JOURNEY_STAGE]);
+        expect.soft(await underPermutedMapping(scenario),
+          `${host}: W16.R3 (~2885) — the record a sign-in fold births is floored through PERSISTED_STAGE[FIRST_JOURNEY_STAGE]: the floor follows the one mapping point`)
+          .toBe(PERMUTED_STAGE[FIRST_JOURNEY_STAGE]);
+      }
+    } finally { clock.mockRestore(); }
   });
 });
 
@@ -1174,8 +1351,9 @@ describe('unit:W16.R4', () => {
 });
 
 // ===========================================================================
-// R5 — a client can tell a refusing shopper from an unreadable record on the
-// route that serves the decision
+// R5 — on the public decision route an unreadable record is served the default
+// decision with a stable member naming it unreadable, distinct from a refusal
+// and from an expired session
 // ===========================================================================
 
 type Answer = { status: number; body: unknown };
@@ -1208,18 +1386,50 @@ function tellingMembers(a: Answer[], b: Answer[]): string[] {
   return telling.sort();
 }
 
+/**
+ * The members that NAME the record unreadable and say so identically in every
+ * answer of the class: `path=value` leaves whose member name or value carries
+ * the criterion's own word, present with the same value in every answer. The
+ * member's name and place in the answer are not ruled; the word is the
+ * criterion's ("a stable member naming it unreadable").
+ */
+function stableMembersNamingUnreadable(answers: Answer[]): string[] {
+  const naming = answers.map(answer => new Set([...leaves(answer)]
+    .filter(([path, value]) => /unreadable/i.test(path) || /unreadable/i.test(value)).map(([path, value]) => `${path}=${value}`)));
+  return answers.length === 0 ? [] : [...naming[0]!].filter(entry => naming.every(set => set.has(entry))).sort();
+}
+
+/**
+ * THE DEFAULT DECISION for the fixture's page: every slot of the published page
+ * filled from the published catalogue in the catalogue's own order — the pieces
+ * of that slot's type, in the order the catalogue lists them, `take` of them.
+ * Derived from the fixture's own publication, never from an engine answer; the
+ * refusing shoppers below are its control (kit 02: "personalization-refused
+ * choices use defaults").
+ */
+const CATALOGUE_ORDER: Record<string, string[]> = Object.fromEntries(FIXTURE_SLOTS.pages.home.map(({ slot, take }) =>
+  [slot, FIXTURE_PIECES.filter(piece => piece.slotTypes.includes(slot)).slice(0, take).map(piece => piece.id)]));
+
 describe('unit:W16.R5', () => {
-  // The representation is NOT ruled: the work order and R19/R98(b) name the
-  // distinction, not a member, so any member that is stable within each class
-  // and differs between them satisfies the second clause. The first clause is
-  // LANE-LOG R63's rule for this same unusable profile stamp ("a stage-moving
-  // read whose stored profile stamp is unusable answers"), with the answer the
-  // read path gives for it (`GET /realtime/reflex`: no retained profile read
-  // out, `affinity`, `journeyStage` and `visit` null — the shape the merged
-  // W16.C5.07 demands when a tenant has no profile policy at all), applied to
-  // the route that serves the decision: she is served, on the catalogue's own
-  // order, and not told her session is gone.
-  it('host: on the route that serves the decision, a shopper whose record is unreadable is served and answered in words a client can tell from a refusing shopper and from a shopper whose session is gone, on both hosts', async () => {
+  // The criterion as amended (A9, approved 2026-09-24): "On the public decision
+  // route an unreadable record is served the default decision (200, catalogue
+  // order) with a stable member naming it unreadable, distinct from a refusal
+  // and from an expired session (LANE-LOG R19 and R98(b))."
+  //  - The route (R19): `POST /v1/:tenant/decisions/snapshot` behind
+  //    `requireShopper`, mounted as src/index.ts mounts it.
+  //  - The unreadable record: the one this ticket already arranges for
+  //    W16.C5.06 (R63) — the tenant publishes the next revision of its profile
+  //    retention policy, so her stored profile stamp is unusable.
+  //  - The default decision: `CATALOGUE_ORDER`, every slot of the page.
+  //  - The member: any member of the answer whose name or value says
+  //    "unreadable", identical in every answer of the class (two shoppers, two
+  //    moments each), and telling her answer from BOTH a refusing shopper's and
+  //    an expired session's (`tellingMembers`). Its name and place are not
+  //    ruled. (The expired session's answer names itself "Shopper session
+  //    unavailable", so "unavailable" cannot be the word that names her.)
+  it('host: on the public decision route a shopper whose record is unreadable is served the default decision — 200, the catalogue\'s own order in every slot — with a stable member naming her record unreadable that tells her answer from a refusing shopper\'s and from an expired session\'s, on both hosts', async () => {
+    expect(CATALOGUE_ORDER, 'the default decision the fixture publishes: the catalogue\'s own order in each of the page\'s three slots').toEqual({
+      hero: HERO_BASE_ORDER, edit: ['festival-charms-editorial', 'evening-charms-editorial'], guide: ['guide-decide-editorial', 'guide-explore-editorial'] });
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of HOSTS) {
@@ -1233,7 +1443,9 @@ describe('unit:W16.R5', () => {
           await h.choose(shopper, choice);
           refusing.push(shopper);
         }
-        // Shoppers whose record will be UNREADABLE: consenting, with a taste of their own.
+        // Shoppers whose record will be UNREADABLE: consenting, with a taste of
+        // their own (her visit: three Tabby views, the cross-category wallet, a
+        // line nobody knows).
         const unreadable = [await h.newShopper({ clock, from: T0 }), await h.newShopper({ clock, from: T0 + 10 * STEP_MS })];
         // Shoppers whose SESSION will be gone: consenting, with a taste of their own.
         const gone = [await h.newShopper({ clock, from: T0 + 20 * STEP_MS, events: THREE_TABBY_VIEWS }),
@@ -1249,35 +1461,45 @@ describe('unit:W16.R5', () => {
         expect(h.f.publishNextProfileRetentionRevision(), `${host}: exactly the profile retention policy moves to its next revision`).toEqual(['profile']);
         clock.mockReturnValue(T0 + 41 * STEP_MS);
         const refusingAnswers = await Promise.all(refusing.map(async shopper => h.rawSnapshot(shopper.capability)));
-        const unreadableAnswers = await Promise.all(unreadable.map(async shopper => h.rawSnapshot(shopper.capability)));
+        const unreadableAnswers: Array<Awaited<ReturnType<HostFixture['rawSnapshot']>>> = [];
+        for (const moment of [41, 42]) {
+          clock.mockReturnValue(T0 + moment * STEP_MS);
+          for (const shopper of unreadable) unreadableAnswers.push(await h.rawSnapshot(shopper.capability));
+        }
         // A day later, the gone sessions' capabilities have expired.
         clock.mockReturnValue(T0 + 25 * HOUR_MS);
         const goneAnswers = await Promise.all(gone.map(async shopper => h.rawSnapshot(shopper.capability)));
 
-        // CONTROLS: the two neighbouring classes exist and say what they are.
+        // CONTROLS: the two neighbouring classes exist and say what they are, and
+        // a refusal is served exactly the default decision.
         for (const answer of refusingAnswers) {
-          expect({ status: answer.status, reason: (answer.body?.experiment as { reason?: unknown } | undefined)?.reason },
-            `${host}: W16.R5 control — a refusing shopper is served and the answer names her refusal (kit 02, experiment.reason)`)
-            .toEqual({ status: 200, reason: 'personalization_consent' });
+          expect({ status: answer.status, reason: (answer.body?.experiment as { reason?: unknown } | undefined)?.reason, ranking: answer.ranking },
+            `${host}: W16.R5 control — a refusing shopper is served the default decision and the answer names her refusal (kit 02, experiment.reason)`)
+            .toEqual({ status: 200, reason: 'personalization_consent', ranking: CATALOGUE_ORDER });
         }
         for (const answer of goneAnswers) {
           expect(answer.status, `${host}: W16.R5 control — a shopper whose session is gone is refused as such`).toBe(401);
         }
 
-        // CLAUSE 1 — the unreadable record is SERVED on the route, from nothing of that record.
+        // CLAUSE 1 — the unreadable record is served the DEFAULT DECISION: 200, the catalogue's own order in every slot.
         for (const answer of unreadableAnswers) {
-          expect.soft({ status: answer.status, ok: answer.body?.ok, hero: answer.ranking.hero },
-            `${host}: W16.R5 — a shopper whose record is unreadable is served on the decision route, on the catalogue's own order (${answer.text.slice(0, 120)})`)
-            .toEqual({ status: 200, ok: true, hero: HERO_BASE_ORDER });
+          expect.soft({ status: answer.status, ok: answer.body?.ok, ranking: answer.ranking },
+            `${host}: W16.R5 — a shopper whose record is unreadable is served the default decision on the decision route: 200, the catalogue's own order in every slot (${answer.text.slice(0, 120)})`)
+            .toEqual({ status: 200, ok: true, ranking: CATALOGUE_ORDER });
         }
-        // CLAUSE 2 — a client can tell her from a refusing shopper, and from a gone session.
+        // CLAUSE 2 — with a STABLE member NAMING it unreadable.
         const toAnswer = (answer: { status: number; body: unknown }): Answer => ({ status: answer.status, body: answer.body });
+        const naming = stableMembersNamingUnreadable(unreadableAnswers.map(toAnswer));
+        expect.soft(naming,
+          `${host}: W16.R5 — every answer to an unreadable record carries the same member naming it unreadable (answers seen: ${JSON.stringify(unreadableAnswers.map(answer => answer.text.slice(0, 80)))})`)
+          .toEqual(expect.arrayContaining([expect.stringMatching(/unreadable/i)]));
+        // CLAUSE 3 — and that member tells her answer from a refusal's AND from an expired session's.
         const versusRefusal = tellingMembers(unreadableAnswers.map(toAnswer), refusingAnswers.map(toAnswer));
         const versusGone = tellingMembers(unreadableAnswers.map(toAnswer), goneAnswers.map(toAnswer));
-        expect.soft(versusRefusal.length,
-          `${host}: W16.R5 — the unreadable record's answer tells a client she did not refuse (telling members: ${JSON.stringify(versusRefusal.slice(0, 8))})`).toBeGreaterThan(0);
-        expect.soft(versusGone.length,
-          `${host}: W16.R5 — and tells a client her session is not gone (telling members: ${JSON.stringify(versusGone.slice(0, 8))})`).toBeGreaterThan(0);
+        const distinct = naming.map(entry => entry.slice(0, entry.indexOf('='))).filter(path => versusRefusal.includes(path) && versusGone.includes(path));
+        expect.soft(distinct,
+          `${host}: W16.R5 — the member naming it unreadable is one a client tells her apart by, from a refusing shopper and from a gone session (naming: ${JSON.stringify(naming)})`)
+          .toEqual(expect.arrayContaining([expect.stringMatching(/./)]));
       }
     } finally { clock.mockRestore(); }
   });
