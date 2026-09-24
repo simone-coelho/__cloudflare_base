@@ -500,7 +500,12 @@ describe('CW31 consent on the content service', () => {
           for (let i = 0; i < 100; i++) recordExposure(state, item, cell, now, DEFAULT_STATS);
           for (let i = 0; i < (item === 'b' ? 90 : 1); i++) recordSuccess(state, item, cell, 'click', now, 1, DEFAULT_STATS);
         }
-        const map = new Map<string, unknown>([['learn', { tenant: 'coach', brand: 'coach', slot, config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS }, stats: state }]]);
+        // W28 LG1 (step 3, STALE arrangement): the seeded statistics state carries the slot configuration
+        // every current producer sends (`slotLearnConfigOf`, service.ts:113 — `measurementBasis` included).
+        // Seeded without it, the first read's exposure fan-out stores the explicit default, the object's
+        // configuration witness moves, and the cached read correctly withholds the snapshot published under
+        // the old witness (kit 02:313) — a fixture artefact, not the Thompson behaviour under test.
+        const map = new Map<string, unknown>([['learn', { tenant: 'coach', brand: 'coach', slot, config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS, measurementBasis: 'served-v1' }, stats: state }]]);
         const storage = { get: async (key: string) => structuredClone(map.get(key)), put: async (key: string, value: unknown) => { map.set(key, structuredClone(value)); },
           getAlarm: async () => null, setAlarm: async () => { /* Synthetic alarm scheduling has no wall-clock runner. */ } };
         const object = new LearnStats({ storage } as unknown as DurableObjectState, env); objects.set('coach:coach:' + slot, object);
