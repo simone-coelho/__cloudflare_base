@@ -3,8 +3,9 @@
 // D1, R1, A1 and S1 are proven by the existing `unit:W22.D1.*`, `unit:W22.R1.*`,
 // `unit:W22.A1.*` and `unit:W22.S1.*` blocks of B1/B2 in this directory; LG1 is
 // proven by the acceptance command's second half (every `W22.` test of the
-// listed legacy files). This file specifies the remaining-work criteria R2–R5,
-// one `describe('unit:W22.<criterion id>')` each.
+// listed legacy files). This file specifies the remaining-work criteria R2, R4
+// and R5, one `describe('unit:W22.<criterion id>')` each (R3 was dropped by the
+// owner, decision D3, 2026-09-24).
 //
 // WITNESSES
 //   · document 35 §5 row W22 (:424), quoted by the work order: "Shared logical
@@ -85,7 +86,7 @@ import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { writeBatches } from '@/ledger/writer';
 import { fanDecisions, fanOutcome } from '@/learn/fan';
-import { buildHour, catchUp, hourKey, shardKey, shardOf, type HourAggregate, type ShardState } from '@/learn/hourly';
+import { buildHour, shardKey, shardOf, type ShardState } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import type { DayReport } from '@/learn/report';
@@ -114,9 +115,6 @@ const MIN = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-/** The day the fold fixtures are written into. */
-const DATE = '2026-09-03';
-const T12 = Date.UTC(2026, 8, 3, 12, 0, 0);
 const NOW = Date.UTC(2026, 8, 3, 14, 30, 0);
 
 /**
@@ -467,99 +465,6 @@ describe('unit:W22.R2', () => {
     expect.soft(creditedTo(again, 'cnt-rogue-work') / once2,
       'W22.R2 (R143) — a redelivery whose digest cannot be computed is recognised by the id of the digested entry the first delivery left, instead of being credited again (DecisionRing.ts alreadyCredited)')
       .toBeCloseTo(1, 3);
-  });
-});
-
-// ===========================================================================
-// unit:W22.R3 — a stored version-1 shard does not treat every hour at or
-// below its through mark as folded (LANE-LOG R143).
-//
-// F17 P3b's own fixture, with the one change R143 names: the shard state the
-// failed hour is repaired against was written by a VERSION-1 fold. The members
-// version 2 added (`foldedHours`, `foldedThrough`, `seenDays`, and W21's
-// `enrollment`, "a version-1 or version-2 state written before this release
-// simply has none") are withdrawn from every stored shard and `version` is 1;
-// `through` — "the high-water mark of the hours folded" — is kept, exactly the
-// state `src/learn/hourly.ts` ShardState documents a v1 fold leaving. Today
-// the migration takes `foldedThrough = through`, so the repaired hour 12 is
-// "already folded" and its decision never enters the rings.
-//
-// BY HAND (DEFAULT_POLICY: click window thirty minutes, ruling R139):
-//   12:59 v-rogue decision (cnt-rogue-work)       ← hour 12, unreadable on the first pass
-//   13:05 v-rogue decision (cnt-tabby-evening)
-//   13:10 v-rogue click on cnt-rogue-work         → credits the 12:59 decision (11 min)
-//   13:20 v-tabby decision (cnt-tabby-evening)
-//   13:25 v-tabby click on cnt-tabby-evening      → credits the 13:20 decision, folded under v1
-// After the repair: 3 decisions, and 2 learning credits — the cross-hour one
-// the repaired hour makes possible, and hour 13's own credit counted once, so
-// an implementation that re-folds what version 1 already folded (a corrupt-
-// state refusal, or a second admission) cannot pass either.
-// ===========================================================================
-
-/** The cron's own call, run until it has caught up (W22.R1.02's helper). */
-async function fold(m: Mounted, now: number): Promise<{ built: string[]; failed: string[] }> {
-  const built: string[] = [], failed: string[] = [];
-  for (let run = 0; run < 20; run++) {
-    const result = await catchUp(m.storage as never, TENANT, W22_LEARN, now, {}, m.env as never);
-    for (const hour of result.built) built.push(`${hour.date} ${hour.hour}`);
-    for (const hour of result.failed) failed.push(`${hour.date} ${hour.hour}`);
-    if (!result.built.length) break;
-  }
-  return { built, failed };
-}
-
-/** Every stored shard state, as a version-1 fold wrote it. Answers how many shard states were rewritten. */
-function asVersionOne(m: Mounted): number {
-  let rewritten = 0;
-  for (const [key, raw] of [...m.storage.objects]) {
-    if (!key.startsWith(`aggregates/${TENANT}/rings/`)) continue;
-    const state = JSON.parse(raw) as Record<string, unknown>;
-    state.version = 1;
-    for (const member of ['foldedHours', 'foldedThrough', 'seenDays', 'enrollment']) delete state[member];
-    m.storage.objects.set(key, JSON.stringify(state)); m.storage.versions.set(key, (m.storage.versions.get(key) ?? 0) + 1);
-    rewritten++;
-  }
-  return rewritten;
-}
-
-describe('unit:W22.R3', () => {
-  it('host: on shard states stored at version 1, a failed hour repaired after later hours enters the rings — its aggregate says so and its cross-hour credit is counted — and the hour version 1 already folded is counted once', async () => {
-    const r = await mount();
-    const d12 = decision(r.env, 'v-rogue', T12 + 59 * MIN, 'cnt-rogue-work');
-    const d13 = decision(r.env, 'v-rogue', T12 + 65 * MIN, 'cnt-tabby-evening');
-    const cross = click(r.env, d12, T12 + 70 * MIN, 'w22-ledger-r3-cross-hour');
-    const other = decision(r.env, 'v-tabby', T12 + 80 * MIN, 'cnt-tabby-evening');
-    const same = click(r.env, other, T12 + 85 * MIN, 'w22-ledger-r3-same-hour');
-    await throughTheLedger(r, [d12, d13, other], [cross, same]);
-
-    // Run 1: hour 12's ledger THROWS on read (F17 P3b), hours 13 and 14 fold.
-    r.storage.failGetFor = (key: string) => key.startsWith(`${TENANT}/${DATE}/12/`);
-    const firstPass = await fold(r, T12 + 3 * HOUR_MS + 6 * MIN);
-    expect(firstPass.failed, 'the fixture: hour 12 fails on the first pass').toContain(`${DATE} 12`);
-    expect(firstPass.built, 'the fixture: hours 13 and 14 fold without it').toEqual(expect.arrayContaining([`${DATE} 13`, `${DATE} 14`]));
-
-    // The shard states as a version-1 fold left them.
-    expect(asVersionOne(r) > 0, 'the fixture: the fold stored shard states').toBe(true);
-    const stored = JSON.parse(r.storage.objects.get(shardKey(TENANT, shardOf('v-rogue')))!) as ShardState;
-    expect({ version: stored.version, pastTwelve: stored.through > T12 },
-      'the fixture: v-rogue\'s shard is a version-1 state whose through mark is past hour 12').toEqual({ version: 1, pastTwelve: true });
-
-    // Run 2: the hour is readable again and is repaired.
-    r.storage.failGetFor = null;
-    const repair = await fold(r, T12 + 3 * HOUR_MS + 7 * MIN);
-    expect(repair.built, 'the fixture: the repair run folds hour 12').toContain(`${DATE} 12`);
-
-    const twelve = JSON.parse(r.storage.objects.get(hourKey(TENANT, DATE, 12))!) as HourAggregate;
-    expect.soft(twelve.ringsFolded,
-      'W22.R3 (R143; F17 P3b) — hour 12, at or below a version-1 through mark but never folded, is not taken as folded: its decisions enter the rings, and its aggregate says so')
-      .toBe(true);
-    const answer = await operatorPost(r, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
-    expect(answer.status, `the report route answers: ${JSON.stringify(answer.body).slice(0, 300)}`).toBe(200);
-    const day = (answer.body as { report: DayReport }).report;
-    expect.soft(day.counts.decisions, 'the three decisions of the day').toBe(3);
-    expect.soft(day.policies.find(row => row.role === 'learning')?.credits,
-      'W22.R3 (R143; F17 P3b, §6 item 2) — both credits, each once: the 13:10 click credits the repaired 12:59 decision, and hour 13\'s own credit, folded under version 1, is not folded twice')
-      .toBe(2);
   });
 });
 
