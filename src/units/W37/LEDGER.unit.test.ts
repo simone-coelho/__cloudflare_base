@@ -35,7 +35,7 @@
 // carry the kit's Coach taxonomy (docs/kit/03-payload-schemas.md:19), including an
 // unknown category and a cross-category occasion list.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 
@@ -69,6 +69,8 @@ import { hourPrefix, ts36 } from '@/ledger/records';
 import { reportKey } from '@/learn/report';
 import { consumeLedger } from '@/ledger/consume';
 import { rollupTenant } from '@/reflex/regionTrend';
+import { signAssertion } from '@/identity/assertion';
+import { catchUp } from '@/learn/hourly';
 import { canonical as stampCanonical, sha256 as stampSha256, validateDesired, validateTransition } from '../../../scripts/stamp-workflow.mjs';
 import { bundleNativeWorker, nativeScratchDirectory, openNativeRuntime, type NativeRuntime } from '../_native';
 
@@ -801,4 +803,360 @@ describe('unit:W37.T6', () => {
       } finally { await stamp.close(); }
     }
   }, 240_000);
+});
+
+// ===========================================================================
+// unit:W37.T5 — per-shopper export and erasure for shoppers of two non-default
+// brands, reaching every store that holds that tenant's shopper data.
+//
+// AUTHORITY: document 35 §5 row W37 (:444) "… complete export/erasure", ruled by
+// the owner as decision D2 (2026-09-24, row A32): "per-shopper export and
+// erasure proven for two non-default brands across every store holding that
+// tenant's shopper data; whole-tenant offboarding is not built". F31 (:231):
+// "Prove two non-default brands across event, decision, identity, sort, egress
+// and erasure."
+//
+// THE INTERFACES ARE THE DOCUMENTED ONES, nothing new:
+//   · erasure — operator `POST /v1/{tenant}/identity/erase` with the subject
+//     selector, resumed with the same selector until it is no longer pending
+//     (docs/kit/02-api-reference.md:42); the ledger half's scheduled rewrite
+//     "walks the tenant's partition newest day first from the erasure day back"
+//     the NEXT night and "never touches a day that is not over" (doc 22 §15,
+//     src/ledger/erasure.ts:1-19), run here through its route
+//     (`POST ledger/erasures/rewrite`, kit :585) at the 03:00 cron's hour of the
+//     next day, with the hourly fold (`catchUp`, the five-minute cron,
+//     src/index.ts:271) and the shopper objects' alarms the erasure arms
+//     (src/durable-objects/ShopperReflex.ts:2063);
+//   · export — the per-shopper operator reads (kit §3 `GET identity/visitor`,
+//     `GET identity/shopper`; kit §5 `GET visitors/{id}/receipts`, `/recent`,
+//     `GET ledger/{id}`, `GET ledger/batches` with each stream, kit :176) and
+//     the R2 partition they list, which "is the export" (doc 22 §12.4); the
+//     same list the privacy sweep names as the subject reads and exports
+//     (35-verification-reports/sweep-data-privacy-and-lifecycle.md:341-348).
+//
+// THE STORES MEASURED (every binding of the mounted host that can hold a
+// shopper's data): KV SESSIONS (session, user pointer, identity links), KV
+// CACHE (the session host's profile copy), R2 STORAGE (the ledger partition's
+// decision, outcome, product-sort and behavior streams; the hourly fold's shard
+// rings and hour aggregates; the day reports; the managed delivery claims and
+// identities; the erasure records), and the Durable Objects SHOPPER_REFLEX
+// (profile, consent, segments, recovery journal, grants), DECISION_RING (the
+// visitor ring and credit plans), LEARN_STATS (learning effects) and
+// REGION_TREND (aggregate only). NOT measured here: the queue's in-flight
+// copies (transport; every consumer write re-reads the tombstones,
+// src/ledger/writer.ts:246), and the stores the kit keeps outside local erasure
+// — Analytics Engine datasets, worker logs, ODP and other external destinations,
+// tenantless historical D1 — which the erasure reaches only as frozen
+// reconciliation obligations (kit :42); the unit reads that inventory back.
+// D1's audit rows in enforced mode carry keyed references only
+// (src/auth/subjectAudit.ts:177-181) and are the accountability record N13 asks for.
+//
+// THE TENANTLESS DELIVERY IDENTITIES (`ledger-delivery/identities/{uuid}.json`,
+// src/ledger/writer.ts:250) name no tenant and hold `{version, id, digest,
+// count}` only — a random delivery id, a row count and a SHA-256 over the whole
+// delivery ("immutable claims contain no raw records", writer.ts:95). Erasure
+// reaches them without deleting them: each is attributed to exactly one tenant
+// by the claim `ledger-delivery/claims/{tenant}/…/{uuid}.json` that names the
+// same id, the rewrite re-proves every surviving row against both
+// (src/ledger/erasure.ts:344-388), and neither carries any identifier of the
+// shopper. The unit asserts exactly that, before and after the erasure.
+//
+// WHAT AN ERASURE MAY LEAVE: its own records — the tombstone that stays the
+// active suppression predicate and the job/obligation/source records under
+// `erasures/{tenant}/` (doc 22 §15; kit :42 "Obligations survive local
+// compaction"), and the shopper object's erasure receipts and barriers
+// (`identityErasure:`, `identitySourceErasure:`, `identitySessionErasure:`,
+// `identityRetired:`). Nothing else of that tenant may still carry her
+// identifiers.
+//
+// NOT SPECIFIED HERE (no witness): an export of the profile, consent and segment
+// stores (SHOPPER_REFLEX `affinity`/`consent`/`pipeline`, SESSIONS
+// `t:{tenant}:session:*`, CACHE `t:{tenant}:profile:*`). D2 asks the export to
+// reach every store, but no documented per-shopper operator read returns them
+// and no witness names the surface or its content; the report returns that
+// member to the owner.
+//
+// THE FIXTURE: one browser shops both non-default brands, acme and globex, the
+// day before (the kit's Coach taxonomy with an unknown category and a
+// cross-category occasion list; a rendered decision, its impression and a
+// click; a purchase; a manual segment; a product sort), then signs in at each
+// brand with the same account id, and shops once more as the linked shopper.
+// Slot `hero` measures on the rendered basis with durable recovery (kit :270),
+// so the decision stream is written through the managed delivery path.
+// ===========================================================================
+
+const T5_RETENTION = JSON.stringify({ version: 1, tenants: Object.fromEntries([ACME, GLOBEX].map(tenant => [tenant, { ...categories(), recovery: policy(), quarantine: policy() }])) });
+const T5_LEARN = (tenant: string) => ({ holdout: { share: 0, salt: `w37-${tenant}`, arms: ['default'] }, slots: { hero: { reward: 'click', measurementBasis: 'rendered-v1' } } });
+const T5_ACCOUNT = 'w37-person-account-0042';
+const T5_STREAMS = ['decision', 'outcome', 'product-sort', 'behavior'] as const;
+/** The shopper object's erasure receipts and barriers (src/durable-objects/ShopperReflex.ts:1995-2028). */
+const ERASURE_RECEIPT = /^(identityErasure|identitySourceErasure|identitySessionErasure|identityRetired):/;
+
+interface T5Answer { status: number; body: Record<string, any> }
+interface T5Shopper { tenant: string; visitorId: string; sessionId: string; grantIds: string[]; shopperId: string; linkedSessionId: string; orderId: string; decisions: { visitor: string; shopper: string } }
+
+async function t5World(kind: 'session' | 'do') {
+  invalidateCache(); invalidateTrendCache();
+  // One calendar, fixed before the clock moves: served yesterday at noon, erased today at noon, rewritten at 03:00 tomorrow.
+  const today = Math.floor(Date.now() / DAY) * DAY, served = today - DAY + 12 * 3_600_000, erasedAt = today + 12 * 3_600_000, night = today + DAY + 3 * 3_600_000;
+  vi.setSystemTime(served);
+  const h = host(kind, { retention: T5_RETENTION, extra: { LEDGER_RECOVERY_ENABLED: 'true', IDENTITY_SALT: 'w37-ledger-synthetic-identity-salt',
+    IDENTITY_SECRETS: `${ACME}:${ACME}-identity-material,${GLOBEX}:${GLOBEX}-identity-material` } });
+  for (const tenant of [ACME, GLOBEX]) {
+    const documents = publicationFor(tenant);
+    documents[3] = { ...documents[3]!, revision: { ...documents[3]!.revision, value: T5_LEARN(tenant) } };
+    await initializePublicationSet(h.env, documents, '0:' + crypto.randomUUID());
+  }
+  const cf = { country: 'US', regionCode: 'NY' };
+  const browser = await newAnonymousSession(h.env, ACME);
+  type Grant = typeof browser;
+  const shop = async (tenant: string): Promise<T5Shopper> => {
+    const g: Grant = tenant === ACME ? browser : await issueSessionCapability(h.env, { tenant, subject: browser.subject, sessionId: browser.sessionId, kind: 'anonymous' }) as Grant;
+    await choose(h, g, true, true);
+    const act = async (grant: Grant, type: string, data: Record<string, unknown>) => {
+      const response = await h.call('/realtime/action', { grant, tenant, cf, body: { type, userId: grant.subject, sessionId: grant.sessionId, source: 'sdk', timestamp: Date.now(), eventId: crypto.randomUUID(), data } });
+      expect(response.status, `${kind} ${tenant} ${type}: ${await response.clone().text()}`).toBe(200);
+      await h.drain();
+      return await response.json() as Record<string, unknown>;
+    };
+    const page = async (grant: Grant, pageInstance: string) => {
+      const response = await h.call(`/v1/${tenant}/decisions/snapshot?page=home&pageInstance=${pageInstance}`, { grant, tenant, cf });
+      const piece = (await response.json() as { decisions?: Array<{ contentId: string; decisionId: string; renderOffer?: string }> }).decisions?.[0];
+      await h.drain();
+      expect(piece?.renderOffer, `${kind} ${tenant}: the rendered basis offers an acknowledgement`).toBeTruthy();
+      const ack = await act(grant, 'content_impression', { contentId: piece!.contentId, decisionId: piece!.decisionId, renderOffer: piece!.renderOffer, page: 'home', pageInstance, slot: 'hero', position: 0 });
+      expect(ack.render, `${kind} ${tenant}: the render is durably acknowledged`).toMatchObject({ version: 1, decisionId: piece!.decisionId, status: 'durable' });
+      await act(grant, 'content_click', { contentId: piece!.contentId, slot: 'hero', decisionId: piece!.decisionId, contentType: 'editorial' });
+      return piece!.decisionId;
+    };
+    await act(g, 'product_view', TABBY_VIEW);
+    await act(g, 'product_view', UNKNOWN_VIEW);
+    const visitorDecision = await page(g, `w37-t5-${tenant}-anonymous`);
+    const orderId = `W37-${tenant.toUpperCase()}-ORDER-7731`;
+    await act(g, 'purchase', { orderId, value: 395, currency: 'USD', items: [{ productId: TABBY_VIEW.productId, quantity: 1, price: 395 }] });
+    for (const [path, body] of [[`/realtime/segments/${g.subject}`, { segment: 'w37-manual' }], [`/realtime/personalization/${g.subject}`, undefined],
+      ['/sort', { userId: g.subject, sessionId: g.sessionId, candidates: [{ id: 'tabby', line: 'Tabby' }, { id: 'rogue', line: 'Rogue' }, { id: 'unfiled', line: 'Unfiled' }] }]] as Array<[string, unknown]>) {
+      const response = await h.call(path, { grant: g, tenant, body, cf });
+      expect(response.status, `${kind} ${tenant} ${path}: ${await response.clone().text()}`).toBe(200);
+    }
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const linked = await h.call(`/v1/${tenant}/identity/link`, { grant: g, tenant, body: { visitorId: g.subject, accountId: T5_ACCOUNT, exp,
+      assertion: await signAssertion(`${tenant}-identity-material`, tenant, g.subject, T5_ACCOUNT, exp) } });
+    const link = await linked.json() as { shopperId: string; session: Grant };
+    expect(linked.status, `${kind} ${tenant}: the signed link`).toBe(200);
+    await h.drain();
+    await act(link.session, 'product_view', TABBY_VIEW);
+    const shopperDecision = await page(link.session, `w37-t5-${tenant}-signed-in`);
+    await h.drain();
+    h.queued.length = 0; // transport copies of what the managed path already stored (not measured; see the banner)
+    return { tenant, visitorId: g.subject, sessionId: g.sessionId, grantIds: [g.grantId!, link.session.grantId!], shopperId: link.shopperId,
+      linkedSessionId: link.session.sessionId, orderId, decisions: { visitor: visitorDecision, shopper: shopperDecision } };
+  };
+  const shoppers = { [ACME]: await shop(ACME), [GLOBEX]: await shop(GLOBEX) } as Record<string, T5Shopper>;
+
+  // The next day: the five-minute cron folds yesterday's closed hours.
+  vi.setSystemTime(erasedAt);
+  const fold = async (tenant: string) => {
+    for (let run = 0; run < 16; run++) {
+      const result = await catchUp(h.env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, T5_LEARN(tenant) as unknown as Parameters<typeof catchUp>[2], Date.now(), {}, h.env);
+      if (!result.built.length && !result.pending) break;
+    }
+  };
+  for (const tenant of [ACME, GLOBEX]) await fold(tenant);
+
+  const operatorToken = () => new SignJWT({ sub: 'w37-operator', type: 'service', roles: ['admin'], permissions: ['*'] })
+    .setProtectedHeader({ alg: 'HS256' }).setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(SECRET));
+  const operator = async (tenant: string, path: string, body?: unknown): Promise<T5Answer> => {
+    const response = await h.call(`/v1/${tenant}${path}`, { tenant, body, headers: { Authorization: `Bearer ${await operatorToken()}` } });
+    return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, any> };
+  };
+
+  /** Every identifier of her the stores could carry: browser, sessions, grants, person, account, order and every decision id. */
+  const identifiers = (s: T5Shopper) => [s.visitorId, s.sessionId, ...s.grantIds, s.shopperId, T5_ACCOUNT, s.linkedSessionId, s.orderId, s.decisions.visitor, s.decisions.shopper];
+  /** A physical name that belongs to no tenant: no registered tenant is one of its segments. */
+  const tenantless = (name: string) => ![ACME, GLOBEX].some(tenant => segments(name).includes(tenant));
+  /** Every physical entry of the tenant (and every tenantless entry) that carries one of her identifiers. */
+  const holding = (tenant: string, s: T5Shopper) => {
+    const ids = identifiers(s), found: Array<{ store: string; name: string; key: string }> = [];
+    const carries = (text: string) => ids.some(id => text.includes(id));
+    for (const [store, data] of [['CACHE', h.cache.data], ['SESSIONS', h.sessions.data], ['STORAGE', h.storage.data]] as const)
+      for (const [key, value] of data) if ((names(tenant)(key) || tenantless(key)) && carries(key + '\n' + value)) found.push({ store, name: key, key });
+    for (const [id, item] of h.objects) {
+      if (!names(tenant)(id) && !tenantless(id)) continue;
+      // An object is judged by what it stores: the platform keeps no name, only the id derived from it.
+      for (const [key, value] of item.data) if (carries(key + '\n' + JSON.stringify(value))) found.push({ store: id.slice(0, id.indexOf('|')), name: id, key });
+    }
+    return found;
+  };
+  const erasureRecord = (tenant: string) => (entry: { store: string; name: string; key: string }) =>
+    entry.store === 'STORAGE' ? entry.name.startsWith(`erasures/${tenant}/`) : entry.store === 'SHOPPER_REFLEX' && ERASURE_RECEIPT.test(entry.key);
+  const tenantState = (tenant: string) => JSON.stringify({
+    kv: [...h.cache.data, ...h.sessions.data].filter(([key]) => names(tenant)(key)).sort(),
+    r2: [...h.storage.data].filter(([key]) => names(tenant)(key)).sort(),
+    objects: [...h.objects].filter(([id]) => names(tenant)(id)).map(([id, item]) => [id, [...item.data].sort(([a], [b]) => a.localeCompare(b))]).sort(),
+  });
+  /** The tenantless delivery identities, each with the one tenant claim that names it (src/ledger/writer.ts:250, delivery.ts:206). */
+  const identities = () => [...h.storage.data.keys()].filter(key => key.startsWith('ledger-delivery/identities/')).map(key => {
+    const id = key.slice('ledger-delivery/identities/'.length, -'.json'.length);
+    const claims = [...h.storage.data.keys()].filter(claim => claim.startsWith('ledger-delivery/claims/') && claim.endsWith(`/${id}.json`));
+    return { key, value: h.storage.data.get(key)!, owners: [...new Set(claims.map(claim => claim.split('/')[2]))] };
+  });
+  /** The documented per-shopper export: every operator read of the person and her browser, and the listed partition objects. */
+  const exported = async (tenant: string, s: T5Shopper, date: string) => {
+    const visitor = await operator(tenant, `/identity/visitor/${s.visitorId}`);
+    const person = await operator(tenant, `/identity/shopper/${s.shopperId}`);
+    const each = async (ids: string[], path: (id: string) => string) => {
+      const answers: Record<string, T5Answer> = {};
+      for (const id of ids) answers[id] = await operator(tenant, path(id));
+      return answers;
+    };
+    const receipts = await each([s.visitorId, s.shopperId], id => `/visitors/${id}/receipts`);
+    const recent = await each([s.visitorId, s.shopperId], id => `/visitors/${id}/recent`);
+    const records = await each([s.decisions.visitor, s.decisions.shopper], id => `/ledger/${encodeURIComponent(id)}`);
+    const partition: Record<string, { status: number; rows: Array<Record<string, any>> }> = {};
+    for (const stream of T5_STREAMS) {
+      const listed = await operator(tenant, `/ledger/batches?date=${date}&stream=${stream}`);
+      const rows = ((listed.body.objects ?? []) as Array<{ key: string }>).flatMap(object => (h.storage.data.get(object.key) ?? '').split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, any>));
+      partition[stream] = { status: listed.status, rows };
+    }
+    return { visitor, person, receipts, recent, records, partition };
+  };
+  /** Her rows, straight from the tenant's partition in R2, per stream. */
+  const partitionRows = (tenant: string, s: T5Shopper, stream: string) => [...h.storage.data].filter(([key]) => key.startsWith(`${tenant}/`) && key.split('/')[3] === stream)
+    .flatMap(([, body]) => body.split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, any>))
+    .filter(row => row.visitor_id === s.visitorId || row.visitor_id === s.shopperId);
+  const rowId = (row: Record<string, any>) => String(row.decision_id ?? row.outcome_id ?? row.record_id ?? row.behavior_id ?? row.event_id ?? JSON.stringify(row));
+
+  /** Erase her through the documented route, then run the work the erasure schedules, the next night. */
+  const erase = async (s: T5Shopper) => {
+    let answer = await operator(s.tenant, '/identity/erase', { shopperId: s.shopperId });
+    for (let resume = 0; answer.body.status === 'pending' && resume < 40; resume++) answer = await operator(s.tenant, '/identity/erase', { shopperId: s.shopperId });
+    await h.drain();
+    for (let round = 0; round < 3; round++) for (const [id, item] of h.objects) {
+      if (!id.startsWith(`SHOPPER_REFLEX|${shopperObjectName(s.tenant, '')}`) || !item.alarms.length) continue;
+      item.alarms.length = 0;
+      await (h.restart('SHOPPER_REFLEX', id.slice('SHOPPER_REFLEX|'.length)).instance as ShopperReflex).alarm();
+      await h.drain();
+    }
+    vi.setSystemTime(night); // the 03:00 cron of the next day
+    const rewrites: Array<Record<string, any>> = [];
+    for (let run = 0; run < 12; run++) {
+      const rewrite = await operator(s.tenant, '/ledger/erasures/rewrite', {});
+      expect(rewrite.status, `the rewrite route: ${JSON.stringify(rewrite.body)}`).toBe(200);
+      rewrites.push(rewrite.body);
+      if (!rewrite.body.more) break;
+    }
+    await fold(s.tenant);
+    await h.drain();
+    vi.setSystemTime(erasedAt);
+    return { answer, rewrites };
+  };
+  return { h, kind, served, shoppers, operator, identifiers, holding, erasureRecord, tenantState, identities, exported, partitionRows, rowId, erase };
+}
+
+describe('unit:W37.T5', () => {
+  for (const kind of ['session', 'do'] as const) {
+    it(`host (${kind}): the per-shopper export of each non-default brand returns her own identity link, decisions, ring and every stream of the partition, never the other brand's, and nothing of her once she is erased`, async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        const w = await t5World(kind);
+        const date = new Date(w.served).toISOString().slice(0, 10);
+        for (const [tenant, other] of [[ACME, GLOBEX], [GLOBEX, ACME]] as const) {
+          const s = w.shoppers[tenant]!, x = await w.exported(tenant, s, date);
+          // identity links (SESSIONS)
+          expect(x.visitor, `W37.T5 — ${kind} ${tenant}: the browser's link`).toMatchObject({ status: 200, body: { ok: true, tenant, visitorId: s.visitorId, shopperId: s.shopperId } });
+          expect(x.person.status, `W37.T5 — ${kind} ${tenant}: the person`).toBe(200);
+          expect(x.person.body.shopper.visitors.map((v: { visitorId: string }) => v.visitorId), `W37.T5 — ${kind} ${tenant}: the person's browsers`).toEqual([s.visitorId]);
+          // decisions (R2 decision stream, DECISION_RING)
+          for (const [id, decision] of [[s.visitorId, s.decisions.visitor], [s.shopperId, s.decisions.shopper]] as const) {
+            expect(x.receipts[id].body.receipts?.map((r: { decision_id: string }) => r.decision_id), `W37.T5 — ${kind} ${tenant}: ${id}'s receipts`).toEqual([decision]);
+            expect(x.recent[id].body.ring?.map((r: { decision_id: string }) => r.decision_id), `W37.T5 — ${kind} ${tenant}: ${id}'s ring`).toEqual([decision]);
+            expect(x.records[decision], `W37.T5 — ${kind} ${tenant}: the record by id`).toMatchObject({ status: 200, body: { ok: true, stream: 'decision', record: { decision_id: decision, tenant, visitor_id: id } } });
+          }
+          // every stream of the partition: the listed objects carry every row of hers the partition holds
+          for (const stream of T5_STREAMS) {
+            const stored = w.partitionRows(tenant, s, stream).map(w.rowId).sort();
+            expect(stored.length, `${kind} ${tenant}: the fixture wrote her ${stream} rows`).toBeGreaterThan(0);
+            expect(x.partition[stream]!.status).toBe(200);
+            expect(x.partition[stream]!.rows.filter(row => row.visitor_id === s.visitorId || row.visitor_id === s.shopperId).map(w.rowId).sort(),
+              `W37.T5 — ${kind} ${tenant}: the ${stream} export lists every object that holds her ${stream} rows`).toEqual(stored);
+            expect(x.partition[stream]!.rows.every(row => row.tenant === tenant), `W37.T5 — ${kind} ${tenant}: the ${stream} export is ${tenant}'s alone`).toBe(true);
+          }
+          // never through the other brand's path: the same browser is the other brand's own shopper there, never this one
+          const across = await w.exported(other, s, date), theirs = w.shoppers[other]!;
+          expect(across.person, `W37.T5 — ${kind}: ${other} does not know ${tenant}'s person`).toMatchObject({ status: 404, body: { ok: false, error: 'unknown shopper' } });
+          expect(across.visitor.body.shopperId, `W37.T5 — ${kind}: at ${other} the shared browser is ${other}'s own person`).toBe(theirs.shopperId);
+          expect(across.receipts[s.shopperId].body.receipts, `W37.T5 — ${kind}: ${other} holds no receipt of ${tenant}'s person`).toEqual([]);
+          expect(across.recent[s.shopperId].body.ring, `W37.T5 — ${kind}: ${other} holds no ring of ${tenant}'s person`).toEqual([]);
+          expect(across.receipts[s.visitorId].body.receipts?.map((r: { decision_id: string }) => r.decision_id), `W37.T5 — ${kind}: at ${other} the shared browser's receipts are ${other}'s`).toEqual([theirs.decisions.visitor]);
+          for (const decision of [s.decisions.visitor, s.decisions.shopper]) expect(across.records[decision]!.status, `W37.T5 — ${kind}: ${other} refuses ${tenant}'s record id`).toBe(400);
+          const carried = JSON.stringify([across.visitor.body.link, across.person.body.shopper, Object.values(across.receipts).map(r => r.body.receipts), Object.values(across.recent).map(r => r.body.ring),
+            Object.values(across.records).map(r => r.body.record), Object.values(across.partition).map(p => p.rows)]);
+          for (const id of [s.shopperId, s.decisions.visitor, s.decisions.shopper, s.orderId, s.linkedSessionId])
+            expect(carried.includes(id), `W37.T5 — ${kind}: nothing ${other} exports carries ${tenant}'s ${id}`).toBe(false);
+        }
+
+        // After her erasure: nothing of hers is exported at acme; globex's export of the same browser is unchanged.
+        const globexBefore = JSON.stringify(await w.exported(GLOBEX, w.shoppers[GLOBEX]!, date));
+        const s = w.shoppers[ACME]!;
+        const { answer } = await w.erase(s);
+        expect(answer, `W37.T5 — ${kind}: the erasure completes its local steps`).toMatchObject({ status: 200, body: { ok: true, status: 'local_complete', tenant: ACME, shopperId: s.shopperId } });
+        const after = await w.exported(ACME, s, date);
+        expect(after.visitor.body, `W37.T5 — ${kind}: no link is exported for the erased browser`).toMatchObject({ ok: true, visitorId: s.visitorId, shopperId: null, link: null });
+        expect(after.person.status, `W37.T5 — ${kind}: the erased person is unknown`).toBe(404);
+        for (const id of [s.visitorId, s.shopperId]) {
+          expect(after.receipts[id].body.receipts, `W37.T5 — ${kind}: no receipt of ${id} after erasure`).toEqual([]);
+          expect(after.recent[id].body.ring, `W37.T5 — ${kind}: no ring of ${id} after erasure`).toEqual([]);
+        }
+        // Hidden at once (410, doc 22 §15), then physically gone after the rewrite (404).
+        for (const decision of [s.decisions.visitor, s.decisions.shopper]) expect([404, 410], `W37.T5 — ${kind}: ${decision} is no longer exported`).toContain(after.records[decision]!.status);
+        const exportedText = JSON.stringify(after.partition);
+        for (const id of w.identifiers(s)) expect(exportedText.includes(id), `W37.T5 — ${kind}: the partition export carries no ${id} after the rewrite`).toBe(false);
+        expect(JSON.stringify(await w.exported(GLOBEX, w.shoppers[GLOBEX]!, date)), `W37.T5 — ${kind}: globex's export of the same browser is untouched by acme's erasure`).toBe(globexBefore);
+      } finally { vi.useRealTimers(); }
+    }, 120_000);
+
+    it(`host (${kind}): erasing a shopper of either non-default brand leaves no identifier of hers in any store of that tenant but the erasure's own records, leaves the other brand byte-for-byte, and reaches the tenantless delivery identities and the unerasable stores as the kit says`, async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        const w = await t5World(kind);
+        const stores = (list: ReturnType<typeof w.holding>) => [...new Set(list.map(entry => entry.store))].sort();
+        for (const [tenant, other] of [[ACME, GLOBEX], [GLOBEX, ACME]] as const) {
+          const s = w.shoppers[tenant]!;
+          // CONTROL: the fixture put her into every store that holds shopper data on this host, and the detector sees it.
+          const before = w.holding(tenant, s);
+          expect(stores(before), `${kind} ${tenant}: her data is in every store the fixture reaches`).toEqual(
+            (kind === 'session' ? ['CACHE', 'DECISION_RING', 'LEARN_STATS', 'SESSIONS', 'SHOPPER_REFLEX', 'STORAGE'] : ['DECISION_RING', 'LEARN_STATS', 'SESSIONS', 'SHOPPER_REFLEX', 'STORAGE']));
+          for (const prefix of T5_STREAMS.map(stream => `/${stream}/`).concat([`aggregates/${tenant}/rings/`]))
+            expect(before.some(entry => entry.store === 'STORAGE' && entry.name.includes(prefix)), `${kind} ${tenant}: her rows are under ${prefix}`).toBe(true);
+          // The tenantless delivery identities: attributed to one tenant each, and carrying nothing of hers.
+          const identitiesBefore = w.identities();
+          expect(identitiesBefore.length, `${kind}: the managed path wrote delivery identities`).toBeGreaterThan(0);
+          for (const identity of identitiesBefore) expect(identity.owners, `W37.T5 — ${kind}: ${identity.key} is claimed by exactly one tenant`).toHaveLength(1);
+
+          const otherBefore = w.tenantState(other);
+          const { answer, rewrites } = await w.erase(s);
+          expect(answer, `W37.T5 — ${kind} ${tenant}: the documented erasure completes its local steps`).toMatchObject({ status: 200, body: { ok: true, complete: false, status: 'local_complete', tenant, shopperId: s.shopperId } });
+          expect(rewrites.at(-1), `W37.T5 — ${kind} ${tenant}: the next night's rewrite finishes`).toMatchObject({ ok: true, tenant, more: false });
+
+          const residue = w.holding(tenant, s).filter(entry => !w.erasureRecord(tenant)(entry));
+          expect(residue.map(entry => `${entry.store} ${entry.name}${entry.store === 'STORAGE' || entry.store === 'CACHE' || entry.store === 'SESSIONS' ? '' : ' :: ' + entry.key}`),
+            `W37.T5 — ${kind} ${tenant}: after the erasure, its scheduled work and the next night's rewrite, no store of ${tenant} still carries her identifiers outside the erasure's own records`).toEqual([]);
+          expect(w.tenantState(other), `W37.T5 — ${kind}: erasing ${tenant}'s shopper leaves ${other}'s stores byte-for-byte`).toBe(otherBefore);
+          for (const identity of w.identities()) {
+            expect(identity.owners, `W37.T5 — ${kind} ${tenant}: ${identity.key} stays attributable to exactly one tenant`).toHaveLength(1);
+            expect(w.identifiers(s).filter(id => (identity.key + identity.value).includes(id)), `W37.T5 — ${kind} ${tenant}: ${identity.key} carries no identifier of hers`).toEqual([]);
+            expect(Object.keys(JSON.parse(identity.value)).sort(), `W37.T5 — ${kind}: a delivery identity holds hashes and counts only`).toEqual(['count', 'digest', 'id', 'version']);
+          }
+          // What cannot be erased locally is reached as frozen, explicitly unresolved obligations naming her (kit :42).
+          const reconciliation = await w.operator(tenant, '/identity/erase', { shopperId: s.shopperId, reconcile: { at: answer.body.reconciliation.at, erasureId: answer.body.reconciliation.erasureId, read: true } });
+          expect(reconciliation.status, `W37.T5 — ${kind} ${tenant}: the reconciliation read: ${JSON.stringify(reconciliation.body).slice(0, 300)}`).toBe(202);
+          const unverified = (reconciliation.body.reconciliation?.obligations ?? []).find((o: { kind: string }) => o.kind === 'unverified');
+          expect(unverified, `W37.T5 — ${kind} ${tenant}: the unerasable stores are an explicit obligation`).toMatchObject({ status: 'unresolved',
+            configuration: { history: 'unverified provider mappings, retired aliases, analytics/log datasets and tenantless historical D1' } });
+          expect(unverified.identities.map((i: { subject: string }) => i.subject).sort(), `W37.T5 — ${kind} ${tenant}: the obligation names her person and her browser`).toEqual([s.shopperId, s.visitorId].sort());
+        }
+      } finally { vi.useRealTimers(); }
+    }, 120_000);
+  }
 });
