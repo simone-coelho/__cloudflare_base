@@ -13,7 +13,9 @@
 import { build } from 'esbuild';
 import { Miniflare } from 'miniflare';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 /** The checkout this file belongs to. */
 export const CHECKOUT_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -75,4 +77,66 @@ export async function customerAssetRuntime(environment: CustomerEnvironment,
   });
   await runtime.ready;
   return { runtime, outbound: () => outbound, dispose: () => runtime.dispose() };
+}
+
+/** One Worker version as a Cloudflare version upload delivered it. */
+export interface UploadedVersion {
+  /** The ES modules the version upload sent, its main module first. */
+  modules: Array<{ path: string; contents: string }>;
+  compatibilityDate: string;
+  compatibilityFlags: string[];
+  /** The version's plain-text and secret-text bindings. */
+  bindings: Record<string, string>;
+  /** The name of the version's `assets` binding. */
+  assetsBinding: string;
+  /** Every file the asset upload sent, by the path it is served at. */
+  files: Map<string, Uint8Array>;
+  /** The version upload's `assets.config`, as Cloudflare receives it. */
+  assetConfig: Record<string, unknown>;
+}
+
+/** The asset directory's rule files; an upload's rules arrive only in `assets.config`. */
+const RULE_FILES = ['_headers', '_redirects'] as const;
+
+/**
+ * A Worker version served the way the asset service serves an upload: its
+ * modules, its bindings, the uploaded asset files and nothing else, under its
+ * `assets.config`. Header and redirect rules reach the asset service only as
+ * `assets.config._headers` / `._redirects` — the fields Wrangler fills from an
+ * assets directory's `_headers` and `_redirects` files and sends with the
+ * version (node_modules/wrangler/wrangler-dist/cli.js :145936-145950,
+ * :147125-147131, :147745-147749) — so they are written as those files for
+ * Miniflare's parser of the same rules (node_modules/miniflare/dist/src/index.js
+ * :81901-81937). An uploaded asset that happens to be named like a rule file is
+ * a plain file to the asset service, never a rule, so it is not written.
+ */
+export async function uploadedVersionRuntime(version: UploadedVersion): Promise<CustomerAssetRuntime> {
+  const directory = mkdtempSync(join(tmpdir(), 'units-native-upload-'));
+  for (const [path, bytes] of version.files) {
+    const target = resolve(directory, '.' + path);
+    if (!target.startsWith(directory + sep)) throw new Error(`uploaded asset path leaves the upload: ${path}`);
+    if ((RULE_FILES as readonly string[]).includes(target.slice(directory.length + 1))) continue;
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, bytes);
+  }
+  for (const file of RULE_FILES) {
+    const rules = version.assetConfig[file];
+    if (typeof rules === 'string') writeFileSync(join(directory, file), rules);
+  }
+  const config = version.assetConfig as { run_worker_first?: unknown; html_handling?: 'auto-trailing-slash' | 'force-trailing-slash' | 'drop-trailing-slash' | 'none'; not_found_handling?: 'single-page-application' | '404-page' | 'none' };
+  let outbound = 0;
+  const runtime = new Miniflare({
+    cf: false,
+    modules: version.modules.map(module => ({ type: 'ESModule' as const, path: module.path, contents: module.contents })),
+    compatibilityDate: version.compatibilityDate, compatibilityFlags: version.compatibilityFlags,
+    bindings: version.bindings,
+    assets: {
+      directory, binding: version.assetsBinding,
+      routerConfig: { has_user_worker: true, invoke_user_worker_ahead_of_assets: config.run_worker_first === true },
+      assetConfig: { html_handling: config.html_handling ?? 'auto-trailing-slash', not_found_handling: config.not_found_handling ?? 'none' },
+    },
+    outboundService: () => { outbound++; throw new Error('units native harness forbids outbound network'); },
+  });
+  try { await runtime.ready; } catch (error) { rmSync(directory, { recursive: true, force: true }); throw error; }
+  return { runtime, outbound: () => outbound, dispose: async () => { await runtime.dispose(); rmSync(directory, { recursive: true, force: true }); } };
 }

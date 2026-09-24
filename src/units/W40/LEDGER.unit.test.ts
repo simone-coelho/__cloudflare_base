@@ -57,6 +57,26 @@
 //       `immutable` with `max-age` of at least one year (31536000 s), the value
 //       this repository already uses for immutable served bytes
 //       (src/routes/aiScene.ts:29, src/services/sceneGen.ts:111).
+//       P4 "while the existing path keeps working": the unversioned paths still
+//       serve the current bundles and are neither `immutable` nor long-lived (no
+//       max-age of a year or more), so a release reaches the customers who load
+//       them; a year-long immutable unversioned path would hold a superseded SDK
+//       for a year (spec review 2026-09-24, defect 1).
+//       P4 "served": served by what `npm run deploy` uploads. Customer deploys go
+//       only through scripts/stamp-workflow.mjs (docs/deployment/01-deploy.md:7):
+//       its package step (`--mode package`, profile local-v1, the command CI runs,
+//       .github/workflows/ci.yml:89) builds the artifact, and its create/upload
+//       step sends that artifact's asset files and a version whose `assets.config`
+//       is everything the asset service is told. Header rules reach the asset
+//       service only as `assets.config._headers`, the field Wrangler fills from an
+//       assets directory's `_headers` file (node_modules/wrangler/wrangler-dist/
+//       cli.js:145936-145950, :147125-147131). The deploy leg therefore serves the
+//       version the real create step uploaded — its module, bindings, uploaded
+//       files and asset configuration, nothing read from public/ — and observes
+//       the same Cache-Control outcome as the native leg (spec review 2026-09-24,
+//       defect 2). How the rule travels from the tree to the upload is the build's
+//       choice; the asset contract name stays customer-assets-v2 and the uploaded
+//       file set stays ASSETS (scripts/stamp-workflow.test.mjs:497-498, :662).
 //   (e) P5 "its integration example builds against the package": every fenced
 //       example in the guide that imports the package by name bundles with the
 //       repository's own bundler (esbuild) resolving the package through a
@@ -75,7 +95,7 @@ import { build } from 'esbuild';
 import ts from 'typescript';
 import { JSDOM } from 'jsdom';
 import { VERSION } from '@/sdk/version';
-import { CHECKOUT_ROOT, customerAssetRuntime } from '../_native';
+import { CHECKOUT_ROOT, customerAssetRuntime, uploadedVersionRuntime, type UploadedVersion } from '../_native';
 
 const ROOT = CHECKOUT_ROOT;
 const PKG_DIR = join(ROOT, 'packages', 'sdk');
@@ -149,6 +169,130 @@ function cacheDirectives(header: string | null): Map<string, string> {
     if (key) out.set(key.toLowerCase(), (value ?? '').replace(/"/g, ''));
   }
   return out;
+}
+
+/** The criterion's two Cache-Control properties: `immutable`, and a max-age of at least a year. */
+function cachePolicy(header: string | null): { immutable: boolean; longLived: boolean } {
+  const directives = cacheDirectives(header);
+  return { immutable: directives.has('immutable'), longLived: Number(directives.get('max-age') ?? 0) >= LONG_LIVED_SECONDS };
+}
+
+// --- The customer deploy (P4 deploy leg) -----------------------------------
+
+/** scripts/stamp-workflow.mjs, the only path `npm run deploy` takes (docs/deployment/01-deploy.md:7). */
+interface StampWorkflow { ASSETS: string[]; canonical(value: unknown): string; sha256(value: string | Uint8Array): string }
+const stampWorkflow = () => import(pathToFileURL(join(ROOT, 'scripts', 'stamp-workflow.mjs')).href) as Promise<StampWorkflow>;
+
+/**
+ * The deploy's package step as CI and an operator run it (.github/workflows/ci.yml:89,
+ * docs/deployment/01-deploy.md:12): the real CLI, `--mode package`, the private input
+ * `{"profile":"local-v1"}`, the artifact written to an owner-only directory. The CLI
+ * itself reports only "unavailable"; the executed checks it prints name the cause.
+ */
+function packageStep(directory: string): { artifact: string; status: unknown; failure: string } {
+  const input = join(directory, 'package-input.json'), artifact = join(directory, 'artifact.json');
+  writeFileSync(input, JSON.stringify({ profile: 'local-v1' }), { mode: 0o600 });
+  const run = spawnSync(process.execPath, [join(ROOT, 'scripts', 'stamp-workflow.mjs'), '--mode', 'package', '--input', input, '--output', artifact],
+    { cwd: ROOT, encoding: 'utf8', timeout: 540_000, maxBuffer: 512 * 1024 * 1024 });
+  const answer = /^\{.*"status".*\}$/m.exec(run.stdout ?? '')?.[0];
+  const status = answer ? (JSON.parse(answer) as { status?: unknown }).status : undefined;
+  if (run.status === 0 && existsSync(artifact)) return { artifact, status, failure: `exit 0: ${answer}` };
+  const checks = [...(run.stdout ?? '').matchAll(/^Executed artifact check (.*)$/gm)].map(line =>
+    JSON.parse(line[1]!) as { command: string; exitCode: number | null; stdout: { base64: string }; stderr: { base64: string } });
+  const failed = checks.find(check => check.exitCode !== 0);
+  const said = failed && [failed.stdout, failed.stderr].map(part => Buffer.from(part.base64, 'base64').toString('utf8')).join('\n')
+    .split('\n').map(line => line.trim()).filter(Boolean).slice(-2).join(' | ');
+  return { artifact, status, failure: `exit ${run.status}${failed ? `; its check \`${failed.command}\` exited ${failed.exitCode}: ${said}`
+    : `${checks.length} checks passed, then: ${(run.stderr ?? '').trim()}`}` };
+}
+
+const ACCOUNT = 'a'.repeat(32), ZONE = 'b'.repeat(32), OPERATION = '11111111-1111-4111-8111-111111111111';
+const OWNER = 'ops-22222222-2222-4222-8222-222222222222', MATERIAL = '9qL8wEfR73mCu5xY02hJ6zN4bAvT1sKd';
+const DATABASE = '33333333-3333-4333-8333-333333333333';
+
+/** A synthetic customer stamp to create: the desired state of scripts/stamp-workflow.test.mjs:22-37. */
+function stampDesired(workflow: StampWorkflow) {
+  const script = 'acme-staging', hash = (value: unknown) => workflow.sha256(workflow.canonical(value));
+  const policy = { id: 'approved-fixture', revision: 1, durationMs: 123456, basis: 'admitted', renewal: 'new-record-only' };
+  const policies: { version: number; tenants: Record<string, Record<string, unknown>> } =
+    { version: 1, tenants: { 'brand-a': Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly'].map(k => [k, { ...policy }])) } };
+  const desired = { version: 1, customer: 'acme', account: ACCOUNT, environment: 'staging', script, ownership: 'a'.repeat(64),
+    resources: { cache: { name: script + '-cache', id: '1'.repeat(32) }, sessions: { name: script + '-sessions', id: '2'.repeat(32) },
+      database: { name: script + '-database', id: DATABASE }, storage: { name: script + '-storage', id: script + '-storage' },
+      queue: { name: script + '-queue', id: '4'.repeat(32) }, deadLetter: { name: script + '-deadletter', id: '5'.repeat(32) }, analytics: 'acme_staging_ops_v1' },
+    tenants: { provisioned: ['brand-a'], hosts: { 'a.example.test': 'brand-a' } }, origins: ['https://a.example.test'], owners: [OWNER],
+    vars: { JWT_ISSUER: script, JWT_AUDIENCE: 'customer-api', REFLEX_HOST: 'session' } as Record<string, string>,
+    secrets: { JWT_SECRET: MATERIAL, SDK_KEYS: 'brand-a:' + MATERIAL, IDENTITY_SALT: MATERIAL, IDENTITY_SECRETS: 'brand-a:' + MATERIAL,
+      ALERT_WEBHOOK_URL: 'https://alerts.example.test/private-fixture' },
+    routes: [{ zone: ZONE, pattern: 'a.example.test/*' }] };
+  const telemetry = { environment: desired.environment, schema: 'ops-v1',
+    analytics: { binding: 'ANALYTICS', dataset: desired.resources.analytics, accessPolicy: 'approved-analytics' },
+    monitor: { binding: 'CACHE', namespace: 'monitor', accessPolicy: 'approved-monitor' },
+    alert: { binding: 'ALERT_WEBHOOK_URL', destination: 'approved-alert', urlSha256: workflow.sha256(desired.secrets.ALERT_WEBHOOK_URL), accessPolicy: 'approved-alert' } };
+  for (const kind of ['analytics', 'monitor', 'alert'] as const) {
+    policies.tenants['brand-a']![`telemetry.${kind}.${hash({ tenant: 'brand-a', environment: desired.environment, schema: 'ops-v1', ...telemetry[kind] })}`] = { ...policy };
+  }
+  desired.vars.RETENTION = JSON.stringify(policies);
+  desired.vars.TENANT_CONNECTORS = JSON.stringify({ version: 1, tenants: { 'brand-a': { telemetry } } });
+  return desired;
+}
+
+interface CloudflareRecord {
+  calls: string[];
+  manifests: Array<Record<string, { hash: string }>>;
+  uploads: Record<string, string>;
+  versions: Array<{ id: string; modules: Record<string, string>; metadata: {
+    main_module: string; compatibility_date: string; compatibility_flags: string[];
+    bindings: Array<{ type: string; name: string; text?: string }>; assets?: { config?: Record<string, unknown> } } }>;
+}
+
+/**
+ * The deploy's create step exactly as `npm run deploy` runs it — scripts/deploy.sh
+ * staging, `--mode create --execute`, the artifact the package step wrote, the token on
+ * stdin, a protected operation state directory — with its Node process preloaded with
+ * src/units/_cloudflare.mjs, a recording Cloudflare account behind the CLI's own REST
+ * serializer. The account already holds the stamp's KV namespaces, D1 database and
+ * queues, as `create` accepts; the bucket is created. (A stamp whose dead-letter queue
+ * does not exist yet cannot be created through the CLI at this revision: its receipt
+ * key `resource-deadLetter` fails the protected store's key pattern,
+ * scripts/stamp-workflow.mjs:358, :750.) Returns the CLI's answer and every request.
+ */
+function createStep(workflow: StampWorkflow, directory: string, artifact: string): { exit: number | null; said: string; record?: CloudflareRecord } {
+  const input = join(directory, 'create-input.json'), state = join(directory, 'state'), recorded = join(directory, 'cloudflare-record.json');
+  mkdirSync(state, { mode: 0o700 });
+  const desired = stampDesired(workflow);
+  writeFileSync(input, JSON.stringify({ desired,
+    bootstrap: { owner: { id: OWNER, email: 'owner@example.test', name: 'Initial Owner' }, password: 'Different-Temporary9' },
+    authorization: { operation: OPERATION, mode: 'create', account: ACCOUNT, script: desired.script, evidence: 'b'.repeat(64), expiresAt: Date.now() + 3_600_000 } }), { mode: 0o600 });
+  const preload = `--import=${pathToFileURL(join(ROOT, 'src', 'units', '_cloudflare.mjs')).href}`;
+  const run = spawnSync('bash', [join(ROOT, 'scripts', 'deploy.sh'), 'staging', '--mode', 'create', '--input', input, '--state', state,
+    '--operation', OPERATION, '--artifact', artifact, '--execute'], { cwd: ROOT, encoding: 'utf8', timeout: 300_000, maxBuffer: 64 * 1024 * 1024,
+    input: JSON.stringify({ apiToken: 'z'.repeat(32) }),
+    env: { ...process.env, NODE_OPTIONS: [process.env.NODE_OPTIONS, preload].filter(Boolean).join(' '),
+      UNITS_CLOUDFLARE: JSON.stringify({ account: ACCOUNT, zones: { [ZONE]: 'example.test' }, record: recorded, existing: {
+        [`/storage/kv/namespaces/${desired.resources.cache.id}`]: { id: desired.resources.cache.id, title: desired.resources.cache.name },
+        [`/storage/kv/namespaces/${desired.resources.sessions.id}`]: { id: desired.resources.sessions.id, title: desired.resources.sessions.name },
+        [`/d1/database/${DATABASE}`]: { uuid: DATABASE, name: desired.resources.database.name },
+        ...Object.fromEntries((['queue', 'deadLetter'] as const).map(kind => [`/queues/${desired.resources[kind].id}`, { queue_id: desired.resources[kind].id,
+          queue_name: desired.resources[kind].name, settings: { delivery_paused: false, message_retention_period: 86400 }, consumers: [] }])),
+      } }) } });
+  const record = existsSync(recorded) ? JSON.parse(readFileSync(recorded, 'utf8')) as CloudflareRecord : undefined;
+  return { exit: run.status, said: `${(run.stdout ?? '').trim()} ${(run.stderr ?? '').trim()}`.trim(), record };
+}
+
+/** The version the create step uploaded, as the asset service and the Worker runtime receive it. */
+function uploadedVersion(record: CloudflareRecord): UploadedVersion {
+  const version = record.versions.at(-1)!, metadata = version.metadata;
+  const manifest = Object.assign({}, ...record.manifests) as Record<string, { hash: string }>;
+  const main = metadata.main_module, names = [main, ...Object.keys(version.modules).filter(name => name !== main)];
+  return {
+    modules: names.map(name => ({ path: name, contents: version.modules[name] ?? '' })),
+    compatibilityDate: metadata.compatibility_date, compatibilityFlags: metadata.compatibility_flags,
+    bindings: Object.fromEntries(metadata.bindings.filter(b => b.type === 'plain_text' || b.type === 'secret_text').map(b => [b.name, b.text ?? ''])),
+    assetsBinding: metadata.bindings.find(b => b.type === 'assets')?.name ?? '',
+    files: new Map(Object.entries(manifest).map(([name, entry]) => [name, Buffer.from(record.uploads[entry.hash] ?? '', 'base64')])),
+    assetConfig: metadata.assets?.config ?? {},
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -356,7 +500,7 @@ describe('unit:W40.P4', () => {
     return { iife, esm };
   };
 
-  it('native: on both customer environments the published versioned URLs serve the current bundles with a long-lived immutable Cache-Control, and the existing unversioned paths still serve them', async () => {
+  it('native: on both customer environments the published versioned URLs serve the current bundles with a long-lived immutable Cache-Control, and the existing unversioned paths still serve them, neither immutable nor long-lived', async () => {
     const { iife, esm } = versionedPaths();
     for (const environment of ['staging', 'production'] as const) {
       const host = await customerAssetRuntime(environment);
@@ -375,17 +519,51 @@ describe('unit:W40.P4', () => {
           const response = await host.runtime.dispatchFetch('https://acme.example' + path);
           expect(response.status, `${environment} ${path} keeps working`).toBe(200);
           expect(sha256(await response.arrayBuffer()), `${environment} ${path} still serves the current bundle`).toBe(sha256(readFileSync(served)));
+          const cacheControl = response.headers.get('cache-control');
+          expect(cachePolicy(cacheControl), `W40.P4 — ${environment} ${path}, the existing unversioned path, is neither immutable nor long-lived, so a release reaches the customers who load it (Cache-Control: ${cacheControl})`)
+            .toEqual({ immutable: false, longLived: false });
         }
         expect(host.outbound(), 'serving the SDK makes no outbound request').toBe(0);
       } finally { await host.dispose(); }
     }
   }, 180_000);
 
-  it('deploy: the customer deploy artifact\'s asset contract (scripts/stamp-workflow.mjs ASSETS, what `npm run deploy` uploads) carries the published versioned bundles', async () => {
+  it('deploy: the version `npm run deploy` uploads — the artifact its package step builds (stamp-workflow --mode package), sent by its create step (scripts/deploy.sh staging --mode create) to a recording Cloudflare account — serves the published versioned URLs with the current bundles and a long-lived immutable Cache-Control, and the existing unversioned paths with the current bundles, neither immutable nor long-lived', async () => {
     const { iife, esm } = versionedPaths();
-    const workflow = await import(pathToFileURL(join(ROOT, 'scripts', 'stamp-workflow.mjs')).href) as { ASSETS: string[] };
+    const workflow = await stampWorkflow();
     for (const path of [...iife, ...esm]) expect(workflow.ASSETS, `the deployed asset set includes ${path}`).toContain(path.slice(1));
-  }, 60_000);
+
+    const directory = mkdtempSync(join(tmpdir(), 'w40-deploy-'));
+    try {
+      const packaged = packageStep(directory);
+      expect(packaged.status, `W40.P4 — the deploy's package step (node scripts/stamp-workflow.mjs --mode package, profile local-v1) builds the artifact the customer deploy uploads: ${packaged.failure}`).toBe('packaged');
+      const created = createStep(workflow, directory, packaged.artifact);
+      expect({ exit: created.exit, said: created.said, versions: created.record?.versions.length },
+        `the deploy's create step (scripts/deploy.sh staging --mode create) uploads one version: ${created.record?.calls.slice(-3).join(', ')}`)
+        .toEqual({ exit: 0, said: expect.stringContaining('"status":"uploaded-not-promoted"'), versions: 1 });
+      const upload = uploadedVersion(created.record!);
+      const sent = `the version upload's assets.config: ${JSON.stringify(upload.assetConfig)}`;
+      const host = await uploadedVersionRuntime(upload);
+      try {
+        const expected = [
+          ...[...iife.map(path => [path, SERVED_IIFE] as const), ...esm.map(path => [path, SERVED_ESM] as const)]
+            .map(([path, served]) => ({ path, status: 200, bytes: sha256(readFileSync(served)), immutable: true, longLived: true })),
+          ...([['/sdk/edge-personalization.js', SERVED_IIFE], ['/sdk/edge-personalization.esm.js', SERVED_ESM]] as const)
+            .map(([path, served]) => ({ path, status: 200, bytes: sha256(readFileSync(served)), immutable: false, longLived: false })),
+        ];
+        const observed: Array<Record<string, unknown>> = [], headers: string[] = [];
+        for (const { path } of expected) {
+          const response = await host.runtime.dispatchFetch('https://a.example.test' + path);
+          const cacheControl = response.headers.get('cache-control');
+          headers.push(`${path}: ${cacheControl}`);
+          observed.push({ path, status: response.status, bytes: sha256(await response.arrayBuffer()), ...cachePolicy(cacheControl) });
+        }
+        expect(observed, `W40.P4 — the deployed version serves the versioned URLs long-lived and immutable and the unversioned paths neither (${headers.join('; ')}; ${sent})`)
+          .toEqual(expected);
+        expect(host.outbound(), 'serving the deployed SDK makes no outbound request').toBe(0);
+      } finally { await host.dispose(); }
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  }, 600_000);
 });
 
 describe('unit:W40.P5', () => {
