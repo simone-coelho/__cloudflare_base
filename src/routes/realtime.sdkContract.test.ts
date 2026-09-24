@@ -2163,6 +2163,8 @@ describe('W35.03 recoverable identity transfer', () => {
         entered.release(); await release.wait; return originalPut(...args);
       });
       const live = f.call('/realtime/action', a.capability, event(a)); await entered.wait;
+      // Each browser's explicit choice, by its own revision, before either link carries it to the person.
+      const choiceOf = (g: Grant) => (item(f, g.subject).data.get('consent') as { revision: string }).revision, ra = choiceOf(a), rb = choiceOf(b);
       const first = link(f, a), duplicate = link(f, a), second = link(f, b);
       release.release(); expect((await live).status).toBe(200); held.mockRestore();
       const [one, two, three] = await Promise.all([first, duplicate, second]);
@@ -2172,7 +2174,21 @@ describe('W35.03 recoverable identity transfer', () => {
       // and since W05 that consent carries its instruction and revision. The competing
       // link of `b` carries b's instruction into the person, so the duplicate answers
       // the receipt exactly, with the person's consent either before or after b's carry.
-      expect({ ...two, consent: one.consent }).toEqual(one); expect([one.consent, three.consent]).toContainEqual(two.consent);
+      // W35 follow-up correction (expectation and one arrangement read, 2026-09-24): the two
+      // links of `a` are concurrent and identical, so EITHER may be the one the object
+      // accepts — neither the test nor the call order fixes their order at the object
+      // (forcing `first` 40 ms late reproduces the reviewer's 1-in-26 run exactly:
+      // `duplicate` accepted, `first` replayed after b's carry). The accepted link of `a`
+      // answers a's choice carried to the person; the replayed one answers the person's
+      // current consent, a's choice or, if b's link was accepted in between, b's; b's link
+      // answers b's choice. The two allowed states are named by each choice's own revision.
+      expect({ ...two, consent: one.consent }).toEqual(one);
+      const carried = { a: [one, two].find(answer => answer.consent?.instruction?.revision === ra)?.consent, b: three.consent };
+      expect(carried.a, 'the accepted link of a answers a\'s choice carried to the person').toMatchObject({ tracking: true, personalization: true,
+        instruction: { revision: ra, subject: target, tenant: 'meridian' } });
+      expect(carried.b, 'the link of b answers b\'s choice carried to the person').toMatchObject({ tracking: true, personalization: true,
+        instruction: { revision: rb, subject: target, tenant: 'meridian' } });
+      for (const answer of [one, two]) expect([carried.a, carried.b], 'each link of a answers one of the two carried states').toContainEqual(answer.consent);
       expect(one.sessionId).toBe(three.sessionId);
       expect(pipe(f, target).attributes.page_views).toBe(5);
       expect(pipe(f, target).visitCount).toBe(2);
@@ -4245,7 +4261,14 @@ describe('W37.03 tenant-owned DO audiences', () => {
       expect(health.lastSeen).toBe(before.affinity.lastSeen); expect([...item.data]).toEqual(baseline);
       expect(readDone).toBe(false); expect(ws.send).not.toHaveBeenCalled();
       release.release(); expect((await first).status).toBe(200); expect((await second).status).toBe(200);
-      expect((await queuedRead).pipeline.attributes.page_views).toBe(3); expect(publishedCounts).toEqual([2, 3]);
+      // W35 follow-up correction (expectation only, 2026-09-24): `second` and the read are
+      // concurrent, and neither the test nor the call order fixes their order at the object
+      // (forcing the read first reproduces this line's 1-in-30 failure exactly: the read
+      // answers 2 and the published counts stay [2, 3]). The read queued behind the held write
+      // answers the state after `first` or after both writes, never before `first` (readDone
+      // above), and no write is lost: both are published in order and the object then holds 3.
+      expect([2, 3]).toContain((await queuedRead).pipeline.attributes.page_views); expect(publishedCounts).toEqual([2, 3]);
+      expect((await view()).pipeline.attributes.page_views).toBe(3);
 
       // Application write-then-reject: never guess rollback, retry, or trust warm old bytes.
       // W35 step-3 STALE correction (arrangement only): this object is ADOPTED (it holds a
