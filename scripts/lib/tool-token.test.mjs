@@ -20,11 +20,49 @@ const family = [
   ['console-operator', 'console-preview-admin', ['admin'], 600], ['holdout-proof', 'holdout-proof', ['operator'], 900],
   ['identity-proof', 'identity-proof', undefined, 600],
 ];
-// W39 H3 (src/units/W39/LEDGER.unit.test.ts): a content seed takes a named tenant (no default)
-// and refuses a remote target before any request. These arrangements give the two seeds the
-// tenant and the local target every case below already meant; what each case asserts is unchanged.
+// W39 H3 (src/units/W39/LEDGER.unit.test.ts; amended by A37, approved 2026-09-24): a content seed
+// takes a named tenant (no default), sends the required publication headers on every write, and
+// reaches a remote target only through the W03 scoped tool token (an explicit operator token, never
+// a minted one). `scoped` gives the two seeds the tenant every case below already meant; what each
+// case asserts is unchanged except where a W39 H3 comment says otherwise.
 const SEEDS = new Set(['import-content', 'seed-coach-content']);
 const scoped = (name, args = []) => SEEDS.has(name) ? ['--scope', 'acme', ...args] : args;
+/**
+ * W39 H3: a Worker's configuration reads and writes as an adapter sees them (kit 02 §4). A GET of a
+ * document answers its draft — the document, its revision N and the publication set S/H — and a write
+ * advances N and S. Every write is recorded with the If-Match and Idempotency-Key it carried and the
+ * identity the Worker would require of it. Routed by request, so the seeds' draft reads need no fixed order.
+ */
+function publicationWorker(documents) {
+  const revisions = Object.fromEntries(Object.keys(documents).map(kind => [kind, 1])), writes = [];
+  let set = 1;
+  const digest = n => n.toString(16).padStart(64, '0');
+  const header = (init, name) => Object.entries(init?.headers ?? {}).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
+  const reply = (url, init) => {
+    const path = new URL(url).pathname, method = init?.method ?? 'GET', kind = path === '/content/catalog/pull' ? 'catalog' : path.split('/')[2];
+    if (!(kind in revisions)) return undefined;
+    if (method === 'GET') return { source: 'stored', document: documents[kind], revision: revisions[kind], publication: { revision: set, digest: digest(set) } };
+    if (path.endsWith('/validate')) { const body = JSON.parse(init.body); return { valid: true, document: body.document ?? body }; }
+    writes.push({ method, path, ifMatch: header(init, 'If-Match'), idempotencyKey: header(init, 'Idempotency-Key'),
+      required: `"${revisions[kind]}/${set}/${digest(set)}"`, revision: revisions[kind] });
+    revisions[kind]++; set++;
+    return { ok: true, revision: revisions[kind], version: `${kind}+r${revisions[kind]}`, publication: { revision: set, digest: digest(set) } };
+  };
+  return { reply, writes };
+}
+/** W39 H3: each write carried the publication headers of the draft the Worker holds (If-Match "N/S/H"; Idempotency-Key "N:UUID"). */
+function assertPublicationHeaders(writes) {
+  assert.ok(writes.length > 0);
+  for (const write of writes) {
+    assert.equal(write.ifMatch, write.required, `${write.method} ${write.path} If-Match`);
+    assert.match(write.idempotencyKey ?? '', new RegExp(`^${write.revision}:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`), `${write.method} ${write.path} Idempotency-Key`);
+  }
+}
+const route = op => [new URL(op.args[0]).pathname, op.args[1]?.method ?? 'GET'];
+/** W39 H3: a request with an effect — every method but GET, save a dry-run validation. */
+const effect = ([path, method]) => method !== 'GET' && !path.endsWith('/validate');
+/** W39 H3: a request without one — a draft read or a dry-run validation of one of the adapter's documents. */
+const readOnly = (paths) => ([path, method]) => (method === 'GET' && paths.includes(path)) || (method === 'POST' && paths.some(p => path === p + '/validate'));
 
 // Bundle the real shared verifier in memory. No source/build file is written.
 const bundled = await build({ stdin: { contents: "export { jwt } from './src/middleware/auth.ts';", resolveDir: ROOT, loader: 'ts' },
@@ -66,7 +104,10 @@ async function adapter(name, env = {}, args = [], replies = []) {
     console: Object.fromEntries(['log', 'error', 'warn'].map(method => [method, (...values) => output.push(values.map(String).join(' '))])),
     fetch: async (...args) => {
       operations.push({ kind: 'fetch', args });
-      if (replies.length) { const body = replies.shift(); return { status: 200, json: async () => body, text: async () => JSON.stringify(body) }; }
+      // W39 H3: a request-routed Worker (publicationWorker) answers by request instead of by position.
+      const routed = typeof replies === 'function' ? replies(...args) : undefined;
+      if (routed !== undefined) return { status: 200, json: async () => routed, text: async () => JSON.stringify(routed) };
+      if (Array.isArray(replies) && replies.length) { const body = replies.shift(); return { status: 200, json: async () => body, text: async () => JSON.stringify(body) }; }
       throw boundary;
     },
     setTimeout() { throw new Error('Unexpected adapter timer'); },
@@ -160,8 +201,7 @@ for (const [name, sub, roles, lifetime] of family) {
 }
 
 for (const name of ['acceptance-run', 'import-content', 'seed-coach-content']) test(`${name}: CLI precedence and remote token path; no ambiguous local mint`, async () => {
-  // W39 H3: a seed's precedence case runs against a local target (a remote one is refused outright).
-  const result = await adapter(name, { OPERATOR_TOKEN: 'env-opaque' }, scoped(name, ['--base', SEEDS.has(name) ? 'http://127.0.0.1:9100' : 'https://remote.example.invalid', '--token', 'cli-opaque']));
+  const result = await adapter(name, { OPERATOR_TOKEN: 'env-opaque' }, scoped(name, ['--base', 'https://remote.example.invalid', '--token', 'cli-opaque']));
   assert.deepEqual(result.acquired, ['cli-opaque']); assert.equal(result.operations.length, 1);
   for (const args of [['--token'], ['--token', ''], ['--token', '--scope', 'acme']]) {
     const invalid = await adapter(name, { ...CONFIG, OPERATOR_TOKEN: 'env-opaque' }, scoped(name, args));
@@ -169,10 +209,7 @@ for (const name of ['acceptance-run', 'import-content', 'seed-coach-content']) t
   }
   for (const base of ['https://localhost.example.invalid', 'https://remote.example.invalid', 'http://localhost@remote.example.invalid']) {
     const invalid = await adapter(name, CONFIG, scoped(name, ['--base', base]));
-    // W39 H3: a seed refuses the remote target itself, whichever refusal it reaches first; nothing is minted or sent.
-    if (SEEDS.has(name)) { assert.ok(invalid.error); assert.deepEqual(invalid.acquired, []); }
-    else assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/);
-    assert.deepEqual(invalid.operations, []);
+    assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/); assert.deepEqual(invalid.operations, []);
   }
   assert.equal((await adapter(name, CONFIG, scoped(name, ['--base', 'http://[::1]:9100']))).acquired.length, 1);
 });
@@ -213,19 +250,21 @@ test('rehearsal accepts explicit bearer or custom settings and preserves the his
 });
 
 test('W03.01 importer authenticates its catalogue read and continues through the slot write', async () => {
+  // W39 H3 (A37): the importer now reads the draft of each document it writes, for the publication
+  // headers, so the exact three-request sequence becomes: the same two writes in the same order, the
+  // catalogue read between them, draft reads only otherwise, and the headers on both writes.
+  const worker = publicationWorker({ catalog: { pieces: [{ id: 'synthetic-merch', slotTypes: ['merch'] }] }, slots: { pages: {} } });
   const result = await adapter('import-content', { OPERATOR_TOKEN: 'synthetic-import-token' },
-    ['--base', 'https://synthetic.invalid', '--scope', 'synthetic-brand'], [
-      { ok: true, revision: 1 },
-      { document: { pieces: [{ id: 'synthetic-merch', slotTypes: ['merch'] }] } },
-      { ok: true, revision: 1, version: 'slots+r1' },
-    ]);
+    ['--base', 'https://synthetic.invalid', '--scope', 'synthetic-brand'], worker.reply);
   assert.match(result.error?.message ?? '', /synthetic exit 0/);
-  assert.equal(result.operations.length, 3);
-  assert.deepEqual(result.operations.map(op => [new URL(op.args[0]).pathname, op.args[1]?.method ?? 'GET']), [
-    ['/content/catalog/pull', 'POST'], ['/content/catalog', 'GET'], ['/content/slots', 'PUT'],
-  ]);
+  const routes = result.operations.map(route);
+  assert.deepEqual(routes.filter(effect), [['/content/catalog/pull', 'POST'], ['/content/slots', 'PUT']]);
+  assert.ok(routes.every(r => effect(r) || readOnly(['/content/catalog', '/content/slots'])(r)), JSON.stringify(routes));
+  const pull = routes.findIndex(([path]) => path === '/content/catalog/pull'), put = routes.findIndex(([path, method]) => path === '/content/slots' && method === 'PUT');
+  assert.ok(routes.slice(pull + 1, put).some(([path, method]) => path === '/content/catalog' && method === 'GET'), JSON.stringify(routes));
   for (const op of result.operations) assert.ok(op.args[1].headers.Authorization === 'Bearer synthetic-import-token');
-  const slots = JSON.parse(result.operations[2].args[1].body).document;
+  assertPublicationHeaders(worker.writes);
+  const slots = JSON.parse(result.operations[put].args[1].body).document;
   assert.equal(slots.pages.home[0].pinnedPieceId, 'synthetic-merch');
   assert.ok(result.output.every(line => !line.includes('synthetic-import-token')));
 });
@@ -234,12 +273,21 @@ test('W03.03 named import/seed/acceptance adapters retain opaque auth and select
   for (const scope of ['acme', 'globex']) {
     const args = ['--base', 'https://synthetic.invalid', '--scope', scope];
     const env = { OPERATOR_TOKEN: 'synthetic-opaque-token' };
-    const imported = await adapter('import-content', env, args, [{ ok: true }, { document: { pieces: [] } }, { ok: true }]);
+    // W39 H3 (A37): the seeds read each draft they write, for the publication headers; the pinned
+    // three- and four-request sequences become the exact writes in order, draft reads otherwise, and
+    // the headers on every write. The tenant and token checks below cover every request as before.
+    const importer = publicationWorker({ catalog: { pieces: [] }, slots: { pages: {} } });
+    const imported = await adapter('import-content', env, args, importer.reply);
     assert.match(imported.error?.message ?? '', /synthetic exit 0/);
-    assert.equal(imported.operations.length, 3);
-    const seeded = await adapter('seed-coach-content', env, args, [{ ok: true }, { ok: true }, { document: { slots: {} } }, { ok: true }]);
+    assert.deepEqual(imported.operations.map(route).filter(effect), [['/content/catalog/pull', 'POST'], ['/content/slots', 'PUT']]);
+    assertPublicationHeaders(importer.writes);
+    // The Worker holds other documents than the seed's, so each of the three writes is due.
+    const seeder = publicationWorker({ catalog: { pieces: [{ id: 'synthetic-retired', slotTypes: ['story'] }] }, slots: { pages: {} }, learn: { slots: {} } });
+    const seeded = await adapter('seed-coach-content', env, args, seeder.reply);
     assert.match(seeded.error?.message ?? '', /synthetic exit 0/);
-    assert.equal(seeded.operations.length, 4);
+    assert.deepEqual(seeded.operations.map(route).filter(effect), [['/content/catalog', 'PUT'], ['/content/slots', 'PUT'], ['/content/learn', 'PUT']]);
+    assert.ok([...imported.operations, ...seeded.operations].map(route).every(r => effect(r) || readOnly(['/content/catalog', '/content/slots', '/content/learn'])(r)));
+    assertPublicationHeaders(seeder.writes);
     const acceptance = await adapter('acceptance-run', env, args, [
       ...[{ pieces: [] }, { pages: {} }, { slots: {} }].map(document => ({ document, revision: 1 })),
       ...Array.from({ length: 3 }, () => ({ ok: true, revision: 2 })),

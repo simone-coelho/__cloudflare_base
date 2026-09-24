@@ -45,7 +45,16 @@
 //     bootstrap and last-owner recovery.
 //   · The named tenant is the existing `--scope <tenant>`; there is no default.
 //   · A target is local when it is a loopback URL (scripts/lib/tool-token.mjs
-//     isLoopbackTarget); anything else is remote and refused before any request.
+//     isLoopbackTarget); anything else is remote. H3 as amended (A37, approved
+//     2026-09-24): a remote target is allowed only through the W03 scoped tool
+//     token — an operator token supplied explicitly (`--token` or OPERATOR_TOKEN),
+//     never one minted from local signing material, which the Worker authorizes
+//     for the named tenant alone (TENANTS operatorGrants). Without it a remote
+//     target is refused before anything is minted or sent.
+//   · The required publication headers (kit 02 §4, "Configuration PUT/PATCH,
+//     import, pull, rollback and item reset require `If-Match: "N/S/H"` from the
+//     actually loaded draft … Also retain `Idempotency-Key: N:UUID`"): every write
+//     a seed sends carries both, with the same N.
 //   · Idempotent on a repeat run: the second run succeeds and leaves every document
 //     the seed publishes for that tenant with exactly the value the first run left.
 //   · Scoped recovery is running the same seed again for the same tenant: it
@@ -66,6 +75,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Hono } from 'hono';
+import { SignJWT } from 'jose';
 import { parse as parseToml } from 'smol-toml';
 import type { Env } from '@/types/env';
 import { initializePublicationSet, readPublication } from '@/config/publication';
@@ -248,7 +258,9 @@ const TENANTS = ['coach', 'tapestry', 'atelier'];
 async function seedEnvironment() {
   const storage = new SeedR2();
   const env = { CACHE: { get: async () => null, put: async () => undefined }, STORAGE: storage, JWT_SECRET: SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
-    TENANTS: JSON.stringify({ provisioned: TENANTS, operatorGrants: { 'seed-coach-content': TENANTS, 'import-content': TENANTS } }) } as unknown as Env;
+    // The W03 scoped tool tokens: one operator per seeded tenant, granted that tenant alone.
+    TENANTS: JSON.stringify({ provisioned: TENANTS, operatorGrants: { 'seed-coach-content': TENANTS, 'import-content': TENANTS,
+      ...Object.fromEntries(TENANTS.map(tenant => [`w39-scoped-${tenant}`, [tenant]])) } }) } as unknown as Env;
   const values: Record<string, unknown> = { content: EMPTY_CATALOG, slots: DEFAULT_SLOTS, learn: DEFAULT_LEARN, reflex: DEFAULT_REFLEX_CONFIG, prior: EMPTY_PRIORS, proposals: EMPTY_PROPOSALS };
   for (const tenant of TENANTS) await initializePublicationSet(env, KINDS.map(kind => ({ kind, scope: kind.name === 'reflex' ? reflexScopeForTenant(tenant) : tenant,
     revision: { revision: 1, value: values[kind.name], actor: 'w39-initializer', note: '', at: 1 } })), '0:' + crypto.randomUUID());
@@ -260,6 +272,8 @@ async function localWorker(env: Env) {
   const app = new Hono<{ Bindings: Env; Variables: { tenant: string } }>();
   app.use('/content/*', tenantMiddleware()); app.route('/content', contentRoutes); app.route('/meridian/api', meridianRoutes);
   let requests = 0, port = 0; const log: string[] = [];
+  /** What each request the Worker answered carried: the tenant selectors, the bearer and the publication headers. */
+  const seen: Array<{ method: string; path: string; status: number; scope: string | null; tenant: string | null; authorization: string | null; ifMatch: string | null; idempotencyKey: string | null }> = [];
   const server = createServer((req, res) => {
     requests++; const chunks: Buffer[] = [];
     req.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -270,12 +284,15 @@ async function localWorker(env: Env) {
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks) }, env);
       const body = Buffer.from(await response.arrayBuffer());
       log.push(`${req.method} ${req.url?.split('?')[0]} ${response.status}${response.status >= 400 ? ' ' + body.toString('utf8').slice(0, 120) : ''}`);
+      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      seen.push({ method: req.method ?? '', path: url.pathname, status: response.status, scope: url.searchParams.get('scope'), tenant: headers.get('x-tenant'),
+        authorization: headers.get('authorization'), ifMatch: headers.get('if-match'), idempotencyKey: headers.get('idempotency-key') });
       res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(body);
     })().catch(error => { res.writeHead(500); res.end(String(error)); }); });
   });
   await new Promise<void>(accept => server.listen(0, '127.0.0.1', accept));
   port = (server.address() as AddressInfo).port;
-  return { base: `http://127.0.0.1:${port}`, requests: () => requests, log: () => log.join(' | '), close: () => new Promise<void>(accept => server.close(() => accept())) };
+  return { base: `http://127.0.0.1:${port}`, requests: () => requests, log: () => log.join(' | '), seen: () => [...seen], close: () => new Promise<void>(accept => server.close(() => accept())) };
 }
 
 const scratch = mkdtempSync(join(tmpdir(), 'w39-ledger-'));
@@ -290,6 +307,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = process.env.W39_GUARD_ROOT, log = process.env.W39_GUARD_LOG, allow = process.env.W39_GUARD_ALLOW || '\\u0000';
+const remote = process.env.W39_GUARD_REMOTE || '\\u0000', forward = process.env.W39_GUARD_FORWARD;
 const append = fs.appendFileSync.bind(fs), realFetch = globalThis.fetch;
 const record = (kind, target) => append(log, JSON.stringify({ kind, target }) + '\\n');
 const pathOf = (p) => { try { return resolve(String(p instanceof URL ? fileURLToPath(p) : p)); } catch { return ''; } };
@@ -314,17 +332,20 @@ globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   record('fetch', url);
   if (url.startsWith(allow)) return realFetch(input, init);
+  // A stand-in for a remote Worker: the named remote origin is served by the local one.
+  if (forward && url.startsWith(remote + '/')) return realFetch(forward + url.slice(remote.length), init);
   throw new TypeError('W39 guard: network refused');
 };
 `);
 interface Guarded { code: number | null; stdout: string; stderr: string; fetches: string[]; writes: string[] }
 let runs = 0;
-function runScript(script: string, args: string[], allow?: string): Promise<Guarded> {
+function runScript(script: string, args: string[], allow?: string, remote?: { origin: string; forward: string }): Promise<Guarded> {
   const log = join(scratch, `guard-${++runs}.ndjson`); writeFileSync(log, '');
   return new Promise(accept => {
     const child = spawn(process.execPath, ['--import', pathToFileURL(GUARD).href, join(ROOT, script), ...args], {
       cwd: ROOT, timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'],
       env: { PATH: process.env.PATH ?? '', HOME: scratch, W39_GUARD_ROOT: ROOT, W39_GUARD_LOG: log, ...(allow ? { W39_GUARD_ALLOW: allow } : {}),
+        ...(remote ? { W39_GUARD_REMOTE: remote.origin, W39_GUARD_FORWARD: remote.forward } : {}),
         DEPLOYMENT_PROFILE: 'demo', JWT_SECRET: SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } });
     let stdout = '', stderr = '';
     child.stdout.on('data', (chunk: Buffer) => { stdout += chunk; }); child.stderr.on('data', (chunk: Buffer) => { stderr += chunk; });
@@ -345,33 +366,85 @@ const documentsOf = async (env: Env, tenant: string, kinds: DocumentKind<unknown
 };
 
 // ===========================================================================
-// unit:W39.H3 — seeds take a named tenant, repeat idempotently, refuse unscoped or remote targets
+// unit:W39.H3 — seeds take a named tenant, repeat idempotently, send the publication
+// headers and refuse an unscoped target; a remote target only through the W03 scoped tool token
 // ===========================================================================
 
+/** A remote Worker's origin, stood in for by the local one through the guard (never resolved). */
+const REMOTE = 'https://edge-platform-production.example.invalid';
+/** The W03 scoped tool token for one tenant: an operator token issued outside the tool and granted that tenant alone. */
+const scopedToolToken = (tenant: string) => new SignJWT({ type: 'service', roles: ['operator'] }).setProtectedHeader({ alg: 'HS256' })
+  .setSubject(`w39-scoped-${tenant}`).setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('10m').sign(encoder.encode(SECRET));
+
 describe('unit:W39.H3', () => {
-  it('H3: each content seed command refuses to run without a named tenant, before any request', async () => {
+  it('H3: each content seed command refuses to run without a named tenant, before any request — against a local Worker and against a remote one with the W03 scoped tool token', async () => {
     const { env } = await seedEnvironment(), worker = await localWorker(env);
     try {
-      for (const { script } of SEEDS) {
-        const run = await runScript(script, ['--base', worker.base, '--token', 'w39-synthetic-opaque-token'], worker.base);
-        expect({ refused: run.code !== 0, requests: run.fetches }, `W39.H3 — ${script} without --scope refuses and sends nothing: an unscoped seed never picks a default tenant`)
+      for (const { script, tenant } of SEEDS) {
+        const local = await runScript(script, ['--base', worker.base, '--token', 'w39-synthetic-opaque-token'], worker.base);
+        expect({ refused: local.code !== 0, requests: local.fetches }, `W39.H3 — ${script} without --scope refuses and sends nothing: an unscoped seed never picks a default tenant`)
+          .toEqual({ refused: true, requests: [] });
+        const remote = await runScript(script, ['--base', REMOTE, '--token', await scopedToolToken(tenant)], undefined, { origin: REMOTE, forward: worker.base });
+        expect({ refused: remote.code !== 0, requests: remote.fetches }, `W39.H3 — ${script} without --scope refuses a remote target too, holding the scoped tool token, and sends nothing`)
           .toEqual({ refused: true, requests: [] });
       }
-      expect(worker.requests(), 'no request reached the local Worker').toBe(0);
+      expect(worker.requests(), 'no request reached the Worker').toBe(0);
     } finally { await worker.close(); }
   }, 60_000);
 
-  it('H3: each content seed command refuses a remote target, before any request', async () => {
+  it('H3: each content seed command refuses a remote target without the W03 scoped tool token — nothing is minted and nothing is sent, although local signing material is present', async () => {
     for (const { script, tenant } of SEEDS) {
-      for (const base of ['https://edge-platform-production.example.invalid', 'http://localhost@remote.example.invalid']) {
-        const run = await runScript(script, ['--scope', tenant, '--base', base, '--token', 'w39-synthetic-opaque-token']);
-        expect({ refused: run.code !== 0, requests: run.fetches }, `W39.H3 — ${script} refuses the remote target ${base} and sends nothing, even holding an operator token`)
+      for (const base of [REMOTE, 'http://localhost@remote.example.invalid']) {
+        const run = await runScript(script, ['--scope', tenant, '--base', base]);
+        expect({ refused: run.code !== 0, requests: run.fetches }, `W39.H3 — ${script} --scope ${tenant} refuses the remote target ${base} without the scoped tool token, and sends nothing`)
           .toEqual({ refused: true, requests: [] });
       }
     }
   }, 60_000);
 
-  it('H3: each content seed command, run twice for its named tenant against a local Worker, succeeds both times and the second run changes no document', async () => {
+  it('H3: with the W03 scoped tool token each content seed command seeds its named tenant on a remote target — every request carries that token and that tenant, and every write the required publication headers', async () => {
+    const { env, storage } = await seedEnvironment(), worker = await localWorker(env);
+    // The Worker's own catalogue pull reaches the same stand-in for the remote Worker.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return url.startsWith(REMOTE + '/') ? realFetch(worker.base + url.slice(REMOTE.length), init) : realFetch(input, init);
+    }) as typeof fetch;
+    try {
+      for (const { script, tenant, documents } of SEEDS) {
+        const bystander = storage.of('atelier'), token = await scopedToolToken(tenant), from = worker.seen().length;
+        const run = await runScript(script, ['--scope', tenant, '--base', REMOTE, '--token', token], undefined, { origin: REMOTE, forward: worker.base });
+        const seen = worker.seen().slice(from).filter(request => request.path.startsWith('/content/'));
+        // A write is any request with an effect: every method but GET, save a dry-run validation.
+        const writes = seen.filter(request => request.method !== 'GET' && !request.path.endsWith('/validate'));
+        expect(writes.length, `${script} writes its documents`).toBeGreaterThan(0);
+        expect(writes.map(({ method, path, ifMatch, idempotencyKey }) => ({ method, path, ifMatch, idempotencyKey })),
+          `W39.H3 — every write ${script} sends carries the required publication headers: If-Match "N/S/H" from the loaded draft and Idempotency-Key "N:UUID" (kit 02 §4); the Worker answered: ${worker.log().slice(-300)}`)
+          .toEqual(writes.map(({ method, path }) => ({ method, path, ifMatch: expect.stringMatching(/^"[1-9]\d*\/[1-9]\d*\/[0-9a-f]{64}"$/), idempotencyKey: expect.stringMatching(/^[1-9]\d*:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) })));
+        for (const write of writes) expect(String(write.idempotencyKey).split(':')[0], `${write.method} ${write.path}: the Idempotency-Key names the draft revision the If-Match names`).toBe(String(write.ifMatch).slice(1).split('/')[0]);
+        expect(run.code, `W39.H3 — ${script} --scope ${tenant} completes against the remote target with the scoped tool token; the Worker answered: ${worker.log().slice(-300)}`).toBe(0);
+        expect(seen.map(({ scope, tenant: selected, authorization }) => ({ scope, tenant: selected, authorization })),
+          `W39.H3 — every request ${script} sends names ${tenant} and carries the scoped tool token it was given`)
+          .toEqual(seen.map(() => ({ scope: tenant, tenant, authorization: `Bearer ${token}` })));
+        expect(run.fetches.every(url => url.startsWith(REMOTE + '/')), 'every request went to the remote target').toBe(true);
+        expect(((await documentsOf(env, tenant, documents)).content as { pieces: unknown[] }).pieces.length, `${script} published its catalog for ${tenant}`).toBeGreaterThan(0);
+        expect(storage.of('atelier'), `W39.H3 — ${script} for ${tenant} touches no other tenant`).toBe(bystander);
+      }
+    } finally { globalThis.fetch = realFetch; await worker.close(); }
+  }, 120_000);
+
+  /**
+   * Idempotent on a repeat run: the second run leaves every document with exactly
+   * the content the first run left. The one field a seed cannot hold still is the
+   * revision stamp the platform writes into a document's version label on every
+   * publication (`+r<revision>`, src/content/kinds.ts:18-21): an importer can only
+   * publish through the Worker's pull, which always publishes, so that stamp is set
+   * aside and nothing else is.
+   */
+  const unstamped = (documents: Record<string, unknown>) => Object.fromEntries(Object.entries(documents).map(([kind, value]) => [kind,
+    value && typeof value === 'object' && typeof (value as { version?: unknown }).version === 'string'
+      ? { ...value, version: (value as { version: string }).version.replace(/\+r\d+$/, '') } : value]));
+  it('H3: each content seed command, run twice for its named tenant against a local Worker, succeeds both times and the second run changes no document content', async () => {
     const { env, storage } = await seedEnvironment(), worker = await localWorker(env);
     try {
       for (const { script, tenant, documents } of SEEDS) {
@@ -382,7 +455,7 @@ describe('unit:W39.H3', () => {
         expect((once.content as { pieces: unknown[] }).pieces.length, `${script} published its catalog for ${tenant}`).toBeGreaterThan(0);
         const second = await runScript(script, ['--scope', tenant, '--base', worker.base], worker.base);
         expect(second.code, `W39.H3 — the repeat run of ${script} succeeds`).toBe(0);
-        expect(await documentsOf(env, tenant, documents), `W39.H3 — the repeat run of ${script} leaves every document it seeds for ${tenant} exactly as the first run left it`).toEqual(once);
+        expect(unstamped(await documentsOf(env, tenant, documents)), `W39.H3 — the repeat run of ${script} leaves every document it seeds for ${tenant} with exactly the content the first run left (the platform's revision stamp aside)`).toEqual(unstamped(once));
         expect(storage.of('atelier'), `W39.H3 — ${script} for ${tenant} touches no other tenant`).toBe(bystander);
         expect([...first.fetches, ...second.fetches].every(url => url.startsWith(worker.base)), 'every request went to the local Worker').toBe(true);
       }
