@@ -634,7 +634,7 @@ export class ShopperReflex {
             assertSessionTarget(p);
             const affinity = this.affinity ?? { shopperId: p.subject, reflex: emptyState(cfg), odpSeed: [], odpSeedAt: 0, odpRecentEvents: [], lastSeen: now, configVersion: cfg.version,
               retention: freshRetention, externalRetention: freshExternal };
-            const previous = this.pipeline ?? { attributes: {}, segments: [], journeyStage: 'early' as const, sessionId: p.sessionId, visitorId: p.subject, firstSeen: now, sessionCount: 0 };
+            const previous = this.pipeline ?? { attributes: {}, segments: [], journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: p.sessionId, visitorId: p.subject, firstSeen: now, sessionCount: 0 };
             const pipeline = { ...previous, segments: [...new Set([...await this.enrichedSegments(connectors, tenant, now), body.segment])] };
             const update = await this.buildUpdate(connectors, now, typeof body.source === 'string' ? body.source : 'manual', null, calculateEngagementScore(pipeline.attributes), cfg, tenant, p, { affinity, pipeline, segmentsProjected: true });
             assertSessionTarget(p);
@@ -1186,7 +1186,8 @@ export class ShopperReflex {
     const pipe: PipelineRecord = this.pipeline ? { ...this.pipeline } : {
       attributes: {},
       segments: [],
-      journeyStage: 'early',
+      // The floor of the journey, through the one mapping point (R32(2)).
+      journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
       sessionId: principal?.sessionId ?? crypto.randomUUID(),
       firstSeen: now,
       sessionCount: 0,
@@ -2882,7 +2883,7 @@ export class ShopperReflex {
         ...(this.pipeline?.segments ?? []).filter(s => !this.affinity?.odpSeed.includes(s)),
         ...(fromPipe?.segments ?? []).filter(s => !from?.odpSeed.includes(s)),
       ].filter(segment => !previousExternal.has(segment)), ...merged.state.audiences, ...enrichmentInputs(profileEnrichment).audiences, ...odp.odpSeed])].sort(),
-      journeyStage: this.pipeline?.journeyStage ?? fromPipe?.journeyStage ?? 'early',
+      journeyStage: this.pipeline?.journeyStage ?? fromPipe?.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
       // A person's canonical projection cannot share a physical KV key with
       // the browser source whose raw SID witness must remain independently owned.
       sessionId: this.pipeline?.sessionId ?? await this.retainedCanonicalSid(await this.grantAuthority()) ?? crypto.randomUUID(),
@@ -3001,7 +3002,9 @@ export class ShopperReflex {
             pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
               sessionId: sid, visitorId: context.subject, firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount,
               visitCount: session.metadata.visitCount, lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
-              surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
+              surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+              // W16 R1: the adopted record keeps the visit journey the session carries.
+              ...(session.journey === undefined ? {} : { journey: session.journey }) };
             // Raw booleans are never affirmative authority for backend adoption.
             if (!personalizes(consent)) return json({ ok: true, applied: 0, audiences: [], reason: 'consent_refused' });
             adopted = { key, value, expires, pending: false, ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }) };
@@ -3449,7 +3452,9 @@ export class ShopperReflex {
             journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
             lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
-            surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
+            surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+            // W16 R1: the adopted record keeps the visit journey the session carries.
+            ...(session.journey === undefined ? {} : { journey: session.journey }) };
           const audienceOwner = { tenant: grant.tenant, subject: grant.subject, sessionId: grant.sessionId };
           requireConsentPurpose(consent, 'tracking');
           try { await this.state.storage.put({ [keyFor(key)]: record, affinity, pipeline, audienceOwner }); }

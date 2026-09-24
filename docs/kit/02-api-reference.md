@@ -132,6 +132,12 @@ therefore matches during the visit she buys in and stops matching on her next vi
 matching forever afterwards. One derivation now stands behind every place that name appears; nothing
 here changes the persisted tokens themselves, which stay `early | mid | late`.
 
+A legacy record — one written before the stored stage existed, so it carries no stage — adopts as
+`early`, the persisted token of the journey's first stage (`exploring`), until her next event derives
+her stage for the current visit. The same floor is where a record born this visit starts, and it is
+what a shopper who refused personalization is reported at: none of them is placed further along a
+journey the engine has not counted.
+
 The same vocabulary and the same `signals` apply to every door an interaction can arrive by, not only
 the live one: an explicitly buffered action (`"processing": "buffered"`) is answered with `signals` of
 its own, and a content interaction and a historical import row are measured against the same published
