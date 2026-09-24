@@ -311,6 +311,29 @@ async function sequenceOn(host: Host, t0: number, clock: { mockReturnValue(value
 }
 
 // ── A1 · the SDK leg ───────────────────────────────────────────────────────
+/**
+ * Every cookie value or cookie header one update carries: a `cookies` or
+ * `cookieHeaders` member that is not empty, or any other string shaped as an
+ * assignment of one of the platform's own `opt_*` cookies. The documented
+ * `personalization_update` (docs/kit/03-payload-schemas.md:545) has no cookie
+ * member at all, and the session cookie is HttpOnly
+ * (`opt_session_id=…; HttpOnly`): page script must never read it.
+ */
+function cookieCarriage(update: Json): string[] {
+  const found: string[] = [];
+  const empty = (value: unknown) => (Array.isArray(value) && value.length === 0)
+    || (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length === 0);
+  for (const member of ['cookies', 'cookieHeaders']) {
+    if (Object.hasOwn(update, member) && !empty(update[member])) found.push(`${member}: ${JSON.stringify(update[member])}`);
+  }
+  JSON.stringify(update, (key, value: unknown) => {
+    if (key === 'cookies' || key === 'cookieHeaders') return undefined;
+    if (typeof value === 'string' && /\bopt_[a-z_]+=/.test(value)) found.push(`${key}: ${value}`);
+    return value;
+  });
+  return found;
+}
+
 /** A browser page for the real SDK entry: jsdom supplies the page, the harness is the network. */
 function page(h: Harness, url: string, referrer: string, storage: Map<string, string>, now: () => number): SdkHost {
   const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { url, ...(referrer ? { referrer } : {}) });
@@ -492,7 +515,7 @@ describe('unit:W35.A1', () => {
     }
   }, 120_000);
 
-  it('sdk: the real SDK entry (createClient) on a jsdom page, driven through the same journey — Instagram landing, browsing with an unknown product, hydrate, purchase, a newsletter return page, sign-in — receives the same updates, decisions, identity and consent from the session host and the object host', async () => {
+  it('sdk: the real SDK entry (createClient) on a jsdom page, driven through the same journey — Instagram landing, browsing with an unknown product, hydrate, purchase, a newsletter return page, sign-in — receives the same updates, decisions, identity and consent from the session host and the object host, and from neither host an update carrying a cookie value or a cookie header', async () => {
     const t0 = Date.now(), clock = vi.spyOn(Date, 'now');
     const seen: Partial<Record<Host, unknown[]>> = {};
     try {
@@ -504,6 +527,13 @@ describe('unit:W35.A1', () => {
       expect.soft(updates(host).length, `W35.A1 (${host} host) — the SDK receives personalization updates during the journey`).toBeGreaterThan(0);
       expect.soft(updates(host).map(u => u.update.journeyStage), `W35.A1 (${host} host) — every update names a journey word (kit 03:545)`)
         .toEqual(updates(host).map(() => expect.stringMatching(/^(exploring|thinking|deciding)$/)));
+      // Per host, so parity cannot be reached by both hosts leaking: the session
+      // host puts the shopper's cookie values and Set-Cookie headers — the
+      // HttpOnly `opt_session_id` among them — in its update data today
+      // (src/services/RealtimeSegmentEngine.ts:715-716).
+      expect.soft(updates(host).flatMap((u, index) => cookieCarriage(u.update).map(found => `update ${index} · ${found}`)),
+        `W35.A1 (${host} host) — no update the SDK receives carries a cookie value or a cookie header: the documented personalization_update has no cookie member (kit 03:545) and the HttpOnly session cookie never reaches page script`)
+        .toEqual([]);
     }
   }, 120_000);
 
@@ -805,7 +835,7 @@ export default {
 
 // ── A3 · ownership transfer, rollback of a failed transfer, restart ────────
 describe('unit:W35.A3', () => {
-  it('host: a sign-in transfer that fails before the person accepts it, and can no longer be accepted because the person\'s owner was reset, is rolled back after restart — the shopper has exactly one owner again and nothing of hers is lost — on both hosts', async () => {
+  it('host: a sign-in transfer that fails before the person accepts it, and can no longer be accepted because the person\'s owner was reset, is rolled back after restart — the shopper has exactly one owner again, nothing of hers is lost, the retry is refused as a request and never as a server failure, and she can sign in afterwards — on both hosts', async () => {
     for (const host of HOSTS) {
       const t0 = Date.now(), clock = vi.spyOn(Date, 'now').mockReturnValue(t0);
       try {
@@ -848,11 +878,25 @@ describe('unit:W35.A3', () => {
           expect.soft(browsing.status, `W35.A3 (${host} host) — and her superseded anonymous grant writes nothing`).toBe(401);
           expect.soft((await h.call('/realtime/reflex', { capability: linked.session!.capability })).status, `W35.A3 (${host} host) — the person serves her`).toBe(200);
         } else {
+          // The retry that meets the failed transfer is refused as a request —
+          // the link door answers its refusals in the 4xx range (kit 02:347:
+          // 401, 409) — never as a server failure.
+          expect.soft(retried.status, `W35.A3 (${host} host) — the retried sign-in that meets the failed transfer is refused as a request (4xx), never answered as a server failure`).toBeGreaterThanOrEqual(400);
+          expect.soft(retried.status, `W35.A3 (${host} host) — the retried sign-in that meets the failed transfer is refused as a request (4xx), never answered as a server failure`).toBeLessThan(500);
           expect.soft(browsing.status, `W35.A3 (${host} host) — the failed transfer is rolled back: her own session accepts her browsing again instead of refusing her forever`).toBe(200);
           expect.soft(ownerState(h, sarah.subject).attributes.product_views, `W35.A3 (${host} host) — on her own intact profile, the new view counted (no lost update)`).toBe(3);
           expect.soft([...h.shopper(TENANT, sarah.subject).data.keys()].filter(key => key === 'identityTransfer' || key === 'forwardTo'),
             `W35.A3 (${host} host) — the rolled-back record neither forwards nor stays fenced by the failed transfer`).toEqual([]);
           expect.soft(target.data.has('pipeline') || target.data.has('affinity'), `W35.A3 (${host} host) — nothing of hers was merged into the person`).toBe(false);
+          // And the rollback leaves sign-in working: she signs in again, and the
+          // link folds her whole browser profile into the person (link.ts:1-22).
+          clock.mockReturnValue(t0 + 4000);
+          const again = await signedLink(h, sarah, 'w35-ledger-rollback');
+          const signedIn = await body(again) as { ok?: boolean; session?: Shopper };
+          expect.soft([again.status, signedIn.ok ?? null], `W35.A3 (${host} host) — after the rollback her next sign-in succeeds (kit 02:347)`).toEqual([200, true]);
+          expect.soft(ownerState(h, person).attributes.product_views, `W35.A3 (${host} host) — and the person then holds her whole profile, the view she made after the rollback included`).toBe(3);
+          expect.soft(signedIn.session ? (await h.call('/realtime/reflex', { capability: signedIn.session.capability })).status : 'no signed-in session',
+            `W35.A3 (${host} host) — the person serves her`).toBe(200);
         }
       } finally { clock.mockRestore(); vi.restoreAllMocks(); }
     }
