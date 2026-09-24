@@ -84,6 +84,18 @@
 
   // Always derive the diagnostic from counts, including when an older server returns inferred fields.
   const intensity = (credited, decisions) => decisions > 0 ? dec(credited / decisions, 3) : '—';
+  /**
+   * W31 Z1.01 (F25 §1.3): the published allocation the answer carries, stated so
+   * the counts beside it are readable as an experiment. It is read from the
+   * report, never compiled in, and a report that records none — or records one
+   * that names no arm — states nothing rather than a placeholder.
+   */
+  const allocationNote = (allocation) => {
+    const a = allocation;
+    if (!a || a.version !== 1 || a.source !== 'published' || !Number.isFinite(a.share) || a.share < 0 || a.share > 1) return null;
+    if (!Array.isArray(a.arms) || !a.arms.length || !a.arms.every((arm) => typeof arm === 'string' && arm)) return null;
+    return `Published allocation: ${+(a.share * 100).toFixed(2)}% to ${a.arms.join(', ')}.`;
+  };
   const minimumHorizon = (coverage, hours) => {
     if (!coverage || coverage.version !== 1 || coverage.source !== 'aggregates' || coverage.metadata !== 'recorded' ||
       !Array.isArray(coverage.missingHours) || coverage.missingHours.length || !Array.isArray(coverage.unknownHours) || coverage.unknownHours.length) return null;
@@ -129,7 +141,7 @@
 
       if (ms.windowError) host.append(h('div', { class: 'msg note' }, ms.windowError));
 
-      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report.'));
+      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report. Read a longer period as consecutive windows and pool them yourself.'));
       for (const day of (ms.window && ms.window.incomplete || [])) host.append(h('div', { class: 'msg note' },
         `Incomplete coverage for ${day.date}${day.truncated ? ': source coverage incomplete' : ''}${day.missingHours.length ? `; ${plural(day.missingHours.length, 'hour')} missing (${day.missingHours.join(', ')})` : ''}.`));
       if (ms.window) {
@@ -149,6 +161,7 @@
       // 1. Raw counts pooled over the requested window.
       const slots = ms.window ? Object.keys(ms.window.slots) : [];
       if (ms.window) host.append(h('div', { class: 'msg note' }, 'Recorded computation basis only. Experimental compatibility, served control and enrollment remain unverified.'));
+      if (ms.window && allocationNote(ms.window.allocation)) host.append(h('div', { class: 'msg note' }, allocationNote(ms.window.allocation)));
       if (ms.window && !slots.length) {
         host.append(card('Over the window', 'No attribution rows yet.', body(h('div', { class: 'empty' },
           ms.window.days.length
@@ -200,6 +213,7 @@
           R && R.hours && R.hours.missing.length ? h('div', { class: 'msg note' }, `Incomplete coverage: ${plural(R.hours.missing.length, 'hour')} missing (${R.hours.missing.join(', ')}).`) : null,
           ...(R ? coverageNotes(R.coverage, R.hours).map(note => h('div', { class: 'msg note' }, note)) : []),
           R && R.holdout && R.holdout[S.slot] ? h('div', { class: 'subhead' }, `The arms on ${S.slot}, under the learning policy`) : null,
+          R && R.holdout && R.holdout[S.slot] && allocationNote(R.allocation) ? h('div', { class: 'msg note' }, allocationNote(R.allocation)) : null,
           R && R.holdout && R.holdout[S.slot] ? C.table([
             { key: 'arm', label: 'Arm' }, { key: 'd', label: 'Decisions', num: true },
             { key: 'c', label: 'Credited outcomes', num: true }, { key: 'r', label: 'Credits per decision', num: true },

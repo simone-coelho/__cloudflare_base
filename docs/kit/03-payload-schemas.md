@@ -514,7 +514,10 @@ when the outcome happened and not by whether a served piece matched — two purc
 one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
 `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
-day applied. No report of ours states a business target, a lift or a standing.
+day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.
+Each compatible slot also carries `computation`, the recorded basis it pooled under: `{ version, profile, learning,
+reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is not compatible.
+No report of ours states a business target, a lift or a standing.
 
 `coverage.unassignedHours` is `number[] | null` and names the source limitation behind those two
 `null`s on a day summed from hour aggregates: `[]` when every built hour carries the experimental
