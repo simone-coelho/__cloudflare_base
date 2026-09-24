@@ -2579,9 +2579,14 @@ it('W22.07 validates explicit buffered context before effects and transports zer
         expect((await f.send(patch, 'opt_tracking_consent=false')).status).toBe(400);
         expect(host === 'session' ? f.bytes() : JSON.stringify([...f.item.data].filter(([key]) => key !== 'consent'))).toBe(before);
         const nextChoice = storedConsent(f.item.data.get('consent')).instruction;
-        expect(nextChoice).toEqual({ ...originalChoice, tracking: originalChoice?.tracking && { ...originalChoice.tracking, value: false } });
-        // Owner admission may persist a restrictive cookie before the route
-        // rejects syntax. No behavioral/profile/provider destination is touched.
+        // The route refuses the syntax BEFORE it crosses the owner boundary
+        // (src/routes/realtime.ts:39-48, "Invalid logical identity must not
+        // acquire/forward the subject owner"; src/identity/sessionCapability.ts
+        // requireShopper with forward: false), so no owner admission runs and
+        // the stored choice is exactly the one before the request (W22 LG1,
+        // STALE: the expectation of a persisted refusal predates that order).
+        // No behavioral/profile/provider destination is touched.
+        expect(nextChoice).toEqual(originalChoice);
         expect(f.effects.every(value => value === 'object:' + shopperObjectName(f.g.tenant, f.g.subject) || value === 'store:consent')).toBe(true);
         expect(f.sessions.calls).toEqual([]); expect(f.queued).toEqual([]); expect(f.learned).toEqual([]);
       }
@@ -2649,13 +2654,23 @@ it('W22.07 gates both hosts on owned profiles consent and observed erasure barri
     expect((await limited.send()).status).toBe(200); await limited.drain();
     const before = limited.bytes(), read = vi.spyOn(limited.item.state.storage, 'get');
     expect((await limited.send({ eventId: 'limited' })).status).toBe(429);
-    expect(read.mock.calls).toEqual([['identityTransfer'], ['identityIntent'], ['grantAuthority'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
+    // Each of the two owner entries first reads the isolated-monitor authority
+    // marker every durable object checks before it serves anything
+    // (src/ops/synthetic.ts MARKER, SyntheticObjectBoundary.run; the same read
+    // src/reflex/regionTrend.test.ts:206 expects). The refused request reads no
+    // profile, affinity, pipeline or session state (W22 LG1, STALE: the list
+    // predates the monitor boundary).
+    expect(read.mock.calls).toEqual([['__monitor_authority_v1'], ['identityTransfer'], ['identityIntent'], ['grantAuthority'],
+      ['__monitor_authority_v1'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
     expect(limited.bytes()).toBe(before); expect(limited.queued).toHaveLength(1);
     const delayed = await bufferedBoundary('do'), saved = delayed.bytes(), delayedRead = vi.spyOn(delayed.item.state.storage, 'get');
     const serialized = delayed.item.shopper as unknown as { serialize: (fn: () => Promise<unknown>) => Promise<unknown> };
     const serialize = serialized.serialize.bind(serialized);
     vi.spyOn(serialized, 'serialize').mockImplementation(fn => serialize(async () => { clock.mockReturnValue(delayed.g.exp * 1000); return fn(); }));
-    expect((await delayed.send()).status).toBe(401); expect(delayedRead).not.toHaveBeenCalled(); expect(delayed.bytes()).toBe(saved); expect(delayed.queued).toEqual([]);
+    // The expired capability is refused inside the owner before any subject
+    // state is read: the one read is the monitor authority marker the object
+    // checks on entry (W22 LG1, STALE for the same reason as above).
+    expect((await delayed.send()).status).toBe(401); expect(delayedRead.mock.calls).toEqual([['__monitor_authority_v1']]); expect(delayed.bytes()).toBe(saved); expect(delayed.queued).toEqual([]);
     clock.mockReturnValue(delayed.now);
   } finally { clock.mockRestore(); }
 });
