@@ -6042,6 +6042,15 @@ describe('SDK ↔ /realtime/action contract', () => {
   it('W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity', async () => {
     for (const host of ['session', 'do']) {
       invalidateCache(); const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian');
+      // STALE ARRANGEMENT, corrected in step 3 (ticket W26, LG1; measured, logs
+      // in _evidence/step3/W25-W26/specifier/logs/probe-w2602-*.log): the shopper
+      // now makes the explicit consent choice W05 requires before any tracking
+      // (without it the action answers 200 and records nothing), and the tenant
+      // has the coherent configuration publication W11 reads on the action path
+      // (without it the action answers 500 "Coherent configuration publication is
+      // uninitialized"). `positiveChoice` is this file's own helper for both;
+      // every assertion below is unchanged.
+      await positiveChoice(f, g);
       const queued: OutcomeRecord[] = [], learned: OutcomeRecord[] = [];
       Object.assign(f.env, {
         EVENT_QUEUE: { send: async (body: { record: OutcomeRecord }) => { queued.push(body.record); } },
