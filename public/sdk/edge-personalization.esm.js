@@ -51,7 +51,6 @@ function hostOf(referrer) {
 
 // src/sdk/identity.ts
 var DEFAULT_VISITOR_KEY = "opt_visitor_id";
-var CONTINUITY_OPERATION_HEADER = "X-Continuity-Operation";
 var YEAR_SECONDS = 60 * 60 * 24 * 365;
 function writeVisitorId(host, key, id) {
   try {
@@ -248,6 +247,7 @@ function createCore(config, host) {
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
   const continuityBrokerKey = `${continuityKey}:broker`;
+  const continuityOperationHeader = "X-Continuity-Operation";
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1e3;
@@ -733,18 +733,13 @@ function createCore(config, host) {
   }
   function keepContinuity(value) {
     const report = value;
-    if (cfg.sessionBroker) {
-      if (report?.enabled === false && report.reason === "unavailable") return;
-      try {
+    try {
+      if (cfg.sessionBroker) {
+        if (report?.enabled === false && report.reason === "unavailable") return;
         if (report?.enabled === true && report.mode === "broker") host.storage.set(continuityBrokerKey, "1");
         else if (report?.enabled === false) host.storage.set(continuityBrokerKey, "");
         host.storage.set(continuityOperationKey, "");
-      } catch {
-      }
-      return;
-    }
-    try {
-      if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
+      } else if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
         host.storage.set(continuityKey, report.proof);
         host.storage.set(continuityOperationKey, "");
       } else if (report?.enabled === false && report.reason !== "unavailable") {
@@ -837,7 +832,7 @@ function createCore(config, host) {
         if (Object.keys(recovery).length) persisted = "";
         const request = () => {
           const returning = persisted ? pendingContinuity() : presentContinuity();
-          const brokered = cfg.sessionBroker && returning ? { [CONTINUITY_OPERATION_HEADER]: returning.operationId } : {};
+          const brokered = cfg.sessionBroker && returning ? { [continuityOperationHeader]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), {
             method: "POST",
             credentials: "include",

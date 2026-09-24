@@ -5,7 +5,7 @@
 // the socket URL, the welcome frame, the reconnect delay, the action envelope
 // and the POST-versus-push dedupe are its behavior, verbatim.
 
-import { CONTINUITY_OPERATION_HEADER, currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession } from './identity';
+import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession, type CONTINUITY_OPERATION_HEADER } from './identity';
 import { toWire } from './wire';
 import { isEventNonce, isEventTimestamp } from '../events/actionTypes';
 import type {
@@ -222,6 +222,8 @@ export function createCore(config: ClientConfig, host: Host): Core {
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
   const continuityBrokerKey = `${continuityKey}:broker`;
+  /** The header the broker reads the operation id from; its type pins it to the one exported name. */
+  const continuityOperationHeader: typeof CONTINUITY_OPERATION_HEADER = 'X-Continuity-Operation';
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1000;
@@ -636,20 +638,16 @@ export function createCore(config: ClientConfig, host: Host): Core {
    */
   function keepContinuity(value: unknown): void {
     const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown; reason?: unknown } | null | undefined;
-    if (cfg.sessionBroker) {
-      // W16 R4: the broker keeps the proof. This browser remembers only that it
-      // holds one, and keeps the operation id only while the engine could not
-      // finish the call it was minted for.
-      if (report?.enabled === false && report.reason === 'unavailable') return;
-      try {
+    try {
+      if (cfg.sessionBroker) {
+        // W16 R4: the broker keeps the proof. This browser remembers only that it
+        // holds one, and keeps the operation id only while the engine could not
+        // finish the call it was minted for.
+        if (report?.enabled === false && report.reason === 'unavailable') return;
         if (report?.enabled === true && report.mode === 'broker') host.storage.set(continuityBrokerKey, '1');
         else if (report?.enabled === false) host.storage.set(continuityBrokerKey, '');
         host.storage.set(continuityOperationKey, '');
-      } catch { /* storage unavailable; the engine still decided */ }
-      return;
-    }
-    try {
-      if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
+      } else if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
         host.storage.set(continuityKey, report.proof);
         host.storage.set(continuityOperationKey, '');
       } else if (report?.enabled === false && report.reason !== 'unavailable') {
@@ -727,7 +725,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
           const returning = persisted ? pendingContinuity() : presentContinuity();
           // Broker mode: the operation id rides a header, and the broker's
           // body contract stays `{ consent? }` (W16 R4).
-          const brokered: Record<string, string> = cfg.sessionBroker && returning ? { [CONTINUITY_OPERATION_HEADER]: returning.operationId } : {};
+          const brokered: Record<string, string> = cfg.sessionBroker && returning ? { [continuityOperationHeader]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include',
             headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}), ...brokered },
             body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning && !cfg.sessionBroker ? { continuity: returning } : {}) }) }, 16384);
