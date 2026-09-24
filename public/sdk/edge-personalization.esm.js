@@ -247,6 +247,7 @@ function createCore(config, host) {
   const capabilityKey = `opt_shopper_session:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
+  const continuityBrokerKey = `${continuityKey}:broker`;
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1e3;
@@ -693,7 +694,7 @@ function createCore(config, host) {
   function presentContinuity() {
     try {
       const proof = cfg.sessionBroker ? "" : host.storage.get(continuityKey) ?? "";
-      if (!proof && !cfg.sessionBroker) return null;
+      if (cfg.sessionBroker ? !brokerHoldsProof() : !proof) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? "";
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
@@ -707,7 +708,7 @@ function createCore(config, host) {
   function pendingContinuity() {
     try {
       const operationId = host.storage.get(continuityOperationKey) ?? "";
-      if (cfg.sessionBroker) return CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      if (cfg.sessionBroker) return brokerHoldsProof() && CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
       const proof = host.storage.get(continuityKey) ?? "";
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch {
@@ -718,7 +719,14 @@ function createCore(config, host) {
     try {
       if (host.storage.get(capabilityKey)) return false;
       if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? "")) return false;
-      return !!cfg.sessionBroker || !!host.storage.get(continuityKey);
+      return cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey);
+    } catch {
+      return false;
+    }
+  }
+  function brokerHoldsProof() {
+    try {
+      return host.storage.get(continuityBrokerKey) === "1";
     } catch {
       return false;
     }
@@ -728,6 +736,8 @@ function createCore(config, host) {
     if (cfg.sessionBroker) {
       if (report?.enabled === false && report.reason === "unavailable") return;
       try {
+        if (report?.enabled === true && report.mode === "broker") host.storage.set(continuityBrokerKey, "1");
+        else if (report?.enabled === false) host.storage.set(continuityBrokerKey, "");
         host.storage.set(continuityOperationKey, "");
       } catch {
       }

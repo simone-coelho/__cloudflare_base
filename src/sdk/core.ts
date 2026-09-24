@@ -215,12 +215,13 @@ export function createCore(config: ClientConfig, host: Host): Core {
   // script: no proof is kept and none is sent, even if a broker answers with
   // one. The operation id is minted beside the proof and kept until the consume
   // is answered, so a lost response is retried as the SAME consume rather than
-  // burning a second generation of her chain. In broker mode it is the only
-  // thing kept (W16 R4): the script cannot see whether the broker holds a proof,
-  // so a cold start mints one, sends it to the broker in a header, and keeps it
-  // until an answer arrives.
+  // burning a second generation of her chain. In broker mode (W16 R4) the
+  // script keeps only that the broker was handed a descriptor — never the proof,
+  // which is an HttpOnly first-party cookie — and, while a return is in flight,
+  // the operation id, which it sends to the broker in a header.
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
+  const continuityBrokerKey = `${continuityKey}:broker`;
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1000;
@@ -572,7 +573,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
   function presentContinuity(): { proof?: string; operationId: string } | null {
     try {
       const proof = cfg.sessionBroker ? '' : host.storage.get(continuityKey) ?? '';
-      if (!proof && !cfg.sessionBroker) return null;
+      if (cfg.sessionBroker ? !brokerHoldsProof() : !proof) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? '';
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
@@ -598,10 +599,26 @@ export function createCore(config: ClientConfig, host: Host): Core {
   function pendingContinuity(): { proof?: string; operationId: string } | null {
     try {
       const operationId = host.storage.get(continuityOperationKey) ?? '';
-      if (cfg.sessionBroker) return CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      if (cfg.sessionBroker) return brokerHoldsProof() && CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
       const proof = host.storage.get(continuityKey) ?? '';
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch { return null; }
+  }
+  /**
+   * A return consume this browser started with no capability of its own and
+   * never saw answered: no capability is stored, and the operation id it was
+   * keyed by (with, in direct mode, the proof) is still kept.
+   */
+  function returnInFlight(): boolean {
+    try {
+      if (host.storage.get(capabilityKey)) return false;
+      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? '')) return false;
+      return cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey);
+    } catch { return false; }
+  }
+  /** Broker mode: the engine issued a descriptor the broker now keeps for this browser. */
+  function brokerHoldsProof(): boolean {
+    try { return host.storage.get(continuityBrokerKey) === '1'; } catch { return false; }
   }
   /**
    * What the engine's own answer says to keep. A disabled answer that is a
@@ -617,25 +634,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
    * looks like and clears — an engine that has stopped recognizing her must not
    * leave a long-lived credential lying in her browser.
    */
-  /**
-   * A return consume this browser started with no capability of its own and
-   * never saw answered: no capability is stored, and the operation id it was
-   * keyed by (with, in direct mode, the proof) is still kept.
-   */
-  function returnInFlight(): boolean {
-    try {
-      if (host.storage.get(capabilityKey)) return false;
-      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? '')) return false;
-      return !!cfg.sessionBroker || !!host.storage.get(continuityKey);
-    } catch { return false; }
-  }
   function keepContinuity(value: unknown): void {
     const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown; reason?: unknown } | null | undefined;
     if (cfg.sessionBroker) {
-      // W16 R4: the broker keeps the proof; this browser keeps the operation id
-      // only while the engine could not finish the call it was minted for.
+      // W16 R4: the broker keeps the proof. This browser remembers only that it
+      // holds one, and keeps the operation id only while the engine could not
+      // finish the call it was minted for.
       if (report?.enabled === false && report.reason === 'unavailable') return;
-      try { host.storage.set(continuityOperationKey, ''); } catch { /* storage unavailable; the engine still decided */ }
+      try {
+        if (report?.enabled === true && report.mode === 'broker') host.storage.set(continuityBrokerKey, '1');
+        else if (report?.enabled === false) host.storage.set(continuityBrokerKey, '');
+        host.storage.set(continuityOperationKey, '');
+      } catch { /* storage unavailable; the engine still decided */ }
       return;
     }
     try {

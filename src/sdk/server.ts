@@ -51,6 +51,16 @@ export function createServerBridge(config: ServerBridgeConfig, transport: typeof
     if (new URL(request.url).origin !== origin.origin) throw new Error('Server bridge unavailable');
     return named(request, cookieName, tokenPattern);
   }
+  /**
+   * The broker-mode proof this browser holds. Never a reason to refuse her
+   * session: a malformed or duplicated value is not relayed and is cleared.
+   */
+  function heldProof(request: Request): { proof?: string; malformed: boolean } {
+    const values = (request.headers.get('Cookie') ?? '').split(';').map(v => v.trim()).filter(v => v.startsWith(continuityCookieName + '='));
+    if (!values.length) return { malformed: false };
+    const proof = values[0]!.slice(continuityCookieName.length + 1);
+    return values.length === 1 && proof.length <= 2048 && proofPattern.test(proof) ? { proof, malformed: false } : { malformed: true };
+  }
   /** The first-party cookie the engine's successor proof is kept under, or the one that clears it. */
   function continuitySetCookie(proof: string | null, maxAge: number): string {
     return `${continuityCookieName}=${proof ?? ''}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${proof ? Math.max(0, maxAge) : 0}`;
@@ -89,14 +99,16 @@ export function createServerBridge(config: ServerBridgeConfig, transport: typeof
     // W16 R4: a return is relayed only when the browser holds the broker's proof
     // AND the SDK named the operation it is keyed by; the engine answers the
     // exact retry of a lost answer once, from one receipt, under that id.
-    const proof = operationId ? named(request, continuityCookieName, proofPattern) : undefined;
+    const held = heldProof(request);
+    const proof = operationId ? held.proof : undefined;
     const relayed = proof !== undefined && operationId !== undefined;
     let answered: Response | undefined;
     const value = await bounded(async signal => json(answered = await transport(`${endpoint.origin}/v1/${config.tenant}/identity/session`, {
       method: 'POST', redirect: 'manual', signal, headers: { 'Content-Type': 'application/json', 'X-Tenant': config.tenant, 'X-SDK-Key': config.sdkKey,
         ...(prior ? { 'X-Shopper-Session': prior } : {}), ...(relayed ? { Cookie: `${ENGINE_CONTINUITY_COOKIE}=${proof}` } : {}) },
       body: JSON.stringify({ ...(consent ? { consent } : {}), ...(relayed ? { continuity: { operationId } } : {}) }),
-    }), 16 * 1024, signal)) as { ok?: boolean; session?: { tenant?: string; capability?: string; exp?: number; consent?: unknown }; continuity?: { enabled?: unknown; reason?: unknown } };
+    }), 16 * 1024, signal)) as { ok?: boolean; session?: { tenant?: string; capability?: string; exp?: number; consent?: unknown };
+      continuity?: { enabled?: unknown; reason?: unknown; mode?: unknown; purpose?: unknown; generation?: unknown; expiresAt?: unknown; revision?: unknown } };
     const session = value?.session;
     // A relayed return the engine RECOGNIZED legitimately answers another
     // session than the provisional one the browser held (W16.C6.13); nothing
@@ -112,8 +124,20 @@ export function createServerBridge(config: ServerBridgeConfig, transport: typeof
     // says nothing about the proof the browser holds.
     const successor = answered ? engineProof(answered) : undefined;
     if (successor) setCookies.push(continuitySetCookie(successor.proof, successor.maxAge));
-    else if (relayed && value?.continuity?.enabled === false && value.continuity.reason !== 'unavailable') setCookies.push(continuitySetCookie(null, 0));
-    return { session, setCookies };
+    else if (held.malformed || relayed && value?.continuity?.enabled === false && value.continuity.reason !== 'unavailable') setCookies.push(continuitySetCookie(null, 0));
+    // The engine's continuity statement, passed on WITHOUT any proof, so the SDK
+    // knows a return is possible without ever holding the credential.
+    const reported = value?.continuity;
+    const continuity = reported && typeof reported === 'object' ? {
+      enabled: reported.enabled === true,
+      ...(typeof reported.reason === 'string' ? { reason: reported.reason } : {}),
+      ...(typeof reported.mode === 'string' ? { mode: reported.mode } : {}),
+      ...(typeof reported.purpose === 'string' ? { purpose: reported.purpose } : {}),
+      ...(Number.isSafeInteger(reported.generation) ? { generation: reported.generation } : {}),
+      ...(Number.isSafeInteger(reported.expiresAt) ? { expiresAt: reported.expiresAt } : {}),
+      ...(Number.isSafeInteger(reported.revision) ? { revision: reported.revision } : {}),
+    } : undefined;
+    return { session, setCookies, continuity };
   }
   async function broker(request: Request): Promise<Response> {
     try {
@@ -128,10 +152,10 @@ export function createServerBridge(config: ServerBridgeConfig, transport: typeof
       }
       const operation = request.headers.get(CONTINUITY_OPERATION_HEADER);
       if (operation !== null && !operationPattern.test(operation)) throw new Error();
-      const { session, setCookies } = await resolve(request, refusal, operation ?? undefined);
+      const { session, setCookies, continuity } = await resolve(request, refusal, operation ?? undefined);
       const headers = new Headers(privateHeaders);
       for (const value of setCookies) headers.append('Set-Cookie', value);
-      return Response.json({ ok: true, session }, { headers });
+      return Response.json({ ok: true, session, ...(continuity ? { continuity } : {}) }, { headers });
     } catch { return Response.json({ ok: false, error: 'First-party session unavailable' }, { status: 401, headers: privateHeaders }); }
   }
   async function snapshot(request: Request, page: string): Promise<{ bootstrap: ServerBootstrap | null; headers: Headers }> {
