@@ -215,6 +215,29 @@ async function reportContinuity(env: Env, tenant: string, decision: ContinuityDe
 
 const OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/** An explicit choice that refuses a purpose: absence of a choice is not one. */
+const refusedExplicitly = (consent: Consent): boolean =>
+  consent.instruction?.tracking?.value === false || consent.instruction?.personalization?.value === false;
+
+/**
+ * W16 R4 (LANE-LOG R81(c)): once her return is recognized beside the
+ * provisional capability an outage served her, the provisional subject is
+ * retired in its own object — its taste, its choice, its session projection and
+ * its grants — so it holds no state of its own. The recognition is already
+ * decided and rotated; a retirement that cannot finish is refused like any other
+ * owner failure, and the browser's exact retry is answered from the one
+ * deterministic receipt.
+ */
+async function retireProvisional(env: Env, principal: { tenant: string; subject: string }, capability: string): Promise<void> {
+  const response = await shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant)
+    .fetch('https://shopper-reflex/identity/continuity/retire', {
+      method: 'POST', headers: { [SHOPPER_HEADER]: capability, 'X-Tenant': principal.tenant, 'Content-Type': 'application/json' }, body: '{}',
+    });
+  if (!response.ok) throw new SessionAccessError();
+  const body = await response.json() as { ok?: unknown; retired?: unknown };
+  if (body.ok !== true || body.retired !== true) throw new SessionAccessError();
+}
+
 /**
  * A return. The proof arrives by the published transport and only by it, is
  * verified here for signature, tenant, transport, covered purpose, revision and
@@ -319,14 +342,22 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
     // is the ordinary consume, atomic in her own object, so the chain keeps its
     // single use, its one rotation and its one deterministic retry. Nothing of
     // the provisional subject is carried across: it is not merged, not read and
-    // not renewed — it is simply left behind to its own retention.
-    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined
+    // not renewed — and once she is recognized it is retired (W16 R4, LANE-LOG
+    // R81(c)): the provisional subject holds no state of its own afterwards.
+    //
+    // A choice made ON the provisional session that refuses a purpose is hers
+    // and outranks the return: a session that refused is not asking to be
+    // recognized, exactly as a refusing transition hint is not (fail closed).
+    const provisionalRefused = principal.kind === 'anonymous' && body?.continuity !== undefined
+      && refusedExplicitly(await ownedConsent(c.env, principal, token));
+    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined && !provisionalRefused
       ? await consumeContinuity(c.env, tenant, decision, c.req.raw, body.continuity, hints, setCookie)
       : null;
     if (returned !== null && returned !== 'unavailable') {
       session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
         consent: storedConsent(returned.consent) };
       continuity = returned.report;
+      await retireProvisional(c.env, principal, token);
     } else {
       if (returned === 'unavailable') continuity = UNAVAILABLE;
       const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);

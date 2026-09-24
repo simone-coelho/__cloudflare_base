@@ -431,7 +431,11 @@ Because that provisional session leaves the browser holding a capability, the re
 where a return **may** carry `X-Shopper-Session`: we complete the consume beside a capability only
 when the session that capability names is itself anonymous. A presented proof never takes over a
 session that belongs to an identified shopper, and nothing of the provisional subject is merged into
-the recognized one — it is left behind to its own retention.
+the recognized one. Once she is recognized, the provisional subject is retired: it holds no state of
+its own afterwards — not the taste browsed on it, not the choice made on it, not its session record —
+and its capability reads nothing. A choice made on the provisional session that refuses tracking or
+personalization outranks the return: that consume is not attempted, and she stays on the session
+she refused on.
 
 The `continuity` block is **absent altogether** from the answer for a shopper who is signed in.
 Return recognition here is anonymous recognition: the descriptor is bound to an anonymous browser

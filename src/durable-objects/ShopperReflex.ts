@@ -567,6 +567,12 @@ export class ShopperReflex {
       if (principal || !internal) return json({ ok: false }, 401);
       return this.handleContinuityConsume(request, internal);
     }
+    // W16 R4: the provisional subject an outage served her, retired once her
+    // return is recognized. Only its own live anonymous capability asks.
+    if (request.method === 'POST' && url.pathname === '/identity/continuity/retire') {
+      if (!principal) return json({ ok: false }, 401);
+      return this.handleProvisionalRetire(principal);
+    }
 
     if (request.headers.get('Upgrade') === 'websocket') {
       return this.serialize(async () => {
@@ -2140,6 +2146,36 @@ export class ShopperReflex {
         if (await continuityDigest(proof) !== record.digest) throw new SessionAccessError();
         await this.armContinuityAlarm(record.expiresAt);
         return json({ ok: true, enabled: true, descriptor, proof });
+      } catch (error) { this.invalidateMirrors(); throw error; }
+    });
+  }
+
+  /**
+   * W16 R4 (LANE-LOG R81(c)). An outage on her return served her a PROVISIONAL
+   * anonymous subject (W16.C6.13), and her next load recognized her own. The
+   * provisional subject then holds no state of its own: nothing of it was merged
+   * into hers (R72(c)), and nothing of it is kept here either — not its taste, not
+   * the choice she made on it, not its session projection, not its grants. What
+   * remains is only the bookkeeping `eraseWithBarrier` keeps for every retired
+   * object (a fresh, empty grant authority), so the provisional capability reads
+   * nothing and can adopt nothing.
+   *
+   * Only an anonymous subject that is still exactly itself is retired: a subject
+   * that forwards to a person, or is mid-transfer, is refused by `assertOwned`,
+   * and an identified grant is refused here.
+   */
+  private async handleProvisionalRetire(principal: SessionCapability): Promise<Response> {
+    return this.serialize(async () => {
+      try {
+        if (principal.kind !== 'anonymous') throw new SessionAccessError();
+        await this.assertOwned(principal, undefined, false, false);
+        if ((this.env.REFLEX_HOST ?? 'session') === 'session') {
+          // The session host's KV projection of the provisional session, and the
+          // pointer to it, go first, while its grant can still write them.
+          await new SessionManager(this.env, { tenant: principal.tenant, principal }).deleteSession(principal.sessionId);
+        }
+        await this.eraseWithBarrier();
+        return json({ ok: true, retired: true });
       } catch (error) { this.invalidateMirrors(); throw error; }
     });
   }
