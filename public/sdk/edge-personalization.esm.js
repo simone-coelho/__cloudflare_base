@@ -51,6 +51,7 @@ function hostOf(referrer) {
 
 // src/sdk/identity.ts
 var DEFAULT_VISITOR_KEY = "opt_visitor_id";
+var CONTINUITY_OPERATION_HEADER = "X-Continuity-Operation";
 var YEAR_SECONDS = 60 * 60 * 24 * 365;
 function writeVisitorId(host, key, id) {
   try {
@@ -690,33 +691,48 @@ function createCore(config, host) {
     return true;
   }
   function presentContinuity() {
-    if (cfg.sessionBroker) return null;
     try {
-      const proof = host.storage.get(continuityKey) ?? "";
-      if (!proof) return null;
+      const proof = cfg.sessionBroker ? "" : host.storage.get(continuityKey) ?? "";
+      if (!proof && !cfg.sessionBroker) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? "";
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
         host.storage.set(continuityOperationKey, operationId);
       }
-      return { proof, operationId };
+      return cfg.sessionBroker ? { operationId } : { proof, operationId };
     } catch {
       return null;
     }
   }
   function pendingContinuity() {
-    if (cfg.sessionBroker) return null;
     try {
-      const proof = host.storage.get(continuityKey) ?? "";
       const operationId = host.storage.get(continuityOperationKey) ?? "";
+      if (cfg.sessionBroker) return CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      const proof = host.storage.get(continuityKey) ?? "";
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch {
       return null;
     }
   }
+  function returnInFlight() {
+    try {
+      if (host.storage.get(capabilityKey)) return false;
+      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? "")) return false;
+      return !!cfg.sessionBroker || !!host.storage.get(continuityKey);
+    } catch {
+      return false;
+    }
+  }
   function keepContinuity(value) {
-    if (cfg.sessionBroker) return;
     const report = value;
+    if (cfg.sessionBroker) {
+      if (report?.enabled === false && report.reason === "unavailable") return;
+      try {
+        host.storage.set(continuityOperationKey, "");
+      } catch {
+      }
+      return;
+    }
     try {
       if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
         host.storage.set(continuityKey, report.proof);
@@ -801,7 +817,7 @@ function createCore(config, host) {
           } catch {
             return false;
           }
-          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length) rememberUnknownConsent();
+          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight()) rememberUnknownConsent();
         }
         let persisted = "";
         try {
@@ -811,11 +827,12 @@ function createCore(config, host) {
         if (Object.keys(recovery).length) persisted = "";
         const request = () => {
           const returning = persisted ? pendingContinuity() : presentContinuity();
+          const brokered = cfg.sessionBroker && returning ? { [CONTINUITY_OPERATION_HEADER]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), {
             method: "POST",
             credentials: "include",
-            headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {} },
-            body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning ? { continuity: returning } : {} })
+            headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {}, ...brokered },
+            body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
           }, 16384);
         };
         let res = await request();

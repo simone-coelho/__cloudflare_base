@@ -178,12 +178,10 @@ export interface EnrollmentProvenance {
    * Why the assignment is `ineligible`, so an analyst need not guess which
    * population a row belongs to: the shopper withheld personalization consent,
    * or her persistent enrollment anchor could not be read at that moment and no
-   * arm may be drawn from the id her browser happens to carry (R118(2), (3)),
-   * or her stored record could not be read under the retention policy in force,
-   * so she is served the site's default and drawn into no arm (W16 R5).
+   * arm may be drawn from the id her browser happens to carry (R118(2), (3)).
    * Absent on a randomised assignment.
    */
-  reason?: 'personalization_consent' | 'anchor_unavailable' | 'record_unreadable';
+  reason?: 'personalization_consent' | 'anchor_unavailable';
   /** 1 for the first anchor; only a replacement of the anchor itself advances it. Recognition does not. */
   anchorGeneration: number;
 }

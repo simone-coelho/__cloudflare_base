@@ -127,6 +127,13 @@ export interface DecisionSources {
   /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */
   external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
+  /**
+   * W16 R5 (LANE-LOG R19, R98(b)): present, as `'unreadable'`, only when her
+   * stored record exists but cannot be read out under the retention policy in
+   * force, so she was served the site's default decision. Absent otherwise: a
+   * refusal is named by `consent`, and an expired session gets no decision.
+   */
+  record?: 'unreadable';
   /** CW31: the shopper's consent switches as the host reported them, and whether the engine personalized at all. */
   consent: Consent & { personalized: boolean };
   /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */
@@ -400,8 +407,10 @@ export async function serveContentDecisions(
   const consent = shopper.consent;
   if (consent.tracking) requireConsentPurpose(consent, personalizes(consent) ? 'personalization' : 'tracking');
   // W16 R5: an unreadable record is served the site's default decision under her
-  // own consent — nothing of the record is an input, she is drawn into no arm,
-  // and nothing is written that her consent does not already cover.
+  // own consent — nothing of the record is an input, and nothing is written that
+  // her consent does not already cover. Her ASSIGNMENT is untouched: it is a pure
+  // function of her anchor and the published salt, not of the record, so the
+  // experiment keeps her where she is and the served experience says `default`.
   const unreadable = shopper.unreadable === true;
   const personalized = personalizes(consent) && !unreadable;
   const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined);
@@ -435,7 +444,7 @@ export async function serveContentDecisions(
   const saltCarried = carriedSaltVersion(learnRev);
   const saltVersion = saltCarried && saltCarried.salt === holdoutInForce.salt ? saltCarried.version : null;
   // The anchor is looked up only for a shopper who is in the experiment at all.
-  const anchor = personalized ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
+  const anchor = personalizes(consent) ? await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId) : null;
   const enrolled = anchor && !anchor.unavailable
     ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
       anchor: anchor.anchor, anchorGeneration: anchor.anchorGeneration })
@@ -447,7 +456,7 @@ export async function serveContentDecisions(
   // report can never pool her with the randomised control.
   const enrollment: EnrollmentProvenance | null = enrolled?.provenance
     ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
-      reason: unreadable ? 'record_unreadable' : personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
+      reason: personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
   const arm = unreadable ? 'default' : armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
@@ -596,6 +605,7 @@ export async function serveContentDecisions(
       journey: journeySource,
       external: external ? { kind: external.kind, ref: external.ref, ok: false, ms: 0, version: null, reason: external.reason } : null,
       state: shopper.state,
+      ...(unreadable ? { record: 'unreadable' as const } : {}),
       consent: { ...consent, personalized },
       timings,
     },

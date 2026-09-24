@@ -5,7 +5,7 @@
 // the socket URL, the welcome frame, the reconnect delay, the action envelope
 // and the POST-versus-push dedupe are its behavior, verbatim.
 
-import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession } from './identity';
+import { CONTINUITY_OPERATION_HEADER, currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession } from './identity';
 import { toWire } from './wire';
 import { isEventNonce, isEventTimestamp } from '../events/actionTypes';
 import type {
@@ -212,10 +212,13 @@ export function createCore(config: ClientConfig, host: Host): Core {
   // long proof, the browser keeps it in its own tenant-scoped store, and
   // presents it on a cold start when it holds no capability of its own. In
   // BROKER mode the proof belongs to the first-party broker and never to this
-  // script: nothing is kept and nothing is sent, even if a broker answers with
+  // script: no proof is kept and none is sent, even if a broker answers with
   // one. The operation id is minted beside the proof and kept until the consume
   // is answered, so a lost response is retried as the SAME consume rather than
-  // burning a second generation of her chain.
+  // burning a second generation of her chain. In broker mode it is the only
+  // thing kept (W16 R4): the script cannot see whether the broker holds a proof,
+  // so a cold start mints one, sends it to the broker in a header, and keeps it
+  // until an answer arrives.
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
@@ -564,18 +567,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
     return true;
   }
   /** The recognition proof this browser holds, with the operation id its
-   * consume is keyed by. Absent in broker mode, by construction. */
-  function presentContinuity(): { proof: string; operationId: string } | null {
-    if (cfg.sessionBroker) return null;
+   * consume is keyed by. In broker mode the proof is the broker's, so only the
+   * operation id is presented (W16 R4). */
+  function presentContinuity(): { proof?: string; operationId: string } | null {
     try {
-      const proof = host.storage.get(continuityKey) ?? '';
-      if (!proof) return null;
+      const proof = cfg.sessionBroker ? '' : host.storage.get(continuityKey) ?? '';
+      if (!proof && !cfg.sessionBroker) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? '';
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
         host.storage.set(continuityOperationKey, operationId);
       }
-      return { proof, operationId };
+      return cfg.sessionBroker ? { operationId } : { proof, operationId };
     } catch { return null; }
   }
   /**
@@ -592,11 +595,11 @@ export function createCore(config: ClientConfig, host: Host): Core {
    * operation id cleared) or decides about her (both cleared); only an outage
    * leaves the pair in place.
    */
-  function pendingContinuity(): { proof: string; operationId: string } | null {
-    if (cfg.sessionBroker) return null;
+  function pendingContinuity(): { proof?: string; operationId: string } | null {
     try {
-      const proof = host.storage.get(continuityKey) ?? '';
       const operationId = host.storage.get(continuityOperationKey) ?? '';
+      if (cfg.sessionBroker) return CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      const proof = host.storage.get(continuityKey) ?? '';
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch { return null; }
   }
@@ -614,9 +617,27 @@ export function createCore(config: ClientConfig, host: Host): Core {
    * looks like and clears — an engine that has stopped recognizing her must not
    * leave a long-lived credential lying in her browser.
    */
+  /**
+   * A return consume this browser started with no capability of its own and
+   * never saw answered: no capability is stored, and the operation id it was
+   * keyed by (with, in direct mode, the proof) is still kept.
+   */
+  function returnInFlight(): boolean {
+    try {
+      if (host.storage.get(capabilityKey)) return false;
+      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? '')) return false;
+      return !!cfg.sessionBroker || !!host.storage.get(continuityKey);
+    } catch { return false; }
+  }
   function keepContinuity(value: unknown): void {
-    if (cfg.sessionBroker) return;
     const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown; reason?: unknown } | null | undefined;
+    if (cfg.sessionBroker) {
+      // W16 R4: the broker keeps the proof; this browser keeps the operation id
+      // only while the engine could not finish the call it was minted for.
+      if (report?.enabled === false && report.reason === 'unavailable') return;
+      try { host.storage.set(continuityOperationKey, ''); } catch { /* storage unavailable; the engine still decided */ }
+      return;
+    }
     try {
       if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
         host.storage.set(continuityKey, report.proof);
@@ -677,7 +698,14 @@ export function createCore(config: ClientConfig, host: Host): Core {
           let saved: { persisted?: unknown; pending?: unknown } | undefined;
           try { saved = previous ? JSON.parse(previous) : undefined; } catch { return false; }
           // An interrupted transition or failed capability write never revives the old account.
-          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length) rememberUnknownConsent();
+          // W16 R4: a RETURN whose answer never arrived is neither. This browser
+          // held no capability to revive, the next request presents the very
+          // same consume, and its answer — replayed once from the engine's one
+          // receipt, or a cold shopper — carries the consent of the session it
+          // establishes. Treating that consent as unknown would send a refusal
+          // the shopper never made and turn her own return away. An explicit
+          // refusal she did make is restored from its own marker above.
+          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight()) rememberUnknownConsent();
         }
         let persisted = '';
         try { persisted = host.storage.get(capabilityKey) ?? ''; } catch { /* storage unavailable */ }
@@ -687,9 +715,12 @@ export function createCore(config: ClientConfig, host: Host): Core {
           // that already has a capability only retries a consume the engine
           // never answered (W16 C6.13).
           const returning = persisted ? pendingContinuity() : presentContinuity();
+          // Broker mode: the operation id rides a header, and the broker's
+          // body contract stays `{ consent? }` (W16 R4).
+          const brokered: Record<string, string> = cfg.sessionBroker && returning ? { [CONTINUITY_OPERATION_HEADER]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include',
-            headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}) },
-            body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning ? { continuity: returning } : {}) }) }, 16384);
+            headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}), ...brokered },
+            body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning && !cfg.sessionBroker ? { continuity: returning } : {}) }) }, 16384);
         };
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
