@@ -1069,11 +1069,16 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
   beforeEach(() => { invalidateCache(); invalidateLiftCache(); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
+  // W34 LG1 (step 3, STALE arrangement): W34.E3 refuses a NEW learn document
+  // carrying an external term, so the stored document these cases serve is
+  // published as a retained value (W11 `retainedValue`, envWith's fifth
+  // parameter), the only way such a document can still be stored. Every
+  // assertion below is unchanged.
   it.each(configurations)('withdraws $kind / $ref despite a valid positive-weight stored document', async (external) => {
     const { env, ring, shopper } = await envWith(snapshot, {
       holdout: { share: 0, salt: '', arms: ['default'] },
       external, slots: { hero: { external: { weight: 0.5 } } },
-    });
+    }, ['hero'], 'coach', true);
     // All adapters would succeed and favour b if the live service invoked one.
     const answer = { version: 'synthetic-v1', scores: { b: 1 } };
     const fetchCall = vi.fn(async () => Response.json(answer));
@@ -1114,7 +1119,7 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
     const { env } = await envWith(snapshot, {
       holdout: { share: mode === 'default arm' ? 1 : 0, salt: '', arms: ['default'] },
       external: configurations[0], slots: { hero: { external: { weight: mode === 'zero weight' ? 0 : 0.5 } } },
-    });
+    }, ['hero'], 'coach', true); // W34 LG1 STALE arrangement: retained, as above.
     const fetchCall = vi.fn(async () => Response.json({ version: 'unused', scores: { b: 1 } }));
     vi.stubGlobal('fetch', fetchCall);
     const out = await serve(env);

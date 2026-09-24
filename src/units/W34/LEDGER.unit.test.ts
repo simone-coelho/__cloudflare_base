@@ -32,9 +32,10 @@
 //
 // ONE WORLD: every learn document carrying an `external` model below is
 // published as a RETAINED value (`retainedValue: true`), because E3 refuses
-// such a document as a new write. The legacy W34.01 fixture publishes its
-// document through the new-document validator (consent.test.ts:102, :143-144 →
-// src/config/publication.ts:552); see the report for that collision.
+// such a document as a new write. The legacy W34.01 fixture is corrected the
+// same way in this ticket's commit (STALE arrangement: envWith's fifth
+// parameter, consent.test.ts:103), so E3's refusal may live in LEARN_KIND's
+// new-document validator (every E3 door calls it) and LG1 still passes.
 
 import { readFileSync } from 'node:fs';
 
