@@ -2,9 +2,69 @@
 
 **Internal. For our teams.** It names a competitor and dissects their published claims, so it is not a customer handout. Section 10 is the part that can be said out loud in front of a customer, without naming anyone.
 
-Researched 25 September 2026 from their public site, their SDKs, their DNS and their CDN. Their claims are quoted with the source. Our capabilities are as built in this engine. Anything inferred is marked.
+**Audience: product management, and anyone deciding what we build next.** Researched 25 September 2026 from their public site, their SDKs, their DNS and their CDN. Their claims are quoted with the source. Our capabilities are as built in this engine. Customer requirements quoted here come from the 18 September technical working session with a named retail customer, attributed line by line in `docs/architecture/tapestry-requirements-extraction-2026-09-18.md`. Anything inferred is marked.
 
 ---
+
+---
+
+# 0. For product management: what to conclude, and what not to
+
+A competitor teardown is easy to misread. This section exists so that the conclusions drawn from it are the ones the evidence supports.
+
+## 0.1 Start from what a customer actually asked for
+
+Not from what a competitor's homepage says. In a technical working session on 18 September, a retail customer with a published behavioural-targeting strategy asked for, in their own words and in this order:
+
+| What they asked for | Status with us |
+|---|---|
+| Experience personalization first: the **order of modules on a page**, not content inside them | Runs on today's engine. Modules become items, the page layout becomes a slot, the returned order is the sequence. |
+| **Semantic understanding** so a module merchandised as an intent can be matched, which structured attributes cannot express | Designed. Vectors at design time, one weighted term on the decision, encoder in search only. |
+| Decisions scoped to **the slot**, not the page | Already how every decision, weight, rule and evidence record works |
+| **Configurability**: weights per behaviour, per product type, and an optimisation objective per piece of content | Two of three exist. The third is a design conversation. |
+| Personalization by the **third or fourth action**, from channel and region before that | Region and channel are read pre-click; the profile updates from the first action |
+| Identity that **merges and never overrides** on sign-in | Exactly how linking behaves |
+| A taxonomy **they own**, with the engine agnostic to attribute names | By design, up to 32 dimensions |
+
+That is the demand signal, and it came from a conversation rather than an analyst report. None of it asks for a large language model, a vector database, or intent prediction.
+
+## 0.2 What the competitor evidence actually supports
+
+1. **The market is validating in-session anonymous intent.** Their entire product is "score the 85 to 95 percent who are anonymous, in session, with no history". Real demand, and they are good at it.
+2. **Their speed is precomputation, not a breakthrough.** Classify, then look up a pre-built creative. Their own publicly listable CDN bucket and the pre-rendered HTML in their mobile SDK show it.
+3. **They sit beside us, not on top of us.** They feed Optimizely and Contentsquare deliberately. Their output is a signal our decision can consume.
+
+## 0.3 Five conclusions not to draw
+
+**"We need a language model on the decision path."** No. The physics excludes one from *their* path too: generating even a few tokens costs hundreds of milliseconds against a decision budget of tens. Generation belongs at design time, where content and tags are prepared, and in search, where a person has typed and expects to wait. Putting one in the serving path trades away the two things this platform is bought for, a reproducible decision and a receipt.
+
+**"We need a vector database."** Only above roughly fifty thousand vectors, and only for retrieval and search, never on the decision path. A content corpus of a few thousand pieces is a few hundred kilobytes and compares in under a millisecond in memory at the edge. Buying an index for a corpus that fits in memory adds a network call and removes a guarantee.
+
+**"We should build intent prediction."** Consuming it is better than building it. A clickstream classifier is close to a commodity, it is what this competitor and several others already sell, and building one puts an inference call on a path we keep model-free on purpose. The external-model term already accepts someone else's score, weighted, versioned, itemised and time-budgeted. Spend the engineering on the decision layer nobody else has.
+
+**"Our cold start is behind theirs."** It is not, and the first draft of this document had it backwards. We cover a new visitor, from region, channel, visit number and the population prior with a pooling ladder, and a new item, which inherits from similar items and reports how many exposures it still needs. They cover the first well and the second not at all.
+
+**"Deterministic means we do not do machine learning."** This sentence costs us credibility with exactly the audience reading this. Two things learn continuously from real behaviour: the shopper's decaying per-dimension state, updated on every event, and per-item performance within a context, accumulated from decisions served and outcomes credited. What we decline is an inference call at decision time. Section 5 has the language to use instead.
+
+## 0.4 The backlog this actually implies
+
+Everything the customer asked for that is not already built, sized honestly. None of it is a quarter.
+
+| Item | Why it matters | Size |
+|---|---|---|
+| Slot configuration addressable per context cell | Day-one ordering by channel and visit number, before any learning. The customer called channel and visit the biggest unlocks. | Days |
+| Modules registered as items, plus module-level impression and engagement events | The first assignment they named | Days |
+| Position-bias correction for ordering | Without it, learning entrenches today's order | Days |
+| Semantic term on the decision, at weight zero first | Their confirmed embeddings requirement | Days |
+| Action weights per product type | Their configurability ask | Under a day |
+| Optimisation objective per content piece | Their late ask, and undesigned | A design session, then days |
+
+## 0.5 The positioning ask
+
+Two sentences are worth defending in every deck and every roadmap review, because they are what survives a model arms race:
+
+- **This is a decision and delivery platform, not a personalization feature.** The unit is a decision for a space on a page, governed by merchandising rules, delivered by the customer's own identifiers.
+- **The differentiators are the receipt and the dial.** Every decision explains itself and can be replayed; every parameter is versioned configuration that changes behaviour in seconds without a release. Neither is something a trained model can offer, and both are what a regulated buying centre asks for after the demo.
 
 # 1. The category correction, first
 
