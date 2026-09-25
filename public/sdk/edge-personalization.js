@@ -716,11 +716,11 @@
         return null;
       }
     }
-    function returnInFlight() {
+    function returnInFlight(interruptedTransition) {
       try {
-        if (host.storage.get(capabilityKey)) return false;
         if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? "")) return false;
-        return cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey);
+        if (!(cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey))) return false;
+        return !host.storage.get(capabilityKey) || !interruptedTransition;
       } catch {
         return false;
       }
@@ -823,7 +823,7 @@
             } catch {
               return false;
             }
-            if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight()) rememberUnknownConsent();
+            if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight(saved.pending === true)) rememberUnknownConsent();
           }
           let persisted = "";
           try {

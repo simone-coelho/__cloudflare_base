@@ -607,15 +607,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
     } catch { return null; }
   }
   /**
-   * A return consume this browser started with no capability of its own and
-   * never saw answered: no capability is stored, and the operation id it was
-   * keyed by (with, in direct mode, the proof) is still kept.
+   * A return consume this browser started and never saw answered: the
+   * operation id it was keyed by (with, in direct mode, the proof; in broker
+   * mode, the broker's descriptor) is still kept. Either the browser held no
+   * capability of its own (a cold return), or it held the PROVISIONAL one an
+   * outage served it and presented the pending consume beside it (W16.C6.13) —
+   * but never across an interrupted transition, which still revives nothing.
    */
-  function returnInFlight(): boolean {
+  function returnInFlight(interruptedTransition: boolean): boolean {
     try {
-      if (host.storage.get(capabilityKey)) return false;
       if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? '')) return false;
-      return cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey);
+      if (!(cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey))) return false;
+      return !host.storage.get(capabilityKey) || !interruptedTransition;
     } catch { return false; }
   }
   /** Broker mode: the engine issued a descriptor the broker now keeps for this browser. */
@@ -706,14 +709,16 @@ export function createCore(config: ClientConfig, host: Host): Core {
           let saved: { persisted?: unknown; pending?: unknown } | undefined;
           try { saved = previous ? JSON.parse(previous) : undefined; } catch { return false; }
           // An interrupted transition or failed capability write never revives the old account.
-          // W16 R4: a RETURN whose answer never arrived is neither. This browser
-          // held no capability to revive, the next request presents the very
-          // same consume, and its answer — replayed once from the engine's one
-          // receipt, or a cold shopper — carries the consent of the session it
-          // establishes. Treating that consent as unknown would send a refusal
-          // the shopper never made and turn her own return away. An explicit
-          // refusal she did make is restored from its own marker above.
-          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight()) rememberUnknownConsent();
+          // W16 R4: a RETURN whose answer never arrived is neither. The next
+          // request presents the very same consume (beside the provisional
+          // capability, when an outage had served one) and claims no consent at
+          // all: the engine answers it once from its one receipt with the
+          // consent HER OWN object holds as a current explicit choice (no such
+          // choice, no recognition), or as a cold shopper with none. Treating it
+          // as unknown consent would send a refusal she never made and turn her
+          // own return away. An explicit refusal she did make is restored from
+          // its own marker above and still turns the return away.
+          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight(saved.pending === true)) rememberUnknownConsent();
         }
         let persisted = '';
         try { persisted = host.storage.get(capabilityKey) ?? ''; } catch { /* storage unavailable */ }
