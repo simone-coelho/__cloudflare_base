@@ -2,7 +2,10 @@
 // scripts/md2docx.mjs — markdown to a corporate Word document.
 //
 //   node scripts/md2docx.mjs in.md out.docx "Title" "Subtitle" \
-//        "Prepared for" "Version" "Date" "Classification"
+//        "Prepared for" "Version" "Date" "Classification" [landscape]
+//
+// Pass "landscape" as the ninth argument for a wide matrix. Content width goes
+// from 9360 to 12960 twips and every table is measured against the new width.
 //
 // The `docx` package is NOT a dependency of this repo, deliberately: adding it
 // to package.json without regenerating package-lock.json breaks `npm ci`, which
@@ -52,15 +55,17 @@ function loadDocx() {
 }
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle,
   Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, TableOfContents,
-  Header, Footer, PageNumber, ExternalHyperlink, LevelFormat, convertInchesToTwip, TabStopType } = loadDocx();
+  Header, Footer, PageNumber, ExternalHyperlink, LevelFormat, convertInchesToTwip, TabStopType, PageOrientation } = loadDocx();
 
-const [, , IN, OUT, TITLE = 'Untitled', SUBTITLE = '', FOR = '', VERSION = '', DATED = '', CLASS = 'Confidential'] = process.argv;
+const [, , IN, OUT, TITLE = 'Untitled', SUBTITLE = '', FOR = '', VERSION = '', DATED = '', CLASS = 'Confidential', ORIENT = ''] = process.argv;
+const LANDSCAPE = /^landscape$/i.test(ORIENT);
 if (!IN || !OUT) { console.error('usage: node scripts/md2docx.mjs in.md out.docx "Title" "Subtitle" "For" "Version" "Date" "Class"'); process.exit(2); }
 const md = fs.readFileSync(IN, 'utf8');
 
 const NAVY = '11142A', BLUE = '0B5CAD', GREY = '5A6472', RULE = 'C9D1DC';
 const HEAD = 'E8EDF4', ZEBRA = 'F6F8FB', CODEBG = 'F3F5F8';
-const BODY = 'Calibri', MONO = 'Consolas', W = 9360;   // Letter minus 1in margins, in twips
+const BODY = 'Calibri', MONO = 'Consolas';
+const W = LANDSCAPE ? 12960 : 9360;   // Letter minus 1in margins, in twips; 11in wide when landscape
 
 const strip = (s) => s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')
   .replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
@@ -173,7 +178,7 @@ while (i < lines.length) {
 if (wide.length) console.warn(`md2docx: WARNING rule 2 — ${wide.length} code line(s) over 76 chars will wrap: lines ${wide.slice(0, 8).join(', ')}`);
 
 const metaRow = (k, v) => new TableRow({
-  children: [[2400, k], [6960, v]].map(([w, t], j) => new TableCell({
+  children: [[2400, k], [W - 2400, v]].map(([w, t], j) => new TableCell({
     width: { size: w, type: WidthType.DXA },
     borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
     margins: { top: 60, bottom: 60 },
@@ -186,7 +191,7 @@ const front = [
   new Paragraph({ spacing: { before: 200, after: 80 }, border: { bottom: { style: BorderStyle.SINGLE, size: 18, color: BLUE, space: 10 } }, children: [new TextRun({ text: TITLE, font: BODY, size: 52, bold: true, color: NAVY })] }),
   new Paragraph({ spacing: { before: 200, after: 700 }, children: [new TextRun({ text: SUBTITLE, font: BODY, size: 26, color: GREY })] }),
   new Table({
-    width: { size: W, type: WidthType.DXA }, columnWidths: [2400, 6960],
+    width: { size: W, type: WidthType.DXA }, columnWidths: [2400, W - 2400],
     borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
     rows: [metaRow('Prepared for', FOR), metaRow('Prepared by', 'Optimizely'), metaRow('Version', VERSION), metaRow('Date', DATED), metaRow('Classification', CLASS)],
   }),
@@ -204,7 +209,7 @@ const doc = new Document({
   ] },
   styles: { default: { document: { run: { font: BODY, size: 21, color: '1A1A1A' }, paragraph: { spacing: { line: 276, after: 120 } } } } },
   sections: [{
-    properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1), right: convertInchesToTwip(1) } }, titlePage: true },
+    properties: { page: { size: { width: 12240, height: 15840, orientation: LANDSCAPE ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT }, margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1), right: convertInchesToTwip(1) } }, titlePage: true },
     children: front.concat(kids),
     headers: { default: new Header({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: W }], border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: RULE, space: 4 } }, children: [new TextRun({ text: TITLE, font: BODY, size: 17, color: GREY }), new TextRun({ text: '\t' + CLASS, font: BODY, size: 17, color: GREY })] })] }), first: new Header({ children: [new Paragraph({ text: '' })] }) },
     footers: { default: new Footer({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: W }], children: [new TextRun({ text: [FOR, VERSION].filter(Boolean).join('  ·  '), font: BODY, size: 17, color: GREY }), new TextRun({ text: '\t', font: BODY, size: 17 }), new TextRun({ children: ['Page ', PageNumber.CURRENT, ' of ', PageNumber.TOTAL_PAGES], font: BODY, size: 17, color: GREY })] })] }), first: new Footer({ children: [new Paragraph({ text: '' })] }) },
