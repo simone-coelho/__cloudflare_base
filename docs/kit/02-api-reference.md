@@ -247,7 +247,7 @@ configuration could not be read (there is nothing to attribute the count to), an
 synthetic monitoring probe, which is excluded where every one of these counters is written.
 
 `reconciliation` is `{ since, compared, disagreements: [ { brand, slot, online, ledger, difference,
-threshold } ] }`: the scheduled comparison of the two stores that hold the same credits by two
+threshold, conflicts? } ] }`: the scheduled comparison of the two stores that hold the same credits by two
 different roads — each slot's statistics object, which counted them online as they happened, and the
 day report, which counted them from the ledger. It reads the NEWEST day this tenant has published,
 and only that day; `since` is that day's start and `compared` is how many (brand, slot) pairs the run
@@ -255,8 +255,18 @@ really compared, so a clean result is never an empty one. `online` is the slot's
 own decay, rounded; `ledger` is the credits the published day counted for that slot's personalized
 arm. A pair is named only when `difference` exceeds `threshold`, a stated relative tolerance of five
 per cent of the larger of the two: zero at unit scale, which is where one lost or doubled credit
-shows, and wide enough at volume to absorb the two stores reading their own clocks. Absent on a
-legacy record and on a run that could not read one of the two sinks.
+shows, and wide enough at volume to absorb the two stores reading their own clocks. A row also
+carries `conflicts: { decisions, outcomes }` when its `online` exceeds its `ledger` and the brand's
+published day excluded rows under the collision contract below; the member is that day's
+`counts.conflicts`, copied. It proves only that a collision is on record for the brand's day, and the
+outcome collision is one known cause of `online` exceeding `ledger`. It is the brand's count for the
+whole day, not this slot's: it cannot say which slot the excluded rows touched, and it cannot tell the
+collision from a credit the ledger lost on the same brand and day, so it rides every such row of the
+brand, including a row whose whole difference is a lost credit. It is never a reason to dismiss a
+difference: the collision accounts only for the credits of the rows the ledger-recovery surface lists
+as filed conflicts, and no other part of the difference is explained by it. A row without `conflicts`
+names no collision. `reconciliation` is absent on a legacy record and on a run that could not read one
+of the two sinks.
 
 `GET /v1/{tenant}/ledger/batches?date=` reconciles the day's export partition with the day the platform
 published, on the same answer: `counts` is `{ rows: { decisions, outcomes }, distinct: { decisions,
@@ -277,11 +287,22 @@ partition more than once (a queue redelivery, a retried partial batch), and ever
 exactly once, counting the copies it dropped as `counts.duplicates`. An outcome minted before the
 per-event nonce existed carries a timestamp-derived id that two genuinely distinct events can share;
 those legacy rows are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a
-read. Two genuinely DIFFERENT rows under one logical id are never merged: the read refuses the day
-with `{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
+read. Two genuinely DIFFERENT rows under one logical id are never merged, and this collision
+contract is the same on every surface. Online, the statistics credit EACH of two different records
+under one stable `outcome_id`: the credited journal tells records apart by the id and a digest of the
+whole record, so only the same record redelivered is credited once, and a delivery whose digest cannot
+be computed is recognised by its id alone — it can lose a credit it cannot tell apart, never grant one
+twice. On the ledger, the read refuses the day of the brand the collision touches, and only that
+brand's day — another brand of the same tenant is still answered — with
+`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
 conflicting row for recovery in the tenant's own scope where the ledger-recovery surface lists it, and
 reads the day again on the next call with that row excluded and counted as `counts.conflicts`, in the
-same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where the online statistics credited
+both records, the two stores therefore disagree by design on that brand and slot: once the difference
+exceeds its threshold, the scheduled `reconciliation` on `/v1/{tenant}/monitor` shows the pair as a
+disagreement, `online` above `ledger`, carrying `conflicts`. The credits of the filed records are the
+designed outcome, not a lost credit; `conflicts` does not show that they are the whole difference, and
+it rides the brand's other rows as well (see `reconciliation` above).
 
 Where a pinned slot fell short and still served something, it also wrote records, so the shortfall is on the receipt as well: `explain.shortTake = {take, served, empty, sentence}` rides every record that slot wrote, pinned position or ranked, and `GET /v1/{tenant}/visitors/{visitorId}/receipts` reads its sentence onto `why` exactly as it reads out stage, freshness, fatigue, merchandising and diversity. A refused slot writes no record, so it has no receipt and the counters above are its only home.
 

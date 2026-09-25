@@ -535,10 +535,25 @@ every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }
 dropped, so the rate is a number instead of a silence. An outcome minted before the per-event nonce
 existed carries a timestamp-derived id that two genuinely distinct events can share; such legacy rows
 are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a read. Two genuinely
-DIFFERENT rows under one logical id are never merged: the read refuses the day and names the
-collision (`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it
-for recovery in your tenant's own scope, and reads again on the next call with that row excluded and
-counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+DIFFERENT rows under one logical id are never merged, and this collision contract is the same on every
+surface. The online statistics credit EACH of two different records under one stable `outcome_id`:
+only the same record redelivered is credited once, and a delivery whose record digest cannot be
+computed is recognised by its id alone, so it can lose a credit it cannot tell apart and never grants
+one twice. The ledger read refuses the day of the brand the collision touches, and only that brand's
+day — another brand of the same tenant is still answered — and names the collision
+(`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it for
+recovery in your tenant's own scope, and reads again on the next call with that row excluded and
+counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where
+both records were credited online, the online store then holds more credits than that day for the
+brand and slot, by design: once the difference exceeds its threshold, the scheduled reconciliation on
+`/v1/{tenant}/monitor` shows the pair as a disagreement carrying `conflicts: { decisions, outcomes }`,
+the day's `counts.conflicts` copied onto the row. The credits of the filed records are the designed
+outcome, not a lost credit. `conflicts` proves only that a collision is on record for the brand's day:
+it is the brand's count for the day, not the slot's, and it rides every row of the brand whose online
+side exceeds its ledger side, so it cannot tell the collision from a credit the ledger lost on the same
+brand and day, including on a row whose whole difference is a lost credit. It is never a reason to
+dismiss a difference: the collision accounts only for the credits of the rows filed as conflicts, and
+no other part of the difference is explained by it. A row without `conflicts` names no collision.
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
