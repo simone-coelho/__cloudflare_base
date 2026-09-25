@@ -2385,8 +2385,8 @@
     {
       "id": "W30",
       "title": "Late and mutable hour repair, maturity and coverage flags",
-      "state": "BUILT_PENDING_VERIFY",
-      "executionMode": "VERIFICATION_ONLY",
+      "state": "PARTIAL",
+      "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
         "locator": "§5 row W30 (line 432); earliest gate G1 capacity / G3 reconstruction; findings F17/F18/F25; N08/N23",
@@ -2431,6 +2431,18 @@
           "proof": "The second command of the acceptance command runs every test whose name matches W30[.] in the listed legacy files."
         },
         {
+          "id": "L1",
+          "kind": "LOCAL",
+          "observable": "A late row that reaches a final hour past the re-fold horizon reaches its published day: the cron republishes that date with the row counted and named, as kit 02 states for late rows (adoption defect D1, a regression against 7e65a26).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A46) passes at the artifact revision."
+        },
+        {
+          "id": "S1",
+          "kind": "LOCAL",
+          "observable": "The console measurement screen and the learning screen describe an hour as repaired exactly as maturityOf and kit 02 define it (an hour folded after the re-fold horizon, whether or not it was folded before), never as repaired rather than first folded (adoption defect D2).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A46), or for a screen sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
           "observable": "The released artifact shows the behavior of every LOCAL criterion on the deployed hosts.",
@@ -2457,10 +2469,15 @@
         {
           "ref": "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-build/BRIEF.md",
           "description": "The build review that stopped without a verdict; its checklist carries into the verification."
+        },
+        {
+          "ref": "/home/simonecoelho/rem/_evidence/adoption-1/reviewer/REPORT.md",
+          "description": "The adoption verification at 68db4f6: W30 FAIL on two defects (D1 a late row past the horizon is never republished, a regression against 7e65a26; D2 both screens call first folds repaired rather than first folded)."
         }
       ],
       "remainingWork": [
-        "Verify the build at 1c4d153 on rem/w30-b1-build against this contract (the stopped build review is the checklist: repaired, the conditional lateObjects put, the single-cause evicted, the filedConflict fail-closed read, the quarantine import), then record an ADOPTION receipt or amend this ticket with the finite defects."
+        "L1: starting from the W30-B1 build (1c4d153 on rem/w30-b1-build) merged with the integration head, republish a date whose late row reaches a final hour past the re-fold horizon (src/learn/hourly.ts: staleHour records lateObjects around lines 1946-1947 and 2033; catchUp republishes only dates built in the same run around lines 2067 and 2071).",
+        "S1: correct the repaired wording in public/console/views-measure.js (around line 129) and public/learning.js (around line 414) to match maturityOf (src/learn/hourly.ts around lines 1213-1215) and kit 02."
       ],
       "decisions": [
         {
@@ -2475,6 +2492,12 @@
           "authorityRef": "units.json W30.P1.01 on rem/w30-b1-build",
           "effect": "The build asserts the mechanism against the compiled values; the values and the workload are approved in LIVE2.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), row A46",
+          "effect": "The W30 adoption failed on two defects; W30 is delivered as an implementation ticket in its place after W29, from the W30-B1 build merged with the integration head, within the W30-B1 write grant."
         }
       ],
       "deferredLiveAcceptance": [
@@ -2491,7 +2514,18 @@
           "proof": "A workload record at a signed-off workload."
         }
       ],
-      "allowedPaths": [],
+      "allowedPaths": [
+        "src/learn/hourly.ts",
+        "src/learn/report.ts",
+        "src/measure/window.ts",
+        "src/index.ts",
+        "src/routes/decisions.ts",
+        "public/console/views-measure.js",
+        "public/learning.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "docs/api/01-rest-endpoints.md"
+      ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/W30 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts src/learn/hourly.test.ts src/learn/report.test.ts -t \"W30[.]\" --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
@@ -2511,7 +2545,8 @@
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
         "The program integration gate command exits 0 once at the same artifact revision.",
-        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision."
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
       ],
       "blockers": []
     },
@@ -3456,6 +3491,12 @@
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
+          "id": "T7",
+          "kind": "LOCAL",
+          "observable": "A stamp whose queues do not exist yet can be created: every receipt key the stamp workflow writes passes the protected store's key check (the resource-deadLetter key fails it today, scripts/stamp-workflow.mjs around lines 358 and 750).",
+          "proof": "A test the specifier adds to the W37 acceptance command before the build (amendment A45) passes at the artifact revision."
+        },
+        {
           "id": "LG1",
           "kind": "LOCAL",
           "observable": "Every legacy test named for W37 passes, including fourteen W37 tests (mostly stale fixtures of triage groups A and B) that fail in the takeover baseline (docs/remediation/baseline-failures.json).",
@@ -3495,7 +3536,8 @@
         "T2: every cron and the hourly fold publish per brand.",
         "T3: adding a brand never takes another brand's default position (scripts/stamp-workflow.mjs).",
         "T5: per-shopper export and erasure across two non-default brands (decision D2).",
-        "LG1 defect: the object host answers already, not linked, for a repeated link (src/durable-objects/ShopperReflex.ts around line 266)."
+        "LG1 defect: the object host answers already, not linked, for a repeated link (src/durable-objects/ShopperReflex.ts around line 266).",
+        "T7: fresh-stamp creation — the resource-deadLetter receipt key must pass the protected store's key check (scripts/stamp-workflow.mjs around lines 358 and 750)."
       ],
       "decisions": [
         {
@@ -3510,6 +3552,12 @@
           "status": "RESOLVED",
           "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A32",
           "effect": "Complete export and erasure means per-shopper export and erasure proven for two non-default brands across every store holding that tenant's shopper data; whole-tenant offboarding is not built."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), rows A43 and A45",
+          "effect": "W37 also fixes fresh-stamp creation (T7), a defect found outside the 26 as frozen; its write boundary adds src/customerBoundary.ts, src/routes/decisions.ts, src/auth/store.ts and src/auth/subjectAudit.ts for the audited per-shopper export (T5)."
         }
       ],
       "deferredLiveAcceptance": [
@@ -3550,6 +3598,10 @@
         "src/middleware/edgeAccess.ts",
         "src/retention.ts",
         "src/auth/oidc.ts",
+        "src/customerBoundary.ts",
+        "src/routes/decisions.ts",
+        "src/auth/store.ts",
+        "src/auth/subjectAudit.ts",
         "scripts/stamp-workflow.mjs",
         "scripts/provision-stamp.sh",
         "docs/deployment/01-deploy.md",
@@ -3963,6 +4015,12 @@
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
+          "id": "P6",
+          "kind": "LOCAL",
+          "observable": "The release lint the deploy's package step runs passes with its warning cap unchanged at 582, because the lint script in package.json excludes src/units/** (decision D4).",
+          "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
           "id": "DC1",
           "kind": "DECISION",
           "observable": "SDK packaging is delivered, not removed.",
@@ -3991,7 +4049,8 @@
         }
       ],
       "remainingWork": [
-        "P1–P5: the package, types, size check, versioned serving and kit example."
+        "P1–P5: the package, types, size check, versioned serving and kit example.",
+        "P6: exclude src/units/** from the release lint script in package.json, keeping --max-warnings 582 (decision D4)."
       ],
       "decisions": [
         {
@@ -4012,6 +4071,12 @@
           "status": "RESOLVED",
           "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A40",
           "effect": "The size budget is each bundle's measured size at the W40 build rounded up to the next 5 KB; a later change is an owner decision."
+        },
+        {
+          "id": "D4",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), row A44",
+          "effect": "The release lint covers shipped code only: src/units/** (the ledger acceptance tests) is excluded from the lint script and the warning cap stays 582; a later change is an owner decision."
         }
       ],
       "deferredLiveAcceptance": [
