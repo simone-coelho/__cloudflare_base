@@ -310,18 +310,27 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "9830cce5e66871fe513006eaee8fee555b0716de on rem/spec-w16: src/units/W16 (the batch tests of W16-B1 to W16-B9 and LEDGER.unit.test.ts)",
+        "reviewedRevision": "942dfbd0d7fa3ada808c6b0da6547c70227bec3d on rem/spec-w16: src/units/W16, 116 tests (the batch tests of W16-B1 to W16-B9 and LEDGER.unit.test.ts, with the fix-1 tests unit:W16.C6.14, C6.15, C6.16 and R4.retry added for the delivery-review defects found at 55a4490)",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W16/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/REPORT-2.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-R3R5-controls.log",
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-acceptance.log",
-          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-R3-legacy-control.log"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-R3-legacy-control.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-control2-build-55a4490.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-control2-broad-exemption-1506a62.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/logs/control-fix-1506a62-broad-2.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/logs/control-55a4490-new-tests.log"
         ]
       },
       "doneWhen": [

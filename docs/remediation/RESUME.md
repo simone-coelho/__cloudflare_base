@@ -2,6 +2,14 @@
 
 **2026-09-23: the remediation runs under the Closure Ledger** (the owner's go, 2026-09-23). Read `AGENTS.md`, then `tools/closure-ledger/BOOTSTRAP-MEMO.md`.
 
+## PAUSED 2026-09-25 on the owner’s order (credits reset) — cold resume here
+
+- Status: Local done 3/26 (W17, W18, W31 adopted at `0c19026`, receipts `9ac4fd9`) · Final 0/26. `rem/integration` head at pause: this commit. Every lane checkout clean; nothing of ours running. One orphan `workerd` (cwd `/home/simonecoelho/rem/spec-k`, from an old W40 specifier run) is left alive: agents may not kill processes.
+- W16 ACTIVE. Build 1 `55a4490` FAILED delivery review (`/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/REPORT.md`: D1 the exact retry is refused 401 after the provisional capability is retired; D2 a lost answer beside a provisional capability becomes an unknown-consent refusal). Fix commits `b36b184`, `1506a62` on `rem/w16-build` (checkout `build-w16`), NOT gated yet; the implementer waits for the lead.
+- W16 tests for D1/D2: `rem/spec-w16` (checkout `spec-a`) = `9830cce` + `dd929a5` (C6.14, C6.15, R4.retry; its spec review FAILED on the unpinned W05 consent boundary, `_evidence/W16-fix1/reviewer-spec/REPORT.md`) + `942dfbd` (C6.16 pins it; NOT yet reviewed; specifier report goes to `_evidence/W16-fix1/specifier/`).
+- Next, in order: (1) rem-reviewer SPECIFICATION delta at `942dfbd`; (2) on PASS set W16 `reviewedRevision` to `942dfbd` plus the fix-1 evidence in `/home/simonecoelho/rem/_evidence/step3/gates.json`, regenerate with `build-program.mjs`, `check`, commit; (3) the implementer merges `rem/spec-w16` then `rem/integration` into `rem/w16-build` (merge `-m` with attribution), runs the acceptance command and the gate once; (4) rem-reviewer DELIVERY re-review at that head; (5) DELIVERY receipt, merge into `rem/integration`, W16 INACTIVE and W19 ACTIVE, `check --receipts`, commit. W19 brief findings drafted in `_evidence/W19-delivery/implementer/BRIEF-draft-findings.md`.
+- Owner questions open: A43–A46 in `/home/simonecoelho/rem/_evidence/step3/AMENDMENTS.md` (none blocks W16–W29).
+
 - Integration branch `rem/integration`, from `798f2a7` (the state at the 2026-09-20 stop; last product merge `ee44579`), checked out at `/home/simonecoelho/rem/integration`. The `/mnt/c` working tree and `feature/real-time-personalization` are another team's demo work: never commit there.
 - Step 1 done: Closure Ledger 0.1.0 in `tools/closure-ledger/`; the 26-ticket scaffold W16–W41 in `docs/remediation/delivery-control/`. It fails `check` by design until every work order is filled.
 - Step 2 done: all 26 work orders are in `program.json`, frozen by the owner on 2026-09-24 ("Let's go with your recommendation"), the ten pre-filled decisions included. `check` fails only on the 26 specification gates (four TBD fields each).
