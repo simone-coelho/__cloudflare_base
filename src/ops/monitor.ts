@@ -241,6 +241,19 @@ export interface SinkDisagreement {
   difference: number;
   /** What the difference had to exceed to be named; stated on every row. */
   threshold: number;
+  /**
+   * W22 R5 (LANE-LOG R145): the designed collision, named. Present only when
+   * the published day this row compared EXCLUDED rows under the admitted
+   * collision contract — two different records under one stable id, filed and
+   * then counted in the day report's `counts.conflicts` — and the online side
+   * holds more than the ledger, the one direction that collision moves the two
+   * sinks: the online statistics credited each record (W22 D1.04) while the day
+   * kept the first (W22 D1.03). It is that brand's day count, copied in the
+   * report's own vocabulary, so an operator can tell a difference of up to
+   * `conflicts.outcomes` from a lost credit. A row without it has no such cause
+   * on record: a lost ledger row is never named a collision.
+   */
+  conflicts?: { decisions: number; outcomes: number };
 }
 export interface SinkReconciliation {
   /** Epoch milliseconds: the day the comparison read. */
@@ -304,6 +317,12 @@ const safeEvidenceLoss = (value: unknown): MonitorResult['evidenceLoss'] | undef
  * two numbers, and a bounded list of rows whose members are rebuilt here rather
  * than copied through. A row that does not carry all five numbers is dropped. */
 const RECONCILED_ROWS = 64;
+/** A collision count is two whole, non-negative numbers, at least one of them non-zero, or nothing. */
+const safeConflicts = (value: unknown): SinkDisagreement['conflicts'] | undefined => {
+  const decisions = field(value, 'decisions'), outcomes = field(value, 'outcomes');
+  if (!observedCount(decisions, Number.MAX_SAFE_INTEGER) || !observedCount(outcomes, Number.MAX_SAFE_INTEGER) || decisions + outcomes === 0) return undefined;
+  return { decisions, outcomes };
+};
 const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | undefined => {
   const since = field(value, 'since'), compared = field(value, 'compared'), rows = field(value, 'disagreements');
   if (typeof since !== 'number' || typeof compared !== 'number' || !Array.isArray(rows)) return undefined;
@@ -315,7 +334,10 @@ const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | u
     if (typeof brand !== 'string' || !isValidTenantId(brand) || typeof slot !== 'string' || !slot || slot.length > 256
       || numbers.some(n => typeof n !== 'number')) continue;
     const [online, ledger, difference, threshold] = numbers.map(n => bounded(n, Number.MAX_SAFE_INTEGER));
-    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold! });
+    // W22 R5: the collision a row names is rebuilt from its two counts, or the
+    // member is dropped; no stored byte can name a collision the row did not.
+    const conflicts = safeConflicts(field(row, 'conflicts'));
+    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold!, ...(conflicts ? { conflicts } : {}) });
   }
   return { since: bounded(since, 8_640_000_000_000_000), compared: bounded(compared, Number.MAX_SAFE_INTEGER), disagreements };
 };
@@ -524,7 +546,11 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
         compared++;
         const difference = Math.abs(online - ledger);
         const threshold = Math.floor(RECONCILIATION_TOLERANCE * Math.max(online, ledger));
-        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold });
+        // W22 R5 (R145): a day that excluded rows under the admitted collision
+        // contract names it on the row it can explain — online above ledger —
+        // so the designed outcome is not read as a lost credit.
+        const conflicts = online > ledger ? safeConflicts(report.counts?.conflicts) : undefined;
+        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold, ...(conflicts ? { conflicts } : {}) });
         if (disagreements.length >= RECONCILED_ROWS) break;
       }
     }
