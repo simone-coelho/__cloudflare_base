@@ -62,7 +62,7 @@ import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requir
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
-import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
+import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { IdentityStore, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted } from '@/identity/shopperId';
@@ -225,6 +225,14 @@ const continuityRecordSchema = z.object({
   receipt: z.object({ operationId: z.string().uuid(), digest: continuityDigestSchema, grant: grantSchema }).strict().optional(),
 }).strict();
 type ContinuityRecord = z.infer<typeof continuityRecordSchema>;
+/**
+ * W16 R4: what a provisional object keeps once her return retired it — the
+ * operation that return was keyed by, until the retired grant's own expiry, so
+ * the exact retry of that lost answer is recognized as that return. No taste,
+ * no choice, no session: nothing of the shopper.
+ */
+const CONTINUITY_RETIRED_PREFIX = 'continuityRetired:';
+const retiredMarkerSchema = z.object({ version: z.literal(1), operationId: z.string().uuid(), until: identityTime }).strict();
 const continuitySettingsSchema = z.object({
   mode: z.enum(['direct', 'broker']), windowMs: z.number().finite().positive(),
   purpose: z.string().min(1).max(120), revision: z.number().int().nonnegative(),
@@ -430,7 +438,16 @@ export class ShopperReflex {
             ? await routed.clone().json() as Record<string, unknown> : null;
           const restrictive = !!preferences;
           try { await this.assertOwned(principal!, routed, restrictive); }
-          catch { throw new SessionAccessError(); }
+          catch {
+            // W16 R4: a grant her own recognized return retired is still
+            // refused, but the refusal says so for the exact retry of that return.
+            if (await this.retiredByReturn(principal!, routed)) {
+              const refused = json({ ok: false, error: 'Shopper session unavailable' }, 401);
+              refused.headers.set(CONTINUITY_RETIRED_HEADER, 'recognized');
+              return refused;
+            }
+            throw new SessionAccessError();
+          }
         }
         return dispatchOwnedRequest(this, this.env, routed, principal!, req => this.fetch(req));
       }).catch(error => {
@@ -571,7 +588,8 @@ export class ShopperReflex {
     // return is recognized. Only its own live anonymous capability asks.
     if (request.method === 'POST' && url.pathname === '/identity/continuity/retire') {
       if (!principal) return json({ ok: false }, 401);
-      return this.handleProvisionalRetire(principal);
+      const body = z.object({ operationId: z.string().uuid() }).strict().parse(await request.json());
+      return this.handleProvisionalRetire(principal, body.operationId);
     }
 
     if (request.headers.get('Upgrade') === 'websocket') {
@@ -1576,6 +1594,12 @@ export class ShopperReflex {
         if (chain.expiresAt <= Date.now()) await this.state.storage.delete(CONTINUITY_KEY);
         else await this.armContinuityAlarm(chain.expiresAt);
       }
+      // W16 R4: a retirement marker outlives nothing — gone at its grant's expiry.
+      for (const [key, value] of await this.state.storage.list({ prefix: CONTINUITY_RETIRED_PREFIX })) {
+        const marker = retiredMarkerSchema.safeParse(value);
+        if (!marker.success || marker.data.until <= Date.now()) await this.state.storage.delete(key);
+        else await this.armContinuityAlarm(marker.data.until);
+      }
       await this.load();
       const now = Date.now();
       const surface = this.surface();
@@ -2164,20 +2188,39 @@ export class ShopperReflex {
    * that forwards to a person, or is mid-transfer, is refused by `assertOwned`,
    * and an identified grant is refused here.
    */
-  private async handleProvisionalRetire(principal: SessionCapability): Promise<Response> {
+  private async handleProvisionalRetire(principal: SessionCapability, operationId: string): Promise<Response> {
     return this.serialize(async () => {
       try {
-        if (principal.kind !== 'anonymous') throw new SessionAccessError();
+        const grant = grantSchema.parse(principal);
+        if (grant.kind !== 'anonymous') throw new SessionAccessError();
         await this.assertOwned(principal, undefined, false, false);
         if ((this.env.REFLEX_HOST ?? 'session') === 'session') {
           // The session host's KV projection of the provisional session, and the
           // pointer to it, go first, while its grant can still write them.
           await new SessionManager(this.env, { tenant: principal.tenant, principal }).deleteSession(principal.sessionId);
         }
-        await this.eraseWithBarrier();
+        // The exact retry of this return's lost answer arrives with the grant
+        // this retirement revokes; the marker lets the refusal name it, until
+        // the grant would have expired anyway, and then the alarm removes it.
+        const marker = retiredMarkerSchema.parse({ version: 1, operationId, until: grant.exp * 1000 });
+        await this.eraseWithBarrier({ [CONTINUITY_RETIRED_PREFIX + grant.grantId]: marker });
+        await this.armContinuityAlarm(marker.until);
         return json({ ok: true, retired: true });
       } catch (error) { this.invalidateMirrors(); throw error; }
     });
+  }
+
+  /** The refused request is the exact retry of the return that retired this grant. */
+  private async retiredByReturn(principal: SessionCapability, routed: Request): Promise<boolean> {
+    try {
+      if (routed.method !== 'POST' || !principal.grantId || !/^\/v1\/[^/]+\/identity\/session$/.test(new URL(routed.url).pathname)) return false;
+      const saved = await this.state.storage.get(CONTINUITY_RETIRED_PREFIX + principal.grantId);
+      if (saved === undefined) return false;
+      const marker = retiredMarkerSchema.parse(saved);
+      if (marker.until <= Date.now()) return false;
+      const body = await routed.clone().json() as { continuity?: { operationId?: unknown } } | null;
+      return body?.continuity?.operationId === marker.operationId;
+    } catch { return false; }
   }
 
   /**
