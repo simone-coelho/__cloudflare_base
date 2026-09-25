@@ -927,3 +927,15 @@ body { padding-bottom: 118px; }
   color: var(--muted); margin-bottom: 9px;
 }
 .module-where b { color: var(--coral-ink, #8C3A24); }
+
+/* The act, above the beat number, so the presenter never has to count. The
+   director bar is dark, so these are light tones: --muted would vanish on it. */
+.beatno { display: flex; flex-direction: column; gap: 2px; padding-top: 0; }
+.beatno .act {
+  font-family: var(--font-d); font-size: 12.5px; font-weight: 700; color: #F4A58E;
+  letter-spacing: 0; text-transform: none; white-space: nowrap;
+}
+.beatno .bn {
+  font-family: var(--font-m); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .62); white-space: nowrap;
+}

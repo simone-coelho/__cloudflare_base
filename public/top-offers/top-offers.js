@@ -673,6 +673,17 @@
     el.topOffersModule.classList.add('module--moved');
   }
 
+  /* The five acts of the walkthrough, so the presenter can always see which one
+     they are in. Same names as docs/qvc/QVC-Top-Offers-Demo-Script.md: if these
+     ever drift from the script, the script wins. */
+  const ACTS = [
+    { n: 1, through: 5,  name: 'The visitor earns it' },
+    { n: 2, through: 10, name: "The merchandiser's day" },
+    { n: 3, through: 12, name: 'Location and weather' },
+    { n: 4, through: 14, name: "Garrett's page questions" },
+    { n: 5, through: 15, name: 'The metric' },
+  ];
+
   const useCatalog = async (name) => { state.catalog = await fetchDoc(name); renderPool(); };
 
   // ── The director's hand ───────────────────────────────────────────────────
@@ -1172,7 +1183,9 @@
     state.busy = true;
     const beforeRows = state.current;
     Array.from(el.presses.children).forEach((b, j) => b.setAttribute('aria-pressed', j === i ? 'true' : 'false'));
-    el.beatNo.textContent = `Beat ${i + 1} / ${BEATS.length}`;
+    const act = ACTS.find((a) => i + 1 <= a.through);
+    el.beatNo.innerHTML = `<b class="act">Act ${act.n} &middot; ${act.name}</b>`
+      + `<span class="bn">Beat ${i + 1} / ${BEATS.length}</span>`;
     el.engineLine.innerHTML = BEATS[i].line;
     say('working…');
     try {
