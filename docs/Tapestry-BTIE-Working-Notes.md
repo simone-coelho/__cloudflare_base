@@ -28,11 +28,11 @@ The four earlier documents (implementation guide v1.1, the implementation one-pa
 
 **The single next action.** Ask the owner whether to commit those three paths. Nothing else in this lane is pending a decision from us. If the answer is yes: `git add` the three paths by name and commit locally, no push.
 
-**Owed but not started**, both named inside the parity document as coming: the vector-embeddings design document, and the identifier handshake specification (SDK-loaded hook, the call that passes their identifier, the signed link at recognition).
+**Owed.** The vector-embeddings design document is written (25 Sep). Still not started: the identifier handshake specification (SDK-loaded hook, the call that passes their identifier, the signed link at recognition).
 
 **Two things a new reader would otherwise get wrong**
 
-- The Word files are generated from the markdown masters by a converter that lived in the session scratchpad, which has since been cleared. Editing any `.docx` means rewriting that converter first: markdown to Word with the `docx` npm package, tables floored per column, every fenced code line at most 76 characters, no ASCII diagrams. Rules and reasons in §2.6 and in the memory entry.
+- The Word files are generated from the markdown masters by `scripts/md2docx.mjs`, which is committed. It needs the `docx` package installed once per machine, outside the repo: `npm install --prefix ~/.md2docx docx`. It is deliberately not a repo dependency, because adding it to package.json without regenerating package-lock.json breaks `npm ci`, which is what CI runs. The seven rules that took a rejected draft to learn are in the script's own header.
 - `docs/BTI-Content-Pool-Sizing` is the one stale document. It argues the 180,000-variant figure at page scope, which the 18 September session superseded by scoping decisions to the slot. Re-issue at slot scope before it goes in any pack.
 
 ---
@@ -49,6 +49,7 @@ The four earlier documents (implementation guide v1.1, the implementation one-pa
 | BTIE clause-by-clause review | `docs/architecture/26-btie-requirements-gap-review.md` | 2026-09-04, against BTIE v2.0. Internal. |
 | BTIE build deltas | `docs/architecture/27-btie-deltas-handover.md` | Nine items handed to the outcome-learning session. **All nine now verified built** (2026-09-18). |
 | **Parity and mechanism document** | `docs/BTI-Parity-and-Mechanism.md` and `-v1.0.docx` | The Monday deliverable, written 18 Sep. One document: vocabulary, the module-sequencing mechanism (section 3, the 24 Sep answer), embeddings with the revised explainability sentence, B1 to B12 mapped, identity and first paint, proposed defaults, edge discipline, the ask list. Customer-safe. |
+| **Vector embeddings design** | `docs/BTI-Vector-Embeddings-Design.md` and `-v1.0.docx` | Written 25 Sep, the second item owed from the session. Decides what gets a vector, where they live and what they cost, the encoder, the shopper's semantic taste, the term in the score, the dense-versus-sparse evaluation on their sample, and the encoder-replacement procedure. Customer-safe. |
 | **Requirements extraction, 18 Sep working session** | `docs/architecture/tapestry-requirements-extraction-2026-09-18.md` | Transcript-derived. B1 to B12 requirements, D the sequencing reversal, E dependencies, G gaps, H decisions, I engineering questions. **The source of truth for what they asked.** |
 
 Nothing is committed yet.
