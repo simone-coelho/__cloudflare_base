@@ -206,6 +206,25 @@ Nothing in B, D or E is blocked by their content and module IDs: an ID is an opa
 | No shared memory across requests | State lives in the shopper object and KV already. Not an issue. |
 | First paint arrives before the origin | We mint identity at the edge and serve immediately; their ID stitches afterwards. The edge is what makes first paint possible. |
 
+### 2.7 Competitor: Quin (quinengine.com), researched 25 Sep
+
+Full comparison in `docs/Competitive-Quin-Comparison.md`. The short version, because the "70 ms" question will come back.
+
+**What they are.** An anonymous in-session **intent predictor**, not a content or experience platform. A trained clickstream model scores a visitor and returns a ready-made *action*: an overlay, promo or recommendation with pre-rendered HTML the client injects. Sold as "generative behavioral AI"; their own technical wording is "deep learning" and "neural networks". They feed Optimizely and Contentsquare rather than replace them. About 15 people, £1.5M seed in 2024.
+
+**The 70 ms, dissected.** Their site gives three different numbers with no percentile, region, measurement point or load: 70 ms (homepage), "17 ms to predict, 79 ms to deliver" (product overview), "data streaming speeds under 70 ms" (the Optimizely connector page). On physics: 17 ms can only be server-side inference excluding the network, because a browser-to-regional-cloud round trip is 10 to 30 ms in region and 75 to 150 ms transatlantic; 79 ms end to end requires same-region and a warm connection; and **no large language model can be in that path**, since generating even a few tokens costs 200 ms to 2 s. Their speed comes from precomputation: their production CDN is a publicly listable Google Cloud Storage bucket of `promos__<hash>__<hash>__<timestamp>` blobs, and their mobile SDK's response carries pre-rendered `html`. Classify, then look up. The same shape as ours, minus the edge.
+
+**The positioning that matters.** They produce a **signal**. We are the **decision and delivery platform** that acts on signals, governs them, explains them and delivers by identifier. Their intent score is a candidate input to our external-model term, which is the honest and the strongest framing: additive, not competing.
+
+**Do not let the comparison shrink us to an intent engine.** Four corrections to make every time:
+
+1. **We learn from real behaviour.** Per-dimension affinity updates on every event with decay, and per-cell outcome statistics accumulate from served decisions and what followed. Deterministic *at decision time* does not mean static; it means the arithmetic is reproducible and the receipt explains it.
+2. **Cold start is a strength, not a gap.** New visitor: region, entry channel, visit number, population priors from the regional trend, the pooling ladder from full cell up to everyone, and priors imported from their warehouse. New item: inherits from similar items, shrinks toward the slot baseline, and reports exposures-to-floor. They have new-visitor intent and nothing for new content.
+3. **The tuning surface is the efficiency argument.** Every weight, decay horizon, threshold, exploration share, trust dial, fatigue, freshness, diversity and merchandising cap is versioned configuration, effective without a deployment, rollback-able. A classifier cannot be tuned that way; changing its behaviour means retraining.
+4. **Content is treated as a product.** The same machinery ranks pieces, products and modules, which is why module sequencing needs no new engine. Their unit is one injected action; they cannot reorder a page's modules or fill six slots from twenty assets with page-wide de-duplication and pins.
+
+**Never claim:** that they use a large language model at decision time (the numbers exclude it, and saying so invites correction), or that their intent model is weak. A trained sequence model over clickstream will beat hand-tuned arithmetic at "will this anonymous visitor convert", and that is their design centre.
+
 ## 3. Log
 
 ### 2026-09-18
@@ -220,4 +239,5 @@ Nothing in B, D or E is blocked by their content and module IDs: an ID is an opa
 - Embeddings clarified after the session: "model" means the encoder. Design-time for items and concepts, request-time only for typed search. Decisions stay encoder-free. Position 2 rewritten.
 - Committed for Monday 21 Sep: the parity document and the vector-embeddings design. Committed for 24 Sep: the module-sequencing mechanism (2.5), which gates the wider meeting.
 - Parity document written as one document with the mechanism at its centre (Simone's choice). Word and markdown in docs/. Still owed: the vector-embeddings design document and the identifier handshake.
+- **2026-09-25.** Quin researched and compared (§2.7 and the comparison document). Simone's correction on the first draft: the comparison undersold us as an intent engine, missed ODP memory, called cold start a weakness when it is a strength, and skipped the tuning surface and content-as-a-product entirely. All four folded in.
 - **2026-09-25, credit-reset pause.** Nothing running in this lane. Cold-resume note added as §0. Cleanup the day before: freed 305 KB of Word smoke-test artifacts; observed 2.0 GB of stale August worktrees under `.claude/worktrees/` that belong to other sessions and were left alone. Not committed at the pause: the commit decision is the owner's, and a peer relaying it does not substitute.
