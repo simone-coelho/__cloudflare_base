@@ -120,6 +120,12 @@ async function bodyOf(request: Request): Promise<unknown> {
  * one event and is credited once. An entry stored before this (id only) still
  * suppresses every repeat of its id: it can lose a credit it cannot tell apart,
  * never grant one twice, and it ages out within the ring's horizon.
+ *
+ * W22 R2 (R143): when the digest cannot be computed the journal falls back to
+ * that same id-only rule, in both directions — a credited record whose digest
+ * fails is remembered as an id-only entry, and a delivery whose digest fails
+ * is a repeat of any entry of its id — so a digest failure never credits a
+ * redelivery again.
  */
 const CREDITED_KEY = 'credited';
 const CREDITED_MAX_BYTES = 256 * 1024;
@@ -626,25 +632,32 @@ export class DecisionRing {
     const id = outcome.outcome_id;
     if (typeof id !== 'string' || !id) return false;
     const digest = await this.creditedDigest(outcome);
-    // A digest this object cannot compute recognizes nothing new: the entry
-    // written without one still stops a repeat of its id.
+    // W22 R2 (R143): a digest this object cannot compute is told apart by the
+    // id alone, the journal's own contract for an entry it cannot tell apart:
+    // every entry of this id stops the repeat, so a redelivery met by a digest
+    // failure can lose a credit it cannot tell apart, never grant one twice.
+    // An entry written without a digest likewise stops every repeat of its id.
     return (await this.creditedOutcomes()).some(entry => entry.id === id
-      && (entry.digest === undefined || entry.digest === digest));
+      && (digest === null || entry.digest === undefined || entry.digest === digest));
   }
   private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
     try {
       if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
       const id = outcome.outcome_id;
       if (typeof id !== 'string' || !id || bytes(id) > RING_LIMITS.idBytes) return;
+      // W22 R2 (R143): a record whose digest cannot be computed is remembered
+      // by its id alone — the id-only shape this journal already reads, which
+      // stops every repeat of that id — never as nothing, which would credit
+      // its redelivery again.
       const digest = await this.creditedDigest(outcome);
-      if (digest === null) return;            // unrecordable is remembered as nothing, never as this id
       // The journal never outlives the online retention of the event it records.
       const expiresAt = readRetention(outcome.retention?.online, tenant, 'online').expiresAt;
       const now = Date.now();
-      // Only this exact record's own entry is replaced. An id-only entry from
-      // before the digest is kept: it is what still recognizes ITS repeat.
-      let kept = [...(await this.creditedOutcomes()).filter(entry => !(entry.id === id && entry.digest === digest)),
-        { id, ts: outcome.ts, expiresAt, digest }]
+      // Only this record's own entry is replaced (for an id-only entry, the
+      // id-only entry of this id). An id-only entry from before the digest is
+      // kept: it is what still recognizes ITS repeat.
+      const entry: CreditedOutcome = digest === null ? { id, ts: outcome.ts, expiresAt } : { id, ts: outcome.ts, expiresAt, digest };
+      let kept = [...(await this.creditedOutcomes()).filter(prior => !(prior.id === id && prior.digest === entry.digest)), entry]
         .sort((a, b) => a.ts - b.ts);
       if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
       while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
