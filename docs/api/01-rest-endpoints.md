@@ -98,7 +98,7 @@ configuration could not be read (there is nothing to attribute the count to), an
 synthetic monitoring probe, which is excluded where every one of these counters is written.
 
 `reconciliation` is `{ since, compared, disagreements: [ { brand, slot, online, ledger, difference,
-threshold } ] }`: the scheduled comparison of the two stores that hold the same credits by two
+threshold, conflicts? } ] }`: the scheduled comparison of the two stores that hold the same credits by two
 different roads — each slot's statistics object, which counted them online as they happened, and the
 day report, which counted them from the ledger. It reads the NEWEST day this tenant has published,
 and only that day; `since` is that day's start and `compared` is how many (brand, slot) pairs the run
@@ -106,8 +106,13 @@ really compared, so a clean result is never an empty one. `online` is the slot's
 own decay, rounded; `ledger` is the credits the published day counted for that slot's personalized
 arm. A pair is named only when `difference` exceeds `threshold`, a stated relative tolerance of five
 per cent of the larger of the two: zero at unit scale, which is where one lost or doubled credit
-shows, and wide enough at volume to absorb the two stores reading their own clocks. Absent on a
-legacy record and on a run that could not read one of the two sinks.
+shows, and wide enough at volume to absorb the two stores reading their own clocks. A row whose
+published day excluded rows under the collision contract below, and whose `online` exceeds `ledger`,
+also carries `conflicts: { decisions, outcomes }` — that brand's day's `counts.conflicts`, copied —
+because that collision is designed to leave exactly this disagreement, and the member names it so an
+operator is not sent chasing a lost credit. A row without `conflicts` has no such cause on record: a
+credit the ledger lost is never named a collision. Absent on a legacy record and on a run that could
+not read one of the two sinks.
 
 `GET /v1/{tenant}/ledger/batches?date=` reconciles the day's export partition with the day the platform
 published, on the same answer: `counts` is `{ rows: { decisions, outcomes }, distinct: { decisions,
@@ -128,11 +133,20 @@ partition more than once (a queue redelivery, a retried partial batch), and ever
 exactly once, counting the copies it dropped as `counts.duplicates`. An outcome minted before the
 per-event nonce existed carries a timestamp-derived id that two genuinely distinct events can share;
 those legacy rows are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a
-read. Two genuinely DIFFERENT rows under one logical id are never merged: the read refuses the day
-with `{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
+read. Two genuinely DIFFERENT rows under one logical id are never merged, and this collision
+contract is the same on every surface. Online, the statistics credit EACH of two different records
+under one stable `outcome_id`: the credited journal tells records apart by the id and a digest of the
+whole record, so only the same record redelivered is credited once, and a delivery whose digest cannot
+be computed is recognised by its id alone — it can lose a credit it cannot tell apart, never grant one
+twice. On the ledger, the read refuses the day of the brand the collision touches, and only that
+brand's day — another brand of the same tenant is still answered — with
+`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
 conflicting row for recovery in the tenant's own scope where the ledger-recovery surface lists it, and
 reads the day again on the next call with that row excluded and counted as `counts.conflicts`, in the
-same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. The two stores therefore disagree by design on that
+brand and slot: the scheduled `reconciliation` on `/v1/{tenant}/monitor` shows the pair as a
+disagreement, `online` above `ledger`, and names the collision on it with `conflicts`. That is the
+designed outcome, not a lost credit.
 
 Caller-managed buffered browser/app actions use HTTP `POST /realtime/action` with top-level `processing: "buffered"`, a stable `eventId`, an explicit nonnegative integer millisecond `timestamp` no later than server evaluation time, and original `browsingSessionId` (1–128 characters without surrounding whitespace, or explicit `null` when unknown). Numeric zero is valid; there is no maximum event age. The signed session still identifies the existing owned profile. Absent `processing` keeps live behavior; buffered WebSocket actions are refused. This adds no SDK offline queue or emitted bundle behavior.
 
