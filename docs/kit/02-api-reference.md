@@ -132,6 +132,12 @@ therefore matches during the visit she buys in and stops matching on her next vi
 matching forever afterwards. One derivation now stands behind every place that name appears; nothing
 here changes the persisted tokens themselves, which stay `early | mid | late`.
 
+A legacy record — one written before the stored stage existed, so it carries no stage — adopts as
+`early`, the persisted token of the journey's first stage (`exploring`), until her next event derives
+her stage for the current visit. The same floor is where a record born this visit starts, and it is
+what a shopper who refused personalization is reported at: none of them is placed further along a
+journey the engine has not counted.
+
 The same vocabulary and the same `signals` apply to every door an interaction can arrive by, not only
 the live one: an explicitly buffered action (`"processing": "buffered"`) is answered with `signals` of
 its own, and a content interaction and a historical import row are measured against the same published
@@ -204,6 +210,18 @@ Every slot's offered decision for the page, in page order; private records are n
 ```
 
 Customer snapshot polls are read-only: `write:false`, no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Tracking-refused choices contain no render offer; personalization-refused choices use defaults. `sources.consent` names that state.
+
+**An unreadable record.** Her stored record can exist and still not be readable: the retained-data
+authority it was born under is no longer the one in force (for example, you published the next
+revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then still
+answers `200` with the site's default decision: every slot in your catalogue's own order, with no
+affinity, journey stage or visit from that record. The answer carries `sources.record: "unreadable"`
+(a member present only on such an answer) and `sources.consent.personalized: false`, and each
+receipt's note says why. That tells it apart from a refusal, whose `experiment.reason` names her
+choice (`personalization_consent`), and from an expired session, which is refused with `401` and
+no decision at all. Her experimental assignment is unchanged, because it depends only on her
+anchor and the published salt. The experience served is `default`. Nothing of the record is read,
+projected or renewed, and the poll stays read-only, as it is for every shopper.
 
 `pinDiagnostics` names the pins the slot governance refused for this page, so a dead pin is visible to the caller instead of silently falling back to the site's own default. Each entry is `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`: `pinIndex` is the refused position inside the slot's `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is one of `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed`; `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin` — the engine attaches it whenever another slot already owns the piece, whichever gate then decided the refusal. A refused required pin refuses its whole slot — no shifted position, no ranked replacement — so the slot carries no decision and no ledger row, and this member is the only place the answer names the refusal. The member is absent when nothing was refused; it reports configuration, never shopper state, and it changes no ranking, eligibility or stored record.
 
@@ -415,7 +433,15 @@ Because that provisional session leaves the browser holding a capability, the re
 where a return **may** carry `X-Shopper-Session`: we complete the consume beside a capability only
 when the session that capability names is itself anonymous. A presented proof never takes over a
 session that belongs to an identified shopper, and nothing of the provisional subject is merged into
-the recognized one — it is left behind to its own retention.
+the recognized one. Once she is recognized, the provisional subject is retired: it holds no state of
+its own afterwards — not the taste browsed on it, not the choice made on it, not its session record —
+and its capability reads nothing. The retired object keeps only the operation id of the return that
+retired it, until the provisional capability would have expired, so that if the recognizing answer
+is lost, its exact retry (the same capability, proof and `operationId`) is still answered as that
+return: once, from the one receipt, with the same subject, generation, grant and successor proof. A
+second retry is a cold shopper, and any other request on the retired capability is refused `401`.
+A choice made on the provisional session that refuses tracking or personalization outranks the
+return: that consume is not attempted, and she stays on the session she refused on.
 
 The `continuity` block is **absent altogether** from the answer for a shopper who is signed in.
 Return recognition here is anonymous recognition: the descriptor is bound to an anonymous browser
@@ -424,11 +450,11 @@ absent block is not a decision and changes nothing a caller holds.
 
 There is **no shipped default**: the mode, the window and the covered purpose are published by the tenant on the versioned reflex document (`continuity: { mode, windowMs, purpose, retentionApproved }`), the same coherent publication set the weights, the decay horizon and the journey ladder ride, so `revision` names the document revision the descriptor is bound to. An incomplete block never becomes a configuration and never blocks the rest of the document.
 
-`expiresAt` is the descriptor's original fixed expiry — issue time plus `windowMs`. It never moves: not on rotation, not on browsing, not on renewal. `generation` is `1` for the first descriptor of a chain and one more per return. `proof` is present **only** in `direct` mode; in `broker` mode the long proof leaves only as the first-party `opt_shopper_continuity` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`) and the body carries none.
+`expiresAt` is the descriptor's original fixed expiry — issue time plus `windowMs`. It never moves: not on rotation, not on browsing, not on renewal. `generation` is `1` for the first descriptor of a chain and one more per return. `proof` is present **only** in `direct` mode; in `broker` mode the long proof leaves only as the `opt_shopper_continuity` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`) on the answer to your broker, and the body carries none. The shipped broker (`createServerBridge(...).broker`, `src/sdk/server.ts`) keeps that proof in the shopper's browser as its own first-party `__Host-opt-continuity-<tenant>` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, the engine's `Max-Age`), never readable by script, and clears it when the engine decides the proof it relayed will not recognize anyone.
 
-A return presents the proof on the same route, normally with **no** `X-Shopper-Session` header (the one exception is the `unavailable` retry above): `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
+A return presents the proof on the same route, normally with **no** `X-Shopper-Session` header (the one exception is the `unavailable` retry above): `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. Through the shipped broker the SDK sends the operation id in the `X-Continuity-Operation` header (the body it sends the broker stays `{ consent? }`), and the broker relays the proof as the `opt_shopper_continuity` cookie with `{ continuity: { operationId } }` to this route, only when the browser holds a proof and the SDK named an operation. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
 
-Logout (`detach`), session reset, link and erase each retire the descriptor, a withdrawn choice makes a descriptor issued before it cold, and the owner object holds only the digest, the generation and the fixed expiry — never the proof. The SDK keeps a direct-mode proof in its own tenant-scoped store under `opt_shopper_continuity:<endpoint>:<tenant>` and presents it on a cold start; in broker mode it holds none and sends none.
+Logout (`detach`), session reset, link and erase each retire the descriptor, a withdrawn choice makes a descriptor issued before it cold, and the owner object holds only the digest, the generation and the fixed expiry — never the proof. The SDK keeps a direct-mode proof in its own tenant-scoped store under `opt_shopper_continuity:<endpoint>:<tenant>` and presents it on a cold start; in broker mode it holds no proof and sends none. In both modes it keeps the operation id of a return whose answer it has not seen under `opt_shopper_continuity:<endpoint>:<tenant>:operation`. In broker mode the shipped broker passes the engine's `continuity` statement on to the browser without any proof, and the SDK remembers only that the broker holds a descriptor (`opt_shopper_continuity:<endpoint>:<tenant>:broker`), so it names an operation only for a return there is a proof for. A return whose answer was lost is presented again on the next load as the same consume, answered once from the one receipt: with no capability when the lost request carried none, and beside the provisional capability when it was the retry of an outage (`unavailable`). That retry is not treated as unknown consent, and it claims no consent of its own: it carries no consent hint, and its answer carries the current explicit choice her own object holds (there is no recognition without one), or, for a cold shopper, no choice at all. A refusal the shopper made is restored from its own marker and still turns the return away, and a load interrupted in the middle of a sign-in or logout still falls back to unknown consent.
 
 **Whoever holds a recognition proof is recognized as its subject.** The proof is a bearer credential:
 it is bound to the tenant, the transport, the covered purpose, the configuration revision, the
