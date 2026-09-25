@@ -4,8 +4,8 @@
 
 ## Current state (2026-09-25)
 
-- Status: Local done 3/26 (W17, W18, W31 adopted at `0c19026`, receipts `9ac4fd9`) · Final 0/26. No owner question is open.
-- W16 ACTIVE. Build 1 `55a4490` failed its delivery review on two continuity defects (`/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/REPORT.md`). The fix is `1506a62` on `rem/w16-build` (checkout `build-w16`). W16’s specification gate is now `942dfbd` on `rem/spec-w16` (116 tests; recorded at `c330d9e`). The implementer merges those tests and `rem/integration`, runs the acceptance command and the gate once; then rem-reviewer re-reviews the delivery (checkout `review-w16`), and the receipt, merge and W19 ACTIVE follow. W19’s brief findings: `_evidence/W19-delivery/implementer/BRIEF-draft-findings.md`.
+- Status: Local done 4/26 (W16 delivered at `db0ef5c`, merged `491ffc4`; W17, W18, W31 adopted at `0c19026`) · Final 0/26. No owner question is open.
+- W19 ACTIVE: build from its specification `6af410e` (rem/spec-w19-w20) merged with `rem/integration`; the remaining work is the three product defects the corrected legacy test W19.02 exposes (D-a serving cache, D-b bare 500 on the object host, D-c catalogue read with REFLEX_ENABLED false). Brief findings: `/home/simonecoelho/rem/_evidence/W19-delivery/implementer/BRIEF-draft-findings.md`.
 - The owner approved A43–A46 on 2026-09-25 ("It is approved."), applied with `/home/simonecoelho/rem/_evidence/step3/apply-amendments-2.mjs`: W30 becomes an implementation ticket after W29 (L1 late-row republish, S1 repaired wording); W37 gains T7 (fresh-stamp creation) and the four export paths; W40 gains P6 (the release lint excludes `src/units/**`, cap 582). Before those builds, a specifier adds the W30 L1/S1 and W37 T7 tests and the reviewer re-gates them; W40 P6 rides the existing deploy test.
 
 - Integration branch `rem/integration`, from `798f2a7` (the state at the 2026-09-20 stop; last product merge `ee44579`), checked out at `/home/simonecoelho/rem/integration`. The `/mnt/c` working tree and `feature/real-time-personalization` are another team's demo work: never commit there.
