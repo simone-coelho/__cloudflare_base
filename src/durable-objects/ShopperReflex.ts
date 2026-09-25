@@ -62,7 +62,7 @@ import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requir
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
-import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
+import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { IdentityStore, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted } from '@/identity/shopperId';
@@ -225,6 +225,14 @@ const continuityRecordSchema = z.object({
   receipt: z.object({ operationId: z.string().uuid(), digest: continuityDigestSchema, grant: grantSchema }).strict().optional(),
 }).strict();
 type ContinuityRecord = z.infer<typeof continuityRecordSchema>;
+/**
+ * W16 R4: what a provisional object keeps once her return retired it — the
+ * operation that return was keyed by, until the retired grant's own expiry, so
+ * the exact retry of that lost answer is recognized as that return. No taste,
+ * no choice, no session: nothing of the shopper.
+ */
+const CONTINUITY_RETIRED_PREFIX = 'continuityRetired:';
+const retiredMarkerSchema = z.object({ version: z.literal(1), operationId: z.string().uuid(), until: identityTime }).strict();
 const continuitySettingsSchema = z.object({
   mode: z.enum(['direct', 'broker']), windowMs: z.number().finite().positive(),
   purpose: z.string().min(1).max(120), revision: z.number().int().nonnegative(),
@@ -430,7 +438,16 @@ export class ShopperReflex {
             ? await routed.clone().json() as Record<string, unknown> : null;
           const restrictive = !!preferences;
           try { await this.assertOwned(principal!, routed, restrictive); }
-          catch { throw new SessionAccessError(); }
+          catch {
+            // W16 R4: a grant her own recognized return retired is still
+            // refused, but the refusal says so for the exact retry of that return.
+            if (await this.retiredByReturn(principal!, routed)) {
+              const refused = json({ ok: false, error: 'Shopper session unavailable' }, 401);
+              refused.headers.set(CONTINUITY_RETIRED_HEADER, 'recognized');
+              return refused;
+            }
+            throw new SessionAccessError();
+          }
         }
         return dispatchOwnedRequest(this, this.env, routed, principal!, req => this.fetch(req));
       }).catch(error => {
@@ -567,6 +584,13 @@ export class ShopperReflex {
       if (principal || !internal) return json({ ok: false }, 401);
       return this.handleContinuityConsume(request, internal);
     }
+    // W16 R4: the provisional subject an outage served her, retired once her
+    // return is recognized. Only its own live anonymous capability asks.
+    if (request.method === 'POST' && url.pathname === '/identity/continuity/retire') {
+      if (!principal) return json({ ok: false }, 401);
+      const body = z.object({ operationId: z.string().uuid() }).strict().parse(await request.json());
+      return this.handleProvisionalRetire(principal, body.operationId);
+    }
 
     if (request.headers.get('Upgrade') === 'websocket') {
       return this.serialize(async () => {
@@ -634,7 +658,7 @@ export class ShopperReflex {
             assertSessionTarget(p);
             const affinity = this.affinity ?? { shopperId: p.subject, reflex: emptyState(cfg), odpSeed: [], odpSeedAt: 0, odpRecentEvents: [], lastSeen: now, configVersion: cfg.version,
               retention: freshRetention, externalRetention: freshExternal };
-            const previous = this.pipeline ?? { attributes: {}, segments: [], journeyStage: 'early' as const, sessionId: p.sessionId, visitorId: p.subject, firstSeen: now, sessionCount: 0 };
+            const previous = this.pipeline ?? { attributes: {}, segments: [], journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: p.sessionId, visitorId: p.subject, firstSeen: now, sessionCount: 0 };
             const pipeline = { ...previous, segments: [...new Set([...await this.enrichedSegments(connectors, tenant, now), body.segment])] };
             const update = await this.buildUpdate(connectors, now, typeof body.source === 'string' ? body.source : 'manual', null, calculateEngagementScore(pipeline.attributes), cfg, tenant, p, { affinity, pipeline, segmentsProjected: true });
             assertSessionTarget(p);
@@ -695,7 +719,16 @@ export class ShopperReflex {
           const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
-          if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
+          // W16 R5: a record whose profile stamp the authority in force no longer
+          // honours is not read out; the decision is told so and serves the
+          // site's default. Nothing else is absorbed here.
+          if (this.affinity) {
+            try { pinProfileRetention(this.env, this.affinity, principal.tenant); }
+            catch (error) {
+              if (!(error instanceof RetentionUnavailable)) throw error;
+              return json({ ok: true, consent, affinity: null, journeyStage: null, visit: null, record: 'unreadable' });
+            }
+          }
           const at = Date.now();
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
@@ -1186,7 +1219,8 @@ export class ShopperReflex {
     const pipe: PipelineRecord = this.pipeline ? { ...this.pipeline } : {
       attributes: {},
       segments: [],
-      journeyStage: 'early',
+      // The floor of the journey, through the one mapping point (R32(2)).
+      journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
       sessionId: principal?.sessionId ?? crypto.randomUUID(),
       firstSeen: now,
       sessionCount: 0,
@@ -1559,6 +1593,12 @@ export class ShopperReflex {
         const chain = continuityRecordSchema.parse(continuityState);
         if (chain.expiresAt <= Date.now()) await this.state.storage.delete(CONTINUITY_KEY);
         else await this.armContinuityAlarm(chain.expiresAt);
+      }
+      // W16 R4: a retirement marker outlives nothing — gone at its grant's expiry.
+      for (const [key, value] of await this.state.storage.list({ prefix: CONTINUITY_RETIRED_PREFIX })) {
+        const marker = retiredMarkerSchema.safeParse(value);
+        if (!marker.success || marker.data.until <= Date.now()) await this.state.storage.delete(key);
+        else await this.armContinuityAlarm(marker.data.until);
       }
       await this.load();
       const now = Date.now();
@@ -2132,6 +2172,55 @@ export class ShopperReflex {
         return json({ ok: true, enabled: true, descriptor, proof });
       } catch (error) { this.invalidateMirrors(); throw error; }
     });
+  }
+
+  /**
+   * W16 R4 (LANE-LOG R81(c)). An outage on her return served her a PROVISIONAL
+   * anonymous subject (W16.C6.13), and her next load recognized her own. The
+   * provisional subject then holds no state of its own: nothing of it was merged
+   * into hers (R72(c)), and nothing of it is kept here either — not its taste, not
+   * the choice she made on it, not its session projection, not its grants. What
+   * remains is only the bookkeeping `eraseWithBarrier` keeps for every retired
+   * object (a fresh, empty grant authority), so the provisional capability reads
+   * nothing and can adopt nothing.
+   *
+   * Only an anonymous subject that is still exactly itself is retired: a subject
+   * that forwards to a person, or is mid-transfer, is refused by `assertOwned`,
+   * and an identified grant is refused here.
+   */
+  private async handleProvisionalRetire(principal: SessionCapability, operationId: string): Promise<Response> {
+    return this.serialize(async () => {
+      try {
+        const grant = grantSchema.parse(principal);
+        if (grant.kind !== 'anonymous') throw new SessionAccessError();
+        await this.assertOwned(principal, undefined, false, false);
+        if ((this.env.REFLEX_HOST ?? 'session') === 'session') {
+          // The session host's KV projection of the provisional session, and the
+          // pointer to it, go first, while its grant can still write them.
+          await new SessionManager(this.env, { tenant: principal.tenant, principal }).deleteSession(principal.sessionId);
+        }
+        // The exact retry of this return's lost answer arrives with the grant
+        // this retirement revokes; the marker lets the refusal name it, until
+        // the grant would have expired anyway, and then the alarm removes it.
+        const marker = retiredMarkerSchema.parse({ version: 1, operationId, until: grant.exp * 1000 });
+        await this.eraseWithBarrier({ [CONTINUITY_RETIRED_PREFIX + grant.grantId]: marker });
+        await this.armContinuityAlarm(marker.until);
+        return json({ ok: true, retired: true });
+      } catch (error) { this.invalidateMirrors(); throw error; }
+    });
+  }
+
+  /** The refused request is the exact retry of the return that retired this grant. */
+  private async retiredByReturn(principal: SessionCapability, routed: Request): Promise<boolean> {
+    try {
+      if (routed.method !== 'POST' || !principal.grantId || !/^\/v1\/[^/]+\/identity\/session$/.test(new URL(routed.url).pathname)) return false;
+      const saved = await this.state.storage.get(CONTINUITY_RETIRED_PREFIX + principal.grantId);
+      if (saved === undefined) return false;
+      const marker = retiredMarkerSchema.parse(saved);
+      if (marker.until <= Date.now()) return false;
+      const body = await routed.clone().json() as { continuity?: { operationId?: unknown } } | null;
+      return body?.continuity?.operationId === marker.operationId;
+    } catch { return false; }
   }
 
   /**
@@ -2882,7 +2971,7 @@ export class ShopperReflex {
         ...(this.pipeline?.segments ?? []).filter(s => !this.affinity?.odpSeed.includes(s)),
         ...(fromPipe?.segments ?? []).filter(s => !from?.odpSeed.includes(s)),
       ].filter(segment => !previousExternal.has(segment)), ...merged.state.audiences, ...enrichmentInputs(profileEnrichment).audiences, ...odp.odpSeed])].sort(),
-      journeyStage: this.pipeline?.journeyStage ?? fromPipe?.journeyStage ?? 'early',
+      journeyStage: this.pipeline?.journeyStage ?? fromPipe?.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
       // A person's canonical projection cannot share a physical KV key with
       // the browser source whose raw SID witness must remain independently owned.
       sessionId: this.pipeline?.sessionId ?? await this.retainedCanonicalSid(await this.grantAuthority()) ?? crypto.randomUUID(),
@@ -3001,7 +3090,9 @@ export class ShopperReflex {
             pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
               sessionId: sid, visitorId: context.subject, firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount,
               visitCount: session.metadata.visitCount, lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
-              surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
+              surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+              // W16 R1: the adopted record keeps the visit journey the session carries.
+              ...(session.journey === undefined ? {} : { journey: session.journey }) };
             // Raw booleans are never affirmative authority for backend adoption.
             if (!personalizes(consent)) return json({ ok: true, applied: 0, audiences: [], reason: 'consent_refused' });
             adopted = { key, value, expires, pending: false, ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }) };
@@ -3449,7 +3540,9 @@ export class ShopperReflex {
             journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
             lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
-            surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
+            surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+            // W16 R1: the adopted record keeps the visit journey the session carries.
+            ...(session.journey === undefined ? {} : { journey: session.journey }) };
           const audienceOwner = { tenant: grant.tenant, subject: grant.subject, sessionId: grant.sessionId };
           requireConsentPurpose(consent, 'tracking');
           try { await this.state.storage.put({ [keyFor(key)]: record, affinity, pipeline, audienceOwner }); }
