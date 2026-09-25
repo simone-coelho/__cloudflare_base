@@ -521,7 +521,7 @@
     {
       "id": "W19",
       "title": "Lossless versioned content import, direct PUT and merge contract",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -674,7 +674,7 @@
     {
       "id": "W20",
       "title": "Merchandising governance: pins, contradictions, catalog references, fallback",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
