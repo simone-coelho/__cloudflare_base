@@ -1696,3 +1696,423 @@ describe('unit:W16.R6', () => {
     }
   }, 300_000);
 });
+
+// ===========================================================================
+// THE EXACT LOST-RESPONSE RETRY BESIDE THE PROVISIONAL CAPABILITY (C6, R4)
+//
+// Added after the W16 delivery review of 55a4490 (rem-reviewer, FAIL, defects 1
+// and 2: `_evidence/W16-delivery/reviewer/REPORT.md`). Both defects break
+// criteria already frozen: C6 "... with exact lost-response retry" and R4 "...
+// the broker (cookie) mode lost-response retry succeeds exactly once; a
+// provisional subject holds no state of its own after recognition". No
+// criterion, command or path changes. The C6 units carry the retry (both
+// modes, by C6's own words); the R4 legs carry R4's third clause — no state of
+// its own after recognition — on this lost-response path, joined with that
+// retry so both are measured on one product. R4's broker clause keeps its own
+// leg above (`unit:W16.R4`, broker mode).
+//
+// WITNESSES — every expected value below comes from these, never from an answer:
+//  - kit `docs/kit/02-api-reference.md` (55a4490 :451; 9830cce :429): the exact
+//    retry of a lost answer "is honoured once from one deterministic successor
+//    receipt, with the same subject, the same generation, the same grant and the
+//    same successor proof"; "a second retry ... [is] a cold shopper: a brand-new
+//    anonymous subject served the catalogue's own order". Direct mode presents
+//    `{ continuity: { proof, operationId } }`.
+//  - kit 02 (55a4490 :432-434; 9830cce :414-416): the unavailable retry is the one
+//    case where a return may carry `X-Shopper-Session`, completed beside a
+//    capability whose session is itself anonymous. R4 and kit 02 at 55a4490
+//    :436-438: once she is recognized the provisional subject is retired — it
+//    holds no state of its own and its capability reads nothing.
+//  - `src/routes/identity.ts` at 55a4490 :227-229 ("the browser's exact retry is
+//    answered from the one deterministic receipt") and :342-343 ("its single use,
+//    its one rotation and its one deterministic retry").
+//  - kit 02 at 55a4490 :453: "A return whose answer was lost is presented again
+//    on the next load as the same consume, answered once from the one receipt;
+//    that retry is not treated as unknown consent, because its answer carries the
+//    consent of the session it establishes, while a refusal the shopper made is
+//    restored from its own marker and still turns the return away." Against it,
+//    `src/sdk/core.ts` at 55a4490 :614-619 (`returnInFlight` gives up when a
+//    capability is stored) and :716 (the unknown-consent marker it guards).
+//
+// ONE PRODUCT. The retirement R4 demands is of the provisional subject's STATE and
+// of what its capability READS. Nothing here asks the retired capability to read or
+// hold anything; C6.14 asks only that the exact retry of the consume presented
+// beside it be answered from her own object's one receipt. `unit:W16.R4.retry`
+// states both at once, on the host and through the real SDK.
+//
+// THE CONSENT THE RETRY CARRIES: none of its own. Its body is the direct-mode
+// return exactly as kit 02 writes it, `{ continuity: { proof, operationId } }`:
+// she made no refusal, so there is no hint to carry (kit 02 :453), and the
+// unknown-consent marker is not a choice of hers. Its ANSWER carries the consent
+// of the session it establishes — her own explicit choice, made on her first
+// visit and stored in her own object (both switches on, its 30-day deadline not
+// reached), which the SDK then holds. The W05 fail-closed remedy stays: nothing
+// here treats a request without a known choice as consent; the engine answers
+// the choice her own object already holds (kit 02 "Explicit consent": missing
+// hints are neutral to valid server authority, false hints only restrict it).
+//
+// MODE. Direct mode, the mode in which the review measured both defects. Broker
+// mode beside a provisional session is on that review's "not measured" list and
+// is not specified here.
+// ===========================================================================
+
+const OPERATION_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * `provisionalThenRecognized`'s arrangement up to, and NOT including, her
+ * recognizing load: her descriptor and her Tabby taste; a week later an outage on
+ * her return, which serves her a PROVISIONAL anonymous session (W16.C6.13) and
+ * leaves her browser holding her proof and the operation id of the interrupted
+ * consume; on that provisional session her explicit choice and a taste that is
+ * not hers. The clock is left at the moment of her recognizing load.
+ */
+async function provisionalServed(h: HostFixture, clock: { mockReturnValue: (at: number) => unknown }) {
+  const her = sdkBrowser(h);
+  expect((await her.load()).adopted, 'load 1 establishes her session').toBe(true);
+  await her.choose();
+  const second = await her.load();
+  expect(second.adopted, 'load 2 issues her recognition descriptor').toBe(true);
+  const issuedProof = her.held().proof;
+  expect(issuedProof.length, 'her browser holds a real direct-mode proof').toBeGreaterThan(32);
+  const herSubject = her.subject();
+  for (const [index, view] of THREE_TABBY_VIEWS.entries()) {
+    clock.mockReturnValue(T0 + index * STEP_MS);
+    await second.core.send('product_view', view.data);
+  }
+  await h.f.drain();
+
+  // A week later, her object unreachable for the consume: the provisional session.
+  clock.mockReturnValue(T0 + 7 * DAY_MS);
+  her.forgetCapability();
+  h.f.setFault({ match: '/identity/continuity/consume', kind: '5xx' });
+  expect((await her.load()).adopted, 'the outage load still serves her a session').toBe(true);
+  h.f.setFault(null);
+  const provisional = { subject: her.subject(), capability: her.capability(), sessionId: her.sessionId() };
+  expect({ anonymous: /^vis-[0-9a-f-]{36}$/.test(provisional.subject), hers: provisional.subject === herSubject },
+    'the outage served a provisional anonymous subject that is not hers').toEqual({ anonymous: true, hers: false });
+  const held = her.held();
+  expect({ proof: held.proof === issuedProof, operationId: OPERATION_ID_SHAPE.test(held.operationId) },
+    'precondition (W16.C6.13): her browser kept her proof and the operation id of the consume the outage interrupted')
+    .toEqual({ proof: true, operationId: true });
+
+  // On it: her explicit choice, and a taste that is not hers.
+  await her.choose(true);
+  for (const [index, view] of PROVISIONAL_VISIT.entries()) {
+    clock.mockReturnValue(T0 + 7 * DAY_MS + (index + 1) * STEP_MS);
+    const answered = await h.action(provisional.capability, view);
+    expect(answered.status, `the provisional session's browsing is accepted: ${answered.text.slice(0, 160)}`).toBe(200);
+  }
+  const provisionalRead = await h.rawHydrate(provisional.capability);
+  expect({ taste: linesOf(provisionalRead.body), personalization: provisionalRead.body.consent?.personalization ?? false },
+    'control: before recognition the provisional subject holds a taste and a choice of its own')
+    .toEqual({ taste: ['Rogue'], personalization: true });
+  clock.mockReturnValue(T0 + 7 * DAY_MS + 10 * STEP_MS);
+  return { her, herSubject, provisional, held };
+}
+
+/** One `POST /v1/:tenant/identity/session` exchange as the browser's network carried it. */
+interface SessionExchange { capability: string | null; body: unknown; status: number; answer: Record<string, unknown> | null; lost: boolean }
+
+/**
+ * The browser's network in front of the mounted engine, for `sdkBrowser`: every
+ * session request the SDK makes is recorded with the engine's own answer, and the
+ * next answer can be LOST — the engine did all of its work and nothing of the
+ * answer (no body, no Set-Cookie) reaches the browser, exactly as
+ * `brokerBrowser.loseNextAnswer` loses a broker answer.
+ */
+function browserNetwork(h: HostFixture) {
+  const exchanges: SessionExchange[] = [];
+  let loseNext = false;
+  const call: HostFixture['f']['call'] = async (path, options = {}) => {
+    const response = await h.f.call(path, options);
+    if (!path.endsWith('/identity/session')) return response;
+    const text = await response.clone().text();
+    const lost = loseNext;
+    loseNext = false;
+    exchanges.push({ capability: options.capability ?? null, body: options.body ?? null, status: response.status, lost,
+      answer: (() => { try { return JSON.parse(text) as Record<string, unknown>; } catch { return null; } })() });
+    if (!lost) return response;
+    await h.f.drain();
+    return new Response(null, { status: 502 });
+  };
+  return { h: { ...h, f: { ...h.f, call } } as HostFixture, exchanges, loseNextAnswer: () => { loseNext = true; } };
+}
+
+/** What an exchange presented as its continuity, and what the engine answered to it. */
+const presentedContinuity = (exchange: SessionExchange) => (exchange.body as { continuity?: unknown } | null)?.continuity ?? null;
+const answeredTo = (exchange: SessionExchange) => ({ status: exchange.status,
+  subject: String(((exchange.answer?.session ?? {}) as { subject?: unknown }).subject ?? ''),
+  continuity: (exchange.answer?.continuity ?? null) as ContinuityReport | null });
+
+/**
+ * Defect 1's arrangement: the provisional session, then her return presented
+ * beside its capability — which recognizes her — and, the answer lost, the very
+ * same request again: the same capability, the same proof, the same operation id.
+ */
+async function exactRetryBesideProvisional(host: typeof HOSTS[number], clock: { mockReturnValue: (at: number) => unknown }) {
+  clock.mockReturnValue(T0);
+  const h = await hostFixture(host, { continuity: CONTINUITY_DIRECT });
+  const { herSubject, provisional, held } = await provisionalServed(h, clock);
+  const exact = { capability: provisional.capability, proof: held.proof, operationId: held.operationId };
+  const first = await h.identitySession(exact);
+  expect({ status: first.status, subject: first.subject, generation: first.continuity?.generation },
+    `${host}: precondition (W16.C6.13) — her return presented beside the provisional capability recognizes HER subject and rotates her chain once: ${first.bodyText.slice(0, 160)}`)
+    .toEqual({ status: 200, subject: herSubject, generation: 2 });
+  // Her browser never saw that answer, and sends the same request again.
+  const retry = await h.identitySession(exact);
+  return { h, herSubject, provisional, first, retry };
+}
+
+/**
+ * Defect 2's arrangement, driven only by the real SDK: the provisional session;
+ * her recognizing load, whose answer is LOST after the engine recognized her; and
+ * her very next load. `asItStood` is her browser's storage right after the lost
+ * answer, for the exactly-once replay.
+ */
+async function lostReturnThenNextLoad(host: typeof HOSTS[number], clock: { mockReturnValue: (at: number) => unknown }) {
+  clock.mockReturnValue(T0);
+  const network = browserNetwork(await hostFixture(host, { continuity: CONTINUITY_DIRECT }));
+  const h = network.h;
+  const { her, herSubject, provisional, held } = await provisionalServed(h, clock);
+
+  // Her recognizing load. The engine recognizes her; the answer never arrives.
+  network.loseNextAnswer();
+  expect((await her.load()).adopted, `${host}: harness — the lost answer adopts nothing`).toBe(false);
+  const lost = network.exchanges.filter(exchange => exchange.lost);
+  expect(lost.map(exchange => ({ presented: presentedContinuity(exchange), ...answeredTo(exchange) })),
+    `${host}: precondition (W16.C6.13) — the answer lost is the one that recognized HER, on the consume her browser kept, rotating her chain once`)
+    .toEqual([{ presented: { proof: held.proof, operationId: held.operationId }, status: 200, subject: herSubject,
+      continuity: expect.objectContaining({ enabled: true, mode: 'direct', generation: 2 }) }]);
+  const lostContinuity = answeredTo(lost[0]!).continuity!;
+  const asItStood = new Map(her.store);
+
+  // Her very next load, driven only by the SDK with whatever her browser holds.
+  clock.mockReturnValue(T0 + 7 * DAY_MS + 11 * STEP_MS);
+  const mark = network.exchanges.length;
+  const next = await her.load();
+  const retries = network.exchanges.slice(mark).filter(exchange => {
+    const presented = presentedContinuity(exchange) as { proof?: unknown; operationId?: unknown } | null;
+    return presented?.proof === held.proof && presented?.operationId === held.operationId;
+  });
+  return { h, her, herSubject, provisional, held, lostContinuity, asItStood, next, retries };
+}
+
+describe('unit:W16.C6.14', () => {
+  it('host: the exact retry of a return recognized beside the provisional capability an outage served her — the same capability, proof and operation id — is answered as the first answer was: 200, her own subject, the same generation, grant and successor proof, never refused as an unavailable session, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        const { herSubject, first, retry } = await exactRetryBesideProvisional(host, clock);
+        expect.soft({ status: retry.status, subject: retry.subject, continuity: retry.continuity ?? null,
+          grant: retry.capability ? claimsOf(retry.capability) : null },
+        `${host}: W16.C6.14 — the exact retry of the lost answer is answered from the one deterministic successor receipt: 200, HER subject, the same generation, the same grant and the same successor proof (answered ${retry.status}: ${retry.bodyText.slice(0, 120)})`)
+          .toEqual({ status: 200, subject: herSubject, continuity: first.continuity, grant: claimsOf(first.capability) });
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
+
+describe('unit:W16.C6.15', () => {
+  it('sdk: joined — when the answer that recognized her beside the provisional capability is lost, the real SDK presents that return again on the very next load, exactly once, as the same consume carrying no consent of its own, and she is recognized as her own subject under her own explicit choice — never the unknown-consent refusal that makes her a new anonymous shopper — on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        const { h, her, herSubject, held, lostContinuity, asItStood, next, retries } = await lostReturnThenNextLoad(host, clock);
+
+        // The retry, as her browser sent it: once, the same consume, no consent hint she never gave.
+        expect.soft(retries.map(exchange => exchange.body),
+          `${host}: W16.C6.15 — on the very next load the real SDK presents the lost return again exactly once, as the same consume (her proof, the same operation id) in the direct-mode return body, carrying no consent of its own — never the unknown-consent refusal`)
+          .toEqual([{ continuity: { proof: held.proof, operationId: held.operationId } }]);
+        // The engine's answer to it: the one receipt.
+        expect.soft(retries.map(answeredTo),
+          `${host}: W16.C6.15 — and that retry is answered as the lost answer was, from the one receipt: 200, HER subject, the same generation and the same successor proof — not a new anonymous shopper with continuity disabled for consent`)
+          .toEqual([{ status: 200, subject: herSubject, continuity: lostContinuity }]);
+        // What her browser holds afterwards.
+        expect.soft({ adopted: next.adopted, subject: her.subject(), consent: next.core.consent, proof: her.held().proof },
+          `${host}: W16.C6.15 — her browser adopts HER session under her own explicit choice (both switches on: the retry is not treated as unknown consent) and keeps the successor proof of her own chain`)
+          .toEqual({ adopted: true, subject: herSubject, consent: { tracking: true, personalization: true }, proof: lostContinuity.proof });
+        expect.soft(her.capability() ? (await h.rawSnapshot(her.capability())).ranking.hero : null,
+          `${host}: W16.C6.15 — and her own remembered taste ranks her page`).toEqual([TABBY, ROGUE]);
+
+        // EXACTLY ONCE: her browser exactly as it stood after the lost answer
+        // presents the same return again — a second retry, never recognized.
+        // (Green by construction on a product that recognizes nothing on this
+        // path; it is the half no repair may break.)
+        const replay = sdkBrowser(h);
+        for (const [key, value] of asItStood) replay.store.set(key, value);
+        const replayed = await replay.load();
+        expect.soft({ adopted: replayed.adopted, hers: replay.subject() === herSubject,
+          hero: replay.capability() ? (await h.rawSnapshot(replay.capability())).ranking.hero : null },
+        `${host}: W16.C6.15 — the same return presented a second time is a cold shopper served the catalogue's own order`)
+          .toEqual({ adopted: true, hers: false, hero: HERO_BASE_ORDER });
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
+
+describe('unit:W16.R4.retry', () => {
+  it('host: both at once — the exact retry of her return recognized beside the provisional capability is answered as hers, AND after it the provisional subject holds no state of its own (its capability reads no taste and no choice) and nothing of it was merged into hers, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        const { h, herSubject, provisional, first, retry } = await exactRetryBesideProvisional(host, clock);
+        expect.soft({ status: retry.status, subject: retry.subject },
+          `${host}: W16.R4 joined with W16.C6.14 — the exact retry beside the provisional capability is answered as HER (answered ${retry.status}: ${retry.bodyText.slice(0, 120)})`)
+          .toEqual({ status: 200, subject: herSubject });
+        const after = await h.rawHydrate(provisional.capability);
+        const own = await h.rawHydrate(first.capability);
+        expect.soft({ provisional: { taste: linesOf(after.body), personalization: after.body.consent?.personalization ?? false }, own: linesOf(own.body) },
+          `${host}: W16.R4 — and after recognition and its retry the provisional subject holds no state of its own (its capability reads no taste and no choice; status ${after.status}), and her own profile holds only her own taste`)
+          .toEqual({ provisional: { taste: [], personalization: false }, own: ['Tabby'] });
+      }
+    } finally { clock.mockRestore(); }
+  });
+
+  it('sdk: joined — after the answer that recognized her beside the provisional capability is lost, the real SDK\'s next load brings HER back with her own taste and nothing of the provisional subject merged into it, and the provisional subject holds no state of its own, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        const { h, her, herSubject, provisional, next } = await lostReturnThenNextLoad(host, clock);
+        const own = her.capability() ? await h.rawHydrate(her.capability()) : null;
+        expect.soft({ adopted: next.adopted, subject: her.subject(), taste: linesOf(own?.body) },
+          `${host}: W16.R4 joined with W16.C6.15 — the lost-response retry succeeds through the real SDK: her next load brings back HER subject, with her own taste and nothing of the provisional subject merged into it`)
+          .toEqual({ adopted: true, subject: herSubject, taste: ['Tabby'] });
+        const after = await h.rawHydrate(provisional.capability);
+        expect.soft({ taste: linesOf(after.body), personalization: after.body.consent?.personalization ?? false },
+          `${host}: W16.R4 — and after recognition the provisional subject holds no state of its own: its capability reads no taste and no choice (status ${after.status})`)
+          .toEqual({ taste: [], personalization: false });
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
+
+// ===========================================================================
+// THE LIMIT OF C6.15: AN INTERRUPTED TRANSITION STILL FAILS CLOSED (C6, W05)
+//
+// Added after the specification review of dd929a5 (rem-reviewer, FAIL, one
+// defect: `_evidence/W16-fix1/reviewer-spec/REPORT.md`). C6.15 asks the SDK not
+// to fall back to unknown consent when the load before lost the answer to her
+// return. Nothing pinned the other side of that line: a transition (a sign-in, a
+// logout) interrupted mid-way, with her proof and operation id held beside the
+// provisional capability, must STILL fall back to unknown consent — so an
+// exemption for every held proof passes every other test and weakens the W05
+// guard.
+//
+// WITNESSES:
+//  - document 35 §5 row W05: "Preserve withdrawal through logout and failures.
+//    Test all switch combinations and unknown/error states before writes";
+//  - `src/sdk/core.ts` at 9830cce :679: "An interrupted transition or failed
+//    capability write never revives the old account" — the fallback to unknown
+//    consent (`rememberUnknownConsent`), whose refusal the next session request
+//    carries as `consent: { tracking: false, personalization: false }`, as
+//    `src/sdk/core.test.ts:425` (W05.01) builds and measures it with
+//    `beginTransition()` and `ready(true)`;
+//  - `src/routes/identity.ts` at 9830cce :235-237: "A browser that arrives
+//    withdrawing a switch is not asking to be recognized" — so that request is
+//    answered as a cold shopper, never as her.
+//
+// ONE PRODUCT with C6.15: the same fixture, the same held proof, operation id and
+// provisional capability, and the same next load; the one difference is how the
+// page before it ended — a lost answer to her return there, a sign-in left
+// mid-way here. The transition is started through the shipped surface
+// (`createIdentity(core).identify`, which runs `beginTransition()` and
+// `ready(true)` as W05.01 does), and the page closes while its link request is
+// in flight: the request is never delivered and never answered, so the anchor
+// the transition wrote stays pending.
+// ===========================================================================
+
+/** The refusal an SDK falls back to when it cannot know the consent in force (W05.01). */
+const UNKNOWN_CONSENT_REFUSAL = { tracking: false, personalization: false };
+
+/**
+ * The page closes while a request is in flight: the first call whose path ends
+ * with `suffix` is never delivered to the engine and never answered. `closed`
+ * resolves once the page has reached that request.
+ */
+function pageClosesDuring(h: HostFixture, suffix: string) {
+  let reached: () => void = () => undefined;
+  const closed = new Promise<void>(resolve => { reached = resolve; });
+  const call: HostFixture['f']['call'] = async (path, options = {}) => {
+    if (!path.endsWith(suffix)) return h.f.call(path, options);
+    reached();
+    return new Promise<Response>(() => { /* the page is gone: no delivery, no answer */ });
+  };
+  return { h: { ...h, f: { ...h.f, call } } as HostFixture, closed };
+}
+
+describe('unit:W16.C6.16', () => {
+  it('sdk: the limit of C6.15 — with her proof and operation id held beside the provisional capability, a sign-in started on the provisional page and interrupted mid-transition still falls back to unknown consent: the next load carries {tracking:false, personalization:false} and does not recognize her, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        const network = browserNetwork(await hostFixture(host, { continuity: CONTINUITY_DIRECT }));
+        const closing = pageClosesDuring(network.h, '/identity/link');
+        const h = closing.h;
+
+        // C6.15's fixture: her descriptor and her Tabby taste; a week later an
+        // outage on her return serves her the provisional session, and her
+        // browser keeps her proof and the operation id of the interrupted consume.
+        const her = sdkBrowser(h);
+        expect((await her.load()).adopted, `${host}: load 1 establishes her session`).toBe(true);
+        await her.choose();
+        const second = await her.load();
+        expect(second.adopted, `${host}: load 2 issues her recognition descriptor`).toBe(true);
+        const issuedProof = her.held().proof;
+        expect(issuedProof.length, `${host}: her browser holds a real direct-mode proof`).toBeGreaterThan(32);
+        const herSubject = her.subject();
+        for (const [index, view] of THREE_TABBY_VIEWS.entries()) {
+          clock.mockReturnValue(T0 + index * STEP_MS);
+          await second.core.send('product_view', view.data);
+        }
+        await h.f.drain();
+        clock.mockReturnValue(T0 + 7 * DAY_MS);
+        her.forgetCapability();
+        h.f.setFault({ match: '/identity/continuity/consume', kind: '5xx' });
+        const provisionalPage = await her.load();
+        expect(provisionalPage.adopted, `${host}: the outage load still serves her a session`).toBe(true);
+        h.f.setFault(null);
+        const provisional = { subject: her.subject(), capability: her.capability() };
+        expect({ anonymous: /^vis-[0-9a-f-]{36}$/.test(provisional.subject), hers: provisional.subject === herSubject },
+          `${host}: the outage served a provisional anonymous subject that is not hers`).toEqual({ anonymous: true, hers: false });
+        await her.choose(true);
+        for (const [index, view] of PROVISIONAL_VISIT.entries()) {
+          clock.mockReturnValue(T0 + 7 * DAY_MS + (index + 1) * STEP_MS);
+          const answered = await h.action(provisional.capability, view);
+          expect(answered.status, `${host}: the provisional session's browsing is accepted: ${answered.text.slice(0, 160)}`).toBe(200);
+        }
+
+        // On the provisional page she starts to sign in; the page closes while
+        // the link request is in flight.
+        const exp = Math.floor(Date.now() / 1000) + 300, account = 'coach-account-w16-c6-16';
+        const assertion = await signAssertion('backend-proof', TENANT, provisionalPage.core.visitorId, account, exp);
+        void createIdentity(provisionalPage.core).identify(account, { assertion, exp, source: 'login' });
+        await closing.closed;
+
+        // Precondition: the interrupted transition left its anchor pending, beside
+        // the provisional capability, her proof and the operation id.
+        const anchorKey = [...her.store.keys()].find(key => key.startsWith('opt_shopper_session:') && key.endsWith(':authority')) ?? '';
+        const capabilityKey = anchorKey.slice(0, -':authority'.length);
+        const anchor = (() => { try { return JSON.parse(her.store.get(anchorKey) ?? '') as { pending?: unknown }; } catch { return {}; } })();
+        const held = her.held();
+        expect({ pending: anchor.pending, capability: her.store.get(capabilityKey) === provisional.capability,
+          proof: held.proof === issuedProof, operationId: OPERATION_ID_SHAPE.test(held.operationId) },
+        `${host}: precondition — the interrupted sign-in left the transition pending, and her browser holds the provisional capability, her proof and the operation id`)
+          .toEqual({ pending: true, capability: true, proof: true, operationId: true });
+
+        // Her next load.
+        clock.mockReturnValue(T0 + 7 * DAY_MS + 10 * STEP_MS);
+        const mark = network.exchanges.length;
+        const next = await her.load();
+        const sent = network.exchanges.slice(mark).map(exchange => (exchange.body as { consent?: unknown } | null)?.consent ?? null);
+        expect.soft({ requests: sent.length > 0, consent: sent },
+          `${host}: W16.C6.16 — an interrupted transition still falls back to unknown consent: every session request of the next load carries {tracking:false, personalization:false}, held proof or not (W05)`)
+          .toEqual({ requests: true, consent: sent.map(() => UNKNOWN_CONSENT_REFUSAL) });
+        expect.soft({ adopted: next.adopted, hers: her.subject() === herSubject, consent: next.core.consent,
+          hero: her.capability() ? (await h.rawSnapshot(her.capability())).ranking.hero : null },
+        `${host}: W16.C6.16 — and that load does not recognize her: she is served as a cold shopper with both switches off and the catalogue's own order`)
+          .toEqual({ adopted: true, hers: false, consent: UNKNOWN_CONSENT_REFUSAL, hero: HERO_BASE_ORDER });
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
