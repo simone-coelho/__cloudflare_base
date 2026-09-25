@@ -373,6 +373,41 @@ the window; it is counted in `outsideWindow` only while her ring still holds tha
 `outsideWindow` is chiefly the measure of the shorter windows, and of a purchase window a tenant
 publishes shorter than seven days.
 
+The outcome receipt also names what REFUSED the outcome. Each slot the visitor's ring would have credited
+decides for itself, under its own published `slots.{slot}.reward` and `slots.{slot}.objective`: a slot
+that learns against another reward than the outcome's own takes nothing from it, and a slot whose
+objective is `revenue` or `margin` takes nothing from an outcome it cannot weigh without a money policy
+(next paragraph). `refusedBySlot` maps each slot that refused the outcome to the rule that refused it,
+`reward` or `money`, and `refused` is the number of its entries; both are absent when no slot refused,
+and the one never travels without the other. `attributed` counts only the credits of the slots that took
+the outcome, so a refusal is never read as a credit, and under `match: any` a purchase that happened in a
+click-learning slot still credits the purchase-learning slot the policy reaches while the click-learning
+slot is named `reward`. `notCredited` says in one word why an outcome that NO slot took went uncredited —
+`money` when any slot refused it for money, otherwise `reward` — and is absent whenever at least one slot
+was credited. A slot refused for both its reward and money is named `money`, because the money decision
+is made first, before the reward one. That name is the coarser of the two and never a missing credit:
+publishing a money policy alone would still leave such a slot refusing the outcome for its reward. A reply
+from the visitor's ring that carries `refused` without `refusedBySlot`, or a count that differs from the
+map's entries, is refused as malformed — the learning receipt is not ok, its ring destination counts as
+unknown and it carries no outcome receipt — so a partially deployed or faulty ring can never report a
+refusal nobody named. The operator's `learning_incomplete` diagnostic line, written for a learning
+receipt that is not complete, carries `refused` beside `attributed`, `eligible` and `weightSkipped`, and
+`refusedBySlot` whenever the receipt carries one; with nothing refused the line stays wholly numeric.
+
+Money is weighed only under a money policy the tenant publishes, and none can be published yet: which
+currency a slot's counters are in, how another currency converts, and what a refund or any other value at
+or below zero means for the objective are the customer's to decide, and the platform invents none of
+them. Until a money policy is published, a slot whose objective is `revenue` or `margin` refuses, by the
+name `money_policy_unset`, every outcome that declares a currency (any currency, since none is declared
+for its counters) and every outcome whose value — for `margin`, whose margin — is zero or negative, such
+as a refund. The outcome receipt names that slot `money` in `refusedBySlot` and carries `money` as
+`{ code?, reason: "money_policy_unset" }`, where `code` is the currency the outcome declared. A purchase
+the SDK reads from the page's data layer always carries a currency (`USD` when the data layer names
+none), so in practice every revenue or margin slot refuses every such purchase today and learns nothing
+from it until the policy is published: nothing is silently converted, added, dropped or subtracted. An
+outcome with neither a currency nor a nonpositive amount is still weighed by its value or margin as
+before. A `unit` slot is never asked: it counts the event whatever currency or value came with it.
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.
