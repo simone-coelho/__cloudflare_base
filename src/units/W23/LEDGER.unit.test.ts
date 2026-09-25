@@ -71,6 +71,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import * as jose from 'jose';
+import ts from 'typescript';
 
 import { memoryAuthority } from '@/auth/authority';
 import { memoryStore } from '@/auth/store';
@@ -627,6 +628,21 @@ describe('unit:W23.R3', () => {
    *   · `rebuiltFrom` on the snapshot's member line (kit 03, the paragraph that
    *     opens with `GET /v1/{tenant}/lift`), and its two bases by name
    *     (`explicit-reset`, `ledger-rebuild`, `RebuildBasis.basis`).
+   *   · "completes the snapshot line": that line is the customer's statement of
+   *     what `GET /v1/{tenant}/lift` returns, and the route returns the stored
+   *     snapshot RAW (`src/routes/decisions.ts`, the lift route: `CACHE.get(
+   *     liftKey(…), 'json')` into `snapshot`), so the line is complete when
+   *     every member of the served snapshot is on it — never `rebuiltFrom`
+   *     alone (spec review 2026-09-24, W23 defect 1: `witness`, `completeness`
+   *     and `tauLearnMs` are declared by `LiftSnapshot`, `src/learn/stats.ts`,
+   *     and on no kit line). The member set is measured, never listed here:
+   *     the logic leg reads every member `LiftSnapshot` DECLARES (so a member
+   *     only some snapshots carry — a bounded object's `completeness`, a
+   *     repaired one's `rebuiltFrom` — is counted), and the host leg reads
+   *     every member the route actually SERVES for a repaired slot (so a member
+   *     written at run time and declared nowhere is counted too). A member is
+   *     "on the line" when its name stands there as a whole word; how the line
+   *     phrases it is the builder's.
    *   · `outsideWindow` and, beside it, the residual R175 names: the purchase
    *     window equals the ring's reach (`RING_MAX_AGE_MS`, seven days), so a
    *     purchase can never be counted there — the W23.T1.01 row and the R169
@@ -637,14 +653,51 @@ describe('unit:W23.R3', () => {
    *     reset is offered (kit 02: "No raw overwrite, tenant remapping or
    *     historical reset is offered."), which the explicit reset contradicts.
    */
-  it('logic: the kit names lift_terms\' terms, rebuiltFrom on the snapshot line with its bases, outsideWindow with the purchase-window residual, and the reset intent on learn/recovery', () => {
+  /** Kit 03's snapshot member line: the reading unit that opens with `GET /v1/{tenant}/lift`. */
+  const snapshotLineOf = (schema: string) => units(schema).find(u => u.includes('`GET /v1/{tenant}/lift`')) ?? '';
+  /** A member is stated on the line when its name stands there as a whole word. */
+  const statedOn = (line: string, member: string) => new RegExp(`\\b${member.replace(/[^\w$]/g, '\\$&')}\\b`).test(line);
+  /** member → stated?, so a failure names every member the line leaves out. */
+  const lineCoverage = (line: string, members: string[]) => Object.fromEntries(members.map(member => [member, statedOn(line, member)]));
+  const everyMember = (members: string[]) => Object.fromEntries(members.map(member => [member, true]));
+  /**
+   * Every member the `LiftSnapshot` interface declares in `src/learn/stats.ts`
+   * (and any interface of that file it extends), read with the TypeScript
+   * parser from the checkout this test lives in.
+   */
+  const declaredSnapshotMembers = (): string[] => {
+    const file = 'src/learn/stats.ts';
+    const source = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true);
+    const members = new Set<string>();
+    const visit = (name: string, seen: Set<string>) => {
+      if (seen.has(name)) return;
+      seen.add(name);
+      for (const statement of source.statements) {
+        if (!ts.isInterfaceDeclaration(statement) || statement.name.text !== name) continue;
+        for (const member of statement.members) {
+          if (member.name && (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name))) members.add(member.name.text);
+        }
+        for (const clause of statement.heritageClauses ?? []) {
+          for (const type of clause.types) if (ts.isIdentifier(type.expression)) visit(type.expression.text, seen);
+        }
+      }
+    };
+    visit('LiftSnapshot', new Set());
+    return [...members];
+  };
+
+  it('logic: the kit names lift_terms\' terms, rebuiltFrom on the snapshot line with its bases, every member the snapshot declares on that line, outsideWindow with the purchase-window residual, and the reset intent on learn/recovery', () => {
     const api = read('docs/kit/02-api-reference.md');
     const schema = read('docs/kit/03-payload-schemas.md');
     const kit = [...units(api), ...units(schema)];
 
     const liftTerms = kit.some(u => u.includes('`lift_terms`') && u.includes('`p0`') && u.includes('`p_hat`') && u.includes('`shown`'));
-    const snapshotLine = units(schema).find(u => u.includes('`GET /v1/{tenant}/lift`')) ?? '';
+    const snapshotLine = snapshotLineOf(schema);
     const rebuiltFromOnLine = /\brebuiltFrom\b/.test(snapshotLine);
+    const declared = declaredSnapshotMembers();
+    expect(declared, 'the fixture: the members of `LiftSnapshot` are read from its declaration in src/learn/stats.ts')
+      .toEqual(expect.arrayContaining(['tenant', 'items', 'slotRates', 'rebuiltFrom']));
+    const snapshotLineMembers = lineCoverage(snapshotLine, declared);
     const rebuiltFromBases = units(schema).some(u => u.includes('`rebuiltFrom`') && u.includes('explicit-reset') && u.includes('ledger-rebuild'));
     const outsideWindow = kit.some(u => u.includes('`outsideWindow`') && /window/i.test(u) && /purchase/i.test(u) && /\bring\b/i.test(u)
       && /\b(equal|equals|same|coincide|coincides|identical)\b/i.test(u));
@@ -652,8 +705,28 @@ describe('unit:W23.R3', () => {
     const resetIntent = recovery.some(u => /intent\s*[:=]?\s*`?['"]?reset\b|`reset`/.test(u));
     const noResetDenied = !/\bNo [^.]*historical reset is offered/.test(api + schema);
 
-    expect({ liftTerms, rebuiltFromOnLine, rebuiltFromBases, outsideWindow, resetIntent, noResetDenied },
-      `W23.R3 — the kit documents what W23 put on the wire (LANE-LOG R175; W23-B1 build review findings 1–2): the terms of \`lift_terms\` (\`p0\`, \`p_hat\` and what the receipt \`shown\`s), \`rebuiltFrom\` on the snapshot's member line and its two bases, \`outsideWindow\` together with the residual that the purchase window equals the ring's reach, and the \`reset\` intent on learn/recovery without the sentence denying it. The snapshot line reads: ${snapshotLine.slice(0, 260)}`)
-      .toEqual({ liftTerms: true, rebuiltFromOnLine: true, rebuiltFromBases: true, outsideWindow: true, resetIntent: true, noResetDenied: true });
+    expect({ liftTerms, rebuiltFromOnLine, rebuiltFromBases, snapshotLineMembers, outsideWindow, resetIntent, noResetDenied },
+      `W23.R3 — the kit documents what W23 put on the wire (LANE-LOG R175; W23-B1 build review findings 1–2): the terms of \`lift_terms\` (\`p0\`, \`p_hat\` and what the receipt \`shown\`s), \`rebuiltFrom\` on the snapshot's member line and its two bases, a COMPLETE snapshot line — every member \`LiftSnapshot\` declares, since GET /v1/{tenant}/lift returns the snapshot raw — \`outsideWindow\` together with the residual that the purchase window equals the ring's reach, and the \`reset\` intent on learn/recovery without the sentence denying it. The snapshot line reads: ${snapshotLine.slice(0, 260)}`)
+      .toEqual({ liftTerms: true, rebuiltFromOnLine: true, rebuiltFromBases: true, snapshotLineMembers: everyMember(declared), outsideWindow: true, resetIntent: true, noResetDenied: true });
+  });
+
+  it('host: every member GET /v1/{tenant}/lift serves for a slot rebuilt from the ledger is stated on the kit\'s snapshot line', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+    const m = await mount();
+    await retainedDay(m);
+    const operationId = 'e1f2a3b4c5d60718293a4b5c6d7e8f90';
+    const rebuilt = await operatorPost(m, `/v1/${TENANT}/learn/generation`, { slot: 'hero', brand: BRAND, rebuildFrom: DATE },
+      m.serviceToken, { 'Idempotency-Key': operationId });
+    expect(rebuilt.status, `the fixture: the ledger rebuild is admitted (W24.T1.02): ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBe(200);
+
+    const snapshot = await served(m, 'hero');
+    const members = Object.keys(snapshot ?? {});
+    expect(members, 'the fixture: the rebuilt slot is served a snapshot, and it names its basis (W23.R1)')
+      .toEqual(expect.arrayContaining(['items', 'slotRates', 'rebuiltFrom']));
+
+    const snapshotLine = snapshotLineOf(read('docs/kit/03-payload-schemas.md'));
+    expect(lineCoverage(snapshotLine, members),
+      `W23.R3 — the kit's snapshot line is complete: every member GET /v1/{tenant}/lift actually served for this repaired slot is stated on it, because the route returns the stored snapshot raw and a customer reads that line to know what she was given (spec review 2026-09-24, W23 defect 1). The route served: ${members.join(', ')}. The line reads: ${snapshotLine.slice(0, 260)}`)
+      .toEqual(everyMember(members));
   });
 });
