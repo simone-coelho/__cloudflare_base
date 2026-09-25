@@ -445,13 +445,27 @@ prior-derived rows; a slot with neither events nor priors publishes nothing.
 
 ## The lift snapshot
 
-`GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, version, publishedAt, events, n0, nMin, liftMin,
-liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
+`GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, tauLearnMs, version, publishedAt, events, n0, nMin, liftMin,
+liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart, witness, completeness?,
+rebuiltFrom? }` — the stored snapshot exactly as it was published, member for member. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
 p_hat, lift, liftReference, prior? }` with the symbols defined above; `liftReference` is `slot-rate` where the
 slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `p0: 0` is read as "no
 reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
 named. `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
+`tauLearnMs` is the decay horizon, in milliseconds, the counts were decayed with; the serving path uses a
+snapshot only when its `tauLearnMs`, `reward`, `objective`, `measurementBasis` and estimator dials are the
+ones the tenant's published learn document names. `witness` is a digest of the statistics object's
+committed identity — tenant, brand, slot, configuration, generation fence and projection — which the
+serving path checks against the object itself, together with the published digest, before it trusts a
+cached snapshot: a snapshot the object does not confirm as its current, healthy publication serves no lift.
+`completeness`, on counters kept under the application's bounds (absent on counters from before those
+bounds existed), is `{ depth, omittedItems, selection, reason }`: the finest ladder level still kept
+(`depth`, 0 to 5), whether items past the item budget were folded into the slot's root instead of being
+kept by name (`omittedItems`), how the kept items were chosen (`first-seen`, or `lexical-repair` after a
+coarsening repair), and `reason` — `complete`, `coarse` when fine levels were dropped, or `item-capacity`
+when items were folded. `rebuiltFrom` names the repair the counters stand on, and only on a slot that was
+repaired (below).
 
 `slotRates` is the mass of the evidence the platform still HOLDS — the retained items plus the bucket of
 items capacity omitted — so an item whose evidence was discarded leaves no denominator counting exposures
@@ -469,6 +483,21 @@ authorized way past it is `POST /v1/{tenant}/learn/generation`, which starts a f
 reinterpreting or silently keeping what was counted before. `restartedAt` is when the generation started —
 the moment of that transition, or the counters' own earliest evidence for a generation never restarted —
 and `exposuresSinceRestart` is what it has counted since. Absent on a snapshot archived before they existed.
+
+`rebuiltFrom` is present only on a slot whose counters were started again by a repair, and names that
+repair: `{ basis, operationId, at, generation, date? }`. `basis` is `explicit-reset` when a tenant admin
+discarded damaged counters with `intent:reset` on `POST /v1/{tenant}/learn/recovery`, and
+`ledger-rebuild` when an operator folded them again from one retained day with `rebuildFrom` on
+`POST /v1/{tenant}/learn/generation`; `date` is that day, and only a `ledger-rebuild` carries it.
+`operationId` is the audited operation that did it, `at` its moment in milliseconds, and `generation`
+the numeric recovery generation of the statistics object it moved to — not the string `generation`
+above. A snapshot that names a basis holds only what was admitted since that repair (for a
+`ledger-rebuild`, that day's fold and what was admitted since), never the tenant's whole history. The
+basis stays with the object: a later wholesale reset of its counters keeps it unchanged, because what is
+counted afterwards still stands on that repair, and only a later explicit reset or ledger rebuild
+replaces it with its own. A generation transition without `rebuildFrom` discards the counters and names
+no basis; that snapshot says when learning restarted through `restartedAt` instead. A slot that was never
+repaired carries no `rebuiltFrom`.
 
 `attributionContract` is the one named, versioned attribution contract every path that reports
 attribution now carries — this snapshot, the day report and the window report — so two numbers can be
