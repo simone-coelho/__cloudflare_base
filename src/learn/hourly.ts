@@ -233,8 +233,23 @@ export interface HourAssignments {
   visitors: Record<string, number>;
   /** assignment → outcome type → distinct visitors on the DATE, through this hour. */
   outcomes: Record<string, Record<string, number>>;
+  /**
+   * W21 R1 (LANE-LOG R156): this hour's outcomes whose visitor held no
+   * assignment this fold could see — no decision of the date at or before the
+   * outcome, and none later in this hour either. The raw-day rule places such
+   * an outcome under her FIRST decision of the day, which may be in a later hour
+   * that has not been folded yet (or may never come), so this hour cannot say
+   * which arm the outcome belongs to and counts it here instead of under any.
+   * It adds across the hours of a day. Any hour with a non-zero count cannot
+   * support the day's `visitorOutcomes`: the day names it in
+   * `coverage.unassignedHours` and answers that member `null`. Decisions,
+   * credits and visitors are unaffected, so the arm rows and `armVisitors`
+   * stand. ABSENT on an aggregate folded before this release, which dropped
+   * such an outcome without saying so and is therefore read as unable to say.
+   */
+  unassignedOutcomes?: number;
 }
-export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {} });
+export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {}, unassignedOutcomes: 0 });
 export interface HourBrand {
   computation?: ComputationBasis | null;
   duplicates?: DuplicateCounts;
@@ -334,6 +349,10 @@ function mergeAssignments(a: HourAssignments | undefined, b: HourAssignments | u
     for (const [name, credits] of Object.entries(src.credits)) addCounts((out.credits[name] ??= {}), credits);
     maxCounts(out.visitors, src.visitors);
     for (const [arm, byType] of Object.entries(src.outcomes)) maxCounts((out.outcomes[arm] ??= {}), byType);
+    // W21 R1: the unplaced outcomes add, and only where every hour can say
+    // them — one hour that cannot makes the total unknown, not zero.
+    if (out.unassignedOutcomes === undefined || src.unassignedOutcomes === undefined) delete out.unassignedOutcomes;
+    else out.unassignedOutcomes += src.unassignedOutcomes;
   }
   return out;
 }
@@ -730,7 +749,15 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     // purchasing visitor.
     const held = subjectRing.filter(e => e.brand === o.brand && onDate(e.ts, ctx.date) && e.ts <= o.ts).at(-1)
       ?? firstOnDate.get(`${o.brand}\u0000${o.visitor_id}`);
-    if (held) {
+    if (!held) {
+      // W21 R1 (LANE-LOG R156): no decision of the date at or before it and
+      // none later in this hour. Her first decision of the day — which the
+      // raw-day rule counts it under — may still come in a later hour this fold
+      // cannot see, so the outcome is not placed under any assignment here and
+      // the hour says so, rather than a day answering a count that omits it.
+      const ha = ((ctx.brands[o.brand] ??= emptyBrand()).assignments ??= emptyAssignments());
+      ha.unassignedOutcomes = (ha.unassignedOutcomes ?? 0) + 1;
+    } else {
       const enrolled = enrollmentOf(state, ctx.date, o.brand, o.visitor_id);
       const label = shardLabel(assignmentLabel(held)), type = shardLabel(o.type);
       const outcomes = (enrolled.outcomes ??= {});
@@ -914,6 +941,9 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
           aggregateName(arm); visit();
           for (const [type, n] of Object.entries(aggregateMap(value))) { aggregateName(type); aggregateNumber(n); visit(); }
         }
+        // W21 R1: present or absent, never malformed — an aggregate folded
+        // before the release carries none and stays readable.
+        if (Object.hasOwn(ha, 'unassignedOutcomes')) aggregateNumber(ha.unassignedOutcomes);
       }
       for (const [name, value] of Object.entries(aggregateMap(b.policies))) {
         aggregateName(name); visit(); const p = aggregateMap(value);
@@ -1040,8 +1070,18 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   // denominators unknown rather than dividing a total it does not hold, and
   // NAMES those hours. One day uses one rule for all of its hours: mixing the
   // two groupings would put one visitor under two different rows.
-  const unassignedHours = sorted.filter(a => a.brands[ids.brand] !== undefined && !assignmentsAgree(a.brands[ids.brand]!)).map(a => a.hour);
-  const assignments = unassignedHours.length === 0 ? hb.assignments : undefined;
+  //
+  // W21 R1 (LANE-LOG R156): an hour can also carry the assignment of every
+  // decision and still be unable to PLACE one of its outcomes — one whose
+  // visitor's first decision of the day comes in a later hour, which the raw
+  // day counts under that decision. Such an hour is named too, and the day
+  // withdraws the one member it cannot support, `visitorOutcomes`, rather than
+  // answering a count that silently omits the outcome. Its arm rows and
+  // `armVisitors` do not depend on where an outcome is placed, and stand.
+  const ungrouped = sorted.filter(a => a.brands[ids.brand] !== undefined && !assignmentsAgree(a.brands[ids.brand]!)).map(a => a.hour);
+  const unplaced = sorted.filter(a => a.brands[ids.brand] !== undefined && a.brands[ids.brand]!.assignments?.unassignedOutcomes !== 0).map(a => a.hour);
+  const unassignedHours = [...new Set([...ungrouped, ...unplaced])].sort((x, y) => x - y);
+  const assignments = ungrouped.length === 0 ? hb.assignments : undefined;
   const names = Object.keys(hb.policies).sort((a, b) => Number(hb.policies[b]!.role === 'learning') - Number(hb.policies[a]!.role === 'learning'));
   const slots = [...new Set([...Object.keys(hb.arms), ...Object.keys(hb.exploration), ...Object.values(hb.policies).flatMap((p) => Object.keys(p.stats))])].sort();
   const policies: DayReport['policies'] = [];
@@ -1083,7 +1123,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     ? [...new Set([...Object.keys(assignments.visitors), ...Object.keys(assignments.outcomes)])].sort((a, b) => a.localeCompare(b)) : [];
   const armVisitors: ArmVisitors | null = assignments
     ? { version: 1, basis: 'distinct_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0 })) } : null;
-  const visitorOutcomes: VisitorOutcomes | null = assignments
+  const visitorOutcomes: VisitorOutcomes | null = assignments && unassignedHours.length === 0
     ? { version: 1, basis: 'enrolled_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0,
       byType: Object.fromEntries(Object.entries(assignments.outcomes[arm] ?? {}).sort(([x], [y]) => x.localeCompare(y))) })) } : null;
   const last = sorted[sorted.length - 1];
