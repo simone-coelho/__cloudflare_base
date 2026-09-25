@@ -1985,3 +1985,134 @@ describe('unit:W16.R4.retry', () => {
     } finally { clock.mockRestore(); }
   });
 });
+
+// ===========================================================================
+// THE LIMIT OF C6.15: AN INTERRUPTED TRANSITION STILL FAILS CLOSED (C6, W05)
+//
+// Added after the specification review of dd929a5 (rem-reviewer, FAIL, one
+// defect: `_evidence/W16-fix1/reviewer-spec/REPORT.md`). C6.15 asks the SDK not
+// to fall back to unknown consent when the load before lost the answer to her
+// return. Nothing pinned the other side of that line: a transition (a sign-in, a
+// logout) interrupted mid-way, with her proof and operation id held beside the
+// provisional capability, must STILL fall back to unknown consent — so an
+// exemption for every held proof passes every other test and weakens the W05
+// guard.
+//
+// WITNESSES:
+//  - document 35 §5 row W05: "Preserve withdrawal through logout and failures.
+//    Test all switch combinations and unknown/error states before writes";
+//  - `src/sdk/core.ts` at 9830cce :679: "An interrupted transition or failed
+//    capability write never revives the old account" — the fallback to unknown
+//    consent (`rememberUnknownConsent`), whose refusal the next session request
+//    carries as `consent: { tracking: false, personalization: false }`, as
+//    `src/sdk/core.test.ts:425` (W05.01) builds and measures it with
+//    `beginTransition()` and `ready(true)`;
+//  - `src/routes/identity.ts` at 9830cce :235-237: "A browser that arrives
+//    withdrawing a switch is not asking to be recognized" — so that request is
+//    answered as a cold shopper, never as her.
+//
+// ONE PRODUCT with C6.15: the same fixture, the same held proof, operation id and
+// provisional capability, and the same next load; the one difference is how the
+// page before it ended — a lost answer to her return there, a sign-in left
+// mid-way here. The transition is started through the shipped surface
+// (`createIdentity(core).identify`, which runs `beginTransition()` and
+// `ready(true)` as W05.01 does), and the page closes while its link request is
+// in flight: the request is never delivered and never answered, so the anchor
+// the transition wrote stays pending.
+// ===========================================================================
+
+/** The refusal an SDK falls back to when it cannot know the consent in force (W05.01). */
+const UNKNOWN_CONSENT_REFUSAL = { tracking: false, personalization: false };
+
+/**
+ * The page closes while a request is in flight: the first call whose path ends
+ * with `suffix` is never delivered to the engine and never answered. `closed`
+ * resolves once the page has reached that request.
+ */
+function pageClosesDuring(h: HostFixture, suffix: string) {
+  let reached: () => void = () => undefined;
+  const closed = new Promise<void>(resolve => { reached = resolve; });
+  const call: HostFixture['f']['call'] = async (path, options = {}) => {
+    if (!path.endsWith(suffix)) return h.f.call(path, options);
+    reached();
+    return new Promise<Response>(() => { /* the page is gone: no delivery, no answer */ });
+  };
+  return { h: { ...h, f: { ...h.f, call } } as HostFixture, closed };
+}
+
+describe('unit:W16.C6.16', () => {
+  it('sdk: the limit of C6.15 — with her proof and operation id held beside the provisional capability, a sign-in started on the provisional page and interrupted mid-transition still falls back to unknown consent: the next load carries {tracking:false, personalization:false} and does not recognize her, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        const network = browserNetwork(await hostFixture(host, { continuity: CONTINUITY_DIRECT }));
+        const closing = pageClosesDuring(network.h, '/identity/link');
+        const h = closing.h;
+
+        // C6.15's fixture: her descriptor and her Tabby taste; a week later an
+        // outage on her return serves her the provisional session, and her
+        // browser keeps her proof and the operation id of the interrupted consume.
+        const her = sdkBrowser(h);
+        expect((await her.load()).adopted, `${host}: load 1 establishes her session`).toBe(true);
+        await her.choose();
+        const second = await her.load();
+        expect(second.adopted, `${host}: load 2 issues her recognition descriptor`).toBe(true);
+        const issuedProof = her.held().proof;
+        expect(issuedProof.length, `${host}: her browser holds a real direct-mode proof`).toBeGreaterThan(32);
+        const herSubject = her.subject();
+        for (const [index, view] of THREE_TABBY_VIEWS.entries()) {
+          clock.mockReturnValue(T0 + index * STEP_MS);
+          await second.core.send('product_view', view.data);
+        }
+        await h.f.drain();
+        clock.mockReturnValue(T0 + 7 * DAY_MS);
+        her.forgetCapability();
+        h.f.setFault({ match: '/identity/continuity/consume', kind: '5xx' });
+        const provisionalPage = await her.load();
+        expect(provisionalPage.adopted, `${host}: the outage load still serves her a session`).toBe(true);
+        h.f.setFault(null);
+        const provisional = { subject: her.subject(), capability: her.capability() };
+        expect({ anonymous: /^vis-[0-9a-f-]{36}$/.test(provisional.subject), hers: provisional.subject === herSubject },
+          `${host}: the outage served a provisional anonymous subject that is not hers`).toEqual({ anonymous: true, hers: false });
+        await her.choose(true);
+        for (const [index, view] of PROVISIONAL_VISIT.entries()) {
+          clock.mockReturnValue(T0 + 7 * DAY_MS + (index + 1) * STEP_MS);
+          const answered = await h.action(provisional.capability, view);
+          expect(answered.status, `${host}: the provisional session's browsing is accepted: ${answered.text.slice(0, 160)}`).toBe(200);
+        }
+
+        // On the provisional page she starts to sign in; the page closes while
+        // the link request is in flight.
+        const exp = Math.floor(Date.now() / 1000) + 300, account = 'coach-account-w16-c6-16';
+        const assertion = await signAssertion('backend-proof', TENANT, provisionalPage.core.visitorId, account, exp);
+        void createIdentity(provisionalPage.core).identify(account, { assertion, exp, source: 'login' });
+        await closing.closed;
+
+        // Precondition: the interrupted transition left its anchor pending, beside
+        // the provisional capability, her proof and the operation id.
+        const anchorKey = [...her.store.keys()].find(key => key.startsWith('opt_shopper_session:') && key.endsWith(':authority')) ?? '';
+        const capabilityKey = anchorKey.slice(0, -':authority'.length);
+        const anchor = (() => { try { return JSON.parse(her.store.get(anchorKey) ?? '') as { pending?: unknown }; } catch { return {}; } })();
+        const held = her.held();
+        expect({ pending: anchor.pending, capability: her.store.get(capabilityKey) === provisional.capability,
+          proof: held.proof === issuedProof, operationId: OPERATION_ID_SHAPE.test(held.operationId) },
+        `${host}: precondition — the interrupted sign-in left the transition pending, and her browser holds the provisional capability, her proof and the operation id`)
+          .toEqual({ pending: true, capability: true, proof: true, operationId: true });
+
+        // Her next load.
+        clock.mockReturnValue(T0 + 7 * DAY_MS + 10 * STEP_MS);
+        const mark = network.exchanges.length;
+        const next = await her.load();
+        const sent = network.exchanges.slice(mark).map(exchange => (exchange.body as { consent?: unknown } | null)?.consent ?? null);
+        expect.soft({ requests: sent.length > 0, consent: sent },
+          `${host}: W16.C6.16 — an interrupted transition still falls back to unknown consent: every session request of the next load carries {tracking:false, personalization:false}, held proof or not (W05)`)
+          .toEqual({ requests: true, consent: sent.map(() => UNKNOWN_CONSENT_REFUSAL) });
+        expect.soft({ adopted: next.adopted, hers: her.subject() === herSubject, consent: next.core.consent,
+          hero: her.capability() ? (await h.rawSnapshot(her.capability())).ranking.hero : null },
+        `${host}: W16.C6.16 — and that load does not recognize her: she is served as a cold shopper with both switches off and the catalogue's own order`)
+          .toEqual({ adopted: true, hers: false, consent: UNKNOWN_CONSENT_REFUSAL, hero: HERO_BASE_ORDER });
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
