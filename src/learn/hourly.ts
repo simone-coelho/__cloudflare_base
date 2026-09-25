@@ -146,6 +146,16 @@ export interface ShardState {
   seen: Record<string, string[]>;
   /** v2: the same membership for the other dates this shard has folded, pruned to the horizon. */
   seenDays?: Record<string, Record<string, string[]>>;
+  /**
+   * v2 (W22 R4, LANE-LOG R143): the hourly retention stamp of an id in
+   * `seenDays`, date → brand → visitor, exactly as `seenRetention` carries it
+   * for `seenDate` — it moves here with the membership when the shard rolls
+   * forward, and a repaired older hour stamps the ids it adds. An id whose
+   * stamp has expired leaves that date's membership at the next cleanup; an id
+   * with no stamp is legacy and is never disposed of on that ground. Its keys
+   * are always a subset of `seenDays`'s: nothing here outlives its id.
+   */
+  seenDaysRetention?: Record<string, Record<string, Record<string, RetentionStamp>>>;
   /** Latest witnessed decision time per brand/visitor on seenDate, retained independently of ring eviction. */
   seenAt?: Record<string, Record<string, number>>;
   seenRetention?: Record<string, Record<string, RetentionStamp>>;
@@ -424,8 +434,6 @@ export interface FoldContext {
   date: string;
   from: number;
   to: number;
-  /** When this fold ran, as the aggregate's own `builtAt`; a repair is dated by it. */
-  now?: number;
   /**
    * W22 R1.02: this hour is being folded again because its ledger has GROWN
    * since the aggregate was written, so rows the rings do not already hold are
@@ -467,6 +475,40 @@ function checkFold(state: ShardState): void {
       }
     }
   }
+  // W22 R4: an archived id's stamp is read exactly as a current one is
+  // (`checkSeen`), and refused whole when any of it is malformed.
+  if (state.seenDaysRetention !== undefined) {
+    const archived = state.seenDaysRetention;
+    if (!objectMap(archived) || Object.keys(archived).length > SEEN_DAYS_MAX) throw new Error('Hourly seen state unavailable');
+    for (const [date, brands] of Object.entries(archived)) {
+      if (!dateShape(date) || date === state.seenDate || !objectMap(brands)) throw new Error('Hourly seen state unavailable');
+      for (const values of Object.values(brands)) {
+        if (!objectMap(values)) throw new Error('Hourly seen state unavailable');
+        for (const stamp of Object.values(values)) readRetention(stamp, (stamp as RetentionStamp)?.tenant, 'hourly');
+      }
+    }
+  }
+}
+
+/**
+ * W22 R4: the archived stamps keep exactly the archived membership's ids — an
+ * id that leaves `seenDays` for erasure, retention or the horizon takes its
+ * stamp with it, and a date the shard no longer archives is dropped whole.
+ */
+function pruneSeenDaysRetention(state: ShardState): void {
+  const archived = state.seenDaysRetention;
+  if (!archived) return;
+  for (const [date, brands] of Object.entries(archived)) {
+    const membership = date === state.seenDate ? undefined : state.seenDays?.[date];
+    if (!membership) { delete archived[date]; continue; }
+    for (const [brand, values] of Object.entries(brands)) {
+      const ids = new Set(membership[brand] ?? []);
+      for (const visitor of Object.keys(values)) if (!ids.has(visitor)) delete values[visitor];
+      if (!Object.keys(values).length) delete brands[brand];
+    }
+    if (!Object.keys(brands).length) delete archived[date];
+  }
+  if (!Object.keys(archived).length) delete state.seenDaysRetention;
 }
 
 /**
@@ -621,14 +663,25 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // date — `seen`, `seenAt`, `seenRetention`, `seenIncomplete` and `seenDate`,
   // all of which keep their version-1 meaning — untouched.
   const older = state.seenDate !== '' && ctx.date < state.seenDate;
-  const beforeDays = JSON.stringify(state.seenDays ?? null);
+  const beforeDays = JSON.stringify([state.seenDays ?? null, state.seenDaysRetention ?? null]);
   const beforeEnrollment = JSON.stringify(state.enrollment ?? null);
   if (!older && state.seenDate !== ctx.date) {
     changed = Object.keys(state.seen).length > 0 || state.seenAt !== undefined || state.seenIncomplete !== undefined;
-    if (state.seenDate !== '' && Object.keys(state.seen).length) (state.seenDays ??= {})[state.seenDate] = state.seen;
+    if (state.seenDate !== '' && Object.keys(state.seen).length) {
+      (state.seenDays ??= {})[state.seenDate] = state.seen;
+      // W22 R4: the date's ids leave for the archive WITH their retention
+      // stamps, so an archived id still leaves when its retention ends.
+      if (state.seenRetention && Object.keys(state.seenRetention).length) (state.seenDaysRetention ??= {})[state.seenDate] = state.seenRetention;
+    }
+    const restored = state.seenDaysRetention?.[ctx.date];
     state.seenDate = ctx.date; state.seen = state.seenDays?.[ctx.date] ?? {};
     if (state.seenDays) { delete state.seenDays[ctx.date]; if (!Object.keys(state.seenDays).length) delete state.seenDays; }
     delete state.seenAt; delete state.seenIncomplete; delete state.seenRetention;
+    if (restored) {
+      state.seenRetention = restored;
+      delete state.seenDaysRetention![ctx.date];
+    }
+    pruneSeenDaysRetention(state);
   }
   const beforeSeen = JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]);
   // The membership this hour counts: the current date's, or — when an older
@@ -712,7 +765,16 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
           enrolled.arms.push(label);
         }
       }
-      if (older) continue;                 // an older date keeps ids, and no witness it cannot carry
+      if (older) {
+        // An older date keeps ids and no timing witness it cannot carry — but
+        // (W22 R4) each id it adds carries its hourly retention stamp, merged
+        // exactly as the current date's `seenRetention` merges it.
+        if (d.entry.retention?.hourly) {
+          const stamps = (((state.seenDaysRetention ??= {})[ctx.date] ??= {})[d.entry.brand] ??= {}), prior = stamps[d.visitor_id];
+          stamps[d.visitor_id] = prior ? mergeRetention(prior, d.entry.retention.hourly, d.entry.tenant!, 'hourly') : d.entry.retention.hourly;
+        }
+        continue;
+      }
       let times = seenAt.get(d.entry.brand);
       if (!times) { times = new Map(); seenAt.set(d.entry.brand, times); }
       times.set(d.visitor_id, Math.max(times.get(d.visitor_id) ?? d.ts, d.ts));
@@ -821,11 +883,12 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // rebuild the hours whose attribution ran against the rings as they were.
   rememberFold(state, ctx, floorAtEntry);
   pruneSeenDays(state, ctx);
+  pruneSeenDaysRetention(state);
   // W21 C1.08: the per-assignment memory keeps exactly the membership's ids, so
   // it is pruned last, after the membership and the archived dates are final.
   pruneEnrollment(state);
   if (JSON.stringify(state.enrollment ?? null) !== beforeEnrollment) changed = true;
-  if (JSON.stringify(state.seenDays ?? null) !== beforeDays) changed = true;
+  if (JSON.stringify([state.seenDays ?? null, state.seenDaysRetention ?? null]) !== beforeDays) changed = true;
   if (JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]) !== beforeSeen) changed = true;
   return { state, folded, changed };
 }
@@ -1378,6 +1441,8 @@ function cleanupOwnership(state: ShardState, tenant: string): void {
     }
   }
   for (const values of Object.values(state.seenRetention ?? {})) for (const stamp of Object.values(values)) readRetention(stamp, tenant, 'hourly');
+  for (const brands of Object.values(state.seenDaysRetention ?? {})) for (const values of Object.values(brands))
+    for (const stamp of Object.values(values)) readRetention(stamp, tenant, 'hourly');
 }
 
 /** Physical erasure/expiry only: no fold, date rewind, attribution or counters. */
@@ -1422,11 +1487,19 @@ function cleanupShard(state: ShardState, tenant: string, tombs: ReadonlyMap<stri
   // erased visitor simply leaves it — there is no witness there that could show
   // a decision after the erasure, and keeping her would be keeping an id the
   // tenant asked to be forgotten.
+  // W22 R4 (R143): and an archived id whose hourly retention has ended leaves
+  // it too, exactly as a current one leaves `seen` above. An id with no stamp
+  // is legacy and is never disposed of on that ground.
   for (const [date, brands] of Object.entries(next.seenDays ?? {})) {
-    for (const [brand, ids] of Object.entries(brands)) brands[brand] = ids.filter(visitor => !tombs.has(visitor));
+    for (const [brand, ids] of Object.entries(brands)) {
+      const stamps = next.seenDaysRetention?.[date]?.[brand];
+      brands[brand] = ids.filter(visitor => !tombs.has(visitor)
+        && (stamps?.[visitor] === undefined || readRetention(stamps[visitor], tenant, 'hourly').expiresAt > now));
+    }
     if (!Object.keys(brands).length) delete next.seenDays![date];
   }
   if (next.seenDays && !Object.keys(next.seenDays).length) delete next.seenDays;
+  pruneSeenDaysRetention(next);
   // Orphan metadata is never used to recreate membership. Remove only its own
   // expired instruction or a cutoff-covered witness, preserving later evidence.
   for (const [brand, values] of Object.entries(next.seenRetention ?? {})) {
@@ -1608,7 +1681,10 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       refold = objectMap(previous) && Number.isSafeInteger(previous.objects) && loaded.objects > (previous.objects as number);
     } catch { refold = false; }
   }
-  const ctx: FoldContext = { tenant, date: at.date, from, to, now, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
+  // W22 R4 (R143): the fold is dated by nothing it reads — the aggregate carries
+  // `builtAt` and the cleanup that follows expires by its own clock — so the
+  // context no longer carries a `now` no fold ever read.
+  const ctx: FoldContext = { tenant, date: at.date, from, to, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
     retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
   let ringsFolded = true;
   /** W21 C1.08: brands whose date membership this fold could not account for assignment by assignment. */
