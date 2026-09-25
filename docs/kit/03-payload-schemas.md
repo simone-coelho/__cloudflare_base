@@ -520,11 +520,14 @@ reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is
 No report of ours states a business target, a lift or a standing.
 
 `coverage.unassignedHours` is `number[] | null` and names the source limitation behind those two
-`null`s on a day summed from hour aggregates: `[]` when every built hour carries the experimental
-assignment, the hours that do not when some were folded before this release — that day's rows are
-grouped by the arm SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are
-`null` rather than a number the source cannot support — and `null` when the stored report does not
-record the member at all.
+`null`s on a day summed from hour aggregates: `[]` when every built hour can say the experimental
+assignment, the hours that cannot, and `null` when the stored report does not record the member at
+all. An hour folded before this release carries no assignment: that day's rows are grouped by the arm
+SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
+number the source cannot support. An hour holding an outcome whose visitor had no decision that day
+at or before it, nor later in that hour, cannot place the outcome, because the day counts it under
+the visitor's first decision of the day and that decision may be in a later hour: that day keeps its
+rows and `armVisitors` and answers `visitorOutcomes: null` rather than a count that omits the outcome.
 
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and

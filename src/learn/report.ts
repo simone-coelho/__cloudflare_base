@@ -755,6 +755,13 @@ export interface ReportCoverage {
    * before this release is owed. A day with any such hour is grouped by the arm
    * SERVED and answers `armVisitors` and `visitorOutcomes` null.
    *
+   * W21 R1 (LANE-LOG R156): also the built hours that carry the assignment of
+   * every decision but could not PLACE one of their outcomes — its visitor had
+   * no decision of the date at or before it, and none later in that hour, so
+   * her first decision of the day (the raw-day rule) may lie in a later hour.
+   * A day naming such an hour keeps its arm rows and `armVisitors` and answers
+   * `visitorOutcomes` null.
+   *
    * Optional in the stored evidence: a report written before this release does
    * not carry it and is still `metadata: 'recorded'`.
    */
@@ -799,7 +806,7 @@ export interface DayReport {
   armVisitors?: ArmVisitors | null;
   /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
   allocation?: ReportAllocation;
-  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field, or names an hour in `coverage.unassignedHours`. */
   visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
