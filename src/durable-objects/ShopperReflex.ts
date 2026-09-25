@@ -54,6 +54,7 @@ import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, vi
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
+import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
 import { assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose } from '@/identity/sessionAuthority';
@@ -300,6 +301,28 @@ interface IngestOutcome {
   status: number;
   body: Record<string, unknown>;
   update: PersonalizationUpdate | null;
+}
+
+/**
+ * W19 LG1: the reducer's own failure is this door's ANSWER, named as the
+ * session host names it (src/routes/realtime.ts, POST /action), never an escape.
+ *
+ * The route reaches this door through the owner's local stub, whose call the
+ * owner operation retains. A rejection here was therefore answered twice: once
+ * by the route's own handler, and again when the owner drained the rejected call
+ * and failed the whole operation, which replaced the route's answer with a bare
+ * Internal Server Error on this host alone. An authority refusal still
+ * propagates unchanged — it is the owner's to answer, on both hosts — and so do
+ * the synthetic boundary's refusal and every typed HTTP refusal, which carry
+ * their own status. Only the response changes: this answer writes and undoes
+ * nothing, so whatever the reducer committed before it failed stands exactly as
+ * it did when the failure escaped, and the owner still drains its retained work.
+ */
+function ingestFailure(error: unknown): IngestOutcome {
+  if (error instanceof HTTPException || error instanceof SyntheticUnavailable) throw error;
+  console.error('Error processing action event');
+  return { status: 500, update: null,
+    body: { success: false, error: 'Failed to process action event', details: error instanceof Error ? error.message : 'Unknown error' } };
 }
 
 /**
@@ -1000,7 +1023,7 @@ export class ShopperReflex {
             || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();
         }
       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }
-      return this.ingest(event, principal);
+      return this.ingest(event, principal).catch(ingestFailure);
     });
     return json(outcome.body, outcome.status);
   }
@@ -1164,10 +1187,16 @@ export class ShopperReflex {
     // carries its own attributes into the registry exactly as a product event
     // does, so it answers to the same vocabulary; only an event with nothing for
     // the vocabulary to answer about skips the read.
+    //
+    // W19 LG1: the vocabulary decides what builds TASTE, and with Reflex
+    // disabled nothing does. This host then reads no catalogue at all, as the
+    // session host already reads none (src/services/RealtimeSegmentEngine.ts),
+    // so a disabled engine costs no document read and cannot be refused by one.
     const eventData = data as Record<string, unknown>;
     const heldProduct = product as unknown as Record<string, unknown> | undefined;
     const contentEvent = isContentAction(actionOf(event));
-    const vocabulary = contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg)
+    const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
+    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg))
       ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null)
       : EMPTY_VOCABULARY;
     const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
@@ -1197,7 +1226,6 @@ export class ShopperReflex {
     }
 
     // Resolve before changing the audience owner or any aliased pipeline state.
-    const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
     const contentEventTouches = reflexOn && contentEvent
       ? await resolvedContentTouches(this.env, tenant, eventData, cfg, vocabulary) : null;
     // A content event is placed by the tenant's content catalogue against the
