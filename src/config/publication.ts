@@ -291,27 +291,63 @@ async function currentSet(storage: R2Bucket, loaded: Loaded): Promise<Publicatio
   return retainedSet(storage, loaded.head.scope, loaded.head.committed);
 }
 function freeze<T>(v: T): T { if (v && typeof v === 'object') { Object.freeze(v); for (const child of Object.values(v)) freeze(child); } return v; }
-interface CacheEntry { storage: R2Bucket; scope: string; at: number; bytes: number; value: PublicationPin; documents: Map<string, Revision<unknown>> }
+/**
+ * W19 LG1 (R74(b)): the serving cache belongs to the BACKING storage binding,
+ * not to the wrapper one request happens to hold.
+ *
+ * The owner fence (`ownerEnvironment`, src/identity/sessionAuthority.ts) hands
+ * every owner operation its own guarded proxy of the same R2 binding, and every
+ * shopper request on both hosts is an owner operation. Keyed by the object the
+ * request held, each shopper request therefore missed the cache it had just
+ * filled and read the whole publication from storage again, on every event. The
+ * fence names the binding each of its proxies fronts here, and the cache key
+ * follows that chain to the binding itself — the same rule the lift cache
+ * follows through `ownerBindingIdentity`. This module cannot import the fence:
+ * it is bundled for workerd on its own (src/config/versionedStore.test.ts).
+ *
+ * Only a wrapper the fence names is followed. Any other wrapper — a synthetic
+ * monitor's scoped bucket, which admits only its own tenant's keys and only its
+ * pinned configuration — stays its own physical context, so nothing it did not
+ * read itself is ever served to it, and nothing it read is served to anyone
+ * else. The key never widens what a caller may read: the scope and the set
+ * digest still select the entry, and a hit serves only a document the same
+ * binding already returned for that exact publication.
+ */
+const storageOrigins = new WeakMap<object, object>();
+export function nameServingStorage(wrapper: object, origin: object): void {
+  // A wrapper is named once, for the binding it was built over; it never moves.
+  if (wrapper !== origin && !storageOrigins.has(wrapper)) storageOrigins.set(wrapper, origin);
+}
+function storageIdentity(storage: R2Bucket): object {
+  let current: object = storage;
+  for (let hops = 0; hops < 8 && storageOrigins.has(current); hops++) current = storageOrigins.get(current)!;
+  return current;
+}
+interface CacheEntry { storage: object; scope: string; at: number; bytes: number; value: PublicationPin; documents: Map<string, Revision<unknown>> }
 const cache = new Set<CacheEntry>(); let cacheBytes = 0, cacheEpoch = {};
 const fresh = (at: number, now: number) => Number.isFinite(now) && now >= at && now - at < PUBLICATION_CACHE_MS;
 function remove(entry: CacheEntry): void { if (cache.delete(entry)) cacheBytes -= entry.bytes; }
 export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; }
-function invalidateScope(storage: R2Bucket, scope: string): void { for (const entry of cache) if (entry.storage === storage && entry.scope === scope) remove(entry); cacheEpoch = {}; }
+function invalidateScope(storage: R2Bucket, scope: string): void {
+  const binding = storageIdentity(storage);
+  for (const entry of cache) if (entry.storage === binding && entry.scope === scope) remove(entry);
+  cacheEpoch = {};
+}
 async function invalidating<T>(storage: R2Bucket, scope: string, run: () => Promise<T>): Promise<T> { invalidateScope(storage, scope); try { return await run(); } finally { invalidateScope(storage, scope); } }
 /** One pin is shared by every dependent read in an operation. Administrative
  * callers opt out of the bounded serving cache; it never refreshes on failure. */
 export async function pinPublication(env: Env, scope: string, servingCache = false): Promise<PublicationPin> {
-  required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)); const storage = storageOf(env), started = Date.now(), epoch = cacheEpoch;
+  required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)); const storage = storageOf(env), binding = storageIdentity(storage), started = Date.now(), epoch = cacheEpoch;
   for (const entry of cache) if (!fresh(entry.at, started)) remove(entry);
-  if (servingCache) for (const entry of cache) if (entry.storage === storage && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
+  if (servingCache) for (const entry of cache) if (entry.storage === binding && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
   const value = freeze(await currentSet(storage, await requiredHead(storage, scope)));
   const bytes = encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
   if (servingCache && epoch === cacheEpoch && fresh(started, now) && bytes <= CACHE_BYTES) {
-    const resident = [...cache].find(e => e.storage === storage && e.scope === scope);
+    const resident = [...cache].find(e => e.storage === binding && e.scope === scope);
     if (!resident || resident.at <= started && resident.value.revision <= value.revision) {
       if (resident) remove(resident);
       while (cache.size >= CACHE_ENTRIES || cacheBytes + bytes > CACHE_BYTES) remove(cache.values().next().value!);
-      cache.add({ storage, scope, at: started, bytes, value, documents: new Map() }); cacheBytes += bytes;
+      cache.add({ storage: binding, scope, at: started, bytes, value, documents: new Map() }); cacheBytes += bytes;
     }
   }
   return value;
@@ -337,9 +373,9 @@ function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: Docume
 }
 export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T>> {
   required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; required(ref);
-  const storage = storageOf(env), epoch = cacheEpoch, now = Date.now();
+  const storage = storageOf(env), binding = storageIdentity(storage), epoch = cacheEpoch, now = Date.now();
   for (const entry of cache) if (!fresh(entry.at, now)) remove(entry);
-  const resident = [...cache].find(e => e.storage === storage && e.scope === set.scope && e.value.digest === set.digest);
+  const resident = [...cache].find(e => e.storage === binding && e.scope === set.scope && e.value.digest === set.digest);
   const hit = resident?.documents.get(key);
   if (hit) return hit as Revision<T>;
   const value = await retained(storage, kind, scope, ref.revision);
