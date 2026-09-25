@@ -2530,16 +2530,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "658b963674c1d72fc6bcfaf1a004630f4c2a0641 on rem/w30-spec: src/units/W30 and the W30-named legacy tests",
+        "reviewedRevision": "1ce4e52a0150fb173471f23a18b8afe957951ce6 on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with the amendment-A46 tests unit:W30.L1 and unit:W30.S1 (LEDGER.unit.test.ts) added on 658b963",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-spec/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.acceptance.log",
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-V1.log",
-          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-C1-budget.log"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-C1-budget.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/W30-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-L1S1-at-1c4d153.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-acceptance-on-reviewer-fix.log"
         ]
       },
       "doneWhen": [
@@ -3612,19 +3617,25 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "4649023dbe6d7eb284b2354812b3f69d17581aac on rem/spec-w37: src/units/W37 and the W37-named legacy tests (13 stale corrections; W37.04 left as a defect)",
+        "reviewedRevision": "2e0fb145c3373f5bbe6761864e2862d647dcd93b on rem/spec-w37: src/units/W37 and the W37-named legacy tests, with the amendment-A45 test unit:W37.T7 (T7.unit.test.ts, helper src/units/_cloudflare.mjs) added on 4649023",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W37/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/W37-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/controls-summary.log",
-          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/acceptance.log"
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/acceptance.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/W37-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-at-2e0fb14.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-control-keyfix.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-control-guard.log"
         ]
       },
       "doneWhen": [
