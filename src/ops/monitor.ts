@@ -270,13 +270,21 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
  * them, or nothing at all. A record written before W20 G2, or one whose counters
  * were unreadable, carries none and keeps its former shape; a record written
  * before the scope was stated reads as `tenant` — the projection states the word
- * rather than copying one through, so no stored value can relabel the counts. */
+ * rather than copying one through, so no stored value can relabel the counts.
+ *
+ * W20 R5 (R111(i)): the counters are written as whole, non-negative numbers
+ * (`tenantSlotGovernance`), so a kept value that is not one — `1e999` read back
+ * as Infinity, a negative, a fraction, a number past the safe range — is a
+ * corrupted record, and clamping it would state a count nobody observed beside
+ * `scope: 'tenant'`. The whole member is dropped instead, exactly as for a run
+ * whose counters could not be read: no result states a zero it did not observe. */
+const observedCount = (value: unknown, max: number): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max;
 const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
   const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
-  if (typeof since !== 'number' || typeof refusedPinCount !== 'number' || typeof shortTakeCount !== 'number') return undefined;
-  return { since: bounded(since, 8_640_000_000_000_000), scope: SLOT_GOVERNANCE_SCOPE,
-    refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
-    shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
+  if (!observedCount(since, 8_640_000_000_000_000) || !observedCount(refusedPinCount, Number.MAX_SAFE_INTEGER)
+    || !observedCount(shortTakeCount, Number.MAX_SAFE_INTEGER)) return undefined;
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount, shortTakeCount };
 };
 
 /** The four loss counters a kept result carries, projected as safely as its

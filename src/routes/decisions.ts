@@ -37,9 +37,9 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
-import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
+import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
@@ -248,10 +248,33 @@ decisionRoutes.get('/:tenant/brands', operatorWrites(), async (c) => {
 });
 
 /**
+ * W20 R4: the `governance` block of one slot on the operator slots page, in the
+ * one word the advisory pin channel already uses for the same fact (`status`,
+ * `slot-pin-diagnostics/v1`). `available` carries the counts the counter store
+ * answered — zero reported as zero; `unavailable` says the store could not be
+ * read and states no count and no horizon, because a zero there would be a zero
+ * nobody observed. The engine's own `SlotGovernance` stays numeric: the outage is
+ * a fact about this read, so its variant is typed here, where the read is made.
+ */
+type AvailableSlotGovernance = { status: 'available' } & SlotGovernance;
+interface UnavailableSlotGovernance {
+  status: 'unavailable';
+  since: null;
+  scope: SlotGovernanceScope;
+  refusedPinCount: null;
+  refusedPins: null;
+  shortTakeCount: null;
+  shortTakePositions: null;
+}
+type SlotRow = Omit<SlotIndexEntry, 'governance'> & { governance?: AvailableSlotGovernance | UnavailableSlotGovernance };
+const UNAVAILABLE_GOVERNANCE: UnavailableSlotGovernance = { status: 'unavailable', since: null, scope: SLOT_GOVERNANCE_SCOPE,
+  refusedPinCount: null, refusedPins: null, shortTakeCount: null, shortTakePositions: null };
+
+/**
  * GET /v1/:tenant/learn/slots?brand=&q=&evidence=1 (doc 28 §4): every slot on every page, grouped by
  * page, with what is configured on it and how many pieces are eligible now; `q` narrows by slot or
  * page name; `evidence=1` adds what each slot has learned so far (items, events, when published),
- * for up to 200 slots. The application's picker and its overview.
+ * for up to 200 slots, and every slot's `governance` block. The application's picker and its overview.
  */
 decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -261,30 +284,43 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const now = Date.now();
   const [slots, catalog, learn] = await Promise.all([readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
   const index = slotsIndex(slots, catalog, learn, now, q);
+  let pages: Array<{ page: string; slots: Array<SlotIndexEntry | SlotRow> }> = index.pages;
   if (c.req.query('evidence') === '1') {
     // W20 G2 (R83, R86(a)): beside what each slot has LEARNED, what the decision
     // path REFUSED for it — the dead pins and the pinned slots that could not
     // fill their take, per slot, since the horizon the block states. One read of
-    // one tenant document, joined under the same flag and the same budget as the
-    // evidence it sits next to, and never silent: a slot with nothing to report
-    // carries zeros, not an absent member.
-    const governance = await readSlotGovernance(c.env, tenant, now);
+    // one tenant document, and never silent: a slot with nothing to report
+    // carries zeros, not an absent member, and a store that could not be read is
+    // named on every block (R4) rather than reported as zeros.
+    const governance = await observeSlotGovernance(c.env, tenant, now);
+    const governanceOf = (slot: string): AvailableSlotGovernance | UnavailableSlotGovernance => governance
+      ? { status: 'available', ...(governance.bySlot.get(slot) ?? emptySlotGovernance(governance.since)) }
+      : { ...UNAVAILABLE_GOVERNANCE };
     // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
     // for an item it does not carry is not counted as something the slot has
     // learned about. The catalogue is the one this answer already read.
     const catalogue = new Set(catalog.pieces.map((p) => p.id));
+    // The 200-slot budget bounds the per-slot `evidence` reads, one store read
+    // each. The governance block is already in memory from the one read above, so
+    // it is joined onto EVERY row, the rows past the budget included (W20 R3).
     let budget = 200;
-    for (const page of index.pages) for (const s of page.slots) {
-      if (budget-- <= 0) { s.evidence = null; continue; }
-      s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
-      try {
-        const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = slotEvidence(snap, catalogue);
-      } catch { s.evidence = null; }
+    pages = [];
+    for (const page of index.pages) {
+      const rows: SlotRow[] = [];
+      for (const s of page.slots) {
+        const row: SlotRow = { ...s, governance: governanceOf(s.slot) };
+        rows.push(row);
+        if (budget-- <= 0) { row.evidence = null; continue; }
+        try {
+          const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
+          row.evidence = slotEvidence(snap, catalogue);
+        } catch { row.evidence = null; }
+      }
+      pages.push({ page: page.page, slots: rows });
     }
   }
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages: index.pages });
+  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages });
 });
 
 /**

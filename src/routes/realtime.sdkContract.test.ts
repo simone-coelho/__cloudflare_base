@@ -2734,10 +2734,20 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       invalidateCache();
       const f = boundary(host), objects = new Map<string, { text: string; etag: string }>(), reads: string[] = [];
       let serial = 0, failCatalog = false;
+      // W19 LG1 (step 3, 2026-09-24), arrangement and layout only. Under W11
+      // (F15/F24) the catalogue is one member of the tenant's coherent
+      // publication set: the set head is `config-publication/v2/<tenant>/`, the
+      // catalogue's own bodies stay at `config-publication/v1/<tenant>/content/`,
+      // and the Reflex and learn members are read from the same set on every
+      // action. "The catalogue read" is therefore the content member's own
+      // bodies, and ownership is asserted over every publication read.
+      const contentMember = (key: string) => /^config-publication\/v1\/[^/]+\/content\//.test(key);
+      const ownPublication = (tenant: string, key: string) =>
+        [`config-publication/v2/${tenant}/`, `config-publication/v1/${tenant}/`, `config-publication/v1/tenant:${tenant}/`].some(prefix => key.startsWith(prefix));
       f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'brighthour'] });
       f.env.STORAGE = {
         get: async (key: string) => {
-          reads.push(key); if (failCatalog && key.startsWith('config-publication/')) throw new Error('private storage detail');
+          reads.push(key); if (failCatalog && contentMember(key)) throw new Error('private storage detail');
           const value = objects.get(key);
           return value ? { key, etag: value.etag, size: new TextEncoder().encode(value.text).length,
             body: new Response(value.text).body, text: async () => value.text, json: async () => JSON.parse(value.text) as unknown } : null;
@@ -2749,10 +2759,15 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
         },
       } as unknown as R2Bucket;
       const formats = { meridian: ['video', 'custom-format'], brighthour: ['on-model'] };
+      // A whole coherent set per tenant (W11: the action reads its Reflex and
+      // learn members too). `wire` makes the two event-carried values below
+      // part of the tenant's own catalogue vocabulary, which W16 C8.10
+      // (R64/R67) requires before an event-carried value builds taste.
       for (const [tenant, values] of Object.entries(formats)) {
-        await initializePublication(f.env, CONTENT_KIND, tenant, { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+        await fixturePublication(f.env, tenant, [{ kind: CONTENT_KIND, scope: tenant, revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
           { id: 'same', customerContentId: 'cms', type: 'film', title: 'same', tags: { contentType: values }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
-        ] } }, '0:' + crypto.randomUUID());
+          { id: 'wire', customerContentId: 'cms-wire', type: 'film', title: 'wire', tags: { contentType: ['wire-miss', 'wire-idless'] }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
+        ] } } }]);
       }
       const frames: Array<{ name: string; frame: IngestFrame }> = [];
       f.env.REGION_TREND = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -2760,25 +2775,30 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       } }) } as unknown as DurableObjectNamespace;
       const a = await newAnonymousSession(f.env, 'meridian');
       const b = await issueSessionCapability(f.env, { tenant: 'brighthour', subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
+      // W05 (F05/F10): consent is fail-closed, so each shopper states an explicit choice first.
+      await positiveChoice(f, a); await positiveChoice(f, b);
       const event = (g: typeof a, data: Record<string, unknown> = {}) => ({ type: 'custom', userId: g.subject, sessionId: g.sessionId, source: 'sdk', surface: 'brighthour',
         data: { event: 'content_click', contentId: 'same', contentType: 'film', ...data } });
       const send = (g: typeof a, data?: Record<string, unknown>) => f.call('/realtime/action', g.capability, event(g, data), g.tenant, undefined, { country: 'US', regionCode: 'NY' });
       const record = (g: typeof a) => host === 'session'
         ? JSON.parse(f.sessions.data.get(tenantKey(g.tenant, `session:${g.sessionId}`))!) as { reflex: { dims: Record<string, Record<string, { s: number }>> } }
         : f.objects.get(shopperObjectName(g.tenant, g.subject))!.data.get('affinity') as { reflex: { dims: Record<string, Record<string, { s: number }>> } };
-      const catalogReads = () => reads.filter(key => key.startsWith('config-publication/'));
+      const catalogReads = () => reads.filter(contentMember);
       invalidateCache(); reads.length = 0;
       for (const g of [a, b]) {
-        const before = catalogReads().length;
+        const before = catalogReads().length, allBefore = reads.length;
         expect((await send(g)).status).toBe(200); await f.drain();
         expect(catalogReads().length).toBeGreaterThan(before);
         expect(catalogReads().slice(before).every(key => key.startsWith(`config-publication/v1/${g.tenant}/content/`))).toBe(true);
+        expect(reads.slice(allBefore).filter(key => key.startsWith('config-publication/')).every(key => ownPublication(g.tenant, key)),
+          `${host}: every publication read of ${g.tenant}'s event is ${g.tenant}'s own: ${JSON.stringify(reads.slice(allBefore))}`).toBe(true);
         expect(frames.at(-1)).toMatchObject({ name: regionObjectName(g.tenant, 'US-NY'), frame: { tenant: g.tenant, w: 1,
           touches: formats[g.tenant as keyof typeof formats].map(value => ({ dim: 'contentType', value })) } });
         for (const value of formats[g.tenant as keyof typeof formats]) expect(record(g).reflex.dims.contentType![value]!.s).toBe(1);
         expect(record(g).reflex.dims.contentType!.film).toBeUndefined();
         const cold = catalogReads().length;
-        expect((await send(g)).status).toBe(200); await f.drain(); expect(catalogReads()).toHaveLength(cold);
+        expect((await send(g)).status).toBe(200); await f.drain();
+        expect(catalogReads(), `${host}: ${g.tenant}'s second event reads its catalogue from the bounded serving cache, not from storage again`).toHaveLength(cold);
       }
       const saved = JSON.stringify(record(a)), population = frames.length, beforeInvalid = catalogReads().length;
       for (const contentId of [null, '', ' ', 12, [], {}]) {
@@ -2788,7 +2808,7 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       expect(catalogReads()).toHaveLength(beforeInvalid); expect(JSON.stringify(record(a))).toBe(saved); expect(frames).toHaveLength(population);
       invalidateCache(); failCatalog = true;
       const failure = await send(a); expect(failure.status).toBe(500);
-      expect(await failure.text()).toContain('Content catalog unavailable'); await f.drain();
+      expect(await failure.text(), `${host}: the refusal names its cause on this host as on the other`).toContain('Content catalog unavailable'); await f.drain();
       expect(JSON.stringify(record(a))).toBe(saved); expect(frames).toHaveLength(population);
       // Retry on the exact same DO instance: refusal cannot poison its owner.
       failCatalog = false; expect((await send(a)).status).toBe(200); await f.drain();
@@ -2799,13 +2819,15 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       const beforeIdless = catalogReads().length;
       expect((await f.call('/realtime/action', a.capability, idless, a.tenant)).status).toBe(200); await f.drain();
       expect(catalogReads()).toHaveLength(beforeIdless); expect(record(a).reflex.dims.contentType!['wire-idless']!.s).toBe(1);
-      const headKey = 'config-publication/v1/meridian/content/head.json', head = objects.get(headKey)!, beforeMissing = frames.length;
-      objects.delete(headKey); invalidateCache();
+      // W11 has no per-kind content head: the missing catalogue is its committed body.
+      const bodyKey = 'config-publication/v1/meridian/content/rev/1.json', body = objects.get(bodyKey)!, beforeMissing = frames.length;
+      objects.delete(bodyKey); invalidateCache();
       expect((await send(a)).status).toBe(500); await f.drain(); expect(frames).toHaveLength(beforeMissing);
-      objects.set(headKey, head);
+      objects.set(bodyKey, body);
       invalidateCache(); failCatalog = true; f.env.REFLEX_ENABLED = 'false';
       const beforeDisabled = catalogReads().length;
-      expect((await send(a)).status).toBe(200); await f.drain(); expect(catalogReads()).toHaveLength(beforeDisabled);
+      expect((await send(a)).status).toBe(200); await f.drain();
+      expect(catalogReads(), `${host}: with Reflex disabled no catalogue is read`).toHaveLength(beforeDisabled);
       f.env.REFLEX_ENABLED = 'true';
       expect((await f.call(`/realtime/session/${a.sessionId}/preferences`, a.capability, { trackingConsent: false, personalizationEnabled: false }, a.tenant)).status).toBe(200);
       const beforeRefused = catalogReads().length;
