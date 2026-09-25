@@ -28,3 +28,4 @@ Deliver the verdict as your final message, one page per ticket at most: the sha 
 
 - Process lesson (2026-09-20, from the W29-B1 build review): run vitest with the cwd set to the checkout as well as `--root <checkout>`; unit files written before that lesson read kit and `public/**` witnesses relative to `process.cwd()`, and a review run from elsewhere measures another tree.
 - Brevity rule (2026-09-20, owner's order): one integration gate run per delivery or adoption review, none for a specification review; no probes beyond the controls above unless a concrete defect is suspected; a one-page report per ticket.
+- Process lesson (2026-09-25): keep every script, scratch copy and probe under your evidence directory, never in the session scratchpad under /tmp — the lead clears it, and a W16 gate script kept there vanished before its launch.
