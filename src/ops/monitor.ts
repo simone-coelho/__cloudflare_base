@@ -241,6 +241,22 @@ export interface SinkDisagreement {
   difference: number;
   /** What the difference had to exceed to be named; stated on every row. */
   threshold: number;
+  /**
+   * W22 R5 (LANE-LOG R145): a collision on record, named. Present when the
+   * online side holds more than the ledger and the brand's published day this
+   * row compared excluded rows under the collision contract — the day report's
+   * `counts.conflicts`, copied: rows filed as two different rows under one
+   * stable decision or outcome id. Two different OUTCOME records under one id
+   * are each credited online (W22 D1.04) while the day keeps one (W22 D1.03),
+   * so that collision is one known cause of such a row. The member proves only
+   * that a collision is on record for the brand's day: it is the day's count,
+   * not this slot's, it cannot say which slot the excluded rows touched, and it
+   * cannot tell the collision from a credit the ledger lost on the same brand
+   * and day — it rides every such row of the brand, a lost credit's included.
+   * It is never a reason to dismiss a difference. A row without it names no
+   * collision.
+   */
+  conflicts?: { decisions: number; outcomes: number };
 }
 export interface SinkReconciliation {
   /** Epoch milliseconds: the day the comparison read. */
@@ -270,13 +286,21 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
  * them, or nothing at all. A record written before W20 G2, or one whose counters
  * were unreadable, carries none and keeps its former shape; a record written
  * before the scope was stated reads as `tenant` — the projection states the word
- * rather than copying one through, so no stored value can relabel the counts. */
+ * rather than copying one through, so no stored value can relabel the counts.
+ *
+ * W20 R5 (R111(i)): the counters are written as whole, non-negative numbers
+ * (`tenantSlotGovernance`), so a kept value that is not one — `1e999` read back
+ * as Infinity, a negative, a fraction, a number past the safe range — is a
+ * corrupted record, and clamping it would state a count nobody observed beside
+ * `scope: 'tenant'`. The whole member is dropped instead, exactly as for a run
+ * whose counters could not be read: no result states a zero it did not observe. */
+const observedCount = (value: unknown, max: number): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max;
 const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
   const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
-  if (typeof since !== 'number' || typeof refusedPinCount !== 'number' || typeof shortTakeCount !== 'number') return undefined;
-  return { since: bounded(since, 8_640_000_000_000_000), scope: SLOT_GOVERNANCE_SCOPE,
-    refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
-    shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
+  if (!observedCount(since, 8_640_000_000_000_000) || !observedCount(refusedPinCount, Number.MAX_SAFE_INTEGER)
+    || !observedCount(shortTakeCount, Number.MAX_SAFE_INTEGER)) return undefined;
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount, shortTakeCount };
 };
 
 /** The four loss counters a kept result carries, projected as safely as its
@@ -296,6 +320,12 @@ const safeEvidenceLoss = (value: unknown): MonitorResult['evidenceLoss'] | undef
  * two numbers, and a bounded list of rows whose members are rebuilt here rather
  * than copied through. A row that does not carry all five numbers is dropped. */
 const RECONCILED_ROWS = 64;
+/** A collision count is two whole, non-negative numbers, at least one of them non-zero, or nothing. */
+const safeConflicts = (value: unknown): SinkDisagreement['conflicts'] | undefined => {
+  const decisions = field(value, 'decisions'), outcomes = field(value, 'outcomes');
+  if (!observedCount(decisions, Number.MAX_SAFE_INTEGER) || !observedCount(outcomes, Number.MAX_SAFE_INTEGER) || decisions + outcomes === 0) return undefined;
+  return { decisions, outcomes };
+};
 const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | undefined => {
   const since = field(value, 'since'), compared = field(value, 'compared'), rows = field(value, 'disagreements');
   if (typeof since !== 'number' || typeof compared !== 'number' || !Array.isArray(rows)) return undefined;
@@ -307,7 +337,10 @@ const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | u
     if (typeof brand !== 'string' || !isValidTenantId(brand) || typeof slot !== 'string' || !slot || slot.length > 256
       || numbers.some(n => typeof n !== 'number')) continue;
     const [online, ledger, difference, threshold] = numbers.map(n => bounded(n, Number.MAX_SAFE_INTEGER));
-    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold! });
+    // W22 R5: the collision a row names is rebuilt from its two counts, or the
+    // member is dropped; no stored byte can name a collision the row did not.
+    const conflicts = safeConflicts(field(row, 'conflicts'));
+    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold!, ...(conflicts ? { conflicts } : {}) });
   }
   return { since: bounded(since, 8_640_000_000_000_000), compared: bounded(compared, Number.MAX_SAFE_INTEGER), disagreements };
 };
@@ -516,7 +549,12 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
         compared++;
         const difference = Math.abs(online - ledger);
         const threshold = Math.floor(RECONCILIATION_TOLERANCE * Math.max(online, ledger));
-        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold });
+        // W22 R5 (R145): a day that excluded rows under the admitted collision
+        // contract names it on every row of the brand whose online side is
+        // above the ledger — a cause on record for the brand's day, never a
+        // verdict on this row's difference (SinkDisagreement.conflicts).
+        const conflicts = online > ledger ? safeConflicts(report.counts?.conflicts) : undefined;
+        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold, ...(conflicts ? { conflicts } : {}) });
         if (disagreements.length >= RECONCILED_ROWS) break;
       }
     }

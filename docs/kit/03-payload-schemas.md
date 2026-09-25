@@ -156,7 +156,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1 including zero: the item's own signals for the multipliers. CSV uses a quoted JSON object, for example `"{""promotion"":1,""margin"":0}"` |
 | `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `explore`, `consider`, `decide` and `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
 | `freshnessDate` | no | When the piece became current, ISO 8601 (your `freshness_date`). A slot's `freshness` rule ages from it; absent, from `window.from` |
-| `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten |
+| `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten. They link, attribute and recognize, and nothing more: the decision receipt names them, an outcome naming one credits the decision that served the piece, and a product event naming one is recognized. The piece inherits no attribute of a product it features — no tag, merchandising value, stock flag or affinity — and no ranking reads those products' attributes |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
 
 Import/pull `merge` is a partial upsert by `id`: omitted supported fields preserve the existing item,
@@ -514,14 +514,20 @@ when the outcome happened and not by whether a served piece matched — two purc
 one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
 `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
-day applied. No report of ours states a business target, a lift or a standing.
+day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.
+Each compatible slot also carries `computation`, the recorded basis it pooled under: `{ version, profile, learning,
+reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is not compatible.
+No report of ours states a business target, a lift or a standing.
 
 `coverage.unassignedHours` is `number[] | null` and names the source limitation behind those two
-`null`s on a day summed from hour aggregates: `[]` when every built hour carries the experimental
-assignment, the hours that do not when some were folded before this release — that day's rows are
-grouped by the arm SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are
-`null` rather than a number the source cannot support — and `null` when the stored report does not
-record the member at all.
+`null`s on a day summed from hour aggregates: `[]` when every built hour can say the experimental
+assignment, the hours that cannot, and `null` when the stored report does not record the member at
+all. An hour folded before this release carries no assignment: that day's rows are grouped by the arm
+SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
+number the source cannot support. An hour holding an outcome whose visitor had no decision that day
+at or before it, nor later in that hour, cannot place the outcome, because the day counts it under
+the visitor's first decision of the day and that decision may be in a later hour: that day keeps its
+rows and `armVisitors` and answers `visitorOutcomes: null` rather than a count that omits the outcome.
 
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and
@@ -529,10 +535,25 @@ every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }
 dropped, so the rate is a number instead of a silence. An outcome minted before the per-event nonce
 existed carries a timestamp-derived id that two genuinely distinct events can share; such legacy rows
 are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a read. Two genuinely
-DIFFERENT rows under one logical id are never merged: the read refuses the day and names the
-collision (`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it
-for recovery in your tenant's own scope, and reads again on the next call with that row excluded and
-counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+DIFFERENT rows under one logical id are never merged, and this collision contract is the same on every
+surface. The online statistics credit EACH of two different records under one stable `outcome_id`:
+only the same record redelivered is credited once, and a delivery whose record digest cannot be
+computed is recognised by its id alone, so it can lose a credit it cannot tell apart and never grants
+one twice. The ledger read refuses the day of the brand the collision touches, and only that brand's
+day — another brand of the same tenant is still answered — and names the collision
+(`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it for
+recovery in your tenant's own scope, and reads again on the next call with that row excluded and
+counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where
+both records were credited online, the online store then holds more credits than that day for the
+brand and slot, by design: once the difference exceeds its threshold, the scheduled reconciliation on
+`/v1/{tenant}/monitor` shows the pair as a disagreement carrying `conflicts: { decisions, outcomes }`,
+the day's `counts.conflicts` copied onto the row. The credits of the filed records are the designed
+outcome, not a lost credit. `conflicts` proves only that a collision is on record for the brand's day:
+it is the brand's count for the day, not the slot's, and it rides every row of the brand whose online
+side exceeds its ledger side, so it cannot tell the collision from a credit the ledger lost on the same
+brand and day, including on a row whose whole difference is a lost credit. It is never a reason to
+dismiss a difference: the collision accounts only for the credits of the rows filed as conflicts, and
+no other part of the difference is explained by it. A row without `conflicts` names no collision.
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
