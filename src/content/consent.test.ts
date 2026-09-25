@@ -99,7 +99,10 @@ async function write<T>(env: Env, kind: DocumentKind<T>, scope: string, value: u
     operationId: base.revision + ':' + crypto.randomUUID(), ...meta });
 }
 
-async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] } }, pageSlots = ['hero'], tenant = 'coach', retainedLearn = false): Promise<{ env: Env; ring: string[]; shopper: string[] }> {
+/** W20 LG1 (step 3): a slot document retained from before today's write check,
+ * adopted as reviewed historical bytes at its own revision (W11 `retainedValue`). */
+type RetainedSlots = { revision: number; value: unknown };
+async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] } }, pageSlots = ['hero'], tenant = 'coach', retainedLearn = false, retainedSlots?: RetainedSlots): Promise<{ env: Env; ring: string[]; shopper: string[] }> {
   const ring: string[] = [], shopper: string[] = [];
   const objects = new Map<string, { text: string; etag: string }>();
   let version = 0;
@@ -140,7 +143,9 @@ async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = {
     [LEARN_KIND, tenant, learn], [REFLEX_KIND, reflexScopeForTenant(tenant), DEFAULT_REFLEX_CONFIG],
     [PRIORS_KIND, tenant, { rows: [] }], [PROPOSALS_KIND, tenant, EMPTY_PROPOSALS],
   ] as Array<[DocumentKind<unknown>, string, unknown]>;
-  expect((await initializePublicationSet(env, values.map(([kind, scope, value]) => ({ kind, scope,
+  expect((await initializePublicationSet(env, values.map(([kind, scope, value]) => kind.name === 'slots' && retainedSlots
+    ? { kind, scope, retainedValue: true as const, revision: { revision: retainedSlots.revision, at: 1, actor: 'retained', note: '', value: retainedSlots.value } }
+    : ({ kind, scope,
     ...(kind.name === 'learn' && retainedLearn ? { retainedValue: true as const } : {}), revision: { revision: 1, at: 1, actor: 'test', note: '', value } })), '0:' + crypto.randomUUID())).revision).toBe(1);
   return { env, ring, shopper };
 }
@@ -153,6 +158,16 @@ const serve = async (env: Env, nowMs?: number, guarded = false) => {
     const result = await serveContentDecisions(guarded ? ownerEnvironment(owner, env) : env, { tenant: 'coach', page: 'home', visitorId: visitor, sessionId: 's1', channel: 'direct', cf: null, cookieHeader: null, stateTenant: 'coach', principal, capability: principal.capability, nowMs });
     await result.afterResponse; return result;
   }, undefined, undefined, async () => fixtureConsent.get(env)!);
+};
+/** W20 LG1 (step 3): under W11 a committed slot revision's own bytes live in the
+ * publication, never in mutable KV (`slots:config:*` is no authority). */
+const slotsBody = async (env: Env, revision: number, tenant = 'coach'): Promise<string | null> =>
+  (await (await env.STORAGE.get(`config-publication/v1/${tenant}/slots/rev/${revision}.json`))?.text()) ?? null;
+/** W20 LG1 (step 3): the W09 owner authority the ledger consumer writes under. */
+const ownedConsume = async (env: Env, wire: unknown[], at: number) => {
+  const principal = await issueSessionCapability(env, { tenant: 'coach', subject: visitor, sessionId: 's1', kind: 'anonymous' }), owner = {};
+  return runOwnerOperation(owner, env, async () => { admitOwnerPrincipal(owner, principal); return consumeLedger(env, wire, at); },
+    undefined, undefined, async () => fixtureConsent.get(env)!);
 };
 
 it('W09.09 actual content caller freezes one combined admission before either sink and owner completion drains admission failure or delay', async () => {
@@ -286,7 +301,7 @@ describe('CW31 consent on the content service', () => {
         { slot: 'off', take: 1, weights: {}, pinnedPieceIds: ['missing'], offLimits: true },
       ] } };
       expect((await write(env, SLOTS_KIND, 'coach', document, { actor: 'fixture' })).ok).toBe(true);
-      const kv = env.CACHE as unknown as FakeKV, bytes = kv.store.get('slots:config:coach:rev:2');
+      const bytes = await slotsBody(env, 2); expect(typeof bytes).toBe('string');
       const first = await serve(env, now); await first.afterResponse;
       const cached = await serve(env, now + 1); await cached.afterResponse;
       for (const set of [first, cached]) {
@@ -295,7 +310,7 @@ describe('CW31 consent on the content service', () => {
       }
       const wire: unknown[] = [];
       env.EVENT_QUEUE = { sendBatch: async (messages: Array<{ body: unknown }>) => { wire.push(...messages.map(m => structuredClone(m.body))); } } as unknown as Queue;
-      expect((await enqueueDecisions(env, first.records)).code).toBe('accepted'); expect((await consumeLedger(env, wire, now + 2)).written).toBe(5);
+      expect((await enqueueDecisions(env, first.records)).code).toBe('accepted'); expect((await ownedConsume(env, wire, now + 2)).written).toBe(5);
       for (const record of first.records) {
         const retained = (await findById<DecisionRecord>(env.STORAGE, record.decision_id, 'decision'))!.record;
         expect(retained).toEqual(record); expect(await replayDecision(env, retained)).toMatchObject({ ok: true, equal: true });
@@ -304,11 +319,14 @@ describe('CW31 consent on the content service', () => {
       expect(rows.map(r => [r.slot, r.pinnedPieceIds, r.rankedCapacity])).toEqual([['hero', ['b', 'a'], 1], ['full', ['e', 'f'], 0], ['off', ['missing'], 0]]);
       expect(queueOf({ proposals: [], slots: rows, learn, erasuresPending: 0 }).slots_without_evidence).toEqual([{ page: 'home', slot: 'hero' }]);
       expect(queueOf({ proposals: [], slots: rows, learn, erasuresPending: 0 }).slots_acting).toEqual([{ page: 'home', slot: 'hero', gamma: 0.5 }]);
-      expect(kv.store.get('slots:config:coach:rev:2')).toBe(bytes);
-      const legacy = JSON.stringify({ revision: 3, at: 1, actor: 'retained', note: '', value: { governanceVersion: 2, pages: { home: [{ slot: 'hero', take: 1, weights: {}, pinnedPieceIds: { unknown: true } }] } } });
-      kv.store.set('slots:config:coach:current', legacy); kv.store.set('slots:config:coach:rev:3', legacy); invalidateCache();
-      const old = await serve(env, now + 3); await old.afterResponse; expect(old.decisions.map(d => d.contentId)).toEqual(['a']);
-      expect(kv.store.get('slots:config:coach:rev:3')).toBe(legacy);
+      expect(await slotsBody(env, 2)).toBe(bytes);
+      // W11: a retained revision is adopted as reviewed historical bytes at its own revision.
+      const legacy = { governanceVersion: 2, pages: { home: [{ slot: 'hero', take: 1, weights: {}, pinnedPieceIds: { unknown: true } }] } };
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'full', 'off'], 'coach', false, { revision: 3, value: legacy });
+      expect((await write(retainedEnv, CONTENT_KIND, 'coach', { pieces: catalog }, { actor: 'fixture', expectedRevision: 1, operationId: '1:' + crypto.randomUUID() })).ok).toBe(true);
+      const legacyBytes = await slotsBody(retainedEnv, 3); expect(JSON.parse(legacyBytes!).value).toEqual(legacy);
+      const old = await serve(retainedEnv, now + 3); await old.afterResponse; expect(old.decisions.map(d => d.contentId)).toEqual(['a']);
+      expect(await slotsBody(retainedEnv, 3)).toBe(legacyBytes);
     }
   });
 
@@ -330,7 +348,7 @@ describe('CW31 consent on the content service', () => {
         { slot: 'hero', take: 6, weights: { contentType: 1 }, allowedTypes: ['film'], excludedTags },
       ] } };
       expect((await write(env, SLOTS_KIND, 'coach', document, { actor: 'fixture' })).ok).toBe(true);
-      const kv = env.CACHE as unknown as FakeKV, heldBytes = kv.store.get('slots:config:coach:rev:2');
+      const heldBytes = await slotsBody(env, 2); expect(typeof heldBytes).toBe('string');
       for (const time of [now, now + 1]) {
         const out = await serve(env, time); await out.afterResponse;
         expect(out.arm).toBe(arm);
@@ -341,14 +359,23 @@ describe('CW31 consent on the content service', () => {
         for (const record of out.records) expect(await replayDecision(env, JSON.parse(JSON.stringify(record)) as DecisionRecord)).toMatchObject({ ok: true, equal: true });
       }
       // Stored v1 never gains new constraints from formerly unknown fields.
+      // W11: the retained v1 revision is adopted as reviewed historical bytes at its own revision.
       const retained = { governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, excludedTags: null, allowedTypes: [] }] } };
-      kv.store.set('slots:config:coach:current', JSON.stringify({ revision: 3, value: retained, at: 1, actor: 'old', note: '' })); invalidateCache();
-      const old = await serve(env, now + 2); await old.afterResponse;
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { contentType: { video: 1, film: 0.8 } } } }, learn, ['hero', 'tagpin', 'typepin'], 'coach', false, { revision: 3, value: retained });
+      expect((await write(retainedEnv, CONTENT_KIND, 'coach', { pieces: catalog }, { actor: 'fixture', expectedRevision: 1, operationId: '1:' + crypto.randomUUID() })).ok).toBe(true);
+      const retainedBytes = await slotsBody(retainedEnv, 3); expect(JSON.parse(retainedBytes!).value).toEqual(retained);
+      const old = await serve(retainedEnv, now + 2); await old.afterResponse;
       expect(old.decisions[0]!.contentId).toBe('a'); expect(old.sources.slots.revision).toBe(3);
-      expect(kv.store.get('slots:config:coach:rev:2')).toBe(heldBytes);
-      kv.store.delete('slots:config:coach:current'); invalidateCache();
-      const absent = await serve(env, now + 3); await absent.afterResponse;
-      expect(absent.records).toEqual([]); expect(absent.decisions).toEqual([]); expect(absent.sources.slots.revision).toBe(0);
+      expect(await slotsBody(retainedEnv, 3)).toBe(retainedBytes);
+      expect(await slotsBody(env, 2)).toBe(heldBytes);
+      // W11 fails closed on a read error: a committed slot revision the store no
+      // longer returns is refused, never replaced by an empty or compiled document.
+      const read = env.STORAGE.get.bind(env.STORAGE);
+      const lost = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) =>
+        key === 'config-publication/v1/coach/slots/rev/2.json' ? null : read(key) as never);
+      invalidateCache();
+      await expect(serve(env, now + 3)).rejects.toThrow('Configuration publication authority unavailable');
+      lost.mockRestore();
     }
   });
 
@@ -383,29 +410,40 @@ describe('CW31 consent on the content service', () => {
       const quiet = await serve(env, now + 2); await quiet.afterResponse;
       expect(quiet.records).toEqual([]); expect(quiet.decisions).toEqual([]); expect(ring).toEqual([]);
       expect(kv.reads.some(key => key.startsWith('lift:'))).toBe(false);
-      kv.store.delete('slots:config:coach:current');
+      // W11 (F15/F24): the committed slot revision's bytes live in the publication,
+      // never in mutable KV. What the store answers for them: their own bytes,
+      // nothing, other bytes, or an outage.
+      const slotKey = 'config-publication/v1/coach/slots/rev/3.json', read = env.STORAGE.get.bind(env.STORAGE);
+      const committed = await slotsBody(env, 3); expect(typeof committed).toBe('string');
+      let answer: { text: string } | null | 'outage' | undefined;
+      const object = (text: string) => ({ key: slotKey, etag: 'w2003-altered', size: new TextEncoder().encode(text).length,
+        body: new Response(text).body, text: async () => text, json: async () => JSON.parse(text) as unknown });
+      const store = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) => {
+        if (key !== slotKey || answer === undefined) return read(key) as never;
+        if (answer === 'outage') throw new Error('synthetic slot outage');
+        return (answer === null ? null : object(answer.text)) as never;
+      });
+      answer = null;
       const cached = await serve(env, now + 3); await cached.afterResponse;
       expect(cached.records).toEqual([]); expect(cached.sources.slots.revision).toBe(3);
-      for (const value of [null, '{bad-json', JSON.stringify({ revision: 4, at: 1, actor: 'fixture', note: '', value: {
-        governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'true' }] },
-      } }), JSON.stringify({ revision: 4, at: 1, actor: 'fixture', note: '', value: { governanceVersion: 4, pages: {} } })]) {
-        if (value === null) kv.store.delete('slots:config:coach:current'); else kv.store.set('slots:config:coach:current', value);
+      // W11 fails closed on a read error: a committed slot revision that is gone,
+      // unparsable or no longer its own bytes is refused, never replaced by an
+      // empty or compiled document, and nothing is written.
+      const altered = (value: unknown) => JSON.stringify({ ...JSON.parse(committed!), value });
+      for (const value of [null, '{bad-json', altered({ governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'true' }] } }),
+        altered({ governanceVersion: 4, pages: {} })]) {
+        answer = value === null ? null : { text: value };
         invalidateCache(); ring.length = 0;
-        const absent = await serve(env, now + 4); await absent.afterResponse;
-        expect(absent.records).toEqual([]); expect(absent.decisions).toEqual([]);
-        expect(absent.sources.slots).toEqual({ version: null, revision: 0, count: 0 }); expect(ring).toEqual([]);
+        await expect(serve(env, now + 4)).rejects.toThrow('Configuration publication authority unavailable');
+        expect(ring).toEqual([]);
       }
-      const originalGet = kv.get.bind(kv);
-      const outage = vi.spyOn(kv, 'get').mockImplementation(async (key, type) => {
-        if (key === 'slots:config:coach:current') throw new Error('synthetic slot outage');
-        return originalGet(key, type);
-      }); invalidateCache();
-      const unavailable = await serve(env, now + 5); await unavailable.afterResponse;
-      expect(unavailable.decisions).toEqual([]); expect(unavailable.sources.slots.count).toBe(0); outage.mockRestore();
-      kv.store.set('slots:config:coach:current', JSON.stringify({ revision: 4, at: 1, actor: 'old', note: '', value: {
-        pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'unknown', excludedPieceIds: [null] }] },
-      } })); invalidateCache();
-      const legacy = await serve(env, now + 6); await legacy.afterResponse;
+      answer = 'outage'; invalidateCache(); ring.length = 0;
+      await expect(serve(env, now + 5)).rejects.toThrow('Configuration publication authority unavailable');
+      expect(ring).toEqual([]); store.mockRestore();
+      // W11: a retained revision is adopted as reviewed historical bytes at its own revision.
+      const retainedValue = { pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'unknown', excludedPieceIds: [null] }] } };
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', false, { revision: 4, value: retainedValue });
+      const legacy = await serve(retainedEnv, now + 6); await legacy.afterResponse;
       expect(legacy.records.map(r => r.item_id)).toEqual(['a']); expect(legacy.sources.slots.revision).toBe(4);
     }
   });
