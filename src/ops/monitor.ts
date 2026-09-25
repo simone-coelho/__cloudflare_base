@@ -242,16 +242,19 @@ export interface SinkDisagreement {
   /** What the difference had to exceed to be named; stated on every row. */
   threshold: number;
   /**
-   * W22 R5 (LANE-LOG R145): the designed collision, named. Present only when
-   * the published day this row compared EXCLUDED rows under the admitted
-   * collision contract — two different records under one stable id, filed and
-   * then counted in the day report's `counts.conflicts` — and the online side
-   * holds more than the ledger, the one direction that collision moves the two
-   * sinks: the online statistics credited each record (W22 D1.04) while the day
-   * kept the first (W22 D1.03). It is that brand's day count, copied in the
-   * report's own vocabulary, so an operator can tell a difference of up to
-   * `conflicts.outcomes` from a lost credit. A row without it has no such cause
-   * on record: a lost ledger row is never named a collision.
+   * W22 R5 (LANE-LOG R145): a collision on record, named. Present when the
+   * online side holds more than the ledger and the brand's published day this
+   * row compared excluded rows under the collision contract — the day report's
+   * `counts.conflicts`, copied: rows filed as two different rows under one
+   * stable decision or outcome id. Two different OUTCOME records under one id
+   * are each credited online (W22 D1.04) while the day keeps one (W22 D1.03),
+   * so that collision is one known cause of such a row. The member proves only
+   * that a collision is on record for the brand's day: it is the day's count,
+   * not this slot's, it cannot say which slot the excluded rows touched, and it
+   * cannot tell the collision from a credit the ledger lost on the same brand
+   * and day — it rides every such row of the brand, a lost credit's included.
+   * It is never a reason to dismiss a difference. A row without it names no
+   * collision.
    */
   conflicts?: { decisions: number; outcomes: number };
 }
@@ -547,8 +550,9 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
         const difference = Math.abs(online - ledger);
         const threshold = Math.floor(RECONCILIATION_TOLERANCE * Math.max(online, ledger));
         // W22 R5 (R145): a day that excluded rows under the admitted collision
-        // contract names it on the row it can explain — online above ledger —
-        // so the designed outcome is not read as a lost credit.
+        // contract names it on every row of the brand whose online side is
+        // above the ledger — a cause on record for the brand's day, never a
+        // verdict on this row's difference (SinkDisagreement.conflicts).
         const conflicts = online > ledger ? safeConflicts(report.counts?.conflicts) : undefined;
         if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold, ...(conflicts ? { conflicts } : {}) });
         if (disagreements.length >= RECONCILED_ROWS) break;

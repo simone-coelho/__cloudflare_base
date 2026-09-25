@@ -543,12 +543,17 @@ one twice. The ledger read refuses the day of the brand the collision touches, a
 day — another brand of the same tenant is still answered — and names the collision
 (`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it for
 recovery in your tenant's own scope, and reads again on the next call with that row excluded and
-counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. The
-online store then holds more credits than that day for the brand and slot, by design: the scheduled
-reconciliation on `/v1/{tenant}/monitor` shows the pair as a disagreement and names the collision on
-it with `conflicts: { decisions, outcomes }`, the day's `counts.conflicts` copied onto the row. That is
-the designed outcome, not a lost credit; a disagreement a lost ledger row causes carries no
-`conflicts`.
+counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where
+both records were credited online, the online store then holds more credits than that day for the
+brand and slot, by design: once the difference exceeds its threshold, the scheduled reconciliation on
+`/v1/{tenant}/monitor` shows the pair as a disagreement carrying `conflicts: { decisions, outcomes }`,
+the day's `counts.conflicts` copied onto the row. The credits of the filed records are the designed
+outcome, not a lost credit. `conflicts` proves only that a collision is on record for the brand's day:
+it is the brand's count for the day, not the slot's, and it rides every row of the brand whose online
+side exceeds its ledger side, so it cannot tell the collision from a credit the ledger lost on the same
+brand and day, including on a row whose whole difference is a lost credit. It is never a reason to
+dismiss a difference: the collision accounts only for the credits of the rows filed as conflicts, and
+no other part of the difference is explained by it. A row without `conflicts` names no collision.
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
