@@ -156,6 +156,9 @@ const detach = client.emit.declarative();   // authenticated offer + rendered AC
 
 **Your data layer**, the cheapest path where a tag layer exists. GA4 event names are mapped by default
 (`page_view`, `view_item`, `add_to_cart`, `add_to_wishlist`, `purchase`); override or add any of them.
+A GA4 item's `item_brand` is the product's brand label and is sent as `productBrand`, never as
+`data.brand`: that member is the brand the page was served under, and only the client's `brand` option
+sets it (see the configuration reference).
 
 ```js
 const release = client.emit.dataLayer();   // wraps window.dataLayer.push and replays what is already there
@@ -266,7 +269,7 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | Option | Default | Meaning |
 |---|---|---|
 | `tenant` | required | The brand scope decisions are made for |
-| `brand` | tenant | Recorded on every decision, and sent as `data.brand` on every action the client sends, whatever its type — the configured value, never a `brand` a page or tag layer put on the event — so an outcome is measured in the brand its exposure was counted in. A client configured without one sends none, and the platform measures the tenant's own brand |
+| `brand` | tenant | Recorded on every decision, and sent as `data.brand` on every action the client sends, whatever its type, so an outcome is measured in the brand its exposure was counted in. `data.brand` is the SDK's own member: a `brand` a page, a mapping or a tag layer puts on an event is never sent under that name. A client configured without one sends none on any event, and the platform measures the tenant's own brand |
 | `endpoint` | page origin | Platform base URL |
 | `sdkKey` | none | Sent on every request; enforced on staging and production |
 | `source` | `sdk` | Names the caller on every event |

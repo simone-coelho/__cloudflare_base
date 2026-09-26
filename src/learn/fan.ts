@@ -47,7 +47,7 @@ import { requireRetention, type RetentionEnv } from '@/retention';
 import { pinRetention } from '@/identity/sessionAuthority';
 import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
 import { PublicationError, pinPublication, publicationScope, readPinnedPublication } from '@/config/publication';
-import { isCatalogueName, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
+import { isCatalogueName, slotPagesOf, SLOTS_KIND } from '@/content/kinds';
 
 /** Physical input/comparison budgets, not retained-history or provider limits. */
 export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_000 } as const;
@@ -82,12 +82,24 @@ export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visi
  * it. A name a RETAINED catalogue carries on more than one page
  * (`pageScopedSlotNames`, `src/content/kinds.ts`) is qualified by the page, as
  * `slot@page`, so `home/hero` and `pdp/hero` are two statistics objects, two
- * snapshots and two archives, and neither is ever read for the other. Slot and
- * page names are catalogue slugs (no `:`, `@` or `/`), so a qualified name can
- * never be another slot's plain name. `page` is passed ONLY for a page-scoped
- * name; every caller resolves that through `identityPage`.
+ * snapshots and two archives, and neither is ever read for the other. `page` is
+ * passed ONLY for a page-scoped name; every caller resolves that through
+ * `identityPage`.
+ *
+ * A qualified name can never be another placement's plain name, and nothing can
+ * address or create one except by its slot and its page (review D3): a page is
+ * always a catalogue page name (`isCatalogueName`: no `:`, `@` or `/`), and no
+ * slot name ever carries `@` — a catalogue slot is a slug, and these three
+ * functions, every statistics object, every fan-in and every operator route
+ * refuse one that does (`isPlacementSlot`). They THROW rather than build a name
+ * from anything else, so a caller that skipped its own check still cannot reach
+ * a page-separated object under another name.
  */
-export const placementSlot = (slot: string, page?: string) => page ? `${slot}@${page}` : slot;
+export const isPlacementSlot = (slot: unknown): slot is string => typeof slot === 'string' && slot.length > 0 && !slot.includes('@');
+export const placementSlot = (slot: string, page?: string) => {
+  if (!isPlacementSlot(slot) || (page !== undefined && page !== '' && !isCatalogueName(page))) throw new Error('Learning placement unavailable');
+  return page ? `${slot}@${page}` : slot;
+};
 export const statsName = (tenant: string, brand: string, slot: string, page?: string) => `${tenant}:${brand}:${placementSlot(slot, page)}`;
 export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
@@ -95,33 +107,42 @@ export const liftArchiveKey = (tenant: string, brand: string, slot: string, vers
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;
-/** W26 R2: a page-scoped placement must name a catalogue page; anything else could address another object. */
-const placementValid = (scoped: ReadonlySet<string>, slot: string, page: unknown): boolean => !scoped.has(slot) || isCatalogueName(page);
+/** W26 R2: a placement's slot is a placement slot, and a page-scoped one names a catalogue page; anything else could address another object. */
+const placementValid = (scoped: ReadonlySet<string>, slot: string, page: unknown): boolean => isPlacementSlot(slot) && (!scoped.has(slot) || isCatalogueName(page));
 
 /**
- * W26 R2: the slot names of the tenant's PUBLISHED catalogue whose identity
- * carries the page, for a caller that has not already read the catalogue.
+ * W26 R2 (review D2): the slot names of the tenant's PUBLISHED catalogue whose
+ * identity carries the page, for a caller that has not already read the
+ * catalogue.
  *
- * A tenant whose publication carries no catalogue has no cross-page name, and
- * its answer is the empty set. Where the publication authority itself cannot be
- * read the answer is also empty — the page-less identity every placement had
- * before W26 — and that is safe to fall back to: after W26 no serving, operator
- * or monitor read of a page-scoped name reads its page-less object, so a write
- * that falls back there can never be served for either page; the monitor's
- * per-page comparison shows the credit as missing rather than agreeing with it.
- * A typed owner or consent refusal raised inside the read is not an outage and
- * propagates unchanged.
+ * A tenant that publishes no catalogue has no cross-page name, and its answer
+ * is the empty set: no publication authority bound at all, a publication that
+ * was never initialized, or a committed set without a slot catalogue in it.
+ * ANYTHING ELSE that stops the catalogue being read — a transient storage
+ * outage, a damaged set — THROWS. The placement of a cross-page name cannot be
+ * known then, and answering with the page-less name would pool both pages'
+ * evidence, silently, into an object nothing serves. Every caller turns the
+ * throw into a refusal it names: a fan-in's receipt is `config` and nothing is
+ * sent, and the owner's recovery leaves the operation unprepared so its own
+ * retry resolves the catalogue again. A typed owner or consent refusal raised
+ * inside the read propagates unchanged.
  */
 export async function pageScopedSlotsOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<ReadonlySet<string>> {
-  try {
-    const scope = publicationScope(SLOTS_KIND, tenant);
-    const pin = await pinPublication(env as Env, scope, true);
-    if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === scope)) return new Set();
-    return new Set(pageScopedSlotNames((await readPinnedPublication(env as Env, SLOTS_KIND, tenant, pin)).value));
-  } catch (error) {
-    if (error instanceof PublicationError) return new Set();
+  return new Set([...await publishedSlotPagesOf(env, tenant)].filter(([, pages]) => pages.length > 1).map(([slot]) => slot));
+}
+/** W26 R2: the pages each slot name of the tenant's published catalogue is carried on, under `pageScopedSlotsOf`'s rules. */
+export async function publishedSlotPagesOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<Map<string, string[]>> {
+  const storage = env.STORAGE as { get?: unknown; put?: unknown } | undefined;
+  if (!storage || typeof storage.get !== 'function' || typeof storage.put !== 'function') return new Map();
+  const scope = publicationScope(SLOTS_KIND, tenant);
+  let pin: Awaited<ReturnType<typeof pinPublication>>;
+  try { pin = await pinPublication(env as Env, scope, true); }
+  catch (error) {
+    if (error instanceof PublicationError && error.code === 'publication_uninitialized') return new Map();
     throw error;
   }
+  if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === scope)) return new Map();
+  return slotPagesOf((await readPinnedPublication(env as Env, SLOTS_KIND, tenant, pin)).value);
 }
 /** W26 R2: a `pageScoped` member on the wire — sorted catalogue slot names, or null when malformed. */
 export function pageScopedOf(value: unknown): ReadonlySet<string> | null {
@@ -721,9 +742,14 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
      * W26 R2: which slot names carry the page in their identity, resolved here
      * at the producer and carried to the ring, which knows the page of every
      * decision it credits and routes each credit to its own page's object.
+     * Review D2: a catalogue that cannot be read refuses the outcome here, as
+     * `config`, with the ring not attempted — never a guessed identity.
      */
+    out.code = 'config';
+    out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
     const scoped = pageScoped ?? await pageScopedSlotsOf(env, tenant);
-    out.ring.destinations = 1; out.ring.unknown = 1;
+    out.code = 'complete';
+    out.ring.notAttempted = 0; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
       ...(money === undefined || money === null ? {} : { money }), ...pageScopedWire(scoped),
       ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);

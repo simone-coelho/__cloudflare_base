@@ -122,6 +122,13 @@ async function publishedSlotPages(c: { env: Env }, tenant: string): Promise<Map<
  * the catalogue carries the slot on.
  */
 type Placement = { ok: true; page?: string } | { ok: false; error: string; pages?: string[] };
+/**
+ * W26 R2 (review D3): every route that names one slot's statistics takes a
+ * CATALOGUE slot name — a slug, never carrying the `@` of a page-scoped
+ * placement's object name — so no operator can address a placement except by
+ * its slot and its `page`, or create an object under another placement's name.
+ */
+const SLOT_REQUIRED = 'slot required: a slot name of the catalogue';
 function placementOf(pages: ReadonlyMap<string, string[]>, slot: string, asked: string | undefined): Placement {
   const page = asked?.trim() || undefined;
   if (page !== undefined && !isCatalogueName(page)) return { ok: false, error: 'page must be a page name of the catalogue' };
@@ -270,7 +277,7 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const cur = decodeCursor(c.req.query('cursor'));
   if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
@@ -406,7 +413,7 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const cur = decodeCursor(c.req.query('cursor'));
   if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
@@ -538,7 +545,7 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const placement = placementOf(await publishedSlotPages(c, tenant), slot, c.req.query('page'));
   c.header('Cache-Control', 'no-store');
@@ -1021,7 +1028,7 @@ decisionRoutes.post('/:tenant/models/reference', async (c) => {
 decisionRoutes.get('/:tenant/lift/history', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!TENANT.test(tenant) || !slot) return c.json({ ok: false, error: 'tenant slug and slot' }, 400);
+  if (!TENANT.test(tenant) || !isCatalogueName(slot)) return c.json({ ok: false, error: 'tenant slug and slot' }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const placement = placementOf(await publishedSlotPages(c, tenant), slot, c.req.query('page'));
   if (!placement.ok) { c.header('Cache-Control', 'no-store'); return c.json(placementRefusal(placement), 400); }
@@ -1114,7 +1121,7 @@ decisionRoutes.post('/:tenant/learn/items/reset', operatorJwt(), async (c) => {
     meta.authorize = authorize;
     b = await c.req.json();
     if (!b || Object.keys(b).some(key => !['slot', 'item', 'brand', 'page'].includes(key))
-      || typeof b.slot !== 'string' || typeof b.item !== 'string' || !b.slot || !b.item || b.slot.length > 200 || b.item.length > 256
+      || !isCatalogueName(b.slot) || typeof b.item !== 'string' || !b.item || b.item.length > 256
       || b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200)
       || b.page !== undefined && typeof b.page !== 'string') return c.json({ ok: false, error: 'Invalid reset target' }, 400);
     if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent' }, 503);
@@ -1162,7 +1169,7 @@ decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const b = (await c.req.json().catch(() => null)) as { slot?: string; brand?: string; page?: string } | null;
-  if (!b?.slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(b?.slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (b.brand ?? '').trim() || tenant;
   if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
   c.header('Cache-Control', 'no-store');
@@ -1217,7 +1224,7 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
   if (!b || typeof b !== 'object' || Array.isArray(b)
     || Object.keys(b).some(key => !['slot', 'brand', 'page', 'reward', 'objective', 'rebuildFrom'].includes(key))
     || (b.page !== undefined && typeof b.page !== 'string')
-    || typeof b.slot !== 'string' || !b.slot || b.slot.length > 200
+    || !isCatalogueName(b.slot)
     || (b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200))
     || (b.reward !== undefined && (typeof b.reward !== 'string' || !TRANSITION_REWARDS.has(b.reward)))
     || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))

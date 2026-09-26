@@ -173,10 +173,10 @@ import { configuredDestinations, configuredOperationalDestinations, type Operati
 import { SLOT_GOVERNANCE_SCOPE, tenantSlotGovernance, type TenantSlotGovernance } from '@/learn/slotGovernance';
 import { EVIDENCE_LOSS_PATHS, readEvidenceLoss, type EvidenceLoss, type EvidenceLossPath } from '@/ledger/delivery';
 import { readWindowSummary, reportPrefix } from '@/learn/report';
-import { statsName } from '@/learn/fan';
+import { publishedSlotPagesOf, statsName } from '@/learn/fan';
 import type { LiftSnapshot } from '@/learn/stats';
 import { pinPublication, readPinnedPublication } from '@/config/publication';
-import { LEARN_KIND, slotPagesOf, SLOTS_KIND } from '@/content/kinds';
+import { LEARN_KIND } from '@/content/kinds';
 import { PRIORS_KIND, priorUnitRefusedSlots } from '@/learn/priors';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
@@ -578,19 +578,14 @@ const RECONCILED_BRANDS = 16, RECONCILED_SLOTS = 32;
  * W26 R2: for each page-scoped slot name of the tenant's catalogue, the pages its
  * statistics objects are named for; every other name is read page-less. Read
  * once per run from the tenant's publication, the pin the statistics objects
- * themselves read. A tenant that publishes no catalogue has no page-scoped name;
- * where the publication cannot be read the names are read page-less, as before
- * W26 R2, and a page-scoped name's missing credits then show as a disagreement,
- * never as agreement.
+ * themselves read. A tenant that publishes no catalogue has no page-scoped name.
+ * Review D2: a catalogue that cannot be read otherwise THROWS, and the run then
+ * makes no comparison at all (`reconcileSinks` answers nothing) — a guessed
+ * page-less read could compare the ledger with an object nothing writes to.
  */
 async function placementPages(env: Env, tenant: string): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
-  try {
-    const pin = await monitorDeadline(pinPublication(env, tenant, true));
-    if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === tenant)) return out;
-    const catalog = await monitorDeadline(readPinnedPublication(env, SLOTS_KIND, tenant, pin));
-    for (const [slot, pages] of slotPagesOf(catalog.value)) if (pages.length > 1) out.set(slot, pages);
-  } catch { /* page-less, as before W26 R2 */ }
+  for (const [slot, pages] of await monitorDeadline(publishedSlotPagesOf(env, tenant))) if (pages.length > 1) out.set(slot, pages);
   return out;
 }
 const onlineCredits = (snapshot: unknown): number | null => {

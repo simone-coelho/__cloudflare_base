@@ -13,10 +13,12 @@
     scope: qs.get('scope') || 'coach',
     brand: qs.get('brand') || qs.get('scope') || 'coach',
     slot: qs.get('slot') || '',
+    // W26 R2: the page of the chosen placement, used only where the catalogue carries the slot name on more than one page.
+    page: qs.get('page') || '',
     token: sessionStorage.getItem('tuning-token') || '',
     learn: null, draft: null, learnRevision: 0, learnSource: 'loading', learnHistory: [],
     slots: [], pieces: new Map(),
-    snapshot: null, archived: null, liftHistory: [], priorHistory: [], proposals: null, proposalsError: '',
+    snapshot: null, archived: null, liftHistory: [], liftError: '', priorHistory: [], proposals: null, proposalsError: '',
     report: null, reportError: '', reportPage: null, reportLoading: false, reportKey: '', reportGeneration: 0, customReport: null, customKey: '',
     errors: [], flash: '', checking: false,
     sort: { col: 'lift', dir: -1 }, filter: '', level: '0',
@@ -196,13 +198,28 @@
     S.slots = [];
     for (const [page, list] of Object.entries(pages)) for (const s of list) S.slots.push({ page, slot: s.slot, weights: s.weights || {}, pinned: Boolean(s.pinnedPieceId) });
     if (!S.slot || !S.slots.some((s) => s.slot === S.slot)) S.slot = (S.slots.find((s) => !s.pinned) || S.slots[0] || { slot: '' }).slot;
+    choosePage();
     S.pieces = new Map(((cat.document && cat.document.pieces) || []).map((p) => [p.id, p]));
   }
+  /**
+   * W26 R2 (review D4): a slot name the catalogue carries on more than one page
+   * is one placement per page — its own snapshot and its own archive — so the
+   * picker lists each page's placement, and its reads name the page.
+   */
+  const pagesOf = (slot) => S.slots.filter((s) => s.slot === slot).map((s) => s.page);
+  const pageScoped = (slot) => pagesOf(slot).length > 1;
+  function choosePage() {
+    const pages = pagesOf(S.slot);
+    S.page = pages.length > 1 ? (pages.includes(S.page) ? S.page : pages[0]) : '';
+  }
+  const placementQuery = () => (pageScoped(S.slot) ? `&page=${encodeURIComponent(S.page)}` : '');
   async function loadLift() {
-    if (!S.slot) { S.snapshot = null; S.liftHistory = []; return; }
-    const q = `?slot=${encodeURIComponent(S.slot)}&brand=${encodeURIComponent(S.brand)}`;
-    const [{ data: cur }, { data: hist }] = await Promise.all([json(v1(`/lift${q}${S.archived ? `&version=${S.archived}` : ''}`)), json(v1(`/lift/history${q}`))]);
+    if (!S.slot) { S.snapshot = null; S.liftHistory = []; S.liftError = ''; return; }
+    const q = `?slot=${encodeURIComponent(S.slot)}&brand=${encodeURIComponent(S.brand)}${placementQuery()}`;
+    const [{ data: cur }, { ok: histOk, data: hist }] = await Promise.all([json(v1(`/lift${q}${S.archived ? `&version=${S.archived}` : ''}`)), json(v1(`/lift/history${q}`))]);
     S.snapshot = cur.snapshot || null; S.liftHistory = hist.versions || [];
+    // A read that failed is said to have failed, never shown as an empty archive.
+    S.liftError = histOk && hist.ok !== false ? '' : hist.error || 'Could not read the snapshot archive.';
   }
   async function loadProposals() {
     const { ok, status, data } = await json(v1('/learn/proposals'));
@@ -260,7 +277,7 @@
   }
   async function resetItem(item) {
     if (!confirm(`Discard the evidence for ${nameOf(item)} in ${S.slot} and start again from the prior?`)) return;
-    const res = await request(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand }) });
+    const res = await request(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand, ...(pageScoped(S.slot) ? { page: S.page } : {}) }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) { S.errors = [data.error || 'The reset was refused.']; render(); return; }
     flash(data.had ? `Evidence for ${nameOf(item)} discarded; snapshot publication status is separate, recorded as revision ${data.revision}.` : `${nameOf(item)} had no evidence in this slot; recorded as revision ${data.revision}.`);
@@ -500,7 +517,8 @@
       ));
     }
     const vh = clear($('lift-history'));
-    if (!S.liftHistory.length) vh.append(h('div', { class: 'empty' }, 'No archived snapshots for this slot yet; every publish from now on is archived by version.'));
+    if (S.liftError) vh.append(h('div', { class: 'empty' }, `Could not read the snapshot archive: ${S.liftError}`));
+    else if (!S.liftHistory.length) vh.append(h('div', { class: 'empty' }, `No archived snapshots for ${pageScoped(S.slot) ? `the ${S.page} page's ${S.slot}` : 'this slot'} yet; every publish from now on is archived by version.`));
     for (const v of S.liftHistory.slice(0, 12)) vh.append(h('div', { class: 'rev' }, h('div', { class: 'top' }, h('span', { class: 'n' }, when(v.version)), h('span', { class: 'v' }, `v${v.version}`), S.archived === v.version ? h('span', { class: 'chip pending' }, 'viewing') : null), h('div', { class: 'meta' }, `${(v.size / 1024).toFixed(1)} KB`), h('button', { class: 'link', onclick: async () => { S.archived = v.version; await loadLift(); render(); } }, 'View this snapshot in the grid')));
     const prh = clear($('prior-history'));
     if (!S.priorHistory.length) prh.append(h('div', { class: 'empty' }, 'No priors imported for this scope. PUT /content/priors takes JSON rows or the CSV a warehouse exports.'));
@@ -610,8 +628,8 @@
   }
   function renderBar() {
     const sl = $('slot');
-    if (sl.options.length !== S.slots.length) { clear(sl); for (const s of S.slots) sl.append(h('option', { value: s.slot }, `${s.slot}${s.pinned ? ' (pinned)' : ''} · ${s.page}`)); }
-    sl.value = S.slot;
+    if (sl.options.length !== S.slots.length) { clear(sl); for (const s of S.slots) sl.append(h('option', { value: pageScoped(s.slot) ? `${s.slot}#${s.page}` : s.slot }, `${s.slot}${s.pinned ? ' (pinned)' : ''} · ${s.page}`)); }
+    sl.value = pageScoped(S.slot) ? `${S.slot}#${S.page}` : S.slot;
     $('brand').value = S.brand;
     $('source').textContent = S.learnSource === 'stored' ? `learn r${S.learnRevision}` : 'compiled default';
     $('source').className = `badge ${S.learnSource === 'stored' ? 'stored' : 'compiled'}`;
@@ -727,7 +745,7 @@
   let reportSession = reportUser();
   if (window.OperatorSession) OperatorSession.onChange(() => { S.token = sessionStorage.getItem('tuning-token') || ''; renderSession(); const next = reportUser(); if (next !== reportSession) { reportSession = next; reportContext(); renderReport(); } });
   renderSession();
-  $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
+  $('slot').addEventListener('change', async (e) => { const [slot, page] = e.target.value.split('#'); S.slot = slot; S.page = page || ''; choosePage(); S.archived = null; S.diffs = {}; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('brand').addEventListener('change', async (e) => { S.brand = e.target.value.trim() || S.scope; S.archived = null; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('grid-filter').addEventListener('input', (e) => { S.filter = e.target.value; renderGrid(); });
   $('grid-level').addEventListener('change', (e) => { S.level = e.target.value; renderGrid(); });

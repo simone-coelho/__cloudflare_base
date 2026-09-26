@@ -7,7 +7,7 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
@@ -116,6 +116,12 @@ const itemName = (v: unknown): v is string => component(v) && !Object.prototype.
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const control = (v: string): boolean => [...v].some(char => char.charCodeAt(0) < 32);
 const time = (v: unknown): v is number => finite(v) && Number.isFinite(new Date(v).getTime());
+/**
+ * W26 R2 (review D3): a slot this object is named for or written under never
+ * carries `@`, the page qualifier of a page-scoped placement's name, so no
+ * object can be created or addressed under another placement's identity.
+ */
+const slotName = (v: unknown): v is string => component(v) && isPlacementSlot(v);
 /** W26 R2: a placement's page, where one is named at all, is a catalogue page name. */
 const pageValid = (v: unknown): v is string | undefined => v === undefined || isCatalogueName(v);
 /** W26 R2: the page is part of an object's identity; absent on one side is absent on the other. */
@@ -145,7 +151,7 @@ function configValid(v: unknown): v is SlotLearnConfig {
 }
 function stateValid(value: unknown, repairing = false): asserts value is Stored {
   if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
-    || !component(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
+    || !slotName(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
   if (value.effects !== undefined && (!object(value.effects) || Object.keys(value.effects).length > RECOVERY_LIMITS.effects
     || Object.entries(value.effects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id)
       || !fields(m, ['digest', 'subject', 'ts', 'expiresAt', 'item']) || typeof m.digest !== 'string' || !/^[a-f0-9]{64}$/.test(m.digest)
@@ -289,7 +295,7 @@ export class LearnStats {
       }
       if (path === '/health' || path === '/recovery' || path === '/recover') {
         const b = await input(request);
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !pageValid(b.page)) throw invalid();
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page)) throw invalid();
         // A read-only committed-state health query must not queue behind an
         // unrelated archive/KV publication wait.
         return await (path === '/health' ? this.recoveryControl(b, path) : this.serialize(() => this.recoveryControl(b, path)));
@@ -341,7 +347,7 @@ export class LearnStats {
       }
       if (path === '/exposures' || path === '/credits') {
         const kind = path === '/exposures' ? 'exposures' : 'credits', b = await input(request), raw = b[kind];
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !pageValid(b.page) || !Array.isArray(raw)
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !Array.isArray(raw)
           || !configValid(b.config)) throw invalid();
         const rows = rowsOf(raw, kind);
         const managed = b.version === 2;
@@ -360,7 +366,7 @@ export class LearnStats {
        */
       if (path === '/transition') {
         const b = await input(request);
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !pageValid(b.page)
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page)
           || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
           || (b.reward !== undefined && (typeof b.reward !== 'string' || !rewards.has(b.reward)))
           || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
@@ -800,7 +806,7 @@ export class LearnStats {
     const placement = rest.join(':'), at = placement.lastIndexOf('@');
     const slot = at > 0 && isCatalogueName(placement.slice(at + 1)) ? placement.slice(0, at) : placement;
     const page = slot === placement ? undefined : placement.slice(at + 1);
-    if (!component(tenant) || !component(brand) || !component(slot)) return null;
+    if (!component(tenant) || !component(brand) || !slotName(slot)) return null;
     if (namespace.idFromName(statsName(tenant, brand, slot, page)).toString() !== String(id)) return null;
     const pin = await pinPublication(this.env, tenant, true);
     const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
@@ -961,7 +967,7 @@ export class LearnStats {
       + bytes(await this.state.storage.get(REBUILT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
-    if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !pageValid(b.page) || !itemName(b.item) || typeof b.operationId !== 'string'
+    if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !itemName(b.item) || typeof b.operationId !== 'string'
       || !object(b.publication)) throw invalid();
     const id = b.publication as unknown as { revision: number; digest: string };
     const set = await committedPublication(this.env, b.tenant, id), op = set.operation;

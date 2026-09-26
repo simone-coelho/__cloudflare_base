@@ -716,8 +716,12 @@ body), and requires it: asked without it, or with a page the catalogue does not 
 400 with `pages`, the pages it is carried on. `learn/recovery` addresses one object exactly, as it always has: with
 `page`, that page's object; without it, the page-less object — for such a slot, the one its pages pooled into before
 they were learned apart. `GET learn/slots` marks such a row `pageScoped: true`, and its `evidence` is that row's own page's. A
-cursor is bound to the page it was cut for. A slot name carried on one page keeps its page-less identity, is read
-without `page=`, and keeps every statistic already learned under it. The monitor compares the ledger with the online
+cursor is bound to the page it was cut for. Every route below that names one slot's statistics takes a catalogue slot
+name — a slug, never a name carrying `@` — and refuses anything else with 400, so a placement is only ever addressed
+by its slot and its page. A slot name carried on one page keeps its page-less identity, is read without `page=`, and
+keeps every statistic already learned under it. Where the catalogue itself cannot be read, a learning write that
+needs it is refused and named (`code: "config"` on the learning receipt) and the owner's recovery retries it; it is
+never written under a guessed identity. The monitor compares the ledger with the online
 counts per brand and slot name, summing a page-scoped name's page objects.
 
 | Route | Does |

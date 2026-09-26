@@ -771,6 +771,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
   function envelope(type: SdkEventType, data: Record<string, unknown> = {}): ActionEnvelope {
     const tracking = trackingAllowed();
     const w = toWire(type, tracking ? data : {});
+    // W26 R3 (kit 03 "`data.brand` … the brand the shopper's page was served
+    // under — the same value the decision request carried"; LANE-LOG R198):
+    // `brand` is the SDK's own member of every action's data. A client
+    // configured for a brand sends that brand on every action, whatever the
+    // type, so the outcome is measured in the statistics the exposure was
+    // counted in; a client configured for none sends none, and the platform
+    // measures the tenant's own brand. A `brand` a page or a tag layer put on
+    // the event is never sent under that name: it is not the brand the
+    // decision request carried (a product's brand label travels as
+    // `productBrand`, emit.ts), and the platform would read it as one.
+    const { brand: _supplied, ...own } = w.data;
+    void _supplied;
     const timestamp = host.now();
     let eventId: string | undefined;
     if (tracking && isCurrent(generation)) {
@@ -786,15 +798,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
       anonymousId: anonId,
       sessionId,
       browsingSessionId: session(),
-      // W26 R3 (kit 03 "`data.brand` … the brand the shopper's page was served
-      // under — the same value the decision request carried"; LANE-LOG R198):
-      // a client configured for a brand puts that brand on every action it
-      // sends, whatever the type, so the outcome is measured in the statistics
-      // the exposure was counted in. It is the configured value, never one a
-      // page or a tag layer supplied under the same name (a product's brand
-      // label is not the brand the page was served under). A client configured
-      // for no brand sends none, and the platform measures the tenant's own.
-      data: tracking && cfg.brand ? { ...w.data, brand: cfg.brand } : w.data,
+      data: tracking && cfg.brand ? { ...own, brand: cfg.brand } : own,
       source: cfg.source,
       ...(cfg.surface ? { surface: cfg.surface } : {}),
       entry: entryOf(),

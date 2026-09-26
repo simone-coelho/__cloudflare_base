@@ -28,7 +28,9 @@ same value the decision request carried. A reward-bearing event that names it is
 brand's statistics; one that names none is measured in the tenant's own brand, as before. Send it
 wherever a tenant serves more than one brand, or a click on brand A's hero lands in brand B's numerator
 while the exposure stays in A's denominator. The SDK sends it for you: a client configured with
-`brand` puts that value on every action it sends, whatever the type. A correlated event whose `brand`
+`brand` puts that value on every action it sends, whatever the type, and a client configured without
+one sends none, whatever a page or tag layer put on the event (a product's brand label travels as
+`productBrand`). A correlated event whose `brand`
 disagrees with the brand of the `decisionId` it names is refused, not pooled, and the refusal is
 counted on the outcome receipt as `brandMismatched`. An event that names no `decisionId` is counted
 there as well: `brandMismatched` adds each placement of another brand it would have been credited to

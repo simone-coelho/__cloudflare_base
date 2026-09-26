@@ -126,6 +126,9 @@
         : res.status === 404
           ? 'This platform does not have the paged grid route yet (GET /v1/{brand}/lift/rows). Nothing is broken; the screen has nothing to page.'
           : res.data.error || 'Could not read the grid.';
+      // W26 R2 (review D4): a slot name on more than one page is one placement
+      // per page; the route names the pages, and the operator picks one.
+      st.pages = res.status === 400 && Array.isArray(res.data.pages) ? res.data.pages : null;
       st.data = null; C.render(); return;
     }
     st.error = '';
@@ -204,7 +207,11 @@
         h('button', { class: 'small', disabled: !rows.length, onclick: () => downloadPage(rows, item) }, 'Download this page'),
       );
 
-      if (st.error) { host.append(toolbar, h('div', { class: 'msg err' }, st.error)); return; }
+      if (st.error) {
+        host.append(toolbar, h('div', { class: 'msg err' }, st.error,
+          st.pages ? h('div', { style: 'margin-top:6px' }, ...st.pages.map((page) => h('button', { class: 'small', onclick: () => C.go('lift', { page, item: '' }) }, `The ${page} page's ${S.slot}`))) : null));
+        return;
+      }
       if (!meta || meta.published === false) {
         host.append(toolbar, h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
