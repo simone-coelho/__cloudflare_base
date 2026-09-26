@@ -556,7 +556,8 @@ describe('unit:W26.R2', () => {
 
   it('host: the monitor\'s cross-sink comparison (src/ops/monitor.ts:509) reads the objects the two hero placements are learned in — the online credits of both pages\' heroes agree with the day\'s ledger and the scheduled run reports them in agreement, never as a disagreement against an object nothing writes to', async () => {
     const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
-    const at = Date.now() - 2 * 3_600_000, date = new Date(at).toISOString().slice(0, 10);
+    // Two hours back, and at least five minutes before that UTC day ends: the last click lands 71 s after `at`, so every event falls in the one day `date` names, whatever the time of day the run starts.
+    const recent = Date.now() - 2 * 3_600_000, at = Math.min(recent, Math.floor(recent / DAY_MS) * DAY_MS + DAY_MS - 5 * 60_000), date = new Date(at).toISOString().slice(0, 10);
     const decisions: DecisionRecord[] = [], outcomes: OutcomeRecord[] = [], refused: unknown[] = [];
     // Ten shoppers click the Tabby film in the home page's hero, twelve the
     // Willow editorial in the product page's hero: one placement each, so every
