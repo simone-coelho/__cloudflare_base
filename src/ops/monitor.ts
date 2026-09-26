@@ -243,12 +243,12 @@ export interface MonitorResult {
    * nobody who does not already suspect the slot looks; this is where it is
    * raised unasked.
    *
-   * DERIVED, never stamped: it is the refusal rule itself (`priorUnitRefusedSlots`,
-   * the function the object's rule is) applied to the tenant's published learn
-   * and prior documents, read from one publication pin — no statistics object is
-   * asked and nothing is written. Absent on a legacy record and on a run that
-   * could not read the documents, so no result states a clean slate it did not
-   * observe.
+   * DERIVED, never stamped: it is the object's refusal rule itself
+   * (`priorUnitErrors`, applied per slot by `priorUnitRefusedSlots`) run on the
+   * tenant's published learn and prior documents, read from one publication
+   * pin — no statistics object is asked and nothing is written. Absent on a
+   * legacy record and on a run that could not read the documents, so no result
+   * states a clean slate it did not observe.
    */
   stoppedSlots?: StoppedSlots;
 }
@@ -640,8 +640,9 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
  * publishing, from the tenant's own published learn and prior documents, read
  * from one publication pin (the pin the statistics objects themselves read, so
  * both judge the same revision). The rule is the statistics object's own
- * (`priorUnitRefusedSlots`): no object is asked, no key-value store is read or
- * written, and nothing here is on a decision path.
+ * (`priorUnitErrors`, applied per slot by `priorUnitRefusedSlots`): no object is
+ * asked, no key-value store is read or written, and nothing here is on a
+ * decision path.
  *
  * A tenant whose publication set carries no prior document has no prior to
  * refuse, and says so with `priorVersion: 0` and no slots. Documents that cannot
