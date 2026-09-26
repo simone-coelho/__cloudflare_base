@@ -1,6 +1,6 @@
 # Quin against the platform
 
-**Internal. For our teams.** It names a competitor and dissects their published claims, so it is not a customer handout. Section 10 is the part that can be said out loud in front of a customer, without naming anyone.
+**Internal. For our teams.** It names a competitor and dissects their published claims, so it is not a customer handout. Section 11 is the part that can be said out loud in front of a customer, without naming anyone.
 
 **Audience: product management, and anyone deciding what we build next.** Researched 25 September 2026 from their public site, their SDKs, their DNS and their CDN. Their claims are quoted with the source. Our capabilities are as built in this engine. Customer requirements quoted here come from the 18 September technical working session with a named retail customer, attributed line by line in `docs/architecture/tapestry-requirements-extraction-2026-09-18.md`. Anything inferred is marked.
 
@@ -196,7 +196,27 @@ This is why module sequencing needs no new engine: register the modules as items
 
 ---
 
-# 8. Where they are genuinely stronger
+# 8. Where we win
+
+The matrix in section 3 shows this, but it is worth naming so nobody has to infer it.
+
+**The page is ours to decide.** Content into slots, the order of modules, the sort of a product grid, and the assembly of a whole page with de-duplication and pins, from one engine and one shopper model. Their unit is a single injected action.
+
+**Accountability.** An explain record on every decision, naming each term and its contribution, and a replay that proves a past decision reproduces from its recorded inputs. No explainability claim appears anywhere on their side.
+
+**Control in seconds, not a retraining cycle.** Every weight, horizon, threshold, cap and share is versioned configuration, effective with no deployment and rollback-able, with parity available as a setting.
+
+**Memory beyond the session.** Recognition next week and across devices after sign-in, merged rather than overridden, with durable profile facts in the customer data platform. Their own positioning rules this out.
+
+**Both cold starts.** A visitor with no history, served from region, channel, visit number and the population prior. An asset with no history, inheriting from similar assets and reporting when it has enough evidence.
+
+**Measurement and governance.** A holdout arm on every decision, per-item evidence per context, decision and outcome export, scheduled warehouse delivery, consent that writes nothing on refusal, erasure with a receipt, and brand isolation.
+
+**Latency you can defend in front of an auditor.** Decided at the point of presence nearest the shopper, with the network leg included and the conditions published beside the number.
+
+---
+
+# 9. Where they are genuinely stronger
 
 Say these out loud. Pretending otherwise gets caught.
 
@@ -208,7 +228,7 @@ Say these out loud. Pretending otherwise gets caught.
 
 ---
 
-# 9. Three questions to ask them
+# 10. Three questions to ask them
 
 1. "Your site says 17 ms to predict and 79 ms to deliver, and also 70 ms. Which is it, at what percentile, measured where, and from which region to which region? Show the 95th percentile time from the shopper's click to the offer on screen."
 2. "When a decision is made, what runs, and where does the creative come from? Are the candidate offers precomputed per tenant, and if so, how does that differ from a lookup?"
@@ -216,7 +236,7 @@ Say these out loud. Pretending otherwise gets caught.
 
 ---
 
-# 10. How to say this in front of a customer, without naming anyone
+# 11. How to say this in front of a customer, without naming anyone
 
 **On latency.** "Ask any vendor what their number covers. Inference alone, the API call, or the shopper's click to the pixel on screen. Ask for the percentile and the region. Ours is measured at the point of presence nearest the shopper, so it includes the network leg, and we publish the conditions with it. A returning shopper is answered in tens of milliseconds. A first-ever request costs more, because it creates state, and we say so."
 

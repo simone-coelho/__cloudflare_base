@@ -52,13 +52,27 @@
 - Their speed comes from offers built in advance and then looked up. That is a sound design. It is not a breakthrough, and it is the same shape as ours without the edge.
 - **Ours is measured at the data centre nearest the shopper and includes the network leg theirs leaves out.** A returning shopper is answered in tens of milliseconds. A first-ever visitor costs more, because that request creates their profile, and we say so rather than quoting the better number.
 
-# 5. Where they genuinely win
+# 5. Where we win
+
+**We decide the page, not a single promo.** Which content fills a slot, in what order the modules appear, how a product grid is sorted, all from one engine. Their unit is one injected offer.
+
+**Every decision explains itself, and can be replayed.** Name the reasons, the weights and what each contributed, and re-run a decision from last month to prove it reproduces. They publish no explainability at all.
+
+**Your team changes behaviour in seconds.** Every weight and threshold is versioned configuration with a rollback, effective without a release. Set the affinity weight to zero and you get your current order back exactly, which is what makes a first rollout safe.
+
+**Memory that outlives the session.** A shopper is recognized next week, and across devices once they sign in, with durable profile memory in the customer data platform. They are in-session only, by design.
+
+**Cold start on both halves.** A visitor with no history, and an asset with no history. Theirs covers the first.
+
+**Measurement built in.** Every decision records which arm it belongs to, so a holdout can prove incremental value, and the records land in your warehouse on a schedule.
+
+# 6. Where they genuinely win
 
 **Anonymous first-session intent.** A model trained on clickstreams will beat hand-tuned arithmetic at "is this person about to buy or about to leave". That is their design centre and they are good at it.
 
 **Speed to value.** One tag, no catalog work, and they claim results in fifteen days. We need your catalog, your tags and your slot map before the first decision.
 
-# 6. What this means for us
+# 7. What this means for us
 
 - **Consume their signal, do not rebuild it.** Our engine already accepts an outside model's score as one weighted input, shown on the receipt. A customer running both gets their intent signal governed and explained by us.
 - **We are the decision layer.** A score tells you someone is likely to buy. It does not tell your page what to show, in what order, under which merchandising rules.
