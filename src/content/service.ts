@@ -19,13 +19,13 @@ import {
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
-import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
-import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
+import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
@@ -75,17 +75,22 @@ export interface ServeRequest {
 const LIFT_TTL_MS = 60_000;
 const liftCache = new Set<{ binding: Env['CACHE']; stats: Env['LEARN_STATS']; key: string; at: number; value: LiftSnapshot | null }>();
 export function invalidateLiftCache(): void { liftCache.clear(); }
-export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig): Promise<LiftSnapshot | null> {
+/**
+ * The lift snapshot in force for one placement. W26 R2: `page` is passed only
+ * for a page-scoped slot name (`identityPage`), and then the snapshot, its
+ * isolate cache entry and its live witness are that page's own.
+ */
+export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig, page?: string): Promise<LiftSnapshot | null> {
   const compatible = (value: LiftSnapshot | null) => value !== null && typeof value === 'object' && !Array.isArray(value)
     && value.tenant === tenant && value.brand === brand && value.slot === slot && value.reward === config.reward
     && (value.measurementBasis ?? 'served-v1') === (config.measurementBasis ?? 'served-v1')
     && (value.objective === undefined ? 'unit' : value.objective) === (config.objective ?? 'unit') && value.tauLearnMs === config.stats.tauLearnMs
     && value.n0 === config.stats.n0 && value.nMin === config.stats.nMin
     && value.liftMin === config.stats.liftMin && value.liftMax === config.stats.liftMax;
-  const key = liftKey(tenant, brand, slot);
+  const key = liftKey(tenant, brand, slot, page);
   const binding = ownerBindingIdentity(env.CACHE), stats = ownerBindingIdentity(env.LEARN_STATS);
   const hit = [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
-  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!) ? hit.value : null;
+  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!, page) ? hit.value : null;
   let value: LiftSnapshot | null = null;
   try {
     const stream = await env.CACHE.get(key, 'stream');
@@ -103,7 +108,7 @@ export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: 
   if (liftCache.size >= 256) liftCache.delete(liftCache.values().next().value!);
   liftCache.add({ binding, stats, key, at: now, value });
   // Cache the raw snapshot, never one request's compatibility verdict.
-  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!) ? value : null;
+  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!, page) ? value : null;
 }
 
 /** What each slot learns against: its reward and the estimator's constants, from the learn document. */
@@ -460,6 +465,12 @@ export async function serveContentDecisions(
   const arm = unreadable ? 'default' : armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
+  // W26 R2: the slot names this catalogue — the one this page is decided with —
+  // carries on more than one page. Derived from the document already read
+  // above, so it adds no read to the serving path and cannot fail on it: each
+  // such placement reads its own page's lift, and its exposures are fanned to
+  // its own page's object.
+  const pageScoped: ReadonlySet<string> = new Set(pageScopedSlotNames(slotsDoc));
 
   // CW6: the population prior. Read from KV through the isolate cache, never
   // from the object; blended into a COPY of the affinity view. Off for the
@@ -497,7 +508,7 @@ export async function serveContentDecisions(
   const configOf = slotLearnConfigOf(learn);
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
   const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
-  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot)); }))]);
+  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
   lap('lift');
@@ -550,7 +561,7 @@ export async function serveContentDecisions(
   const captured = consent.tracking && captureRecords.length > 0
     ? env.LEDGER_RECOVERY_ENABLED === 'true'
       ? recoverDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => { if (result.source.state !== 'recovered') reportLearningIncomplete('decisions', result.learning ?? null); })
-      : fanDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => reportLearningIncomplete('decisions', result))
+      : fanDecisions(env, captureSet, slotLearnConfigOf(learn), undefined, pageScoped).then(result => reportLearningIncomplete('decisions', result))
     : Promise.resolve();
   // W20 G2 (R83, R86(a)/(b)): a refused pin has no decision and no ledger row,
   // and a pinned slot that fell short writes only what it served, so neither

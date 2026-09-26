@@ -9,6 +9,7 @@
 import type { ItemControl, SlotCatalog, ContentCatalog, LearnConfig } from '@/content/types';
 import { isEligibleAt } from '@/content/lifecycle';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
+import { pageScopedSlotNames } from '@/content/kinds';
 import { LEVEL_WORDS, liftReferenceOf, type LiftReference, type LiftSnapshot, type Level } from './stats';
 import type { SlotGovernance } from './slotGovernance';
 
@@ -120,8 +121,12 @@ export function pageRows(rows: readonly LiftRow[], q: RowsQuery): { total: numbe
   return { total: matched.length, offset, limit, rows: page, next: offset + limit < matched.length ? offset + limit : null };
 }
 
-/** The cursor names the snapshot version and the query it belongs to, so a page never straddles two snapshots. */
-export interface Cursor { v: number; o: number; level: RowLevel; item?: string; q?: string; sort?: SortKey; dir?: 'asc' | 'desc'; limit?: number }
+/**
+ * The cursor names the snapshot version and the query it belongs to, so a page never straddles two snapshots.
+ * W26 R2: `p` is the page of a page-scoped placement the cursor was cut for — absent for a page-less one — so
+ * the next page is read from the same page's table and never from another's.
+ */
+export interface Cursor { v: number; o: number; level: RowLevel; item?: string; q?: string; sort?: SortKey; dir?: 'asc' | 'desc'; limit?: number; p?: string }
 const b64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4))));
 export const encodeCursor = (c: Cursor): string => b64(JSON.stringify(c));
@@ -129,7 +134,8 @@ export function decodeCursor(s: string | undefined | null): Cursor | null {
   if (!s) return null;
   try {
     const c = JSON.parse(unb64(s)) as Cursor;
-    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells' || c.level === 'exploring') ? c : null;
+    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells' || c.level === 'exploring')
+      && (c.p === undefined || (typeof c.p === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(c.p))) ? c : null;
   } catch { return null; }
 }
 
@@ -200,12 +206,20 @@ export interface SlotIndexEntry {
   evidence?: { items: number; events: number; publishedAt: number } | null;
   /**
    * W20 G2 (R83, R86(a)): filled by the route beside `evidence`, under the same
-   * flag and the same budget — what the decision path REFUSED for this slot
-   * since the horizon the block states: the dead pins, with the reason the
-   * composer recorded, and the times the pinned slot could not fill its `take`.
-   * Zero is reported as zero; it reports configuration, never shopper state.
+   * flag — what the decision path REFUSED for this slot since the horizon the
+   * block states: the dead pins, with the reason the composer recorded, and the
+   * times the pinned slot could not fill its `take`. Zero is reported as zero;
+   * it reports configuration, never shopper state. Since W20 R3 the block is
+   * joined onto EVERY row from the one counter read the route makes, before and
+   * outside the 200-slot budget, which bounds only the per-slot `evidence` reads.
    */
   governance?: SlotGovernance;
+  /**
+   * W26 R2: present, and true, only where the catalogue carries this slot name
+   * on more than one page. This row's placement is then its own statistics
+   * object, and its lift is read with `page=` set to this row's `page`.
+   */
+  pageScoped?: true;
 }
 
 /**
@@ -229,6 +243,8 @@ export function slotEvidence(snap: LiftSnapshot | null, catalogue: ReadonlySet<s
 export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: LearnConfig, nowMs: number, q?: string): { total: number; pages: Array<{ page: string; slots: SlotIndexEntry[] }> } {
   const needle = (q ?? '').trim().toLowerCase();
   const live = catalog.pieces.filter((p) => isEligibleAt(p, nowMs));
+  // W26 R2: from the WHOLE catalogue, never the rows `q` keeps.
+  const scoped = new Set(pageScopedSlotNames(slots));
   const pages: Array<{ page: string; slots: SlotIndexEntry[] }> = [];
   let total = 0;
   for (const [page, list] of Object.entries(slots.pages)) {
@@ -253,6 +269,7 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
         ...(d.exploration?.mode === 'thompson' ? { configuredExploration: 'thompson' as const } : {}),
         autonomy: d.autonomy?.mode ?? 'configured',
         controls: Object.keys(d.items ?? {}).length,
+        ...(scoped.has(s.slot) ? { pageScoped: true as const } : {}),
       });
       total++;
     }

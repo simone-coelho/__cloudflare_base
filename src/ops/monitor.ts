@@ -176,7 +176,7 @@ import { readWindowSummary, reportPrefix } from '@/learn/report';
 import { statsName } from '@/learn/fan';
 import type { LiftSnapshot } from '@/learn/stats';
 import { pinPublication, readPinnedPublication } from '@/config/publication';
-import { LEARN_KIND } from '@/content/kinds';
+import { LEARN_KIND, slotPagesOf, SLOTS_KIND } from '@/content/kinds';
 import { PRIORS_KIND, priorUnitRefusedSlots } from '@/learn/priors';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
@@ -574,6 +574,25 @@ export async function runChecks(env: Env, tenant: string, now = Date.now()): Pro
 const RECONCILIATION_TOLERANCE = 0.05;
 /** Brands, and slots per brand, one run will compare; the pairs are bounded by both. */
 const RECONCILED_BRANDS = 16, RECONCILED_SLOTS = 32;
+/**
+ * W26 R2: for each page-scoped slot name of the tenant's catalogue, the pages its
+ * statistics objects are named for; every other name is read page-less. Read
+ * once per run from the tenant's publication, the pin the statistics objects
+ * themselves read. A tenant that publishes no catalogue has no page-scoped name;
+ * where the publication cannot be read the names are read page-less, as before
+ * W26 R2, and a page-scoped name's missing credits then show as a disagreement,
+ * never as agreement.
+ */
+async function placementPages(env: Env, tenant: string): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  try {
+    const pin = await monitorDeadline(pinPublication(env, tenant, true));
+    if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === tenant)) return out;
+    const catalog = await monitorDeadline(readPinnedPublication(env, SLOTS_KIND, tenant, pin));
+    for (const [slot, pages] of slotPagesOf(catalog.value)) if (pages.length > 1) out.set(slot, pages);
+  } catch { /* page-less, as before W26 R2 */ }
+  return out;
+}
 const onlineCredits = (snapshot: unknown): number | null => {
   const root = (snapshot as LiftSnapshot | null)?.slotRates?.['*'];
   return root && Number.isFinite(root.s) && root.s >= 0 ? Math.round(root.s) : null;
@@ -598,6 +617,13 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
     const since = date ? Date.parse(date + 'T00:00:00Z') : now;
     if (!date || !Number.isFinite(since)) return { since: now, compared: 0, disagreements: [] };
     const brands = (published.get(date) ?? []).sort().slice(0, RECONCILED_BRANDS);
+    // W26 R2 (F21 §6(b), §8): the day report counts a slot NAME, and a name the
+    // tenant's catalogue carries on more than one page is learned in one
+    // statistics object per page. The online side of such a slot is therefore
+    // the sum of its page objects — every page the catalogue carries it on —
+    // compared with the ledger per brand and slot as before; a name on one page
+    // is read from the one object it has always had.
+    const slotPages = await placementPages(env, tenant);
     const budget = { bytes: 0, cells: 0 };
     let compared = 0;
     const disagreements: SinkDisagreement[] = [];
@@ -609,14 +635,18 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
         // statistics, so only its credits are the online store's counterpart.
         const rows = report.holdout[slot] ?? [];
         const ledger = rows.filter(row => row.arm === 'personalized').reduce((sum, row) => sum + (Number.isFinite(row.credited) ? row.credited : 0), 0);
-        let online: number | null = null;
+        let online: number | null = 0;
         try {
           const namespace = env.LEARN_STATS;
-          const answer = await monitorDeadline(namespace.get(namespace.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/snapshot'));
-          if (!answer.ok) continue;
-          const body = await answer.json() as { ok?: unknown; snapshot?: unknown };
-          if (body.ok !== true) continue;
-          online = body.snapshot === null ? 0 : onlineCredits(body.snapshot);
+          for (const page of slotPages.get(slot) ?? [undefined]) {
+            const answer = await monitorDeadline(namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch('https://learn/snapshot'));
+            if (!answer.ok) { online = null; break; }
+            const body = await answer.json() as { ok?: unknown; snapshot?: unknown };
+            if (body.ok !== true) { online = null; break; }
+            const credits = body.snapshot === null ? 0 : onlineCredits(body.snapshot);
+            if (credits === null) { online = null; break; }
+            online += credits;
+          }
         } catch { continue; }
         if (online === null) continue;   // a sink that could not be read is not a sink that agreed
         compared++;

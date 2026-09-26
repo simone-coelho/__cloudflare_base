@@ -906,7 +906,15 @@
         anonymousId: anonId,
         sessionId,
         browsingSessionId: session(),
-        data: w.data,
+        // W26 R3 (kit 03 "`data.brand` … the brand the shopper's page was served
+        // under — the same value the decision request carried"; LANE-LOG R198):
+        // a client configured for a brand puts that brand on every action it
+        // sends, whatever the type, so the outcome is measured in the statistics
+        // the exposure was counted in. It is the configured value, never one a
+        // page or a tag layer supplied under the same name (a product's brand
+        // label is not the brand the page was served under). A client configured
+        // for no brand sends none, and the platform measures the tenant's own.
+        data: tracking && cfg.brand ? { ...w.data, brand: cfg.brand } : w.data,
         source: cfg.source,
         ...cfg.surface ? { surface: cfg.surface } : {},
         entry: entryOf(),
