@@ -340,7 +340,7 @@ export class LearnStats {
         return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed);
       }
       if (path === '/snapshot') {
-        const snapshot = await this.serialize(async () => { const d = await this.loadIfAny(); return d ? this.snapshot(d) : null; });
+        const snapshot = await this.serialize(() => this.currentSnapshot());
         return json({ ok: true, snapshot });
       }
       /**
@@ -794,6 +794,30 @@ export class LearnStats {
     return { tenant, brand, slot, stats: emptyStats(),
       config: { reward: dials?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
         objective: dials?.objective ?? 'unit', measurementBasis: dials?.measurementBasis ?? 'served-v1' } };
+  }
+
+  /**
+   * W25 R3 (LANE-LOG R183): what this object would publish now, answered on
+   * `/snapshot` from the SAME identity and the same builder `publish()` uses.
+   *
+   * A slot that has recorded events answers from its counters, as it always did.
+   * A slot that never recorded one has no stored state, and before this it
+   * answered "nothing" even when W25 N1.01 had made it publishable on its
+   * imported prior alone — so every reader of the object's own snapshot, the
+   * monitor's sink comparison among them, saw a slot the serving path was
+   * ranking as holding no estimate. It now answers the prior-derived snapshot,
+   * under the same gate as publication: a never-written slot with nothing to
+   * publish still answers null. Nothing is written. Where the tenant's published
+   * documents cannot be read, the read fails exactly as its publication would,
+   * rather than answering a "nothing" it did not establish.
+   */
+  private async currentSnapshot(): Promise<LiftSnapshot | null> {
+    const stored = await this.loadIfAny();
+    if (stored) return this.snapshot(stored);
+    const identity = await this.priorOnlyIdentity();
+    if (!identity) return null;
+    const snap = await this.snapshot(identity);
+    return Object.keys(snap.items).length === 0 ? null : snap;
   }
 
   /**

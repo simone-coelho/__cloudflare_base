@@ -24,7 +24,7 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
+import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy, type ReportPriors } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
@@ -2007,7 +2007,19 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
  * from the ledger itself otherwise (a day from before the fold existed, or custom reporting policies,
  * which are computed over the records and so need a day one request can read).
  */
-export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
+export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(),
+  opts: {
+    maxObjects?: number;
+    /**
+     * W25 R4 (LANE-LOG R183): the tenant's published prior document
+     * (`reportPriors`). A day built from the ledger records builds its grids
+     * with it and declares `gridPriors: { applied: true, priorVersion }` where
+     * it applied. The day summed from the folded hours does not use it — an
+     * hour aggregate carries no prior revision — and keeps declaring
+     * `applied: false`.
+     */
+    priors?: ReportPriors | null;
+  } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
   if (reporting === null) {
     const report = await publishAggregateDay(r2, ids, learn, now, false);
     if (report) return report;
@@ -2016,5 +2028,5 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
     const n = await countDayObjects(r2, ids.tenant, ids.date, opts.maxObjects);
     if (n > opts.maxObjects) throw new ReportTooLarge(n, opts.maxObjects);
   }
-  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved);
+  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved, opts.priors ?? null);
 }
