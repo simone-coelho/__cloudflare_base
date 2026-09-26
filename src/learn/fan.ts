@@ -329,7 +329,14 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const r = value.receipt;
   // W24 R1.03: the refusal members, present or absent, never malformed — and
   // `refused` IS the number of entries in `refusedBySlot`, so a reply cannot
-  // claim a count its own named refusals do not carry.
+  // claim a count its own named refusals do not carry. W24 R4 (LANE-LOG R203;
+  // W24-B2 build review finding 1): the two travel TOGETHER or not at all, the
+  // way the ring emits them (`DecisionRing.outcome()`). A `refused` with no
+  // `refusedBySlot` beside it — what a partially deployed or faulty ring would
+  // send — is a count nobody named, refused as malformed exactly as every other
+  // member that does not account for itself: `ring.unknown`, no outcome
+  // receipt, the learning receipt not ok. Never admitted as a refusal the
+  // receipt cannot name, and never read as a credit.
   const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
   const money = r.money === undefined ? undefined : moneyReply(r.money);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
@@ -340,8 +347,7 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
     || (r.brandMismatched !== undefined && !count(r.brandMismatched))
     || refusedBySlot === null || money === null
-    || (r.refused !== undefined && !count(r.refused))
-    || (refusedBySlot !== undefined && r.refused !== Object.keys(refusedBySlot).length)
+    || (refusedBySlot === undefined ? r.refused !== undefined : r.refused !== Object.keys(refusedBySlot).length)
     // "No slot learns from this" is a statement about an outcome nothing took.
     || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
   const credits: StatsDelivery = { ...r.credits };
@@ -377,11 +383,24 @@ function finish(out: LearningReceipt): LearningReceipt {
   if (!out.ok && out.code === 'complete') out.code = 'incomplete';
   return out;
 }
-/** Only current background wrappers report: one fixed numeric summary, never raw identifiers or errors. */
+/**
+ * Only current background wrappers report: one fixed numeric summary, never raw
+ * identifiers or errors.
+ *
+ * W24 R3 (LANE-LOG R203; W24-B2 build review finding 3): the line shows what
+ * the outcome receipt says was REFUSED beside what it says was attributed —
+ * `refused`, a count like every other member (zero when nothing was refused or
+ * no receipt came back), and `refusedBySlot`, the receipt's own map of the
+ * configured slot names to the rule that refused each (`reward` or `money`),
+ * present only when the receipt carries one. Slot names are the tenant's
+ * published slot catalogue, not a visitor, content or error identifier; a
+ * line with nothing refused stays wholly numeric.
+ */
 export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: LearningReceipt | null): void {
   if (result?.ok) return;
   try {
     const credits = result?.outcome?.credits;
+    const refusedBySlot = result?.outcome?.refusedBySlot;
     console.warn('learning_incomplete', {
       version: 1, kind: kind === 'decisions' ? 0 : 1, code: result ? ['complete', 'invalid', 'barrier', 'config', 'incomplete'].indexOf(result.code) : 3,
       received: result?.received ?? 1, cutoffSkipped: result?.cutoffSkipped ?? 0,
@@ -391,8 +410,10 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
       exposureUnknown: result?.exposures.rowsUnknown ?? 0, exposureNotAttempted: result?.exposures.rowsNotAttempted ?? 0,
       creditPlanKnown: Number(result?.outcome !== null && result?.outcome !== undefined), attributed: result?.outcome?.attributed ?? 0,
       eligible: result?.outcome?.eligible ?? 0, weightSkipped: result?.outcome?.weightSkipped ?? 0,
+      refused: result?.outcome?.refused ?? 0,
       creditProcessed: credits?.processed ?? 0, creditSkipped: credits?.skipped ?? 0, creditUnknown: credits?.rowsUnknown ?? 0, creditNotAttempted: credits?.rowsNotAttempted ?? 0,
       alarmsUnknown: (result?.exposures.alarmsUnknown ?? 0) + (credits?.alarmsUnknown ?? 0),
+      ...(refusedBySlot ? { refusedBySlot: Object.fromEntries(Object.entries(refusedBySlot)) } : {}),
     });
   } catch { /* Diagnostics must not throw or cause a retry. */ }
 }

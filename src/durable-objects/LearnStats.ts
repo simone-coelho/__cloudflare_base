@@ -55,6 +55,8 @@ const SEEN_KEY = 'learnSeen';
  * snapshot published afterwards can say what it was built from and no reader
  * mistakes post-reset counters for the tenant's whole history. Absent on an
  * object that was never repaired; charged against the object's total bound.
+ * W23 R2: the object's own `/reset` keeps it, since what is counted after that
+ * reset still stands on the repair it names.
  */
 const REBUILT_KEY = 'learnRebuilt';
 /**
@@ -338,7 +340,7 @@ export class LearnStats {
         return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed);
       }
       if (path === '/snapshot') {
-        const snapshot = await this.serialize(async () => { const d = await this.loadIfAny(); return d ? this.snapshot(d) : null; });
+        const snapshot = await this.serialize(() => this.currentSnapshot());
         return json({ ok: true, snapshot });
       }
       /**
@@ -365,17 +367,26 @@ export class LearnStats {
           try {
             const saved = await this.state.storage.get('learnFence');
             const current = await this.state.storage.get<Stored>('learn');
-            if (saved === undefined && !current?.stats?.bounded && await this.state.storage.get('learnReset') === undefined && this.env.LEDGER_RECOVERY_ENABLED !== 'true') await this.state.storage.deleteAll();
+            // W23 R2 (LANE-LOG R209): an object that carries a rebuild basis is
+            // never wiped whole, because `deleteAll` would take the basis with it.
+            if (saved === undefined && !current?.stats?.bounded && await this.state.storage.get('learnReset') === undefined
+              && await this.state.storage.get(REBUILT_KEY) === undefined && this.env.LEDGER_RECOVERY_ENABLED !== 'true') await this.state.storage.deleteAll();
             else {
               const fence = await this.fence();
               if (!Number.isSafeInteger(fence.whole + 1)) throw recovery();
               await this.state.storage.transaction(async tx => {
                 await tx.put('learnFence', { whole: fence.whole + 1, items: {} });
-                // A basis describes the repair the counters standing now were
-                // started on. These counters are going, so it goes with them
-                // rather than being carried onto evidence it never named, and
-                // so does the accumulation transition that started them (W24).
-                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(REBUILT_KEY); await tx.delete(GENERATION_KEY);
+                // The counters go, and so does the accumulation transition that
+                // started them (W24). The rebuild basis STAYS, byte for byte
+                // (W23 R2, LANE-LOG R209): a reset removes evidence and never
+                // restores any, so whatever this object counts afterwards still
+                // stands on that repair and holds none of the history before it.
+                // Dropping the basis here would let the next snapshot read as the
+                // tenant's whole history. It names the audited operation that
+                // made it, its moment, the generation it moved to then and, for a
+                // ledger rebuild, the retained day; only a later explicit reset or
+                // a ledger rebuild replaces it.
+                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(GENERATION_KEY);
               });
             }
           } finally { this.data = null; }
@@ -783,6 +794,30 @@ export class LearnStats {
     return { tenant, brand, slot, stats: emptyStats(),
       config: { reward: dials?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
         objective: dials?.objective ?? 'unit', measurementBasis: dials?.measurementBasis ?? 'served-v1' } };
+  }
+
+  /**
+   * W25 R3 (LANE-LOG R183): what this object would publish now, answered on
+   * `/snapshot` from the SAME identity and the same builder `publish()` uses.
+   *
+   * A slot that has recorded events answers from its counters, as it always did.
+   * A slot that never recorded one has no stored state, and before this it
+   * answered "nothing" even when W25 N1.01 had made it publishable on its
+   * imported prior alone — so every reader of the object's own snapshot, the
+   * monitor's sink comparison among them, saw a slot the serving path was
+   * ranking as holding no estimate. It now answers the prior-derived snapshot,
+   * under the same gate as publication: a never-written slot with nothing to
+   * publish still answers null. Nothing is written. Where the tenant's published
+   * documents cannot be read, the read fails exactly as its publication would,
+   * rather than answering a "nothing" it did not establish.
+   */
+  private async currentSnapshot(): Promise<LiftSnapshot | null> {
+    const stored = await this.loadIfAny();
+    if (stored) return this.snapshot(stored);
+    const identity = await this.priorOnlyIdentity();
+    if (!identity) return null;
+    const snap = await this.snapshot(identity);
+    return Object.keys(snap.items).length === 0 ? null : snap;
   }
 
   /**

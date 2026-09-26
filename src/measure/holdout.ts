@@ -1,12 +1,21 @@
 // src/measure/holdout.ts
 // ---------------------------------------------------------------------------
-// The incrementality number, with its uncertainty, in words a person can read.
+// The difference between two arms' rates, with its uncertainty, in words a
+// person can read.
 //
-// The day report (src/learn/report.ts) gives each holdout arm a rate: credited
+// The day report (src/learn/report.ts) gives each holdout arm a count: credited
 // outcomes over decisions. A rate on its own invites the first question any
 // data scientist asks, "is that difference real or is it the 68 people in the
 // holdout?", and the second, "how long until we know?". This module answers
 // both from the two counts per arm and nothing else. Pure; no I/O.
+//
+// WHAT IT IS NOT (W21 R3; F07 §2.1, §7(a)). Credits are not successes of one
+// Bernoulli trial per decision: one decision can be credited by several
+// outcomes (doc 22 §10), so s can exceed n. Every summary this module publishes
+// clamps s to n, and the sample-size answer refuses a "rate" above 1 instead of
+// taking the square root of a negative variance. A called difference is a
+// difference in credited outcomes per decision at the stated confidence — an
+// attribution diagnostic. The words never say the holdout is what makes it so.
 //
 // SYMBOLS, ONCE.
 //   n        decisions served on an arm
@@ -43,6 +52,7 @@ export interface Proportion {
   hi: number;
 }
 
+/** One arm as published: `n` and `s` read as numbers, and `s` clamped to `n` (never more successes than trials). */
 export interface ArmSummary extends ArmCount {
   arm: string;
   rate: Proportion;
@@ -104,7 +114,7 @@ export interface ArmComparison {
   /** (treatment − control) / control. Null when the control rate is zero. */
   relative: number | null;
   verdict: Verdict;
-  /** Decisions PER ARM at which a difference of the observed size could be called at 80% power. Null when the rates are equal. */
+  /** Decisions PER ARM at which a difference of the observed size could be called at 80% power. Null when the rates are equal or an arm is empty; never NaN. */
   neededPerArm: number | null;
   /** The confidence the intervals above are at. */
   confidence: number;
@@ -174,17 +184,34 @@ export function newcombe(a: ArmCount, b: ArmCount, z = Z95): Proportion {
 /**
  * Decisions per arm needed to call a difference of the observed size with 95%
  * confidence at 80% power, two-sided, equal arms. Null when there is no
- * difference to size, or no rate to size it against.
+ * difference to size, or no rate to size it against: an empty arm, or counts
+ * that are not a proportion — `s` above `n` (credits can exceed decisions),
+ * below zero or not a finite number. A rate above 1 has a negative variance,
+ * and its square root was the NaN a reader was once told to wait for (F07 §2.1).
  */
 export function neededPerArm(control: ArmCount, treatment: ArmCount): number | null {
-  if (control.n === 0 || treatment.n === 0) return null;
-  const pc = control.s / control.n;
-  const pt = treatment.s / treatment.n;
+  const pc = proportionOf(control), pt = proportionOf(treatment);
+  if (pc === null || pt === null) return null;
   const delta = Math.abs(pt - pc);
   if (delta === 0) return null;
   const pBar = (pc + pt) / 2;
   const term = Z95 * Math.sqrt(2 * pBar * (1 - pBar)) + Z80_POWER * Math.sqrt(pc * (1 - pc) + pt * (1 - pt));
-  return Math.ceil((term * term) / (delta * delta));
+  const needed = Math.ceil((term * term) / (delta * delta));
+  return Number.isFinite(needed) && needed > 0 ? needed : null;
+}
+
+/** s / n where the two counts are a proportion — n above zero, s from zero to n — else null. */
+function proportionOf(arm: ArmCount): number | null {
+  const n = arm?.n, s = arm?.s;
+  if (typeof n !== 'number' || typeof s !== 'number' || !Number.isFinite(n) || !Number.isFinite(s) || n <= 0 || s < 0 || s > n) return null;
+  return s / n;
+}
+
+/** An arm as published: finite, non-negative, and never more credited decisions than decisions (F07 §7(a)). */
+function summarize(arm: ArmCount & { arm?: string }, fallback: string, z: number): ArmSummary {
+  const n = Math.max(0, finite(arm.n));
+  const s = Math.min(n, Math.max(0, finite(arm.s)));
+  return { arm: arm.arm ?? fallback, n, s, rate: wilson(s, n, z) };
 }
 
 /** Sum counts across days, or across slots, so a holdout can be read cumulatively. */
@@ -282,8 +309,13 @@ function targetWords(r: TargetReading, controlRate: number): string {
  * `no_learning` against `personalized` isolates what learning adds on top.
  *
  * Intervals at `confidence` (default 95 %), the same difference at the other
- * everyday level beside it, and the reading against the pre-set targets
- * (Tapestry's by default; null to switch off).
+ * everyday level beside it, and the reading against the caller's own pre-set
+ * targets (none supplied is read as no published target; null switches the
+ * reading off).
+ *
+ * Both arms are summarized with `s` clamped to `n`, and every number below —
+ * the intervals, the ratio, the sample size and the words — is computed from
+ * those summaries, so what is published is one consistent set of counts.
  */
 export function compareArms(
   control: ArmCount & { arm?: string },
@@ -298,8 +330,8 @@ export function compareArms(
   const targets = options.targets === undefined ? null : options.targets;
   const reading = options.targets === null ? undefined : true;
 
-  const c: ArmSummary = { arm: control.arm ?? 'default', n: Math.max(0, finite(control.n)), s: Math.max(0, finite(control.s)), rate: wilson(control.s, control.n, z) };
-  const t: ArmSummary = { arm: treatment.arm ?? 'personalized', n: Math.max(0, finite(treatment.n)), s: Math.max(0, finite(treatment.s)), rate: wilson(treatment.s, treatment.n, z) };
+  const c = summarize(control, 'default', z);
+  const t = summarize(treatment, 'personalized', z);
   const difference = newcombe(t, c, z);
   // The point ratio comes from the RAW rates, never from the rounded ones the
   // interval is reported at: at a small control rate that rounding is the whole
@@ -331,7 +363,9 @@ export function compareArms(
           : `not yet distinguishable from zero; a difference this size needs about ${fmt(needed)} decisions on each arm to call, and the smaller arm has ${fmt(Math.min(c.n, t.n))}.`;
       words = `${head}; ${range}, so ${tail}${also}`;
     } else {
-      words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better, and the holdout is the reason we can say so.${also}`;
+      // W21 R3 (F07 §7(a)): what the interval shows, and nothing it does not —
+      // a difference in credited outcomes per decision at this confidence.
+      words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better on credited outcomes per decision.${also}`;
     }
     if (read) words += ` ${targetWords(read, c.rate.p).replace(/^./, (ch) => ch.toUpperCase())}.`;
   }

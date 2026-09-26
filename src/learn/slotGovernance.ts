@@ -99,7 +99,12 @@ export interface SlotGovernanceView extends TenantSlotGovernance {
  * horizon than the one the answer states, and the answer always states it.
  */
 export const SLOT_GOVERNANCE_HORIZON_MS = 30 * 86_400_000;
-/** As many slots as the operator slots page joins evidence for. */
+/**
+ * The most slots one tenant's document counts for within a horizon: the first
+ * 200 distinct slots that refuse or fall short are counted, and an occurrence of
+ * a further slot is not. The operator slots page joins a block onto every slot it
+ * lists, so such a slot reads as zero until the horizon restarts.
+ */
 const MAX_SLOTS = 200;
 /** Distinct pins named per slot; the count keeps counting past it. */
 const MAX_PINS_PER_SLOT = 10;
@@ -178,17 +183,27 @@ async function loadDocument(env: Pick<Env, 'CACHE'>, tenant: string, now: number
 }
 
 /**
- * What an operator surface reports for this tenant. A slot that is absent from
- * the document has zero occurrences, not an absent block, so the caller fills
- * every slot it lists with `emptySlotGovernance(view.since)`.
+ * What an operator surface reports for this tenant, or `null` when the counter
+ * store could not be read (W20 R4). A slot that is absent from a document that
+ * WAS read has zero occurrences, not an absent block, so the caller fills every
+ * slot it lists with `emptySlotGovernance(view.since)`; a store that could not
+ * be read observed nothing, and the caller says so instead of stating zeros —
+ * the operator slots page names the outage on every block, and the monitor
+ * drops its member.
  *
- * Never throws: an unreadable store answers zeros at a horizon of now, and the
- * caller that needs to distinguish that (the monitor) passes `strict`.
+ * Never throws.
+ */
+export async function observeSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<SlotGovernanceView | null> {
+  try { return viewOf(await loadDocument(env, tenant, now), now); } catch { return null; }
+}
+
+/**
+ * The counts alone, for a caller that has no outage to report: an unreadable
+ * store reads as zeros at a horizon of now. No operator surface uses this —
+ * they read `observeSlotGovernance`, which tells the two apart.
  */
 export async function readSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<SlotGovernanceView> {
-  let document: StoredDocument | null = null;
-  try { document = await loadDocument(env, tenant, now); } catch { document = null; }
-  return viewOf(document, now);
+  return await observeSlotGovernance(env, tenant, now) ?? viewOf(null, now);
 }
 
 function viewOf(document: StoredDocument | null, now: number): SlotGovernanceView {
@@ -212,10 +227,8 @@ function viewOf(document: StoredDocument | null, now: number): SlotGovernanceVie
  * monitor result never states a zero it did not observe.
  */
 export async function tenantSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<TenantSlotGovernance | undefined> {
-  try {
-    const view = viewOf(await loadDocument(env, tenant, now), now);
-    return { since: view.since, scope: view.scope, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount };
-  } catch { return undefined; }
+  const view = await observeSlotGovernance(env, tenant, now);
+  return view ? { since: view.since, scope: view.scope, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount } : undefined;
 }
 
 /**

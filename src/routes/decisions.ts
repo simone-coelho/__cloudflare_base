@@ -30,16 +30,17 @@ import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
 import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
-import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
+import { PRIORS_KIND } from '@/learn/priors';
 import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
 /** W22 D1.03: conflicts one read may file before it answers with the last of them. */
 const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
-import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
+import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
@@ -79,6 +80,24 @@ async function publishedProposals(c: { env: Env }, tenant: string): Promise<Prop
   const set = await pin;
   const published = Object.values(set.refs).some(ref => ref.kind === PROPOSALS_KIND.name && ref.scope === tenant);
   return published ? readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant) : { proposals: [] };
+}
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document, from the same
+ * pin as the learn document the report is built under, as the priors input of
+ * the day report (`reportPriors`). Absence and unreadability are kept apart the
+ * way `publishedProposals` keeps them: only the set's own statement that the
+ * tenant publishes no prior document answers "no priors", and the report then
+ * builds its grids prior-free and declares `applied: false`. A storage or
+ * authority failure refuses the build, exactly as the learn read beside it does,
+ * so no report is ever built prior-free because a read failed.
+ */
+async function publishedReportPriors(c: { env: Env }, tenant: string, learn: LearnConfig): Promise<ReportPriors | null> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === PRIORS_KIND.name && ref.scope === tenant)) return null;
+  const revision = await readPinnedPublication(c.env, PRIORS_KIND, tenant, set);
+  return reportPriors(revision.value, revision.revision, learn);
 }
 /**
  * The decisions an outcome credits, with the provenance each of them was
@@ -248,10 +267,33 @@ decisionRoutes.get('/:tenant/brands', operatorWrites(), async (c) => {
 });
 
 /**
+ * W20 R4: the `governance` block of one slot on the operator slots page, in the
+ * one word the advisory pin channel already uses for the same fact (`status`,
+ * `slot-pin-diagnostics/v1`). `available` carries the counts the counter store
+ * answered — zero reported as zero; `unavailable` says the store could not be
+ * read and states no count and no horizon, because a zero there would be a zero
+ * nobody observed. The engine's own `SlotGovernance` stays numeric: the outage is
+ * a fact about this read, so its variant is typed here, where the read is made.
+ */
+type AvailableSlotGovernance = { status: 'available' } & SlotGovernance;
+interface UnavailableSlotGovernance {
+  status: 'unavailable';
+  since: null;
+  scope: SlotGovernanceScope;
+  refusedPinCount: null;
+  refusedPins: null;
+  shortTakeCount: null;
+  shortTakePositions: null;
+}
+type SlotRow = Omit<SlotIndexEntry, 'governance'> & { governance?: AvailableSlotGovernance | UnavailableSlotGovernance };
+const UNAVAILABLE_GOVERNANCE: UnavailableSlotGovernance = { status: 'unavailable', since: null, scope: SLOT_GOVERNANCE_SCOPE,
+  refusedPinCount: null, refusedPins: null, shortTakeCount: null, shortTakePositions: null };
+
+/**
  * GET /v1/:tenant/learn/slots?brand=&q=&evidence=1 (doc 28 §4): every slot on every page, grouped by
  * page, with what is configured on it and how many pieces are eligible now; `q` narrows by slot or
  * page name; `evidence=1` adds what each slot has learned so far (items, events, when published),
- * for up to 200 slots. The application's picker and its overview.
+ * for up to 200 slots, and every slot's `governance` block. The application's picker and its overview.
  */
 decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -261,30 +303,43 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const now = Date.now();
   const [slots, catalog, learn] = await Promise.all([readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
   const index = slotsIndex(slots, catalog, learn, now, q);
+  let pages: Array<{ page: string; slots: Array<SlotIndexEntry | SlotRow> }> = index.pages;
   if (c.req.query('evidence') === '1') {
     // W20 G2 (R83, R86(a)): beside what each slot has LEARNED, what the decision
     // path REFUSED for it — the dead pins and the pinned slots that could not
     // fill their take, per slot, since the horizon the block states. One read of
-    // one tenant document, joined under the same flag and the same budget as the
-    // evidence it sits next to, and never silent: a slot with nothing to report
-    // carries zeros, not an absent member.
-    const governance = await readSlotGovernance(c.env, tenant, now);
+    // one tenant document, and never silent: a slot with nothing to report
+    // carries zeros, not an absent member, and a store that could not be read is
+    // named on every block (R4) rather than reported as zeros.
+    const governance = await observeSlotGovernance(c.env, tenant, now);
+    const governanceOf = (slot: string): AvailableSlotGovernance | UnavailableSlotGovernance => governance
+      ? { status: 'available', ...(governance.bySlot.get(slot) ?? emptySlotGovernance(governance.since)) }
+      : { ...UNAVAILABLE_GOVERNANCE };
     // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
     // for an item it does not carry is not counted as something the slot has
     // learned about. The catalogue is the one this answer already read.
     const catalogue = new Set(catalog.pieces.map((p) => p.id));
+    // The 200-slot budget bounds the per-slot `evidence` reads, one store read
+    // each. The governance block is already in memory from the one read above, so
+    // it is joined onto EVERY row, the rows past the budget included (W20 R3).
     let budget = 200;
-    for (const page of index.pages) for (const s of page.slots) {
-      if (budget-- <= 0) { s.evidence = null; continue; }
-      s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
-      try {
-        const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = slotEvidence(snap, catalogue);
-      } catch { s.evidence = null; }
+    pages = [];
+    for (const page of index.pages) {
+      const rows: SlotRow[] = [];
+      for (const s of page.slots) {
+        const row: SlotRow = { ...s, governance: governanceOf(s.slot) };
+        rows.push(row);
+        if (budget-- <= 0) { row.evidence = null; continue; }
+        try {
+          const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
+          row.evidence = slotEvidence(snap, catalogue);
+        } catch { row.evidence = null; }
+      }
+      pages.push({ page: page.page, slots: rows });
     }
   }
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages: index.pages });
+  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages });
 });
 
 /**
@@ -1179,6 +1234,9 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     }
     const learn = await readConfig<LearnConfig>(c, LEARN_KIND, tenant);
     for (const policy of defaultWindows) policy.windowsMs = learn.policy?.windowsMs ?? {};
+    // W25 R4: a day built from the ledger records builds its grids with the
+    // tenant's prior document, as the live table does, and says which revision.
+    const priors = await publishedReportPriors(c, tenant, learn);
     // Doc 31 §3: the day is the sum of its hour aggregates; only custom policies, or a day from before the
     // fold existed, are computed from the records, and such a day must be one a request can read.
     //
@@ -1193,7 +1251,7 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     let report: Awaited<ReturnType<typeof runDayReport>> | null = null, conflict: ReportRowConflict | null = null;
     for (let attempt = 0; attempt <= REPORT_CONFLICTS; attempt++) {
       try {
-        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env, resolved);
+        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS, priors }, c.env, resolved);
         conflict = null; break;
       } catch (error) {
         if (!(error instanceof ReportRowConflict)) throw error;
