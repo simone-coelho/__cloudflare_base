@@ -631,9 +631,10 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     out.code = 'complete';
     if (!records.length) return out;
     out.code = 'config';
-    const scoped = pageScoped ?? await pageScopedSlotsOf(env, tenant);
     // W26 R2: one destination per PLACEMENT — the slot, and its page where the
-    // catalogue carries the slot name on more than one page.
+    // catalogue carries the slot name on more than one page. Only a set that
+    // reaches the statistics at all needs the catalogue.
+    const scoped = pageScoped ?? (records.some(r => r.arm === 'personalized') ? await pageScopedSlotsOf(env, tenant) : new Set<string>());
     const bySlot = new Map<string, { slot: string; page?: string; rows: DecisionRecord[] }>();
     // Holdout decisions remain in the ring, never the personalized statistics.
     for (const r of records) if (r.arm === 'personalized') {

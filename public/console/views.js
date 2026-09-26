@@ -288,7 +288,7 @@
     // lift corrects for: nothing, today — neither the position a piece was shown
     // at nor the placement it was shown in.
     const head = ['item', 'your_id', 'title', 'context', 'measurement_basis', 'objective', 'exposures_n', 'weighted_credit_s', 'credit_per_exposure_p_hat', 'slot_credit_per_exposure_p0', 'lift', 'prior_strength_n0', 'evidence', 'held', 'correction'];
-    const out = [head, ...rows.map((r) => [r.item, r.customer_item_id || '', r.title || '', r.key, r.measurementBasis || 'served-v1', r.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.control || '', correctionOf(r)])];
+    const out = [head, ...rows.map((r) => [r.item, r.customer_item_id || '', r.title || '', r.key, r.measurementBasis || 'served-v1', r.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.control || '', r.correction || 'uncorrected-v1'])];
     download(`lift-${S.scope}-${S.slot}${item ? `-${item}` : ''}.csv`, csv(out));
   }
 

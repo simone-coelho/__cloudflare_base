@@ -1077,11 +1077,12 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
-  // W26 R2: a statistics object is addressed by its placement.
-  const placement = kind === 'stats' ? placementOf(await publishedSlotPages(c, tenant), b.slot as string, b.page as string | undefined) : { ok: true as const };
-  if (!placement.ok) return c.json(placementRefusal(placement), 400);
-  if (kind === 'stats') { if (placement.page) b.page = placement.page; else delete b.page; }
-  const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string, placement.page) : ringName(tenant, b.visitorId as string);
+  // W26 R2: recovery addresses one statistics OBJECT exactly, as it always has:
+  // `page` names a page-scoped placement's object, and without it the target is
+  // the page-less object — which, for a slot name a retained catalogue carries
+  // on more than one page, is the object its pages pooled into before W26 R2
+  // and is still a legitimate target to inspect or repair.
+  const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string, b.page as string | undefined) : ringName(tenant, b.visitorId as string);
   return auditedLearningRecovery(c, tenant, operation, kind, target,
     operation === 'repair' ? { digest: b.digest as string, generation: b.generation as number } : {}, async () => {
       const ns = kind === 'stats' ? c.env.LEARN_STATS : c.env.DECISION_RING;
