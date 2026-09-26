@@ -653,7 +653,7 @@ function outcomeRecord(input: { visitor: string; ts: number; type: string; item:
 type SeededDecision = Omit<DecisionRecord, 'experiment'> & { experiment?: SnapshotAnswer['experiment'] };
 type SeededOutcome = ReturnType<typeof outcomeRecord> & { experiment?: SnapshotAnswer['experiment']; decision_id?: string };
 async function seedLedgerDay(m: Mounted, date: string, decisions: SeededDecision[], outcomes: SeededOutcome[]): Promise<void> {
-  const stamp = <T extends { ts: number }>(row: T) => ({ ...row, retention: captureRetention(m.env, TENANT, row.ts) });
+  const admittedAt = Date.now(), stamp = <T extends { ts: number }>(row: T) => ({ ...row, retention: captureRetention(m.env, TENANT, row.ts, admittedAt) }); // A50: one clock read stamps every delivery, so a millisecond tick cannot make two deliveries of one row differ in retention.
   const bodies: unknown[] = [];
   if (decisions.length) bodies.push({ kind: 'ledger', type: 'decisions', version: 1, records: decisions.map(stamp) });
   for (const outcome of outcomes) bodies.push({ kind: 'ledger', type: 'outcome', version: 1, record: stamp(outcome) });

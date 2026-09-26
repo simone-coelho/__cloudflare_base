@@ -1754,7 +1754,7 @@
         {
           "id": "R2",
           "kind": "LOCAL",
-          "observable": "page is part of the storage identity for a slot name used on more than one page, so a retained catalogue with a cross-page duplicate never pools silently, and serving, the operator lift reads, the monitor, recovery and the managed exposure path read the page-separated object; single-page names keep their names (LANE-LOG R198).",
+          "observable": "page is part of the storage identity for a slot name used on more than one page, so a retained catalogue with a cross-page duplicate never pools silently, and serving, the operator lift reads, the monitor, recovery, the managed exposure path, the synthetic monitor and the decision replay read the page-separated object and its archive; single-page names keep their names (LANE-LOG R198; amendment A49).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1814,7 +1814,8 @@
         }
       ],
       "remainingWork": [
-        "R2–R5: the later W26 unit of LANE-LOG R198."
+        "R2–R5: the later W26 unit of LANE-LOG R198.",
+        "A49: the synthetic monitor (src/ops/synthetic.ts about :88 and :623) and the decision replay (src/learn/replay.ts about :98) follow the page for a cross-page slot name."
       ],
       "decisions": [
         {
@@ -1829,6 +1830,12 @@
           "authorityRef": "units.json W26.P1.01; HANDOFF-2026-09-18 §8 D04 D09",
           "effect": "Locally the platform names its basis, states its non-correction and counts legacy credits apart.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A47–A50 on 2026-09-26 (\"approved\"), row A49",
+          "effect": "W26 fixes the two regressions its page-separated storage causes outside its first write boundary: the synthetic monitor and the decision replay."
         }
       ],
       "deferredLiveAcceptance": [
@@ -1855,6 +1862,8 @@
         "src/content/service.ts",
         "src/routes/decisions.ts",
         "src/ops/monitor.ts",
+        "src/ops/synthetic.ts",
+        "src/learn/replay.ts",
         "src/ledger/recovery.ts",
         "src/sdk/core.ts",
         "src/sdk/emit.ts",
@@ -1872,7 +1881,7 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "3587d98e137b726ed22a547874a56824bde2ad13 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column), with the two time-of-day anchors corrected at ad80567 (LEDGER) and 3587d98 (B1 R1.01), arrangement only",
+        "reviewedRevision": "88b129b979e5fe128ea9b7f15ef25d0bfee4d719 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column), the time-of-day anchors corrected at ad80567 and 3587d98, and the amendment-A49 legs unit:W26.R2.synthetic and unit:W26.R2.replay added at 88b129b",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
@@ -1880,7 +1889,9 @@
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/REPORT-a49.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT-a49.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W26-negative-control.log",
@@ -1888,7 +1899,10 @@
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-uncredited-uncorrelated.log",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-acceptance.log",
           "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/negative-control.log",
-          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-3.log"
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-3.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-4.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/bac-legs-a49.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/fixwide-synthetic-a49.log"
         ]
       },
       "doneWhen": [
@@ -2447,6 +2461,18 @@
           "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A46), or for a screen sentence the reviewer reading it, passes at the artifact revision."
         },
         {
+          "id": "P1",
+          "kind": "LOCAL",
+          "observable": "A later-hour carry-in outcome is placed on the arm of the decision that carried it in, so a folded day answers visitorOutcomes whenever the raw day does (amendment A47).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A47) passes at the artifact revision."
+        },
+        {
+          "id": "E1",
+          "kind": "LOCAL",
+          "observable": "When the attribution ring has evicted a visitor's earlier decision, a purchase made before consent is never folded under an arm: the fold flags or corrects it, and the kit sentence on it in docs/kit/03-payload-schemas.md is true (amendment A48).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A48), or for the kit sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
           "observable": "The released artifact shows the behavior of every LOCAL criterion on the deployed hosts.",
@@ -2481,7 +2507,9 @@
       ],
       "remainingWork": [
         "L1: starting from the W30-B1 build (1c4d153 on rem/w30-b1-build) merged with the integration head, republish a date whose late row reaches a final hour past the re-fold horizon (src/learn/hourly.ts: staleHour records lateObjects around lines 1946-1947 and 2033; catchUp republishes only dates built in the same run around lines 2067 and 2071).",
-        "S1: correct the repaired wording in public/console/views-measure.js (around line 129) and public/learning.js (around line 414) to match maturityOf (src/learn/hourly.ts around lines 1213-1215) and kit 02."
+        "S1: correct the repaired wording in public/console/views-measure.js (around line 129) and public/learning.js (around line 414) to match maturityOf (src/learn/hourly.ts around lines 1213-1215) and kit 02.",
+        "P1: place a later-hour carry-in outcome on the arm of the decision that carried it in, so the folded day answers visitorOutcomes whenever the raw day does (amendment A47; W21 delivery review residual 1).",
+        "E1: flag or correct the fold when the ring has evicted a visitor's earlier decision, so a pre-consent purchase never folds under an arm, and make the kit 03 sentence true (amendment A48; W21 delivery review residual 2, src/learn/hourly.ts about :750-751)."
       ],
       "decisions": [
         {
@@ -2502,6 +2530,12 @@
           "status": "RESOLVED",
           "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), row A46",
           "effect": "The W30 adoption failed on two defects; W30 is delivered as an implementation ticket in its place after W29, from the W30-B1 build merged with the integration head, within the W30-B1 write grant."
+        },
+        {
+          "id": "D4",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A47–A50 on 2026-09-26 (\"approved\"), rows A47 and A48",
+          "effect": "W30 also places later-hour carry-in outcomes and flags or corrects ring-eviction misattribution, both found by the W21 delivery review."
         }
       ],
       "deferredLiveAcceptance": [
