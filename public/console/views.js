@@ -282,6 +282,31 @@
   }
 
   // ══════════════════════════════════════════════════════════ Slots ══════════
+  /** The day a horizon starts: the counts run over days, so the time of day adds nothing. */
+  const day = (ms) => (Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '');
+  /**
+   * W20 R2: the slot's `governance` block from the operator slots page — what the
+   * decision path refused for it since the horizon the block states. The pins
+   * refused, how often and why (the runtime reason word), and, for a pinned slot,
+   * the times it fell short of its take with the positions left empty. A block
+   * whose counter store could not be read says so and shows no count; a slot
+   * that refused nothing says that, rather than an empty cell.
+   */
+  function governanceCell(g) {
+    if (g === undefined || g === null) return 'not asked';
+    if (g.status === 'unavailable') return h('span', { class: 'sub' }, 'counts unavailable: the counter store could not be read');
+    const refused = Number.isFinite(g.refusedPinCount) ? g.refusedPinCount : 0;
+    const short = Number.isFinite(g.shortTakeCount) ? g.shortTakeCount : 0;
+    const pins = Array.isArray(g.refusedPins) ? g.refusedPins : [];
+    const named = pins.reduce((n, p) => n + (Number.isFinite(p.count) ? p.count : 0), 0);
+    return h('div', {},
+      h('div', {}, refused ? `${plural(refused, 'pin refusal')}` : 'no pin refused'),
+      ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, ${words(p.reason)}`)),
+      refused > named ? h('div', { class: 'itemid' }, `${plural(refused - named, 'more refusal')} not named`) : null,
+      h('div', {}, short ? `${plural(short, 'short take')}, ${plural(g.shortTakePositions, 'position')} left empty` : 'no short take'),
+      day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
+  }
+
   C.view({
     id: 'slots', group: 'This brand', title: 'Slots', heading: 'Every slot, and what is set on it',
     hint: 'A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server.',
@@ -305,6 +330,7 @@
           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),
           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'
             : `${plural(s.evidence.items, 'piece')}, ${plural(Math.round(s.evidence.events), 'event')}`),
+          h('td', {}, governanceCell(s.governance)),
         ));
         host.append(card(`${page.page} · ${plural(page.slots.length, 'slot')}`, null,
           C.table([
@@ -319,6 +345,7 @@
             { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
             { key: 'evidence', label: 'Learned so far' },
+            { key: 'governance', label: 'Refused or short', title: 'Pins the decision path refused for this slot, and the times a pinned slot served fewer pieces than it shows, since the date given. Counted once for the whole tenant, across every brand of it; a floor, never an overcount' },
           ], body)));
       }
     },
