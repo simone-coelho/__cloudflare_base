@@ -24,7 +24,7 @@ import type { DecisionRecord } from '@/content/types';
 import { isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
 import { validCarrier, DELIVERY_FIELD } from '@/ledger/delivery';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { identityPage, liftArchiveKey, liftKey, placementSlot, ringName, statsName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, placementSlot, ringName, statsName } from '@/learn/fan';
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
@@ -112,9 +112,6 @@ async function publishedSlotPages(c: { env: Env }, tenant: string): Promise<Map<
   if (!Object.values(set.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === tenant)) return new Map();
   return slotPagesOf(await readConfig<SlotCatalog>(c, SLOTS_KIND, tenant));
 }
-/** W26 R2: the page-scoped slot names of that catalogue — the names carried on more than one page. */
-const scopedOf = (pages: ReadonlyMap<string, string[]>): ReadonlySet<string> =>
-  new Set([...pages].filter(([, on]) => on.length > 1).map(([slot]) => slot));
 /**
  * W26 R2: the placement an operator request addresses. `page` is the decision
  * request's own member name. For a slot name the catalogue carries on more than

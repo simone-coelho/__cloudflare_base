@@ -43,7 +43,7 @@ One script, served from the platform host we give you. No dependencies.
 <script>
   const client = EdgePersonalization.createClient({
     tenant: 'coach',                       // the brand scope decisions are made for
-    brand: 'coach',                        // recorded on every decision
+    brand: 'coach',                        // recorded on every decision, sent as data.brand on every event
     endpoint: 'https://<platform-host>',   // omit when the platform is on your own hostname
     sdkKey: '<your site key>',             // identifies the site; not a secret
     source: 'coach-web',                   // names your integration on every event
@@ -266,7 +266,7 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | Option | Default | Meaning |
 |---|---|---|
 | `tenant` | required | The brand scope decisions are made for |
-| `brand` | tenant | Recorded on every decision |
+| `brand` | tenant | Recorded on every decision, and sent as `data.brand` on every action the client sends, whatever its type — the configured value, never a `brand` a page or tag layer put on the event — so an outcome is measured in the brand its exposure was counted in. A client configured without one sends none, and the platform measures the tenant's own brand |
 | `endpoint` | page origin | Platform base URL |
 | `sdkKey` | none | Sent on every request; enforced on staging and production |
 | `source` | `sdk` | Names the caller on every event |
