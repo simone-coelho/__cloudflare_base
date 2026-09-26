@@ -19,7 +19,7 @@ import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 import { effectiveExploration, type ExploreMode } from './explore';
-import type { PriorIndex } from './priors';
+import { indexPriors, priorCapacityExceeded, type PriorIndex, type PriorsDoc } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -600,6 +600,33 @@ export interface ReportInput {
    * leaving a reader to discover it by comparing numbers.
    */
   priors?: { version: number; index: PriorIndex | ((slot: string) => PriorIndex | null | undefined) } | null;
+}
+
+/** The priors input of `buildReport`, as a production caller hands it over. */
+export type ReportPriors = NonNullable<ReportInput['priors']>;
+
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document as the input
+ * `buildReport` takes, resolved per slot under the tenant's own learn document —
+ * the index the statistics object would build for that slot, read the way
+ * `LearnStats` reads it (`indexPriors` under the slot's measurement basis).
+ *
+ * A slot whose objective is `revenue` or `margin` gets no index: an imported
+ * prior is a probability, the statistics object refuses to publish such a slot
+ * rather than apply one in the wrong unit (W25 Z1.01), and the offline grid does
+ * not do what the live table refuses to — its grid is built prior-free and says
+ * so (`priorVersion: 0` on that grid). A document past the bound every reader
+ * indexes within is refused here, before any grid is built, rather than read as
+ * no prior at all.
+ */
+export function reportPriors(doc: PriorsDoc, version: number, learn: LearnConfig): ReportPriors {
+  if (priorCapacityExceeded(doc) || !Number.isSafeInteger(version) || version < 0) throw new ReportUnavailableError();
+  const configs = slotConfigsOf(learn);
+  return { version, index: (slot: string) => {
+    const config = configs[slot];
+    if ((config?.objective ?? 'unit') !== 'unit') return null;
+    return indexPriors(doc, slot, config?.measurementBasis ?? 'served-v1');
+  } };
 }
 
 /** The prior index in force for one slot, or null where the grid is prior-free. */
@@ -1318,6 +1345,13 @@ export async function runReport(
   now = Date.now(),
   retentionEnv?: RetentionEnv,
   resolved?: ResolvedConflicts,
+  /**
+   * W25 R4: the tenant's published prior document (`reportPriors`), so a day
+   * built from the ledger records builds its grids the way the live table does
+   * and its `gridPriors` declares the revision it applied. Absent, the grids are
+   * built prior-free and the report declares that instead.
+   */
+  priors?: ReportPriors | null,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
@@ -1345,7 +1379,7 @@ export async function runReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes, ...(resolved ? { resolved } : {}),
+    decisions, outcomes, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };

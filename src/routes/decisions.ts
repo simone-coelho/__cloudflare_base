@@ -30,7 +30,8 @@ import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
 import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
-import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
+import { PRIORS_KIND } from '@/learn/priors';
 import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
 /** W22 D1.03: conflicts one read may file before it answers with the last of them. */
 const REPORT_CONFLICTS = 8;
@@ -79,6 +80,24 @@ async function publishedProposals(c: { env: Env }, tenant: string): Promise<Prop
   const set = await pin;
   const published = Object.values(set.refs).some(ref => ref.kind === PROPOSALS_KIND.name && ref.scope === tenant);
   return published ? readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant) : { proposals: [] };
+}
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document, from the same
+ * pin as the learn document the report is built under, as the priors input of
+ * the day report (`reportPriors`). Absence and unreadability are kept apart the
+ * way `publishedProposals` keeps them: only the set's own statement that the
+ * tenant publishes no prior document answers "no priors", and the report then
+ * builds its grids prior-free and declares `applied: false`. A storage or
+ * authority failure refuses the build, exactly as the learn read beside it does,
+ * so no report is ever built prior-free because a read failed.
+ */
+async function publishedReportPriors(c: { env: Env }, tenant: string, learn: LearnConfig): Promise<ReportPriors | null> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === PRIORS_KIND.name && ref.scope === tenant)) return null;
+  const revision = await readPinnedPublication(c.env, PRIORS_KIND, tenant, set);
+  return reportPriors(revision.value, revision.revision, learn);
 }
 /**
  * The decisions an outcome credits, with the provenance each of them was
@@ -1215,6 +1234,9 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     }
     const learn = await readConfig<LearnConfig>(c, LEARN_KIND, tenant);
     for (const policy of defaultWindows) policy.windowsMs = learn.policy?.windowsMs ?? {};
+    // W25 R4: a day built from the ledger records builds its grids with the
+    // tenant's prior document, as the live table does, and says which revision.
+    const priors = await publishedReportPriors(c, tenant, learn);
     // Doc 31 §3: the day is the sum of its hour aggregates; only custom policies, or a day from before the
     // fold existed, are computed from the records, and such a day must be one a request can read.
     //
@@ -1229,7 +1251,7 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     let report: Awaited<ReturnType<typeof runDayReport>> | null = null, conflict: ReportRowConflict | null = null;
     for (let attempt = 0; attempt <= REPORT_CONFLICTS; attempt++) {
       try {
-        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env, resolved);
+        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS, priors }, c.env, resolved);
         conflict = null; break;
       } catch (error) {
         if (!(error instanceof ReportRowConflict)) throw error;
