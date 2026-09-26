@@ -1872,19 +1872,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "f41b4ca5fbcf580c5a633ace82f21b7b4f4622f7 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column)",
+        "reviewedRevision": "3587d98e137b726ed22a547874a56824bde2ad13 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column), with the two time-of-day anchors corrected at ad80567 (LEDGER) and 3587d98 (B1 R1.01), arrangement only",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W26-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-split-writes.log",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-uncredited-uncorrelated.log",
-          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-acceptance.log"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/negative-control.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-3.log"
         ]
       },
       "doneWhen": [
