@@ -863,3 +863,215 @@ describe('unit:W26.R5', () => {
     } finally { w.close(); }
   });
 });
+
+// ===========================================================================
+// unit:W26.R2.synthetic and unit:W26.R2.replay — amendment A49 (owner,
+// 2026-09-26): R2's readers of the page-separated object now include "the
+// synthetic monitor and the decision replay … and its archive". The W26
+// delivery review (/home/simonecoelho/rem/_evidence/W26-delivery/reviewer/
+// REPORT.md, regressions (b) and (c)) found both still naming the page-less
+// object: the synthetic monitor's fence and observation (`src/ops/synthetic.ts`
+// about :88 `names` and about :623 `observe`) and the replay's archive read
+// (`src/learn/replay.ts` about :98 `replayDeps`). Same retained cross-page
+// catalogue and harness as the legs above; what only these legs need is
+// imported where it is used, so no line above moves.
+// ===========================================================================
+
+/**
+ * The tenant's internal synthetic monitor, configured over this harness the way
+ * the native W12.02 suite configures it (src/index.api-boundary.test.ts:1260):
+ * the telemetry descriptor with its nine isolated destinations, their retention
+ * policies, the recovery queues, and a region-trend binding. The source queue
+ * delivers each synthetic envelope to the worker's own synthetic consumer
+ * (`consumeSynthetic`, the first thing `src/index.ts:328` runs for a message)
+ * in its own invocation, after the producer's send has returned, as a queue
+ * does. Every statistics object a synthetic operation addresses is read off the
+ * signed native call on the binding (`SYNTHETIC_HEADER`, whose `name` is the
+ * object the fence admitted), and the first call that addresses `probe.admitted`
+ * is also presented, unchanged, to a fresh object boundary
+ * (`SyntheticObjectBoundary`, as each native class installs it) whose work asks
+ * the operation's own fence for each name of `probe.names`.
+ */
+async function armSyntheticMonitor(m: Mounted, probe: { admitted: string; names: string[] }) {
+  const [{ configuredOperationalDestinations, SYNTHETIC_BINDINGS }, { consumeSynthetic, SyntheticObjectBoundary, SYNTHETIC_HEADER, SYNTHETIC_KIND }, { AsyncResource }] =
+    await Promise.all([import('@/connectors/config'), import('@/ops/synthetic'), import('node:async_hooks')]);
+  const env = m.env as unknown as Record<string, unknown>;
+  const destinations = SYNTHETIC_BINDINGS.map(binding => ({ binding, purpose: 'isolated-synthetic-monitor', namespace: 'ops-synthetic-v1', accessPolicy: 'w26-local-only' }));
+  env.TENANT_CONNECTORS = JSON.stringify({ version: 1, tenants: { [TENANT]: { telemetry: { environment: 'test', schema: 'ops-v1', synthetic: {
+    version: 1, enabled: true, lifetimeMs: 120_000, stageMs: 10_000, decisionMs: 200, eventMs: 300, thresholdSource: 'document-32-server-diagnostics', destinations } } } } });
+  const retention = JSON.parse(m.env.RETENTION as string) as { tenants: Record<string, Record<string, unknown>> };
+  for (const destination of await configuredOperationalDestinations(m.env, TENANT)) retention.tenants[TENANT]![destination.category] =
+    { id: 'w26-ledger-synthetic', revision: 1, durationMs: 120_000, basis: 'occurred', renewal: 'new-record-only' };
+  env.RETENTION = JSON.stringify(retention);
+  env.LEDGER_RECOVERY_ENABLED = 'true';
+  env.LEDGER_RECOVERY_CONFIG = JSON.stringify({ version: 1, sourceQueue: 'w26-ledger-source', deadLetterQueue: 'w26-ledger-dlq' });
+  env.REGION_TREND = { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ ok: true }) }) };
+  // A queue delivers in its own invocation, never inside the producer's: the
+  // consumer (and the fence probe below) are bound to this, the test's, async
+  // context, so no owner operation the producer ran in is inherited.
+  const deliver = AsyncResource.bind((body: unknown) => consumeSynthetic(m.env, 'w26-ledger-source', body));
+  const deliveries: Promise<unknown>[] = [], refused: string[] = [], queue = m.env.EVENT_QUEUE!;
+  const send = async (body: unknown) => {
+    await queue.send(body);
+    if ((body as { kind?: unknown } | null)?.kind === SYNTHETIC_KIND) {
+      deliveries.push(new Promise(resolve => setTimeout(resolve, 0)).then(() => deliver(body))
+        .then(acked => { if (!acked) refused.push('not acknowledged'); }, error => { refused.push(String(error)); }));
+    }
+  };
+  env.EVENT_QUEUE = { send, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) await send(message.body); } };
+  const fence: Record<string, Record<string, string>> = {};
+  const askFence = AsyncResource.bind(async (request: Request, id: string, host: string) => {
+    const data = new Map<string, unknown>(); let alarm: number | null = null;
+    const storage = { get: async (key: string) => structuredClone(data.get(key)), put: async (key: string, value: unknown) => { data.set(key, structuredClone(value)); },
+      delete: async (key: string) => data.delete(key), list: async () => new Map(data), getAlarm: async () => alarm,
+      setAlarm: async (at: number) => { alarm = at; }, deleteAlarm: async () => { alarm = null; }, transaction: async (run: (tx: unknown) => Promise<unknown>) => run(storage) };
+    const boundary = new SyntheticObjectBoundary({ id, storage } as unknown as DurableObjectState, m.env, 'LEARN_STATS');
+    try {
+      fence[host] = await boundary.run(request, async () => Object.fromEntries(probe.names.map(name => {
+        try { boundary.env.LEARN_STATS!.idFromName(name); return [name, 'admitted']; } catch { return [name, 'refused']; }
+      })));
+    } catch (error) { fence[host] = { boundary: `refused the operation's own call (${String(error)})` }; }
+  });
+  const addressed: string[] = [], stats = m.env.LEARN_STATS!;
+  env.LEARN_STATS = {
+    idFromName: (name: string) => stats.idFromName(name),
+    get: (id: DurableObjectId) => {
+      const stub = stats.get(id);
+      return { fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init), header = request.headers.get(SYNTHETIC_HEADER);
+        if (header) {
+          const call = (JSON.parse(header) as { value: { name: string; scope: { value: { host: string } } } }).value;
+          addressed.push(call.name);
+          if (call.name === probe.admitted && !fence[call.scope.value.host]) await askFence(request.clone(), String(id), call.scope.value.host);
+        }
+        return stub.fetch(request);
+      } };
+    },
+  };
+  const settle = async () => { while (deliveries.length) await Promise.all(deliveries.splice(0)); await m.drain(); };
+  return { addressed, refused, fence, settle };
+}
+
+/** One scheduled synthetic run on one host, read again once if its queue delivery was still in flight, as the scheduled monitor reads a started operation before it allocates another (`executeSynthetic`). */
+async function synthesize(m: Mounted, monitor: Awaited<ReturnType<typeof armSyntheticMonitor>>, host: 'session' | 'do') {
+  const { runSynthetic } = await import('@/ops/synthetic');
+  monitor.addressed.length = 0;
+  let result = await runSynthetic(m.env, TENANT, host);
+  await monitor.settle();
+  if (result.state === 'pending') { result = await runSynthetic(m.env, TENANT, host); await monitor.settle(); }
+  // A run over the tenant's own latency thresholds is reported failed for
+  // latency (document 32's diagnostics, as W12.02 allows); that is not the
+  // fence, and every stage must still have completed.
+  const verdict = result.state === 'complete' || (result.state === 'failed' && result.latencyExceeded === true && result.failedStage === undefined) ? 'complete'
+    : `${result.state}${result.failedStage ? ` at stage ${result.failedStage}` : ''}${result.responseStatus ? ` (${result.responseStatus} ${result.responseFailure ?? ''})` : ''}`;
+  return { run: { verdict, decision: result.decision, event: result.event, producer: result.producer, consumer: result.consumer, ledger: result.ledger,
+    learning: result.learning, dlq: result.dlq }, addressed: [...new Set(monitor.addressed)].sort() };
+}
+const COMPLETE_RUN = { verdict: 'complete', decision: true, event: true, producer: true, consumer: true, ledger: true, learning: true, dlq: false };
+
+/** The objects a tenant's placements are learned in, found by what they hold whatever the build names them: one exposure each, under the brand the synthetic monitor serves (the tenant's own; `wireProof` refuses any other). */
+async function placementObjects(m: Mounted, pages: Array<{ page: string; slot: string; item: string }>) {
+  const now = Date.now() - 60_000;
+  for (const [index, p] of pages.entries()) {
+    expect(await fanDecisions(m.env, { tenant: TENANT, brand: TENANT, visitor_id: 'v-w26-ledger', records: [
+      record(m.env, { page: p.page, slot: p.slot, item_id: p.item, ts: now + index, brand: TENANT })] }, slot => SLOT_CONFIG[slot]!))
+      .toMatchObject({ ok: true });
+  }
+  return statisticsObjects(m);
+}
+
+describe('unit:W26.R2.synthetic', () => {
+  /**
+   * A49, regression (b): the synthetic monitor proves the tenant's real serving
+   * and learning loop on its home page, inside a fence that admits only the
+   * objects its operation names. For a slot name the retained catalogue carries
+   * on two pages the loop learns the home hero in its page-separated object, so
+   * a fence that names only `tenant:tenant:slot` refuses the monitor's own
+   * learning and the scheduled check fails closed on a healthy tenant; a fence
+   * widened to every name would let a synthetic operation reach objects it has
+   * no business with. The monitor must complete, address exactly the objects
+   * the tenant's home placements are learned in, and its fence must still
+   * refuse the product page's hero object and a page-less hero object.
+   */
+  it('host (session, do): for a tenant whose retained catalogue carries `hero` on the home page and on the product page, the internal synthetic monitor (src/ops/synthetic.ts, run by the scheduled monitor, src/ops/monitor.ts:441) completes on the home page it probes, is never refused by its own fence, addresses exactly the home hero\'s page-separated statistics object and the rail\'s own, and its fence still refuses the product page\'s hero object and a page-less hero object', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
+    const objects = await placementObjects(m, [{ page: 'home', slot: 'hero', item: TABBY }, { page: 'home', slot: 'rail', item: ROGUE }, { page: 'pdp', slot: 'hero', item: WILLOW }]);
+    expect(objects.map(o => Object.keys(o.items).sort()).sort(),
+      'PRECONDITION (the write leg): the home hero, the product-page hero and the rail are learned in three statistics objects')
+      .toEqual([[ROGUE], [TABBY], [WILLOW]]);
+    const homeHero = objects.find(o => TABBY in o.items)!.name, pdpHero = objects.find(o => WILLOW in o.items)!.name, rail = objects.find(o => ROGUE in o.items)!.name;
+    const outside = [pdpHero, statsName(TENANT, TENANT, 'hero')].filter(name => name !== homeHero);
+    const monitor = await armSyntheticMonitor(m, { admitted: homeHero, names: [homeHero, ...outside] });
+    for (const host of ['session', 'do'] as const) {
+      const { run, addressed } = await synthesize(m, monitor, host);
+      expect(run, `W26.R2 (A49): the ${host}-host synthetic monitor must complete for a tenant whose catalogue carries a slot name on two pages — its learning proved in the home hero's page-separated object — never refused by its own fence nor left waiting on a page-less object nothing learns in (src/ops/synthetic.ts about :88, :623)`)
+        .toEqual(COMPLETE_RUN);
+      expect(addressed, `W26.R2 (A49): the ${host}-host synthetic monitor must address exactly the objects the tenant's home placements are learned in — the home hero's page-separated object and the rail's own — never a page-less hero object`)
+        .toEqual([homeHero, rail].sort());
+      expect(monitor.fence[host], `W26.R2 (A49): the ${host}-host operation's fence must admit the home hero's page-separated object and still refuse the product page's hero object and a page-less hero object (src/ops/synthetic.ts \`names\`)`)
+        .toEqual(Object.fromEntries([[homeHero, 'admitted'], ...outside.map(name => [name, 'refused'])]));
+    }
+  }, 180_000);
+
+  // LOCKED: a tenant whose slot names are unique across pages keeps the monitor
+  // it has always had — the same run, over the objects its placements have
+  // always been learned in (`statsName(t, b, 'hero') === 't:b:hero'`, B1:527-531).
+  it('host (session, do): for a tenant whose slot names are unique across pages, the internal synthetic monitor completes and addresses the objects its home placements have always been learned in', async () => {
+    const m = await mount();
+    const objects = await placementObjects(m, [{ page: 'home', slot: 'hero', item: TABBY }, { page: 'home', slot: 'rail', item: ROGUE }]);
+    expect(objects.map(o => o.name).sort(), 'PRECONDITION: the unique names keep their page-less objects').toEqual([statsName(TENANT, TENANT, 'hero'), statsName(TENANT, TENANT, 'rail')].sort());
+    const monitor = await armSyntheticMonitor(m, { admitted: statsName(TENANT, TENANT, 'hero'), names: [statsName(TENANT, TENANT, 'hero')] });
+    for (const host of ['session', 'do'] as const) {
+      const { run, addressed } = await synthesize(m, monitor, host);
+      expect(run, `the ${host}-host synthetic monitor completes for a tenant whose slot names are unique across pages`).toEqual(COMPLETE_RUN);
+      expect(addressed, `the ${host}-host synthetic monitor addresses the objects its home placements have always been learned in`).toEqual(objects.map(o => o.name).sort());
+    }
+  }, 180_000);
+});
+
+describe('unit:W26.R2.replay', () => {
+  /**
+   * A49, regression (c): doc 22 §12.3's replay decides a stored decision again
+   * from the documents at its recorded revisions and the lift snapshot at its
+   * recorded version, read from the archive. The snapshot a cross-page
+   * placement was decided with is archived under its page-separated identity;
+   * a replay that reads the page-less archive answers "not in the archive" for
+   * every decision on such a placement (versions are timestamps, so it cannot
+   * silently pick up another object's snapshot instead).
+   */
+  it('host: replaying her decisions (`GET /v1/:tenant/replay/:id`, src/learn/replay.ts) reads each placement\'s own archived snapshot — the product page\'s hero against the product page\'s archive, the home page\'s hero against the home page\'s, the rail (a name unique to one page) against its page-less archive — and replays each equal, never "not in the archive"', async () => {
+    const m = await mount({ slots: RETAINED_DUPLICATE, retainedSlots: true });
+    await learnedWorld(m);
+    const sarah = await consentingShopper(m);
+    // Her two pages, decided by the serving path exactly as the serving leg
+    // above reads them (`servePage`), and written to the ledger by the real
+    // producer and the real consumer the replay route reads.
+    const records: DecisionRecord[] = [];
+    for (const page of ['home', 'pdp'] as const) {
+      const decided = await servePage(m, sarah, page);
+      expect(decided.arm, `PRECONDITION: on the ${page} page she is served the personalized experience`).toBe('personalized');
+      records.push(...decided.records);
+    }
+    expect(records.map(r => [r.page, r.slot]), 'PRECONDITION: her home page decides the hero and the rail, her product page the hero').toEqual([['home', 'hero'], ['home', 'rail'], ['pdp', 'hero']]);
+    await enqueueDecisions(m.env, records);
+    expect(await consumeLedger(m.env, m.queued.splice(0), Date.now()), 'PRECONDITION: the real consumer wrote her decisions').toMatchObject({ ok: true });
+    const served = records.map(r => ({ page: r.page as 'home' | 'pdp', slot: r.slot, decisionId: r.decision_id }));
+
+    const replays: unknown[] = [];
+    for (const d of served) {
+      const replay = await asOperator(m, 'GET', `/v1/${TENANT}/replay/${encodeURIComponent(d.decisionId)}`);
+      const stored = replay.body.served as DecisionRecord | undefined;
+      expect(stored?.versions.lift ?? 0, `PRECONDITION: the ${d.page} ${d.slot} decision is in the ledger and was made with a published snapshot, so its replay reads an archive (${replay.status}: ${JSON.stringify(replay.body).slice(0, 200)})`)
+        .toBeGreaterThan(0);
+      if (d.slot === 'hero') {
+        expect(stored?.explain.lift ? Math.round(stored.explain.lift.n) : `the ${d.page} hero was decided with no learned lift`,
+          `PRECONDITION (the serving leg): the ${d.page} page's hero was decided with the ${d.page} page's own learned lift`).toBe(HERO_EXPOSURES[d.page]);
+      }
+      replays.push({ page: d.page, slot: d.slot, status: replay.status, classification: replay.body.classification ?? null, reason: replay.body.reason ?? null,
+        replayedWithTheRecordedSnapshot: (replay.body.used as { lift?: number } | null | undefined)?.lift === stored?.versions.lift });
+    }
+    expect(replays,
+      'W26.R2 (A49): every decision must replay equal from its own placement\'s archive — a cross-page hero from its own page\'s archived snapshot, the rail from its page-less one — never "not in the archive" for a snapshot the page-separated object archived (src/learn/replay.ts about :98)')
+      .toEqual(served.map(d => ({ page: d.page, slot: d.slot, status: 200, classification: 'equal', reason: null, replayedWithTheRecordedSnapshot: true })));
+  });
+});
