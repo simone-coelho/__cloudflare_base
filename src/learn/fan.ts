@@ -655,7 +655,14 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     // W26 R2: one destination per PLACEMENT — the slot, and its page where the
     // catalogue carries the slot name on more than one page. Only a set that
     // reaches the statistics at all needs the catalogue.
-    const scoped = pageScoped ?? (records.some(r => r.arm === 'personalized') ? await pageScopedSlotsOf(env, tenant) : new Set<string>());
+    let scoped: ReadonlySet<string>;
+    try { scoped = pageScoped ?? (records.some(r => r.arm === 'personalized') ? await pageScopedSlotsOf(env, tenant) : new Set<string>()); }
+    catch {
+      // Review D2: the catalogue could not be read, so no placement's identity
+      // is known. Refused as `config`, naming both destinations not attempted.
+      out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+      return finish(out);
+    }
     const bySlot = new Map<string, { slot: string; page?: string; rows: DecisionRecord[] }>();
     // Holdout decisions remain in the ring, never the personalized statistics.
     for (const r of records) if (r.arm === 'personalized') {
