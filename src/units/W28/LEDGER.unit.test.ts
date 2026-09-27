@@ -199,6 +199,27 @@ const allCategories = () => ({ [TENANT]: Object.fromEntries(RETENTION_CATEGORIES
 // (legacy W28.01, LG1) requires a new record's `inputs.replay.exploration` to be
 // `'supported-only'`; `src/units/W27/B1.unit.test.ts:724` refuses the value
 // `'supported-only-v2'`. A marker inside `inputs.replay` breaks the first two.
+//
+// THE EDITED RECEIPT (spec review 2026-09-24, W28 defect 1): replaying both
+// receipts equal is also what a replay does that tries the new rules and falls
+// back to the old ones on any mismatch — no marker anywhere, the rules chosen
+// by whichever one the decision happens to match. The second leg closes that:
+// each leader-agreement receipt the pre-change engine wrote, edited to carry
+// the decision the CHANGED rules make for the same page load — `explored: true`
+// and its `explain.exploration` — and nothing else. Measured premise: the
+// edited receipt states the current engine's decision in every decision field
+// a replay compares (the pre-change and current receipts differ in exactly
+// those two members), so a replay that picks its rules by what the decision
+// matches replays it equal. A receipt carries the rules it was written under
+// only if something on it SAYS so; the edited receipt is a pre-change record,
+// written before any such statement existed, so it must not replay equal. Its
+// `explain.exploration` holds only the members the pre-change record format
+// declares (`mode`, `reason`, `bucket`, `sample`: `a75a300`
+// `src/content/types.ts:444`), so wherever the build records its marker —
+// outside `inputs.replay` under the pending amendment A20, or anywhere else —
+// the edited receipt never borrows it from the current one. How the replay
+// answers it (the old rules' decision, or a refusal) is not ruled; that it
+// does not answer `equal` is.
 // ===========================================================================
 
 type Scenario = { name: string; record: string; visitor: string; limit: number; snapshot: LiftSnapshot; exploration: ExploreConfig;
@@ -285,6 +306,40 @@ describe('unit:W28.R2', () => {
         .toBe('equal');
       expect(replay).toMatchObject({ ok: true, equal: true, diff: [] });
       expect(replay.replayed!.item_id, 'the piece the receipt says was served is the piece the replay serves').toBe(before.item_id);
+    }
+  });
+
+  it('logic: a receipt written before the change, edited to carry the decision the changed rules make (explored, with its exploration), does not replay equal — a receipt replays under the rules it records, never the rules its decision happens to match', async () => {
+    /** The members of `explain.exploration` the pre-change record format declares (`a75a300` `src/content/types.ts:444`). */
+    const preChangeExploration = (e: DecisionRecord['explain']['exploration']) => e === undefined ? undefined
+      : { mode: e.mode, reason: e.reason, bucket: e.bucket, ...(e.sample !== undefined ? { sample: e.sample } : {}) };
+    /** The decision a receipt states, in the fields a replay compares, marker-free. */
+    const decisionOf = (r: DecisionRecord) => ({ item_id: r.item_id, ranking_position: r.ranking_position, candidates: r.candidates,
+      explored: r.explored, authority: r.authority, exploration: preChangeExploration(r.explain.exploration),
+      score_base: r.explain.score_base, score_final: r.explain.score_final, lift: r.explain.lift, drivers: r.explain.drivers });
+
+    for (const s of SCENARIOS.filter(x => x.record === 'rotationLeader' || x.record === 'epsilonLeader')) {
+      const env = await replayWorld(s);
+      const before = structuredClone(PRE_CHANGE[s.record]!);
+      before.retention = captureRetention(env, TENANT, before.ts);
+      const after = currentReceipt(env, s);
+
+      // The fixture's premises, measured: the change made this page load an exploration.
+      expect({ before: before.explored, after: after.explored, exploration: after.explain.exploration !== undefined },
+        `${s.name}: the pre-change engine recorded no exploration and the changed rules record one`)
+        .toEqual({ before: false, after: true, exploration: true });
+
+      const edited = structuredClone(before);
+      edited.explored = true;
+      edited.explain = { ...edited.explain, exploration: preChangeExploration(after.explain.exploration) };
+      expect(decisionOf(edited), `${s.name}: the edited receipt states the decision the changed rules make, in every decision field a replay compares`)
+        .toEqual(decisionOf(after));
+
+      // RULED: nothing on it says it was written under the changed rules, so it does not replay as if it were.
+      const replay = await replayDecision(env, edited, replayDeps(env));
+      expect({ equal: replay.equal },
+        `W28.R2 (${s.name}) — a pre-change receipt edited to carry the changed rules' decision must not replay equal: which rules a receipt replays under is stated on the receipt (a versioned replay marker, R204), never chosen by whichever rules reproduce its decision. It replayed as \`${replay.classification}\`${replay.diff.length ? ` on ${JSON.stringify(replay.diff.map(d => d.field))}` : ''}${replay.reason ? ` (${replay.reason})` : ''}`)
+        .toEqual({ equal: false });
     }
   });
 });
