@@ -19,6 +19,9 @@
   const card = (title, why, ...body) => h('section', { class: 'card' },
     h('header', {}, h('h3', {}, title), why ? h('div', { class: 'why' }, why) : null), ...body);
   const body = (...x) => h('div', { class: 'body' }, ...x);
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
   const iso = (d) => new Date(d).toISOString().slice(0, 10);
   const daysAgo = (n) => iso(Date.now() - n * 86400000);
 
@@ -220,8 +223,12 @@
           ], R.holdout[S.slot].map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, fmt(a.decisions)), h('td', { class: 'num' }, fmt(a.credited)), h('td', { class: 'num' }, intensity(a.credited, a.decisions))))) : null,
           R && R.exploration ? (() => {
             const e = R.exploration.find((x) => x.slot === S.slot);
+            // W28.R5: the report row names a retained setting the engine did not run
+            // (`configuredMode`, `unsupported`); the line says so beside the effective mode.
             return e ? h('div', { class: 'kv' },
-              h('span', { class: 'k' }, 'Explored'), h('span', { class: 'v' }, `${pct(e.realized)} of ${plural(e.decisions, 'decision')} in the first position${e.configured === null || e.configured === undefined ? ', with exploration off' : `, against ${pct(e.configured)} configured`}`)) : null;
+              h('span', { class: 'k' }, 'Explored'), h('span', { class: 'v' }, `${pct(e.realized)} of ${plural(e.decisions, 'decision')} in the first position${e.configured === null || e.configured === undefined ? ', with exploration off' : `, against ${pct(e.configured)} configured`}`),
+              ...(e.unsupported && e.configuredMode ? [h('span', { class: 'k' }, 'Retained setting'),
+                h('span', { class: 'v' }, `${storedModeWords(e.configuredMode)}: the learn document keeps it and the engine did not run it, so it explored nothing.`)] : [])) : null;
           })() : null,
         )));
 

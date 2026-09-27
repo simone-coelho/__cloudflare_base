@@ -429,7 +429,11 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   // W28.W1.01: one representation of "the mode the engine runs, and the retained
   // setting where they differ" — the same helper the day report's §7 row uses.
   const eff = effectiveExploration(ex);
-  const effective = { mode: eff.mode ?? 'off', share: eff.unsupported ? 0 : ex?.share ?? 0,
+  // W28.R4: the share is the one the helper says a runnable policy reserves.
+  // A dial that cannot explore — `off` that kept a stored share, a retained
+  // withdrawn mode, no exploration block at all — reserves none, and this answer
+  // says 0 for all three, as the day report's row says `configured: null`.
+  const effective = { mode: eff.mode ?? 'off', share: eff.configured ?? 0,
     ...(eff.unsupported ? { configuredMode: eff.configuredMode, unsupported: true } : {}) };
   const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
   c.header('Cache-Control', 'no-store');

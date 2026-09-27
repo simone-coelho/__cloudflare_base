@@ -12,6 +12,7 @@ import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { pageScopedSlotNames } from '@/content/kinds';
 import { LEVEL_WORDS, liftReferenceOf, type LiftReference, type LiftSnapshot, type Level } from './stats';
 import type { SlotGovernance } from './slotGovernance';
+import { effectiveExploration, type ExploreMode } from './explore';
 
 /**
  * W26 X1.01 (F21 §8): what this estimate has been corrected for, by name.
@@ -197,9 +198,19 @@ export interface SlotIndexEntry {
   /** Legacy index inputs omit this and mean served-v1; current writers emit it. */
   measurementBasis?: 'served-v1' | 'rendered-v1';
   gamma: number;
+  /** The mode the engine runs on this slot (`effectiveExploration`): `off` where nothing can run. */
   exploration: string;
-  /** Retained unsupported configuration, not an active exploration policy. */
-  configuredExploration?: 'thompson';
+  /**
+   * W28.R3 (kit 02, "Exploration"): where the learn document keeps a mode the
+   * engine will not run, the retained setting in the canonical words every other
+   * exploration surface uses — `GET learn/exploring`, the day report's row —
+   * from the one helper, `effectiveExploration`. Absent otherwise.
+   */
+  configuredMode?: ExploreMode;
+  /** Set with `configuredMode`: the stored policy is retained, not offered. */
+  unsupported?: true;
+  /** The same retained setting under this row's earlier name, kept for readers of it; always equal to `configuredMode`. */
+  configuredExploration?: ExploreMode;
   autonomy: string;
   controls: number;
   /** Filled by the route when asked: what the slot has learned so far. */
@@ -252,6 +263,8 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
     for (const s of list) {
       if (needle && !s.slot.toLowerCase().includes(needle) && !page.toLowerCase().includes(needle)) continue;
       const d = learn.slots?.[s.slot] ?? {};
+      // W28.R3: one statement of the slot's dial, by the helper the other surfaces use.
+      const exploration = effectiveExploration(d.exploration);
       const rules: string[] = [];
       if (s.merchandising && Object.values(s.merchandising).some((v) => v)) rules.push('merchandising');
       if (s.stage) rules.push('stage');
@@ -265,8 +278,9 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
         rules, pieces: live.filter((p) => p.slotTypes.includes(s.slot)).length,
         reward: d.reward ?? 'click', objective: d.objective ?? 'unit', gamma: d.gamma ?? 0,
         measurementBasis: d.measurementBasis ?? 'served-v1',
-        exploration: d.exploration?.mode === 'thompson' ? 'off' : d.exploration?.mode ?? 'off',
-        ...(d.exploration?.mode === 'thompson' ? { configuredExploration: 'thompson' as const } : {}),
+        exploration: exploration.mode ?? 'off',
+        ...(exploration.unsupported && exploration.configuredMode
+          ? { configuredMode: exploration.configuredMode, unsupported: true as const, configuredExploration: exploration.configuredMode } : {}),
         autonomy: d.autonomy?.mode ?? 'configured',
         controls: Object.keys(d.items ?? {}).length,
         ...(scoped.has(s.slot) ? { pageScoped: true as const } : {}),

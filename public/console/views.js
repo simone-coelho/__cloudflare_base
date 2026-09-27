@@ -24,6 +24,11 @@
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const words = (s) => String(s || '').replace(/_/g, ' ');
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor below already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
+  /** The retained mode a slots row names (`configuredMode` with `unsupported`; `configuredExploration` from an older server), or null. */
+  const retainedModeOf = (s) => (s.unsupported && s.configuredMode) || s.configuredExploration || null;
   function humanMs(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     if (ms % DAY === 0) return plural(ms / DAY, 'day');
@@ -344,7 +349,8 @@
           h('td', {}, s.rules && s.rules.length ? s.rules.join(', ') : 'none'),
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
-          h('td', {}, words(s.exploration)),
+          h('td', {}, words(s.exploration),
+            retainedModeOf(s) ? h('div', { class: 'itemid' }, `${storedModeWords(retainedModeOf(s))}; explores nothing`) : null),
           h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),
           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'
