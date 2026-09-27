@@ -369,26 +369,56 @@ function tamper(m: Mounted, objectKey: string, id: string, change: (record: Deci
 }
 
 // ===========================================================================
-// unit:W27.R3 — a corrupt manifest at version ≥ 2 is refused as corrupt, not
-// only reported as a rollout event.
+// unit:W27.R3 — a manifest at version 2 or above whose dependency identity is
+// not a nonnegative safe integer is refused, not only reported as a rollout
+// event (the frozen criterion, amendment A22; LANE-LOG R200).
 //
-// Today `manifestVersionRefusal` (replay.ts:127) wins over every other
-// malformation (W27-B1 build review, finding 2), so a damaged record that
-// happens to carry `version: 2` is diagnosed only as "this build is behind that
-// record" — the diagnosis O1.01 exists to keep APART from "this record is
-// damaged". WHAT IS RULED CORRUPT HERE, and why only this: a dependency
-// identity that is not a nonnegative safe integer (-1, a fraction, past 2^53).
-// The kit makes that a rule of every recorded identity, whatever grammar
-// carries it (02:325, "nonnegative safe-integer … identities before dependency
-// reads"; "Integer zero remains the … absent-dependency convention"). A member
-// a later grammar could legitimately add or reshape is NOT ruled corrupt: this
-// build cannot know that grammar, and O1.01's rollout sentence must stay
-// reachable for it. The v1-shaped manifest bumped to a later version keeps the
-// rollout sentence exactly (O1.01's lock, restated as this unit's control).
+// At the specification base `manifestVersionRefusal` (replay.ts:127) wins over
+// every other malformation (W27-B1 build review, finding 2), so a damaged
+// record that happens to carry `version: 2` is diagnosed only as "this build is
+// behind that record" — the diagnosis O1.01 exists to keep APART from "this
+// record is damaged".
+//
+// WHAT IS RULED — the frozen R3 text, which governs (lead's ruling on the W27
+// delivery review, 2026-09-27). A slot row's `lift` and `prior` are the
+// manifest's dependency identities. When one is PRESENT and is not a
+// nonnegative safe integer, the manifest is damaged whatever version it claims
+// and whatever the value's type: a negative, a fraction, a non-finite number,
+// one past 2^53 — and equally a string ("5", "-1", "0"), an object ({},
+// {version:-1}, {version:5}), null, a boolean or an array. A22's reason: the
+// kit applies the rule to every recorded identity (02:325, "nonnegative
+// safe-integer … `lift` and `prior` identities before dependency reads";
+// "Integer zero remains the … absent-dependency convention" — integer zero,
+// never the string "0"). The refusal is `invalid page replay manifest`, on
+// every slot row of the page, before any archive is read.
+//
+// WHAT KEEPS THE ROLLOUT SENTENCE (O1.01's lock, restated as this unit's
+// control): a later-version manifest whose identities are ALL nonnegative safe
+// integers — the v1-shaped manifest bumped to a later version, and one that
+// also carries members this build does not know or reshapes a member that is
+// not an identity. That keeps O1.01's rollout sentence reachable for a later
+// grammar. NOT RULED here: a row whose `lift` or `prior` is absent, a row that
+// is not an object, a `slots` that is not an array.
+//
+// CORRECTION: the revision of this header at afef56b narrowed the rule to
+// identities recorded as numbers and exempted "a member a later grammar could
+// add or reshape". The frozen text has no such exemption: a reshaped `lift` or
+// `prior` is still a dependency identity that is not a nonnegative safe
+// integer.
 // ===========================================================================
 
+/** Every value a present `lift` or `prior` can hold that is not a nonnegative safe integer (the frozen R3 text; the W27 delivery review's cases). */
+const NOT_AN_IDENTITY: unknown[] = [
+  // Numbers the kit's rule refuses.
+  Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1e300,
+  // Values that are not numbers at all: the rule is about the identity, not its type.
+  '5', '-1', '0', {}, { version: -1 }, { version: 5 }, null, true, [1],
+];
+const shown = (value: unknown): string => (typeof value === 'number' ? String(value) : JSON.stringify(value));
+type ManifestRows = Record<string, unknown> & { slots: Array<Record<string, unknown>> };
+
 describe('unit:W27.R3', () => {
-  it('logic: a later-version manifest with a corrupt dependency identity is refused as an invalid manifest before any archive is read, while a sound one keeps the rollout sentence', async () => {
+  it('logic: a later-version manifest with a corrupt dependency identity — of any type, on any slot row — is refused as an invalid manifest before any archive is read, while one whose identities are all nonnegative safe integers keeps the rollout sentence', async () => {
     const w = await world();
     const snapshots = await coupledSnapshots(w);
     const later = recordFor(decidePage(w, snapshots), 'story');
@@ -416,13 +446,67 @@ describe('unit:W27.R3', () => {
         expect(w.storage.reads.filter(key => key.startsWith('lift/')), 'refused before any archive is read').toEqual([]);
       }
     }
+
+    // Control for the read ledger: the untouched version-1 record replays, and
+    // replaying it DOES read the archives it names, so "no `lift/` read" below
+    // measures a refusal and not a path that never reads.
+    w.storage.reads.length = 0;
+    const sound = await replayDecision(w.env, structuredClone(later), replayDeps(w.env));
+    expect(sound, sound.reason).toMatchObject({ ok: true, equal: true, diff: [] });
+    expect(w.storage.reads, 'a sound replay of the coupled page reads the learning slot archive').toContain(liftArchiveKey(TENANT, BRAND, 'chero', snapshots.chero.version));
+
+    for (const version of [2, 3, 17]) {
+      // Control, the refusal's boundary (the lead's ruling): identities that are
+      // all nonnegative safe integers keep the rollout sentence, even beside
+      // members this build does not know and a reshaped member that is not an
+      // identity. Refusing every departure from the version-1 grammar would
+      // leave O1.01's rollout sentence unreachable for a genuinely later one.
+      const grammar = structuredClone(later);
+      const reshaped = grammar.inputs!.replay as unknown as ManifestRows;
+      reshaped.version = version;
+      reshaped.ranking = 'a-later-grammar';
+      reshaped.learning = 'per-slot';
+      reshaped.slots = reshaped.slots.map(row => ({ ...row, page: 'home' }));
+      expect(await replayDecision(w.env, grammar, replayDeps(w.env)), `version ${version}: identities sound, members this build does not know`)
+        .toMatchObject({ ok: false, equal: false, classification: 'not-replayable', replayed: null, reason: `page replay manifest version ${version} is not supported` });
+
+      // W27.R3, the frozen reading: a PRESENT identity that is not a
+      // nonnegative safe integer, whatever its type, on every row of the page.
+      for (const [row, slot] of ['merch', 'chero', 'story'].entries()) {
+        for (const member of ['lift', 'prior'] as const) {
+          for (const value of NOT_AN_IDENTITY) {
+            const corrupt = structuredClone(later);
+            const replay = corrupt.inputs!.replay as unknown as ManifestRows;
+            expect(replay.slots[row]!.slot).toBe(slot);
+            replay.version = version;
+            replay.slots[row]![member] = value;
+            w.storage.reads.length = 0;
+            const answer = await replayDecision(w.env, corrupt, replayDeps(w.env));
+            expect(answer,
+              `W27.R3 (version ${version}, ${slot}.${member} = ${shown(value)}) — a present dependency identity that is not a nonnegative safe integer is DAMAGE whatever its type and whatever version the manifest claims; the refusal must be the invalid-manifest sentence, not "${String(answer.reason)}"`)
+              .toMatchObject({ ok: false, equal: false, classification: 'not-replayable', replayed: null, diff: [], reason: 'invalid page replay manifest' });
+            expect(w.storage.reads.filter(key => key.startsWith('lift/')), `${slot}.${member} = ${shown(value)}: refused before any archive is read`).toEqual([]);
+          }
+        }
+      }
+    }
   });
 
   for (const host of HOSTS) {
-    it(`host (${host}): the operator endpoint diagnoses a stored later-version manifest with a corrupt identity as an invalid manifest`, async () => {
+    it(`host (${host}): the operator endpoint diagnoses a stored later-version manifest with a corrupt identity of any type as an invalid manifest, and a sound later-version manifest as a rollout event`, async () => {
       const m = await mounted(host);
       const page = await ledgeredPage(m);
       const later = page.records.find(record => record.slot === 'story')!;
+      // The manifest exactly as the real consumer stored it: every rewrite
+      // after the first case below starts again from this row.
+      let stored: unknown;
+      tamper(m, page.objectKey, later.decision_id, record => { stored = structuredClone(record.inputs!.replay); });
+      expect((stored as ManifestRows).slots.map(row => row.slot)).toEqual(['merch', 'chero', 'story']);
+      const rewrite = (change: (replay: ManifestRows) => void): void => tamper(m, page.objectKey, later.decision_id, record => {
+        const replay = structuredClone(stored) as ManifestRows;
+        change(replay);
+        (record.inputs as unknown as Record<string, unknown>).replay = replay;
+      });
       tamper(m, page.objectKey, later.decision_id, record => {
         const replay = record.inputs!.replay as unknown as Record<string, unknown> & { slots: Array<Record<string, unknown>> };
         replay.version = 2; replay.slots[1]!.lift = -1;
@@ -432,6 +516,30 @@ describe('unit:W27.R3', () => {
       expect(String(answer.body.reason ?? ''),
         'W27.R3 — the operator reads that the stored manifest is damaged, not only that this build is behind it').toContain('invalid page replay manifest');
       expect(answer.body).toMatchObject({ ok: false, equal: false, classification: 'not-replayable', replayed: null });
+
+      // Control (W27.O1.01 through the endpoint): the stored manifest with sound
+      // identities, at a later version, is a rollout event named by version.
+      rewrite(replay => { replay.version = 2; });
+      const ahead = await replayRequest(m, later.decision_id);
+      expect(ahead.status).toBe(200); expect(ahead.noStore).toBe(true);
+      expect(ahead.body).toMatchObject({ ok: false, equal: false, classification: 'not-replayable', replayed: null,
+        reason: 'page replay manifest version 2 is not supported' });
+
+      // W27.R3, the frozen reading, on the stored record: an identity that is
+      // not a nonnegative safe integer whatever its type. (Only values a JSON
+      // ledger row can carry: NaN and the infinities do not survive it.)
+      for (const member of ['lift', 'prior'] as const) {
+        for (const value of NOT_AN_IDENTITY.filter(candidate => typeof candidate !== 'number' || Number.isFinite(candidate))) {
+          rewrite(replay => { replay.version = 2; replay.slots[1]![member] = value; });
+          m.storage.reads.length = 0;
+          const damaged = await replayRequest(m, later.decision_id);
+          expect(damaged.status).toBe(200); expect(damaged.noStore).toBe(true);
+          expect(damaged.body,
+            `W27.R3 (${host}, stored version 2, chero.${member} = ${shown(value)}) — the operator must read that the stored manifest is damaged, not "${String(damaged.body.reason)}"`)
+            .toMatchObject({ ok: false, equal: false, classification: 'not-replayable', replayed: null, reason: 'invalid page replay manifest' });
+          expect(m.storage.reads.filter(key => key.startsWith('lift/')), `${host}: chero.${member} = ${shown(value)} is refused before any archive is read`).toEqual([]);
+        }
+      }
     });
   }
 });
