@@ -720,8 +720,9 @@ cursor is bound to the page it was cut for. Every route below that names one slo
 name — a slug, never a name carrying `@` — and refuses anything else with 400, so a placement is only ever addressed
 by its slot and its page. A slot name carried on one page keeps its page-less identity, is read without `page=`, and
 keeps every statistic already learned under it. Where the catalogue itself cannot be read, a learning write that
-needs it is refused and named (`code: "config"` on the learning receipt) and the owner's recovery retries it; it is
-never written under a guessed identity. The monitor compares the ledger with the online
+needs it is refused and named (`code: "config"` on the learning receipt); it is never written under a guessed
+identity. The owner's recovery retries it only when `LEDGER_RECOVERY_ENABLED` is `"true"`; otherwise it is refused,
+named in the `learning_incomplete` log and not retried. The monitor compares the ledger with the online
 counts per brand and slot name, summing a page-scoped name's page objects.
 
 | Route | Does |
