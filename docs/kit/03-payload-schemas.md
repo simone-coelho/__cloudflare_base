@@ -563,10 +563,15 @@ all. An hour folded before this release carries no assignment: that day's rows a
 SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
 number the source cannot support. An outcome whose visitor had no decision that day at or before it,
 nor later in its hour, is counted under the visitor's first decision of the day, and that decision may
-be in a later hour: the fold remembers the outcome, and the fold of the hour that holds that decision
-places it on that decision's assignment — never on the outcome's own `experiment` stamp — so the day
-answers `visitorOutcomes` exactly as the day computed from its records does, and an outcome whose
-visitor has no decision that day is counted on no row by either. An hour IS named when it holds an outcome whose visitor did
+be in a later hour: the fold remembers the outcome, and once a fold has carried the visitor into the
+day the outcome counts under the assignment of her earliest decision — never under the outcome's own
+`experiment` stamp — for as long as it precedes that decision, so the day answers `visitorOutcomes`
+exactly as the day computed from its records does, and an outcome whose visitor has no decision that
+day is counted on no row by either. Every fold of an hour decides that hour's outcomes afresh and
+replaces what an earlier fold of it decided, so an earlier decision that reaches the ledger late
+moves an outcome to its row and never leaves it on two. An hour is also named while an outcome it
+remembered can no longer be placed from memory — a later fold found a decision of the visitor's at or
+before it, as when an earlier hour is folded out of order — until that hour is folded again. An hour IS named when it holds an outcome whose visitor did
 have a decision that day at or before it that the fold's attribution ring no longer holds — the ring
 cap or the horizon evicted it — or whose earliest decision of the day the fold cannot date, because
 the assignment she held when the outcome happened cannot then be known: that day keeps its rows and
@@ -583,8 +588,9 @@ statement that the platform cannot say what an hour is.
 `refoldHorizonMs` is the published re-fold horizon the day was built under, measured from each hour's
 own END. `maturities` is `[ { hour, maturity } ]` per built hour: `open` while the hour is inside that
 horizon and its ledger prefix is still re-checked, `final` past it, and `repaired` where the hour's
-aggregate was WRITTEN after it became final — a rebuild asked for at a higher object cap, or a first
-fold that reached the hour late. An hour is in exactly one of the three, so a repair can never quietly
+aggregate was WRITTEN after it became final — a rebuild asked for at a higher object cap, a re-fold
+because an earlier hour was folded after it, or a first fold that reached the hour late. A final hour
+is folded again only for those two reasons, never for a late row. An hour is in exactly one of the three, so a repair can never quietly
 replace numbers you have already read as final. `lateAfterMaturity` is `[ { hour, objects } ]`: ledger
 objects that reached an hour's prefix after that hour was final. They are counted and named and applied
 nowhere, and the rows stay in the ledger — this is a declaration about what the numbers include, not an

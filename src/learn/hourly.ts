@@ -208,14 +208,23 @@ export interface ShardState {
    * visitor. An outcome whose visitor had NO decision of the date at or before
    * it — none the fold had admitted, none later in its hour — is counted by the
    * raw day under her FIRST decision of the day, which may be in an hour not
-   * folded yet. The fold of that hour places it there (`placeDeferred`), under
-   * the assignment of the decision that carries her into the day, and forgets
-   * it; one whose visitor never has a decision that day is counted nowhere, as
-   * the raw day counts it. Only outcome types and their latest times are kept,
-   * with the outcomes' hourly retention stamp: an erasure removes every type
-   * it covers, an expired stamp removes the visitor, and a date leaves with the
-   * horizon exactly as `seenDays` does. Nothing here is a fold record: an hour
-   * that only remembers an outcome is not an hour its rings have taken in.
+   * folded yet; so is one that precedes a first decision this fold already
+   * knows, because an earlier one may still be folded. Once a fold has carried
+   * her into the date, the outcome counts
+   * under the assignment of her earliest decision (`firstArm`) for as long as
+   * it precedes that decision — DERIVED from this memory on every fold
+   * (`deriveOutcomes`), never written once and kept, so an earlier decision of
+   * hers folded later moves it or, when that decision precedes the outcome,
+   * leaves it for its own hour's fold to place against the ring and names that
+   * hour meanwhile (`strandedHours`). One whose visitor never has a decision
+   * that day is counted nowhere, as the raw day counts it. The fold of the
+   * outcome's own hour REPLACES that hour's entries here, so a re-fold never
+   * adds a second copy. Only outcome types and the earliest and latest time of
+   * each are kept, per hour, with the outcomes' hourly retention stamp: an
+   * erasure removes what it covers, an expired stamp removes the visitor, and a
+   * date leaves with the horizon exactly as `seenDays` does. Nothing here is a
+   * fold record: an hour that only remembers an outcome is not an hour its
+   * rings have taken in.
    */
   deferred?: Record<string, Record<string, Record<string, DeferredOutcomes>>>;
   /** Technical write generation, retained after completion to prevent coordinator ETag reuse. */
@@ -228,8 +237,21 @@ export interface ShardState {
 export interface VisitorEnrollment {
   /** The assignments she was drawn into that date, first seen first. */
   arms: string[];
-  /** assignment → the outcome types she produced while holding it. */
+  /**
+   * assignment → the outcome types she produced while holding it. Since W30 it
+   * is DERIVED (`deriveOutcomes`) from `placed` and the carry-in memory, and is
+   * kept under its name so every reader of it is unchanged.
+   */
   outcomes?: Record<string, string[]>;
+  /**
+   * W30 P1 (delivery review defect 1): where each hour's fold placed her
+   * outcomes of that hour — hour (`'00'`–`'23'`) → assignment → types. Each
+   * fold of an hour REPLACES that hour's entry, so an outcome a re-fold places
+   * on another row (an earlier decision of hers reached the ledger late) moves
+   * instead of being counted on two. `legacy` holds, unrevisable, the outcomes a
+   * record written before this release carried.
+   */
+  placed?: Record<string, Record<string, string[]>>;
   /**
    * W30 P1/E1 (amendments A47, A48): the time of her EARLIEST decision of the
    * date any fold has admitted, and the assignment it carried — the decision
@@ -247,8 +269,8 @@ export interface VisitorEnrollment {
 }
 /** W30 P1: one visitor's outcomes waiting for her first decision of the date. */
 export interface DeferredOutcomes {
-  /** Outcome type → the latest time an outcome of that type was deferred. */
-  outcomes: Record<string, number>;
+  /** Hour (`'00'`–`'23'`) → outcome type → `[earliest, latest]` time of that type deferred in that hour. */
+  hours: Record<string, Record<string, [number, number]>>;
   /** The hourly retention stamp of those outcomes, merged as `seenRetention` merges a visitor's. */
   retention?: RetentionStamp;
 }
@@ -338,6 +360,17 @@ export interface HourAssignments {
    * nothing, so every unassigned outcome there still names its hour.
    */
   deferredOutcomes?: number;
+  /**
+   * W30 P1 (delivery review defect 2): the hours of this date holding an
+   * outcome REMEMBERED for a visitor who, as of this fold, has a decision that
+   * day at or before it (an earlier hour folded out of order) or whose earliest
+   * decision cannot be dated. Memory can no longer place it; only that hour's
+   * own fold can, against the ring, and the catch-up folds it again. Until an
+   * aggregate of that hour is written after this one, the day names it and
+   * answers `visitorOutcomes: null` rather than a count without the outcome.
+   * Omitted when there is none.
+   */
+  strandedHours?: number[];
 }
 export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {}, unassignedOutcomes: 0, deferredOutcomes: 0 });
 export interface HourBrand {
@@ -487,7 +520,8 @@ function mergeAssignments(a: HourAssignments | undefined, b: HourAssignments | u
     // them — one hour that cannot makes the total unknown, not zero.
     if (out.unassignedOutcomes === undefined || src.unassignedOutcomes === undefined) delete out.unassignedOutcomes;
     else out.unassignedOutcomes += src.unassignedOutcomes;
-    // W30 P1: the same rule for the remembered share of them.
+    // W30 P1: the same rule for the remembered share of them. `strandedHours`
+    // is read per aggregate by `reportFromHours` and is never merged.
     if (out.deferredOutcomes === undefined || src.deferredOutcomes === undefined) delete out.deferredOutcomes;
     else out.deferredOutcomes += src.deferredOutcomes;
   }
@@ -672,6 +706,16 @@ function checkEnrollment(state: ShardState): void {
         if ((value.firstAt === undefined) !== (value.firstArm === undefined)) fail();
         if (value.firstAt !== undefined && (!onDate(value.firstAt, date) || !label(value.firstArm)
           || !(value.arms as unknown[]).includes(value.firstArm))) fail();
+        // W30 P1: the per-hour placements, each an assignment → types map within the same bounds.
+        const placed: unknown = value.placed;
+        if (placed !== undefined) {
+          if (!objectMap(placed) || Object.keys(placed).length > 25) fail();
+          for (const [hour, byArm] of Object.entries(placed)) {
+            aggregateBound('work', ++work);
+            if (!(hour === 'legacy' || /^(?:[01][0-9]|2[0-3])$/.test(hour)) || !objectMap(byArm) || Object.keys(byArm).length > ENROLLMENT_ARMS_MAX) fail();
+            for (const [arm, types] of Object.entries(byArm)) if (!label(arm) || !list(types, label)) fail();
+          }
+        }
         const outcomes: unknown = value.outcomes;
         if (outcomes === undefined) continue;
         if (!objectMap(outcomes) || Object.keys(outcomes).length > ENROLLMENT_ARMS_MAX) fail();
@@ -711,16 +755,8 @@ function enrollmentOf(state: ShardState, date: string, brand: string, visitor: s
   return ((brands[brand] ??= {})[visitor] ??= { arms: [] });
 }
 
-/** W30 P1: an outcome type recorded under one assignment of her date, within the enrollment bounds. */
-function enrollOutcome(enrolled: VisitorEnrollment, label: string, type: string): void {
-  const outcomes = (enrolled.outcomes ??= {});
-  if (!outcomes[label] && Object.keys(outcomes).length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
-  const types = (outcomes[label] ??= []);
-  if (!types.includes(type)) {
-    if (types.length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
-    types.push(type);
-  }
-}
+/** W30 P1: the two-digit key of the hour a time falls in. */
+const hourKeyOf = (ts: number): string => pad2(new Date(Math.floor(ts / HOUR_MS) * HOUR_MS).getUTCHours());
 
 /** W30 P1: the carry-in memory, refused whole when any of it is malformed. */
 function checkDeferred(state: ShardState): void {
@@ -736,41 +772,67 @@ function checkDeferred(state: ShardState): void {
       if (!label(brand) || !objectMap(record)) fail();
       for (const [visitor, value] of Object.entries(record)) {
         aggregateBound('work', ++work);
-        if (!visitor || visitor.length > 256 || !objectMap(value) || !objectMap(value.outcomes)
-          || Object.keys(value).some(key => key !== 'outcomes' && key !== 'retention')) fail();
-        const types = Object.entries(value.outcomes);
-        if (!types.length || types.length > ENROLLMENT_ARMS_MAX || types.some(([type, at]) => !label(type) || !onDate(at, date))) fail();
+        if (!visitor || visitor.length > 256 || !objectMap(value) || !objectMap(value.hours)
+          || Object.keys(value).some(key => key !== 'hours' && key !== 'retention')) fail();
+        const hours = Object.entries(value.hours);
+        if (!hours.length || hours.length > 24) fail();
+        for (const [hour, byType] of hours) {
+          aggregateBound('work', ++work);
+          if (!/^(?:[01][0-9]|2[0-3])$/.test(hour) || !objectMap(byType)) fail();
+          const types = Object.entries(byType);
+          if (!types.length || types.length > ENROLLMENT_ARMS_MAX) fail();
+          for (const [type, span] of types) {
+            if (!label(type) || !Array.isArray(span) || span.length !== 2 || !onDate(span[0], date) || !onDate(span[1], date)
+              || span[0] > span[1] || hourKeyOf(span[0]) !== hour || hourKeyOf(span[1]) !== hour) fail();
+          }
+        }
         if (value.retention !== undefined) readRetention(value.retention, (value.retention as RetentionStamp)?.tenant, 'hourly');
       }
     }
   }
 }
 
+/** W30 P1: drop empty levels of the carry-in memory, and keep each visitor's hours in hour order so a re-fold that decides the same writes the same bytes. */
+function tidyDeferred(state: ShardState): void {
+  const memory = state.deferred;
+  if (!memory) return;
+  for (const [date, brands] of Object.entries(memory)) {
+    for (const [brand, record] of Object.entries(brands)) {
+      for (const [visitor, carry] of Object.entries(record)) {
+        carry.hours = Object.fromEntries(Object.entries(carry.hours).filter(([, byType]) => Object.keys(byType).length).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+        if (!Object.keys(carry.hours).length) delete record[visitor];
+      }
+      if (!Object.keys(record).length) delete brands[brand];
+    }
+    if (!Object.keys(brands).length) delete memory[date];
+  }
+  if (!Object.keys(memory).length) delete state.deferred;
+}
+
 /**
  * W30 P1: an erasure reaches the carry-in memory and the enrollment's earliest
  * decision exactly as it reaches the rows. A deferred outcome at or before the
- * tombstone's cutoff is gone; so is an earliest decision the cutoff covers,
- * which leaves the record unable to say (its timestamp is not kept for a row
- * the tenant asked to be forgotten). With `expiry`, an expired hourly stamp
- * removes the visitor's deferred outcomes too.
+ * tombstone's cutoff is gone — where only some of a type's outcomes are, the
+ * earliest surviving time is not known and the latest stands for both; so is an
+ * earliest decision the cutoff covers, which leaves the record unable to say
+ * (its timestamp is not kept for a row the tenant asked to be forgotten). With
+ * `expiry`, an expired hourly stamp removes the visitor's deferred outcomes.
  */
 function eraseDeferred(state: ShardState, tombs: ReadonlyMap<string, Pick<Tombstone, 'erased_at'>>, expiry?: { tenant: string; now: number }): void {
-  const memory = state.deferred;
-  if (memory) {
-    for (const [date, brands] of Object.entries(memory)) {
-      for (const [brand, record] of Object.entries(brands)) {
-        for (const [visitor, carry] of Object.entries(record)) {
-          if (expiry && carry.retention !== undefined && readRetention(carry.retention, expiry.tenant, 'hourly').expiresAt <= expiry.now) { delete record[visitor]; continue; }
-          const cutoff = tombs.get(visitor)?.erased_at;
-          if (cutoff !== undefined) for (const [type, at] of Object.entries(carry.outcomes)) if (at <= cutoff) delete carry.outcomes[type];
-          if (!Object.keys(carry.outcomes).length) delete record[visitor];
+  for (const brands of Object.values(state.deferred ?? {})) {
+    for (const record of Object.values(brands)) {
+      for (const [visitor, carry] of Object.entries(record)) {
+        if (expiry && carry.retention !== undefined && readRetention(carry.retention, expiry.tenant, 'hourly').expiresAt <= expiry.now) { delete record[visitor]; continue; }
+        const cutoff = tombs.get(visitor)?.erased_at;
+        if (cutoff === undefined) continue;
+        for (const byType of Object.values(carry.hours)) for (const [type, span] of Object.entries(byType)) {
+          if (span[1] <= cutoff) delete byType[type];
+          else if (span[0] <= cutoff) byType[type] = [span[1], span[1]];
         }
-        if (!Object.keys(record).length) delete brands[brand];
       }
-      if (!Object.keys(brands).length) delete memory[date];
     }
-    if (!Object.keys(memory).length) delete state.deferred;
   }
+  tidyDeferred(state);
   if (!tombs.size) return;
   for (const brands of Object.values(state.enrollment ?? {})) for (const record of Object.values(brands)) {
     for (const [visitor, enrolled] of Object.entries(record)) {
@@ -1010,12 +1072,13 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     }
     if (admitted.length) changed = true;
   }
-  // W30 P1 (amendment A47): the outcomes remembered for a visitor this fold has
-  // just carried into the date are placed on the assignment of her FIRST
-  // decision of it — the raw day's own rule for an outcome no decision of hers
-  // precedes. One that a decision of hers now precedes (an earlier hour folded
-  // out of order) is left for its own hour, which the catch-up folds again.
-  placeDeferred(state, ctx.date, touched);
+  // W30 P1 (delivery review defect 1): this fold decides every outcome of its
+  // hour afresh — where it is placed and what is remembered — and REPLACES what
+  // any earlier fold of the hour decided, instead of adding to it.
+  const hourKey = hourKeyOf(ctx.from);
+  for (const record of Object.values(state.deferred?.[ctx.date] ?? {})) for (const carry of Object.values(record)) delete carry.hours[hourKey];
+  /** brand → visitor → assignment → the outcome types this fold placed there. */
+  const placedNow = new Map<string, Map<string, Map<string, Set<string>>>>();
   // Keep the existing hour-start horizon and final persisted retention behavior.
   for (const [v, ring] of Object.entries(state.rings)) {
     const sorted = touched.has(v) ? [...ring].sort((a, b) => a.ts - b.ts) : ring;
@@ -1067,11 +1130,23 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
       const ha = ((ctx.brands[o.brand] ??= emptyBrand()).assignments ??= emptyAssignments());
       ha.unassignedOutcomes = (ha.unassignedOutcomes ?? 0) + 1;
       if (!member) {
-        deferOutcome(state, ctx.date, o);
+        deferOutcome(state, ctx.date, hourKey, o);
         ha.deferredOutcomes = (ha.deferredOutcomes ?? 0) + 1;
       }
+    } else if (!ringHeld && record!.firstAt! >= ctx.to) {
+      // W30 P1: held by her earliest decision of the day, and that decision is
+      // in a LATER hour — one an hour between them, folded afterwards, can still
+      // replace, without this hour ever being folded again. Remembered, and
+      // placed by derivation (`outcomesOf`), so it follows her earliest decision
+      // instead of staying on the row it was first counted on. An earliest
+      // decision inside this hour can only be replaced by a row of this hour or
+      // an earlier one, whose fold folds this hour again.
+      deferOutcome(state, ctx.date, hourKey, o);
     } else {
-      enrollOutcome(enrollmentOf(state, ctx.date, o.brand, o.visitor_id), label, shardLabel(o.type));
+      const visitors = placedNow.get(o.brand) ?? new Map<string, Map<string, Set<string>>>(); placedNow.set(o.brand, visitors);
+      const arms = visitors.get(o.visitor_id) ?? new Map<string, Set<string>>(); visitors.set(o.visitor_id, arms);
+      const types = arms.get(label) ?? new Set<string>(); arms.set(label, types);
+      types.add(shardLabel(o.type));
     }
     // W30 V1.01: what this hour could not reach. Recorded on a brand the fold
     // already knows — `buildHour` counts every outcome onto its brand before the
@@ -1125,6 +1200,18 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     // the cap or the horizon removed may be the one that would have been.
     if (carryIn && !learningCredits && subjectRing.length >= ctx.ringCap) carryIn.evicted += 1;
   }
+  // W30 P1: this hour's placements replace the ones any earlier fold of it made.
+  for (const brands of Object.values(state.enrollment?.[ctx.date] ?? {})) for (const record of Object.values(brands)) {
+    record.placed ??= legacyPlacement(record);
+    delete record.placed[hourKey];
+  }
+  for (const [brand, visitors] of placedNow) for (const [visitor, arms] of visitors) {
+    const record = enrollmentOf(state, ctx.date, brand, visitor);
+    record.placed ??= legacyPlacement(record);
+    if (arms.size > ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+    record.placed[hourKey] = Object.fromEntries([...arms].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+      .map(([arm, types]) => { if (types.size > ENROLLMENT_ARMS_MAX) throw new ReportInputError(); return [arm, [...types].sort()]; }));
+  }
   if (folded && ctx.from > state.through) state.through = ctx.from;   // the version-1 mark, still the newest hour folded
   if (older) {
     const days = (state.seenDays ??= {});
@@ -1145,7 +1232,11 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // W21 C1.08: the per-assignment memory keeps exactly the membership's ids, so
   // it is pruned last, after the membership and the archived dates are final.
   pruneEnrollment(state);
+  tidyDeferred(state);
   pruneDeferred(state, ctx);
+  // W30 P1: every record's outcomes, derived from what the hours placed and what
+  // is still remembered, so a memory placement follows her earliest decision.
+  deriveOutcomes(state);
   if (JSON.stringify(state.enrollment ?? null) !== beforeEnrollment) changed = true;
   // W30 P1: reported apart from `changed`, because remembering an outcome is
   // not taking an hour into the rings — a fold that changes nothing else keeps
@@ -1158,42 +1249,74 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   return { state, folded, changed, floor: floorAtEntry, deferredChanged };
 }
 
-/** W30 P1: remember an outcome for the visitor's first decision of its date. */
-function deferOutcome(state: ShardState, date: string, o: OutcomeRecord): void {
+/** W30 P1: remember an outcome for the visitor's first decision of its date, under its own hour. */
+function deferOutcome(state: ShardState, date: string, hour: string, o: OutcomeRecord): void {
   const type = shardLabel(o.type);
-  const carry = ((((state.deferred ??= {})[date] ??= {})[o.brand] ??= {})[o.visitor_id] ??= { outcomes: {} });
-  if (!Object.hasOwn(carry.outcomes, type) && Object.keys(carry.outcomes).length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
-  carry.outcomes[type] = Math.max(carry.outcomes[type] ?? o.ts, o.ts);
+  const carry = ((((state.deferred ??= {})[date] ??= {})[o.brand] ??= {})[o.visitor_id] ??= { hours: {} });
+  const byType = (carry.hours[hour] ??= {});
+  if (!Object.hasOwn(byType, type) && Object.keys(byType).length >= ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+  const span = byType[type];
+  byType[type] = span ? [Math.min(span[0], o.ts), Math.max(span[1], o.ts)] : [o.ts, o.ts];
   const stamp = o.retention?.hourly;
   if (stamp) carry.retention = carry.retention ? mergeRetention(carry.retention, stamp, o.tenant, 'hourly') : stamp;
 }
 
 /**
- * W30 P1: place what was remembered for the visitors this fold carried into
- * the date. A deferred outcome BEFORE her earliest decision belongs to that
- * decision's assignment and is enrolled there and forgotten; one a decision of
- * hers now precedes stays, for its own hour's re-fold to place against the
- * ring. A record that cannot say when her earliest decision was places nothing.
+ * W30 P1: the outcome types one visitor holds under each assignment of her
+ * date — every hour's placement, and each remembered outcome that precedes her
+ * earliest decision, under that decision's assignment. A remembered outcome a
+ * decision of hers precedes is NOT placed here: its own hour's fold places it.
  */
-function placeDeferred(state: ShardState, date: string, touched: ReadonlySet<string>): void {
-  const waiting = state.deferred?.[date];
-  if (!waiting) return;
-  for (const [brand, record] of Object.entries(waiting)) {
-    for (const [visitor, carry] of Object.entries(record)) {
-      if (!touched.has(visitor)) continue;
-      const enrolled = state.enrollment?.[date]?.[brand]?.[visitor];
-      if (!enrolled?.arms.length || enrolled.firstAt === undefined || enrolled.firstArm === undefined) continue;
-      for (const [type, at] of Object.entries(carry.outcomes)) {
-        if (at >= enrolled.firstAt) continue;
-        enrollOutcome(enrolled, enrolled.firstArm, type);
-        delete carry.outcomes[type];
-      }
-      if (!Object.keys(carry.outcomes).length) delete record[visitor];
-    }
-    if (!Object.keys(record).length) delete waiting[brand];
+function outcomesOf(record: VisitorEnrollment, carry: DeferredOutcomes | undefined): Record<string, string[]> | undefined {
+  const union = new Map<string, Set<string>>();
+  const add = (arm: string, type: string) => { const types = union.get(arm) ?? new Set<string>(); union.set(arm, types); types.add(type); };
+  for (const byArm of Object.values(record.placed ?? {})) for (const [arm, types] of Object.entries(byArm)) for (const type of types) add(arm, type);
+  if (carry && record.firstAt !== undefined && record.firstArm !== undefined) {
+    for (const byType of Object.values(carry.hours)) for (const [type, span] of Object.entries(byType)) if (span[0] < record.firstAt) add(record.firstArm, type);
   }
-  if (!Object.keys(waiting).length) delete state.deferred![date];
-  if (state.deferred && !Object.keys(state.deferred).length) delete state.deferred;
+  if (!union.size) return undefined;
+  if (union.size > ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+  return Object.fromEntries([...union].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([arm, types]) => {
+    if (types.size > ENROLLMENT_ARMS_MAX) throw new ReportInputError();
+    return [arm, [...types].sort()];
+  }));
+}
+
+/**
+ * W30 P1: the placement a record this build did not write starts from — its
+ * outcomes, kept whole and unrevisable under `legacy`. A record this build
+ * writes always carries `placed`, empty or not, so it is never mistaken for one.
+ */
+const legacyPlacement = (record: VisitorEnrollment): Record<string, Record<string, string[]>> =>
+  record.outcomes ? { legacy: structuredClone(record.outcomes) } : {};
+
+/** W30 P1: rewrite every record's `outcomes` from its placements and the carry-in memory. */
+function deriveOutcomes(state: ShardState): void {
+  for (const [date, brands] of Object.entries(state.enrollment ?? {})) for (const [brand, record] of Object.entries(brands)) {
+    for (const [visitor, enrolled] of Object.entries(record)) {
+      // Hour order, whatever order the folds replaced them in, so the same placements are the same bytes.
+      enrolled.placed = Object.fromEntries(Object.entries(enrolled.placed ?? legacyPlacement(enrolled)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+      const outcomes = outcomesOf(enrolled, state.deferred?.[date]?.[brand]?.[visitor]);
+      if (outcomes) enrolled.outcomes = outcomes; else delete enrolled.outcomes;
+    }
+  }
+}
+
+/**
+ * W30 P1 (delivery review defect 2): the hours of `date` holding a remembered
+ * outcome that memory can no longer place — its visitor has a decision that day
+ * at or before it, or an earliest decision that cannot be dated.
+ */
+function strandedOf(state: ShardState, date: string, brand: string): number[] {
+  const hours = new Set<number>();
+  for (const [visitor, carry] of Object.entries(state.deferred?.[date]?.[brand] ?? {})) {
+    const enrolled = state.enrollment?.[date]?.[brand]?.[visitor];
+    if (!enrolled?.arms.length) continue;                 // no decision of hers that day yet: waiting, not stranded
+    for (const [hour, byType] of Object.entries(carry.hours)) {
+      if (enrolled.firstAt === undefined || Object.values(byType).some(span => span[1] >= enrolled.firstAt!)) hours.add(Number(hour));
+    }
+  }
+  return [...hours];
 }
 
 /**
@@ -1325,6 +1448,11 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
         if (Object.hasOwn(ha, 'unassignedOutcomes')) aggregateNumber(ha.unassignedOutcomes);
         // W30 P1: the same, for the remembered share of them.
         if (Object.hasOwn(ha, 'deferredOutcomes')) aggregateNumber(ha.deferredOutcomes);
+        if (Object.hasOwn(ha, 'strandedHours')) {
+          const listed: unknown = ha.strandedHours;
+          if (!Array.isArray(listed) || !listed.length || listed.length > 24 || new Set(listed).size !== listed.length
+            || listed.some(h => !Number.isInteger(h) || h < 0 || h > 23)) unavailable();
+        }
       }
       for (const [name, value] of Object.entries(aggregateMap(b.policies))) {
         aggregateName(name); visit(); const p = aggregateMap(value);
@@ -1472,7 +1600,16 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     const ha = a.brands[ids.brand]?.assignments;
     return a.brands[ids.brand] !== undefined && (ha?.unassignedOutcomes === undefined || ha.unassignedOutcomes !== (ha.deferredOutcomes ?? 0));
   }).map(a => a.hour);
-  const unassignedHours = [...new Set([...ungrouped, ...unplaced])].sort((x, y) => x - y);
+  // W30 P1 (delivery review defect 2): an hour a later fold found holding a
+  // remembered outcome memory can no longer place is named until an aggregate
+  // of that hour is written after that fold — its own fold is what places it.
+  const builtAtOf = new Map(sorted.map(a => [a.hour, a.builtAt]));
+  const stranded: number[] = [];
+  for (const a of sorted) for (const hour of a.brands[ids.brand]?.assignments?.strandedHours ?? []) {
+    const origin = builtAtOf.get(hour);
+    if (origin !== undefined && origin < a.builtAt) stranded.push(hour);
+  }
+  const unassignedHours = [...new Set([...ungrouped, ...unplaced, ...stranded])].sort((x, y) => x - y);
   const assignments = ungrouped.length === 0 ? hb.assignments : undefined;
   const names = Object.keys(hb.policies).sort((a, b) => Number(hb.policies[b]!.role === 'learning') - Number(hb.policies[a]!.role === 'learning'));
   const slots = [...new Set([...Object.keys(hb.arms), ...Object.keys(hb.exploration), ...Object.values(hb.policies).flatMap((p) => Object.keys(p.stats))])].sort();
@@ -2113,6 +2250,8 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
   let recoveryFrom = 0;
   /** W21 C1.08: brands whose date membership this fold could not account for assignment by assignment. */
   const unaccounted = new Set<string>();
+  /** W30 P1: brand → the hours of this date holding a remembered outcome memory can no longer place. */
+  const stranded = new Map<string, Set<number>>();
   const generation = pending?.generation ?? crypto.randomUUID();
   const staged: Array<string | null> = [], fingerprints: PendingHour['states'] = [];
   let stagedBytes = 0;
@@ -2162,6 +2301,11 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       }
     }
     if (r.state.seenDate === at.date) for (const brand of Object.keys(r.state.seenIncomplete ?? {})) (brands[brand] ??= emptyBrand()).visitorsIncomplete = true;
+    // W30 P1 (delivery review defect 2): what memory can no longer place, as of this fold.
+    for (const brand of Object.keys(r.state.deferred?.[at.date] ?? {})) {
+      const hours = strandedOf(r.state, at.date, brand);
+      if (hours.length) { const known = stranded.get(brand) ?? new Set<number>(); stranded.set(brand, known); for (const h of hours) known.add(h); }
+    }
     // Preserve the established no-change through/seen body. Changed bodies get a
     // nonce too: a later replay must never recreate an old conditional-write ETag.
     let body = original;
@@ -2187,6 +2331,8 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     // truth — and one whose membership this fold could not account for withdraws
     // the member entirely, which is what `coverage.unassignedHours` then names.
     if (unaccounted.has(brand)) delete b.assignments; else b.assignments ??= emptyAssignments();
+    const strandedHours = [...(stranded.get(brand) ?? [])].sort((x, y) => x - y);
+    if (b.assignments && strandedHours.length) b.assignments.strandedHours = strandedHours;
     try {
       b.computation = computationBasis(learn,
         Object.entries(b.policies).map(([name, p]) => ({ name, role: p.role, policy: p.policy })),
@@ -2369,14 +2515,19 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   const debt = new Set(missing.map(c => hourKey(tenant, c.date, c.hour)));
   if (interrupted) debt.add(hourKey(tenant, interrupted.date, interrupted.hour));
   // W22 R1.02: the hours that already have an aggregate are candidates too —
-  // for a re-fold, not for a first one. They are taken after every missing
-  // hour, they cost a listing and a point read each and only while the run has
-  // budget for them, and a re-fold appears in `built` like any other hour: the
-  // result keeps exactly the members it had.
+  // for a re-fold, not for a first one. They cost a listing and a point read
+  // each and only while the run has budget for them, and a re-fold appears in
+  // `built` like any other hour: the result keeps exactly the members it had.
+  //
+  // W30 P1 (delivery review defect 1): every candidate is taken in TIME order,
+  // a missing hour and a re-fold alike. A re-fold taken after a later missing
+  // hour of the same run left that later hour folded against the state before
+  // the re-fold, with the same `builtAt`, so nothing ever folded it again — an
+  // outcome the re-fold moved to another row stayed counted on the old one too.
   const settled = candidates.filter((c) => existing.has(hourKey(tenant, c.date, c.hour)));
   const builtAt = new Map<number, number>();
-  const work = [...(interrupted ? [interrupted] : []), ...missing.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour),
-    ...settled.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)];
+  const work = [...(interrupted ? [interrupted] : []),
+    ...candidates.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)];
   // An interrupted hour is never a re-fold candidate: its transaction has to
   // finish, whatever its aggregate says.
   const rebuild = new Set(settled.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)
