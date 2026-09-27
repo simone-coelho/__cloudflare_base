@@ -2061,17 +2061,22 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "afef56ba33e38199309aa432bf68986a34129ebb on rem/spec-w27: src/units/W27 and the W27-named legacy tests (R2 removed, decision D3)",
+        "reviewedRevision": "85055cb6412a48f9d9bed8e49d1cb7b24e107555 on rem/spec-w27: src/units/W27 and the W27-named legacy tests (R2 removed, decision D3), with unit:W27.R3 extended at 85055cb to every present non-identity lift or prior, numbers and non-numbers (the frozen R3 text)",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/W27-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-acceptance.log",
-          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-legacy-only.log"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-legacy-only.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/specifier/logs/W27-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/logs/build-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/logs/broad-acceptance.log"
         ]
       },
       "doneWhen": [
