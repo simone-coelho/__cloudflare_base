@@ -434,7 +434,7 @@
     if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${many(row.objects, 'object')})`).join(', ')}.`);
     const carry = hourRows(coverage.carryInHours, ['evicted', 'unplaced']);
     const reached = carry ? carry.filter(row => row.evicted > 0 || row.unplaced > 0) : [];
-    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day)`).join(', ')}.`);
+    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day known when the hour was folded)`).join(', ')}.`);
     if (reached.some(row => row.evicted > 0)) notes.push('A full attribution ring is uncertainty about a credit, not proof that one was owed.');
     const scan = hourRows(coverage.objectScan, ['objects', 'read']);
     if (scan) notes.push(`Ledger objects the fold opened, of those each built hour holds: ${scan.map(row => `${row.hour}: ${row.read} of ${row.objects}`).join(', ')}.`);

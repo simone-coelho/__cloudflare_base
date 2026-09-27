@@ -561,10 +561,18 @@ No report of ours states a business target, a lift or a standing.
 assignment, the hours that cannot, and `null` when the stored report does not record the member at
 all. An hour folded before this release carries no assignment: that day's rows are grouped by the arm
 SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
-number the source cannot support. An hour holding an outcome whose visitor had no decision that day
-at or before it, nor later in that hour, cannot place the outcome, because the day counts it under
-the visitor's first decision of the day and that decision may be in a later hour: that day keeps its
-rows and `armVisitors` and answers `visitorOutcomes: null` rather than a count that omits the outcome.
+number the source cannot support. An outcome whose visitor had no decision that day at or before it,
+nor later in its hour, is counted under the visitor's first decision of the day, and that decision may
+be in a later hour: the fold remembers the outcome, and the fold of the hour that holds that decision
+places it on that decision's assignment — never on the outcome's own `experiment` stamp — so the day
+answers `visitorOutcomes` exactly as the day computed from its records does, and an outcome whose
+visitor has no decision that day is counted on no row by either. An hour IS named when it holds an outcome whose visitor did
+have a decision that day at or before it that the fold's attribution ring no longer holds — the ring
+cap or the horizon evicted it — or whose earliest decision of the day the fold cannot date, because
+the assignment she held when the outcome happened cannot then be known: that day keeps its rows and
+`armVisitors` and answers `visitorOutcomes: null` rather than count the outcome on a row she may not
+have held. An hour folded before this release remembered no outcome and is still named for every
+outcome it could not place.
 
 `coverage` says the same kind of thing about the HOURS a day was summed from, and every member below
 is additive and optional: a report written before this release carries none of them and is still read
@@ -584,9 +592,11 @@ age cutoff that discards late data. `carryInHours` is `[ { hour, evicted, unplac
 each built hour whose earlier decisions the fold could not reach — `evicted` where the visitor's
 attribution ring held its full capacity at the moment the outcome was attributed and nothing was
 credited, so a decision the cap or the horizon removed may be the one that would have been, and
-`unplaced` where no decision of the visitor's own date could be found for the outcome at all. Neither
-is a claim that a credit was owed; a day with any `unplaced` reports `status: "incomplete"` rather than
-a visitor-level number that is quietly short. `objectScan` is `[ { hour, objects, read } ]`: how many
+`unplaced` where no decision of the visitor's own date could be found for the outcome when its hour
+was folded — a later hour's fold may still place it on her first decision of the day, or it is one of
+the outcomes `coverage.unassignedHours` names. Neither is a claim that a credit was owed; a day with
+any `unplaced` reports `status: "incomplete"`, because that hour's own fold could not complete the
+visitor-level count and only a later hour, or nothing, completes it. `objectScan` is `[ { hour, objects, read } ]`: how many
 ledger objects each built hour holds and how many the fold really OPENED, so the object-scan cap is
 visible where an hour hit it and the hours beside it report what they really read. `recoveryFromMs` is
 the migration bound — the earliest hour a repair can still put into the batch rings, because a
