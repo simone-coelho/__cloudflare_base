@@ -27,9 +27,14 @@ The `data` object of `POST /realtime/action`, by `type`.
 same value the decision request carried. A reward-bearing event that names it is measured in that
 brand's statistics; one that names none is measured in the tenant's own brand, as before. Send it
 wherever a tenant serves more than one brand, or a click on brand A's hero lands in brand B's numerator
-while the exposure stays in A's denominator. A correlated event whose `brand` disagrees with the brand
-of the `decisionId` it names is refused, not pooled, and the refusal is counted on the outcome receipt
-as `brandMismatched`.
+while the exposure stays in A's denominator. The SDK sends it for you: a client configured with
+`brand` puts that value on every action it sends, whatever the type, and a client configured without
+one sends none, whatever a page or tag layer put on the event (a product's brand label travels as
+`productBrand`). A correlated event whose `brand`
+disagrees with the brand of the `decisionId` it names is refused, not pooled, and the refusal is
+counted on the outcome receipt as `brandMismatched`. An event that names no `decisionId` is counted
+there as well: `brandMismatched` adds each placement of another brand it would have been credited to
+under the learning policy, in a slot its own brand credited nothing.
 
 An attribute value the tenant's published catalogue does not name, on a dimension that catalogue does
 name values for, builds no affinity — that value alone, whatever else the same event carries. A
@@ -459,6 +464,9 @@ ones the tenant's published learn document names. `witness` is a digest of the s
 committed identity — tenant, brand, slot, configuration, generation fence and projection — which the
 serving path checks against the object itself, together with the published digest, before it trusts a
 cached snapshot: a snapshot the object does not confirm as its current, healthy publication serves no lift.
+A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with
+`page=` (see the API reference); its `slot` member is still the slot name, the answer around it names the
+`page`, and the page is part of the committed identity its `witness` digests.
 `completeness`, on counters kept under the application's bounds (absent on counters from before those
 bounds existed), is `{ depth, omittedItems, selection, reason }`: the finest ladder level still kept
 (`depth`, 0 to 5), whether items past the item budget were folded into the slot's root instead of being

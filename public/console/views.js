@@ -103,6 +103,8 @@
     const item = S.params.item || '';
     const res = await C.v1('/lift/rows', {
       slot: S.slot,
+      // W26 R2: the placement's page, where the catalogue carries this slot name on more than one page.
+      page: S.params.page || undefined,
       level: item ? 'cells' : 'pooled',
       item: item || undefined,
       q: lift.q || undefined,
@@ -124,6 +126,9 @@
         : res.status === 404
           ? 'This platform does not have the paged grid route yet (GET /v1/{brand}/lift/rows). Nothing is broken; the screen has nothing to page.'
           : res.data.error || 'Could not read the grid.';
+      // W26 R2 (review D4): a slot name on more than one page is one placement
+      // per page; the route names the pages, and the operator picks one.
+      st.pages = res.status === 400 && Array.isArray(res.data.pages) ? res.data.pages : null;
       st.data = null; C.render(); return;
     }
     st.error = '';
@@ -151,7 +156,7 @@
 
   async function resetItem(item, name) {
     if (!window.confirm(`Discard the evidence for ${name} in ${S.slot} and start again from the prior?`)) return;
-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand }, lift.authored);
+    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand, ...(S.params.page ? { page: S.params.page } : {}) }, lift.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     C.flash(res.data.had
       ? `Evidence for ${name} discarded; snapshot publication status is reported separately, recorded as revision ${fmt(res.data.revision)}.`
@@ -184,7 +189,7 @@
 
       const toolbar = h('div', { class: 'toolbar' },
         item
-          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '' }) }, '← Every piece')
+          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '', page: S.params.page }) }, '← Every piece')
           : h('input', {
               class: 'small', id: 'lift-q', 'data-focus-key': 'lift-q', placeholder: 'Find a piece by id, your id or title',
               value: lift.q, style: 'width:280px',
@@ -202,7 +207,11 @@
         h('button', { class: 'small', disabled: !rows.length, onclick: () => downloadPage(rows, item) }, 'Download this page'),
       );
 
-      if (st.error) { host.append(toolbar, h('div', { class: 'msg err' }, st.error)); return; }
+      if (st.error) {
+        host.append(toolbar, h('div', { class: 'msg err' }, st.error,
+          st.pages ? h('div', { style: 'margin-top:6px' }, ...st.pages.map((page) => h('button', { class: 'small', onclick: () => C.go('lift', { page, item: '' }) }, `The ${page} page's ${S.slot}`))) : null));
+        return;
+      }
       if (!meta || meta.published === false) {
         host.append(toolbar, h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
@@ -227,6 +236,9 @@
         { key: 'p0', label: 'Slot credit / exposure', sym: 'p₀', num: true, sortable: true, title: 'What this slot achieves in the same context, whatever it shows' },
         { key: 'lift', label: 'Lift', sym: 'p̂ / p₀', num: true, sortable: true, title: 'The rate over the slot’s rate, clamped. Above 1 is better than the slot’s average' },
         { key: 'evidence', label: 'Evidence', sym: 'n / (n + n₀)', num: true, sortable: true, title: 'How much of the rate is live observation rather than the prior' },
+        // W26 R5 (F21 §8 "report the lift table as a diagnostic that is not corrected for position or placement"):
+        // what each row's lift corrects for, from the row's own `correction`. Nothing, today.
+        { key: 'correction', label: 'Correction', title: 'What this lift is corrected for. uncorrected-v1: neither the position a piece was shown at nor the placement it was shown in, so it is a diagnostic, not incremental lift' },
         { key: 'act', label: 'Held by a person' },
       ];
 
@@ -239,7 +251,7 @@
           }))]),
           h('td', {},
             item ? h('div', { class: 'itemname' }, name)
-                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item }) }, name),
+                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item, page: S.params.page }) }, name),
             h('div', { class: 'itemid' }, r.item)),
           ...(item ? [h('td', {}, h('div', {}, r.level_words || 'everyone'), r.key === '*' ? null : h('div', { class: 'cellkey' }, r.key))] : []),
           h('td', { class: 'num' }, dec(r.n)),
@@ -248,6 +260,7 @@
           h('td', { class: 'num' }, dec(r.p0)),
           h('td', { class: 'num' }, h('strong', {}, dec(r.lift))),
           h('td', { class: 'num' }, pct(r.evidence)),
+          h('td', { title: 'not corrected for position or placement' }, correctionOf(r)),
           h('td', {},
             r.control ? h('span', { class: `chip ${r.control}` }, r.control === 'freeze' ? 'frozen' : 'rejected') : null,
             r.prior ? h('span', { class: 'chip prior', title: `an imported prior: rate ${dec(r.prior.p)} worth ${fmt(r.prior.n)} observations` }, 'prior') : null,
@@ -270,6 +283,11 @@
       ));
     },
   });
+
+  /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
+  function correctionOf(r) {
+    return typeof r.correction === 'string' && r.correction ? r.correction : 'uncorrected-v1';
+  }
 
   function downloadPage(rows, item) {
     // W26 X1.01: `correction` is the LAST column, after every existing one, so a
@@ -317,7 +335,8 @@
       for (const page of S.slots.pages) {
         const body = page.slots.map((s) => h('tr', {},
           h('td', {},
-            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot }) }, s.slot),
+            // W26 R2: a slot name the catalogue carries on more than one page is one placement per page.
+            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot, page: s.pageScoped ? s.page : undefined }) }, s.slot),
             s.pinnedPieceIds?.length ? h('div', { class: 'itemid' }, `Pinned first: ${JSON.stringify(s.pinnedPieceIds)}; ${s.rankedCapacity} ranked positions`) : s.pinned ? h('div', { class: 'itemid' }, `pinned to ${s.pinned}`) : null),
           h('td', { class: 'num' }, fmt(s.take)),
           h('td', { class: 'num' }, fmt(s.pieces)),

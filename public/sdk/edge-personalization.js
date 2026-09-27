@@ -891,6 +891,8 @@
     function envelope(type, data = {}) {
       const tracking = trackingAllowed();
       const w = toWire(type, tracking ? data : {});
+      const { brand: _supplied, ...own } = w.data;
+      void _supplied;
       const timestamp = host.now();
       let eventId;
       if (tracking && isCurrent(generation)) {
@@ -906,7 +908,7 @@
         anonymousId: anonId,
         sessionId,
         browsingSessionId: session(),
-        data: w.data,
+        data: tracking && cfg.brand ? { ...own, brand: cfg.brand } : own,
         source: cfg.source,
         ...cfg.surface ? { surface: cfg.surface } : {},
         entry: entryOf(),
@@ -1420,7 +1422,10 @@
       ...it.item_name !== void 0 ? { name: it.item_name } : {},
       ...it.price !== void 0 ? { price: it.price } : {},
       ...it.item_category !== void 0 ? { category: it.item_category } : {},
-      ...it.item_brand !== void 0 ? { brand: it.item_brand } : {},
+      // W26 R3 (review D1): a product's brand label is the PRODUCT's, sent as
+      // `productBrand`. `data.brand` is the brand the page was served under,
+      // which only the client's configuration names (`envelope`, core.ts).
+      ...it.item_brand !== void 0 ? { productBrand: it.item_brand } : {},
       ...it.item_variant !== void 0 ? { variant: it.item_variant } : {}
     };
   }
