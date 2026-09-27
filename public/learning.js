@@ -428,7 +428,7 @@
       const settledHours = hoursOf('final'), openHours = hoursOf('open'), repairedHours = hoursOf('repaired');
       if (settledHours.length) notes.push(`Hours past that horizon and final, which the platform will not re-fold on its own: ${settledHours.join(', ')}.`);
       if (openHours.length) notes.push(`Hours still inside it, whose ledger is still re-checked: ${openHours.join(', ')}.`);
-      if (repairedHours.length) notes.push(`Hours whose aggregate was written after they were already final, so their numbers were repaired rather than first folded: ${repairedHours.join(', ')}.`);
+      if (repairedHours.length) notes.push(`Hours marked repaired, because their aggregate was written after they were already final — a first fold that reached them only late, or a rebuild of numbers already read as final: ${repairedHours.join(', ')}.`);
     }
     const late = hourRows(coverage.lateAfterMaturity, ['objects']);
     if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${many(row.objects, 'object')})`).join(', ')}.`);
