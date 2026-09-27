@@ -39,13 +39,19 @@
 // W30.E1 (`P1E1.unit.test.ts` expectCorrectedOrFlagged):
 //   · COUNTED — the folded day's `visitorOutcomes` is the raw day's, member for
 //     member (so the purchase is on exactly the one row the raw day puts it
-//     on), and it names no hour in `coverage.unassignedHours`; or
+//     on), and it names no hour in `coverage.unassignedHours`;
 //   · NAMED — the folded day names the purchase's hour, 9, in
 //     `coverage.unassignedHours` and answers `visitorOutcomes: null`, keeping
 //     its `armVisitors`.
-// Anything else fails: above all a purchase counted on two rows, or a count
-// short of it, with no hour named. Nothing here reads `ShardState` or
-// `coverage.carryInHours`/`status`: V1.01's hour-level statement stands.
+// W30.P1.02 and W30.P1.03 require COUNTED only: P1 is "a folded day answers
+// visitorOutcomes whenever the raw day does", the raw day answers on both
+// paths, and once the fold has caught up it holds every row of the day, so no
+// information is lost that could justify naming an hour (the W30 fix-1
+// specification review, ruling (a)). W30.F1.02 admits COUNTED or NAMED: there
+// the re-fold of the purchase hour is refused, which is where F1 and W21.R1
+// name an hour. Anything else fails: above all a purchase counted on two rows,
+// or a count short of it, with no hour named. Nothing here reads `ShardState`
+// or `coverage.carryInHours`/`status`: V1.01's hour-level statement stands.
 //
 // THE PATH. Records reach the ledger through the product's own object writer
 // (`writeBatches`, the queue consumer's call), each burst as it happens. The
@@ -268,18 +274,32 @@ async function bothDays(r2: UnitR2, env: Env, now: number): Promise<{ folded: Ru
 
 interface Ruled { armVisitors: Array<{ arm: string; visitors: number }>; visitorOutcomes: unknown }
 
-/**
- * The fixture's own premises, then the one representation both criteria rule:
- * COUNTED (the raw day's rows exactly, no hour named) or NAMED (hour 9 named,
- * `visitorOutcomes: null`, `armVisitors` kept).
- */
-function expectCountedOnceOrNamed(day: { folded: RuledDay; raw: RuledDay }, ruled: Ruled, criterion: string, counted: string): void {
+/** The fixture's own premises: the raw day's rows by hand, and a folded day built from every hour of the date. */
+function expectDayPremises(day: { folded: RuledDay; raw: RuledDay }, ruled: Ruled, criterion: string): void {
   expect({ armVisitors: day.raw.armVisitors?.arms, visitorOutcomes: day.raw.visitorOutcomes },
     `${criterion} — the raw-day branch, by hand (\`src/learn/report.ts\` assignmentAt: her last decision at or before the outcome, else her first of the day)`)
     .toEqual(ruled);
   expect({ source: day.folded.hours?.source, built: day.folded.hours?.built, missingHours: day.folded.coverage?.missingHours },
     `${criterion} — the fixture: by the time the day is read the five-minute job has folded every hour of the date and nothing is missing`)
     .toEqual({ source: 'aggregates', built: ALL_HOURS, missingHours: [] });
+}
+
+/**
+ * P1: the premises, then COUNTED and nothing else — the folded day answers the
+ * raw day's `visitorOutcomes`, member for member, and names no hour.
+ */
+function expectCountedOnce(day: { folded: RuledDay; raw: RuledDay }, ruled: Ruled, criterion: string, counted: string): void {
+  expectDayPremises(day, ruled, criterion);
+  expect({ visitorOutcomes: day.folded.visitorOutcomes, unassignedHours: day.folded.coverage?.unassignedHours }, `${criterion} — ${counted}`)
+    .toEqual({ visitorOutcomes: ruled.visitorOutcomes, unassignedHours: [] });
+}
+
+/**
+ * F1: the premises, then COUNTED (the raw day's rows exactly, no hour named)
+ * or NAMED (hour 9 named, `visitorOutcomes: null`, `armVisitors` kept).
+ */
+function expectCountedOnceOrNamed(day: { folded: RuledDay; raw: RuledDay }, ruled: Ruled, criterion: string, counted: string): void {
+  expectDayPremises(day, ruled, criterion);
   const named = day.folded.coverage?.unassignedHours;
   if (Array.isArray(named) && named.includes(PURCHASE_HOUR)) {
     // NAMED: the hour holding the purchase is named, and the one member the
@@ -321,7 +341,8 @@ function expectCountedOnceOrNamed(day: { folded: RuledDay; raw: RuledDay }, rule
 //   armVisitors      default 1 · ineligible 1 · personalized 1
 //   visitorOutcomes  default {1, {click 1}} · ineligible {1, {purchase 1}} ·
 //                    personalized {1, {}}
-// ONE purchase, on exactly ONE row: `ineligible`. Measured: at 278c588 the
+// ONE purchase, on exactly ONE row: `ineligible`. RULED (P1): the folded day
+// answers exactly these rows and names no hour. Measured: at 278c588 the
 // folded day also counts it on `personalized` and names no hour (the review's
 // probe P-e); at 7c2523e and at 6426de3, which place no later-hour carry-in, it
 // answers the raw day's rows.
@@ -337,7 +358,7 @@ describe('unit:W30.P1.02', () => {
     ] },
   };
 
-  it('logic: when her earlier decision reaches the purchase hour late, inside the re-fold horizon, after a later hour placed the purchase as a carry-in, the re-fold leaves the purchase on exactly one row — the one the raw day gives — or names the hour', async () => {
+  it('logic: when her earlier decision reaches the purchase hour late, inside the re-fold horizon, after a later hour placed the purchase as a carry-in, the re-fold leaves the purchase on exactly one row — the one the raw day gives — and the folded day answers visitorOutcomes exactly as the raw day does, naming no hour', async () => {
     const r2 = new UnitR2(), env = fixtureEnv(r2);
     const preConsent = decision({ visitor: 'v-switch', assignment: 'ineligible', ts: at(DATE, 9, 5), item: 'cnt-tabby-evening' });
     const kateSpade = decision({ visitor: 'v-switch', brand: OTHER_BRAND, assignment: 'default', ts: at(DATE, 9, 10), item: 'ks-knott-satchel', page: 'plp' });
@@ -360,9 +381,9 @@ describe('unit:W30.P1.02', () => {
       'W30.P1.02 — the fixture: no fold failed, and at 11:36 the five-minute job re-folded hour 9 because her late decision reached it inside the re-fold horizon')
       .toEqual({ failed: [], refolded: true });
 
-    expectCountedOnceOrNamed(await bothDays(r2, env, at(NEXT, 1, 30)), RULED,
+    expectCountedOnce(await bothDays(r2, env, at(NEXT, 1, 30)), RULED,
       'W30.P1.02 (amendment A47; W30 delivery review defect 1, first path)',
-      'a later-hour placement is taken back when a re-fold finds an earlier decision of hers: kit 03 "one purchase is counted on exactly one row", so v-switch\'s 09:15 purchase is counted on the `ineligible` row her 09:05 decision gives it — exactly as the raw day counts it — and NOT also on the `personalized` row her 10:30 decision carried it onto; a day that cannot say which must name hour 9 and answer null');
+      'a later-hour placement is taken back when a re-fold finds an earlier decision of hers: kit 03 "one purchase is counted on exactly one row", so v-switch\'s 09:15 purchase is counted on the `ineligible` row her 09:05 decision gives it — exactly as the raw day counts it — and NOT also on the `personalized` row her 10:30 decision carried it onto; the raw day answers and the caught-up fold holds every row, so the folded day answers visitorOutcomes too and names no hour (P1: "a folded day answers visitorOutcomes whenever the raw day does")');
   }, 240_000);
 });
 
@@ -390,7 +411,8 @@ describe('unit:W30.P1.02', () => {
 //   armVisitors      default 1 · ineligible 1 · personalized 1
 //   visitorOutcomes  default {1, {purchase 1}} · ineligible {1, {purchase 1}} ·
 //                    personalized {1, {}}
-// ONE purchase, on exactly ONE row: `ineligible`. Measured: at 278c588 the
+// ONE purchase, on exactly ONE row: `ineligible`. RULED (P1): the folded day
+// answers exactly these rows and names no hour. Measured: at 278c588 the
 // folded day also counts it on `personalized` and names no hour (the review's
 // probe e4 "placed-first"); at 7c2523e and at 6426de3 it answers the raw day's
 // rows.
@@ -406,7 +428,7 @@ describe('unit:W30.P1.03', () => {
     ] },
   };
 
-  it('logic: when an earlier hour fails and is folded later inside the lookback, after a later hour placed the purchase as a carry-in, the re-fold leaves the purchase on exactly one row — the one the raw day gives — or names the hour', async () => {
+  it('logic: when an earlier hour fails and is folded later inside the lookback, after a later hour placed the purchase as a carry-in, the re-fold leaves the purchase on exactly one row — the one the raw day gives — and the folded day answers visitorOutcomes exactly as the raw day does, naming no hour', async () => {
     const r2 = new RefusingR2(), env = fixtureEnv(r2);
     const unknown = decision({ visitor: 'u-unknown', assignment: 'default', ts: at(DATE, 9, 5), item: 'cnt-unknown-taxonomy', cell: UNKNOWN_CELL });
     await deliver(r2, env, [decision({ visitor: 'v-oo', assignment: 'ineligible', ts: at(DATE, 8, 30), item: 'cnt-tabby-evening' })], [], 'p103-early');
@@ -428,9 +450,9 @@ describe('unit:W30.P1.03', () => {
       'W30.P1.03 — the fixture: only hour 8 failed, during the outage; hour 14 (her consented decision) was folded while hour 8 was still unfolded; at 16:06 the job folded hour 8 and re-folded hour 9')
       .toEqual({ failed: [hourOfDate(8)], carriedIn: true, recovered: [true, true] });
 
-    expectCountedOnceOrNamed(await bothDays(r2, env, at(NEXT, 1, 30)), RULED,
+    expectCountedOnce(await bothDays(r2, env, at(NEXT, 1, 30)), RULED,
       'W30.P1.03 (amendment A47; W30 delivery review defect 1, second path)',
-      'a later-hour placement is taken back when an earlier hour folded later finds an earlier decision of hers: kit 03 "one purchase is counted on exactly one row", so v-oo\'s 09:15 purchase is counted on the `ineligible` row her 08:30 decision gives it — exactly as the raw day counts it — and NOT also on the `personalized` row her 14:00 decision carried it onto; a day that cannot say which must name hour 9 and answer null');
+      'a later-hour placement is taken back when an earlier hour folded later finds an earlier decision of hers: kit 03 "one purchase is counted on exactly one row", so v-oo\'s 09:15 purchase is counted on the `ineligible` row her 08:30 decision gives it — exactly as the raw day counts it — and NOT also on the `personalized` row her 14:00 decision carried it onto; the raw day answers and the caught-up fold holds every row, so the folded day answers visitorOutcomes too and names no hour (P1: "a folded day answers visitorOutcomes whenever the raw day does")');
   }, 240_000);
 });
 
