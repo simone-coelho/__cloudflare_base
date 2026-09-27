@@ -173,13 +173,16 @@ const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
  * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
  * mutation is withdrawn for every tenant — `POST learn/cycle` and
  * `POST learn/proposals/:id/:decision` answer 503 below without reading or
- * writing anything — and the retained statuses were never verified as applied
- * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
- * reports proposal work carries these two facts beside it, so a count is never
- * read as an action a person can take today. Stamped, not derived from
- * configuration, because no configuration a tenant can set makes the mutation
- * available: the routes below refuse unconditionally (F24 §5, document 35 §5
- * W29). It is stated here, once, beside the constants the same routes share.
+ * writing anything — and the retained statuses were never verified as applied.
+ * Any answer that reports proposal work carries these two facts beside it, so a
+ * count is never read as an action a person can take today. Stamped, not derived
+ * from configuration, because no configuration a tenant can set makes the
+ * mutation available: the routes below refuse unconditionally (F24 §5, document
+ * 35 §5 W29). It is stated here, once, beside the constants the same routes
+ * share, and every answer reads it (W29 R3, LANE-LOG R176): the work queue
+ * carries it whole as `autonomy`, and the `GET learn/proposals` history takes
+ * its `mutationAvailable` and its `verified` from these two members, so the two
+ * answers cannot part.
  */
 const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
@@ -599,7 +602,10 @@ decisionRoutes.get('/:tenant/learn/proposals', operatorJwt(), async (c) => {
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const doc = await readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, proposals: doc.proposals, history: { historical: true, verified: false, readOnly: true, complete: false, mutationAvailable: false, note: 'Stored proposal statuses are unverified. This bounded listing is not a complete audit trail.' } });
+  // The withdrawal and the unverified statuses are the work queue's two facts, read from the one statement of them.
+  return c.json({ ok: true, tenant, proposals: doc.proposals, history: { historical: true, verified: AUTONOMY_WITHDRAWN.proposalStatusesVerified,
+    readOnly: true, complete: false, mutationAvailable: AUTONOMY_WITHDRAWN.mutationAvailable,
+    note: 'Stored proposal statuses are unverified. This bounded listing is not a complete audit trail.' } });
 });
 decisionRoutes.post('/:tenant/learn/proposals/:id/:decision', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
