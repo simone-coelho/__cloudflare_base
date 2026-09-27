@@ -58,7 +58,14 @@ export interface RecoveryReceipt {
   source: { expected: number; state: 'pending' | 'recovered' | 'suppressed_erased' | 'expired_unrecovered' };
   ledger?: CaptureReceipt; queue?: LedgerDeliveryReceipt; learning?: LearningReceipt;
 }
-interface RecoveryPayload { input: RecoveryInput; messages: PreparedMessage[]; effects?: Record<string, LearningEffect>; prepared?: boolean }
+/**
+ * W26 R2: `pageScoped` is the set of slot names whose storage identity carried
+ * the page when this operation PREPARED its learning effects, kept with them so
+ * every retry lands exactly where the prepared effects and the cleanup
+ * destinations say. A payload prepared before W26 R2 carries none, and its
+ * effects keep the page-less names they were prepared under.
+ */
+interface RecoveryPayload { input: RecoveryInput; messages: PreparedMessage[]; effects?: Record<string, LearningEffect>; prepared?: boolean; pageScoped?: string[] }
 export interface OwnerRecovery {
   version: 1; id: string; digest: string; payloadDigest: string; chunks: number; bytes: number;
   principal: SessionCapability; consentUntil: number; retention: RetentionStamp; expiresAt: number;
@@ -197,16 +204,22 @@ export async function resumeOwnerRecovery(storage: DurableObjectStorage, env: En
     return meta.receipt;
   }
   const payload = await payloadOf(storage, meta), input = payload.input;
-  const { fanDecisions, fanOutcome, prepareExposureEffects, ringName, statsName } = await import('@/learn/fan');
+  const { exposureDestinations, fanDecisions, fanOutcome, pageScopedSlotsOf, pageScopedWire, prepareExposureEffects, ringName } = await import('@/learn/fan');
   if (!payload.prepared) {
+    // W26 R2: resolved once, where the effects are prepared, and kept with them.
+    if (learningInput(input)) payload.pageScoped = [...await pageScopedSlotsOf(env, input.tenant)].sort();
+    const prepared = new Set(payload.pageScoped ?? []);
     if (input.kind === 'decisions') {
-      payload.effects = await prepareExposureEffects(env, input.records, meta.consentUntil);
-      meta.destinations = [...new Set(input.records.filter(row => row.arm === 'personalized').map(row => statsName(row.tenant, row.brand, row.slot)))];
+      payload.effects = await prepareExposureEffects(env, input.records, meta.consentUntil, prepared);
+      // The recovery record names every object its effects go to — each
+      // placement's own, page-separated where the catalogue says so — so her
+      // erasure and the record's expiry clean exactly those.
+      meta.destinations = exposureDestinations(input.records, prepared);
     } else if (input.kind === 'outcome') {
       if (!env.DECISION_RING) throw new Error('Attribution preparation unavailable');
       const response = await env.DECISION_RING.get(env.DECISION_RING.idFromName(ringName(input.tenant, input.subject))).fetch('https://learn/outcome/prepare', {
         method: 'POST', body: recoveryJSON({ version: 2, tenant: input.tenant, brand: input.brand, outcome: input.outcome,
-          policy: input.policy, slotConfig: input.configs, defaultSlotConfig: input.defaultConfig, consentUntil: meta.consentUntil }),
+          policy: input.policy, slotConfig: input.configs, defaultSlotConfig: input.defaultConfig, consentUntil: meta.consentUntil, ...pageScopedWire(prepared) }),
       });
       const body = await response.json() as { ok?: boolean; digest?: string; destinations?: string[] };
       if (!response.ok || body.ok !== true || !Array.isArray(body.destinations)) throw new Error('Attribution preparation unavailable');
@@ -224,9 +237,10 @@ export async function resumeOwnerRecovery(storage: DurableObjectStorage, env: En
   meta.receipt.queue = await sendManaged(env, payload.messages, meta.records);
   meta.receipt.ledger = await ledgerUnderOwners<CaptureReceipt>(env, { kind: 'managed', deliveries: payload.messages.map(message => readDelivery(message.body)) });
   await guard(meta.principal, meta.consentUntil);
+  const scoped = new Set(payload.pageScoped ?? []);
   if (learningInput(input)) meta.receipt.learning = input.kind === 'decisions'
-    ? await fanDecisions(env, { tenant: input.tenant, brand: input.brand, visitor_id: input.subject, records: input.records }, slot => input.configs[slot]!, { effects: payload.effects! })
-    : await fanOutcome(env, input.tenant, input.outcome, input.policy, input.brand, input.configs, input.defaultConfig, { consentUntil: meta.consentUntil });
+    ? await fanDecisions(env, { tenant: input.tenant, brand: input.brand, visitor_id: input.subject, records: input.records }, slot => input.configs[slot]!, { effects: payload.effects! }, scoped)
+    : await fanOutcome(env, input.tenant, input.outcome, input.policy, input.brand, input.configs, input.defaultConfig, { consentUntil: meta.consentUntil }, undefined, scoped);
   if (meta.receipt.ledger.ok && (!learningInput(input) || meta.receipt.learning?.ok)) meta.receipt.source.state = 'recovered';
   await storage.put(metaKey(meta.id), meta);
   await armRecovery(storage, meta.expiresAt);

@@ -14,6 +14,7 @@ import { MANAGED_BYTES, deliveryClaimSubset, validDeliveryCaptureReceipt } from 
 import { isShopperId } from './shopperId';
 import { requireRetention, readRetention, mergeExternalRetention, type ExternalRetention, type RetentionStamp, type RetentionCategory, type RetentionEnv } from '@/retention';
 import type { RecoveryInput, RecoveryReceipt } from '@/ledger/recovery';
+import { nameServingStorage } from '@/config/publication';
 
 interface Invocation {
   owner: object;
@@ -597,8 +598,15 @@ export function ownerEnvironment(owner: object, env: Env): Env {
     'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'] as const) {
     Object.defineProperty(scoped, key, { get: () => {
       const binding = env[key];
-      return binding ? guardBinding(binding,
-        ['RATE_LIMITER', 'PERSONALIZATION_WEBSOCKET', 'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'].includes(key) ? 'namespace' : 'binding') : binding;
+      if (!binding) return binding;
+      const guarded = guardBinding(binding,
+        ['RATE_LIMITER', 'PERSONALIZATION_WEBSOCKET', 'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'].includes(key) ? 'namespace' : 'binding');
+      // W19 LG1 (R74(b)): this proxy is a fence around the SAME bucket, not a
+      // different one, so the publication serving cache keys on the bucket and
+      // a shopper's next event is served what her last one already read. Every
+      // storage call through the proxy is still fenced; a cache hit makes none.
+      if (key === 'STORAGE') nameServingStorage(guarded, binding);
+      return guarded;
     } });
   }
   Object.defineProperty(scoped, 'ANALYTICS', { get: () => env.ANALYTICS ? {

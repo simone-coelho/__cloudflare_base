@@ -24,7 +24,7 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
+import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy, type ReportPriors } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
@@ -146,6 +146,16 @@ export interface ShardState {
   seen: Record<string, string[]>;
   /** v2: the same membership for the other dates this shard has folded, pruned to the horizon. */
   seenDays?: Record<string, Record<string, string[]>>;
+  /**
+   * v2 (W22 R4, LANE-LOG R143): the hourly retention stamp of an id in
+   * `seenDays`, date → brand → visitor, exactly as `seenRetention` carries it
+   * for `seenDate` — it moves here with the membership when the shard rolls
+   * forward, and a repaired older hour stamps the ids it adds. An id whose
+   * stamp has expired leaves that date's membership at the next cleanup; an id
+   * with no stamp is legacy and is never disposed of on that ground. Its keys
+   * are always a subset of `seenDays`'s: nothing here outlives its id.
+   */
+  seenDaysRetention?: Record<string, Record<string, Record<string, RetentionStamp>>>;
   /** Latest witnessed decision time per brand/visitor on seenDate, retained independently of ring eviction. */
   seenAt?: Record<string, Record<string, number>>;
   seenRetention?: Record<string, Record<string, RetentionStamp>>;
@@ -233,8 +243,23 @@ export interface HourAssignments {
   visitors: Record<string, number>;
   /** assignment → outcome type → distinct visitors on the DATE, through this hour. */
   outcomes: Record<string, Record<string, number>>;
+  /**
+   * W21 R1 (LANE-LOG R156): this hour's outcomes whose visitor held no
+   * assignment this fold could see — no decision of the date at or before the
+   * outcome, and none later in this hour either. The raw-day rule places such
+   * an outcome under her FIRST decision of the day, which may be in a later hour
+   * that has not been folded yet (or may never come), so this hour cannot say
+   * which arm the outcome belongs to and counts it here instead of under any.
+   * It adds across the hours of a day. Any hour with a non-zero count cannot
+   * support the day's `visitorOutcomes`: the day names it in
+   * `coverage.unassignedHours` and answers that member `null`. Decisions,
+   * credits and visitors are unaffected, so the arm rows and `armVisitors`
+   * stand. ABSENT on an aggregate folded before this release, which dropped
+   * such an outcome without saying so and is therefore read as unable to say.
+   */
+  unassignedOutcomes?: number;
 }
-export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {} });
+export const emptyAssignments = (): HourAssignments => ({ version: 1, decisions: {}, credits: {}, visitors: {}, outcomes: {}, unassignedOutcomes: 0 });
 export interface HourBrand {
   computation?: ComputationBasis | null;
   duplicates?: DuplicateCounts;
@@ -334,6 +359,10 @@ function mergeAssignments(a: HourAssignments | undefined, b: HourAssignments | u
     for (const [name, credits] of Object.entries(src.credits)) addCounts((out.credits[name] ??= {}), credits);
     maxCounts(out.visitors, src.visitors);
     for (const [arm, byType] of Object.entries(src.outcomes)) maxCounts((out.outcomes[arm] ??= {}), byType);
+    // W21 R1: the unplaced outcomes add, and only where every hour can say
+    // them — one hour that cannot makes the total unknown, not zero.
+    if (out.unassignedOutcomes === undefined || src.unassignedOutcomes === undefined) delete out.unassignedOutcomes;
+    else out.unassignedOutcomes += src.unassignedOutcomes;
   }
   return out;
 }
@@ -405,8 +434,6 @@ export interface FoldContext {
   date: string;
   from: number;
   to: number;
-  /** When this fold ran, as the aggregate's own `builtAt`; a repair is dated by it. */
-  now?: number;
   /**
    * W22 R1.02: this hour is being folded again because its ledger has GROWN
    * since the aggregate was written, so rows the rings do not already hold are
@@ -448,6 +475,40 @@ function checkFold(state: ShardState): void {
       }
     }
   }
+  // W22 R4: an archived id's stamp is read exactly as a current one is
+  // (`checkSeen`), and refused whole when any of it is malformed.
+  if (state.seenDaysRetention !== undefined) {
+    const archived = state.seenDaysRetention;
+    if (!objectMap(archived) || Object.keys(archived).length > SEEN_DAYS_MAX) throw new Error('Hourly seen state unavailable');
+    for (const [date, brands] of Object.entries(archived)) {
+      if (!dateShape(date) || date === state.seenDate || !objectMap(brands)) throw new Error('Hourly seen state unavailable');
+      for (const values of Object.values(brands)) {
+        if (!objectMap(values)) throw new Error('Hourly seen state unavailable');
+        for (const stamp of Object.values(values)) readRetention(stamp, (stamp as RetentionStamp)?.tenant, 'hourly');
+      }
+    }
+  }
+}
+
+/**
+ * W22 R4: the archived stamps keep exactly the archived membership's ids — an
+ * id that leaves `seenDays` for erasure, retention or the horizon takes its
+ * stamp with it, and a date the shard no longer archives is dropped whole.
+ */
+function pruneSeenDaysRetention(state: ShardState): void {
+  const archived = state.seenDaysRetention;
+  if (!archived) return;
+  for (const [date, brands] of Object.entries(archived)) {
+    const membership = date === state.seenDate ? undefined : state.seenDays?.[date];
+    if (!membership) { delete archived[date]; continue; }
+    for (const [brand, values] of Object.entries(brands)) {
+      const ids = new Set(membership[brand] ?? []);
+      for (const visitor of Object.keys(values)) if (!ids.has(visitor)) delete values[visitor];
+      if (!Object.keys(values).length) delete brands[brand];
+    }
+    if (!Object.keys(brands).length) delete archived[date];
+  }
+  if (!Object.keys(archived).length) delete state.seenDaysRetention;
 }
 
 /**
@@ -602,14 +663,25 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // date — `seen`, `seenAt`, `seenRetention`, `seenIncomplete` and `seenDate`,
   // all of which keep their version-1 meaning — untouched.
   const older = state.seenDate !== '' && ctx.date < state.seenDate;
-  const beforeDays = JSON.stringify(state.seenDays ?? null);
+  const beforeDays = JSON.stringify([state.seenDays ?? null, state.seenDaysRetention ?? null]);
   const beforeEnrollment = JSON.stringify(state.enrollment ?? null);
   if (!older && state.seenDate !== ctx.date) {
     changed = Object.keys(state.seen).length > 0 || state.seenAt !== undefined || state.seenIncomplete !== undefined;
-    if (state.seenDate !== '' && Object.keys(state.seen).length) (state.seenDays ??= {})[state.seenDate] = state.seen;
+    if (state.seenDate !== '' && Object.keys(state.seen).length) {
+      (state.seenDays ??= {})[state.seenDate] = state.seen;
+      // W22 R4: the date's ids leave for the archive WITH their retention
+      // stamps, so an archived id still leaves when its retention ends.
+      if (state.seenRetention && Object.keys(state.seenRetention).length) (state.seenDaysRetention ??= {})[state.seenDate] = state.seenRetention;
+    }
+    const restored = state.seenDaysRetention?.[ctx.date];
     state.seenDate = ctx.date; state.seen = state.seenDays?.[ctx.date] ?? {};
     if (state.seenDays) { delete state.seenDays[ctx.date]; if (!Object.keys(state.seenDays).length) delete state.seenDays; }
     delete state.seenAt; delete state.seenIncomplete; delete state.seenRetention;
+    if (restored) {
+      state.seenRetention = restored;
+      delete state.seenDaysRetention![ctx.date];
+    }
+    pruneSeenDaysRetention(state);
   }
   const beforeSeen = JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]);
   // The membership this hour counts: the current date's, or — when an older
@@ -693,7 +765,16 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
           enrolled.arms.push(label);
         }
       }
-      if (older) continue;                 // an older date keeps ids, and no witness it cannot carry
+      if (older) {
+        // An older date keeps ids and no timing witness it cannot carry — but
+        // (W22 R4) each id it adds carries its hourly retention stamp, merged
+        // exactly as the current date's `seenRetention` merges it.
+        if (d.entry.retention?.hourly) {
+          const stamps = (((state.seenDaysRetention ??= {})[ctx.date] ??= {})[d.entry.brand] ??= {}), prior = stamps[d.visitor_id];
+          stamps[d.visitor_id] = prior ? mergeRetention(prior, d.entry.retention.hourly, d.entry.tenant!, 'hourly') : d.entry.retention.hourly;
+        }
+        continue;
+      }
       let times = seenAt.get(d.entry.brand);
       if (!times) { times = new Map(); seenAt.set(d.entry.brand, times); }
       times.set(d.visitor_id, Math.max(times.get(d.visitor_id) ?? d.ts, d.ts));
@@ -730,7 +811,15 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     // purchasing visitor.
     const held = subjectRing.filter(e => e.brand === o.brand && onDate(e.ts, ctx.date) && e.ts <= o.ts).at(-1)
       ?? firstOnDate.get(`${o.brand}\u0000${o.visitor_id}`);
-    if (held) {
+    if (!held) {
+      // W21 R1 (LANE-LOG R156): no decision of the date at or before it and
+      // none later in this hour. Her first decision of the day — which the
+      // raw-day rule counts it under — may still come in a later hour this fold
+      // cannot see, so the outcome is not placed under any assignment here and
+      // the hour says so, rather than a day answering a count that omits it.
+      const ha = ((ctx.brands[o.brand] ??= emptyBrand()).assignments ??= emptyAssignments());
+      ha.unassignedOutcomes = (ha.unassignedOutcomes ?? 0) + 1;
+    } else {
       const enrolled = enrollmentOf(state, ctx.date, o.brand, o.visitor_id);
       const label = shardLabel(assignmentLabel(held)), type = shardLabel(o.type);
       const outcomes = (enrolled.outcomes ??= {});
@@ -794,11 +883,12 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
   // rebuild the hours whose attribution ran against the rings as they were.
   rememberFold(state, ctx, floorAtEntry);
   pruneSeenDays(state, ctx);
+  pruneSeenDaysRetention(state);
   // W21 C1.08: the per-assignment memory keeps exactly the membership's ids, so
   // it is pruned last, after the membership and the archived dates are final.
   pruneEnrollment(state);
   if (JSON.stringify(state.enrollment ?? null) !== beforeEnrollment) changed = true;
-  if (JSON.stringify(state.seenDays ?? null) !== beforeDays) changed = true;
+  if (JSON.stringify([state.seenDays ?? null, state.seenDaysRetention ?? null]) !== beforeDays) changed = true;
   if (JSON.stringify([state.seen, state.seenAt, state.seenIncomplete, state.seenRetention]) !== beforeSeen) changed = true;
   return { state, folded, changed };
 }
@@ -914,6 +1004,9 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
           aggregateName(arm); visit();
           for (const [type, n] of Object.entries(aggregateMap(value))) { aggregateName(type); aggregateNumber(n); visit(); }
         }
+        // W21 R1: present or absent, never malformed — an aggregate folded
+        // before the release carries none and stays readable.
+        if (Object.hasOwn(ha, 'unassignedOutcomes')) aggregateNumber(ha.unassignedOutcomes);
       }
       for (const [name, value] of Object.entries(aggregateMap(b.policies))) {
         aggregateName(name); visit(); const p = aggregateMap(value);
@@ -1040,8 +1133,18 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   // denominators unknown rather than dividing a total it does not hold, and
   // NAMES those hours. One day uses one rule for all of its hours: mixing the
   // two groupings would put one visitor under two different rows.
-  const unassignedHours = sorted.filter(a => a.brands[ids.brand] !== undefined && !assignmentsAgree(a.brands[ids.brand]!)).map(a => a.hour);
-  const assignments = unassignedHours.length === 0 ? hb.assignments : undefined;
+  //
+  // W21 R1 (LANE-LOG R156): an hour can also carry the assignment of every
+  // decision and still be unable to PLACE one of its outcomes — one whose
+  // visitor's first decision of the day comes in a later hour, which the raw
+  // day counts under that decision. Such an hour is named too, and the day
+  // withdraws the one member it cannot support, `visitorOutcomes`, rather than
+  // answering a count that silently omits the outcome. Its arm rows and
+  // `armVisitors` do not depend on where an outcome is placed, and stand.
+  const ungrouped = sorted.filter(a => a.brands[ids.brand] !== undefined && !assignmentsAgree(a.brands[ids.brand]!)).map(a => a.hour);
+  const unplaced = sorted.filter(a => a.brands[ids.brand] !== undefined && a.brands[ids.brand]!.assignments?.unassignedOutcomes !== 0).map(a => a.hour);
+  const unassignedHours = [...new Set([...ungrouped, ...unplaced])].sort((x, y) => x - y);
+  const assignments = ungrouped.length === 0 ? hb.assignments : undefined;
   const names = Object.keys(hb.policies).sort((a, b) => Number(hb.policies[b]!.role === 'learning') - Number(hb.policies[a]!.role === 'learning'));
   const slots = [...new Set([...Object.keys(hb.arms), ...Object.keys(hb.exploration), ...Object.values(hb.policies).flatMap((p) => Object.keys(p.stats))])].sort();
   const policies: DayReport['policies'] = [];
@@ -1083,7 +1186,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     ? [...new Set([...Object.keys(assignments.visitors), ...Object.keys(assignments.outcomes)])].sort((a, b) => a.localeCompare(b)) : [];
   const armVisitors: ArmVisitors | null = assignments
     ? { version: 1, basis: 'distinct_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0 })) } : null;
-  const visitorOutcomes: VisitorOutcomes | null = assignments
+  const visitorOutcomes: VisitorOutcomes | null = assignments && unassignedHours.length === 0
     ? { version: 1, basis: 'enrolled_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0,
       byType: Object.fromEntries(Object.entries(assignments.outcomes[arm] ?? {}).sort(([x], [y]) => x.localeCompare(y))) })) } : null;
   const last = sorted[sorted.length - 1];
@@ -1338,6 +1441,8 @@ function cleanupOwnership(state: ShardState, tenant: string): void {
     }
   }
   for (const values of Object.values(state.seenRetention ?? {})) for (const stamp of Object.values(values)) readRetention(stamp, tenant, 'hourly');
+  for (const brands of Object.values(state.seenDaysRetention ?? {})) for (const values of Object.values(brands))
+    for (const stamp of Object.values(values)) readRetention(stamp, tenant, 'hourly');
 }
 
 /** Physical erasure/expiry only: no fold, date rewind, attribution or counters. */
@@ -1382,11 +1487,19 @@ function cleanupShard(state: ShardState, tenant: string, tombs: ReadonlyMap<stri
   // erased visitor simply leaves it — there is no witness there that could show
   // a decision after the erasure, and keeping her would be keeping an id the
   // tenant asked to be forgotten.
+  // W22 R4 (R143): and an archived id whose hourly retention has ended leaves
+  // it too, exactly as a current one leaves `seen` above. An id with no stamp
+  // is legacy and is never disposed of on that ground.
   for (const [date, brands] of Object.entries(next.seenDays ?? {})) {
-    for (const [brand, ids] of Object.entries(brands)) brands[brand] = ids.filter(visitor => !tombs.has(visitor));
+    for (const [brand, ids] of Object.entries(brands)) {
+      const stamps = next.seenDaysRetention?.[date]?.[brand];
+      brands[brand] = ids.filter(visitor => !tombs.has(visitor)
+        && (stamps?.[visitor] === undefined || readRetention(stamps[visitor], tenant, 'hourly').expiresAt > now));
+    }
     if (!Object.keys(brands).length) delete next.seenDays![date];
   }
   if (next.seenDays && !Object.keys(next.seenDays).length) delete next.seenDays;
+  pruneSeenDaysRetention(next);
   // Orphan metadata is never used to recreate membership. Remove only its own
   // expired instruction or a cutoff-covered witness, preserving later evidence.
   for (const [brand, values] of Object.entries(next.seenRetention ?? {})) {
@@ -1568,7 +1681,10 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       refold = objectMap(previous) && Number.isSafeInteger(previous.objects) && loaded.objects > (previous.objects as number);
     } catch { refold = false; }
   }
-  const ctx: FoldContext = { tenant, date: at.date, from, to, now, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
+  // W22 R4 (R143): the fold is dated by nothing it reads — the aggregate carries
+  // `builtAt` and the cleanup that follows expires by its own clock — so the
+  // context no longer carries a `now` no fold ever read.
+  const ctx: FoldContext = { tenant, date: at.date, from, to, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
     retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
   let ringsFolded = true;
   /** W21 C1.08: brands whose date membership this fold could not account for assignment by assignment. */
@@ -1891,7 +2007,19 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
  * from the ledger itself otherwise (a day from before the fold existed, or custom reporting policies,
  * which are computed over the records and so need a day one request can read).
  */
-export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
+export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(),
+  opts: {
+    maxObjects?: number;
+    /**
+     * W25 R4 (LANE-LOG R183): the tenant's published prior document
+     * (`reportPriors`). A day built from the ledger records builds its grids
+     * with it and declares `gridPriors: { applied: true, priorVersion }` where
+     * it applied. The day summed from the folded hours does not use it — an
+     * hour aggregate carries no prior revision — and keeps declaring
+     * `applied: false`.
+     */
+    priors?: ReportPriors | null;
+  } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
   if (reporting === null) {
     const report = await publishAggregateDay(r2, ids, learn, now, false);
     if (report) return report;
@@ -1900,5 +2028,5 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
     const n = await countDayObjects(r2, ids.tenant, ids.date, opts.maxObjects);
     if (n > opts.maxObjects) throw new ReportTooLarge(n, opts.maxObjects);
   }
-  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved);
+  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved, opts.priors ?? null);
 }
