@@ -128,9 +128,21 @@ const MANIFEST_VERSION = 1;
  * implemented here qualifies; every other `version` fails the recorded-identity
  * rule and keeps `invalid page replay manifest`, so nothing arbitrary a record
  * carries is interpolated into an operator-visible sentence.
+ *
+ * W27 R3 (amendment A22): claiming a later version does not excuse damage this
+ * build CAN recognize. A slot row's `lift` or `prior` recorded as a number is a
+ * dependency identity, and every recorded identity is a nonnegative safe
+ * integer whatever grammar carries it (kit 02, "nonnegative safe-integer …
+ * identities before dependency reads"), so a negative, a fraction, a non-finite
+ * number or one past the safe-integer range is corrupt at any version and keeps
+ * `invalid page replay manifest`. Only that is ruled: a member a later grammar
+ * could legitimately add or reshape is not something this build can judge, so
+ * it leaves the rollout sentence reachable.
  */
 function manifestVersionRefusal(value: unknown): string | null {
   if (!object(value) || !identity(value.version) || value.version <= MANIFEST_VERSION) return null;
+  if (Array.isArray(value.slots) && value.slots.some(row => object(row)
+    && ['lift', 'prior'].some(key => own(row, key) && typeof row[key] === 'number' && !identity(row[key])))) return null;
   return `page replay manifest version ${value.version} is not supported`;
 }
 

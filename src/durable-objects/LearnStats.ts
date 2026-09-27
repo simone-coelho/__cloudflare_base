@@ -36,6 +36,9 @@ interface EffectMarker { digest: string; subject: string; ts: number; expiresAt:
  */
 interface Stored { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; stats: StatsState;
   effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
+/** Every instant the alarm must remove a live or retired learning-effect marker at. */
+const effectExpiries = (stored: Stored | null | undefined): number[] =>
+  [...Object.values(stored?.effects ?? {}), ...Object.values(stored?.retiredEffects ?? {})].map(marker => marker.expiresAt);
 interface GenerationFence { whole: number; items: Record<string, number> }
 type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string };
 /**
@@ -622,7 +625,7 @@ export class LearnStats {
 
   private async arm(): Promise<void> {
     await this.loadIfAny();
-    const next = Math.min(Date.now() + PUBLISH_DELAY_MS, ...[...Object.values(this.data?.effects ?? {}), ...Object.values(this.data?.retiredEffects ?? {})].map(marker => marker.expiresAt));
+    const next = Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(this.data));
     const previous = await this.state.storage.getAlarm();
     if (previous === null || previous > next) await this.state.storage.setAlarm(next);
   }
@@ -887,7 +890,11 @@ export class LearnStats {
       if (error instanceof Refusal) throw error;
       // An archive or KV acknowledgement can be lost after its write. Keep any
       // orphan archive, schedule only publication again, and never claim rollback.
-      await this.state.storage.setAlarm(Date.now() + PUBLISH_DELAY_MS);
+      // W27 R4 (amendment A19, LANE-LOG R161): the retry is due 30 seconds out,
+      // but the alarm is also what removes a learning-effect marker at its
+      // expiry, so it is set to the EARLIER of the two and a pending expiry is
+      // never pushed later than it is due.
+      await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
   }
