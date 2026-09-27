@@ -2043,7 +2043,18 @@ export interface CatchUpResult {
  *    aggregate as `lateObjects` and applied nowhere, so they are neither
  *    silently applied to numbers an analyst has read nor silently dropped.
  */
-interface HourVerdict { refold: boolean; late?: { body: string; etag: string | null } }
+interface HourVerdict {
+  refold: boolean;
+  late?: { body: string; etag: string | null };
+  /**
+   * W30 L1 (adoption defect D1): the late objects the stored aggregate carries
+   * once this probe's own write (if any) lands — `0` where it names none. The
+   * catch-up compares it with the published day, because the day a late row
+   * reaches is otherwise never published again: no hour of it is built.
+   * Absent where the probe could not read the aggregate.
+   */
+  lateObjects?: number;
+}
 async function staleHour(r2: R2Agg, tenant: string, which: { date: string; hour: number },
   builtAt: Map<number, number>, earlierBuiltInRun: boolean, cap: number, now: number): Promise<HourVerdict> {
   const at = { ...which, from: hourStart(which.date, which.hour) };
@@ -2060,14 +2071,34 @@ async function staleHour(r2: R2Agg, tenant: string, which: { date: string; hour:
     if (objects > (agg.objects as number)) {
       if (now <= at.from + HOUR_MS + REFOLD_MATURITY_MS) return { refold: true };
       const late = objects - (agg.objects as number);
-      if (agg.lateObjects === late) return { refold: false };
-      return { refold: false, late: { body: JSON.stringify({ ...agg, lateObjects: late }), etag: stored.etag } };
+      if (agg.lateObjects === late) return { refold: false, lateObjects: late };
+      return { refold: false, late: { body: JSON.stringify({ ...agg, lateObjects: late }), etag: stored.etag }, lateObjects: late };
     }
+    const named = Number.isSafeInteger(agg.lateObjects) && (agg.lateObjects as number) > 0 ? agg.lateObjects as number : 0;
+    return { refold: earlierBuiltInRun || [...builtAt].some(([from, when]) => from < at.from && when > mine), lateObjects: named };
   } catch { return { refold: false }; }
-  return { refold: earlierBuiltInRun || [...builtAt].some(([from, when]) => from < at.from && when > mine) };
 }
 
-/** A saved summary proves only exact known hour membership, not content or policy freshness. */
+/**
+ * W30 L1 (adoption defect D1): does the saved day name, for every hour this run
+ * probed, exactly the late objects that hour's aggregate now carries? A late row
+ * that reaches a FINAL hour is counted onto the hour and applied nowhere, so no
+ * hour of its date is built again and matching hour membership alone would keep
+ * the day as first published for ever. A day that says less — or more, or
+ * nothing because it was written before the member existed — is republished.
+ */
+function namesLateObjects(report: DayReport | null, late: ReadonlyMap<number, number> | undefined): boolean {
+  if (!late?.size) return true;
+  const rows = report?.coverage?.lateAfterMaturity;
+  const saved = new Map<number, number>();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (objectMap(row) && Number.isInteger(row.hour) && Number.isSafeInteger(row.objects)) saved.set(row.hour as number, row.objects as number);
+  }
+  for (const [hour, objects] of late) if ((saved.get(hour) ?? 0) !== objects) return false;
+  return true;
+}
+
+/** A saved summary proves only exact known hour membership and the late objects it names, not content or policy freshness. */
 function hasReportedHours(report: DayReport | null, expected: ReadonlySet<number>): boolean {
   const hours = report?.hours;
   if (hours?.source !== 'aggregates' || !Array.isArray(hours.built) || hours.built.length > 24 || hours.built.length !== expected.size) return false;
@@ -2125,6 +2156,8 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   const rebuild = new Set(settled.filter(c => !interrupted || c.date !== interrupted.date || c.hour !== interrupted.hour)
     .map(c => hourKey(tenant, c.date, c.hour)));
   const built: CatchUpResult['built'] = [], failed: CatchUpResult['failed'] = [];
+  /** W30 L1: date → hour → the late objects a probed hour's aggregate carries after this run. */
+  const lateByDate = new Map<string, Map<number, number>>();
   let budget = opts.budget ?? RUN_BUDGET;
   let otherFailures = 0;
   for (const c of work) {
@@ -2146,9 +2179,16 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
         // FINAL hour's prefix has really grown since the fold read it. It is
         // conditional on the aggregate this run saw, and idempotent: the count
         // it writes is the count it has just observed.
+        let lateObjects = verdict.lateObjects;
         if (verdict.late) {
           try { await conditionalBody(metered, hourKey(tenant, c.date, c.hour), verdict.late.body, verdict.late.etag); }
-          catch { /* a lost race leaves the rows in the ledger and is named on the next run */ }
+          catch { lateObjects = undefined; /* a lost race leaves the rows in the ledger and is named on the next run */ }
+        }
+        // W30 L1: what the hour now names, so the day publication below can see
+        // that a date no hour of which was built still has to be published again.
+        if (!verdict.refold && lateObjects !== undefined) {
+          const hours = lateByDate.get(c.date) ?? new Map<number, number>();
+          hours.set(c.hour, lateObjects); lateByDate.set(c.date, hours);
         }
         if (!verdict.refold) continue;
       }
@@ -2184,7 +2224,13 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   for (const date of dates.slice(-3)) {
     const ids = { tenant, brand: tenant, date };
     try {
-      if (!builtDates.has(date) && hasReportedHours(await readWindowSummary(r2, ids, summaryBudget), dateHours.get(date)!)) continue;
+      if (!builtDates.has(date)) {
+        // W30 L1 (adoption defect D1): a saved day is left alone only while it
+        // has every built hour AND names the late objects every hour probed this
+        // run carries; a late row past the re-fold horizon republishes its date.
+        const saved = await readWindowSummary(r2, ids, summaryBudget);
+        if (hasReportedHours(saved, dateHours.get(date)!) && namesLateObjects(saved, lateByDate.get(date))) continue;
+      }
       await publishAggregateDay(r2, ids, learn, now, true);
       reports.published.push(date);
     } catch { reports.failed.push({ date, error: 'day report publication failed' }); }
