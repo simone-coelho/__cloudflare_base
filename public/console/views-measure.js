@@ -84,6 +84,18 @@
 
   // Always derive the diagnostic from counts, including when an older server returns inferred fields.
   const intensity = (credited, decisions) => decisions > 0 ? dec(credited / decisions, 3) : '—';
+  /**
+   * W31 Z1.01 (F25 §1.3): the published allocation the answer carries, stated so
+   * the counts beside it are readable as an experiment. It is read from the
+   * report, never compiled in, and a report that records none — or records one
+   * that names no arm — states nothing rather than a placeholder.
+   */
+  const allocationNote = (allocation) => {
+    const a = allocation;
+    if (!a || a.version !== 1 || a.source !== 'published' || !Number.isFinite(a.share) || a.share < 0 || a.share > 1) return null;
+    if (!Array.isArray(a.arms) || !a.arms.length || !a.arms.every((arm) => typeof arm === 'string' && arm)) return null;
+    return `Published allocation: ${+(a.share * 100).toFixed(2)}% to ${a.arms.join(', ')}.`;
+  };
   const minimumHorizon = (coverage, hours) => {
     if (!coverage || coverage.version !== 1 || coverage.source !== 'aggregates' || coverage.metadata !== 'recorded' ||
       !Array.isArray(coverage.missingHours) || coverage.missingHours.length || !Array.isArray(coverage.unknownHours) || coverage.unknownHours.length) return null;
@@ -129,7 +141,7 @@
 
       if (ms.windowError) host.append(h('div', { class: 'msg note' }, ms.windowError));
 
-      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report.'));
+      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report. Read a longer period as consecutive windows and pool them yourself.'));
       for (const day of (ms.window && ms.window.incomplete || [])) host.append(h('div', { class: 'msg note' },
         `Incomplete coverage for ${day.date}${day.truncated ? ': source coverage incomplete' : ''}${day.missingHours.length ? `; ${plural(day.missingHours.length, 'hour')} missing (${day.missingHours.join(', ')})` : ''}.`));
       if (ms.window) {
@@ -149,6 +161,7 @@
       // 1. Raw counts pooled over the requested window.
       const slots = ms.window ? Object.keys(ms.window.slots) : [];
       if (ms.window) host.append(h('div', { class: 'msg note' }, 'Recorded computation basis only. Experimental compatibility, served control and enrollment remain unverified.'));
+      if (ms.window && allocationNote(ms.window.allocation)) host.append(h('div', { class: 'msg note' }, allocationNote(ms.window.allocation)));
       if (ms.window && !slots.length) {
         host.append(card('Over the window', 'No attribution rows yet.', body(h('div', { class: 'empty' },
           ms.window.days.length
@@ -200,6 +213,7 @@
           R && R.hours && R.hours.missing.length ? h('div', { class: 'msg note' }, `Incomplete coverage: ${plural(R.hours.missing.length, 'hour')} missing (${R.hours.missing.join(', ')}).`) : null,
           ...(R ? coverageNotes(R.coverage, R.hours).map(note => h('div', { class: 'msg note' }, note)) : []),
           R && R.holdout && R.holdout[S.slot] ? h('div', { class: 'subhead' }, `The arms on ${S.slot}, under the learning policy`) : null,
+          R && R.holdout && R.holdout[S.slot] && allocationNote(R.allocation) ? h('div', { class: 'msg note' }, allocationNote(R.allocation)) : null,
           R && R.holdout && R.holdout[S.slot] ? C.table([
             { key: 'arm', label: 'Arm' }, { key: 'd', label: 'Decisions', num: true },
             { key: 'c', label: 'Credited outcomes', num: true }, { key: 'r', label: 'Credits per decision', num: true },
@@ -246,7 +260,26 @@
     { id: 'catalog', title: 'The content catalog', why: 'The pieces themselves, their tags and their lifecycle.', path: '/content/catalog/history', rollback: (n) => `/content/catalog/rollback/${n}` },
     { id: 'priors', title: 'Imported priors', why: 'Rates a team estimated elsewhere, used until live evidence outweighs them.', path: '/content/priors/history', rollback: (n) => `/content/priors/rollback/${n}` },
   ];
-  const hist = { rows: {}, lift: [], loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+  const hist = { rows: {}, lift: [], liftError: '', loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+
+  /**
+   * W26 R2 (review D4): the slot's archived snapshots. A slot name the catalogue
+   * carries on more than one page is one placement per page, each with its own
+   * archive, and the route names those pages when it is asked without one; every
+   * page's archive is then read and shown, each version with its page. A read
+   * that fails is said to have failed, never shown as an empty archive.
+   */
+  async function liftHistory(slot) {
+    const asked = S.params.page || undefined;
+    const first = await C.v1('/lift/history', { slot, page: asked });
+    if (first.ok && first.data.ok !== false) return { versions: (first.data.versions || []).map((v) => (first.data.page ? { ...v, page: first.data.page } : v)), error: '' };
+    const pages = !asked && first.status === 400 && Array.isArray(first.data.pages) ? first.data.pages : null;
+    if (!pages) return { versions: [], error: first.data.error || 'Could not read the snapshot archive.' };
+    const each = await Promise.all(pages.map((page) => C.v1('/lift/history', { slot, page })));
+    const failed = each.find((r) => !r.ok || r.data.ok === false);
+    if (failed) return { versions: [], error: failed.data.error || 'Could not read the snapshot archive.' };
+    return { versions: each.flatMap((r, i) => (r.data.versions || []).map((v) => ({ ...v, page: pages[i] }))).sort((a, b) => b.version - a.version), error: '' };
+  }
 
   async function loadHistory() {
     const scope = S.scope, slot = S.slot, request = ++hist.request;
@@ -261,9 +294,9 @@
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
     hist.authored = Object.fromEntries(KINDS.map((k, i) => [k.id, got[i].authored]));
     KINDS.forEach((k, i) => { hist.rows[k.id] = got[i].ok ? got[i].data.revisions || [] : null; });
-    const lift = slot ? await C.v1('/lift/history', { slot }) : { ok: false, data: {} };
+    const lift = slot ? await liftHistory(slot) : { versions: [], error: '' };
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
-    hist.lift = lift.ok ? lift.data.versions || [] : [];
+    hist.lift = lift.versions; hist.liftError = lift.error;
     hist.loading = false;
     C.render();
   }
@@ -314,10 +347,12 @@
       host.append(card(`Published snapshots · ${S.slot || 'no slot chosen'}`,
         'What the engine learned, as it was published. These are not edited by anyone: each is what the evidence said at that moment, kept so a decision made then can be replayed exactly.',
         !S.slot ? h('div', { class: 'empty' }, 'Choose a slot in the rail.')
+          : hist.liftError ? h('div', { class: 'msg err' }, `Could not read the snapshot archive: ${hist.liftError}`)
           : !hist.lift.length ? h('div', { class: 'empty' }, 'No archived snapshots for this slot yet; every publish from now on is archived by version.')
-          : C.table([{ key: 'v', label: 'Published' }, { key: 'ver', label: 'Version' }, { key: 'size', label: 'Size', num: true }],
+          : C.table([{ key: 'v', label: 'Published' }, ...(hist.lift.some((v) => v.page) ? [{ key: 'page', label: 'Page' }] : []), { key: 'ver', label: 'Version' }, { key: 'size', label: 'Size', num: true }],
               hist.lift.slice(0, 20).map((v) => h('tr', {},
                 h('td', {}, when(v.version)),
+                ...(hist.lift.some((x) => x.page) ? [h('td', {}, v.page || '—')] : []),
                 h('td', {}, h('span', { class: 'itemid' }, String(v.version))),
                 h('td', { class: 'num' }, `${dec((v.size || 0) / 1024, 1)} KB`))))));
     },

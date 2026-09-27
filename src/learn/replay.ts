@@ -10,7 +10,7 @@
 import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
 import { decideContent } from '@/content/decide';
 import { HISTORICAL_EXPLORATION } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
@@ -76,7 +76,12 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
 
 export interface ReplayDeps {
   doc<T>(kind: DocumentKind<T>, scope: string, revision: number): Promise<T | null>;
-  archive(tenant: string, brand: string, slot: string, version: number): Promise<LiftSnapshot | null>;
+  /**
+   * W26 R2 (amendment A49): `page` is passed only for a slot name the recorded
+   * catalogue carries on more than one page, whose snapshots are archived under
+   * that page's own placement (`liftArchiveKey`, src/learn/fan.ts).
+   */
+  archive(tenant: string, brand: string, slot: string, version: number, page?: string): Promise<LiftSnapshot | null>;
 }
 class ReplayDependencyError extends Error {}
 
@@ -92,10 +97,10 @@ export function replayDeps(env: Env): ReplayDeps {
     // operator can act on; reporting it as a permanent absence is a guess, and
     // the wrong one (F22 §7.2). The private failure text never leaves here: the
     // caller writes the operator-visible sentence for both diagnoses.
-    archive: async (tenant, brand, slot, version) => {
+    archive: async (tenant, brand, slot, version, page) => {
       const unreadable = new ReplayDependencyError(`lift dependency ${slot}/${version} could not be read`);
       let object: R2ObjectBody | null;
-      try { object = await env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version)); }
+      try { object = await env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version, page)); }
       catch { throw unreadable; }
       if (!object) return null;
       try { return (await object.json()) as LiftSnapshot; }
@@ -123,9 +128,22 @@ const MANIFEST_VERSION = 1;
  * implemented here qualifies; every other `version` fails the recorded-identity
  * rule and keeps `invalid page replay manifest`, so nothing arbitrary a record
  * carries is interpolated into an operator-visible sentence.
+ *
+ * W27 R3 (amendment A22): claiming a later version does not excuse damage this
+ * build CAN recognize. A slot row's `lift` and `prior` are dependency
+ * identities, and every recorded identity is a nonnegative safe integer
+ * whatever grammar carries it (kit 02, "nonnegative safe-integer … identities
+ * before dependency reads"). So a present `lift` or `prior` that is anything
+ * else — a negative, a fraction, a non-finite number, one past the safe-integer
+ * range, a string, `null`, a boolean, an object or an array — is corrupt at any
+ * version and keeps `invalid page replay manifest`, before any archive is read.
+ * A later-version manifest whose identities are all sound keeps the rollout
+ * sentence.
  */
 function manifestVersionRefusal(value: unknown): string | null {
   if (!object(value) || !identity(value.version) || value.version <= MANIFEST_VERSION) return null;
+  if (Array.isArray(value.slots) && value.slots.some(row => object(row)
+    && ['lift', 'prior'].some(key => own(row, key) && !identity(row[key])))) return null;
   return `page replay manifest version ${value.version} is not supported`;
 }
 
@@ -241,10 +259,17 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const dependencies = manifest?.slots.filter(row => rankingSlots ? rankingSlots.has(row.slot) : selected.some(slot => slot.slot === row.slot))
     ?? [{ slot: served.slot, lift: learning && !pinned ? v.lift : 0, prior: learning && !pinned ? v.prior : 0 }];
   const snapshots: Record<string, LiftSnapshot | null> = Object.create(null) as Record<string, LiftSnapshot | null>;
+  // W26 R2 (amendment A49): the serving path read each page-scoped slot's lift
+  // from its own page's placement, as the catalogue it decided with said
+  // (src/content/service.ts); that catalogue is the recorded revision read
+  // above, so the replay reads the same page's archive, never the page-less one.
+  const pageScoped = new Set(pageScopedSlotNames(slots));
   for (const row of dependencies) {
     if (row.lift === 0) { snapshots[row.slot] = null; continue; }
     let snapshot: LiftSnapshot | null;
-    try { snapshot = await deps.archive(served.tenant, served.brand, row.slot, row.lift); }
+    try { snapshot = await (pageScoped.has(row.slot)
+      ? deps.archive(served.tenant, served.brand, row.slot, row.lift, served.page)
+      : deps.archive(served.tenant, served.brand, row.slot, row.lift)); }
     catch { return fail(served, `lift dependency ${row.slot}/${row.lift} could not be read`); }
     requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
     if (!snapshot) return fail(served, `lift dependency ${row.slot}/${row.lift} is not in the archive`);

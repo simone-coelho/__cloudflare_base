@@ -8,18 +8,20 @@ import type { Env } from '@/types/env';
 import type { LiftSnapshot } from './stats';
 
 /** Live authority is never satisfied by an eventually-consistent KV/cache hit. */
-export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot): Promise<boolean> {
+export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string): Promise<boolean> {
   if (!env.LEARN_STATS || typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return false;
   const namespace = env.LEARN_STATS;
   const abort = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
   const probe = async () => { try {
-    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/health', {
-      method: 'POST', body: JSON.stringify({ tenant, brand, slot }), signal: abort.signal,
+    // W26 R2: a page-scoped placement is witnessed by its own page's object,
+    // which answers for that page and no other.
+    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch('https://learn/health', {
+      method: 'POST', body: JSON.stringify({ tenant, brand, slot, ...(page ? { page } : {}) }), signal: abort.signal,
     });
     const value = await response.json() as Record<string, unknown>;
     const publication = value.publication as { witness?: string; digest?: string; version?: number } | null;
     return response.ok && value.ok === true && value.state === 'healthy' && value.tenant === tenant && value.brand === brand
-      && value.slot === slot && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
+      && value.slot === slot && (value.page ?? undefined) === page && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
       && publication.version === snapshot.version && publication.digest === await recoveryDigest(snapshot);
   } catch { return false; } };
   try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
@@ -44,6 +46,8 @@ import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES, recordEvi
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { pinRetention } from '@/identity/sessionAuthority';
 import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
+import { PublicationError, pinPublication, publicationScope, readPinnedPublication } from '@/config/publication';
+import { isCatalogueName, slotPagesOf, SLOTS_KIND } from '@/content/kinds';
 
 /** Physical input/comparison budgets, not retained-history or provider limits. */
 export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_000 } as const;
@@ -68,10 +72,86 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
 export const ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
-export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
-export const liftKey = (tenant: string, brand: string, slot: string) => `lift:${tenant}:${brand}:${slot}`;
+/**
+ * W26 R2 (F21 §6(b), §8 "Page in `statsName`/`liftKey`"; LANE-LOG R198): the
+ * storage identity of one placement.
+ *
+ * A slot name the tenant's catalogue carries on ONE page keeps the page-less
+ * identity it has always had — `tenant:brand:slot`, `lift:tenant:brand:slot`,
+ * `lift/tenant/brand/slot/` — and with it every statistic already learned under
+ * it. A name a RETAINED catalogue carries on more than one page
+ * (`pageScopedSlotNames`, `src/content/kinds.ts`) is qualified by the page, as
+ * `slot@page`, so `home/hero` and `pdp/hero` are two statistics objects, two
+ * snapshots and two archives, and neither is ever read for the other. `page` is
+ * passed ONLY for a page-scoped name; every caller resolves that through
+ * `identityPage`.
+ *
+ * A qualified name can never be another placement's plain name, and nothing can
+ * address or create one except by its slot and its page (review D3): a page is
+ * always a catalogue page name (`isCatalogueName`: no `:`, `@` or `/`), and no
+ * slot name ever carries `@` — a catalogue slot is a slug, and these three
+ * functions, every statistics object, every fan-in and every operator route
+ * refuse one that does (`isPlacementSlot`). They THROW rather than build a name
+ * from anything else, so a caller that skipped its own check still cannot reach
+ * a page-separated object under another name.
+ */
+export const isPlacementSlot = (slot: unknown): slot is string => typeof slot === 'string' && slot.length > 0 && !slot.includes('@');
+export const placementSlot = (slot: string, page?: string) => {
+  if (!isPlacementSlot(slot) || (page !== undefined && page !== '' && !isCatalogueName(page))) throw new Error('Learning placement unavailable');
+  return page ? `${slot}@${page}` : slot;
+};
+export const statsName = (tenant: string, brand: string, slot: string, page?: string) => `${tenant}:${brand}:${placementSlot(slot, page)}`;
+export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
-export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number) => `lift/${tenant}/${brand}/${slot}/${version}.json`;
+export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
+export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
+  scoped.has(slot) ? page : undefined;
+/** W26 R2: a placement's slot is a placement slot, and a page-scoped one names a catalogue page; anything else could address another object. */
+const placementValid = (scoped: ReadonlySet<string>, slot: string, page: unknown): boolean => isPlacementSlot(slot) && (!scoped.has(slot) || isCatalogueName(page));
+
+/**
+ * W26 R2 (review D2): the slot names of the tenant's PUBLISHED catalogue whose
+ * identity carries the page, for a caller that has not already read the
+ * catalogue.
+ *
+ * A tenant that publishes no catalogue has no cross-page name, and its answer
+ * is the empty set: no publication authority bound at all, a publication that
+ * was never initialized, or a committed set without a slot catalogue in it.
+ * ANYTHING ELSE that stops the catalogue being read — a transient storage
+ * outage, a damaged set — THROWS. The placement of a cross-page name cannot be
+ * known then, and answering with the page-less name would pool both pages'
+ * evidence, silently, into an object nothing serves. Every caller turns the
+ * throw into a refusal it names: a fan-in's receipt is `config` and nothing is
+ * sent, and the owner's recovery leaves the operation unprepared so its own
+ * retry resolves the catalogue again. A typed owner or consent refusal raised
+ * inside the read propagates unchanged.
+ */
+export async function pageScopedSlotsOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<ReadonlySet<string>> {
+  return new Set([...await publishedSlotPagesOf(env, tenant)].filter(([, pages]) => pages.length > 1).map(([slot]) => slot));
+}
+/** W26 R2: the pages each slot name of the tenant's published catalogue is carried on, under `pageScopedSlotsOf`'s rules. */
+export async function publishedSlotPagesOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<Map<string, string[]>> {
+  const storage = env.STORAGE as { get?: unknown; put?: unknown } | undefined;
+  if (!storage || typeof storage.get !== 'function' || typeof storage.put !== 'function') return new Map();
+  const scope = publicationScope(SLOTS_KIND, tenant);
+  let pin: Awaited<ReturnType<typeof pinPublication>>;
+  try { pin = await pinPublication(env as Env, scope, true); }
+  catch (error) {
+    if (error instanceof PublicationError && error.code === 'publication_uninitialized') return new Map();
+    throw error;
+  }
+  if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === scope)) return new Map();
+  return slotPagesOf((await readPinnedPublication(env as Env, SLOTS_KIND, tenant, pin)).value);
+}
+/** W26 R2: a `pageScoped` member on the wire — sorted catalogue slot names, or null when malformed. */
+export function pageScopedOf(value: unknown): ReadonlySet<string> | null {
+  if (value === undefined) return new Set();
+  if (!Array.isArray(value) || value.length > FAN_LIMITS.rows || value.some(name => !isCatalogueName(name))) return null;
+  return new Set(value as string[]);
+}
+/** W26 R2: the wire form of a set of page-scoped names — absent when empty, so an unscoped body is byte-identical to before. */
+export const pageScopedWire = (scoped: ReadonlySet<string>): { pageScoped?: string[] } => scoped.size ? { pageScoped: [...scoped].sort() } : {};
 
 type NS = DurableObjectNamespace | undefined;
 export interface StatsWriteReceipt {
@@ -329,7 +409,14 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const r = value.receipt;
   // W24 R1.03: the refusal members, present or absent, never malformed — and
   // `refused` IS the number of entries in `refusedBySlot`, so a reply cannot
-  // claim a count its own named refusals do not carry.
+  // claim a count its own named refusals do not carry. W24 R4 (LANE-LOG R203;
+  // W24-B2 build review finding 1): the two travel TOGETHER or not at all, the
+  // way the ring emits them (`DecisionRing.outcome()`). A `refused` with no
+  // `refusedBySlot` beside it — what a partially deployed or faulty ring would
+  // send — is a count nobody named, refused as malformed exactly as every other
+  // member that does not account for itself: `ring.unknown`, no outcome
+  // receipt, the learning receipt not ok. Never admitted as a refusal the
+  // receipt cannot name, and never read as a credit.
   const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
   const money = r.money === undefined ? undefined : moneyReply(r.money);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
@@ -340,8 +427,7 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
     || (r.brandMismatched !== undefined && !count(r.brandMismatched))
     || refusedBySlot === null || money === null
-    || (r.refused !== undefined && !count(r.refused))
-    || (refusedBySlot !== undefined && r.refused !== Object.keys(refusedBySlot).length)
+    || (refusedBySlot === undefined ? r.refused !== undefined : r.refused !== Object.keys(refusedBySlot).length)
     // "No slot learns from this" is a statement about an outcome nothing took.
     || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
   const credits: StatsDelivery = { ...r.credits };
@@ -377,11 +463,24 @@ function finish(out: LearningReceipt): LearningReceipt {
   if (!out.ok && out.code === 'complete') out.code = 'incomplete';
   return out;
 }
-/** Only current background wrappers report: one fixed numeric summary, never raw identifiers or errors. */
+/**
+ * Only current background wrappers report: one fixed numeric summary, never raw
+ * identifiers or errors.
+ *
+ * W24 R3 (LANE-LOG R203; W24-B2 build review finding 3): the line shows what
+ * the outcome receipt says was REFUSED beside what it says was attributed —
+ * `refused`, a count like every other member (zero when nothing was refused or
+ * no receipt came back), and `refusedBySlot`, the receipt's own map of the
+ * configured slot names to the rule that refused each (`reward` or `money`),
+ * present only when the receipt carries one. Slot names are the tenant's
+ * published slot catalogue, not a visitor, content or error identifier; a
+ * line with nothing refused stays wholly numeric.
+ */
 export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: LearningReceipt | null): void {
   if (result?.ok) return;
   try {
     const credits = result?.outcome?.credits;
+    const refusedBySlot = result?.outcome?.refusedBySlot;
     console.warn('learning_incomplete', {
       version: 1, kind: kind === 'decisions' ? 0 : 1, code: result ? ['complete', 'invalid', 'barrier', 'config', 'incomplete'].indexOf(result.code) : 3,
       received: result?.received ?? 1, cutoffSkipped: result?.cutoffSkipped ?? 0,
@@ -391,8 +490,10 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
       exposureUnknown: result?.exposures.rowsUnknown ?? 0, exposureNotAttempted: result?.exposures.rowsNotAttempted ?? 0,
       creditPlanKnown: Number(result?.outcome !== null && result?.outcome !== undefined), attributed: result?.outcome?.attributed ?? 0,
       eligible: result?.outcome?.eligible ?? 0, weightSkipped: result?.outcome?.weightSkipped ?? 0,
+      refused: result?.outcome?.refused ?? 0,
       creditProcessed: credits?.processed ?? 0, creditSkipped: credits?.skipped ?? 0, creditUnknown: credits?.rowsUnknown ?? 0, creditNotAttempted: credits?.rowsNotAttempted ?? 0,
       alarmsUnknown: (result?.exposures.alarmsUnknown ?? 0) + (credits?.alarmsUnknown ?? 0),
+      ...(refusedBySlot ? { refusedBySlot: Object.fromEntries(Object.entries(refusedBySlot)) } : {}),
     });
   } catch { /* Diagnostics must not throw or cause a retry. */ }
 }
@@ -467,10 +568,25 @@ export async function learningGenerations(ns: NS, name: string, items: string[])
   return Object.fromEntries(items.map(item => [item, { whole: value.whole as number, item: Number((value.items as Record<string, unknown>)[item]) }]));
 }
 
-export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number): Promise<Record<string, LearningEffect>> {
+/**
+ * W26 R2: every statistics object a set of personalized records lands in, by
+ * name — the managed path prepares its effects against these and the recovery
+ * record names them for cleanup, so both follow the page-separated object.
+ */
+export function exposureDestinations(records: readonly DecisionRecord[], scoped: ReadonlySet<string>): string[] {
+  const names = new Set<string>();
+  for (const row of records) if (row.arm === 'personalized') {
+    if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
+    names.add(statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)));
+  }
+  return [...names];
+}
+
+export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number, scoped: ReadonlySet<string> = new Set()): Promise<Record<string, LearningEffect>> {
   const result: Record<string, LearningEffect> = {}, groups = new Map<string, DecisionRecord[]>();
   for (const row of records) if (row.arm === 'personalized') {
-    const name = statsName(row.tenant, row.brand, row.slot); groups.set(name, [...(groups.get(name) ?? []), row]);
+    if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
+    const name = statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)); groups.set(name, [...(groups.get(name) ?? []), row]);
   }
   for (const [name, rows] of groups) {
     const generations = await learningGenerations(env.LEARN_STATS, name, rows.map(row => row.item_id));
@@ -482,8 +598,17 @@ export async function prepareExposureEffects(env: Env, records: DecisionRecord[]
   return result;
 }
 
-/** After a decision set is served: the ring gets the full records, each slot's object gets its exposures. */
-export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
+/**
+ * After a decision set is served: the ring gets the full records, each
+ * placement's object gets its exposures.
+ *
+ * W26 R2: `pageScoped` is the set of slot names whose identity carries the page
+ * (`pageScopedSlotNames`), as the caller already holds it — the serving path
+ * from the catalogue it decided with, the managed path from what its recovery
+ * record prepared. A caller that holds none has it read here, once, before
+ * either destination starts (`pageScopedSlotsOf`).
+ */
+export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
   const out = receipt('decisions', Array.isArray(set.records) ? set.records.length : 0);
   try {
     const { tenant, brand, visitor_id: visitorId, records: input } = set, budget = admission();
@@ -526,14 +651,30 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     for (const row of records) pinRetention(env as RetentionEnv, row.retention?.online, tenant, 'online');
     out.code = 'complete';
     if (!records.length) return out;
-    const bySlot = new Map<string, DecisionRecord[]>();
-    // Holdout decisions remain in the ring, never the personalized statistics.
-    for (const r of records) if (r.arm === 'personalized') bySlot.set(r.slot, [...(bySlot.get(r.slot) ?? []), r]);
     out.code = 'config';
+    // W26 R2: one destination per PLACEMENT — the slot, and its page where the
+    // catalogue carries the slot name on more than one page. Only a set that
+    // reaches the statistics at all needs the catalogue.
+    let scoped: ReadonlySet<string>;
+    try { scoped = pageScoped ?? (records.some(r => r.arm === 'personalized') ? await pageScopedSlotsOf(env, tenant) : new Set<string>()); }
+    catch {
+      // Review D2: the catalogue could not be read, so no placement's identity
+      // is known. Refused as `config`, naming both destinations not attempted.
+      out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+      return finish(out);
+    }
+    const bySlot = new Map<string, { slot: string; page?: string; rows: DecisionRecord[] }>();
+    // Holdout decisions remain in the ring, never the personalized statistics.
+    for (const r of records) if (r.arm === 'personalized') {
+      if (!placementValid(scoped, r.slot, r.page)) { out.code = 'invalid'; return finish(out); }
+      const page = identityPage(scoped, r.slot, r.page), name = statsName(tenant, brand, r.slot, page);
+      const group = bySlot.get(name) ?? { slot: r.slot, ...(page ? { page } : {}), rows: [] };
+      group.rows.push(r); bySlot.set(name, group);
+    }
     if (records.some(row => (row.measurementBasis ?? 'served-v1') !== (slotConfig(row.slot).measurementBasis ?? 'served-v1'))) return finish(out);
     out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
     out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size,
-      received: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0) };
+      received: [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0) };
     // W22 D1.02 (F16 §7): "put `decision_id` back into the `/exposures` payload
     // so `LearnStats` can do the same". A decision is served once, so its
     // logical id is what makes a redelivered exposure recognizable — and the
@@ -542,8 +683,8 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     // payload alone cannot tell them apart. The managed path carries neither:
     // its effect marker already proves the same thing, and adding fields to its
     // row would change the digest every stored marker was written under.
-    const exposures = await Promise.all([...bySlot].map(async ([slot, rows]) => ({ slot, body: {
-      tenant, brand, slot, config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
+    const exposures = await Promise.all([...bySlot].map(async ([name, { slot, page, rows }]) => ({ name, body: {
+      tenant, brand, slot, ...(page ? { page } : {}), config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
       exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
         ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
     } })));
@@ -555,7 +696,7 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     out.exposures.rowsUnknown = out.exposures.received; out.exposures.rowsNotAttempted = 0;
     const [ring, stats] = await Promise.all([
       post(env.DECISION_RING, ringName(tenant, visitorId), '/append', { tenant, visitorId, records, ...(managed ? { version: 2 } : {}) }, b => appendReply(b, records.length)),
-      Promise.all(exposures.map(({ slot, body }) => deliverStats(env.LEARN_STATS, statsName(tenant, brand, slot), 'exposures', body, body.exposures.length))),
+      Promise.all(exposures.map(({ name, body }) => deliverStats(env.LEARN_STATS, name, 'exposures', body, body.exposures.length))),
     ]);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.append = ring.receipt;
@@ -565,7 +706,7 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
 }
 
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null): Promise<LearningReceipt> {
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -604,9 +745,20 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
      * slot is known — and the statistics object's own guard remains a
      * compatibility check on the accumulation tuple, never a reward filter.
      */
-    out.ring.destinations = 1; out.ring.unknown = 1;
+    /**
+     * W26 R2: which slot names carry the page in their identity, resolved here
+     * at the producer and carried to the ring, which knows the page of every
+     * decision it credits and routes each credit to its own page's object.
+     * Review D2: a catalogue that cannot be read refuses the outcome here, as
+     * `config`, with the ring not attempted — never a guessed identity.
+     */
+    out.code = 'config';
+    out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+    const scoped = pageScoped ?? await pageScopedSlotsOf(env, tenant);
+    out.code = 'complete';
+    out.ring.notAttempted = 0; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
-      ...(money === undefined || money === null ? {} : { money }),
+      ...(money === undefined || money === null ? {} : { money }), ...pageScopedWire(scoped),
       ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
@@ -635,16 +787,19 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
   decisions: readonly DecisionRecord[]; outcomes: readonly OutcomeRecord[]; at: number;
+  /** W26 R2: the page of a page-scoped placement; only that page's decisions and credits are folded. */
+  page?: string;
 }): { stats: StatsState; decisions: number; outcomes: number } {
   const stats = emptyStats();
   const basis = input.config.measurementBasis ?? 'served-v1';
-  const rings = new Map<string, RingEntry[]>(), seen = new Set<string>();
+  const rings = new Map<string, RingEntry[]>(), seen = new Set<string>(), pageOf = new Map<string, string>();
+  const placed = (page: string | undefined) => input.page === undefined || page === input.page;
   let decisions = 0, outcomes = 0;
   for (const d of input.decisions) {
     if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
-    seen.add(d.decision_id);
+    seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
     rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
-    if (d.slot !== input.slot || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
+    if (d.slot !== input.slot || !placed(d.page) || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
     recordExposure(stats, d.item_id, d.cell, input.at, input.config.stats, input.at);
     decisions++;
   }
@@ -654,7 +809,7 @@ export function foldRetainedDay(input: {
     if (!ring) continue;
     let credited = false;
     for (const c of attribute(o, ring, input.policy)) {
-      if (c.slot !== input.slot || c.reward !== input.config.reward) continue;  // the slot learns against one reward
+      if (c.slot !== input.slot || !placed(pageOf.get(c.decision_id)) || c.reward !== input.config.reward) continue;  // the slot learns against one reward
       const weight = creditWeight(input.config.objective, o);
       if (weight <= 0) continue;
       recordSuccess(stats, c.item, c.cell, c.reward, input.at, weight, input.config.stats, input.at);

@@ -820,7 +820,8 @@ describe('unit:W26.R1.01', () => {
   for (const host of ['session', 'do'] as const) {
     it(`host (${host}): two placements of one piece are two exposures, a named click credits one, a redelivered set counts once, and a legacy outcome is counted as legacy on the report`, async () => {
       const m = await mount({ host });
-      const now = Date.now() - 5 * 60_000;
+      // Five minutes back, and at least five minutes before that UTC day ends: the last event lands 120 s after `now` and the consumer's clock reads 180 s after it, so every event falls in the one day `date` names, whatever the time of day the run starts (at most ten minutes of decay, still 1 to three decimals).
+      const recent = Date.now() - 5 * 60_000, now = Math.min(recent, Math.floor(recent / 86_400_000) * 86_400_000 + 86_400_000 - 5 * 60_000);
       const hero = record(m.env, { slot: 'hero', item_id: 'tabby-in-motion-film', ts: now, position: 0 });
       const rail = record(m.env, { slot: 'rail', item_id: 'tabby-in-motion-film', ts: now + 1, position: 0 });
       const set = { tenant: TENANT, brand: BRAND, visitor_id: 'v-w26', records: [hero, rail] };

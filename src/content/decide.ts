@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
+  Arm, Authority, Cell, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
 } from './types';
 import { validateSeedRules } from './kinds';
 import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
@@ -19,7 +19,7 @@ import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } 
 import { STAGE_WORDS } from '@/services/JourneyStage';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { HISTORICAL_CONTENT_TYPES, withContentTypeAffinity } from './typeAffinity';
-import { compileSlotConstraints, rankedCapacity } from './slotConstraints';
+import { compileSlotConstraints, rankedCapacity, type SlotConstraintRefusal } from './slotConstraints';
 
 export interface DecideInput {
   tenant: string;
@@ -109,6 +109,17 @@ function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: read
   if (historicalGovernance === HISTORICAL_GOVERNANCE) return null;
   const warnings: ConstraintDiagnostic[] = [];
   let warningCount = 0;
+  forEachConstraintRefusal(eligible, specs, ranks, historicalGovernance, (slot, piece, refusal) => {
+    warningCount++;
+    if (warnings.length < CONSTRAINT_WARNING_SAMPLE) warnings.push(constraintWarning(slot, piece, refusal));
+  });
+  return warningCount ? { warningCount, omittedWarningCount: warningCount - warnings.length, warnings } : null;
+}
+
+/** The one walk both channels share: every ranked slot's refusal of an otherwise eligible piece, slot order then catalogue order. */
+function forEachConstraintRefusal(eligible: readonly ContentPiece[], specs: readonly ContentSlotSpec[],
+  ranks: (spec: ContentSlotSpec) => boolean, historicalGovernance: HistoricalGovernance | undefined,
+  visit: (slot: string, piece: ContentPiece, refusal: SlotConstraintRefusal) => void): void {
   for (const spec of specs) {
     if (!ranks(spec)) continue;
     const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
@@ -116,16 +127,64 @@ function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: read
     for (const piece of eligible) {
       if (!piece.slotTypes.includes(spec.slot)) continue;
       const refusal = gate.refusal(piece);
-      if (!refusal) continue;
-      warningCount++;
-      if (warnings.length < CONSTRAINT_WARNING_SAMPLE) {
-        warnings.push({ slot: spec.slot, contentId: piece.id, reason: refusal.reason,
-          ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
-          ...(refusal.value === undefined ? {} : { value: refusal.value }) });
-      }
+      if (refusal) visit(spec.slot, piece, refusal);
     }
   }
-  return warningCount ? { warningCount, omittedWarningCount: warningCount - warnings.length, warnings } : null;
+}
+
+const constraintWarning = (slot: string, piece: ContentPiece, refusal: SlotConstraintRefusal): ConstraintDiagnostic => ({
+  slot, contentId: piece.id, reason: refusal.reason,
+  ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
+  ...(refusal.value === undefined ? {} : { value: refusal.value }) });
+
+/** The composer's view of the page's slot strategies, as the decision builds it. */
+function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins): ContentSlotSpec[] {
+  return slots.map((s) => ({
+    slot: s.slot, take: s.take, weights: s.weights,
+    ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
+    ...(!historicalPins && s.pinnedPieceIds ? { pinnedPieceIds: [...s.pinnedPieceIds] } : {}),
+    ...(s.offLimits !== undefined ? { offLimits: s.offLimits } : {}),
+    ...(s.excludedPieceIds ? { excludedPieceIds: s.excludedPieceIds } : {}),
+    ...(s.excludedTags ? { excludedTags: s.excludedTags } : {}),
+    ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
+    // CW33: the slot's diversity rule, applied by the composer at the take.
+    ...(s.diversity ? { diversity: s.diversity } : {}),
+  }));
+}
+
+/**
+ * W20 R1 (R77(b), R82(c)): the refusals `constraintDiagnostics` names on a
+ * decision set, for an operator reading a whole published slot document
+ * (`GET /content/slots`) instead of a shopper loading one page.
+ *
+ * Each page is decided on its own, as the serving path decides it: the same
+ * slot specs, the same eligibility at `nowMs` (live, inside its window, in
+ * stock), the same page-wide pin reservation — a slot whose pinned prefix the
+ * composer refuses ranks nothing, so it refuses nobody — and the same compiled
+ * gates, run through the same walk. The reservation is the composer's own,
+ * called with an empty ranking set, so no ranking runs and no shopper input is
+ * read; a hard control refuses a piece on every arm alike, so there is no arm
+ * to choose. Every refused eligible piece is counted; at most
+ * `CONSTRAINT_WARNING_SAMPLE` are named across the whole document, in page
+ * order, then slot order, then catalogue order, each with its page. Pure and
+ * advisory: nothing here serves, ranks or stores anything.
+ */
+export function slotDocumentConstraintDiagnostics(pieces: readonly ContentPiece[],
+  pages: Readonly<Record<string, readonly SlotStrategy[]>>, nowMs: number): DocumentConstraintDiagnostics {
+  const eligible = pieces.filter((piece) => isEligibleAt(piece, nowMs));
+  const warnings: PageConstraintDiagnostic[] = [];
+  let warningCount = 0;
+  for (const [page, slots] of Object.entries(pages)) {
+    const specs = slotSpecs(slots);
+    const { pinDiagnostics } = composeContentDetailed(eligible, NO_SIGNAL, specs, 0, undefined, undefined, undefined, undefined, new Set());
+    const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+    forEachConstraintRefusal(eligible, specs, (spec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot), undefined,
+      (slot, piece, refusal) => {
+        warningCount++;
+        if (warnings.length < CONSTRAINT_WARNING_SAMPLE) warnings.push({ page, ...constraintWarning(slot, piece, refusal) });
+      });
+  }
+  return { warningCount, omittedWarningCount: warningCount - warnings.length, warnings };
 }
 
 /** Three decimals, the grain every itemised delta on a receipt is recorded at. */
@@ -142,17 +201,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
   const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
-  const specs: ContentSlotSpec[] = i.slots.map((s) => ({
-    slot: s.slot, take: s.take, weights: s.weights,
-    ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
-    ...(!historicalPins && s.pinnedPieceIds ? { pinnedPieceIds: [...s.pinnedPieceIds] } : {}),
-    ...(s.offLimits !== undefined ? { offLimits: s.offLimits } : {}),
-    ...(s.excludedPieceIds ? { excludedPieceIds: s.excludedPieceIds } : {}),
-    ...(s.excludedTags ? { excludedTags: s.excludedTags } : {}),
-    ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
-    // CW33: the slot's diversity rule, applied by the composer at the take.
-    ...(s.diversity ? { diversity: s.diversity } : {}),
-  }));
+  const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // Keep the site's default diversity/order unchanged as well as its zero scores.
