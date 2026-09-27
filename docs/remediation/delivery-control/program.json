@@ -2573,13 +2573,15 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "1ce4e52a0150fb173471f23a18b8afe957951ce6 on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with the amendment-A46 tests unit:W30.L1 and unit:W30.S1 (LEDGER.unit.test.ts) added on 658b963",
+        "reviewedRevision": "6426de337781c6ab47e494790a354980251a366c on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with the amendment-A46 tests unit:W30.L1 and unit:W30.S1 (1ce4e52) and the amendment-A47/A48 tests unit:W30.P1 and unit:W30.E1 (P1E1.unit.test.ts, 6426de3)",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.acceptance.log",
@@ -2587,7 +2589,10 @@
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-C1-budget.log",
           "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/W30-negative-control.log",
           "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-L1S1-at-1c4d153.log",
-          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-acceptance-on-reviewer-fix.log"
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-acceptance-on-reviewer-fix.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/specifier/logs/W30-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/logs/P1E1-at-integration-9df3365.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/logs/P1E1-at-w30build-1c4d153.log"
         ]
       },
       "doneWhen": [
