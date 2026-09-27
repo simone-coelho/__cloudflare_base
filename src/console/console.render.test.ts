@@ -890,9 +890,22 @@ describe('the operator application, rendered', () => {
       const syms = c.all('#view thead th .sym').map((x) => (x.textContent || '').trim());
       // Witness public/console/views.js:224-227: the grid names the defined exposure unit and the weighted credit per exposure
       // (document 35 §5 W26: "defined served/rendered/viewable unit"; the served/rendered basis is per snapshot).
-      expect(words).toEqual(['', 'Piece', 'Exposures', 'Weighted credit', 'Credit / exposure', 'Slot credit / exposure', 'Lift ↓', 'Evidence', 'Held by a person']);
+      // W26.R5 (frozen work order W26; F21 §8 "report the lift table as a diagnostic that is not corrected for position
+      // or placement"; LANE-LOG R198) adds ONE correction column to this table. No witness fixes its words or its place,
+      // so it is found by name (as src/units/W26/LEDGER.unit.test.ts finds it); every other heading keeps its words and
+      // its order, and the design's symbols stay the six formula columns' own.
+      const correction = words.findIndex((label) => /correct/i.test(label));
+      expect(correction, `W26.R5: the lift table shows a correction column (headings: ${JSON.stringify(words)})`).toBeGreaterThanOrEqual(0);
+      expect(words.filter((_, i) => i !== correction)).toEqual(['', 'Piece', 'Exposures', 'Weighted credit', 'Credit / exposure', 'Slot credit / exposure', 'Lift ↓', 'Evidence', 'Held by a person']);
       expect(syms).toEqual(['n', 's', 'p̂', 'p₀', 'p̂ / p₀', 'n / (n + n₀)']);
       expect(c.all('#view tbody tr')).toHaveLength(3);
+      // Property 3 (NO STRAY VALUE, :551) on the new column: these fixture rows carry no `correction`, as an older
+      // server's rows do, so each row shows a fallback there, never an empty cell or a stray value.
+      for (const tr of c.all('#view tbody tr')) {
+        const cell = ((tr.querySelectorAll('td')[correction]?.textContent) || '').trim();
+        expect(cell, 'W26.R5: a row without a correction shows a fallback in the correction column').toMatch(/\S/);
+        expect(cell).not.toMatch(STRAY);
+      }
       expect(c.text()).toContain('312 pieces, showing 1 to 3');   // the page the server cut, not the page size
       expect(c.text()).toContain('reward click');
       expect(c.text()).not.toMatch(STRAY);

@@ -19,7 +19,7 @@ import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 import { effectiveExploration, type ExploreMode } from './explore';
-import type { PriorIndex } from './priors';
+import { indexPriors, priorCapacityExceeded, type PriorIndex, type PriorsDoc } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -464,14 +464,17 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'attributionContract'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'allocation' | 'attributionContract'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
   // `armVisitors` rides the summary because the window pools it from here; a
-  // summary written before it existed simply does not carry the key.
+  // summary written before it existed simply does not carry the key. W31 M1.01:
+  // `allocation` rides it for the same reason and on the same terms — the window
+  // states the allocation its days agree on, and a summary written before the
+  // key existed is unknown, never re-derived (R149).
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'allocation', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -490,6 +493,10 @@ export function canonicalReportJson(report: DayReport): string {
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
     ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
     armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    // W31 M1.01: the window states the published allocation its days agree on,
+    // and it pools from this frame, so the allocation rides it rather than being
+    // bought with a second read. Absent where the day records none.
+    ...(validAllocation(report.allocation) ? { allocation: validAllocation(report.allocation)! } : {}),
     // W22 A1.01: the window pools from the summary, so the contract it pooled
     // under has to be readable without opening the whole grid.
     ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
@@ -600,6 +607,33 @@ export interface ReportInput {
    * leaving a reader to discover it by comparing numbers.
    */
   priors?: { version: number; index: PriorIndex | ((slot: string) => PriorIndex | null | undefined) } | null;
+}
+
+/** The priors input of `buildReport`, as a production caller hands it over. */
+export type ReportPriors = NonNullable<ReportInput['priors']>;
+
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document as the input
+ * `buildReport` takes, resolved per slot under the tenant's own learn document —
+ * the index the statistics object would build for that slot, read the way
+ * `LearnStats` reads it (`indexPriors` under the slot's measurement basis).
+ *
+ * A slot whose objective is `revenue` or `margin` gets no index: an imported
+ * prior is a probability, the statistics object refuses to publish such a slot
+ * rather than apply one in the wrong unit (W25 Z1.01), and the offline grid does
+ * not do what the live table refuses to — its grid is built prior-free and says
+ * so (`priorVersion: 0` on that grid). A document past the bound every reader
+ * indexes within is refused here, before any grid is built, rather than read as
+ * no prior at all.
+ */
+export function reportPriors(doc: PriorsDoc, version: number, learn: LearnConfig): ReportPriors {
+  if (priorCapacityExceeded(doc) || !Number.isSafeInteger(version) || version < 0) throw new ReportUnavailableError();
+  const configs = slotConfigsOf(learn);
+  return { version, index: (slot: string) => {
+    const config = configs[slot];
+    if ((config?.objective ?? 'unit') !== 'unit') return null;
+    return indexPriors(doc, slot, config?.measurementBasis ?? 'served-v1');
+  } };
 }
 
 /** The prior index in force for one slot, or null where the grid is prior-free. */
@@ -755,6 +789,13 @@ export interface ReportCoverage {
    * before this release is owed. A day with any such hour is grouped by the arm
    * SERVED and answers `armVisitors` and `visitorOutcomes` null.
    *
+   * W21 R1 (LANE-LOG R156): also the built hours that carry the assignment of
+   * every decision but could not PLACE one of their outcomes — its visitor had
+   * no decision of the date at or before it, and none later in that hour, so
+   * her first decision of the day (the raw-day rule) may lie in a later hour.
+   * A day naming such an hour keeps its arm rows and `armVisitors` and answers
+   * `visitorOutcomes` null.
+   *
    * Optional in the stored evidence: a report written before this release does
    * not carry it and is still `metadata: 'recorded'`.
    */
@@ -836,7 +877,7 @@ export interface DayReport {
   armVisitors?: ArmVisitors | null;
   /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
   allocation?: ReportAllocation;
-  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field, or names an hour in `coverage.unassignedHours`. */
   visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
@@ -1393,6 +1434,13 @@ export async function runReport(
   now = Date.now(),
   retentionEnv?: RetentionEnv,
   resolved?: ResolvedConflicts,
+  /**
+   * W25 R4: the tenant's published prior document (`reportPriors`), so a day
+   * built from the ledger records builds its grids the way the live table does
+   * and its `gridPriors` declares the revision it applied. Absent, the grids are
+   * built prior-free and the report declares that instead.
+   */
+  priors?: ReportPriors | null,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
@@ -1420,7 +1468,7 @@ export async function runReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes, ...(resolved ? { resolved } : {}),
+    decisions, outcomes, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };
