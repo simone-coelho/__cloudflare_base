@@ -1706,7 +1706,7 @@
     {
       "id": "W26",
       "title": "Exposure unit, placement identity and fatigue",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1916,7 +1916,7 @@
     {
       "id": "W27",
       "title": "Replay: archive before visible, page manifests, explicit failure",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
