@@ -13,7 +13,7 @@ import { validateSeedRules } from './kinds';
 import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
 import { isEligibleAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
-import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
@@ -194,7 +194,8 @@ const authorityOf = (strategy: string): Authority =>
   strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
 
 export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
-  historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance): ContentDecisionSet {
+  historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance,
+  historicalRules?: typeof HISTORICAL_EXPLORATION_RULES): ContentDecisionSet {
   const hasNonce = Object.prototype.hasOwnProperty.call(i, 'requestId');
   if (hasNonce && (!isEventNonce(i.requestId) || !isEventTimestamp(i.nowMs))) throw new Error('Invalid decision identity');
   // The `default` arm is the site's own defaults: no personalization, so the
@@ -397,7 +398,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // already holding: no I/O, nothing that can fail or change the ranking.
     const controlled = new Set<string>();
     if (learning.controlOf) for (const r of ranked) if (learning.controlOf(slot, r.id)) controlled.add(r.id);
-    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical);
+    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical, historicalRules);
     if (!pick) return null;
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
@@ -412,6 +413,21 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
   const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
+  /**
+   * W28.R2: the support a record states. The composer records the top
+   * candidates by score before an exploration moved its piece to the front,
+   * with that piece beside them (W28.C1.01(b)): at most `candidateLimit + 1`
+   * entries, the explored piece first. The rules before recorded the first
+   * `candidateLimit` of the moved ranking instead, and that is exactly the
+   * first `candidateLimit` of this support — the explored piece, then the
+   * ranking without it — so a record written under them is reproduced by the
+   * cut, whatever the pick and the limit. Where nothing moved, both are the
+   * ranking's first `candidateLimit` and the cut changes nothing.
+   */
+  const supportOf = (slot: string) => {
+    const support = candidates[slot] ?? [];
+    return historicalRules === HISTORICAL_EXPLORATION_RULES ? support.slice(0, Math.max(0, i.candidateLimit ?? 10)) : support;
+  };
   // W20 G2 (R86(b), R86(c)): a PINNED slot that served and still could not fill
   // its `take`. Measured from what the composer actually served
   // against the take the document publishes, so it can never disagree with the
@@ -486,7 +502,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   };
   // Doc 22 §12.3: what this set was computed from, so a replay is exact.
   const plain = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
-  const inputs: DecisionInputs = {
+  // W28.R2 (amendment A20): the exploration rules this set was decided under,
+  // stated BESIDE the page manifest, never inside it (`EXPLORATION_RULES`,
+  // src/learn/explore.ts). Written wherever the learning layer ran; without it
+  // no exploration rule runs, both rule sets decide identically, and there is
+  // nothing to state. A replay of the rules before writes none.
+  const rules: { explorationRules?: ExplorationRules } = learning !== null && historicalRules !== HISTORICAL_EXPLORATION_RULES
+    ? { explorationRules: EXPLORATION_RULES } : {};
+  const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
     affinity: plain(affinity.dims) as DecisionInputs['affinity'],
     replay: {
       version: 1, learning: learning !== null, candidateLimit: i.candidateLimit ?? 10,
@@ -503,6 +526,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
+    ...rules,
   };
 
   const positionIn = new Map<string, number>();
@@ -526,7 +550,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       ...(!historicalPins && !pinned ? { ranking_position: rankingPosition } : {}),
-      candidates: !historicalPins && pinned ? [{ contentId: d.contentId, score: 0 }] : candidates[d.slot] ?? [],
+      candidates: !historicalPins && pinned ? [{ contentId: d.contentId, score: 0 }] : supportOf(d.slot),
       cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
       versions: { ...i.versions, lift: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.version ?? 0, prior: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
       ...(byId.get(d.contentId)?.featuredProductIds?.length ? { featured_product_ids: [...byId.get(d.contentId)!.featuredProductIds!] } : {}),

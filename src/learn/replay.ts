@@ -12,7 +12,7 @@ import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
 import { decideContent } from '@/content/decide';
-import { HISTORICAL_EXPLORATION } from '@/learn/explore';
+import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
@@ -240,6 +240,13 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const hasManifest = own(inputs, 'replay');
   const manifest = hasManifest ? manifestOf(inputs.replay, page, served) : null;
   if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
+  // W28.R2 (amendment A20): the exploration rules the record was decided under
+  // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
+  // record that states none was written before them and replays under the rules
+  // before; a marker this build does not implement refuses, before any archive
+  // is read — never a guess, and never whichever rules happen to reproduce it.
+  const rules = recordedExplorationRules(inputs);
+  if (rules === 'invalid') return fail(served, 'invalid exploration rules marker');
   const prefixPolicy = manifest?.pins === 'prefix-reserved-v2';
   const pinned = prefixPolicy ? served.position < slotPins(target).length : Boolean(target.pinnedPieceId);
   const pinId = prefixPolicy ? slotPins(target)[served.position] : target.pinnedPieceId;
@@ -307,7 +314,8 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,
-  manifest?.governance === 'slot-gates-v2' ? undefined : manifest?.governance === 'slot-gates-v1' ? HISTORICAL_GOVERNANCE_V1 : HISTORICAL_GOVERNANCE); } catch { return fail(served, 'recorded replay inputs could not be evaluated'); }
+  manifest?.governance === 'slot-gates-v2' ? undefined : manifest?.governance === 'slot-gates-v1' ? HISTORICAL_GOVERNANCE_V1 : HISTORICAL_GOVERNANCE,
+  rules === 'current' ? undefined : HISTORICAL_EXPLORATION_RULES); } catch { return fail(served, 'recorded replay inputs could not be evaluated'); }
   const replayed = set.records.find((r) => r.slot === served.slot && r.position === served.position) ?? null;
   // Rendering is an authenticated later observation, not a new ranking time.
   // Preserve that observation while recomputing the original decision inputs.
