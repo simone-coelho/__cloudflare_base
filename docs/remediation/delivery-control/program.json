@@ -2090,7 +2090,7 @@
     {
       "id": "W28",
       "title": "Thompson exploration withdrawn and consistent",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2276,7 +2276,7 @@
     {
       "id": "W29",
       "title": "Autonomy safely unavailable and reported",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
