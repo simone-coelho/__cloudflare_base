@@ -386,15 +386,29 @@ function savedShape(value: unknown, ids: { tenant: string; brand: string; date: 
 }
 
 async function savedDocument(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
-  budget: ReportReadBudget): Promise<{ report: DayReport; text: string } | null> {
+  budget: ReportReadBudget): Promise<{ report: DayReport; text: string; etag: string | undefined } | null> {
   validateReportIds(ids);
   try {
     const obj = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
     if (obj === null) return null;
     const text = await storedReportText(obj, budget, 'savedBytes', 'windowBytes');
     const report: unknown = JSON.parse(text);
-    savedShape(report, ids, budget); return { report, text };
+    savedShape(report, ids, budget); return { report, text, etag: objectEtag(obj) };
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
+}
+
+/**
+ * W33 O4: the whole stored day with the etag of the object it came from, for a
+ * writer that replaces exactly that object or nothing. The leading summary
+ * frame is the writer's, not the day's, and is not part of the answer.
+ */
+export async function readStoredDay(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }): Promise<{ report: DayReport; etag: string } | null> {
+  const doc = await savedDocument(r2, ids, { bytes: 0, cells: 0 });
+  if (!doc) return null;
+  if (doc.etag === undefined) throw new ReportUnavailableError();
+  const { _summary: _frame, ...report } = doc.report as DayReport & { _summary?: unknown };
+  void _frame;
+  return { report, etag: doc.etag };
 }
 
 export async function readSavedReport(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
@@ -464,7 +478,7 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'allocation' | 'attributionContract'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'allocation' | 'attributionContract' | 'provenance'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
@@ -474,7 +488,7 @@ function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: st
   // states the allocation its days agree on, and a summary written before the
   // key existed is unknown, never re-derived (R149).
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'allocation', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'allocation', 'attributionContract', 'provenance'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -499,7 +513,10 @@ export function canonicalReportJson(report: DayReport): string {
     ...(validAllocation(report.allocation) ? { allocation: validAllocation(report.allocation)! } : {}),
     // W22 A1.01: the window pools from the summary, so the contract it pooled
     // under has to be readable without opening the whole grid.
-    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
+    // W33 O3/O4: the window pools from this frame, so a day's provenance rides
+    // it — a declared day is withheld from the pool without opening its grid.
+    ...(validProvenance(report.provenance) ? { provenance: validProvenance(report.provenance)! } : {}) };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
   const full = rawReportJson(report);
@@ -548,10 +565,27 @@ async function summaryPrefix(value: unknown, budget: ReportReadBudget): Promise<
 
 /** New canonical reports need one short range; legacy fallback is one independent full version. */
 export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): Promise<DayReport | null> {
+  return (await readCanonicalSummary(r2, ids, budget)).report;
+}
+
+/**
+ * W33 O2: the object a reader saw under the canonical key, so a writer that
+ * decided on it can make its replacement conditional on exactly that object.
+ * `etag` is `null` where no day is stored, and `undefined` where a stored day
+ * came back without one (never from R2, which always states it): a write
+ * cannot be made conditional on that, so it is refused rather than made blind.
+ */
+export interface CanonicalBasis { etag: string | null | undefined; builtAt: number | null }
+const objectEtag = (value: unknown): string | undefined =>
+  object(value) && typeof value.etag === 'string' && value.etag.length > 0 && value.etag.length <= 256 ? value.etag : undefined;
+
+/** `readWindowSummary`, answering also the etag of the object whose summary it returned. */
+export async function readCanonicalSummary(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
+  budget: ReportReadBudget): Promise<{ report: DayReport | null; etag: string | null | undefined }> {
   validateReportIds(ids);
   try {
     const first = await r2.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } });
-    if (first === null) return null;
+    if (first === null) return { report: null, etag: null };
     const prefix = await summaryPrefix(first, budget), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
     const marked = prefix.bytes.length >= SUMMARY_START.length && SUMMARY_START.split('').every((c, i) => prefix.bytes[i] === c.charCodeAt(0));
     if (marked) {
@@ -562,15 +596,16 @@ export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: st
       }
       // Decode only the framed line: the following grid can end mid-codepoint in this range.
       const line = decoder.decode(prefix.bytes.subarray(0, end));
-      return summaryLine(line, ids, budget);
+      return { report: summaryLine(line, ids, budget), etag: objectEtag(first) };
     }
     if (prefix.complete) {
       const report: unknown = JSON.parse(decoder.decode(prefix.bytes));
       if (object(report) && Object.hasOwn(report, '_summary')) throw new ReportUnavailableError();
-      savedShape(report, ids, budget); return report;
+      savedShape(report, ids, budget); return { report, etag: objectEtag(first) };
     }
     // Discard every prefix fact. A concurrent replacement is read wholly, never mixed.
-    const full = await storedReportText(await r2.get(reportKey(ids.tenant, ids.brand, ids.date)), budget, 'savedBytes', 'windowBytes');
+    const whole = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
+    const full = await storedReportText(whole, budget, 'savedBytes', 'windowBytes');
     const report: unknown = JSON.parse(full);
     if (object(report) && Object.hasOwn(report, '_summary')) {
       const end = full.indexOf('\n');
@@ -578,8 +613,54 @@ export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: st
       summaryLine(full.slice(0, end), ids, budget);
     }
     savedShape(report, ids, budget);
-    return report;
+    return { report, etag: objectEtag(whole) };
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
+}
+
+/**
+ * W33 O2: what the canonical key holds at the moment a writer that did NOT read
+ * it before computing is about to replace it — one short range read of its
+ * leading frame. `builtAt` is the stored day's own build time where the frame
+ * (or a whole legacy body inside the range) states it, and `null` where it
+ * cannot be read; such a day was not written by a current writer, whose summary
+ * is always bounded and readable, and it stays replaceable exactly as before.
+ */
+export async function readCanonicalBasis(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }): Promise<CanonicalBasis> {
+  validateReportIds(ids);
+  let first: unknown;
+  try { first = await r2.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } }); }
+  catch { throw new ReportUnavailableError(); }
+  if (first === null) return { etag: null, builtAt: null };
+  const etag = objectEtag(first);
+  try {
+    const prefix = await summaryPrefix(first, { bytes: 0, cells: 0 }), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
+    const end = prefix.bytes.indexOf(10);
+    const text = end >= 0 ? decoder.decode(prefix.bytes.subarray(0, end)) : prefix.complete ? decoder.decode(prefix.bytes) : '';
+    const value: unknown = text.startsWith(SUMMARY_START) && text.endsWith(',') ? JSON.parse(text.slice(SUMMARY_START.length, -1))
+      : text && !text.startsWith(SUMMARY_START) ? JSON.parse(text) : null;
+    const builtAt = object(value) ? value.builtAt : undefined;
+    return { etag, builtAt: finite(builtAt) ? builtAt : null };
+  } catch { return { etag, builtAt: null }; }
+}
+
+/**
+ * W33 O2 (document 35 §5 row W33, "Protect against concurrent overlay/canonical
+ * writes"): the one way a canonical day is written. It never replaces a stored
+ * day built after this one, and the put is conditional on the object the
+ * decision was made on — `basis` when the caller read the key before computing
+ * (the five-minute job), otherwise one read of the key now — so a writer that
+ * finishes last with an older view of the day cannot replace a newer one that
+ * landed meanwhile. Answers whether this body was stored; a refusal is not an
+ * error, the newer day stands. A storage failure still throws.
+ */
+export async function writeCanonicalDay(r2: SavedReportReader & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, body: string, builtAt: number, basis?: CanonicalBasis): Promise<boolean> {
+  const seen = basis ?? await readCanonicalBasis(r2, ids);
+  if (seen.etag === undefined) throw new ReportUnavailableError();
+  if (seen.builtAt !== null && seen.builtAt > builtAt) return false;
+  const written = await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body,
+    { onlyIf: seen.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: seen.etag }, httpMetadata: { contentType: 'application/json' } });
+  return written !== null;
 }
 
 export interface ReportInput {
@@ -713,6 +794,60 @@ export function validAllocation(value: unknown): ReportAllocation | null {
     || value.share < 0 || value.share > 1 || !Array.isArray(value.arms) || value.arms.length > REPORT_LIMITS.policies
     || (value.arms as unknown[]).some(arm => !name(arm))) return null;
   return { version: 1, source: 'published', share: value.share, arms: [...(value.arms as string[])] };
+}
+
+/**
+ * W33 O3 (document 35 §5 row W33, N09): the policy and version identity that
+ * produced a stored day. `policies` is the ordered list of policy names the
+ * day's numbers were computed under; `status` says how the day came to be under
+ * the canonical key:
+ *
+ *  · `canonical` — a canonical writer published it from the hour aggregates or
+ *    the ledger, under the learning policy and the preset overlays;
+ *  · `repaired` — `repairCanonicalDay` found the day overwritten by a custom
+ *    overlay and replaced it with the day the canonical writer computes from the
+ *    retained sources;
+ *  · `declared` — the same repair found the day overwritten and its sources
+ *    gone, so the day is kept readable with the numbers it held, its `policies`
+ *    name the overlay that produced them, and the window no longer pools it.
+ *
+ * Anything that is not exactly this shape is unknown, and unknown reads `null`:
+ * a day written before the member existed is never taken for a recorded
+ * canonical one.
+ */
+export interface DayProvenance { version: 1; status: 'canonical' | 'repaired' | 'declared'; policies: string[] }
+export function validProvenance(value: unknown): DayProvenance | null {
+  if (!object(value) || !only(value, ['version', 'status', 'policies']) || value.version !== 1
+    || (value.status !== 'canonical' && value.status !== 'repaired' && value.status !== 'declared')
+    || !Array.isArray(value.policies) || !value.policies.length || value.policies.length > REPORT_LIMITS.policies
+    || !(value.policies as unknown[]).every(name) || new Set(value.policies).size !== value.policies.length) return null;
+  return { version: 1, status: value.status, policies: [...(value.policies as string[])] };
+}
+/** What a canonical writer records: the names of the policies its own numbers were computed under, in order. */
+export function dayProvenance(report: Pick<DayReport, 'policies'>, status: DayProvenance['status']): DayProvenance | null {
+  return validProvenance({ version: 1, status, policies: report.policies.map(p => p.name) });
+}
+/**
+ * W33 O4: is a stored day's policy set the canonical one — its learning policy
+ * followed by exactly the preset overlays of that same learning policy, by name
+ * and by effective definition, in order? That is what every canonical writer
+ * has computed since the presets existed (they are unchanged since CW22), so a
+ * day that fails it was written by a custom overlay (N09). `null` when the
+ * stored policies cannot be read at all: that is not evidence either way.
+ */
+export function canonicalPolicySet(policies: unknown): boolean | null {
+  if (!Array.isArray(policies) || !policies.length || policies.length > REPORT_LIMITS.policies) return null;
+  const rows: Array<{ name: string; role: string; policy: AttributionPolicy }> = [];
+  for (const row of policies as unknown[]) {
+    if (!object(row) || !name(row.name) || (row.role !== 'learning' && row.role !== 'reporting') || !object(row.policy)) return null;
+    try { validateReportPolicies([{ ...(row.policy as unknown as AttributionPolicy), name: row.name }]); } catch { return null; }
+    rows.push({ name: row.name, role: row.role, policy: row.policy as unknown as AttributionPolicy });
+  }
+  const [learning, ...reporting] = rows;
+  if (learning!.role !== 'learning' || learning!.name !== 'learning' || reporting.some(row => row.role !== 'reporting')) return false;
+  const presets = presetPolicies(learning!.policy);
+  const same = (a: AttributionPolicy, b: AttributionPolicy) => JSON.stringify(effectiveReportPolicy(a)) === JSON.stringify(effectiveReportPolicy(b));
+  return reporting.length === presets.length && presets.every((preset, i) => reporting[i]!.name === preset.name && same(reporting[i]!.policy, preset));
 }
 
 /**
@@ -904,6 +1039,13 @@ export interface DayReport {
    * absence means unknown, never "prior-free".
    */
   gridPriors?: { applied: boolean; priorVersion: number };
+  /**
+   * W33 O3: the policy and version identity that produced this stored day
+   * (`DayProvenance`). Set by the canonical writers and the repair; absent on a
+   * response-only overlay and on a day written before it existed, which the
+   * read answers `null`.
+   */
+  provenance?: DayProvenance | null;
 }
 
 /**
@@ -1034,6 +1176,8 @@ export function diagnosticDayReport(report: DayReport): DayReport {
     coverage,
     computation: recordedComputation(report.computation),
     ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
+    // W33 O3: always answered — a day that records none is the explicit unknown.
+    provenance: validProvenance(report.provenance),
   };
 }
 
@@ -1442,6 +1586,25 @@ export async function runReport(
    */
   priors?: ReportPriors | null,
 ): Promise<DayReport> {
+  return ledgerReport(r2, ids, learn, reporting, now, retentionEnv, resolved, priors, reporting === null);
+}
+
+/**
+ * W33 O4: the canonical day from the ledger exactly as `runReport(…, null, …)`
+ * computes it — the learning policy and the preset overlays, prior-free as the
+ * nightly job builds it — WITHOUT writing it, so the repair can make its own
+ * write conditional on the affected day it read.
+ */
+export async function rebuildLedgerDay(r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, retentionEnv?: RetentionEnv): Promise<DayReport> {
+  return ledgerReport(r2, ids, learn, null, now, retentionEnv, undefined, null, false);
+}
+
+async function ledgerReport(
+  r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now: number,
+  retentionEnv: RetentionEnv | undefined, resolved: ResolvedConflicts | undefined, priors: ReportPriors | null | undefined, persist: boolean,
+): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
   bound('policies', overlays.length + 1); validateReportPolicies([learning, ...overlays]);
@@ -1483,9 +1646,13 @@ export async function runReport(
   // Explicit overlays (even [] or the preset list) are response-only. They must not
   // replace the canonical aggregate/raw report subsequently read by GET/window.
   if (reporting === null) {
+    // W33 O3: the canonical day records the policy set that produced it.
+    report.provenance = dayProvenance(report, 'canonical');
     const body = canonicalReportJson(report);
     if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
-    try { await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body, { httpMetadata: { contentType: 'application/json' } }); } catch { /* the response still carries it */ }
+    // W33 O2: conditional, so this write never replaces a newer canonical day
+    // that landed while this one was reading the ledger.
+    if (persist) try { await writeCanonicalDay(r2 as unknown as Parameters<typeof writeCanonicalDay>[0], ids, body, report.builtAt); } catch { /* the response still carries it */ }
   } else rawReportJson(report);
   if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
   return report;

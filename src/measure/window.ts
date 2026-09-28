@@ -1,7 +1,7 @@
 // Pool raw attribution counts from saved day reports. Experimental inference
 // requires enrollment, control, outcome and analysis contracts outside this report.
 import { attributionArm, readWindowSummary, reportCoverage, reportPayloadJson, validAllocation, validArmVisitors, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, REPORT_MEASUREMENT, type ArmRow, type ArmVisitors, type ReportAllocation, type ReportCoverage, type SavedReportReader } from '@/learn/report';
-import { effectiveReportPolicy, recordedComputation, slotComputation, type ComputationBasis, type DayReport } from '@/learn/report';
+import { effectiveReportPolicy, recordedComputation, slotComputation, validProvenance, type ComputationBasis, type DayReport } from '@/learn/report';
 import type { AttributionPolicy } from '@/learn/policy';
 import { validAttributionContract } from '@/learn/route';
 import type { AttributionContract } from '@/learn/stats';
@@ -87,7 +87,12 @@ export interface WindowReport {
     /** n/s are compatibility aliases for decisions/credited, not Bernoulli trials/successes. */
     arms: Array<ArmRow & { n: number; s: number }>;
     comparisons: never[];
-    compatibility: { status: 'compatible' | 'unknown' | 'mixed'; reasons: Array<'unknown_basis' | 'mixed_basis' | 'mixed_allocation' | 'unrepresented_counts'>; days: string[] };
+    /**
+     * W33 O4: `declared_day` — a pooled day is a declared day (`provenance.status:
+     * 'declared'`): its numbers were computed under a custom overlay and could not
+     * be rebuilt, so they are shown on the day and never pooled here as canonical.
+     */
+    compatibility: { status: 'compatible' | 'unknown' | 'mixed'; reasons: Array<'unknown_basis' | 'mixed_basis' | 'mixed_allocation' | 'unrepresented_counts' | 'declared_day'>; days: string[] };
     /**
      * W31 M1.01: the one recorded computation this slot pooled under, stated
      * rather than assumed. Null where the slot is not compatible, because an
@@ -176,6 +181,9 @@ export async function windowReport(
     else if (!allocation) allocation = dayAllocation;
     else if (allocationKey(dayAllocation) !== allocationKey(allocation)) allocationMixed = true;
     const basis = recordedComputation(report.computation);
+    // W33 O4 (N09): a declared day's counts are an overlay's, not the canonical
+    // day's, so every slot it reaches withholds its pooled arms and says why.
+    const declared = validProvenance(report.provenance)?.status === 'declared';
     for (const slot of new Set([...Object.keys(report.holdout), ...(basis?.slots.map(s => s.slot) ?? [])])) {
       const rows = report.holdout[slot];
       const info: WindowReport['slots'][string]['compatibility'] = compatibility.get(slot) ?? { status: 'compatible', reasons: [], days: [] };
@@ -185,6 +193,7 @@ export async function windowReport(
       if (allocationMixed) addReason('mixed_allocation');
       if (!identity) addReason('unknown_basis');
       if (!rows?.length) addReason('unrepresented_counts');
+      if (declared) addReason('declared_day');
       if (identity && identities.has(slot) && identities.get(slot) !== identity) addReason('mixed_basis');
       info.reasons.sort();
       if (identity) identities.set(slot, identities.get(slot) ?? identity);
