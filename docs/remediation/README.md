@@ -1,5 +1,7 @@
 # Remediation execution entry point
 
+> **Frozen history. The remediation runs under the Closure Ledger:** start at [AGENTS.md](../../AGENTS.md).
+
 [Document 35](../architecture/35-audit-verification-and-source-of-truth.md) says what is wrong and what full remediation requires. [Document 36](../architecture/36-remediation-governance-and-execution.md) says how the lead and Astra team execute and verify it. [tracker.json](tracker.json) is the only mutable execution register; [RESUME.md](RESUME.md) is the next-session checkpoint.
 
 Start here in every new session:

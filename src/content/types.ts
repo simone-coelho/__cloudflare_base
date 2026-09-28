@@ -564,3 +564,19 @@ export interface ConstraintDiagnostics {
   omittedWarningCount: number;
   warnings: ConstraintDiagnostic[];
 }
+
+/**
+ * W20 R1: one of those refusals as the operator's read of a whole slot document
+ * names it (`GET /content/slots`), where several pages share one bounded sample:
+ * the same entry, with the page whose decision would refuse the piece.
+ */
+export interface PageConstraintDiagnostic extends ConstraintDiagnostic {
+  page: string;
+}
+
+/** The document-wide channel: the same bound and counts, across every page in document order. */
+export interface DocumentConstraintDiagnostics {
+  warningCount: number;
+  omittedWarningCount: number;
+  warnings: PageConstraintDiagnostic[];
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W16",
+  "workOrderHash": "sha256:b9c160c0ca5b5072677f80ac95a0b4d47c5182813fec7f17c5a8d42dce6bb10f",
+  "artifact": {
+    "revision": "db0ef5c89d6a9928e985f6bea3982284f3f6e494",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration (merged at 491ffc4), local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W16-delivery/implementer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W16-delivery/implementer/logs/gate-3-eslint.log",
+      "git commits e88c163 4ec3376 73d7ebe be8de93 95e2001 133cc77 b36b184 1506a62 on rem/w16-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W16 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/logs/acceptance-2.log",
+      "/home/simonecoelho/rem/_evidence/W16-delivery/implementer/logs/gate-1-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/logs/integration-2.log",
+      "/home/simonecoelho/rem/_evidence/W16-delivery/implementer/logs/gate-2-integration.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W16-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-25T17:54:01.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE3",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

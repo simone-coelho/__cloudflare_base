@@ -35,7 +35,7 @@ import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
 import { ConnectorUnavailable } from '@/connectors/model';
 import { catalogDiagnostics } from '@/content/catalogDiagnostics';
-import { slotDiagnostics } from '@/content/slotDiagnostics';
+import { slotConstraintDiagnostics, slotDiagnostics } from '@/content/slotDiagnostics';
 
 type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext } };
 export const contentRoutes = new Hono<Ctx>();
@@ -146,12 +146,14 @@ function catalogScope(c: Context<Ctx>): string {
   return tenant;
 }
 function scopeOf(c: Context<Ctx>, _kind?: DocumentKind<unknown>): string { void _kind; return catalogScope(c); }
+/** The slot document's own canonical catalog tenant, for the advisory channels that read the catalogue. */
+const slotCatalogTenant = (c: Context<Ctx>, scope: string) => () => {
+  const tenant = catalogScope(c);
+  if (scope !== tenant) throw new Error('Unbound slot scope');
+  return tenant;
+};
 function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | null, revision: number | null) {
-  return slotDiagnostics(c.env, slots, revision, () => {
-    const tenant = catalogScope(c);
-    if (scope !== tenant) throw new Error('Unbound slot scope');
-    return tenant;
-  });
+  return slotDiagnostics(c.env, slots, revision, slotCatalogTenant(c, scope));
 }
 /**
  * The records a direct publication submitted, for the advisory channel alone.
@@ -325,7 +327,10 @@ contentRoutes.get('/:kind', async (c) => {
     publication: rev?.publication, actor: rev?.actor ?? null, note: rev?.note ?? null, at: rev?.at ?? null, document: value,
     ...documentEnvelopeOf(k.kind, value),
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, value, rev?.revision ?? 0) } : {}),
-    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, rev?.value ?? null, rev?.revision ?? null) } : {}) });
+    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, rev?.value ?? null, rev?.revision ?? null),
+      // W20 R1 (R77(b), R82(c)): the public home of the refusals the published
+      // hard controls make, beside the pin channel and in a channel of its own.
+      constraintDiagnostics: await slotConstraintDiagnostics(c.env, rev?.value ?? null, rev?.revision ?? null, slotCatalogTenant(c, scope)) } : {}) });
 });
 
 contentRoutes.get('/:kind/history', async (c) => {

@@ -1,5 +1,7 @@
 # Remediation method — the law for W16–W41
 
+> **Frozen 2026-09-23. Superseded by the Closure Ledger** (see [AGENTS.md](../../AGENTS.md) and [the bootstrap memo](../../tools/closure-ledger/BOOTSTRAP-MEMO.md)). Kept as history; do not apply it.
+
 Owner-ordered 2026-09-18 at the lead takeover. This is the method that moved another codebase's score from 0 to 111 accepted units in a day, adapted to this repository. [Document 35](../architecture/35-audit-verification-and-source-of-truth.md) §5 still says **what** must be true for W01–W41; this document says **how** it is proven. Where `AGENTS.md`, document 36, the frozen tracker or older handoffs conflict with this method, this method applies. Document 35's scope is never reduced by it.
 
 ## 1. The idea in five sentences
