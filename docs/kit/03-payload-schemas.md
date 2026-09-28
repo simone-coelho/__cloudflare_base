@@ -569,7 +569,12 @@ day the outcome counts under the assignment of her earliest decision — never u
 exactly as the day computed from its records does, and an outcome whose visitor has no decision that
 day is counted on no row by either. Every fold of an hour decides that hour's outcomes afresh and
 replaces what an earlier fold of it decided, so an earlier decision that reaches the ledger late
-moves an outcome to its row and never leaves it on two. An hour is also named while an outcome it
+moves an outcome to its row and never leaves it on two. Each hour aggregate counts an outcome only
+through the hour that decides its row — the outcome's own hour, or for a remembered outcome the hour
+of the visitor's earliest decision — so an earlier hour folded again between a placement and the
+fold that moves it never keeps the old row, whatever order the hours are folded in. An hour whose
+aggregate was written before an earlier hour of its date was last folded is named until the job
+folds it again, because that fold may have moved or decided a row it counts. An hour is also named while an outcome it
 remembered can no longer be placed from memory — a later fold found a decision of the visitor's at or
 before it, as when an earlier hour is folded out of order — until that hour is folded again. An hour IS named when it holds an outcome whose visitor did
 have a decision that day at or before it that the fold's attribution ring no longer holds — the ring
