@@ -7,11 +7,11 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
-import { LEARN_KIND } from '@/content/kinds';
+import { isCatalogueName, LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
 import { attributionContractOf, policyOf } from '@/learn/route';
@@ -29,8 +29,16 @@ export const LEARN_LIMITS = { requestBytes: 256 * 1024, rows: 1000, stateBytes: 
 const rewards = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
 const utf8 = new TextEncoder();
 interface EffectMarker { digest: string; subject: string; ts: number; expiresAt: number; item: string }
-interface Stored { tenant: string; brand: string; slot: string; config: SlotLearnConfig; stats: StatsState;
+/**
+ * W26 R2: `page` is present only on the object of a PAGE-SCOPED placement — a
+ * slot name a retained catalogue carries on more than one page — and is then
+ * part of this object's identity exactly as the tenant, brand and slot are.
+ */
+interface Stored { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; stats: StatsState;
   effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
+/** Every instant the alarm must remove a live or retired learning-effect marker at. */
+const effectExpiries = (stored: Stored | null | undefined): number[] =>
+  [...Object.values(stored?.effects ?? {}), ...Object.values(stored?.retiredEffects ?? {})].map(marker => marker.expiresAt);
 interface GenerationFence { whole: number; items: Record<string, number> }
 type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string };
 /**
@@ -55,6 +63,8 @@ const SEEN_KEY = 'learnSeen';
  * snapshot published afterwards can say what it was built from and no reader
  * mistakes post-reset counters for the tenant's whole history. Absent on an
  * object that was never repaired; charged against the object's total bound.
+ * W23 R2: the object's own `/reset` keeps it, since what is counted after that
+ * reset still stands on the repair it names.
  */
 const REBUILT_KEY = 'learnRebuilt';
 /**
@@ -109,6 +119,16 @@ const itemName = (v: unknown): v is string => component(v) && !Object.prototype.
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const control = (v: string): boolean => [...v].some(char => char.charCodeAt(0) < 32);
 const time = (v: unknown): v is number => finite(v) && Number.isFinite(new Date(v).getTime());
+/**
+ * W26 R2 (review D3): a slot this object is named for or written under never
+ * carries `@`, the page qualifier of a page-scoped placement's name, so no
+ * object can be created or addressed under another placement's identity.
+ */
+const slotName = (v: unknown): v is string => component(v) && isPlacementSlot(v);
+/** W26 R2: a placement's page, where one is named at all, is a catalogue page name. */
+const pageValid = (v: unknown): v is string | undefined => v === undefined || isCatalogueName(v);
+/** W26 R2: the page is part of an object's identity; absent on one side is absent on the other. */
+const samePage = (stored: { page?: unknown }, asked: unknown): boolean => (stored.page ?? undefined) === (asked ?? undefined);
 function bytes(v: unknown): number {
   return utf8.encode(JSON.stringify(v, (_key, value: unknown) => {
     if (typeof value === 'number' && !Number.isFinite(value)) throw invalid();
@@ -133,8 +153,8 @@ function configValid(v: unknown): v is SlotLearnConfig {
     && finite(s.liftMax) && s.liftMax >= 1 && s.liftMax > s.liftMin;
 }
 function stateValid(value: unknown, repairing = false): asserts value is Stored {
-  if (!fields(value, ['tenant', 'brand', 'slot', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
-    || !component(value.slot) || !configValid(value.config)) throw invalid();
+  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
+    || !slotName(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
   if (value.effects !== undefined && (!object(value.effects) || Object.keys(value.effects).length > RECOVERY_LIMITS.effects
     || Object.entries(value.effects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id)
       || !fields(m, ['digest', 'subject', 'ts', 'expiresAt', 'item']) || typeof m.digest !== 'string' || !/^[a-f0-9]{64}$/.test(m.digest)
@@ -255,7 +275,7 @@ export class LearnStats {
           for (const raw of b.effects as Array<Record<string, unknown>>) {
             if (!['exposures', 'credits'].includes(String(raw.kind)) || typeof raw.decision !== 'string' || typeof raw.item !== 'string'
               || raw.kind === 'credits' && typeof raw.outcome !== 'string') throw invalid();
-            const id = await learningEffectId(raw.kind as 'exposures' | 'credits', `${scope.tenant}:${scope.tenant}:${d?.slot}`, raw.decision, raw.outcome as string | undefined);
+            const id = await learningEffectId(raw.kind as 'exposures' | 'credits', statsName(scope.tenant, scope.tenant, String(d?.slot), d?.page), raw.decision, raw.outcome as string | undefined);
             const marker = d?.effects?.[id]; complete &&= !!marker && marker.subject === scope.subject && marker.item === raw.item && marker.expiresAt > Date.now();
           }
           if (complete && d) {
@@ -266,8 +286,8 @@ export class LearnStats {
             if (!snapshot) complete = false;
             else {
               const [archive, cached] = await Promise.all([
-                this.env.STORAGE.get(liftArchiveKey(d.tenant, d.brand, d.slot, snapshot.version)),
-                this.env.CACHE.get(liftKey(d.tenant, d.brand, d.slot), 'json'),
+                this.env.STORAGE.get(liftArchiveKey(d.tenant, d.brand, d.slot, snapshot.version, d.page)),
+                this.env.CACHE.get(liftKey(d.tenant, d.brand, d.slot, d.page), 'json'),
               ]);
               complete = !!archive && await recoveryDigest(await archive.json()) === await recoveryDigest(snapshot)
                 && await recoveryDigest(cached) === await recoveryDigest(snapshot);
@@ -278,7 +298,7 @@ export class LearnStats {
       }
       if (path === '/health' || path === '/recovery' || path === '/recover') {
         const b = await input(request);
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot)) throw invalid();
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page)) throw invalid();
         // A read-only committed-state health query must not queue behind an
         // unrelated archive/KV publication wait.
         return await (path === '/health' ? this.recoveryControl(b, path) : this.serialize(() => this.recoveryControl(b, path)));
@@ -330,15 +350,15 @@ export class LearnStats {
       }
       if (path === '/exposures' || path === '/credits') {
         const kind = path === '/exposures' ? 'exposures' : 'credits', b = await input(request), raw = b[kind];
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !Array.isArray(raw)
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !Array.isArray(raw)
           || !configValid(b.config)) throw invalid();
         const rows = rowsOf(raw, kind);
         const managed = b.version === 2;
         if ((b.version !== undefined && b.version !== 2) || (managed ? rows.length !== raw.length || rows.some(row => !row.effect) : rows.some(row => row.effect))) throw invalid();
-        return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed);
+        return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed, b.page as string | undefined);
       }
       if (path === '/snapshot') {
-        const snapshot = await this.serialize(async () => { const d = await this.loadIfAny(); return d ? this.snapshot(d) : null; });
+        const snapshot = await this.serialize(() => this.currentSnapshot());
         return json({ ok: true, snapshot });
       }
       /**
@@ -349,7 +369,7 @@ export class LearnStats {
        */
       if (path === '/transition') {
         const b = await input(request);
-        if (!component(b.tenant) || !component(b.brand) || !component(b.slot)
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page)
           || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
           || (b.reward !== undefined && (typeof b.reward !== 'string' || !rewards.has(b.reward)))
           || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
@@ -365,17 +385,26 @@ export class LearnStats {
           try {
             const saved = await this.state.storage.get('learnFence');
             const current = await this.state.storage.get<Stored>('learn');
-            if (saved === undefined && !current?.stats?.bounded && await this.state.storage.get('learnReset') === undefined && this.env.LEDGER_RECOVERY_ENABLED !== 'true') await this.state.storage.deleteAll();
+            // W23 R2 (LANE-LOG R209): an object that carries a rebuild basis is
+            // never wiped whole, because `deleteAll` would take the basis with it.
+            if (saved === undefined && !current?.stats?.bounded && await this.state.storage.get('learnReset') === undefined
+              && await this.state.storage.get(REBUILT_KEY) === undefined && this.env.LEDGER_RECOVERY_ENABLED !== 'true') await this.state.storage.deleteAll();
             else {
               const fence = await this.fence();
               if (!Number.isSafeInteger(fence.whole + 1)) throw recovery();
               await this.state.storage.transaction(async tx => {
                 await tx.put('learnFence', { whole: fence.whole + 1, items: {} });
-                // A basis describes the repair the counters standing now were
-                // started on. These counters are going, so it goes with them
-                // rather than being carried onto evidence it never named, and
-                // so does the accumulation transition that started them (W24).
-                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(REBUILT_KEY); await tx.delete(GENERATION_KEY);
+                // The counters go, and so does the accumulation transition that
+                // started them (W24). The rebuild basis STAYS, byte for byte
+                // (W23 R2, LANE-LOG R209): a reset removes evidence and never
+                // restores any, so whatever this object counts afterwards still
+                // stands on that repair and holds none of the history before it.
+                // Dropping the basis here would let the next snapshot read as the
+                // tenant's whole history. It names the audited operation that
+                // made it, its moment, the generation it moved to then and, for a
+                // ledger rebuild, the retained day; only a later explicit reset or
+                // a ledger rebuild replaces it.
+                await tx.delete('learn'); await tx.delete(SEEN_KEY); await tx.delete(GENERATION_KEY);
               });
             }
           } finally { this.data = null; }
@@ -454,9 +483,9 @@ export class LearnStats {
     this.data = stored; return stored;
   }
 
-  private async candidate(tenant: string, brand: string, slot: string, config: SlotLearnConfig): Promise<Stored> {
+  private async candidate(tenant: string, brand: string, slot: string, config: SlotLearnConfig, page?: string): Promise<Stored> {
     const existing = await this.loadIfAny();
-    if (existing && (existing.tenant !== tenant || existing.brand !== brand || existing.slot !== slot)) throw recovery();
+    if (existing && (existing.tenant !== tenant || existing.brand !== brand || existing.slot !== slot || !samePage(existing, page))) throw recovery();
     // A forward anchor only: the stored tuple does not attest to legacy history.
     if (existing && (existing.config.reward !== config.reward
       || (existing.config.objective ?? 'unit') !== (config.objective ?? 'unit')
@@ -465,7 +494,7 @@ export class LearnStats {
       throw new Refusal(409, 'statistics configuration incompatible');
     }
     return existing ? { ...structuredClone(existing), config }
-      : { tenant, brand, slot, config, stats: { ...emptyStats(), bounded: { depth: 5, omitted: { n: { s: 0, t: 0 }, s: {} }, omittedEvents: 0, selection: 'first-seen' } } };
+      : { tenant, brand, slot, ...(page ? { page } : {}), config, stats: { ...emptyStats(), bounded: { depth: 5, omitted: { n: { s: 0, t: 0 }, s: {} }, omittedEvents: 0, selection: 'first-seen' } } };
   }
 
   private async commit(candidate: Stored): Promise<void> {
@@ -476,9 +505,9 @@ export class LearnStats {
   }
 
   private writeRows(kind: StatsWriteReceipt['kind'], received: number, tenant: string, brand: string, slot: string,
-    config: SlotLearnConfig, rows: Row[], managed = false): Promise<Response> {
+    config: SlotLearnConfig, rows: Row[], managed = false, page?: string): Promise<Response> {
     return this.serialize(async () => {
-      const candidate = await this.candidate(tenant, brand, slot, config);
+      const candidate = await this.candidate(tenant, brand, slot, config, page);
       const fence = managed ? await this.fence() : null;
       // W22 D1.02: the unmanaged online path's own idempotence. The managed
       // path already proves it with effect markers, so the journal is read only
@@ -503,13 +532,13 @@ export class LearnStats {
           if (!fields(effect, ['version', 'id', 'decision', 'outcome', 'tenant', 'subject', 'generation', 'retention', 'consentUntil'])
             || effect.version !== 1 || effect.tenant !== tenant || !component(effect.subject) || typeof effect.decision !== 'string'
             || !fields(effect.generation, ['whole', 'item']) || !time(effect.consentUntil)
-            || effect.consentUntil <= Date.now() || effect.id !== await learningEffectId(kind, `${tenant}:${brand}:${slot}`, effect.decision, effect.outcome)) throw invalid();
+            || effect.consentUntil <= Date.now() || effect.id !== await learningEffectId(kind, statsName(tenant, brand, slot, page), effect.decision, effect.outcome)) throw invalid();
           const expected = effect.generation as LearningGeneration;
           if (expected.whole !== fence!.whole || expected.item !== (fence!.items[row.item] ?? 0)) throw new Refusal(409, 'statistics generation changed');
           const retention = requireRetention(this.env, effect.retention, tenant, 'online');
           const barrier = await loadTombstone(this.env.STORAGE, tenant, effect.subject);
           if (barrier && row.ts <= barrier.erased_at) { suppressed++; continue; }
-          const digest = await recoveryDigest({ kind, tenant, brand, slot, config, row }), prior = candidate.effects![effect.id];
+          const digest = await recoveryDigest({ kind, tenant, brand, slot, ...(page ? { page } : {}), config, row }), prior = candidate.effects![effect.id];
           const retired = candidate.retiredEffects?.[effect.id];
           if (retired) { if (retired.digest !== digest) throw new Refusal(409, 'statistics effect conflict'); suppressed++; continue; }
           if (prior) {
@@ -596,7 +625,7 @@ export class LearnStats {
 
   private async arm(): Promise<void> {
     await this.loadIfAny();
-    const next = Math.min(Date.now() + PUBLISH_DELAY_MS, ...[...Object.values(this.data?.effects ?? {}), ...Object.values(this.data?.retiredEffects ?? {})].map(marker => marker.expiresAt));
+    const next = Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(this.data));
     const previous = await this.state.storage.getAlarm();
     if (previous === null || previous > next) await this.state.storage.setAlarm(next);
   }
@@ -610,8 +639,9 @@ export class LearnStats {
    */
   private async transition(b: Record<string, unknown>): Promise<Response> {
     const tenant = b.tenant as string, brand = b.brand as string, slot = b.slot as string, operationId = b.operationId as string;
+    const page = b.page as string | undefined;
     const current = await this.loadIfAny();
-    if (current && (current.tenant !== tenant || current.brand !== brand || current.slot !== slot)) throw invalid();
+    if (current && (current.tenant !== tenant || current.brand !== brand || current.slot !== slot || !samePage(current, page))) throw invalid();
     // The ESTIMATOR is never the operator's to move here: it is the tenant's
     // published document's, exactly as an ordinary write reads it.
     const pin = await pinPublication(this.env, tenant, true);
@@ -629,13 +659,13 @@ export class LearnStats {
     // the new generation replaces it. A retained archive is never overwritten:
     // the body already stored under that version is the one it published.
     let archivedVersion: number | null = null;
-    const head = await this.env.CACHE.get(liftKey(tenant, brand, slot), 'json') as LiftSnapshot | null;
+    const head = await this.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json') as LiftSnapshot | null;
     if (object(head) && Number.isSafeInteger(head.version) && head.version > 0
       && head.tenant === tenant && head.brand === brand && head.slot === slot) {
       const body = JSON.stringify(head);
       if (utf8.encode(body).length > LEARN_LIMITS.snapshotBytes) throw capacity();
       try {
-        await this.env.STORAGE.put(liftArchiveKey(tenant, brand, slot, head.version), body, {
+        await this.env.STORAGE.put(liftArchiveKey(tenant, brand, slot, head.version, page), body, {
           onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
         });
       } catch { throw new Refusal(503, 'statistics archive unavailable'); }
@@ -646,11 +676,11 @@ export class LearnStats {
     let stats: StatsState = { ...emptyStats(), bounded: { depth: 5, omitted: { n: { s: 0, t: 0 }, s: {} }, omittedEvents: 0, selection: 'first-seen' } };
     let rebuiltFrom: AccumulationTransition['rebuiltFrom'];
     if (typeof b.rebuildFrom === 'string') {
-      const day = await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at);
+      const day = await this.rebuildFromLedger(tenant, brand, slot, config, learn.value, b.rebuildFrom, at, page);
       stats = { ...day.stats, bounded: stats.bounded };
       rebuiltFrom = { date: b.rebuildFrom, decisions: day.decisions, outcomes: day.outcomes };
     }
-    const candidate: Stored = { tenant, brand, slot, config, stats };
+    const candidate: Stored = { tenant, brand, slot, ...(page ? { page } : {}), config, stats };
     this.fit(candidate);
     const record: AccumulationTransition = { operationId, at, reward: config.reward,
       objective: config.objective ?? 'unit', measurementBasis: config.measurementBasis ?? 'served-v1',
@@ -686,12 +716,12 @@ export class LearnStats {
    * the ruling forbids.
    */
   private async rebuildFromLedger(tenant: string, brand: string, slot: string, config: SlotLearnConfig,
-    learn: Parameters<typeof policyOf>[0], date: string, at: number): Promise<{ stats: StatsState; decisions: number; outcomes: number }> {
+    learn: Parameters<typeof policyOf>[0], date: string, at: number, page?: string): Promise<{ stats: StatsState; decisions: number; outcomes: number }> {
     const decisions = await loadDay<DecisionRecord>(this.env.STORAGE, tenant, date, 'decision', REPORT_LIMITS.records);
     const outcomes = await loadDay<import('@/ledger/records').OutcomeRecord>(this.env.STORAGE, tenant, date, 'outcome', REPORT_LIMITS.records);
     if (decisions.truncated || outcomes.truncated) throw capacity();
     return foldRetainedDay({ tenant, brand, slot, config, policy: policyOf(learn),
-      decisions: decisions.records, outcomes: outcomes.records, at });
+      decisions: decisions.records, outcomes: outcomes.records, at, ...(page ? { page } : {}) });
   }
 
   /** W24 G1.01/G1.02: the authorized transition on record, or undefined. Damaged is refused, never ignored. */
@@ -774,15 +804,43 @@ export class LearnStats {
     const parts = named.split(':');
     if (parts.length < 3) return null;
     const [tenant, brand, ...rest] = parts;
-    const slot = rest.join(':');
-    if (!component(tenant) || !component(brand) || !component(slot)) return null;
-    if (namespace.idFromName(statsName(tenant, brand, slot)).toString() !== String(id)) return null;
+    // W26 R2: a page-scoped placement is addressed as `slot@page`; the page is
+    // part of the identity and the slot alone names its configuration.
+    const placement = rest.join(':'), at = placement.lastIndexOf('@');
+    const slot = at > 0 && isCatalogueName(placement.slice(at + 1)) ? placement.slice(0, at) : placement;
+    const page = slot === placement ? undefined : placement.slice(at + 1);
+    if (!component(tenant) || !component(brand) || !slotName(slot)) return null;
+    if (namespace.idFromName(statsName(tenant, brand, slot, page)).toString() !== String(id)) return null;
     const pin = await pinPublication(this.env, tenant, true);
     const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
     const dials = learn.value.slots?.[slot];
-    return { tenant, brand, slot, stats: emptyStats(),
+    return { tenant, brand, slot, ...(page ? { page } : {}), stats: emptyStats(),
       config: { reward: dials?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
         objective: dials?.objective ?? 'unit', measurementBasis: dials?.measurementBasis ?? 'served-v1' } };
+  }
+
+  /**
+   * W25 R3 (LANE-LOG R183): what this object would publish now, answered on
+   * `/snapshot` from the SAME identity and the same builder `publish()` uses.
+   *
+   * A slot that has recorded events answers from its counters, as it always did.
+   * A slot that never recorded one has no stored state, and before this it
+   * answered "nothing" even when W25 N1.01 had made it publishable on its
+   * imported prior alone — so every reader of the object's own snapshot, the
+   * monitor's sink comparison among them, saw a slot the serving path was
+   * ranking as holding no estimate. It now answers the prior-derived snapshot,
+   * under the same gate as publication: a never-written slot with nothing to
+   * publish still answers null. Nothing is written. Where the tenant's published
+   * documents cannot be read, the read fails exactly as its publication would,
+   * rather than answering a "nothing" it did not establish.
+   */
+  private async currentSnapshot(): Promise<LiftSnapshot | null> {
+    const stored = await this.loadIfAny();
+    if (stored) return this.snapshot(stored);
+    const identity = await this.priorOnlyIdentity();
+    if (!identity) return null;
+    const snap = await this.snapshot(identity);
+    return Object.keys(snap.items).length === 0 ? null : snap;
   }
 
   /**
@@ -816,7 +874,7 @@ export class LearnStats {
         const publication = { witness: snap.witness, digest: await recoveryDigest(snap), version };
         await this.totalBound(d, undefined, publication);
         this.lastAllocated = version;
-        const key = liftArchiveKey(d.tenant, d.brand, d.slot, version);
+        const key = liftArchiveKey(d.tenant, d.brand, d.slot, version, d.page);
         const archived = await this.env.STORAGE.put(key, body, {
           onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
         });
@@ -824,7 +882,7 @@ export class LearnStats {
         if (!archived || archived.key !== key || typeof archived.etag !== 'string' || !archived.etag.trim()
           || archived.etag.length > 256 || archived.size !== size) throw new Error('Archive acknowledgement unavailable');
         await this.state.storage.put('learnPublished', publication);
-        await this.env.CACHE.put(liftKey(d.tenant, d.brand, d.slot), body);
+        await this.env.CACHE.put(liftKey(d.tenant, d.brand, d.slot, d.page), body);
         return snap;
       }
       throw new Error('Snapshot versions occupied');
@@ -832,7 +890,11 @@ export class LearnStats {
       if (error instanceof Refusal) throw error;
       // An archive or KV acknowledgement can be lost after its write. Keep any
       // orphan archive, schedule only publication again, and never claim rollback.
-      await this.state.storage.setAlarm(Date.now() + PUBLISH_DELAY_MS);
+      // W27 R4 (amendment A19, LANE-LOG R161): the retry is due 30 seconds out,
+      // but the alarm is also what removes a learning-effect marker at its
+      // expiry, so it is set to the EARLIER of the two and a pending expiry is
+      // never pushed later than it is due.
+      await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
   }
@@ -912,13 +974,13 @@ export class LearnStats {
       + bytes(await this.state.storage.get(REBUILT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
-    if (!component(b.tenant) || !component(b.brand) || !component(b.slot) || !itemName(b.item) || typeof b.operationId !== 'string'
+    if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !itemName(b.item) || typeof b.operationId !== 'string'
       || !object(b.publication)) throw invalid();
     const id = b.publication as unknown as { revision: number; digest: string };
     const set = await committedPublication(this.env, b.tenant, id), op = set.operation;
     if (op.kind !== 'learn' || op.scope !== b.tenant || op.operationId !== b.operationId || op.initialize || op.note !== 'item reset admitted') throw invalid();
     const requestDigest = await recoveryDigest({ operationId: op.operationId, expectedRevision: op.expectedRevision, expectedPublication: op.base,
-      actor: op.actor, note: op.note, changes: [{ kind: 'learn', scope: b.tenant, request: { type: 'item-reset', item: b.item, slot: b.slot, brand: b.brand } }] });
+      actor: op.actor, note: op.note, changes: [{ kind: 'learn', scope: b.tenant, request: { type: 'item-reset', item: b.item, slot: b.slot, brand: b.brand, ...(b.page ? { page: b.page } : {}) } }] });
     if (requestDigest !== op.requestDigest) throw invalid();
     type Receipt = { operationId: string; publication: { revision: number; digest: string }; item: string; had: boolean };
     const prior = await this.state.storage.get<Receipt>('learnReset');
@@ -930,7 +992,7 @@ export class LearnStats {
       return json({ ok: true, item: b.item, had: prior.had, resetCompleted: true, publicationOutcome });
     }
     const current = await this.loadIfAny();
-    if (current && (current.tenant !== b.tenant || current.brand !== b.brand || current.slot !== b.slot)) throw invalid();
+    if (current && (current.tenant !== b.tenant || current.brand !== b.brand || current.slot !== b.slot || !samePage(current, b.page))) throw invalid();
     const fence = await this.fence(), item = b.item;
     if (!(item in fence.items) && Object.keys(fence.items).length >= LEARN_LIMITS.items) throw capacity();
     fence.items[item] = (fence.items[item] ?? 0) + 1; if (!Number.isSafeInteger(fence.items[item])) throw recovery();
@@ -1001,12 +1063,13 @@ export class LearnStats {
   }
 
   private witness(d: Stored, fence: GenerationFence): Promise<string> {
-    return recoveryDigest({ tenant: d.tenant, brand: d.brand, slot: d.slot, config: d.config, fence,
+    // W26 R2: a page-scoped object's witness binds its page; a page-less one is unchanged.
+    return recoveryDigest({ tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), config: d.config, fence,
       projection: d.stats.bounded ? { depth: d.stats.bounded.depth, closed: d.stats.bounded.closed === true } : null });
   }
   private async recoveryControl(b: Record<string, unknown>, path: string): Promise<Response> {
     const raw: unknown = await this.state.storage.get('learn'), fence = await this.fence();
-    if (raw !== undefined && (!object(raw) || raw.tenant !== b.tenant || raw.brand !== b.brand || raw.slot !== b.slot)) throw recovery();
+    if (raw !== undefined && (!object(raw) || raw.tenant !== b.tenant || raw.brand !== b.brand || raw.slot !== b.slot || !samePage(raw, b.page))) throw recovery();
     const size = bytes(raw ?? null);
     if (size > LEARN_LIMITS.repairBytes) throw recovery();
     const digest = await recoveryDigest({ raw: raw ?? null, fence });
@@ -1021,7 +1084,7 @@ export class LearnStats {
     // for as long as it is there, which is what the explicit reset exists for.
     if (healthy && raw !== undefined && anchoredAfter((raw as unknown as Stored).stats, Date.now())) healthy = false;
     const publication = await this.state.storage.get<{ digest: string; witness: string; version: number }>('learnPublished');
-    if (path !== '/recover') return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot,
+    if (path !== '/recover') return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot, ...(b.page ? { page: b.page } : {}),
       state: raw === undefined ? 'empty' : healthy ? 'healthy' : 'recovery-required', generation: fence.whole, digest, bytes: size,
       publication: publication && /^[a-f0-9]{64}$/.test(publication.digest) && /^[a-f0-9]{64}$/.test(publication.witness) && Number.isSafeInteger(publication.version)
         ? { digest: publication.digest, witness: publication.witness, version: publication.version } : null,

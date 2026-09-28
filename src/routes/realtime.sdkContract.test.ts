@@ -2646,9 +2646,14 @@ it('W22.07 validates explicit buffered context before effects and transports zer
         expect((await f.send(patch, 'opt_tracking_consent=false')).status).toBe(400);
         expect(host === 'session' ? f.bytes() : JSON.stringify([...f.item.data].filter(([key]) => key !== 'consent'))).toBe(before);
         const nextChoice = storedConsent(f.item.data.get('consent')).instruction;
-        expect(nextChoice).toEqual({ ...originalChoice, tracking: originalChoice?.tracking && { ...originalChoice.tracking, value: false } });
-        // Owner admission may persist a restrictive cookie before the route
-        // rejects syntax. No behavioral/profile/provider destination is touched.
+        // The route refuses the syntax BEFORE it crosses the owner boundary
+        // (src/routes/realtime.ts:39-48, "Invalid logical identity must not
+        // acquire/forward the subject owner"; src/identity/sessionCapability.ts
+        // requireShopper with forward: false), so no owner admission runs and
+        // the stored choice is exactly the one before the request (W22 LG1,
+        // STALE: the expectation of a persisted refusal predates that order).
+        // No behavioral/profile/provider destination is touched.
+        expect(nextChoice).toEqual(originalChoice);
         expect(f.effects.every(value => value === 'object:' + shopperObjectName(f.g.tenant, f.g.subject) || value === 'store:consent')).toBe(true);
         expect(f.sessions.calls).toEqual([]); expect(f.queued).toEqual([]); expect(f.learned).toEqual([]);
       }
@@ -2716,13 +2721,23 @@ it('W22.07 gates both hosts on owned profiles consent and observed erasure barri
     expect((await limited.send()).status).toBe(200); await limited.drain();
     const before = limited.bytes(), read = vi.spyOn(limited.item.state.storage, 'get');
     expect((await limited.send({ eventId: 'limited' })).status).toBe(429);
-    expect(read.mock.calls).toEqual([['identityTransfer'], ['identityIntent'], ['grantAuthority'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
+    // Each of the two owner entries first reads the isolated-monitor authority
+    // marker every durable object checks before it serves anything
+    // (src/ops/synthetic.ts MARKER, SyntheticObjectBoundary.run; the same read
+    // src/reflex/regionTrend.test.ts:206 expects). The refused request reads no
+    // profile, affinity, pipeline or session state (W22 LG1, STALE: the list
+    // predates the monitor boundary).
+    expect(read.mock.calls).toEqual([['__monitor_authority_v1'], ['identityTransfer'], ['identityIntent'], ['grantAuthority'],
+      ['__monitor_authority_v1'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
     expect(limited.bytes()).toBe(before); expect(limited.queued).toHaveLength(1);
     const delayed = await bufferedBoundary('do'), saved = delayed.bytes(), delayedRead = vi.spyOn(delayed.item.state.storage, 'get');
     const serialized = delayed.item.shopper as unknown as { serialize: (fn: () => Promise<unknown>) => Promise<unknown> };
     const serialize = serialized.serialize.bind(serialized);
     vi.spyOn(serialized, 'serialize').mockImplementation(fn => serialize(async () => { clock.mockReturnValue(delayed.g.exp * 1000); return fn(); }));
-    expect((await delayed.send()).status).toBe(401); expect(delayedRead).not.toHaveBeenCalled(); expect(delayed.bytes()).toBe(saved); expect(delayed.queued).toEqual([]);
+    // The expired capability is refused inside the owner before any subject
+    // state is read: the one read is the monitor authority marker the object
+    // checks on entry (W22 LG1, STALE for the same reason as above).
+    expect((await delayed.send()).status).toBe(401); expect(delayedRead.mock.calls).toEqual([['__monitor_authority_v1']]); expect(delayed.bytes()).toBe(saved); expect(delayed.queued).toEqual([]);
     clock.mockReturnValue(delayed.now);
   } finally { clock.mockRestore(); }
 });
@@ -2786,10 +2801,20 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       invalidateCache();
       const f = boundary(host), objects = new Map<string, { text: string; etag: string }>(), reads: string[] = [];
       let serial = 0, failCatalog = false;
+      // W19 LG1 (step 3, 2026-09-24), arrangement and layout only. Under W11
+      // (F15/F24) the catalogue is one member of the tenant's coherent
+      // publication set: the set head is `config-publication/v2/<tenant>/`, the
+      // catalogue's own bodies stay at `config-publication/v1/<tenant>/content/`,
+      // and the Reflex and learn members are read from the same set on every
+      // action. "The catalogue read" is therefore the content member's own
+      // bodies, and ownership is asserted over every publication read.
+      const contentMember = (key: string) => /^config-publication\/v1\/[^/]+\/content\//.test(key);
+      const ownPublication = (tenant: string, key: string) =>
+        [`config-publication/v2/${tenant}/`, `config-publication/v1/${tenant}/`, `config-publication/v1/tenant:${tenant}/`].some(prefix => key.startsWith(prefix));
       f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'brighthour'] });
       f.env.STORAGE = {
         get: async (key: string) => {
-          reads.push(key); if (failCatalog && key.startsWith('config-publication/')) throw new Error('private storage detail');
+          reads.push(key); if (failCatalog && contentMember(key)) throw new Error('private storage detail');
           const value = objects.get(key);
           return value ? { key, etag: value.etag, size: new TextEncoder().encode(value.text).length,
             body: new Response(value.text).body, text: async () => value.text, json: async () => JSON.parse(value.text) as unknown } : null;
@@ -2801,10 +2826,15 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
         },
       } as unknown as R2Bucket;
       const formats = { meridian: ['video', 'custom-format'], brighthour: ['on-model'] };
+      // A whole coherent set per tenant (W11: the action reads its Reflex and
+      // learn members too). `wire` makes the two event-carried values below
+      // part of the tenant's own catalogue vocabulary, which W16 C8.10
+      // (R64/R67) requires before an event-carried value builds taste.
       for (const [tenant, values] of Object.entries(formats)) {
-        await initializePublication(f.env, CONTENT_KIND, tenant, { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+        await fixturePublication(f.env, tenant, [{ kind: CONTENT_KIND, scope: tenant, revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
           { id: 'same', customerContentId: 'cms', type: 'film', title: 'same', tags: { contentType: values }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
-        ] } }, '0:' + crypto.randomUUID());
+          { id: 'wire', customerContentId: 'cms-wire', type: 'film', title: 'wire', tags: { contentType: ['wire-miss', 'wire-idless'] }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
+        ] } } }]);
       }
       const frames: Array<{ name: string; frame: IngestFrame }> = [];
       f.env.REGION_TREND = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -2812,25 +2842,30 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       } }) } as unknown as DurableObjectNamespace;
       const a = await newAnonymousSession(f.env, 'meridian');
       const b = await issueSessionCapability(f.env, { tenant: 'brighthour', subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
+      // W05 (F05/F10): consent is fail-closed, so each shopper states an explicit choice first.
+      await positiveChoice(f, a); await positiveChoice(f, b);
       const event = (g: typeof a, data: Record<string, unknown> = {}) => ({ type: 'custom', userId: g.subject, sessionId: g.sessionId, source: 'sdk', surface: 'brighthour',
         data: { event: 'content_click', contentId: 'same', contentType: 'film', ...data } });
       const send = (g: typeof a, data?: Record<string, unknown>) => f.call('/realtime/action', g.capability, event(g, data), g.tenant, undefined, { country: 'US', regionCode: 'NY' });
       const record = (g: typeof a) => host === 'session'
         ? JSON.parse(f.sessions.data.get(tenantKey(g.tenant, `session:${g.sessionId}`))!) as { reflex: { dims: Record<string, Record<string, { s: number }>> } }
         : f.objects.get(shopperObjectName(g.tenant, g.subject))!.data.get('affinity') as { reflex: { dims: Record<string, Record<string, { s: number }>> } };
-      const catalogReads = () => reads.filter(key => key.startsWith('config-publication/'));
+      const catalogReads = () => reads.filter(contentMember);
       invalidateCache(); reads.length = 0;
       for (const g of [a, b]) {
-        const before = catalogReads().length;
+        const before = catalogReads().length, allBefore = reads.length;
         expect((await send(g)).status).toBe(200); await f.drain();
         expect(catalogReads().length).toBeGreaterThan(before);
         expect(catalogReads().slice(before).every(key => key.startsWith(`config-publication/v1/${g.tenant}/content/`))).toBe(true);
+        expect(reads.slice(allBefore).filter(key => key.startsWith('config-publication/')).every(key => ownPublication(g.tenant, key)),
+          `${host}: every publication read of ${g.tenant}'s event is ${g.tenant}'s own: ${JSON.stringify(reads.slice(allBefore))}`).toBe(true);
         expect(frames.at(-1)).toMatchObject({ name: regionObjectName(g.tenant, 'US-NY'), frame: { tenant: g.tenant, w: 1,
           touches: formats[g.tenant as keyof typeof formats].map(value => ({ dim: 'contentType', value })) } });
         for (const value of formats[g.tenant as keyof typeof formats]) expect(record(g).reflex.dims.contentType![value]!.s).toBe(1);
         expect(record(g).reflex.dims.contentType!.film).toBeUndefined();
         const cold = catalogReads().length;
-        expect((await send(g)).status).toBe(200); await f.drain(); expect(catalogReads()).toHaveLength(cold);
+        expect((await send(g)).status).toBe(200); await f.drain();
+        expect(catalogReads(), `${host}: ${g.tenant}'s second event reads its catalogue from the bounded serving cache, not from storage again`).toHaveLength(cold);
       }
       const saved = JSON.stringify(record(a)), population = frames.length, beforeInvalid = catalogReads().length;
       for (const contentId of [null, '', ' ', 12, [], {}]) {
@@ -2840,7 +2875,7 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       expect(catalogReads()).toHaveLength(beforeInvalid); expect(JSON.stringify(record(a))).toBe(saved); expect(frames).toHaveLength(population);
       invalidateCache(); failCatalog = true;
       const failure = await send(a); expect(failure.status).toBe(500);
-      expect(await failure.text()).toContain('Content catalog unavailable'); await f.drain();
+      expect(await failure.text(), `${host}: the refusal names its cause on this host as on the other`).toContain('Content catalog unavailable'); await f.drain();
       expect(JSON.stringify(record(a))).toBe(saved); expect(frames).toHaveLength(population);
       // Retry on the exact same DO instance: refusal cannot poison its owner.
       failCatalog = false; expect((await send(a)).status).toBe(200); await f.drain();
@@ -2851,13 +2886,15 @@ it('W19.02 resolves content formats under exact tenant ownership on both hosts w
       const beforeIdless = catalogReads().length;
       expect((await f.call('/realtime/action', a.capability, idless, a.tenant)).status).toBe(200); await f.drain();
       expect(catalogReads()).toHaveLength(beforeIdless); expect(record(a).reflex.dims.contentType!['wire-idless']!.s).toBe(1);
-      const headKey = 'config-publication/v1/meridian/content/head.json', head = objects.get(headKey)!, beforeMissing = frames.length;
-      objects.delete(headKey); invalidateCache();
+      // W11 has no per-kind content head: the missing catalogue is its committed body.
+      const bodyKey = 'config-publication/v1/meridian/content/rev/1.json', body = objects.get(bodyKey)!, beforeMissing = frames.length;
+      objects.delete(bodyKey); invalidateCache();
       expect((await send(a)).status).toBe(500); await f.drain(); expect(frames).toHaveLength(beforeMissing);
-      objects.set(headKey, head);
+      objects.set(bodyKey, body);
       invalidateCache(); failCatalog = true; f.env.REFLEX_ENABLED = 'false';
       const beforeDisabled = catalogReads().length;
-      expect((await send(a)).status).toBe(200); await f.drain(); expect(catalogReads()).toHaveLength(beforeDisabled);
+      expect((await send(a)).status).toBe(200); await f.drain();
+      expect(catalogReads(), `${host}: with Reflex disabled no catalogue is read`).toHaveLength(beforeDisabled);
       f.env.REFLEX_ENABLED = 'true';
       expect((await f.call(`/realtime/session/${a.sessionId}/preferences`, a.capability, { trackingConsent: false, personalizationEnabled: false }, a.tenant)).status).toBe(200);
       const beforeRefused = catalogReads().length;
@@ -6175,6 +6212,15 @@ describe('SDK ↔ /realtime/action contract', () => {
   it('W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity', async () => {
     for (const host of ['session', 'do']) {
       invalidateCache(); const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian');
+      // STALE ARRANGEMENT, corrected in step 3 (ticket W26, LG1; measured, logs
+      // in _evidence/step3/W25-W26/specifier/logs/probe-w2602-*.log): the shopper
+      // now makes the explicit consent choice W05 requires before any tracking
+      // (without it the action answers 200 and records nothing), and the tenant
+      // has the coherent configuration publication W11 reads on the action path
+      // (without it the action answers 500 "Coherent configuration publication is
+      // uninitialized"). `positiveChoice` is this file's own helper for both;
+      // every assertion below is unchanged.
+      await positiveChoice(f, g);
       const queued: OutcomeRecord[] = [], learned: OutcomeRecord[] = [];
       Object.assign(f.env, {
         EVENT_QUEUE: { send: async (body: { record: OutcomeRecord }) => { queued.push(body.record); } },

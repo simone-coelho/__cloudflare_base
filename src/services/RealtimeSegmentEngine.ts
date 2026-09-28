@@ -812,7 +812,7 @@ export class RealtimeSegmentEngine {
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     if (this.principal && !personalizes(consentOf(sessionData))) return {
       decisions: {}, featureFlags: {}, experiments: {}, featureVariables: {}, enhancedFeatureVariables: {},
-      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: 'early', sessionData,
+      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionData,
     };
     if (this.principal) requireConsentPurpose(consentOf(sessionData), 'personalization');
     // The session remembers which demo it belongs to (absent ⇒ coach), so the
@@ -855,7 +855,10 @@ export class RealtimeSegmentEngine {
       personalization_enabled: sessionData.preferences.personalizationEnabled
     };
 
-    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? 'early';
+    // The floor of the journey through the one mapping point (R32(2)): a session
+    // born this visit, and a legacy record written before the stored stage
+    // existed, carry none (docs/kit/02-api-reference.md).
+    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE];
 
     // Decide the full storefront module set through the Optimizely FX seam.
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);

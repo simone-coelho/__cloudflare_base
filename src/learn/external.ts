@@ -12,6 +12,33 @@
 // and its versioning; the engine stays inspectable at the term level.
 
 import type { Cell } from '@/content/types';
+import type { Env } from '@/types/env';
+
+/**
+ * W34 E2 (document 35 §5 row W34; F30; decision D1): the external-model policy
+ * is a DEPLOYMENT setting, `EXTERNAL_MODEL_POLICY` in the Worker's vars, never
+ * a stored document and never a code constant the decision path takes on
+ * trust. The policies this build implements are exactly the ones listed here,
+ * and `off` is the only one: no runtime model, service, Workers AI call or
+ * table lookup is enabled by any value (a service name does not waive
+ * no-runtime-inference). Anything the list does not name, absence, an empty
+ * or mis-cased value and a read that fails resolve to `off`, so the answer can
+ * never be a different decision. Enabling a seam would be new scope, with its
+ * own restricted destinations, data, candidates and budgets, added here.
+ */
+export type ExternalModelPolicy = 'off';
+const EXTERNAL_MODEL_POLICIES: Readonly<Record<string, ExternalModelPolicy>> = Object.freeze({ off: 'off' });
+/** What a weighted receipt says for its withdrawn term, per policy in force. */
+export const EXTERNAL_POLICY_REASON: Readonly<Record<ExternalModelPolicy, string>> = Object.freeze({
+  off: 'external scoring disabled by deployment policy',
+});
+
+/** The deployment's external-model policy; fails closed to `off`. Never throws. */
+export function externalModelPolicy(env: Pick<Env, 'EXTERNAL_MODEL_POLICY'>): ExternalModelPolicy {
+  let declared: unknown;
+  try { declared = env.EXTERNAL_MODEL_POLICY; } catch { return 'off'; }
+  return typeof declared === 'string' && Object.hasOwn(EXTERNAL_MODEL_POLICIES, declared) ? EXTERNAL_MODEL_POLICIES[declared]! : 'off';
+}
 
 export type ExternalKind = 'service' | 'table' | 'workers_ai';
 export interface ExternalModelConfig { kind: ExternalKind; ref: string; timeoutMs: number; fallback: 'omit' }

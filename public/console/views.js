@@ -24,6 +24,11 @@
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const words = (s) => String(s || '').replace(/_/g, ' ');
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor below already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
+  /** The retained mode a slots row names (`configuredMode` with `unsupported`; `configuredExploration` from an older server), or null. */
+  const retainedModeOf = (s) => (s.unsupported && s.configuredMode) || s.configuredExploration || null;
   function humanMs(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     if (ms % DAY === 0) return plural(ms / DAY, 'day');
@@ -103,6 +108,8 @@
     const item = S.params.item || '';
     const res = await C.v1('/lift/rows', {
       slot: S.slot,
+      // W26 R2: the placement's page, where the catalogue carries this slot name on more than one page.
+      page: S.params.page || undefined,
       level: item ? 'cells' : 'pooled',
       item: item || undefined,
       q: lift.q || undefined,
@@ -124,6 +131,9 @@
         : res.status === 404
           ? 'This platform does not have the paged grid route yet (GET /v1/{brand}/lift/rows). Nothing is broken; the screen has nothing to page.'
           : res.data.error || 'Could not read the grid.';
+      // W26 R2 (review D4): a slot name on more than one page is one placement
+      // per page; the route names the pages, and the operator picks one.
+      st.pages = res.status === 400 && Array.isArray(res.data.pages) ? res.data.pages : null;
       st.data = null; C.render(); return;
     }
     st.error = '';
@@ -151,7 +161,7 @@
 
   async function resetItem(item, name) {
     if (!window.confirm(`Discard the evidence for ${name} in ${S.slot} and start again from the prior?`)) return;
-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand }, lift.authored);
+    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand, ...(S.params.page ? { page: S.params.page } : {}) }, lift.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     C.flash(res.data.had
       ? `Evidence for ${name} discarded; snapshot publication status is reported separately, recorded as revision ${fmt(res.data.revision)}.`
@@ -184,7 +194,7 @@
 
       const toolbar = h('div', { class: 'toolbar' },
         item
-          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '' }) }, '← Every piece')
+          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '', page: S.params.page }) }, '← Every piece')
           : h('input', {
               class: 'small', id: 'lift-q', 'data-focus-key': 'lift-q', placeholder: 'Find a piece by id, your id or title',
               value: lift.q, style: 'width:280px',
@@ -202,7 +212,11 @@
         h('button', { class: 'small', disabled: !rows.length, onclick: () => downloadPage(rows, item) }, 'Download this page'),
       );
 
-      if (st.error) { host.append(toolbar, h('div', { class: 'msg err' }, st.error)); return; }
+      if (st.error) {
+        host.append(toolbar, h('div', { class: 'msg err' }, st.error,
+          st.pages ? h('div', { style: 'margin-top:6px' }, ...st.pages.map((page) => h('button', { class: 'small', onclick: () => C.go('lift', { page, item: '' }) }, `The ${page} page's ${S.slot}`))) : null));
+        return;
+      }
       if (!meta || meta.published === false) {
         host.append(toolbar, h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
@@ -227,6 +241,9 @@
         { key: 'p0', label: 'Slot credit / exposure', sym: 'p₀', num: true, sortable: true, title: 'What this slot achieves in the same context, whatever it shows' },
         { key: 'lift', label: 'Lift', sym: 'p̂ / p₀', num: true, sortable: true, title: 'The rate over the slot’s rate, clamped. Above 1 is better than the slot’s average' },
         { key: 'evidence', label: 'Evidence', sym: 'n / (n + n₀)', num: true, sortable: true, title: 'How much of the rate is live observation rather than the prior' },
+        // W26 R5 (F21 §8 "report the lift table as a diagnostic that is not corrected for position or placement"):
+        // what each row's lift corrects for, from the row's own `correction`. Nothing, today.
+        { key: 'correction', label: 'Correction', title: 'What this lift is corrected for. uncorrected-v1: neither the position a piece was shown at nor the placement it was shown in, so it is a diagnostic, not incremental lift' },
         { key: 'act', label: 'Held by a person' },
       ];
 
@@ -239,7 +256,7 @@
           }))]),
           h('td', {},
             item ? h('div', { class: 'itemname' }, name)
-                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item }) }, name),
+                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item, page: S.params.page }) }, name),
             h('div', { class: 'itemid' }, r.item)),
           ...(item ? [h('td', {}, h('div', {}, r.level_words || 'everyone'), r.key === '*' ? null : h('div', { class: 'cellkey' }, r.key))] : []),
           h('td', { class: 'num' }, dec(r.n)),
@@ -248,6 +265,7 @@
           h('td', { class: 'num' }, dec(r.p0)),
           h('td', { class: 'num' }, h('strong', {}, dec(r.lift))),
           h('td', { class: 'num' }, pct(r.evidence)),
+          h('td', { title: 'not corrected for position or placement' }, correctionOf(r)),
           h('td', {},
             r.control ? h('span', { class: `chip ${r.control}` }, r.control === 'freeze' ? 'frozen' : 'rejected') : null,
             r.prior ? h('span', { class: 'chip prior', title: `an imported prior: rate ${dec(r.prior.p)} worth ${fmt(r.prior.n)} observations` }, 'prior') : null,
@@ -271,6 +289,11 @@
     },
   });
 
+  /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
+  function correctionOf(r) {
+    return typeof r.correction === 'string' && r.correction ? r.correction : 'uncorrected-v1';
+  }
+
   function downloadPage(rows, item) {
     // W26 X1.01: `correction` is the LAST column, after every existing one, so a
     // reader who parses this file by position keeps reading it. It says what the
@@ -282,6 +305,31 @@
   }
 
   // ══════════════════════════════════════════════════════════ Slots ══════════
+  /** The day a horizon starts: the counts run over days, so the time of day adds nothing. */
+  const day = (ms) => (Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '');
+  /**
+   * W20 R2: the slot's `governance` block from the operator slots page — what the
+   * decision path refused for it since the horizon the block states. The pins
+   * refused, how often and why (the runtime reason word), and, for a pinned slot,
+   * the times it fell short of its take with the positions left empty. A block
+   * whose counter store could not be read says so and shows no count; a slot
+   * that refused nothing says that, rather than an empty cell.
+   */
+  function governanceCell(g) {
+    if (g === undefined || g === null) return 'not asked';
+    if (g.status === 'unavailable') return h('span', { class: 'sub' }, 'counts unavailable: the counter store could not be read');
+    const refused = Number.isFinite(g.refusedPinCount) ? g.refusedPinCount : 0;
+    const short = Number.isFinite(g.shortTakeCount) ? g.shortTakeCount : 0;
+    const pins = Array.isArray(g.refusedPins) ? g.refusedPins : [];
+    const named = pins.reduce((n, p) => n + (Number.isFinite(p.count) ? p.count : 0), 0);
+    return h('div', {},
+      h('div', {}, refused ? `${plural(refused, 'pin refusal')}` : 'no pin refused'),
+      ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, ${words(p.reason)}`)),
+      refused > named ? h('div', { class: 'itemid' }, `${plural(refused - named, 'more refusal')} not named`) : null,
+      h('div', {}, short ? `${plural(short, 'short take')}, ${plural(g.shortTakePositions, 'position')} left empty` : 'no short take'),
+      day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
+  }
+
   C.view({
     id: 'slots', group: 'This brand', title: 'Slots', heading: 'Every slot, and what is set on it',
     hint: 'A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server.',
@@ -292,7 +340,8 @@
       for (const page of S.slots.pages) {
         const body = page.slots.map((s) => h('tr', {},
           h('td', {},
-            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot }) }, s.slot),
+            // W26 R2: a slot name the catalogue carries on more than one page is one placement per page.
+            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot, page: s.pageScoped ? s.page : undefined }) }, s.slot),
             s.pinnedPieceIds?.length ? h('div', { class: 'itemid' }, `Pinned first: ${JSON.stringify(s.pinnedPieceIds)}; ${s.rankedCapacity} ranked positions`) : s.pinned ? h('div', { class: 'itemid' }, `pinned to ${s.pinned}`) : null),
           h('td', { class: 'num' }, fmt(s.take)),
           h('td', { class: 'num' }, fmt(s.pieces)),
@@ -300,11 +349,13 @@
           h('td', {}, s.rules && s.rules.length ? s.rules.join(', ') : 'none'),
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
-          h('td', {}, words(s.exploration)),
+          h('td', {}, words(s.exploration),
+            retainedModeOf(s) ? h('div', { class: 'itemid' }, `${storedModeWords(retainedModeOf(s))}; explores nothing`) : null),
           h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),
           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'
             : `${plural(s.evidence.items, 'piece')}, ${plural(Math.round(s.evidence.events), 'event')}`),
+          h('td', {}, governanceCell(s.governance)),
         ));
         host.append(card(`${page.page} · ${plural(page.slots.length, 'slot')}`, null,
           C.table([
@@ -319,6 +370,7 @@
             { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
             { key: 'evidence', label: 'Learned so far' },
+            { key: 'governance', label: 'Refused or short', title: 'Pins the decision path refused for this slot, and the times a pinned slot served fewer pieces than it shows, since the date given. Counted once for the whole tenant, across every brand of it; a floor, never an overcount' },
           ], body)));
       }
     },
