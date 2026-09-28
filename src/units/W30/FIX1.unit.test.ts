@@ -616,7 +616,9 @@ describe('unit:W30.P1.04', () => {
 // unit:W30.P1.05 — the same double count on a second interleaving, which
 // W30.P1.04 does not reach (the W30 fix-2 specification review,
 // /home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT.md, "variant
-// B", run/variantB.probe.test.ts): the hour re-folded BETWEEN the later-hour
+// B", run/variantB.probe.test.ts, with the pair of records its round-2 review
+// rules, REPORT-2.md and run/variantBprod.probe.test.ts: before consent, then
+// consented, as the engine mints them): the hour re-folded BETWEEN the later-hour
 // placement and the move is the purchase's OWN hour, and the move is made by
 // the re-fold of a LATER hour, the one holding her late earliest decision. The
 // defect as the delivery re-review states it: any hour earlier than the one
@@ -633,32 +635,35 @@ describe('unit:W30.P1.04', () => {
 //                     taxonomy does not know, `default`
 //   09:25  u-unknown  click on it — DELIVERED LATE, at 11:10 (hour 9 ended at
 //                     10:00 and is inside the 3 h horizon until 13:00)
-//   10:05  v-switch   coach decision, `default` — DELIVERED LATE, at 11:30
+//   10:05  v-switch   coach decision, `ineligible` (no consent on coach.com yet:
+//                     served the site's defaults) — DELIVERED LATE, at 11:30
 //                     (hour 10 is inside the horizon until 14:00)
-//   10:30  v-switch   coach decision, `personalized`
+//   10:30  v-switch   coach decision, `personalized` (she has consented)
 // The five-minute job runs at 10:06 (hour 9: no coach decision of hers is
 // known, the purchase is remembered), 11:06 (hour 10: her 10:30 decision is the
 // earliest known and the purchase is placed on `personalized`), 11:16 (the late
 // click has reached hour 9's prefix: hour 9 — the purchase's own hour — is
 // re-folded BETWEEN the placement and the move), 11:36 (her 10:05 decision has
 // reached hour 10's prefix: hour 10 is re-folded, her earliest decision is now
-// `default` and the purchase moves) and 01:06 the next day.
+// `ineligible` and the purchase moves) and 01:06 the next day.
 // The raw-day rule over the coach decisions: the 09:15 purchase precedes every
 // coach decision of hers, so it is held by her FIRST of the day, 10:05 →
-// `default`; her 10:30 decision puts her on `personalized` with no outcome
+// `ineligible`; her 10:30 decision puts her on `personalized` with no outcome
 // there; the kate-spade decision is another brand's; u-unknown's click is held
 // by her 09:20 decision → `default`.
-//   armVisitors      default 2 · personalized 1
-//   visitorOutcomes  default {2, {click 1, purchase 1}} · personalized {1, {}}
-// ONE purchase, on exactly ONE row: `default`. RULED (P1): the folded day
+//   armVisitors      default 1 · ineligible 1 · personalized 1
+//   visitorOutcomes  default {1, {click 1}} · ineligible {1, {purchase 1}} ·
+//                    personalized {1, {}}
+// ONE purchase, on exactly ONE row: `ineligible`. RULED (P1): the folded day
 // answers exactly these rows and names no hour.
 // ===========================================================================
 
 describe('unit:W30.P1.05', () => {
   const RULED: Ruled = {
-    armVisitors: [{ arm: 'default', visitors: 2 }, { arm: 'personalized', visitors: 1 }],
+    armVisitors: [{ arm: 'default', visitors: 1 }, { arm: 'ineligible', visitors: 1 }, { arm: 'personalized', visitors: 1 }],
     visitorOutcomes: { version: 1, basis: 'enrolled_visitors', arms: [
-      { arm: 'default', visitors: 2, byType: { click: 1, purchase: 1 } },
+      { arm: 'default', visitors: 1, byType: { click: 1 } },
+      { arm: 'ineligible', visitors: 1, byType: { purchase: 1 } },
       { arm: 'personalized', visitors: 1, byType: {} },
     ] },
   };
@@ -667,7 +672,7 @@ describe('unit:W30.P1.05', () => {
     const r2 = new UnitR2(), env = fixtureEnv(r2);
     const kateSpade = decision({ visitor: 'v-switch', brand: OTHER_BRAND, assignment: 'default', ts: at(DATE, 9, 10), item: 'ks-knott-satchel', page: 'plp' });
     const unknown = decision({ visitor: 'u-unknown', assignment: 'default', ts: at(DATE, 9, 20), item: 'cnt-unknown-taxonomy', cell: UNKNOWN_CELL });
-    const earliest = decision({ visitor: 'v-switch', assignment: 'default', ts: at(DATE, 10, 5), item: 'cnt-tabby-evening' });
+    const earliest = decision({ visitor: 'v-switch', assignment: 'ineligible', ts: at(DATE, 10, 5), item: 'cnt-tabby-evening' });
     const later = decision({ visitor: 'v-switch', assignment: 'personalized', ts: at(DATE, 10, 30), item: 'cnt-rogue-work' });
 
     await deliver(r2, env, [kateSpade, unknown], [
@@ -691,7 +696,7 @@ describe('unit:W30.P1.05', () => {
 
     expectCountedOnce(await bothDays(r2, env, at(NEXT, 1, 30)), RULED,
       'W30.P1.05 (amendment A47; W30 delivery re-review at e1c929e, the double count after two late rows in the horizon; W30 fix-2 specification review, variant B)',
-      'the purchase\'s own hour folded again between the later-hour placement and the move never keeps the old row: kit 03 "one purchase is counted on exactly one row" and "an earlier decision that reaches the ledger late moves an outcome to its row and never leaves it on two", so v-switch\'s 09:15 purchase is counted on the `default` row of her first decision of the day, 10:05 — exactly as the raw day counts it — and NOT also on the `personalized` row her 10:30 decision carried it onto, although hour 9 was folded again while it stood there; the raw day answers and the caught-up fold holds every row, so the folded day answers visitorOutcomes too and names no hour (P1: "a folded day answers visitorOutcomes whenever the raw day does")');
+      'the purchase\'s own hour folded again between the later-hour placement and the move never keeps the old row: kit 03 "one purchase is counted on exactly one row" and "an earlier decision that reaches the ledger late moves an outcome to its row and never leaves it on two", so v-switch\'s 09:15 purchase is counted on the `ineligible` row of her first decision of the day, 10:05 — exactly as the raw day counts it — and NOT also on the `personalized` row her 10:30 decision carried it onto, although hour 9 was folded again while it stood there; the raw day answers and the caught-up fold holds every row, so the folded day answers visitorOutcomes too and names no hour (P1: "a folded day answers visitorOutcomes whenever the raw day does")');
   }, 240_000);
 });
 
