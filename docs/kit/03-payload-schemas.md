@@ -561,10 +561,63 @@ No report of ours states a business target, a lift or a standing.
 assignment, the hours that cannot, and `null` when the stored report does not record the member at
 all. An hour folded before this release carries no assignment: that day's rows are grouped by the arm
 SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
-number the source cannot support. An hour holding an outcome whose visitor had no decision that day
-at or before it, nor later in that hour, cannot place the outcome, because the day counts it under
-the visitor's first decision of the day and that decision may be in a later hour: that day keeps its
-rows and `armVisitors` and answers `visitorOutcomes: null` rather than a count that omits the outcome.
+number the source cannot support. An outcome whose visitor had no decision that day at or before it,
+nor later in its hour, is counted under the visitor's first decision of the day, and that decision may
+be in a later hour: the fold remembers the outcome, and once a fold has carried the visitor into the
+day the outcome counts under the assignment of her earliest decision — never under the outcome's own
+`experiment` stamp — for as long as it precedes that decision, so the day answers `visitorOutcomes`
+exactly as the day computed from its records does, and an outcome whose visitor has no decision that
+day is counted on no row by either. Every fold of an hour decides that hour's outcomes afresh and
+replaces what an earlier fold of it decided, so an earlier decision that reaches the ledger late
+moves an outcome to its row and never leaves it on two. Each hour aggregate counts an outcome only
+through the hour that decides its row — the outcome's own hour, or for a remembered outcome the hour
+of the visitor's earliest decision — so an earlier hour folded again between a placement and the
+fold that moves it never keeps the old row, whatever order the hours are folded in. An hour whose
+aggregate was written before an earlier hour of its date was last folded is named until the job
+folds it again, because that fold may have moved or decided a row it counts. An hour is also named while an outcome it
+remembered can no longer be placed from memory — a later fold found a decision of the visitor's at or
+before it, as when an earlier hour is folded out of order — until that hour is folded again. An hour IS named when it holds an outcome whose visitor did
+have a decision that day at or before it that the fold's attribution ring no longer holds — the ring
+cap or the horizon evicted it — or whose earliest decision of the day the fold cannot date, because
+the assignment she held when the outcome happened cannot then be known: that day keeps its rows and
+`armVisitors` and answers `visitorOutcomes: null` rather than count the outcome on a row she may not
+have held. An hour folded before this release remembered no outcome and is still named for every
+outcome it could not place.
+
+`coverage` says the same kind of thing about the HOURS a day was summed from, and every member below
+is additive and optional: a report written before this release carries none of them and is still read
+as recorded. The top-level `coverage.maturity` still reads `unknown`, and it is the LEGACY field about
+outcome maturity, kept so a report already written before this release still reads; it is not a
+statement that the platform cannot say what an hour is.
+
+`refoldHorizonMs` is the published re-fold horizon the day was built under, measured from each hour's
+own END. `maturities` is `[ { hour, maturity } ]` per built hour: `open` while the hour is inside that
+horizon and its ledger prefix is still re-checked, `final` past it, and `repaired` where the hour's
+aggregate was WRITTEN after it became final — a rebuild asked for at a higher object cap, a re-fold
+because an earlier hour was folded after it, or a first fold that reached the hour late. A final hour
+is folded again only for those two reasons, never for a late row. An hour is in exactly one of the three, so a repair can never quietly
+replace numbers you have already read as final. `lateAfterMaturity` is `[ { hour, objects } ]`: ledger
+objects that reached an hour's prefix after that hour was final. They are counted and named and applied
+nowhere, and the rows stay in the ledger — this is a declaration about what the numbers include, not an
+age cutoff that discards late data. `carryInHours` is `[ { hour, evicted, unplaced } ]`: the outcomes of
+each built hour whose earlier decisions the fold could not reach — `evicted` where the visitor's
+attribution ring held its full capacity at the moment the outcome was attributed and nothing was
+credited, so a decision the cap or the horizon removed may be the one that would have been, and
+`unplaced` where no decision of the visitor's own date could be found for the outcome when its hour
+was folded — a later hour's fold may still place it on her first decision of the day, or it is one of
+the outcomes `coverage.unassignedHours` names. Neither is a claim that a credit was owed; a day with
+any `unplaced` reports `status: "incomplete"`, because that hour's own fold could not complete the
+visitor-level count and only a later hour, or nothing, completes it. `objectScan` is `[ { hour, objects, read } ]`: how many
+ledger objects each built hour holds and how many the fold really OPENED, so the object-scan cap is
+visible where an hour hit it and the hours beside it report what they really read. `recoveryFromMs` is
+the migration bound — the earliest hour a repair can still put into the batch rings, because a
+version-1 shard state remembers only a high-water mark and recovery therefore begins at the first
+version-2 fold and no further back; `0` where no shard imposes one.
+
+`counts.conflicts` is `{ decisions, outcomes }`, rows excluded because two genuinely different rows
+share one logical id and an operator surface has already filed that conflict. It is now carried on a
+day built from the hour aggregates as well as on one recomputed from the day's records, and it is
+omitted — never published as a zero — when there is no collision, exactly as `counts.duplicates` is.
 
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and

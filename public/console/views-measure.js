@@ -107,6 +107,44 @@
     if (hours && (!Array.isArray(hours.missing) || hours.missing.length || !Array.isArray(hours.built) || hours.built.length !== rows.length || !hours.built.every(hour => rows.some(x => x.hour === hour)))) return null;
     return Math.min(...rows.map(x => x.horizonMs));
   };
+  /**
+   * W30 (F17 SS3.4): the per-hour honesty signals a day summed from hour
+   * aggregates now carries, rendered ONLY where the source really states them,
+   * so a report written before this release renders exactly as it did.
+   */
+  const foldNotes = (coverage) => {
+    const notes = [];
+    if (!coverage || coverage.version !== 1) return notes;
+    const hourRows = (value, keys) => Array.isArray(value) && value.length > 0 && value.length <= 24
+      && value.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && keys.every(key => Number.isInteger(row[key]) && row[key] >= 0)) ? value : null;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const horizon = coverage.refoldHorizonMs;
+    if (Number.isFinite(horizon) && horizon >= 0) notes.push(`Published re-fold horizon: ${horizon / 3600000}h measured from the end of each hour.`);
+    const maturities = Array.isArray(coverage.maturities) && coverage.maturities.length > 0 && coverage.maturities.length <= 24
+      && coverage.maturities.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && ['open', 'final', 'repaired'].includes(row.maturity)) ? coverage.maturities : null;
+    if (maturities) {
+      const hoursOf = (state) => maturities.filter(row => row.maturity === state).map(row => row.hour);
+      const settledHours = hoursOf('final'), openHours = hoursOf('open'), repairedHours = hoursOf('repaired');
+      if (settledHours.length) notes.push(`Hours past that horizon and final, whose late rows are counted and not applied, and which the platform folds again only when an earlier hour is folded after them or a higher object cap is asked for: ${settledHours.join(', ')}.`);
+      if (openHours.length) notes.push(`Hours still inside it, whose ledger is still re-checked: ${openHours.join(', ')}.`);
+      if (repairedHours.length) notes.push(`Hours marked repaired, because their aggregate was written after they were already final — a first fold that reached them only late, or a rebuild of numbers already read as final: ${repairedHours.join(', ')}.`);
+    }
+    const late = hourRows(coverage.lateAfterMaturity, ['objects']);
+    if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${plural(row.objects, 'object')})`).join(', ')}.`);
+    const carry = hourRows(coverage.carryInHours, ['evicted', 'unplaced']);
+    const reached = carry ? carry.filter(row => row.evicted > 0 || row.unplaced > 0) : [];
+    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day known when the hour was folded)`).join(', ')}.`);
+    if (reached.some(row => row.evicted > 0)) notes.push('A full attribution ring is uncertainty about a credit, not proof that one was owed.');
+    const scan = hourRows(coverage.objectScan, ['objects', 'read']);
+    if (scan) notes.push(`Ledger objects the fold opened, of those each built hour holds: ${scan.map(row => `${row.hour}: ${row.read} of ${row.objects}`).join(', ')}.`);
+    const from = coverage.recoveryFromMs;
+    if (Number.isFinite(from) && from > 0 && from < 8640000000000000) {
+      notes.push(`Repair reaches back no further than ${new Date(from).toISOString().slice(0, 13)}:00Z, the earliest hour these rings still admit.`);
+    }
+    return notes;
+  };
   const coverageNotes = (coverage, hours) => {
     const notes = ['Outcome maturity: unknown. Source completeness is not established.'];
     if (!coverage || coverage.version !== 1) return [...notes, 'Coverage metadata absent or invalid; minimum contributing horizon: unknown.'];
@@ -121,6 +159,7 @@
     notes.push(minimum !== null
       ? `Minimum reported contributing horizon: ${minimum / 3600000}h; not a completeness guarantee.` : 'Minimum contributing horizon: unknown.');
     if (Array.isArray(coverage.unadvancedHours) && coverage.unadvancedHours.length) notes.push('Unadvanced ring progress does not mean every reported credit is wrong.');
+    for (const note of foldNotes(coverage)) notes.push(note);
     return notes;
   };
 
