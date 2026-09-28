@@ -3077,7 +3077,7 @@
     {
       "id": "W34",
       "title": "External-model policy: off makes zero calls",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3243,7 +3243,7 @@
     {
       "id": "W35",
       "title": "Transactional shopper authority",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
