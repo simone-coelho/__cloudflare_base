@@ -306,7 +306,27 @@
     { id: 'catalog', title: 'The content catalog', why: 'The pieces themselves, their tags and their lifecycle.', path: '/content/catalog/history', rollback: (n) => `/content/catalog/rollback/${n}` },
     { id: 'priors', title: 'Imported priors', why: 'Rates a team estimated elsewhere, used until live evidence outweighs them.', path: '/content/priors/history', rollback: (n) => `/content/priors/rollback/${n}` },
   ];
-  const hist = { rows: {}, lift: [], liftError: '', loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+  const hist = { rows: {}, envelopes: {}, lift: [], liftError: '', loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+  // W32 E1.01 (F32 §2.4-§2.6, §6.2): how big the document in force is, against
+  // the ceiling it is stored under, so a merchandiser sees the room left BEFORE
+  // a publish is refused for the size.
+  //
+  // The count comes from the answer's own `envelope`, never from counting the
+  // pieces this answer happened to carry: those are the same number today only
+  // because the read returns the whole document, and the moment it returns a
+  // page or a projection a recount would quietly understate the catalog. A
+  // deployment whose answer predates the member renders nothing here rather
+  // than a stray value, which is the rule every view on this console keeps.
+  const size = (bytes) => (bytes >= 1048576 ? `${dec(bytes / 1048576, 1)} MiB` : `${dec(bytes / 1024, 1)} KB`);
+  function envelopeLine(e) {
+    if (!e || typeof e !== 'object') return null;
+    const parts = [];
+    if (Number.isFinite(e.pieces)) parts.push(plural(e.pieces, 'piece'));
+    if (Number.isFinite(e.bytes)) parts.push(Number.isFinite(e.limitBytes)
+      ? `${size(e.bytes)} of the ${size(e.limitBytes)} one stored document may hold`
+      : size(e.bytes));
+    return parts.length ? h('div', { class: 'why' }, parts.join(' · ')) : null;
+  }
 
   /**
    * W26 R2 (review D4): the slot's archived snapshots. A slot name the catalogue
@@ -335,10 +355,13 @@
     const got = await Promise.all(KINDS.map(async k => {
       const selector = C.query({ scope: k.id === 'reflex' ? C.configScope() : S.scope });
       const [history, current] = await Promise.all([C.call(k.path + selector), C.call(k.path.replace(/\/history$/, '') + selector)]);
-      return { ...history, authored: current.ok ? C.authored(current.data) : null };
+      // The same read this card already makes for the authored identity also
+      // carries the document's own envelope; nothing new is fetched for it.
+      return { ...history, authored: current.ok ? C.authored(current.data) : null, envelope: current.ok ? current.data.envelope : null };
     }));
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
     hist.authored = Object.fromEntries(KINDS.map((k, i) => [k.id, got[i].authored]));
+    hist.envelopes = Object.fromEntries(KINDS.map((k, i) => [k.id, got[i].envelope || null]));
     KINDS.forEach((k, i) => { hist.rows[k.id] = got[i].ok ? got[i].data.revisions || [] : null; });
     const lift = slot ? await liftHistory(slot) : { versions: [], error: '' };
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
@@ -369,7 +392,7 @@
       for (const k of KINDS) {
         const rows = hist.rows[k.id];
         const current = rows && rows.length ? Math.max(...rows.map((r) => r.revision)) : 0;
-        host.append(card(k.title, k.why, rows === undefined
+        host.append(card(k.title, k.why, envelopeLine(hist.envelopes[k.id]), rows === undefined
           ? h('div', { class: 'empty' }, 'Reading…')
           : rows === null
           ? h('div', { class: 'empty' }, 'Could not read this history.')

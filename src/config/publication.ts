@@ -58,6 +58,22 @@ function serialized(value: unknown): string {
   if (encoder.encode(raw).byteLength > PUBLICATION_MAX_BYTES) throw new PublicationError('Publication exceeds 2 MiB', 413, 'document_too_large');
   return raw;
 }
+/**
+ * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): the bytes the ceiling is charged
+ * against, as a number anything outside this module may answer.
+ *
+ * `PUBLICATION_MAX_BYTES` is compared against the CANONICAL serialization — keys
+ * sorted, no insignificant whitespace — so the only honest size to show an
+ * operator is that same string's UTF-8 length. `JSON.stringify` of the document
+ * as it happens to be ordered is a different number, and a merchandiser who
+ * budgeted against it would discover the real ceiling as a refusal. It throws
+ * exactly where `serialized()` would refuse the document as unpublishable (a
+ * value that is not JSON, or nesting past 32 levels); it never refuses a
+ * document for its size, because its whole purpose is to report that size.
+ */
+export function documentBytes(value: unknown): number {
+  return encoder.encode(canonical(value)).byteLength;
+}
 function storageOf(env: Env): R2Bucket {
   try { const s = env.STORAGE; required(s && typeof s.get === 'function' && typeof s.put === 'function'); return s; } catch { throw unavailable(); }
 }

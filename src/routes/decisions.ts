@@ -38,7 +38,7 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
+import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -304,9 +304,18 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const [catalog, learn] = await Promise.all([readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
-  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
+  // W32 S1.01 (F32 §4 item 5): the names are joined onto the rows this answer
+  // really names, never through a map of the whole catalogue. A query that
+  // SEARCHES or SORTS by name has to rank every candidate row by its name, so
+  // it asks for the snapshot's own ids — bounded by the rows the operator can
+  // see, still never by the catalogue; every other query asks for the page's
+  // ids alone, after the page is cut. Neither form changes the answer: the
+  // filter and the sort are the same function of the same rows.
+  const searching = q !== undefined || sort === 'name';
+  const names = searching ? catalogNames(catalog, Object.keys(snapshot.items ?? {})) : NO_NAMES;
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
   const cut = pageRows(rows, { level, item, q, sort, dir, offset, limit });
+  if (!searching) cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level, item, q, sort, dir, limit, ...(page ? { p: page } : {}) });
   // W25 V1.01: the grid states WHICH prior document its numbers were built with,
   // so an export a data scientist downloads can be reconciled against the
@@ -442,11 +451,19 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   c.header('Cache-Control', 'no-store');
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
-  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
   // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
   // the catalogue carries; a prior row for an id it does not carry is never
   // offered here. The catalogue is the one this answer already read.
-  const cut = pageOf(exploringRows(snapshot, names, floor, new Set(names.keys())), cur ? cur.o : 0, limit);
+  //
+  // W32 S1.01: MEMBERSHIP is the whole catalogue and stays the whole catalogue —
+  // it is what decides which rows exist at all, and a page-bounded set here
+  // would silently drop every row the page did not reach, which is exactly the
+  // clause W25 added. What is bounded is the NAME join: the list is cut to the
+  // page first, and only the page's ids are looked up, because the order this
+  // list is in (least observed first, then id) does not depend on a name.
+  const catalogue = new Set(catalog.pieces.map((p) => p.id));
+  const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue), cur ? cur.o : 0, limit);
+  cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level: 'exploring', limit, ...(page ? { p: page } : {}) });
   return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, ...effective, floor, total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
 });
@@ -530,8 +547,10 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
     ]);
     witness = ringRes; assertRecent(c.env, tenant, ringRes);
     const ring = ringRes.ring.slice().sort((a, b) => b.ts - a.ts || a.position - b.position);
-    const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
     const page = pageOf(ring, cur ? cur.o : 0, limit);
+    // W32 S1.01 (F32 §4 item 5): the receipts this page carries name at most
+    // `limit` pieces, so the catalogue is asked for those and no more.
+    const names = catalogNames(catalog, page.rows.map((r) => r.item_id));
     const cursor = page.next === null ? null : encodeCursor({ v: 0, o: page.next, level: 'exploring', limit });
     return c.json({ ok: true, tenant, visitor_id: visitorId, total: page.total, offset: page.offset, limit: page.limit, receipts: page.rows.map((r) => receiptOf(r, names)), cursor });
   } catch { return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); } });

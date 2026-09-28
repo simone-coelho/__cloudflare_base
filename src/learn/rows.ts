@@ -76,6 +76,59 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
 export type Names = ReadonlyMap<string, { customerContentId?: string; title?: string }>;
 
+/** Nothing joined: every row keeps its id and answers `null` for both names. */
+export const NO_NAMES: Names = new Map();
+
+/**
+ * W32 S1.01 (F32 §1.2, §4 item 5): the names for the ids an answer will really
+ * name, and for no others.
+ *
+ * Every operator route that shows a page of rows used to build
+ * `new Map(catalog.pieces.map(...))` — one entry for every piece of the whole
+ * catalogue — to put `customerContentId`/`title` on at most `limit` rows. At the
+ * launch corpus that is invisible; at the corpus sizes F32 §2.6 measured it is a
+ * second full-catalogue structure allocated per operator request, on top of the
+ * catalogue the request already parsed. This answers the asked-for ids only, so
+ * what it allocates is bounded by the PAGE and never by the catalogue.
+ *
+ * The catalogue's own piece list is read once per catalogue object rather than
+ * once per call: the paged surfaces ask twice (the page's rows, then the ids a
+ * second page needs), and a document that is read again for each of them is the
+ * cost this is removing. The cache is keyed on the catalogue object itself and
+ * holds only that object's own array, so it retains nothing the caller has not
+ * already got in hand and dies with the revision it belongs to.
+ *
+ * It is a name JOIN and never a membership test: an id the catalogue does not
+ * carry is simply absent from the result, and a caller that needs to know which
+ * ids the catalogue carries (W25 V1.01, `exploringRows`' `catalogue` set) must
+ * ask the catalogue, not this map. A page-bounded join used as membership would
+ * silently drop every row outside the page.
+ */
+const pieceLists = new WeakMap<object, readonly { id: string; customerContentId?: string; title?: string }[]>();
+export function catalogNames(catalog: { pieces: readonly { id: string; customerContentId?: string; title?: string }[] }, ids: Iterable<string>): Names {
+  const want = new Set(ids), out = new Map<string, { customerContentId?: string; title?: string }>();
+  if (want.size === 0) return out;
+  let pieces = typeof catalog === 'object' && catalog !== null ? pieceLists.get(catalog) : undefined;
+  if (pieces === undefined) {
+    pieces = catalog.pieces;
+    if (typeof catalog === 'object' && catalog !== null && Array.isArray(pieces)) pieceLists.set(catalog, pieces);
+  }
+  for (const piece of pieces) {
+    if (!want.has(piece.id) || out.has(piece.id)) continue;
+    out.set(piece.id, { customerContentId: piece.customerContentId, title: piece.title });
+    if (out.size === want.size) break;
+  }
+  return out;
+}
+
+/** The same rows with the page's names joined on; nothing else about them changes. */
+export function namedRows<T extends { item: string; customer_item_id: string | null; title: string | null }>(rows: readonly T[], names: Names): T[] {
+  return rows.map((row) => {
+    const nm = names.get(row.item);
+    return nm ? { ...row, customer_item_id: nm.customerContentId ?? null, title: nm.title ?? null } : row;
+  });
+}
+
 /** Every row of the snapshot at the level asked, names and controls joined on. */
 export function rowsOf(snap: LiftSnapshot, names: Names, controls: Record<string, ItemControl> | undefined, level: RowLevel, item?: string): LiftRow[] {
   const out: LiftRow[] = [];
