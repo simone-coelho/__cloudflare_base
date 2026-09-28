@@ -19,7 +19,7 @@ import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 import { effectiveExploration, type ExploreMode } from './explore';
-import type { PriorIndex } from './priors';
+import { indexPriors, priorCapacityExceeded, type PriorIndex, type PriorsDoc } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -181,6 +181,8 @@ export class ReportRowIdentity {
   private bytes = 0;
   private work = 0;
   private conflicted: DuplicateCounts = { decisions: 0, outcomes: 0 };
+  /** W30 F1.01: the same exclusions as witnesses, so a caller that counts by BRAND (the hourly fold) can. */
+  private conflictedRows: DuplicateWitness[] = [];
   /** `resolved` holds the conflicts an operator surface already carries; a row
    * whose conflict is filed is excluded and COUNTED instead of refusing the day.
    * `brand`, when the caller is reading ONE brand's day, is that brand: every
@@ -220,7 +222,10 @@ export class ReportRowIdentity {
       if (mine) {
         const key = conflictKey(stream, String(id));
         if (!this.resolved.has(key)) throw new ReportRowConflict(stream, String(id), row);
-        if (this.brand === undefined || row.brand === this.brand) this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
+        if (this.brand === undefined || row.brand === this.brand) {
+          this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
+          this.conflictedRows.push({ brand: row.brand as string, visitor_id: row.visitor_id as string, ts: row.ts as number, stream, count: 1 });
+        }
       }
       return false;
     }
@@ -228,6 +233,8 @@ export class ReportRowIdentity {
   }
   /** Rows excluded because their conflict is filed, in the vocabulary `duplicates` uses. */
   conflicts(): DuplicateCounts { return { ...this.conflicted }; }
+  /** W30 F1.01: the same exclusions, each named by the brand it belongs to. */
+  conflictRows(): DuplicateWitness[] { return [...this.conflictedRows]; }
   duplicates(): DuplicateWitness[] {
     return [...this.rows.values()].filter(r => r.count > 0).map(({ row, stream, count }) =>
       ({ brand: row.brand as string, visitor_id: row.visitor_id as string, ts: row.ts as number, stream, count }));
@@ -457,14 +464,17 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'attributionContract'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'allocation' | 'attributionContract'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
   // `armVisitors` rides the summary because the window pools it from here; a
-  // summary written before it existed simply does not carry the key.
+  // summary written before it existed simply does not carry the key. W31 M1.01:
+  // `allocation` rides it for the same reason and on the same terms — the window
+  // states the allocation its days agree on, and a summary written before the
+  // key existed is unknown, never re-derived (R149).
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'allocation', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -483,6 +493,10 @@ export function canonicalReportJson(report: DayReport): string {
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
     ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
     armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    // W31 M1.01: the window states the published allocation its days agree on,
+    // and it pools from this frame, so the allocation rides it rather than being
+    // bought with a second read. Absent where the day records none.
+    ...(validAllocation(report.allocation) ? { allocation: validAllocation(report.allocation)! } : {}),
     // W22 A1.01: the window pools from the summary, so the contract it pooled
     // under has to be readable without opening the whole grid.
     ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
@@ -593,6 +607,33 @@ export interface ReportInput {
    * leaving a reader to discover it by comparing numbers.
    */
   priors?: { version: number; index: PriorIndex | ((slot: string) => PriorIndex | null | undefined) } | null;
+}
+
+/** The priors input of `buildReport`, as a production caller hands it over. */
+export type ReportPriors = NonNullable<ReportInput['priors']>;
+
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document as the input
+ * `buildReport` takes, resolved per slot under the tenant's own learn document —
+ * the index the statistics object would build for that slot, read the way
+ * `LearnStats` reads it (`indexPriors` under the slot's measurement basis).
+ *
+ * A slot whose objective is `revenue` or `margin` gets no index: an imported
+ * prior is a probability, the statistics object refuses to publish such a slot
+ * rather than apply one in the wrong unit (W25 Z1.01), and the offline grid does
+ * not do what the live table refuses to — its grid is built prior-free and says
+ * so (`priorVersion: 0` on that grid). A document past the bound every reader
+ * indexes within is refused here, before any grid is built, rather than read as
+ * no prior at all.
+ */
+export function reportPriors(doc: PriorsDoc, version: number, learn: LearnConfig): ReportPriors {
+  if (priorCapacityExceeded(doc) || !Number.isSafeInteger(version) || version < 0) throw new ReportUnavailableError();
+  const configs = slotConfigsOf(learn);
+  return { version, index: (slot: string) => {
+    const config = configs[slot];
+    if ((config?.objective ?? 'unit') !== 'unit') return null;
+    return indexPriors(doc, slot, config?.measurementBasis ?? 'served-v1');
+  } };
 }
 
 /** The prior index in force for one slot, or null where the grid is prior-free. */
@@ -748,10 +789,54 @@ export interface ReportCoverage {
    * before this release is owed. A day with any such hour is grouped by the arm
    * SERVED and answers `armVisitors` and `visitorOutcomes` null.
    *
+   * W21 R1 (LANE-LOG R156): also the built hours that carry the assignment of
+   * every decision but could not PLACE one of their outcomes — its visitor had
+   * no decision of the date at or before it, and none later in that hour, so
+   * her first decision of the day (the raw-day rule) may lie in a later hour.
+   * A day naming such an hour keeps its arm rows and `armVisitors` and answers
+   * `visitorOutcomes` null.
+   *
    * Optional in the stored evidence: a report written before this release does
    * not carry it and is still `metadata: 'recorded'`.
    */
   unassignedHours?: number[] | null;
+  /**
+   * W30 M1.01 (F17 §6 item 1): the published re-fold horizon this day was built
+   * under, measured from each hour's own END. Inside it a folded hour is still
+   * re-checked against its ledger prefix; past it the hour is final BY
+   * DECLARATION. Absent where the source does not state it (R149).
+   */
+  refoldHorizonMs?: number;
+  /**
+   * W30 M1.01/R1.01: per built hour, `open` inside the horizon above, `final`
+   * past it, and `repaired` where the hour's aggregate was WRITTEN after it
+   * became final — a rebuild a caller asked for, or a first fold that reached
+   * the hour late. Derived from the aggregate's own `builtAt`, so it needs no
+   * new stored member, and an hour is in exactly one of the three.
+   */
+  maturities?: Array<{ hour: number; maturity: 'open' | 'final' | 'repaired' }>;
+  /**
+   * W30 M1.01: ledger objects that reached an hour's prefix after that hour was
+   * final. They are COUNTED and NAMED here and applied nowhere: the rows stay in
+   * the ledger, which is what makes this a declaration and not a cutoff
+   * (HANDOFF-2026-09-16 :234, "User did not approve a blanket age cutoff").
+   */
+  lateAfterMaturity?: Array<{ hour: number; objects: number }>;
+  /**
+   * W30 V1.01: per built hour, the outcomes whose carry-in history the fold
+   * could not reach — `evicted` where the visitor's attribution ring was full at
+   * the moment the outcome was attributed and no credit was earned, `unplaced`
+   * where no decision of the visitor's date could be found for it at all.
+   */
+  carryInHours?: Array<{ hour: number; evicted: number; unplaced: number }>;
+  /** W30 C1.01/F1.01: per built hour, the ledger objects it holds and the objects the fold OPENED. */
+  objectScan?: Array<{ hour: number; objects: number; read: number }>;
+  /**
+   * W30 F1.01 (W22 R143): the version-1 shard migration bound — the earliest
+   * hour a repair can still put into the batch rings, because a version-1 state
+   * remembers only a high-water mark. `0` where no shard imposes one.
+   */
+  recoveryFromMs?: number;
 }
 
 export interface DayReport {
@@ -792,7 +877,7 @@ export interface DayReport {
   armVisitors?: ArmVisitors | null;
   /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
   allocation?: ReportAllocation;
-  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field, or names an hour in `coverage.unassignedHours`. */
   visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
@@ -846,7 +931,31 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   // list of built hours or the explicit unknown.
   const assignment = e.unassignedHours === undefined || e.unassignedHours === null
     || (hours(e.unassignedHours) && e.unassignedHours.every(h => knownHours(report.hours?.built).includes(h)));
+  // W30 (R149, R177): every member this batch adds is OPTIONAL in the stored
+  // evidence — a report written before this release carries none and is still
+  // `metadata: 'recorded'` — and, where it is present, it is a list of BUILT
+  // hours, in hour order, with exactly the members it is declared with.
+  const count = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) >= 0;
+  const perHour = (v: unknown, keys: readonly string[], check: (row: Record<string, unknown>) => boolean): boolean => {
+    if (v === undefined) return true;
+    if (!Array.isArray(v) || v.length > 24) return false;
+    let previous = -1;
+    for (let i = 0; i < v.length; i++) {
+      const row: unknown = v[i];
+      if (!Object.hasOwn(v, i) || !object(row) || Object.keys(row).length !== keys.length + 1
+        || !hour(row.hour) || !built.includes(row.hour) || row.hour <= previous
+        || !keys.every(key => Object.hasOwn(row, key)) || !check(row)) return false;
+      previous = row.hour;
+    }
+    return true;
+  };
+  const maturityRows = perHour(e.maturities, ['maturity'], row => row.maturity === 'open' || row.maturity === 'final' || row.maturity === 'repaired');
+  const lateRows = perHour(e.lateAfterMaturity, ['objects'], row => count(row.objects));
+  const carryRows = perHour(e.carryInHours, ['evicted', 'unplaced'], row => count(row.evicted) && count(row.unplaced));
+  const scanRows = perHour(e.objectScan, ['objects', 'read'], row => count(row.objects) && count(row.read) && Number(row.read) <= Number(row.objects));
+  const bounds = (e.refoldHorizonMs === undefined || count(e.refoldHorizonMs)) && (e.recoveryFromMs === undefined || count(e.recoveryFromMs));
   const valid = e.version === 1 && e.source === source && source !== 'unknown' && assignment &&
+    maturityRows && lateRows && carryRows && scanRows && bounds &&
     typeof e.truncated === 'boolean' && (typeof e.visitorsIncomplete === 'boolean' || e.visitorsIncomplete === null) &&
     hours(e.missingHours) && hours(e.truncatedHours) && hours(e.unadvancedHours) && hours(e.unknownHours) &&
     e.truncatedHours.every(h => built.includes(h)) && e.unadvancedHours.every(h => built.includes(h)) && e.unknownHours.every(h => built.includes(h)) &&
@@ -861,9 +970,30 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const missingHours = knownHours([...missing, ...knownHours(e.missingHours)]);
   const visitorsIncomplete = e.visitorsIncomplete === true ? true : valid ? e.visitorsIncomplete as boolean | null : null;
   const truncated = report.counts?.truncated === true || e.truncated === true || truncatedHours.length > 0;
+  // W30: the members are echoed only where the source really states them, and a
+  // list is copied row by row so nothing the evidence carried beside them rides
+  // through. `null`/absent is the honest unknown, never an empty list.
+  const copy = <T>(v: unknown, ok: boolean, row: (value: Record<string, unknown>) => T): T[] | undefined =>
+    valid && ok && Array.isArray(v) ? (v as Record<string, unknown>[]).map(row) : undefined;
+  const maturities = copy(e.maturities, maturityRows, r => ({ hour: r.hour as number, maturity: r.maturity as 'open' | 'final' | 'repaired' }));
+  const lateAfterMaturity = copy(e.lateAfterMaturity, lateRows, r => ({ hour: r.hour as number, objects: r.objects as number }));
+  const carryInHours = copy(e.carryInHours, carryRows, r => ({ hour: r.hour as number, evicted: r.evicted as number, unplaced: r.unplaced as number }));
+  const objectScan = copy(e.objectScan, scanRows, r => ({ hour: r.hour as number, objects: r.objects as number, read: r.read as number }));
+  // W30 M1.01/V1.01: a row the day holds but does not include, and a
+  // visitor-level outcome it could not place, are both reasons the day is
+  // INCOMPLETE — data exists that the numbers do not carry.
+  const late = (lateAfterMaturity ?? []).some(row => row.objects > 0);
+  const unplaced = (carryInHours ?? []).some(row => row.unplaced > 0);
   return {
-    version: 1, source, metadata, status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length ? 'incomplete' : 'unknown',
+    version: 1, source, metadata,
+    status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length || late || unplaced ? 'incomplete' : 'unknown',
     maturity: 'unknown', truncated, visitorsIncomplete, missingHours, truncatedHours, unadvancedHours, unknownHours, horizons,
+    ...(valid && count(e.refoldHorizonMs) ? { refoldHorizonMs: e.refoldHorizonMs } : {}),
+    ...(maturities ? { maturities } : {}),
+    ...(lateAfterMaturity ? { lateAfterMaturity } : {}),
+    ...(carryInHours ? { carryInHours } : {}),
+    ...(objectScan ? { objectScan } : {}),
+    ...(valid && count(e.recoveryFromMs) ? { recoveryFromMs: e.recoveryFromMs } : {}),
     // Stated only where the source really states it: an absent, unknown or
     // unreadable evidence block reads `null`, never an empty list, which would
     // claim every built hour carries the assignment.
@@ -1304,6 +1434,13 @@ export async function runReport(
   now = Date.now(),
   retentionEnv?: RetentionEnv,
   resolved?: ResolvedConflicts,
+  /**
+   * W25 R4: the tenant's published prior document (`reportPriors`), so a day
+   * built from the ledger records builds its grids the way the live table does
+   * and its `gridPriors` declares the revision it applied. Absent, the grids are
+   * built prior-free and the report declares that instead.
+   */
+  priors?: ReportPriors | null,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
@@ -1331,7 +1468,7 @@ export async function runReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes, ...(resolved ? { resolved } : {}),
+    decisions, outcomes, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };

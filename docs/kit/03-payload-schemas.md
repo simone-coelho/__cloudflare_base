@@ -27,9 +27,14 @@ The `data` object of `POST /realtime/action`, by `type`.
 same value the decision request carried. A reward-bearing event that names it is measured in that
 brand's statistics; one that names none is measured in the tenant's own brand, as before. Send it
 wherever a tenant serves more than one brand, or a click on brand A's hero lands in brand B's numerator
-while the exposure stays in A's denominator. A correlated event whose `brand` disagrees with the brand
-of the `decisionId` it names is refused, not pooled, and the refusal is counted on the outcome receipt
-as `brandMismatched`.
+while the exposure stays in A's denominator. The SDK sends it for you: a client configured with
+`brand` puts that value on every action it sends, whatever the type, and a client configured without
+one sends none, whatever a page or tag layer put on the event (a product's brand label travels as
+`productBrand`). A correlated event whose `brand`
+disagrees with the brand of the `decisionId` it names is refused, not pooled, and the refusal is
+counted on the outcome receipt as `brandMismatched`. An event that names no `decisionId` is counted
+there as well: `brandMismatched` adds each placement of another brand it would have been credited to
+under the learning policy, in a slot its own brand credited nothing.
 
 An attribute value the tenant's published catalogue does not name, on a dimension that catalogue does
 name values for, builds no affinity — that value alone, whatever else the same event carries. A
@@ -103,7 +108,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
-| `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact |
+| `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
 
@@ -156,7 +161,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1 including zero: the item's own signals for the multipliers. CSV uses a quoted JSON object, for example `"{""promotion"":1,""margin"":0}"` |
 | `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `explore`, `consider`, `decide` and `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
 | `freshnessDate` | no | When the piece became current, ISO 8601 (your `freshness_date`). A slot's `freshness` rule ages from it; absent, from `window.from` |
-| `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten |
+| `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten. They link, attribute and recognize, and nothing more: the decision receipt names them, an outcome naming one credits the decision that served the piece, and a product event naming one is recognized. The piece inherits no attribute of a product it features — no tag, merchandising value, stock flag or affinity — and no ranking reads those products' attributes |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
 
 Import/pull `merge` is a partial upsert by `id`: omitted supported fields preserve the existing item,
@@ -165,6 +170,23 @@ IDs append. New items and `replace` imports require valid complete items; only t
 customer IDs default to `id`, tags to `{}`, and lifecycle to `live`. Catalog PUT remains full replace.
 CSV blank cells mean omitted, not cleared. Supplied canonical fields take precedence over aliases,
 including malformed values: JSON nulls refuse except the supported `art: null`.
+
+**How big a catalog may be.** One stored configuration document is limited to 2 MiB of actual UTF-8
+bytes, measured on its canonical form (keys sorted, no insignificant whitespace), and the catalog is
+one such document per scope. Measured against the piece shape this repository's own shipped catalog
+uses — about 671 canonical bytes for an average piece and 820 for its largest — that envelope holds
+**up to 2,000 content pieces per scope** with room to spare: about 1.3 MiB at the shipped average
+shape, and about 1.6 MiB even if every piece were as large as the largest shipped one.
+`GET /content/catalog` answers the two numbers for your catalog as they stand, as
+`envelope: { pieces, bytes, limitBytes }` beside the document (the other document kinds answer
+`bytes` and `limitBytes` without `pieces`), and the console's History screen shows them on the
+catalog card, so the ceiling is a number you watch rather than one you discover as a refused publish.
+A write that would store a document over the ceiling is refused with `413` and
+`code: "document_too_large"`; a request body over the 2 MiB input bound is refused before that, with
+`413` and `code: "input_budget_exceeded"` naming the `budget`, the `limit` and the `observed`
+size; either way nothing is stored. This is a measured application envelope, not a deployed-capacity,
+latency or SLO commitment: a larger corpus is a conversation about sharding the catalog, not a number
+to raise here.
 
 Supplied arrays, tags and merchandising replace that whole field; `merchandising: {}` clears its
 signals. In a merge, a nonempty window replaces only its supplied bounds, preserving an omitted
@@ -445,13 +467,43 @@ prior-derived rows; a slot with neither events nor priors publishes nothing.
 
 ## The lift snapshot
 
-`GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, version, publishedAt, events, n0, nMin, liftMin,
-liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart }`. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
+`GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, tauLearnMs, version, publishedAt, events, n0, nMin, liftMin,
+liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart, witness, completeness?,
+rebuiltFrom? }` — the stored snapshot exactly as it was published, member for member. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
 p_hat, lift, liftReference, prior? }` with the symbols defined above; `liftReference` is `slot-rate` where the
 slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `p0: 0` is read as "no
 reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
 named. `slotRates` is cell key → the slot's own `{ n, s,
 rate }`. `version` is the publish time in milliseconds and is what a decision's `versions.lift` names.
+`tauLearnMs` is the decay horizon, in milliseconds, the counts were decayed with; the serving path uses a
+snapshot only when its `tauLearnMs`, `reward`, `objective`, `measurementBasis` and estimator dials are the
+ones the tenant's published learn document names. `witness` is a digest of the statistics object's
+committed identity — tenant, brand, slot, configuration, generation fence and projection — which the
+serving path checks against the object itself, together with the published digest, before it trusts a
+cached snapshot: a snapshot the object does not confirm as its current, healthy publication serves no lift.
+A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with
+`page=` (see the API reference); its `slot` member is still the slot name, the answer around it names the
+`page`, and the page is part of the committed identity its `witness` digests.
+`completeness`, on counters kept under the application's bounds (absent on counters from before those
+bounds existed), is `{ depth, omittedItems, selection, reason }`: the finest ladder level still kept
+(`depth`, 0 to 5), whether items past the item budget were folded into the slot's root instead of being
+kept by name (`omittedItems`), how the kept items were chosen (`first-seen`, or `lexical-repair` after a
+coarsening repair), and `reason` — `complete`, `coarse` when fine levels were dropped, or `item-capacity`
+when items were folded. `rebuiltFrom` names the repair the counters stand on, and only on a slot that was
+repaired (below).
+
+**What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
+slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
+is part of the mixture it is being divided by, so the more of a slot's traffic one piece takes, the
+closer its own reference moves to its own rate. Read `lift` accordingly. A lift near one is not proof
+that ranking has collapsed, and it is not proof that the piece is average — it is equally consistent
+with a piece that dominates the slot it is measured in, and with a slot whose pieces genuinely
+perform alike. This is an open model-validation question, not a defect with a proved repair: no
+validation of `liftReference` against an agreed objective is claimed here, and the platform mandates
+no leave-one-out or held-out reference in its place, because comparing the alternatives under the
+clamps, the shrinkage, the context ladder and the single-item case is an evaluation your data-science
+owners make. What the platform commits to is naming the reference on every row, so nothing about it
+has to be assumed.
 
 `slotRates` is the mass of the evidence the platform still HOLDS — the retained items plus the bucket of
 items capacity omitted — so an item whose evidence was discarded leaves no denominator counting exposures
@@ -469,6 +521,21 @@ authorized way past it is `POST /v1/{tenant}/learn/generation`, which starts a f
 reinterpreting or silently keeping what was counted before. `restartedAt` is when the generation started —
 the moment of that transition, or the counters' own earliest evidence for a generation never restarted —
 and `exposuresSinceRestart` is what it has counted since. Absent on a snapshot archived before they existed.
+
+`rebuiltFrom` is present only on a slot whose counters were started again by a repair, and names that
+repair: `{ basis, operationId, at, generation, date? }`. `basis` is `explicit-reset` when a tenant admin
+discarded damaged counters with `intent:reset` on `POST /v1/{tenant}/learn/recovery`, and
+`ledger-rebuild` when an operator folded them again from one retained day with `rebuildFrom` on
+`POST /v1/{tenant}/learn/generation`; `date` is that day, and only a `ledger-rebuild` carries it.
+`operationId` is the audited operation that did it, `at` its moment in milliseconds, and `generation`
+the numeric recovery generation of the statistics object it moved to — not the string `generation`
+above. A snapshot that names a basis holds only what was admitted since that repair (for a
+`ledger-rebuild`, that day's fold and what was admitted since), never the tenant's whole history. The
+basis stays with the object: a later wholesale reset of its counters keeps it unchanged, because what is
+counted afterwards still stands on that repair, and only a later explicit reset or ledger rebuild
+replaces it with its own. A generation transition without `rebuildFrom` discards the counters and names
+no basis; that snapshot says when learning restarted through `restartedAt` instead. A slot that was never
+repaired carries no `rebuiltFrom`.
 
 `attributionContract` is the one named, versioned attribution contract every path that reports
 attribution now carries — this snapshot, the day report and the window report — so two numbers can be
@@ -514,14 +581,73 @@ when the outcome happened and not by whether a served piece matched — two purc
 one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
 `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
-day applied. No report of ours states a business target, a lift or a standing.
+day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.
+Each compatible slot also carries `computation`, the recorded basis it pooled under: `{ version, profile, learning,
+reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is not compatible.
+No report of ours states a business target, a lift or a standing.
 
 `coverage.unassignedHours` is `number[] | null` and names the source limitation behind those two
-`null`s on a day summed from hour aggregates: `[]` when every built hour carries the experimental
-assignment, the hours that do not when some were folded before this release — that day's rows are
-grouped by the arm SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are
-`null` rather than a number the source cannot support — and `null` when the stored report does not
-record the member at all.
+`null`s on a day summed from hour aggregates: `[]` when every built hour can say the experimental
+assignment, the hours that cannot, and `null` when the stored report does not record the member at
+all. An hour folded before this release carries no assignment: that day's rows are grouped by the arm
+SERVED, as they always were, and its `armVisitors` and `visitorOutcomes` are `null` rather than a
+number the source cannot support. An outcome whose visitor had no decision that day at or before it,
+nor later in its hour, is counted under the visitor's first decision of the day, and that decision may
+be in a later hour: the fold remembers the outcome, and once a fold has carried the visitor into the
+day the outcome counts under the assignment of her earliest decision — never under the outcome's own
+`experiment` stamp — for as long as it precedes that decision, so the day answers `visitorOutcomes`
+exactly as the day computed from its records does, and an outcome whose visitor has no decision that
+day is counted on no row by either. Every fold of an hour decides that hour's outcomes afresh and
+replaces what an earlier fold of it decided, so an earlier decision that reaches the ledger late
+moves an outcome to its row and never leaves it on two. Each hour aggregate counts an outcome only
+through the hour that decides its row — the outcome's own hour, or for a remembered outcome the hour
+of the visitor's earliest decision — so an earlier hour folded again between a placement and the
+fold that moves it never keeps the old row, whatever order the hours are folded in. An hour whose
+aggregate was written before an earlier hour of its date was last folded is named until the job
+folds it again, because that fold may have moved or decided a row it counts. An hour is also named while an outcome it
+remembered can no longer be placed from memory — a later fold found a decision of the visitor's at or
+before it, as when an earlier hour is folded out of order — until that hour is folded again. An hour IS named when it holds an outcome whose visitor did
+have a decision that day at or before it that the fold's attribution ring no longer holds — the ring
+cap or the horizon evicted it — or whose earliest decision of the day the fold cannot date, because
+the assignment she held when the outcome happened cannot then be known: that day keeps its rows and
+`armVisitors` and answers `visitorOutcomes: null` rather than count the outcome on a row she may not
+have held. An hour folded before this release remembered no outcome and is still named for every
+outcome it could not place.
+
+`coverage` says the same kind of thing about the HOURS a day was summed from, and every member below
+is additive and optional: a report written before this release carries none of them and is still read
+as recorded. The top-level `coverage.maturity` still reads `unknown`, and it is the LEGACY field about
+outcome maturity, kept so a report already written before this release still reads; it is not a
+statement that the platform cannot say what an hour is.
+
+`refoldHorizonMs` is the published re-fold horizon the day was built under, measured from each hour's
+own END. `maturities` is `[ { hour, maturity } ]` per built hour: `open` while the hour is inside that
+horizon and its ledger prefix is still re-checked, `final` past it, and `repaired` where the hour's
+aggregate was WRITTEN after it became final — a rebuild asked for at a higher object cap, a re-fold
+because an earlier hour was folded after it, or a first fold that reached the hour late. A final hour
+is folded again only for those two reasons, never for a late row. An hour is in exactly one of the three, so a repair can never quietly
+replace numbers you have already read as final. `lateAfterMaturity` is `[ { hour, objects } ]`: ledger
+objects that reached an hour's prefix after that hour was final. They are counted and named and applied
+nowhere, and the rows stay in the ledger — this is a declaration about what the numbers include, not an
+age cutoff that discards late data. `carryInHours` is `[ { hour, evicted, unplaced } ]`: the outcomes of
+each built hour whose earlier decisions the fold could not reach — `evicted` where the visitor's
+attribution ring held its full capacity at the moment the outcome was attributed and nothing was
+credited, so a decision the cap or the horizon removed may be the one that would have been, and
+`unplaced` where no decision of the visitor's own date could be found for the outcome when its hour
+was folded — a later hour's fold may still place it on her first decision of the day, or it is one of
+the outcomes `coverage.unassignedHours` names. Neither is a claim that a credit was owed; a day with
+any `unplaced` reports `status: "incomplete"`, because that hour's own fold could not complete the
+visitor-level count and only a later hour, or nothing, completes it. `objectScan` is `[ { hour, objects, read } ]`: how many
+ledger objects each built hour holds and how many the fold really OPENED, so the object-scan cap is
+visible where an hour hit it and the hours beside it report what they really read. `recoveryFromMs` is
+the migration bound — the earliest hour a repair can still put into the batch rings, because a
+version-1 shard state remembers only a high-water mark and recovery therefore begins at the first
+version-2 fold and no further back; `0` where no shard imposes one.
+
+`counts.conflicts` is `{ decisions, outcomes }`, rows excluded because two genuinely different rows
+share one logical id and an operator surface has already filed that conflict. It is now carried on a
+day built from the hour aggregates as well as on one recomputed from the day's records, and it is
+omitted — never published as a zero — when there is no collision, exactly as `counts.duplicates` is.
 
 Ledger rows are delivered AT LEAST ONCE. `decision_id` and `outcome_id` are the dedup keys, on every
 read here and in your own warehouse: the same logical row may reach the partition more than once, and
@@ -529,10 +655,25 @@ every read above yields it once. `counts.duplicates` is `{ decisions, outcomes }
 dropped, so the rate is a number instead of a silence. An outcome minted before the per-event nonce
 existed carries a timestamp-derived id that two genuinely distinct events can share; such legacy rows
 are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a read. Two genuinely
-DIFFERENT rows under one logical id are never merged: the read refuses the day and names the
-collision (`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it
-for recovery in your tenant's own scope, and reads again on the next call with that row excluded and
-counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+DIFFERENT rows under one logical id are never merged, and this collision contract is the same on every
+surface. The online statistics credit EACH of two different records under one stable `outcome_id`:
+only the same record redelivered is credited once, and a delivery whose record digest cannot be
+computed is recognised by its id alone, so it can lose a credit it cannot tell apart and never grants
+one twice. The ledger read refuses the day of the brand the collision touches, and only that brand's
+day — another brand of the same tenant is still answered — and names the collision
+(`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }`, HTTP 409), files it for
+recovery in your tenant's own scope, and reads again on the next call with that row excluded and
+counted in `counts.conflicts`, in the same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where
+both records were credited online, the online store then holds more credits than that day for the
+brand and slot, by design: once the difference exceeds its threshold, the scheduled reconciliation on
+`/v1/{tenant}/monitor` shows the pair as a disagreement carrying `conflicts: { decisions, outcomes }`,
+the day's `counts.conflicts` copied onto the row. The credits of the filed records are the designed
+outcome, not a lost credit. `conflicts` proves only that a collision is on record for the brand's day:
+it is the brand's count for the day, not the slot's, and it rides every row of the brand whose online
+side exceeds its ledger side, so it cannot tell the collision from a credit the ledger lost on the same
+brand and day, including on a row whose whole difference is a lost credit. It is never a reason to
+dismiss a difference: the collision accounts only for the credits of the rows filed as conflicts, and
+no other part of the difference is explained by it. A row without `conflicts` names no collision.
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.

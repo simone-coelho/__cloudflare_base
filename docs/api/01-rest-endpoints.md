@@ -12,6 +12,7 @@
 - **Env gates:** `GEMINI_API_KEY` (AI endpoints degrade/503 without it) · `OPTIMIZELY_WRITE_ENABLED` + `OPTIMIZELY_API_TOKEN` (FX writes return `created:false`/"stubbed" when off) · ODP creds (`ODP_API_HOST`+`ODP_PUBLIC_KEY` — the ODP loop silently no-ops without them) · `OPTIMIZELY_WEBHOOK_SECRET` (datafile webhook HMAC) · `DECISION_SOURCE`, `CONNECTOR_MODE`, `REFLEX_ENABLED`.
 - **Honesty convention:** simulated payloads self-label (`simulated`, `_meta`, `dataSource` fields).
 - **Measurement reads (W21 C1.05, F25 §5.1):** `GET /v1/:tenant/learn/report` and `GET /v1/:tenant/learn/report/window` carry the same gate as the build `POST` beside them (`operatorJwt()`), so they answer 401 without an operator credential in **every** `AUTH_MODE`, including the open demo default. They previously rode `operatorWrites()`, which returns `next()` in open mode, and so delivered per-arm counts, intervals and target standing to any caller who could view source on the storefront. The credential is the one the build POST already accepts; no account session is required.
+- **What a window states it pooled under (W31 M1.01, F25 §1.3/§5.7):** `GET /v1/:tenant/learn/report/window` carries `allocation` — the published holdout share and arms every pooled day agrees on — and, per slot, the `computation` that slot pooled under (`version`, `profile`, `learning`, `reward`, `objective`, `tauLearnMs`, `measurementBasis`). Both are read from the days: the allocation rides each day's bounded `_summary` frame, so the window still makes one ranged read per day. Two pooled days served under different allocations are a mixed basis, exactly as two computations are — the slot answers `status: 'mixed'` with the reason `mixed_allocation`, its days and no pooled arms — while a day written before the field existed is an unknown: the window states `allocation: null`, adds no reason, and pools the days as before. A window at its 184-day maximum is still one reading; a longer period is refused, and the kit states how to compose consecutive windows on the customer's side.
 - **Window exports (W21 C1.07, F12):** `GET /v1/:tenant/ledger/batches?from=&to=` is swept under the prefixes its days share — one per calendar year the window touches, plus a bounded number of pages each — rather than one listing per day, and its object budget holds for the request as a whole. A truncated answer names exactly the days the sweep reached. The single-`date=` listing, its `cursor` and its reconciliation `counts` are unchanged.
 - **Where the window sweep starts (W21 C1.09):** each of those listings begins at the window's first day (`startAfter: <tenant>/<from>` on its first page), so objects the tenant wrote earlier in the same calendar year are never paged through and cannot consume the page budget. A tenant with more earlier objects than the budget is still answered its own days; the truncation rule, the page budget and the single-`date=` path are unchanged.
 - **Dispatch order:** `/agents/*` is handled by the Agents SDK **before** Hono — it bypasses Hono middleware.
@@ -38,7 +39,9 @@ Both hosts retain a known entry during same-visit navigation. Only accepted live
 
 W20 G1 — a refused pin is not silent. The snapshot answer (`GET`/`POST /v1/:tenant/decisions/snapshot`) additionally carries `pinDiagnostics`, from the array the decision set already holds: one entry per pin the governance refused, `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`. `pinIndex` is the refused position inside a `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is the refusal the composer recorded — `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed` — and `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin`, because the engine attaches it whenever another slot already owns the piece. A refused required pin refuses its whole slot, so it has no decision and no ledger row; this member is the only place the answer names it. It is absent when nothing was refused, both hosts answer the same array, and it changes no ranking, eligibility or persisted record.
 
-W20 G2 — that member is bounded, and the operator has counters of their own. The answer carries at most 50 entries, in page and slot order, with `refusedCount` (every refusal on the page) and `omittedCount` (how many the sample left out) beside them; the bound is applied before the answer's size guard, so no operator-authored slot document can turn a served snapshot into a 503. The served snapshot is the shopper's surface and stays a per-page fact. What happened over time belongs to the operator: `GET /v1/:tenant/learn/slots?evidence=1` adds `governance` to each slot entry, under the same flag and the same 200-slot budget as `evidence` — `{since, scope, refusedPinCount, refusedPins:[{pinnedPieceId, reason, count}], shortTakeCount, shortTakePositions}`, counting distinct occurrences on both hosts and both arms since the horizon `since` states (30 days, after which the counts restart), with zero reported as zero rather than omitted, and the `refusedPins` detail bounded per slot while the counts stay whole. `scope` states the scope those counts are kept at and always reads `"tenant"`: one counter document per tenant, counted across all of the tenant's brands, while the `evidence` beside it is kept per brand — so a `brand=` page reads its tenant's counts on the row beside that brand's own learning evidence. `POST`/`GET /v1/:tenant/monitor` answers the same two counts summed for the tenant, as `governance: {since, scope, refusedPinCount, shortTakeCount}`; it is read from those counters and never from the monitor's own probe, whose compose of the tenant's page is excluded where the counters are written. Two things guarantee that exclusion and both are part of this contract: the probe composes unsigned with tracking refused and declares `selfCheck` — no shopper granted it anything, its own cookie header withholds tracking consent, and the counters are skipped for any compose that declares the flag — so either guarantor alone already keeps the probe out of a tenant's counts, and neither can be removed without contradicting this reference. `shortTakeCount` counts the times a pinned slot served what it could and still fell short of its `take`, with `shortTakePositions` the positions left empty across them. Where that slot served something it also wrote records, so `explain.shortTake = {take, served, empty, sentence}` rides each of them and `GET /v1/:tenant/visitors/:visitorId/receipts` reads the sentence out on `why`. A slot whose pin was refused wrote no record at all, so it has no receipt and these counters are its only home. The counters hold slot names, the merchandiser's pinned piece ids, refusal reasons and counts — configuration, never shopper state — are written fire and forget after the answer, never read on the decision path, and are a best-effort diagnostic rather than an accounting ledger.
+W20 G2 — that member is bounded, and the operator has counters of their own. The answer carries at most 50 entries, in page and slot order, with `refusedCount` (every refusal on the page) and `omittedCount` (how many the sample left out) beside them; the bound is applied before the answer's size guard, so no operator-authored slot document can turn a served snapshot into a 503. The served snapshot is the shopper's surface and stays a per-page fact. What happened over time belongs to the operator: `GET /v1/:tenant/learn/slots?evidence=1` adds `governance` to each slot entry, under the same flag as `evidence` and on every entry — the entries past the 200-slot budget that bounds the per-slot `evidence` reads included, because the block comes from one read of one counter document — `{status, since, scope, refusedPinCount, refusedPins:[{pinnedPieceId, reason, count}], shortTakeCount, shortTakePositions}`, counting distinct occurrences on both hosts and both arms since the horizon `since` states (30 days, after which the counts restart), with zero reported as zero rather than omitted, and the `refusedPins` detail bounded per slot while the counts stay whole. `status` is `available` when the counter store was read; when it could not be, every block reads `status: "unavailable"` with `since`, the counts and `refusedPins` all `null`, so an outage is never reported as zeros. The counter document counts at most 200 distinct slots per tenant within one horizon; an occurrence on a further slot is not counted, and that slot reads zero until the horizon restarts. `scope` states the scope those counts are kept at and always reads `"tenant"`: one counter document per tenant, counted across all of the tenant's brands, while the `evidence` beside it is kept per brand — so a `brand=` page reads its tenant's counts on the row beside that brand's own learning evidence. `POST`/`GET /v1/:tenant/monitor` answers the same two counts summed for the tenant, as `governance: {since, scope, refusedPinCount, shortTakeCount}` — absent when the counter store could not be read, and absent on the operator's read of a kept result whose `since` or counts are not non-negative whole numbers, never a clamped count; it is read from those counters and never from the monitor's own probe, whose compose of the tenant's page is excluded where the counters are written. Two things guarantee that exclusion and both are part of this contract: the probe composes unsigned with tracking refused and declares `selfCheck` — no shopper granted it anything, its own cookie header withholds tracking consent, and the counters are skipped for any compose that declares the flag — so either guarantor alone already keeps the probe out of a tenant's counts, and neither can be removed without contradicting this reference. `shortTakeCount` counts the times a pinned slot served what it could and still fell short of its `take`, with `shortTakePositions` the positions left empty across them. Where that slot served something it also wrote records, so `explain.shortTake = {take, served, empty, sentence}` rides each of them and `GET /v1/:tenant/visitors/:visitorId/receipts` reads the sentence out on `why`. A slot whose pin was refused wrote no record at all, so it has no receipt and these counters are its only home. The counters hold slot names, the merchandiser's pinned piece ids, refusal reasons and counts — configuration, never shopper state — are written fire and forget after the answer, never read on the decision path, and are a best-effort diagnostic rather than an accounting ledger: concurrent page loads may collapse to one increment; the counts are a floor, never an overcount.
+
+W20 — the refusals a slot's own hard controls make, on the operator's read. `GET /content/slots` carries `constraintDiagnostics` beside `pinDiagnostics`, in a channel of its own (`schema: 'slot-constraint-diagnostics/v1'`, advisory): per page of the stored document, decided as serving decides it, the pieces a ranked slot's published controls refuse although the slot could otherwise have served them, each `{page, slot, contentId, reason, dimension?, value?}` — every one counted, at most 50 named in page, slot and catalogue order, the rest in `omittedWarningCount`. It reads `not_required` for a document with no hard control and `unavailable`, with null counts, when there is no stored document or the catalogue cannot be read.
 
 W25 — cold priors, on the operator surfaces. `PUT /content/priors` (JSON rows or `text/csv`) refuses, 422, a
 cell that is not `*` or a prefix of the ladder order `c=`, `v=`, `s=`, `r=`, `a=`, naming the row and the
@@ -77,6 +80,19 @@ evidence the control removed from that item's treatment; it keeps the position i
 and is never recorded as an exploration pick. No `cooldown` dial exists in any mode, and none is
 offered. A retained historical replay still reproduces the archived sampler exactly as it was.
 
+W32 — sizes answered, name joins bounded to the page. `GET /content/{kind}` carries
+`envelope: { pieces?, bytes, limitBytes }` beside the document: `bytes` is the canonical UTF-8 length (keys
+sorted, no insignificant whitespace) the 2 MiB publication ceiling is charged against, `limitBytes` is that
+ceiling, and `pieces` is the catalog's piece count, absent for every other kind. It is measured from the
+document the answer carries; a document that cannot be measured answers without the member and still reads.
+A write that would store a document over the ceiling is refused 413 `document_too_large` with nothing stored,
+and a request body over the input bound is refused first, 413 `input_budget_exceeded` with
+`budget`/`limit`/`observed`. `GET /v1/:tenant/lift/rows`, `GET /v1/:tenant/learn/exploring` and
+`GET /v1/:tenant/visitors/:visitorId/receipts` join `customer_item_id` and `title` for the ids the answer
+names — the page's ids, or the snapshot's ids when a `q=` search or `sort=name` has to rank by name — and
+no longer build a map of the whole catalogue per request; which rows exist is still decided against the whole
+catalogue, so every answer is unchanged.
+
 `POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
 read on the scheduled run and never on a decision path.
 
@@ -95,7 +111,7 @@ configuration could not be read (there is nothing to attribute the count to), an
 synthetic monitoring probe, which is excluded where every one of these counters is written.
 
 `reconciliation` is `{ since, compared, disagreements: [ { brand, slot, online, ledger, difference,
-threshold } ] }`: the scheduled comparison of the two stores that hold the same credits by two
+threshold, conflicts? } ] }`: the scheduled comparison of the two stores that hold the same credits by two
 different roads — each slot's statistics object, which counted them online as they happened, and the
 day report, which counted them from the ledger. It reads the NEWEST day this tenant has published,
 and only that day; `since` is that day's start and `compared` is how many (brand, slot) pairs the run
@@ -103,8 +119,18 @@ really compared, so a clean result is never an empty one. `online` is the slot's
 own decay, rounded; `ledger` is the credits the published day counted for that slot's personalized
 arm. A pair is named only when `difference` exceeds `threshold`, a stated relative tolerance of five
 per cent of the larger of the two: zero at unit scale, which is where one lost or doubled credit
-shows, and wide enough at volume to absorb the two stores reading their own clocks. Absent on a
-legacy record and on a run that could not read one of the two sinks.
+shows, and wide enough at volume to absorb the two stores reading their own clocks. A row also
+carries `conflicts: { decisions, outcomes }` when its `online` exceeds its `ledger` and the brand's
+published day excluded rows under the collision contract below; the member is that day's
+`counts.conflicts`, copied. It proves only that a collision is on record for the brand's day, and the
+outcome collision is one known cause of `online` exceeding `ledger`. It is the brand's count for the
+whole day, not this slot's: it cannot say which slot the excluded rows touched, and it cannot tell the
+collision from a credit the ledger lost on the same brand and day, so it rides every such row of the
+brand, including a row whose whole difference is a lost credit. It is never a reason to dismiss a
+difference: the collision accounts only for the credits of the rows the ledger-recovery surface lists
+as filed conflicts, and no other part of the difference is explained by it. A row without `conflicts`
+names no collision. `reconciliation` is absent on a legacy record and on a run that could not read one
+of the two sinks.
 
 `GET /v1/{tenant}/ledger/batches?date=` reconciles the day's export partition with the day the platform
 published, on the same answer: `counts` is `{ rows: { decisions, outcomes }, distinct: { decisions,
@@ -125,11 +151,22 @@ partition more than once (a queue redelivery, a retried partial batch), and ever
 exactly once, counting the copies it dropped as `counts.duplicates`. An outcome minted before the
 per-event nonce existed carries a timestamp-derived id that two genuinely distinct events can share;
 those legacy rows are OUTSIDE the redelivery guarantee and are never deduplicated, online or on a
-read. Two genuinely DIFFERENT rows under one logical id are never merged: the read refuses the day
-with `{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
+read. Two genuinely DIFFERENT rows under one logical id are never merged, and this collision
+contract is the same on every surface. Online, the statistics credit EACH of two different records
+under one stable `outcome_id`: the credited journal tells records apart by the id and a digest of the
+whole record, so only the same record redelivered is credited once, and a delivery whose digest cannot
+be computed is recognised by its id alone — it can lose a credit it cannot tell apart, never grant one
+twice. On the ledger, the read refuses the day of the brand the collision touches, and only that
+brand's day — another brand of the same tenant is still answered — with
+`{ ok: false, code: "report_row_conflict", conflict: { stream, id } }` (HTTP 409), files the
 conflicting row for recovery in the tenant's own scope where the ledger-recovery surface lists it, and
 reads the day again on the next call with that row excluded and counted as `counts.conflicts`, in the
-same `{ decisions, outcomes }` vocabulary as `counts.duplicates`.
+same `{ decisions, outcomes }` vocabulary as `counts.duplicates`. Where the online statistics credited
+both records, the two stores therefore disagree by design on that brand and slot: once the difference
+exceeds its threshold, the scheduled `reconciliation` on `/v1/{tenant}/monitor` shows the pair as a
+disagreement, `online` above `ledger`, carrying `conflicts`. The credits of the filed records are the
+designed outcome, not a lost credit; `conflicts` does not show that they are the whole difference, and
+it rides the brand's other rows as well (see `reconciliation` above).
 
 Caller-managed buffered browser/app actions use HTTP `POST /realtime/action` with top-level `processing: "buffered"`, a stable `eventId`, an explicit nonnegative integer millisecond `timestamp` no later than server evaluation time, and original `browsingSessionId` (1–128 characters without surrounding whitespace, or explicit `null` when unknown). Numeric zero is valid; there is no maximum event age. The signed session still identifies the existing owned profile. Absent `processing` keeps live behavior; buffered WebSocket actions are refused. This adds no SDK offline queue or emitted bundle behavior.
 
