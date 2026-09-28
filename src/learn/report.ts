@@ -569,13 +569,14 @@ export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: st
 }
 
 /**
- * W33 O2: the object a reader saw under the canonical key, so a writer that
- * decided on it can make its replacement conditional on exactly that object.
- * `etag` is `null` where no day is stored, and `undefined` where a stored day
- * came back without one (never from R2, which always states it): a write
- * cannot be made conditional on that, so it is refused rather than made blind.
+ * W33 O2: the canonical day object a writer NOTED before it read any of its
+ * sources, so its write can be made conditional on exactly that object. `etag`
+ * is `null` where no day was stored, and `undefined` where the note could not be
+ * taken (a failed listing, or a stored day that states no etag, which R2 always
+ * states): a write cannot be made conditional on that, so it is refused rather
+ * than made blind.
  */
-export interface CanonicalBasis { etag: string | null | undefined; builtAt: number | null }
+export interface CanonicalNote { etag: string | null | undefined }
 const objectEtag = (value: unknown): string | undefined =>
   object(value) && typeof value.etag === 'string' && value.etag.length > 0 && value.etag.length <= 256 ? value.etag : undefined;
 
@@ -618,48 +619,46 @@ export async function readCanonicalSummary(r2: SavedReportReader, ids: { tenant:
 }
 
 /**
- * W33 O2: what the canonical key holds at the moment a writer that did NOT read
- * it before computing is about to replace it — one short range read of its
- * leading frame. `builtAt` is the stored day's own build time where the frame
- * (or a whole legacy body inside the range) states it, and `null` where it
- * cannot be read; such a day was not written by a current writer, whose summary
- * is always bounded and readable, and it stays replaceable exactly as before.
+ * W33 O2: note the canonical day object BEFORE reading any source — one listing
+ * of the day's own key, which states the stored object's etag, so the note costs
+ * no read of the day and no read of any source. A listing that names the key
+ * without an etag (never R2's) is completed by a one-byte read of the object.
  */
-export async function readCanonicalBasis(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }): Promise<CanonicalBasis> {
+export async function noteCanonicalDay(r2: SavedReportReader & { list(options: { prefix: string; limit?: number }): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }): Promise<CanonicalNote> {
   validateReportIds(ids);
-  let first: unknown;
-  try { first = await r2.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } }); }
-  catch { throw new ReportUnavailableError(); }
-  if (first === null) return { etag: null, builtAt: null };
-  const etag = objectEtag(first);
+  const key = reportKey(ids.tenant, ids.brand, ids.date);
   try {
-    const prefix = await summaryPrefix(first, { bytes: 0, cells: 0 }), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
-    const end = prefix.bytes.indexOf(10);
-    const text = end >= 0 ? decoder.decode(prefix.bytes.subarray(0, end)) : prefix.complete ? decoder.decode(prefix.bytes) : '';
-    const value: unknown = text.startsWith(SUMMARY_START) && text.endsWith(',') ? JSON.parse(text.slice(SUMMARY_START.length, -1))
-      : text && !text.startsWith(SUMMARY_START) ? JSON.parse(text) : null;
-    const builtAt = object(value) ? value.builtAt : undefined;
-    return { etag, builtAt: finite(builtAt) ? builtAt : null };
-  } catch { return { etag, builtAt: null }; }
+    const page = await r2.list({ prefix: key, limit: 1 });
+    const listed = object(page) && Array.isArray(page.objects) ? (page.objects as unknown[]).find(o => object(o) && o.key === key) : undefined;
+    if (listed === undefined) return { etag: null };
+    const etag = objectEtag(listed);
+    if (etag !== undefined) return { etag };
+    const obj = await r2.get(key, { range: { offset: 0, length: 1 } });
+    if (obj === null) return { etag: null };
+    try { if (object(obj) && obj.body instanceof ReadableStream) await obj.body.cancel(); } catch { /* the etag is what was asked */ }
+    return { etag: objectEtag(obj) };
+  } catch { return { etag: undefined }; }
 }
 
 /**
  * W33 O2 (document 35 §5 row W33, "Protect against concurrent overlay/canonical
- * writes"): the one way a canonical day is written. It never replaces a stored
- * day built after this one, and the put is conditional on the object the
- * decision was made on — `basis` when the caller read the key before computing
- * (the five-minute job), otherwise one read of the key now — so a writer that
- * finishes last with an older view of the day cannot replace a newer one that
- * landed meanwhile. Answers whether this body was stored; a refusal is not an
- * error, the newer day stands. A storage failure still throws.
+ * writes"): the one way a canonical day is written — by the POST without
+ * `policies`, the nightly job, the five-minute job and `repairCanonicalDay`.
+ * The put is conditional on the object `note` names: the object the writer
+ * noted before it read any source (the five-minute job's note is the etag of
+ * the summary it read; the repair's, the etag of the day it judged). If ANY
+ * other write reached the day after the note, the put is refused and the stored
+ * day stands, so a writer whose sources were read before a newer day was stored
+ * never replaces it. There is no read at write time and no comparison of build
+ * times. Answers whether this body was stored; a refusal is not an error. An
+ * unknown note refuses, and a storage failure throws.
  */
-export async function writeCanonicalDay(r2: SavedReportReader & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
-  ids: { tenant: string; brand: string; date: string }, body: string, builtAt: number, basis?: CanonicalBasis): Promise<boolean> {
-  const seen = basis ?? await readCanonicalBasis(r2, ids);
-  if (seen.etag === undefined) throw new ReportUnavailableError();
-  if (seen.builtAt !== null && seen.builtAt > builtAt) return false;
+export async function writeCanonicalDay(r2: { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, body: string, note: CanonicalNote): Promise<boolean> {
+  if (note.etag === undefined) throw new ReportUnavailableError();
   const written = await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body,
-    { onlyIf: seen.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: seen.etag }, httpMetadata: { contentType: 'application/json' } });
+    { onlyIf: note.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: note.etag }, httpMetadata: { contentType: 'application/json' } });
   return written !== null;
 }
 
@@ -1585,8 +1584,15 @@ export async function runReport(
    * built prior-free and the report declares that instead.
    */
   priors?: ReportPriors | null,
+  /**
+   * W33 O2: the canonical day object the caller noted before it read any source
+   * (`runDayReport` notes once, before it lists the hour aggregates, and hands
+   * the note here when the day falls back to the ledger). Absent, a canonical
+   * build notes it itself, before it reads the ledger.
+   */
+  note?: CanonicalNote,
 ): Promise<DayReport> {
-  return ledgerReport(r2, ids, learn, reporting, now, retentionEnv, resolved, priors, reporting === null);
+  return ledgerReport(r2, ids, learn, reporting, now, retentionEnv, resolved, priors, reporting === null, note);
 }
 
 /**
@@ -1604,11 +1610,14 @@ async function ledgerReport(
   r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
   ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now: number,
   retentionEnv: RetentionEnv | undefined, resolved: ResolvedConflicts | undefined, priors: ReportPriors | null | undefined, persist: boolean,
+  note?: CanonicalNote,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
   bound('policies', overlays.length + 1); validateReportPolicies([learning, ...overlays]);
   const budget: RawReadBudget = { objects: 0, bytes: 0 };
+  // W33 O2: a canonical build notes the day object before it reads the ledger.
+  const noted = reporting === null && persist ? note ?? await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids) : undefined;
   // Sequential reads share limits and stop before later streams/erasure reads on refusal.
   // W22 D1.05: the day is read for ONE brand, and the reader is told which, so
   // a conflict in another brand of the same tenant neither refuses this brand's
@@ -1650,9 +1659,10 @@ async function ledgerReport(
     report.provenance = dayProvenance(report, 'canonical');
     const body = canonicalReportJson(report);
     if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
-    // W33 O2: conditional, so this write never replaces a newer canonical day
-    // that landed while this one was reading the ledger.
-    if (persist) try { await writeCanonicalDay(r2 as unknown as Parameters<typeof writeCanonicalDay>[0], ids, body, report.builtAt); } catch { /* the response still carries it */ }
+    // W33 O2: conditional on the object noted before the ledger was read, so a
+    // canonical day stored while this one was reading it is never replaced; a
+    // refused write leaves the response carrying a day that is not stored.
+    if (persist && noted) try { await writeCanonicalDay(r2, ids, body, noted); } catch { /* the response still carries it */ }
   } else rawReportJson(report);
   if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
   return report;

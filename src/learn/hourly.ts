@@ -26,7 +26,7 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, writeCanonicalDay, type ArmRow, type CanonicalBasis, type DayReport, type ReportPolicy, type ReportPriors } from './report';
+import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type ReportPolicy, type ReportPriors } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts,
@@ -2422,9 +2422,10 @@ export interface CatchUpResult {
   /** Missing hours plus an interrupted transaction counted once; publication failures are separate. */
   pending: number;
   /**
-   * W33 O2: a date whose conditional write found a newer canonical day in place
-   * is not `published` by this run; it is `failed` with the error
-   * `day report superseded by a newer publication`, and the next run checks it again.
+   * W33 O2: a date whose conditional write was refused — another write reached
+   * the day after this run noted it — is not `published` by this run; it is
+   * `failed` with the error `day report superseded by a concurrent publication`,
+   * nothing is written, and the next run checks the date again.
    */
   reports: { published: string[]; failed: Array<{ date: string; error: string }>; deferred: string[] };
 }
@@ -2647,22 +2648,22 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   for (const date of dates.slice(-3)) {
     const ids = { tenant, brand: tenant, date };
     try {
-      // W33 O2: the day this run decided on. Where the saved summary was read,
-      // the write is conditional on exactly that object, so a day another
-      // writer published after the read is never replaced; where it was not
-      // (a date this run folded), the write reads the key once itself.
-      let basis: CanonicalBasis | undefined;
+      // W33 O2: the day object this run notes before it reads the date's
+      // aggregates. Where it read the saved summary, the note is the etag of
+      // that very object; for a date it folded, publication notes the object
+      // itself, after the folds and before it lists the aggregates.
+      let note: CanonicalNote | undefined;
       if (!builtDates.has(date)) {
         // W30 L1 (adoption defect D1): a saved day is left alone only while it
         // has every built hour AND names the late objects every hour probed this
         // run carries; a late row past the re-fold horizon republishes its date.
         const saved = await readCanonicalSummary(r2, ids, summaryBudget);
         if (hasReportedHours(saved.report, dateHours.get(date)!) && namesLateObjects(saved.report, lateByDate.get(date))) continue;
-        basis = { etag: saved.etag, builtAt: null };
+        note = { etag: saved.etag };
       }
-      const published = await publishAggregateDay(r2, ids, learn, now, true, basis);
+      const published = await publishAggregateDay(r2, ids, learn, now, true, note);
       if (published?.written) reports.published.push(date);
-      else reports.failed.push({ date, error: 'day report superseded by a newer publication' });
+      else reports.failed.push({ date, error: 'day report superseded by a concurrent publication' });
     } catch { reports.failed.push({ date, error: 'day report publication failed' }); }
   }
   return { built, failed, pending: debt.size, reports };
@@ -2711,17 +2712,18 @@ async function aggregateDay(r2: R2Agg, ids: { tenant: string; brand: string; dat
 
 /**
  * Scheduler writes must acknowledge persistence and must never fall back to raw records.
- * W33 O2: the write is `writeCanonicalDay`'s — never over a day built after this
- * one, and conditional on the object the decision was made on (`basis`, or one
- * read of the key at write time). `written` is false where a newer day stood.
+ * W33 O2: the write is `writeCanonicalDay`'s, conditional on the day object noted
+ * before the date's aggregates are listed — the caller's `note`, or one taken
+ * here. `written` is false where another write reached the day after the note.
  */
 async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, strict: boolean,
-  basis?: CanonicalBasis): Promise<{ report: DayReport; written: boolean } | null> {
+  note?: CanonicalNote): Promise<{ report: DayReport; written: boolean } | null> {
+  const noted = note ?? await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids);
   const report = await aggregateDay(r2, ids, learn, now);
   if (!report) { if (strict) unavailable(); return null; }
   const body = canonicalReportJson(report);
   let written = false;
-  try { written = await writeCanonicalDay(r2 as unknown as Parameters<typeof writeCanonicalDay>[0], ids, body, report.builtAt, basis); }
+  try { written = await writeCanonicalDay(r2, ids, body, noted); }
   catch (error) { if (strict) throw error; /* The public response still carries the computation. */ }
   return { report, written };
 }
@@ -2744,15 +2746,20 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
      */
     priors?: ReportPriors | null;
   } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
+  // W33 O2: a canonical build notes the day object ONCE, before it reads any
+  // source, and the same note conditions its write whichever path computes it —
+  // the hour aggregates, or the ledger where the date has none.
+  let note: CanonicalNote | undefined;
   if (reporting === null) {
-    const published = await publishAggregateDay(r2, ids, learn, now, false);
+    note = await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids);
+    const published = await publishAggregateDay(r2, ids, learn, now, false, note);
     if (published) return published.report;
   }
   if (opts.maxObjects !== undefined) {
     const n = await countDayObjects(r2, ids.tenant, ids.date, opts.maxObjects);
     if (n > opts.maxObjects) throw new ReportTooLarge(n, opts.maxObjects);
   }
-  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved, opts.priors ?? null);
+  return runReport(r2, ids, learn, reporting, now, retentionEnv, resolved, opts.priors ?? null, note);
 }
 
 /**
@@ -2820,9 +2827,8 @@ export async function repairCanonicalDay(r2: R2Agg, ids: { tenant: string; brand
       next = { ...stored.report, provenance: declared }; status = 'declared';
     }
     const body = canonicalReportJson(next);
-    const written = await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body,
-      { onlyIf: { etagMatches: stored.etag }, httpMetadata: { contentType: 'application/json' } });
-    if (written !== null) return { status, policies: next.provenance?.policies ?? [] };
+    // The canonical writers' own conditional write, on the day this verdict read.
+    if (await writeCanonicalDay(r2, ids, body, { etag: stored.etag })) return { status, policies: next.provenance?.policies ?? [] };
   }
   // The day changed under the repair twice: nothing is written, and the caller runs it again.
   throw new ReportUnavailableError();
