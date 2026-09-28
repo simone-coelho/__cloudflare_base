@@ -327,7 +327,15 @@ export interface HourAssignments {
   credits: Record<string, Record<string, number>>;
   /** assignment → distinct visitors with a decision on the DATE, through this hour. */
   visitors: Record<string, number>;
-  /** assignment → outcome type → distinct visitors on the DATE, through this hour. */
+  /**
+   * assignment → outcome type → distinct visitors on the DATE, through this
+   * hour. Since W30 "through this hour" is event time: an outcome counts here
+   * only once the hour that DECIDES its row is this hour or an earlier one —
+   * the outcome's own hour, or for a remembered one the hour of her earliest
+   * decision (`outcomesOf`). A row a later hour decides can still move without
+   * this hour ever being folded again, so an hour that counted it would keep
+   * the old row beside the new one when the day takes the largest count.
+   */
   outcomes: Record<string, Record<string, number>>;
   /**
    * W21 R1 (LANE-LOG R156): this hour's outcomes whose visitor held no
@@ -1266,12 +1274,25 @@ function deferOutcome(state: ShardState, date: string, hour: string, o: OutcomeR
  * date — every hour's placement, and each remembered outcome that precedes her
  * earliest decision, under that decision's assignment. A remembered outcome a
  * decision of hers precedes is NOT placed here: its own hour's fold places it.
+ *
+ * With `through` (a two-digit hour of the same date), only the rows DECIDED by
+ * that hour or an earlier one: an hour's placement is decided by that hour's
+ * fold, a remembered outcome's row by the hour of her earliest decision, and a
+ * legacy placement was decided before this release. That is what an hour
+ * aggregate may count (W30 P1, delivery re-review): every hour after one that
+ * is folded again is folded again too, so a row decided at or before an hour
+ * cannot change without that hour's count being taken again, while a row a
+ * LATER hour decides can — and an hour that had counted it would keep the old
+ * row beside the new one.
  */
-function outcomesOf(record: VisitorEnrollment, carry: DeferredOutcomes | undefined): Record<string, string[]> | undefined {
+function outcomesOf(record: VisitorEnrollment, carry: DeferredOutcomes | undefined, through?: string): Record<string, string[]> | undefined {
   const union = new Map<string, Set<string>>();
   const add = (arm: string, type: string) => { const types = union.get(arm) ?? new Set<string>(); union.set(arm, types); types.add(type); };
-  for (const byArm of Object.values(record.placed ?? {})) for (const [arm, types] of Object.entries(byArm)) for (const type of types) add(arm, type);
-  if (carry && record.firstAt !== undefined && record.firstArm !== undefined) {
+  for (const [hour, byArm] of Object.entries(record.placed ?? legacyPlacement(record))) {
+    if (through !== undefined && hour !== 'legacy' && hour > through) continue;
+    for (const [arm, types] of Object.entries(byArm)) for (const type of types) add(arm, type);
+  }
+  if (carry && record.firstAt !== undefined && record.firstArm !== undefined && (through === undefined || hourKeyOf(record.firstAt) <= through)) {
     for (const byType of Object.values(carry.hours)) for (const [type, span] of Object.entries(byType)) if (span[0] < record.firstAt) add(record.firstArm, type);
   }
   if (!union.size) return undefined;
@@ -2291,10 +2312,14 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       const record = r.state.enrollment?.[at.date]?.[brand] ?? {};
       if (ids.some(visitor => !record[visitor]?.arms.length)) { unaccounted.add(brand); continue; }
       const ha = (hb.assignments ??= emptyAssignments());
+      const carried = r.state.deferred?.[at.date]?.[brand];
       for (const visitor of ids) {
         const enrolled = record[visitor]!;
         for (const arm of enrolled.arms) ha.visitors[arm] = (ha.visitors[arm] ?? 0) + 1;
-        for (const [arm, types] of Object.entries(enrolled.outcomes ?? {})) {
+        // W30 P1 (delivery re-review): the rows decided through THIS hour only
+        // (`outcomesOf`), so an earlier hour folded again between a later
+        // hour's placement and the fold that moves it never keeps the old row.
+        for (const [arm, types] of Object.entries(outcomesOf(enrolled, carried?.[visitor], pad2(at.hour)) ?? {})) {
           const byType = (ha.outcomes[arm] ??= {});
           for (const type of types) byType[type] = (byType[type] ?? 0) + 1;
         }
