@@ -43,7 +43,7 @@ One script, served from the platform host we give you. No dependencies.
 <script>
   const client = EdgePersonalization.createClient({
     tenant: 'coach',                       // the brand scope decisions are made for
-    brand: 'coach',                        // recorded on every decision
+    brand: 'coach',                        // recorded on every decision, sent as data.brand on every event
     endpoint: 'https://<platform-host>',   // omit when the platform is on your own hostname
     sdkKey: '<your site key>',             // identifies the site; not a secret
     source: 'coach-web',                   // names your integration on every event
@@ -119,7 +119,7 @@ headers.set('Content-Type', 'text/html; charset=utf-8');
 return new Response(renderPage(bootstrap, bootstrap ? bootstrapJSON(bootstrap) : null), { headers });
 ```
 
-Forward the helper's Set-Cookie, private/no-store and Vary:Cookie headers; never share-cache this HTML. The HttpOnly first-party cookie resolves the canonical current grant/consent before HTML. Render exactly one element per choice with `data-op-page-instance`, `data-op-slot`, `data-op-content`, `data-op-position` and `data-op-decision-id`. Embed only `bootstrapJSON(bootstrap)` inside an inert `application/json` script; never embed bearer, full receipts or profile. The host's `renderPage` must escape its own HTML attributes/content.
+Forward every one of the helper's Set-Cookie headers, and its private/no-store and Vary:Cookie headers; never share-cache this HTML. The broker and the snapshot helper can set two cookies: the session cookie and, when your tenant publishes broker-mode return recognition, `__Host-opt-continuity-<tenant>`, which carries the recognition proof and is relayed back to us only on a return the SDK names an operation for. The HttpOnly first-party cookie resolves the canonical current grant/consent before HTML. Render exactly one element per choice with `data-op-page-instance`, `data-op-slot`, `data-op-content`, `data-op-position` and `data-op-decision-id`. Embed only `bootstrapJSON(bootstrap)` inside an inert `application/json` script; never embed bearer, full receipts or profile. The host's `renderPage` must escape its own HTML attributes/content.
 
 Create the browser client with `sessionBroker:'/shopper-broker'`, register the usual default/slot callbacks, then `await client.listen.adopt(parsedBootstrap, {page:'home'})`. Matching current grant/tenant/endpoint/page/deadline and complete DOM adopt without subscriber repaint and admit the rendered elements. On false, defaults are restored; call `refresh({page:'home'})`. Bare `apply(serverPayload)` is not authenticated SSR adoption. Real host SSR/browser/no-flash and latency acceptance remain open.
 
@@ -156,6 +156,9 @@ const detach = client.emit.declarative();   // authenticated offer + rendered AC
 
 **Your data layer**, the cheapest path where a tag layer exists. GA4 event names are mapped by default
 (`page_view`, `view_item`, `add_to_cart`, `add_to_wishlist`, `purchase`); override or add any of them.
+A GA4 item's `item_brand` is the product's brand label and is sent as `productBrand`, never as
+`data.brand`: that member is the brand the page was served under, and only the client's `brand` option
+sets it (see the configuration reference).
 
 ```js
 const release = client.emit.dataLayer();   // wraps window.dataLayer.push and replays what is already there
@@ -266,7 +269,7 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | Option | Default | Meaning |
 |---|---|---|
 | `tenant` | required | The brand scope decisions are made for |
-| `brand` | tenant | Recorded on every decision |
+| `brand` | tenant | Recorded on every decision, and sent as `data.brand` on every action the client sends, whatever its type, so an outcome is measured in the brand its exposure was counted in. `data.brand` is the SDK's own member: a `brand` a page, a mapping or a tag layer puts on an event is never sent under that name. A client configured without one sends none on any event, and the platform measures the tenant's own brand |
 | `endpoint` | page origin | Platform base URL |
 | `sdkKey` | none | Sent on every request; enforced on staging and production |
 | `source` | `sdk` | Names the caller on every event |
