@@ -2421,6 +2421,11 @@ export interface CatchUpResult {
   failed: Array<{ date: string; hour: number; error: string }>;
   /** Missing hours plus an interrupted transaction counted once; publication failures are separate. */
   pending: number;
+  /**
+   * W33 O2: a date whose conditional write found a newer canonical day in place
+   * is not `published` by this run; it is `failed` with the error
+   * `day report superseded by a newer publication`, and the next run checks it again.
+   */
   reports: { published: string[]; failed: Array<{ date: string; error: string }>; deferred: string[] };
 }
 

@@ -558,7 +558,17 @@ Absent on an archive or a report written before the contract existed.
 visitors, truncated, duplicates?, conflicts? }, attributionContract, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
 mode, configuredMode?, unsupported? } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
-visitorOutcomes }`.
+visitorOutcomes, provenance }`.
+
+`provenance` is `{ version: 1, status, policies }`: the identity of the policies that produced the stored
+day. `policies` is the ordered list of policy names its numbers were computed under — `learning` and the
+preset overlays for a canonical day. `status` is `canonical` where a canonical writer published it,
+`repaired` where the repair-or-declare path replaced a day a custom overlay had overwritten with the day
+the canonical writer computes from the retained sources, and `declared` where that path found such a day
+with its sources gone and kept it with the numbers it held, `policies` then naming the overlay that
+produced them. GET answers `provenance: null` for a day that records none — one written before the member
+existed — and such a day is unknown, never taken for a canonical one. A response-only overlay result from
+`POST` with `policies` carries no `provenance`, because it is never stored.
 
 An `exploration` row states the mode the engine RAN. Where the slot's retained document names a mode
 the engine will not run (Thompson is withdrawn), `mode` is `off`, `configured` is `null`, and
@@ -581,7 +591,7 @@ when the outcome happened and not by whether a served piece matched — two purc
 one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
 `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
-day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.
+day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms. A pooled day whose `provenance.status` is `declared` is withheld the same way, with the reason `declared_day` and status `unknown` (`mixed` where a mixed reason also applies): its numbers are an overlay's and are never pooled as canonical.
 Each compatible slot also carries `computation`, the recorded basis it pooled under: `{ version, profile, learning,
 reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is not compatible.
 No report of ours states a business target, a lift or a standing.
