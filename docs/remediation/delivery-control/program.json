@@ -3212,15 +3212,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "6d938414963a02b30c70150e2d84c24190269ed3 on rem/spec-w34: src/units/W34 and the W34-named legacy tests (W34.01 corrected to publish retained)",
+        "reviewedRevision": "82235876763c7cb160069f0ca114c42cb1907dfa on rem/spec-w34 (the refresh: merge 334828c of rem/integration ca5094b): src/units/W34 and the W34-named legacy tests (W34.01 and W20.03 corrected to publish retained)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W20.03-uncorrected-e3.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W20.03-bite.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W34-E1-egress.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/specifier/logs/W34-negative-control-refresh.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W34-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W34-E3-validator.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W34-acceptance.log"
