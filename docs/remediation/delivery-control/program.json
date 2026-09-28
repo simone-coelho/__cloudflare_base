@@ -3048,15 +3048,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "827a23e2840d36a6c6b6986bda266550081f00bd on rem/spec-w33: src/units/W33 and the W33-named legacy tests",
+        "reviewedRevision": "583b2e07fdd9b21cb30f3fc08e0f921384ff8f22 on rem/spec-w33: src/units/W33 (LEDGER and FIX1) and the W33-named legacy tests",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer-spec/logs/red-bc788a2.log",
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/specifier/logs/W33-negative-control-fix1.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W33-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W33-nonstrict.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W33-acceptance.log"
