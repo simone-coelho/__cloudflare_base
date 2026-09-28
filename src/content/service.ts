@@ -27,6 +27,7 @@ import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
+import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
@@ -496,11 +497,16 @@ export async function serveContentDecisions(
   // W34.01: external scoring is withdrawn from live decisions, including table
   // lookup. Stored settings cannot authorize runtime inference or external work.
   // Keep the omission explicit on weighted receipts and replayable from them.
+  // W34 E2: the policy in force is the deployment's `EXTERNAL_MODEL_POLICY`,
+  // read here and resolved fail-closed (absent, invalid or unreadable is off,
+  // the only policy this build implements), so the read cannot fail the
+  // decision or change what is served; the receipt's reason is the policy's.
+  const externalPolicy = externalModelPolicy(env);
   const extCfg = learn.external ?? null;
   const extWeightOf = (slot: string) => learn.slots?.[slot]?.external?.weight ?? 0;
   const wantsExt = extCfg !== null && arm !== 'default' && activeSlots.some((s) => extWeightOf(s.slot) > 0);
   const external: ExternalTerm | null = wantsExt && extCfg
-    ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: 'external scoring disabled by deployment policy' }
+    ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: EXTERNAL_POLICY_REASON[externalPolicy] }
     : null;
 
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
