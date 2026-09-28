@@ -502,6 +502,10 @@ export class ShopperReflex {
       if (principal) return json({ ok: false, error: 'Internal transfer required' }, 401);
       return this.handleTransfer(request, internal!);
     }
+    if (request.method === 'POST' && url.pathname === '/identity/transfer/status') {
+      if (principal) return json({ ok: false, error: 'Internal transfer required' }, 401);
+      return this.handleTransferStatus(request, internal!);
+    }
     if (request.method === 'POST' && url.pathname === '/identity/recovery/proof') {
       if (principal || !internal || !this.isActualObject(internal.tenant, internal.subject)) return json({ ok: false }, 401);
       const text = await request.text(); if (new TextEncoder().encode(text).length > 1024 * 1024) return json({ ok: false }, 413);
@@ -827,9 +831,22 @@ export class ShopperReflex {
           if (principal) await this.assertOwned(principal, undefined, true);
           else await this.assertLegacyWriter();
         } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
-        if (!principal || await this.transferState() || await this.intentState()) return json({ ok: false, error: 'Explicit owned choice required' }, 401);
+        if (!principal) return json({ ok: false, error: 'Explicit owned choice required' }, 401);
+        const patch = Object.fromEntries(CONSENT_SWITCHES.filter(k => body[k] !== undefined).map(k => [k, body[k]]));
+        // W35 LG1: a device whose sign-in has moved (or is moving) its profile
+        // to the person keeps its own session's authority to WITHDRAW — only
+        // turning a switch off, never on or renewed — so a refusal from any grant
+        // she holds is honoured. The ownership check above already admits only
+        // that transfer's own source session here (assertOwned, restrictive);
+        // the refusal then rides every later retry of the link to the person
+        // (handleLink carries this object's current consent) and the refusal
+        // cookie restricts the person on this browser's next request. Any other
+        // choice on a transferred device stays refused: the person's own choice
+        // governs her profile.
+        if ((await this.transferState() || await this.intentState()) && Object.values(patch).some(value => value !== false)) {
+          return json({ ok: false, error: 'Explicit owned choice required' }, 401);
+        }
         try {
-          const patch = Object.fromEntries(CONSENT_SWITCHES.filter(k => body[k] !== undefined).map(k => [k, body[k]]));
           const hints = consentFromCookies(request.headers.get('Cookie'));
           for (const key of CONSENT_SWITCHES) if (typeof body[key] === 'boolean') hints[key] = true;
           const next = chooseConsent(intersectConsent(storedConsent(await this.state.storage.get('consent')), hints), patch, body.choice!, principal);
@@ -1217,7 +1234,9 @@ export class ShopperReflex {
           dropped: 'unknown_product',
           // The counter says THAT one was dropped; this names WHICH input it was.
           signals,
-          sessionId: this.pipeline?.sessionId ?? null,
+          // W35 A1: the session the shopper holds, as every other answer of this
+          // door names it and as the session host answers the same drop.
+          sessionId: principal?.sessionId ?? this.pipeline?.sessionId ?? null,
           cookiesUpdated: false,
           consent,
         },
@@ -1415,7 +1434,10 @@ export class ShopperReflex {
 
     // 7. Build against the candidate; derivation failure leaves committed mirrors intact.
     let update: PersonalizationUpdate | null = null;
-    if (personalizes(consent) && (segmentsChanged || stageChanged)) {
+    // W35 A1: the personalized event that creates her record answers her
+    // initial state, as the session host does for the record it creates; after
+    // that only a change is pushed.
+    if (personalizes(consent) && (segmentsChanged || stageChanged || !this.pipeline)) {
       update = await this.buildUpdate(connectors, now, event.source, reflex, engagementScore, cfg, tenant, undefined,
         { affinity: nextAffinity, pipeline: nextPipeline, journeyWord });
     }
@@ -1859,8 +1881,10 @@ export class ShopperReflex {
         : null,
       visit: usable ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
+      // W35 A1: nothing else — the identical shape the session host answers
+      // (docs/api/01-rest-endpoints.md, GET /realtime/reflex). The session is
+      // the one her capability names; the read never reports a stored one.
       consent,
-      sessionId: this.pipeline?.sessionId ?? null,
     });
   }
 
@@ -2913,10 +2937,64 @@ export class ShopperReflex {
     return this.forwardTo;
   }
 
+  /**
+   * W35 A3. Whether the person's owner can still EVER accept this prepared
+   * transfer, asked of that owner and answered read-only. Its authority epoch is
+   * a fresh random id that only a reset or erasure replaces, and its commit
+   * requires the transfer's own epoch (handleTransfer), so once the epoch is
+   * another one — and no receipt of this transfer survives — the transfer can
+   * never complete. An accepted transfer keeps its receipt under that same epoch.
+   */
+  private async handleTransferStatus(request: Request, context: InternalContext): Promise<Response> {
+    const body = z.object({ transfer: transferSchema }).strict().parse(await request.json());
+    const transfer = await this.validateTransfer(body.transfer, true);
+    if (transfer.tenant !== context.tenant || transfer.shopperId !== context.subject || !isShopperId(context.subject)) throw new SessionAccessError();
+    return this.serialize(async () => {
+      const authority = await this.grantAuthority();
+      const accepted = await this.state.storage.get('identityReceipt:' + transfer.id) !== undefined;
+      return json({ ok: true, superseded: !accepted && authority?.epoch !== transfer.targetEpoch });
+    });
+  }
+
+  /**
+   * W35 A3. A sign-in that failed before the person accepted it leaves this
+   * browser fenced by its prepared transfer, and a retry of that sign-in stays
+   * pinned to it (the link's own retry never re-acquires another epoch or undoes
+   * anything). When the person's owner was reset, that transfer can never be
+   * accepted, and the fence would refuse her own session forever. Her own
+   * current session, on its next owned request, therefore asks the person's
+   * owner; only on its answer that the transfer is superseded are the intent and
+   * the prepared transfer withdrawn together, returning the browser to exactly
+   * the one owner it was — its profile untouched, nothing of it merged anywhere,
+   * and nothing forwarded (a transfer forwards only once accepted). A failed or
+   * refused question changes nothing and she is refused exactly as before.
+   */
+  private async withdrawSupersededTransfer(principal: SessionCapability): Promise<boolean> {
+    const prepared = await this.transferState(), intent = await this.intentState();
+    if (!prepared || prepared.status !== 'prepared' || prepared.scrubbed || !intent || principal.kind !== 'anonymous') return false;
+    const transfer = await this.validateTransfer(prepared.transfer);
+    if (transfer.visitorId !== principal.subject || transfer.sourceSessionId !== principal.sessionId || transfer.tenant !== principal.tenant
+      || JSON.stringify(intentSchema.strip().parse(transfer)) !== JSON.stringify(intent)) return false;
+    await this.assertGrant(principal, false);
+    const response = await this.env.SHOPPER_REFLEX.get(this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(transfer.tenant, transfer.shopperId)))
+      .fetch('https://shopper-reflex/identity/transfer/status', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': transfer.tenant, 'X-Reflex-Subject': transfer.shopperId },
+        body: JSON.stringify({ transfer: { ...transfer, affinity: null, pipeline: null } }) });
+    if (!response.ok) throw new SessionAccessError();
+    const answer = z.object({ ok: z.literal(true), superseded: z.boolean() }).strict().parse(await response.json());
+    if (!answer.superseded) return false;
+    assertSessionTarget(principal);
+    recheckOwnerInvocation(this);
+    try { await this.state.storage.transaction(async transaction => { await transaction.delete(['identityTransfer', 'identityIntent']); }); }
+    finally { this.invalidateMirrors(); }
+    return true;
+  }
+
   /** Called INSIDE the same serialized operation as the effect, never before it. */
   private async assertOwned(principal: SessionCapability, request?: Request, restrictiveConsent = false, adopt = true, admit = true): Promise<void> {
     assertSessionTarget(principal);
     if (!this.isActualObject(principal.tenant, principal.subject)) throw new SessionAccessError();
+    await this.withdrawSupersededTransfer(principal);
     const transfer = await this.transferState(), intent = await this.intentState();
     if ((transfer || intent) && (!restrictiveConsent || (transfer?.transfer ?? intent)!.sourceSessionId !== principal.sessionId)) throw new SessionAccessError();
     if (await this.forwardTarget() && !(restrictiveConsent && (transfer || intent))) throw new SessionAccessError();
@@ -3544,7 +3622,7 @@ export class ShopperReflex {
             const alarm = await this.state.storage.getAlarm();
             if (alarm === null || alarm > deadline) await this.state.storage.setAlarm(deadline);
           }
-          if (!personalizes(consent)) {
+          if (!consent.tracking) {
             // A negative instruction neither creates nor recomputes behavior/config.
             check();
             try { await this.state.storage.put({ [keyFor(key)]: record }); }
@@ -3557,13 +3635,24 @@ export class ShopperReflex {
             }
             return;
           }
-          requireConsentPurpose(consent, 'personalization');
-          const cfg = await resolveTenantReflexConfig(this.env, grant.tenant, resolveSurface({ surface: session.surface }));
+          // W35 A1: with tracking consented the engine records her behavior even
+          // while personalization is off, and so does this object on the other
+          // host (ingest persists every tracked event). The owned mirror follows
+          // every tracked write, so what a link carries to the person is the
+          // browser's whole record — the views she made while personalization was
+          // off included — exactly as the object host carries its own.
+          if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+          // Under tracking only, the stored vector names the configuration it was
+          // built under, so the tenant's configuration is read only when there
+          // is no vector to carry (the engine resolved it before recording it).
+          const carried = session.reflex as ReflexState | undefined;
+          const cfg = personalizes(consent) || !carried
+            ? await resolveTenantReflexConfig(this.env, grant.tenant, resolveSurface({ surface: session.surface })) : null;
           check();
-          const affinity: AffinityRecord = { shopperId: session.userId, reflex: session.reflex ?? emptyState(cfg),
+          const affinity: AffinityRecord = { shopperId: session.userId, reflex: carried ?? emptyState(cfg!),
             retention: session.retention, externalRetention: session.externalRetention,
             odpContext: session.odpContext, odpSeed: session.odpSeed ?? [], odpSeedAt: session.odpSeedAt ?? 0,
-            odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg.version };
+            odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg?.version ?? carried!.configVersion };
           const pipeline: PipelineRecord = { attributes: session.attributes, segments: session.segments,
             journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,

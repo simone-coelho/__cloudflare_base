@@ -291,6 +291,12 @@ realtimeRoutes.post('/action', async (c) => {
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
       ...(result.signals ? { signals: result.signals } : {}),
       sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
+    // W35 A1: the drop is answered as the shopper's own object answers it
+    // (ShopperReflex.ingest): named, with the signals that name the product, no
+    // outcome, no provider forward and no cookie refresh.
+    if (result.dropped) return c.json({ success: true, message: 'Action ignored: unknown productId', dropped: result.dropped,
+      ...(result.signals ? { signals: result.signals } : {}), sessionId: result.sessionId, cookiesUpdated: false,
+      consent, behavior, ...(render ? { render } : {}) });
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
     // path — the shopper never waits on the memory; ODP down = zero impact.
