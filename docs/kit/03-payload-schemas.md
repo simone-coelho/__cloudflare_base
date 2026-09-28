@@ -558,7 +558,28 @@ Absent on an archive or a report written before the contract existed.
 visitors, truncated, duplicates?, conflicts? }, attributionContract, policies: [ { name, policy, role, credits } ], grids: { [slot]: { [policy]: a lift
 snapshot built from that day alone } }, exploration: [ { slot, decisions, explored, realized, configured,
 mode, configuredMode?, unsupported? } ], holdout: { [slot]: [ { arm, decisions, credited, rate } ] }, armVisitors, allocation,
-visitorOutcomes }`.
+visitorOutcomes, provenance }`.
+
+`provenance` is `{ version: 1, status, policies }`: the identity of the policies that produced the stored
+day. `policies` is the ordered list of policy names its numbers were computed under — `learning` and the
+preset overlays for a canonical day. `status` is `canonical` where a canonical writer published it,
+`repaired` where the repair-or-declare path replaced a day a custom overlay had overwritten with the day
+the canonical writer computes from the retained sources, and `declared` where that path found such a day
+with its sources gone and kept it with the numbers it held, `policies` then naming the overlay that
+produced them. GET answers `provenance: null` for a day that records none — one written before the member
+existed — and such a day is unknown, never taken for a canonical one. A response-only overlay result from
+`POST` with `policies` carries no `provenance`, because it is never stored.
+
+A canonical day is stored only by a conditional write. Before a writer reads any source — the date's
+hour aggregates, or the ledger it falls back to — it notes the stored day's R2 etag, or that none is
+stored; its put succeeds only if that is still so. A day another writer stored after the note therefore
+stands, and the refused writer stores nothing: the `POST` without `policies` still answers 200
+`{ ok: true, report }` with the day it computed, which is not stored, while `GET` answers the day that
+stands; the nightly job resolves with the day it computed and logs its usual counts line, with
+nothing recording the refusal; the five-minute job reports the date in `reports.failed` with the error
+`day report superseded by a concurrent publication` and checks the date again on its next run. A
+refused write can leave in place a day computed from an earlier read of the sources until the date is
+published again.
 
 An `exploration` row states the mode the engine RAN. Where the slot's retained document names a mode
 the engine will not run (Thompson is withdrawn), `mode` is `off`, `configured` is `null`, and
@@ -581,7 +602,7 @@ when the outcome happened and not by whether a served piece matched — two purc
 one purchasing visitor, and one purchase is counted on exactly one row. The window report carries an
 `armVisitors` on the `visitor_days` basis (the per-day distinct counts summed), `null` when any pooled
 day predates it, and the same `attributionContract`, whose `appliedWindowsMs` is the least any pooled
-day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms.
+day applied. The window report carries `allocation`, the published allocation every pooled day agrees on, `null` when a pooled day carries none or two disagree; two pooled days with different allocations are a mixed basis, reported as the reason `mixed_allocation` with its days and no pooled arms. A pooled day whose `provenance.status` is `declared` is withheld the same way, with the reason `declared_day` and status `unknown` (`mixed` where a mixed reason also applies): its numbers are an overlay's and are never pooled as canonical.
 Each compatible slot also carries `computation`, the recorded basis it pooled under: `{ version, profile, learning,
 reward, objective, tauLearnMs, measurementBasis }`, and `null` where the slot is not compatible.
 No report of ours states a business target, a lift or a standing.
