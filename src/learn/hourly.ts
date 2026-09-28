@@ -1630,7 +1630,20 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
     const origin = builtAtOf.get(hour);
     if (origin !== undefined && origin < a.builtAt) stranded.push(hour);
   }
-  const unassignedHours = [...new Set([...ungrouped, ...unplaced, ...stranded])].sort((x, y) => x - y);
+  // W30 P1 (delivery re-review): an hour counts the rows decided through its
+  // own hour, and a fold of an earlier hour can decide one of them again. An
+  // hour whose aggregate was written before an earlier hour of its date was
+  // last folded may hold a row that fold has since moved, or lack one it has
+  // since decided, so it is named until it is folded again — the test the
+  // catch-up already uses to fold it again (`staleHour`), so a caught-up day
+  // names none of them.
+  const unrefreshed: number[] = [];
+  let newestEarlier = -Infinity;
+  for (const a of sorted) {
+    if (a.brands[ids.brand] !== undefined && Number.isSafeInteger(a.builtAt) && a.builtAt < newestEarlier) unrefreshed.push(a.hour);
+    if (Number.isSafeInteger(a.builtAt)) newestEarlier = Math.max(newestEarlier, a.builtAt);
+  }
+  const unassignedHours = [...new Set([...ungrouped, ...unplaced, ...stranded, ...unrefreshed])].sort((x, y) => x - y);
   const assignments = ungrouped.length === 0 ? hb.assignments : undefined;
   const names = Object.keys(hb.policies).sort((a, b) => Number(hb.policies[b]!.role === 'learning') - Number(hb.policies[a]!.role === 'learning'));
   const slots = [...new Set([...Object.keys(hb.arms), ...Object.keys(hb.exploration), ...Object.values(hb.policies).flatMap((p) => Object.keys(p.stats))])].sort();
