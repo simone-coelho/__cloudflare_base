@@ -570,6 +570,17 @@ produced them. GET answers `provenance: null` for a day that records none — on
 existed — and such a day is unknown, never taken for a canonical one. A response-only overlay result from
 `POST` with `policies` carries no `provenance`, because it is never stored.
 
+A canonical day is stored only by a conditional write. Before a writer reads any source — the date's
+hour aggregates, or the ledger it falls back to — it notes the stored day's R2 etag, or that none is
+stored; its put succeeds only if that is still so. A day another writer stored after the note therefore
+stands, and the refused writer stores nothing: the `POST` without `policies` still answers 200
+`{ ok: true, report }` with the day it computed, which is not stored, while `GET` answers the day that
+stands; the nightly job resolves with the day it computed and logs its usual counts line, with
+nothing recording the refusal; the five-minute job reports the date in `reports.failed` with the error
+`day report superseded by a concurrent publication` and checks the date again on its next run. A
+refused write can leave in place a day computed from an earlier read of the sources until the date is
+published again.
+
 An `exploration` row states the mode the engine RAN. Where the slot's retained document names a mode
 the engine will not run (Thompson is withdrawn), `mode` is `off`, `configured` is `null`, and
 `configuredMode` with `unsupported: true` name the stored setting — the same two members
