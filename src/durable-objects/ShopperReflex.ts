@@ -1022,6 +1022,11 @@ export class ShopperReflex {
       this.dropped.invalid++;
       return json({ success: false, error: 'invalid action event' }, 400);
     }
+    // W19 LG1 answers the reducer's failure only where it would otherwise be
+    // answered twice: the route's call through the owner's local stub, nested in
+    // the route's own owner operation. A caller that reaches this door directly
+    // runs its own operation here, so the failure escapes to it once, as before.
+    const nested = ownerHeld(this);
     // This internal HTTP door receives the route's coarse request.cf fields.
     // Keep them transient; shared socket normalization must ignore client geo.
     if (principal && body.geo && typeof body.geo === 'object') event.geo = {
@@ -1040,7 +1045,7 @@ export class ShopperReflex {
             || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();
         }
       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }
-      return this.ingest(event, principal).catch(ingestFailure);
+      return nested ? this.ingest(event, principal).catch(ingestFailure) : this.ingest(event, principal);
     });
     return json(outcome.body, outcome.status);
   }
