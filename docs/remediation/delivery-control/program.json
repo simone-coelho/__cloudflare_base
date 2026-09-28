@@ -2408,7 +2408,7 @@
     {
       "id": "W30",
       "title": "Late and mutable hour repair, maturity and coverage flags",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2763,7 +2763,7 @@
     {
       "id": "W32",
       "title": "Report and catalogue bounds; zero-base honesty stated",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
