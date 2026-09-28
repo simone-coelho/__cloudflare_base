@@ -600,7 +600,7 @@ Four documents per brand, each with the same seven routes. `kind` is `catalog`, 
 
 | Route | Auth | Does |
 |---|---|---|
-| `GET /content/{kind}?scope=` | operator | The explicitly published document, with `source: stored`, `revision`, `publication`, `actor`, `note`, `at` |
+| `GET /content/{kind}?scope=` | operator | The explicitly published document, with `source: stored`, `revision`, `publication`, `actor`, `note`, `at`, and `envelope: { pieces?, bytes, limitBytes }`: the document's canonical UTF-8 size and the 2 MiB ceiling it is stored under, with the piece count on the catalog only (see the payload schemas, How big a catalog may be) |
 | `GET /content/{kind}/history?scope=` | operator | Latest 50 revision summaries: number, version label, actor, note, time |
 | `GET /content/{kind}/revisions/{n}?scope=` | operator | One past revision |
 | `POST /content/{kind}/validate?scope=` | operator | `{ document }` in, `{ valid, errors[] }` out: every error, not the first |

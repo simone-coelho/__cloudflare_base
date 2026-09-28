@@ -80,6 +80,19 @@ evidence the control removed from that item's treatment; it keeps the position i
 and is never recorded as an exploration pick. No `cooldown` dial exists in any mode, and none is
 offered. A retained historical replay still reproduces the archived sampler exactly as it was.
 
+W32 — sizes answered, name joins bounded to the page. `GET /content/{kind}` carries
+`envelope: { pieces?, bytes, limitBytes }` beside the document: `bytes` is the canonical UTF-8 length (keys
+sorted, no insignificant whitespace) the 2 MiB publication ceiling is charged against, `limitBytes` is that
+ceiling, and `pieces` is the catalog's piece count, absent for every other kind. It is measured from the
+document the answer carries; a document that cannot be measured answers without the member and still reads.
+A write that would store a document over the ceiling is refused 413 `document_too_large` with nothing stored,
+and a request body over the input bound is refused first, 413 `input_budget_exceeded` with
+`budget`/`limit`/`observed`. `GET /v1/:tenant/lift/rows`, `GET /v1/:tenant/learn/exploring` and
+`GET /v1/:tenant/visitors/:visitorId/receipts` join `customer_item_id` and `title` for the ids the answer
+names — the page's ids, or the snapshot's ids when a `q=` search or `sort=name` has to rank by name — and
+no longer build a map of the whole catalogue per request; which rows exist is still decided against the whole
+catalogue, so every answer is unchanged.
+
 `POST`/`GET /v1/{tenant}/monitor` also answers two members of its own about the tenant's evidence, both
 read on the scheduled run and never on a decision path.
 

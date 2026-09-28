@@ -174,15 +174,19 @@ including malformed values: JSON nulls refuse except the supported `art: null`.
 **How big a catalog may be.** One stored configuration document is limited to 2 MiB of actual UTF-8
 bytes, measured on its canonical form (keys sorted, no insignificant whitespace), and the catalog is
 one such document per scope. Measured against the piece shape this repository's own shipped catalog
-uses — 667 canonical bytes for an average piece and 815 for its largest — that envelope holds
-**up to 2,000 content pieces per scope** with room to spare (1.28 MiB at the shipped shape; 1.78 MiB
-at the heavier shape the platform's own scale measurement used). `GET /content/catalog` answers the
-two numbers for your catalog as they stand, as `envelope: { pieces, bytes, limitBytes }` beside the
-document, and the console's History screen shows them on the catalog card, so the ceiling is a number
-you watch rather than one you discover as a refused publish. A document over the ceiling is refused
-with `413` and `code: "document_too_large"`, and nothing is stored. This is a measured application
-envelope, not a deployed-capacity, latency or SLO commitment: a larger corpus is a conversation about
-sharding the catalog, not a number to raise here.
+uses — about 671 canonical bytes for an average piece and 820 for its largest — that envelope holds
+**up to 2,000 content pieces per scope** with room to spare: about 1.3 MiB at the shipped average
+shape, and about 1.6 MiB even if every piece were as large as the largest shipped one.
+`GET /content/catalog` answers the two numbers for your catalog as they stand, as
+`envelope: { pieces, bytes, limitBytes }` beside the document (the other document kinds answer
+`bytes` and `limitBytes` without `pieces`), and the console's History screen shows them on the
+catalog card, so the ceiling is a number you watch rather than one you discover as a refused publish.
+A write that would store a document over the ceiling is refused with `413` and
+`code: "document_too_large"`; a request body over the 2 MiB input bound is refused before that, with
+`413` and `code: "input_budget_exceeded"` naming the `budget`, the `limit` and the `observed`
+size; either way nothing is stored. This is a measured application envelope, not a deployed-capacity,
+latency or SLO commitment: a larger corpus is a conversation about sharding the catalog, not a number
+to raise here.
 
 Supplied arrays, tags and merchandising replace that whole field; `merchandising: {}` clears its
 signals. In a merge, a nonempty window replaces only its supplied bounds, preserving an omitted
