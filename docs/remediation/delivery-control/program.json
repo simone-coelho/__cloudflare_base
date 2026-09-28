@@ -2573,7 +2573,7 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "fb96462603523608c762bf51b8463c3eb14169dc on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with the A46 tests L1 and S1, the A47/A48 tests P1 and E1, and the delivery-review tests unit:W30.P1.02, P1.03 (strict: the raw day exactly) and F1.02 (FIX1.unit.test.ts)",
+        "reviewedRevision": "36f5883909335b9ada6178537fc7a86cd3154950 on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with L1, S1, P1, E1, the round-1 tests P1.02, P1.03 and F1.02, and the round-2 double-count tests unit:W30.P1.04, P1.05 and P1.06 (FIX1.unit.test.ts; only a general per-hour placement rule passes all three)",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
@@ -2585,7 +2585,13 @@
           "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/REPORT-2.md",
           "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/REPORT-2.md",
-          "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT-3.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT-3.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
           "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.acceptance.log",
@@ -2599,7 +2605,10 @@
           "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/logs/P1E1-at-w30build-1c4d153.log",
           "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/logs/W30-negative-control-4.log",
           "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/logs/FIX1-fb96462-at-at-278c588.log",
-          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/logs/FIX1-fb96462-at-ctl-named.log"
+          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/logs/FIX1-fb96462-at-ctl-named.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/logs/W30-negative-control-7.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/logs/r3-P104-P106-at-e1c929e.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/logs/r3-P104-P106-at-fixN-e1c929e.log"
         ]
       },
       "doneWhen": [
