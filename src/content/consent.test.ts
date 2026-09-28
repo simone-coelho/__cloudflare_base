@@ -384,7 +384,10 @@ describe('CW31 consent on the content service', () => {
     for (const arm of ['personalized', 'default', 'no_learning'] as const) {
       const learn: LearnConfig = { holdout: { share: arm === 'personalized' ? 0 : 1, salt: 'gates', arms: [arm === 'no_learning' ? 'no_learning' : 'default'] },
         external: { kind: 'table', ref: 'dormant', timeoutMs: 10, fallback: 'omit' }, slots: { hero: { gamma: 1, external: { weight: 1 } }, story: { gamma: 0 } } };
-      const { env, ring } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent']);
+      // W34 LG1 (STALE arrangement): W34.E3 refuses a NEW learn document carrying an
+      // external term, so the dormant term is stored as a retained value (W11
+      // `retainedValue`, envWith's fifth parameter), the only way it can still be stored.
+      const { env, ring } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', true);
       const kv = env.CACHE as unknown as FakeKV;
       const document: SlotCatalog = { pages: { home: [
         { slot: 'hero', take: 1, weights: { line: 1 }, pinnedPieceId: 'a', offLimits: true, fatigue: { weight: 1, windowHours: 24, cap: 3 } },
@@ -442,7 +445,7 @@ describe('CW31 consent on the content service', () => {
       expect(ring).toEqual([]); store.mockRestore();
       // W11: a retained revision is adopted as reviewed historical bytes at its own revision.
       const retainedValue = { pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'unknown', excludedPieceIds: [null] }] } };
-      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', false, { revision: 4, value: retainedValue });
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', true, { revision: 4, value: retainedValue }); // W34 LG1: retained, as above.
       const legacy = await serve(retainedEnv, now + 6); await legacy.afterResponse;
       expect(legacy.records.map(r => r.item_id)).toEqual(['a']); expect(legacy.sources.slots.revision).toBe(4);
     }
@@ -1112,11 +1115,16 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
   beforeEach(() => { invalidateCache(); invalidateLiftCache(); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
+  // W34 LG1 (step 3, STALE arrangement): W34.E3 refuses a NEW learn document
+  // carrying an external term, so the stored document these cases serve is
+  // published as a retained value (W11 `retainedValue`, envWith's fifth
+  // parameter), the only way such a document can still be stored. Every
+  // assertion below is unchanged.
   it.each(configurations)('withdraws $kind / $ref despite a valid positive-weight stored document', async (external) => {
     const { env, ring, shopper } = await envWith(snapshot, {
       holdout: { share: 0, salt: '', arms: ['default'] },
       external, slots: { hero: { external: { weight: 0.5 } } },
-    });
+    }, ['hero'], 'coach', true);
     // All adapters would succeed and favour b if the live service invoked one.
     const answer = { version: 'synthetic-v1', scores: { b: 1 } };
     const fetchCall = vi.fn(async () => Response.json(answer));
@@ -1157,7 +1165,7 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
     const { env } = await envWith(snapshot, {
       holdout: { share: mode === 'default arm' ? 1 : 0, salt: '', arms: ['default'] },
       external: configurations[0], slots: { hero: { external: { weight: mode === 'zero weight' ? 0 : 0.5 } } },
-    });
+    }, ['hero'], 'coach', true); // W34 LG1 STALE arrangement: retained, as above.
     const fetchCall = vi.fn(async () => Response.json({ version: 'unused', scores: { b: 1 } }));
     vi.stubGlobal('fetch', fetchCall);
     const out = await serve(env);
