@@ -571,7 +571,13 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
   let external: LearnConfig['external'];
   if (candidate.external !== undefined) {
     const g = candidate.external;
-    if (!isRecord(g) || !['service', 'table', 'workers_ai'].includes(String(g.kind)) || typeof g.ref !== 'string' || !g.ref.trim()) errors.push('external: kind service|table|workers_ai and a ref');
+    // W34 E3 (F30, decision D1): the deployment's external-model policy
+    // (`EXTERNAL_MODEL_POLICY`, src/learn/external.ts) enables no model — `off`
+    // is its only state — so a NEW document naming one is refused, whatever the
+    // kind. A document stored before this rule still reads (`validateStored`),
+    // and its term is served withdrawn, never scored.
+    if (!historical) errors.push('external: refused — the deployment\'s external-model policy (EXTERNAL_MODEL_POLICY) is off and enables no service, table or workers_ai model; remove `external`');
+    else if (!isRecord(g) || !['service', 'table', 'workers_ai'].includes(String(g.kind)) || typeof g.ref !== 'string' || !g.ref.trim()) errors.push('external: kind service|table|workers_ai and a ref');
     else {
       const timeoutMs = g.timeoutMs === undefined ? 20 : g.timeoutMs;
       if (!isNum(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) errors.push('external.timeoutMs: 1..5000 milliseconds');
