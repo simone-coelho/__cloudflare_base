@@ -10,6 +10,8 @@
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { parseCsv } from '@/content/import';
+import type { Cell } from '@/content/types';
+import { levelKeys } from '@/learn/stats';
 
 export interface PriorRow { slot: string; item: string; cell: string; p_prior: number; n_equiv: number; measurementBasis?: import('@/content/types').MeasurementBasis }
 /** What a document says about the grammar its cells were written in. */
@@ -47,11 +49,31 @@ export interface CellGrammar {
   migration: string;
 }
 
+/**
+ * W25 R2 (LANE-LOG R183): the ladder's key letters, READ OFF the ladder itself.
+ *
+ * The finest key `levelKeys` materializes names every level, coarsest first, as
+ * `key=value` pairs joined by `|`; its keys, in that order, are the grammar's
+ * order. Written out a second time here, a reorder of the ladder would leave the
+ * import door accepting the old order — cells no snapshot builds, the very
+ * silent no-op G1.01 closed — and only a test would notice. Derived, the grammar
+ * and what the door accepts and refuses follow the ladder. The cell it is read
+ * from is the unplaced shopper, whose values are the ladder's own defaults and
+ * contain neither `|` nor `=`.
+ */
+function ladderOrder(): readonly string[] {
+  const unplaced: Cell = { channel: 'unknown', visit_bucket: 'unknown', stage: 'unknown', region: null, affinity: null };
+  const finest = levelKeys(unplaced).at(-1) ?? '';
+  return Object.freeze(finest.split('|').map((pair) => pair.slice(0, pair.indexOf('='))));
+}
+
 export const CELL_GRAMMAR: CellGrammar = {
   name: 'ladder-cell',
   // 1 was the pre-CW29 ladder (`c=`, `v=`, `r=`, `a=`); 2 carries the journey stage.
+  // A document declaring this version with another order is still refused:
+  // `grammarError` compares the declared order with this derived one, pair by pair.
   version: 2,
-  order: ['c', 'v', 's', 'r', 'a'],
+  order: ladderOrder(),
   migration: 're-export the prior file with every cell written as `*` or a prefix of the current ladder order, then import it again',
 };
 
@@ -159,6 +181,33 @@ export function priorUnitErrors(doc: PriorsDoc, objectiveOf: (slot: string) => '
   return errors;
 }
 
+/**
+ * W25 R1 (LANE-LOG R183): the slots a document is refused for under
+ * `priorUnitErrors`, one entry per slot in the order its first row appears,
+ * with the objective the slot learns in and how many of the document's rows
+ * name it.
+ *
+ * The statistics object refuses to PUBLISH a slot on exactly this rule
+ * (`LearnStats` `priorsFor`: a retained document can still carry such a row,
+ * because only the import door refuses it), so a slot listed here is a slot
+ * whose publication the document stops. It is derived from the document and the
+ * objectives alone — the same rule, applied by the same function — so a reader
+ * that is not the statistics object can say which slots are stopped without
+ * asking any object. Pure.
+ */
+export function priorUnitRefusedSlots(doc: PriorsDoc, objectiveOf: (slot: string) => 'unit' | 'revenue' | 'margin' | null | undefined):
+  Array<{ slot: string; objective: 'revenue' | 'margin'; rows: number }> {
+  const refused = new Map<string, { slot: string; objective: 'revenue' | 'margin'; rows: number }>();
+  for (const r of doc.rows ?? []) {
+    if (!priorUnitErrors({ rows: [r] }, objectiveOf).length) continue;
+    const objective = objectiveOf(r.slot) === 'margin' ? 'margin' : 'revenue';
+    const entry = refused.get(r.slot) ?? { slot: r.slot, objective, rows: 0 };
+    entry.rows++;
+    refused.set(r.slot, entry);
+  }
+  return [...refused.values()];
+}
+
 /** The five columns, in any order, one row per prior. Blank cell means '*'. */
 export function parsePriorsCsv(text: string): PriorsDoc {
   const rows = parseCsv(text).map((r) => ({
@@ -180,10 +229,19 @@ export const PRIORS_KIND: DocumentKind<PriorsDoc> = {
 /** Exact item → exact cell → prior, for one slot; neither identifier is split. */
 export type PriorIndex = Map<string, Map<string, { p: number; n: number }>>;
 
+/**
+ * Whether a document is past the bound every reader indexes it within (4096
+ * rows, 256 KiB). A reader that builds from a prior checks this BEFORE building,
+ * so an over-capacity retained document is refused rather than read as absent.
+ */
+export function priorCapacityExceeded(doc: PriorsDoc | null | undefined): boolean {
+  return !!doc && (doc.rows.length > 4096 || new TextEncoder().encode(JSON.stringify(doc)).length > 256 * 1024);
+}
+
 export function indexPriors(doc: PriorsDoc | null | undefined, slot: string, measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1'): PriorIndex {
   // Bound expansion here too; legacy document validation must not silently
   // turn an over-capacity retained prior into an absent/zero prior.
-  if (doc && (doc.rows.length > 4096 || new TextEncoder().encode(JSON.stringify(doc)).length > 256 * 1024)) throw new Error('Prior capacity exceeded');
+  if (priorCapacityExceeded(doc)) throw new Error('Prior capacity exceeded');
   const out: PriorIndex = new Map();
   for (const r of doc?.rows ?? []) if (r.slot === slot && (r.measurementBasis ?? 'served-v1') === measurementBasis) {
     const cells = out.get(r.item) ?? new Map<string, { p: number; n: number }>();

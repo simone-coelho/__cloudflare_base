@@ -19,7 +19,7 @@ import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
 import { effectiveExploration, type ExploreMode } from './explore';
-import type { PriorIndex } from './priors';
+import { indexPriors, priorCapacityExceeded, type PriorIndex, type PriorsDoc } from './priors';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -181,6 +181,8 @@ export class ReportRowIdentity {
   private bytes = 0;
   private work = 0;
   private conflicted: DuplicateCounts = { decisions: 0, outcomes: 0 };
+  /** W30 F1.01: the same exclusions as witnesses, so a caller that counts by BRAND (the hourly fold) can. */
+  private conflictedRows: DuplicateWitness[] = [];
   /** `resolved` holds the conflicts an operator surface already carries; a row
    * whose conflict is filed is excluded and COUNTED instead of refusing the day.
    * `brand`, when the caller is reading ONE brand's day, is that brand: every
@@ -220,7 +222,10 @@ export class ReportRowIdentity {
       if (mine) {
         const key = conflictKey(stream, String(id));
         if (!this.resolved.has(key)) throw new ReportRowConflict(stream, String(id), row);
-        if (this.brand === undefined || row.brand === this.brand) this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
+        if (this.brand === undefined || row.brand === this.brand) {
+          this.conflicted[stream === 'decision' ? 'decisions' : 'outcomes']++;
+          this.conflictedRows.push({ brand: row.brand as string, visitor_id: row.visitor_id as string, ts: row.ts as number, stream, count: 1 });
+        }
       }
       return false;
     }
@@ -228,6 +233,8 @@ export class ReportRowIdentity {
   }
   /** Rows excluded because their conflict is filed, in the vocabulary `duplicates` uses. */
   conflicts(): DuplicateCounts { return { ...this.conflicted }; }
+  /** W30 F1.01: the same exclusions, each named by the brand it belongs to. */
+  conflictRows(): DuplicateWitness[] { return [...this.conflictedRows]; }
   duplicates(): DuplicateWitness[] {
     return [...this.rows.values()].filter(r => r.count > 0).map(({ row, stream, count }) =>
       ({ brand: row.brand as string, visitor_id: row.visitor_id as string, ts: row.ts as number, stream, count }));
@@ -379,15 +386,29 @@ function savedShape(value: unknown, ids: { tenant: string; brand: string; date: 
 }
 
 async function savedDocument(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
-  budget: ReportReadBudget): Promise<{ report: DayReport; text: string } | null> {
+  budget: ReportReadBudget): Promise<{ report: DayReport; text: string; etag: string | undefined } | null> {
   validateReportIds(ids);
   try {
     const obj = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
     if (obj === null) return null;
     const text = await storedReportText(obj, budget, 'savedBytes', 'windowBytes');
     const report: unknown = JSON.parse(text);
-    savedShape(report, ids, budget); return { report, text };
+    savedShape(report, ids, budget); return { report, text, etag: objectEtag(obj) };
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
+}
+
+/**
+ * W33 O4: the whole stored day with the etag of the object it came from, for a
+ * writer that replaces exactly that object or nothing. The leading summary
+ * frame is the writer's, not the day's, and is not part of the answer.
+ */
+export async function readStoredDay(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }): Promise<{ report: DayReport; etag: string } | null> {
+  const doc = await savedDocument(r2, ids, { bytes: 0, cells: 0 });
+  if (!doc) return null;
+  if (doc.etag === undefined) throw new ReportUnavailableError();
+  const { _summary: _frame, ...report } = doc.report as DayReport & { _summary?: unknown };
+  void _frame;
+  return { report, etag: doc.etag };
 }
 
 export async function readSavedReport(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
@@ -457,14 +478,17 @@ export async function readReportView(r2: SavedReportReader, ids: { tenant: strin
 }
 
 const SUMMARY_START = '{"_summary":';
-type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'attributionContract'> & {
+type ReportSummary = Pick<DayReport, 'tenant' | 'brand' | 'date' | 'builtAt' | 'counts' | 'hours' | 'coverage' | 'computation' | 'armVisitors' | 'allocation' | 'attributionContract' | 'provenance'> & {
   version: 1; holdout: Record<string, Array<Pick<ArmRow, 'arm' | 'decisions' | 'credited'>>>;
 };
 function summaryShape(s: unknown, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): asserts s is DayReport {
   // `armVisitors` rides the summary because the window pools it from here; a
-  // summary written before it existed simply does not carry the key.
+  // summary written before it existed simply does not carry the key. W31 M1.01:
+  // `allocation` rides it for the same reason and on the same terms — the window
+  // states the allocation its days agree on, and a summary written before the
+  // key existed is unknown, never re-derived (R149).
   if (!object(s) || s.version !== 1 || !finite(s.builtAt) || !object(s.counts)
-    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'attributionContract'].includes(k))) throw new ReportUnavailableError();
+    || !Object.hasOwn(s, 'coverage') || Object.keys(s).some(k => !['version', 'tenant', 'brand', 'date', 'builtAt', 'counts', 'holdout', 'hours', 'coverage', 'computation', 'armVisitors', 'allocation', 'attributionContract', 'provenance'].includes(k))) throw new ReportUnavailableError();
   savedShape(s, ids, budget);
 }
 function summaryLine(line: string, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): DayReport {
@@ -483,9 +507,16 @@ export function canonicalReportJson(report: DayReport): string {
       [slot, rows.map(({ arm, decisions, credited }) => ({ arm, decisions, credited }))])),
     ...(report.hours ? { hours: report.hours } : {}), coverage: reportCoverage(report), computation: recordedComputation(report.computation),
     armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
+    // W31 M1.01: the window states the published allocation its days agree on,
+    // and it pools from this frame, so the allocation rides it rather than being
+    // bought with a second read. Absent where the day records none.
+    ...(validAllocation(report.allocation) ? { allocation: validAllocation(report.allocation)! } : {}),
     // W22 A1.01: the window pools from the summary, so the contract it pooled
     // under has to be readable without opening the whole grid.
-    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}) };
+    ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
+    // W33 O3/O4: the window pools from this frame, so a day's provenance rides
+    // it — a declared day is withheld from the pool without opening its grid.
+    ...(validProvenance(report.provenance) ? { provenance: validProvenance(report.provenance)! } : {}) };
   const prefix = SUMMARY_START + JSON.stringify(summary) + ',\n';
   bound('summaryBytes', byteLength(prefix));
   const full = rawReportJson(report);
@@ -534,10 +565,28 @@ async function summaryPrefix(value: unknown, budget: ReportReadBudget): Promise<
 
 /** New canonical reports need one short range; legacy fallback is one independent full version. */
 export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string }, budget: ReportReadBudget): Promise<DayReport | null> {
+  return (await readCanonicalSummary(r2, ids, budget)).report;
+}
+
+/**
+ * W33 O2: the canonical day object a writer NOTED before it read any of its
+ * sources, so its write can be made conditional on exactly that object. `etag`
+ * is `null` where no day was stored, and `undefined` where the note could not be
+ * taken (a failed listing, or a stored day that states no etag, which R2 always
+ * states): a write cannot be made conditional on that, so it is refused rather
+ * than made blind.
+ */
+export interface CanonicalNote { etag: string | null | undefined }
+const objectEtag = (value: unknown): string | undefined =>
+  object(value) && typeof value.etag === 'string' && value.etag.length > 0 && value.etag.length <= 256 ? value.etag : undefined;
+
+/** `readWindowSummary`, answering also the etag of the object whose summary it returned. */
+export async function readCanonicalSummary(r2: SavedReportReader, ids: { tenant: string; brand: string; date: string },
+  budget: ReportReadBudget): Promise<{ report: DayReport | null; etag: string | null | undefined }> {
   validateReportIds(ids);
   try {
     const first = await r2.get(reportKey(ids.tenant, ids.brand, ids.date), { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } });
-    if (first === null) return null;
+    if (first === null) return { report: null, etag: null };
     const prefix = await summaryPrefix(first, budget), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
     const marked = prefix.bytes.length >= SUMMARY_START.length && SUMMARY_START.split('').every((c, i) => prefix.bytes[i] === c.charCodeAt(0));
     if (marked) {
@@ -548,15 +597,16 @@ export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: st
       }
       // Decode only the framed line: the following grid can end mid-codepoint in this range.
       const line = decoder.decode(prefix.bytes.subarray(0, end));
-      return summaryLine(line, ids, budget);
+      return { report: summaryLine(line, ids, budget), etag: objectEtag(first) };
     }
     if (prefix.complete) {
       const report: unknown = JSON.parse(decoder.decode(prefix.bytes));
       if (object(report) && Object.hasOwn(report, '_summary')) throw new ReportUnavailableError();
-      savedShape(report, ids, budget); return report;
+      savedShape(report, ids, budget); return { report, etag: objectEtag(first) };
     }
     // Discard every prefix fact. A concurrent replacement is read wholly, never mixed.
-    const full = await storedReportText(await r2.get(reportKey(ids.tenant, ids.brand, ids.date)), budget, 'savedBytes', 'windowBytes');
+    const whole = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
+    const full = await storedReportText(whole, budget, 'savedBytes', 'windowBytes');
     const report: unknown = JSON.parse(full);
     if (object(report) && Object.hasOwn(report, '_summary')) {
       const end = full.indexOf('\n');
@@ -564,8 +614,52 @@ export async function readWindowSummary(r2: SavedReportReader, ids: { tenant: st
       summaryLine(full.slice(0, end), ids, budget);
     }
     savedShape(report, ids, budget);
-    return report;
+    return { report, etag: objectEtag(whole) };
   } catch (error) { throw error instanceof ReportBudgetExceeded ? error : new ReportUnavailableError(); }
+}
+
+/**
+ * W33 O2: note the canonical day object BEFORE reading any source — one listing
+ * of the day's own key, which states the stored object's etag, so the note costs
+ * no read of the day and no read of any source. A listing that names the key
+ * without an etag (never R2's) is completed by a one-byte read of the object.
+ */
+export async function noteCanonicalDay(r2: SavedReportReader & { list(options: { prefix: string; limit?: number }): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }): Promise<CanonicalNote> {
+  validateReportIds(ids);
+  const key = reportKey(ids.tenant, ids.brand, ids.date);
+  try {
+    const page = await r2.list({ prefix: key, limit: 1 });
+    const listed = object(page) && Array.isArray(page.objects) ? (page.objects as unknown[]).find(o => object(o) && o.key === key) : undefined;
+    if (listed === undefined) return { etag: null };
+    const etag = objectEtag(listed);
+    if (etag !== undefined) return { etag };
+    const obj = await r2.get(key, { range: { offset: 0, length: 1 } });
+    if (obj === null) return { etag: null };
+    try { if (object(obj) && obj.body instanceof ReadableStream) await obj.body.cancel(); } catch { /* the etag is what was asked */ }
+    return { etag: objectEtag(obj) };
+  } catch { return { etag: undefined }; }
+}
+
+/**
+ * W33 O2 (document 35 §5 row W33, "Protect against concurrent overlay/canonical
+ * writes"): the one way a canonical day is written — by the POST without
+ * `policies`, the nightly job, the five-minute job and `repairCanonicalDay`.
+ * The put is conditional on the object `note` names: the object the writer
+ * noted before it read any source (the five-minute job's note is the etag of
+ * the summary it read; the repair's, the etag of the day it judged). If ANY
+ * other write reached the day after the note, the put is refused and the stored
+ * day stands, so a writer whose sources were read before a newer day was stored
+ * never replaces it. There is no read at write time and no comparison of build
+ * times. Answers whether this body was stored; a refusal is not an error. An
+ * unknown note refuses, and a storage failure throws.
+ */
+export async function writeCanonicalDay(r2: { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, body: string, note: CanonicalNote): Promise<boolean> {
+  if (note.etag === undefined) throw new ReportUnavailableError();
+  const written = await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body,
+    { onlyIf: note.etag === null ? { etagDoesNotMatch: '*' } : { etagMatches: note.etag }, httpMetadata: { contentType: 'application/json' } });
+  return written !== null;
 }
 
 export interface ReportInput {
@@ -593,6 +687,33 @@ export interface ReportInput {
    * leaving a reader to discover it by comparing numbers.
    */
   priors?: { version: number; index: PriorIndex | ((slot: string) => PriorIndex | null | undefined) } | null;
+}
+
+/** The priors input of `buildReport`, as a production caller hands it over. */
+export type ReportPriors = NonNullable<ReportInput['priors']>;
+
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document as the input
+ * `buildReport` takes, resolved per slot under the tenant's own learn document —
+ * the index the statistics object would build for that slot, read the way
+ * `LearnStats` reads it (`indexPriors` under the slot's measurement basis).
+ *
+ * A slot whose objective is `revenue` or `margin` gets no index: an imported
+ * prior is a probability, the statistics object refuses to publish such a slot
+ * rather than apply one in the wrong unit (W25 Z1.01), and the offline grid does
+ * not do what the live table refuses to — its grid is built prior-free and says
+ * so (`priorVersion: 0` on that grid). A document past the bound every reader
+ * indexes within is refused here, before any grid is built, rather than read as
+ * no prior at all.
+ */
+export function reportPriors(doc: PriorsDoc, version: number, learn: LearnConfig): ReportPriors {
+  if (priorCapacityExceeded(doc) || !Number.isSafeInteger(version) || version < 0) throw new ReportUnavailableError();
+  const configs = slotConfigsOf(learn);
+  return { version, index: (slot: string) => {
+    const config = configs[slot];
+    if ((config?.objective ?? 'unit') !== 'unit') return null;
+    return indexPriors(doc, slot, config?.measurementBasis ?? 'served-v1');
+  } };
 }
 
 /** The prior index in force for one slot, or null where the grid is prior-free. */
@@ -675,6 +796,60 @@ export function validAllocation(value: unknown): ReportAllocation | null {
 }
 
 /**
+ * W33 O3 (document 35 §5 row W33, N09): the policy and version identity that
+ * produced a stored day. `policies` is the ordered list of policy names the
+ * day's numbers were computed under; `status` says how the day came to be under
+ * the canonical key:
+ *
+ *  · `canonical` — a canonical writer published it from the hour aggregates or
+ *    the ledger, under the learning policy and the preset overlays;
+ *  · `repaired` — `repairCanonicalDay` found the day overwritten by a custom
+ *    overlay and replaced it with the day the canonical writer computes from the
+ *    retained sources;
+ *  · `declared` — the same repair found the day overwritten and its sources
+ *    gone, so the day is kept readable with the numbers it held, its `policies`
+ *    name the overlay that produced them, and the window no longer pools it.
+ *
+ * Anything that is not exactly this shape is unknown, and unknown reads `null`:
+ * a day written before the member existed is never taken for a recorded
+ * canonical one.
+ */
+export interface DayProvenance { version: 1; status: 'canonical' | 'repaired' | 'declared'; policies: string[] }
+export function validProvenance(value: unknown): DayProvenance | null {
+  if (!object(value) || !only(value, ['version', 'status', 'policies']) || value.version !== 1
+    || (value.status !== 'canonical' && value.status !== 'repaired' && value.status !== 'declared')
+    || !Array.isArray(value.policies) || !value.policies.length || value.policies.length > REPORT_LIMITS.policies
+    || !(value.policies as unknown[]).every(name) || new Set(value.policies).size !== value.policies.length) return null;
+  return { version: 1, status: value.status, policies: [...(value.policies as string[])] };
+}
+/** What a canonical writer records: the names of the policies its own numbers were computed under, in order. */
+export function dayProvenance(report: Pick<DayReport, 'policies'>, status: DayProvenance['status']): DayProvenance | null {
+  return validProvenance({ version: 1, status, policies: report.policies.map(p => p.name) });
+}
+/**
+ * W33 O4: is a stored day's policy set the canonical one — its learning policy
+ * followed by exactly the preset overlays of that same learning policy, by name
+ * and by effective definition, in order? That is what every canonical writer
+ * has computed since the presets existed (they are unchanged since CW22), so a
+ * day that fails it was written by a custom overlay (N09). `null` when the
+ * stored policies cannot be read at all: that is not evidence either way.
+ */
+export function canonicalPolicySet(policies: unknown): boolean | null {
+  if (!Array.isArray(policies) || !policies.length || policies.length > REPORT_LIMITS.policies) return null;
+  const rows: Array<{ name: string; role: string; policy: AttributionPolicy }> = [];
+  for (const row of policies as unknown[]) {
+    if (!object(row) || !name(row.name) || (row.role !== 'learning' && row.role !== 'reporting') || !object(row.policy)) return null;
+    try { validateReportPolicies([{ ...(row.policy as unknown as AttributionPolicy), name: row.name }]); } catch { return null; }
+    rows.push({ name: row.name, role: row.role, policy: row.policy as unknown as AttributionPolicy });
+  }
+  const [learning, ...reporting] = rows;
+  if (learning!.role !== 'learning' || learning!.name !== 'learning' || reporting.some(row => row.role !== 'reporting')) return false;
+  const presets = presetPolicies(learning!.policy);
+  const same = (a: AttributionPolicy, b: AttributionPolicy) => JSON.stringify(effectiveReportPolicy(a)) === JSON.stringify(effectiveReportPolicy(b));
+  return reporting.length === presets.length && presets.every((preset, i) => reporting[i]!.name === preset.name && same(reporting[i]!.policy, preset));
+}
+
+/**
  * W21 E1.04 (F07 §2.5, §7): business outcomes counted by ENROLLMENT and by
  * VISITOR, independently of whether a served piece matched them. A control
  * visitor's purchase counts for control whether or not she was served anything
@@ -748,10 +923,54 @@ export interface ReportCoverage {
    * before this release is owed. A day with any such hour is grouped by the arm
    * SERVED and answers `armVisitors` and `visitorOutcomes` null.
    *
+   * W21 R1 (LANE-LOG R156): also the built hours that carry the assignment of
+   * every decision but could not PLACE one of their outcomes — its visitor had
+   * no decision of the date at or before it, and none later in that hour, so
+   * her first decision of the day (the raw-day rule) may lie in a later hour.
+   * A day naming such an hour keeps its arm rows and `armVisitors` and answers
+   * `visitorOutcomes` null.
+   *
    * Optional in the stored evidence: a report written before this release does
    * not carry it and is still `metadata: 'recorded'`.
    */
   unassignedHours?: number[] | null;
+  /**
+   * W30 M1.01 (F17 §6 item 1): the published re-fold horizon this day was built
+   * under, measured from each hour's own END. Inside it a folded hour is still
+   * re-checked against its ledger prefix; past it the hour is final BY
+   * DECLARATION. Absent where the source does not state it (R149).
+   */
+  refoldHorizonMs?: number;
+  /**
+   * W30 M1.01/R1.01: per built hour, `open` inside the horizon above, `final`
+   * past it, and `repaired` where the hour's aggregate was WRITTEN after it
+   * became final — a rebuild a caller asked for, or a first fold that reached
+   * the hour late. Derived from the aggregate's own `builtAt`, so it needs no
+   * new stored member, and an hour is in exactly one of the three.
+   */
+  maturities?: Array<{ hour: number; maturity: 'open' | 'final' | 'repaired' }>;
+  /**
+   * W30 M1.01: ledger objects that reached an hour's prefix after that hour was
+   * final. They are COUNTED and NAMED here and applied nowhere: the rows stay in
+   * the ledger, which is what makes this a declaration and not a cutoff
+   * (HANDOFF-2026-09-16 :234, "User did not approve a blanket age cutoff").
+   */
+  lateAfterMaturity?: Array<{ hour: number; objects: number }>;
+  /**
+   * W30 V1.01: per built hour, the outcomes whose carry-in history the fold
+   * could not reach — `evicted` where the visitor's attribution ring was full at
+   * the moment the outcome was attributed and no credit was earned, `unplaced`
+   * where no decision of the visitor's date could be found for it at all.
+   */
+  carryInHours?: Array<{ hour: number; evicted: number; unplaced: number }>;
+  /** W30 C1.01/F1.01: per built hour, the ledger objects it holds and the objects the fold OPENED. */
+  objectScan?: Array<{ hour: number; objects: number; read: number }>;
+  /**
+   * W30 F1.01 (W22 R143): the version-1 shard migration bound — the earliest
+   * hour a repair can still put into the batch rings, because a version-1 state
+   * remembers only a high-water mark. `0` where no shard imposes one.
+   */
+  recoveryFromMs?: number;
 }
 
 export interface DayReport {
@@ -792,7 +1011,7 @@ export interface DayReport {
   armVisitors?: ArmVisitors | null;
   /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
   allocation?: ReportAllocation;
-  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field. */
+  /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field, or names an hour in `coverage.unassignedHours`. */
   visitorOutcomes?: VisitorOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
@@ -819,6 +1038,13 @@ export interface DayReport {
    * absence means unknown, never "prior-free".
    */
   gridPriors?: { applied: boolean; priorVersion: number };
+  /**
+   * W33 O3: the policy and version identity that produced this stored day
+   * (`DayProvenance`). Set by the canonical writers and the repair; absent on a
+   * response-only overlay and on a day written before it existed, which the
+   * read answers `null`.
+   */
+  provenance?: DayProvenance | null;
 }
 
 /**
@@ -846,7 +1072,31 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   // list of built hours or the explicit unknown.
   const assignment = e.unassignedHours === undefined || e.unassignedHours === null
     || (hours(e.unassignedHours) && e.unassignedHours.every(h => knownHours(report.hours?.built).includes(h)));
+  // W30 (R149, R177): every member this batch adds is OPTIONAL in the stored
+  // evidence — a report written before this release carries none and is still
+  // `metadata: 'recorded'` — and, where it is present, it is a list of BUILT
+  // hours, in hour order, with exactly the members it is declared with.
+  const count = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) >= 0;
+  const perHour = (v: unknown, keys: readonly string[], check: (row: Record<string, unknown>) => boolean): boolean => {
+    if (v === undefined) return true;
+    if (!Array.isArray(v) || v.length > 24) return false;
+    let previous = -1;
+    for (let i = 0; i < v.length; i++) {
+      const row: unknown = v[i];
+      if (!Object.hasOwn(v, i) || !object(row) || Object.keys(row).length !== keys.length + 1
+        || !hour(row.hour) || !built.includes(row.hour) || row.hour <= previous
+        || !keys.every(key => Object.hasOwn(row, key)) || !check(row)) return false;
+      previous = row.hour;
+    }
+    return true;
+  };
+  const maturityRows = perHour(e.maturities, ['maturity'], row => row.maturity === 'open' || row.maturity === 'final' || row.maturity === 'repaired');
+  const lateRows = perHour(e.lateAfterMaturity, ['objects'], row => count(row.objects));
+  const carryRows = perHour(e.carryInHours, ['evicted', 'unplaced'], row => count(row.evicted) && count(row.unplaced));
+  const scanRows = perHour(e.objectScan, ['objects', 'read'], row => count(row.objects) && count(row.read) && Number(row.read) <= Number(row.objects));
+  const bounds = (e.refoldHorizonMs === undefined || count(e.refoldHorizonMs)) && (e.recoveryFromMs === undefined || count(e.recoveryFromMs));
   const valid = e.version === 1 && e.source === source && source !== 'unknown' && assignment &&
+    maturityRows && lateRows && carryRows && scanRows && bounds &&
     typeof e.truncated === 'boolean' && (typeof e.visitorsIncomplete === 'boolean' || e.visitorsIncomplete === null) &&
     hours(e.missingHours) && hours(e.truncatedHours) && hours(e.unadvancedHours) && hours(e.unknownHours) &&
     e.truncatedHours.every(h => built.includes(h)) && e.unadvancedHours.every(h => built.includes(h)) && e.unknownHours.every(h => built.includes(h)) &&
@@ -861,9 +1111,30 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const missingHours = knownHours([...missing, ...knownHours(e.missingHours)]);
   const visitorsIncomplete = e.visitorsIncomplete === true ? true : valid ? e.visitorsIncomplete as boolean | null : null;
   const truncated = report.counts?.truncated === true || e.truncated === true || truncatedHours.length > 0;
+  // W30: the members are echoed only where the source really states them, and a
+  // list is copied row by row so nothing the evidence carried beside them rides
+  // through. `null`/absent is the honest unknown, never an empty list.
+  const copy = <T>(v: unknown, ok: boolean, row: (value: Record<string, unknown>) => T): T[] | undefined =>
+    valid && ok && Array.isArray(v) ? (v as Record<string, unknown>[]).map(row) : undefined;
+  const maturities = copy(e.maturities, maturityRows, r => ({ hour: r.hour as number, maturity: r.maturity as 'open' | 'final' | 'repaired' }));
+  const lateAfterMaturity = copy(e.lateAfterMaturity, lateRows, r => ({ hour: r.hour as number, objects: r.objects as number }));
+  const carryInHours = copy(e.carryInHours, carryRows, r => ({ hour: r.hour as number, evicted: r.evicted as number, unplaced: r.unplaced as number }));
+  const objectScan = copy(e.objectScan, scanRows, r => ({ hour: r.hour as number, objects: r.objects as number, read: r.read as number }));
+  // W30 M1.01/V1.01: a row the day holds but does not include, and a
+  // visitor-level outcome it could not place, are both reasons the day is
+  // INCOMPLETE — data exists that the numbers do not carry.
+  const late = (lateAfterMaturity ?? []).some(row => row.objects > 0);
+  const unplaced = (carryInHours ?? []).some(row => row.unplaced > 0);
   return {
-    version: 1, source, metadata, status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length ? 'incomplete' : 'unknown',
+    version: 1, source, metadata,
+    status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length || late || unplaced ? 'incomplete' : 'unknown',
     maturity: 'unknown', truncated, visitorsIncomplete, missingHours, truncatedHours, unadvancedHours, unknownHours, horizons,
+    ...(valid && count(e.refoldHorizonMs) ? { refoldHorizonMs: e.refoldHorizonMs } : {}),
+    ...(maturities ? { maturities } : {}),
+    ...(lateAfterMaturity ? { lateAfterMaturity } : {}),
+    ...(carryInHours ? { carryInHours } : {}),
+    ...(objectScan ? { objectScan } : {}),
+    ...(valid && count(e.recoveryFromMs) ? { recoveryFromMs: e.recoveryFromMs } : {}),
     // Stated only where the source really states it: an absent, unknown or
     // unreadable evidence block reads `null`, never an empty list, which would
     // claim every built hour carries the assignment.
@@ -904,6 +1175,8 @@ export function diagnosticDayReport(report: DayReport): DayReport {
     coverage,
     computation: recordedComputation(report.computation),
     ...(validAttributionContract(report.attributionContract) ? { attributionContract: validAttributionContract(report.attributionContract)! } : {}),
+    // W33 O3: always answered — a day that records none is the explicit unknown.
+    provenance: validProvenance(report.provenance),
   };
 }
 
@@ -1304,11 +1577,47 @@ export async function runReport(
   now = Date.now(),
   retentionEnv?: RetentionEnv,
   resolved?: ResolvedConflicts,
+  /**
+   * W25 R4: the tenant's published prior document (`reportPriors`), so a day
+   * built from the ledger records builds its grids the way the live table does
+   * and its `gridPriors` declares the revision it applied. Absent, the grids are
+   * built prior-free and the report declares that instead.
+   */
+  priors?: ReportPriors | null,
+  /**
+   * W33 O2: the canonical day object the caller noted before it read any source
+   * (`runDayReport` notes once, before it lists the hour aggregates, and hands
+   * the note here when the day falls back to the ledger). Absent, a canonical
+   * build notes it itself, before it reads the ledger.
+   */
+  note?: CanonicalNote,
+): Promise<DayReport> {
+  return ledgerReport(r2, ids, learn, reporting, now, retentionEnv, resolved, priors, reporting === null, note);
+}
+
+/**
+ * W33 O4: the canonical day from the ledger exactly as `runReport(…, null, …)`
+ * computes it — the learning policy and the preset overlays, prior-free as the
+ * nightly job builds it — WITHOUT writing it, so the repair can make its own
+ * write conditional on the affected day it read.
+ */
+export async function rebuildLedgerDay(r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, retentionEnv?: RetentionEnv): Promise<DayReport> {
+  return ledgerReport(r2, ids, learn, null, now, retentionEnv, undefined, null, false);
+}
+
+async function ledgerReport(
+  r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },
+  ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now: number,
+  retentionEnv: RetentionEnv | undefined, resolved: ResolvedConflicts | undefined, priors: ReportPriors | null | undefined, persist: boolean,
+  note?: CanonicalNote,
 ): Promise<DayReport> {
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const overlays = reporting ?? presetPolicies(learning);
   bound('policies', overlays.length + 1); validateReportPolicies([learning, ...overlays]);
   const budget: RawReadBudget = { objects: 0, bytes: 0 };
+  // W33 O2: a canonical build notes the day object before it reads the ledger.
+  const noted = reporting === null && persist ? note ?? await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids) : undefined;
   // Sequential reads share limits and stop before later streams/erasure reads on refusal.
   // W22 D1.05: the day is read for ONE brand, and the reader is told which, so
   // a conflict in another brand of the same tenant neither refuses this brand's
@@ -1331,7 +1640,7 @@ export async function runReport(
   }
   const report = buildReport({
     ...ids, learning, reporting: overlays, learn,
-    decisions, outcomes, ...(resolved ? { resolved } : {}),
+    decisions, outcomes, ...(resolved ? { resolved } : {}), ...(priors ? { priors } : {}),
     now, truncated: d.truncated || o.truncated,
   }, conflicts);
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };
@@ -1346,9 +1655,14 @@ export async function runReport(
   // Explicit overlays (even [] or the preset list) are response-only. They must not
   // replace the canonical aggregate/raw report subsequently read by GET/window.
   if (reporting === null) {
+    // W33 O3: the canonical day records the policy set that produced it.
+    report.provenance = dayProvenance(report, 'canonical');
     const body = canonicalReportJson(report);
     if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
-    try { await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body, { httpMetadata: { contentType: 'application/json' } }); } catch { /* the response still carries it */ }
+    // W33 O2: conditional on the object noted before the ledger was read, so a
+    // canonical day stored while this one was reading it is never replaced; a
+    // refused write leaves the response carrying a day that is not stored.
+    if (persist && noted) try { await writeCanonicalDay(r2, ids, body, noted); } catch { /* the response still carries it */ }
   } else rawReportJson(report);
   if (retentionEnv) for (const row of [...decisions, ...outcomes]) requireRetention(retentionEnv, row.retention?.ledger, ids.tenant, 'ledger');
   return report;

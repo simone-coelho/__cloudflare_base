@@ -125,6 +125,28 @@ export const namedSlotOf = (slot: string | null | undefined): string | null =>
   typeof slot === 'string' && slot.trim().length > 0 && slot !== 'unknown' ? slot : null;
 
 /**
+ * W26 R4 (LANE-LOG R198; the W26-B1 build review: "the uncorrelated path scopes
+ * by brand" and counted nothing): for an outcome that names NO decision, how
+ * many placements of ANOTHER brand it would have been credited to under the
+ * same policy — same scope, same item or featured product, same named slot,
+ * inside the reward's window — in a slot its own brand credited nothing.
+ *
+ * `foreign` is the caller's own candidate list narrowed to entries that carry a
+ * brand other than the outcome's; an entry with no brand cannot establish a
+ * disagreement. `credited` is what the outcome's own brand was credited, so an
+ * outcome its own placement took is never also a mismatch there. A COUNT, never
+ * a gate: it credits nothing and moves nothing between brands. A correlated
+ * outcome is counted by `attributeWindowed` itself and answers 0 here.
+ */
+export function uncorrelatedBrandMismatches(outcome: OutcomeRecord, foreign: readonly RingEntry[], policy: AttributionPolicy, credited: readonly Credit[]): number {
+  if (Object.prototype.hasOwnProperty.call(outcome, 'decision_id')) return 0;
+  const candidates = foreign.filter(e => typeof e.brand === 'string' && e.brand !== outcome.brand);
+  if (!candidates.length) return 0;
+  const own = new Set(credited.map(c => c.slot));
+  return attributeWindowed(outcome, candidates, policy).credits.filter(c => !own.has(c.slot)).length;
+}
+
+/**
  * Apply the learning policy to one outcome against the visitor's ring. Pure.
  * Eligible decisions are those in scope, inside the reward's window, before the
  * outcome; `match` narrows them to the served item; `credit` picks who is paid.

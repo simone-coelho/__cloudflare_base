@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W23",
+  "workOrderHash": "sha256:12e88ea058e265fafc17d6bbbed27aadc586e7f851e07324d53f2ccf4323fed3",
+  "artifact": {
+    "revision": "d14d4c453388e9fe2305b516f0f013b828e0aa6a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W23-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W23-delivery/implementer/logs/eslint.log",
+      "git commits 7d94140 d14d4c4 on rem/w23-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W23 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/reflex/regionTrend.test.ts -t \"W23[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W23-delivery/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W23-delivery/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W23-delivery/reviewer/logs/integration-gate.log",
+      "/home/simonecoelho/rem/_evidence/W23-delivery/implementer/logs/integration-gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W23-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-25T23:34:31.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE3",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
