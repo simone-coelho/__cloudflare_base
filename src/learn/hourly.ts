@@ -2772,8 +2772,10 @@ export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: stri
  * exactly the day the canonical writer computes from them now — the sum of the
  * date's hour aggregates where the date has any, the day's ledger rows
  * otherwise — recorded `provenance.status: 'repaired'`. It is DECLARED where
- * they are not — no hour aggregate and no ledger row of the brand remains for a
- * day that counted some — kept readable with the numbers it held, its
+ * they are not — that same rebuild finds no row of the brand (none in the
+ * date's hour aggregates, or in its ledger where the date has no aggregate,
+ * erased rows counting as found) for a day that counted some — kept readable
+ * with the numbers it held, its
  * provenance naming the overlay policies that produced them, and withheld from
  * every window. A declared day is still affected, so a later pass repairs it if
  * its sources come back and otherwise leaves it byte-identical.
@@ -2799,7 +2801,10 @@ export async function repairCanonicalDay(r2: R2Agg, ids: { tenant: string; brand
     const counted = stored.report.counts;
     if (!objectMap(counted)) throw new ReportUnavailableError();
     const rebuilt = await aggregateDay(r2, ids, learn, now) ?? await rebuildLedgerDay(r2, ids, learn, now, retentionEnv);
-    const lost = rebuilt.counts.decisions === 0 && rebuilt.counts.outcomes === 0 && (counted.decisions > 0 || counted.outcomes > 0);
+    // Sources are GONE only where the rebuild found no row of the brand at all —
+    // not where every row it found was erased, which is a canonical (empty) day.
+    const lost = rebuilt.counts.decisions === 0 && rebuilt.counts.outcomes === 0 && !(rebuilt.erasures?.rows_hidden)
+      && (counted.decisions > 0 || counted.outcomes > 0);
     let next: DayReport, status: 'repaired' | 'declared';
     if (!lost) {
       // The replacement is itself the canonical day, or nothing is written: a
