@@ -1033,10 +1033,14 @@ decisionRoutes.get('/:tenant/replay/:id', operatorJwt(), async (c) => {
 /**
  * POST /v1/:tenant/models/reference (doc 22 §9). The reference implementation
  * of the model contract, as a service a data science team can call to see the
- * shape, and point the `service` kind at by URL to see the term on a receipt.
- * Stateless; no visitor id crosses it.
+ * shape. Stateless; no visitor id crosses it. W34 E4 (F30): it carries the
+ * operator authentication and tenant scope of the learn write routes — the
+ * gate of POST learn/cycle, an operator token holding the resolved tenant's
+ * grant in enforced mode — so no site key, shopper session or other tenant's
+ * operator reaches it. No live decision calls it: the external-model policy is
+ * off (src/learn/external.ts).
  */
-decisionRoutes.post('/:tenant/models/reference', async (c) => {
+decisionRoutes.post('/:tenant/models/reference', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const body = (await c.req.json().catch(() => null)) as Partial<ExternalRequest> | null;
