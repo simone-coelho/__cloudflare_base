@@ -2930,7 +2930,7 @@
     {
       "id": "W33",
       "title": "Custom overlays never overwrite canonical day reports",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3077,7 +3077,7 @@
     {
       "id": "W34",
       "title": "External-model policy: off makes zero calls",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
