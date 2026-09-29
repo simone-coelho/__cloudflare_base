@@ -3504,15 +3504,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "f54b0346d07b13b32d76bb31d8fda1f11f856911 on rem/spec-w33-w36: src/units/W36",
+        "reviewedRevision": "2f1988ffb7d07a33d26be014abc879e3810c5552 on rem/spec-w36 (fix 1, one commit on f54b034): src/units/W36 (LEDGER and FIX1)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/logs/r1-fix1-at-head-e2030e7.log",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/logs/r2-fix1-at-base-3c68192.log",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/specifier/logs/W36-negative-control-fix1.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W36-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W36-S5-returning-snapshot.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W36-acceptance.log"
