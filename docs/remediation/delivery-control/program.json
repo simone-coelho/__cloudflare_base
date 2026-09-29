@@ -3407,7 +3407,7 @@
     {
       "id": "W36",
       "title": "Session containment on event routes",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3534,7 +3534,7 @@
     {
       "id": "W37",
       "title": "One tenant registry and per-customer stamps",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
