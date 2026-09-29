@@ -2135,7 +2135,15 @@ describe('W35.03 recoverable identity transfer', () => {
         expect(source.data.get('identityTransfer')).toMatchObject({ status: 'complete' });
         expect(source.data.get('forwardTo')).toBe(shopperObjectName(g.tenant, target));
         clock.mockReturnValue(Date.now() + 1);
-        expect(await link(f, g)).toEqual(recovered); expect([...destination.data]).toEqual(accepted);
+        // W35 step-3 STALE correction (expectation only): the replayed answer is the
+        // recovered one, except that each consent cookie's Max-Age is the instruction's
+        // REMAINING lifetime at the replay's own clock (settled decision D06-W05: the
+        // choice lasts 30 days from the explicit choice and absent/expired is off, so a
+        // cookie never outlives it — SessionManager.generateConsentCookieHeaders floors
+        // expiresAt - now). One millisecond later that is one second less.
+        const remaining = (cookie: string) => { const name = cookie.split('=')[0], key = name === 'opt_tracking_consent' ? 'tracking' : 'personalization';
+          return cookie.replace(/Max-Age=\d+/, 'Max-Age=' + Math.max(0, Math.floor((recovered.consent!.instruction![key]!.expiresAt - Date.now()) / 1000))); };
+        expect(await link(f, g)).toEqual({ ...recovered, cookieHeaders: recovered.cookieHeaders.map(remaining) }); expect([...destination.data]).toEqual(accepted);
         const stored = JSON.parse(f.sessions.data.get(tenantKey(g.tenant, 'identity:shopper:' + target))!);
         expect(stored.visitors.map((value: { visitorId: string }) => value.visitorId)).toEqual([g.subject]);
         const visitor = JSON.parse(f.sessions.data.get(tenantKey(g.tenant, 'identity:visitor:' + g.subject))!);
@@ -2155,10 +2163,33 @@ describe('W35.03 recoverable identity transfer', () => {
         entered.release(); await release.wait; return originalPut(...args);
       });
       const live = f.call('/realtime/action', a.capability, event(a)); await entered.wait;
+      // Each browser's explicit choice, by its own revision, before either link carries it to the person.
+      const choiceOf = (g: Grant) => (item(f, g.subject).data.get('consent') as { revision: string }).revision, ra = choiceOf(a), rb = choiceOf(b);
       const first = link(f, a), duplicate = link(f, a), second = link(f, b);
       release.release(); expect((await live).status).toBe(200); held.mockRestore();
       const [one, two, three] = await Promise.all([first, duplicate, second]);
-      expect(one).toEqual(two); expect(one.sessionId).toBe(three.sessionId);
+      // W35 step-3 STALE correction (expectation only): a replayed link answers the
+      // accepted receipt with the person's CURRENT consent ("A later refusal changes
+      // only consent; the accepted merge is never replayed", ShopperReflex.handleTransfer),
+      // and since W05 that consent carries its instruction and revision. The competing
+      // link of `b` carries b's instruction into the person, so the duplicate answers
+      // the receipt exactly, with the person's consent either before or after b's carry.
+      // W35 follow-up correction (expectation and one arrangement read, 2026-09-24): the two
+      // links of `a` are concurrent and identical, so EITHER may be the one the object
+      // accepts — neither the test nor the call order fixes their order at the object
+      // (forcing `first` 40 ms late reproduces the reviewer's 1-in-26 run exactly:
+      // `duplicate` accepted, `first` replayed after b's carry). The accepted link of `a`
+      // answers a's choice carried to the person; the replayed one answers the person's
+      // current consent, a's choice or, if b's link was accepted in between, b's; b's link
+      // answers b's choice. The two allowed states are named by each choice's own revision.
+      expect({ ...two, consent: one.consent }).toEqual(one);
+      const carried = { a: [one, two].find(answer => answer.consent?.instruction?.revision === ra)?.consent, b: three.consent };
+      expect(carried.a, 'the accepted link of a answers a\'s choice carried to the person').toMatchObject({ tracking: true, personalization: true,
+        instruction: { revision: ra, subject: target, tenant: 'meridian' } });
+      expect(carried.b, 'the link of b answers b\'s choice carried to the person').toMatchObject({ tracking: true, personalization: true,
+        instruction: { revision: rb, subject: target, tenant: 'meridian' } });
+      for (const answer of [one, two]) expect([carried.a, carried.b], 'each link of a answers one of the two carried states').toContainEqual(answer.consent);
+      expect(one.sessionId).toBe(three.sessionId);
       expect(pipe(f, target).attributes.page_views).toBe(5);
       expect(pipe(f, target).visitCount).toBe(2);
       expect([...destination.data.keys()].filter(key => key.startsWith('identityReceipt:'))).toHaveLength(2);
@@ -2168,7 +2199,11 @@ describe('W35.03 recoverable identity transfer', () => {
       const originalGet = f.sessions.get.bind(f.sessions);
       const stale = vi.spyOn(f.sessions, 'get').mockImplementation((key, type) => key.includes('identity:') ? Promise.resolve(null) : originalGet(key, type));
       f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify({ shopperId: target, visitors: [] }));
-      restart(f, older.subject); restart(f, target); expect(await link(f, older)).toEqual(olderResult);
+      // W35 step-3 STALE correction (expectation only), as above: the replay answers the
+      // older receipt with the person's current consent, which the newer member's accepted
+      // link carried last and nothing has changed since.
+      const newerResult = firstMember === a.subject ? three : one;
+      restart(f, older.subject); restart(f, target); expect(await link(f, older)).toEqual({ ...olderResult, consent: newerResult.consent });
       expect(JSON.parse(f.sessions.data.get(tenantKey('meridian', 'identity:shopper:' + target))!).visitors.map((v: { visitorId: string }) => v.visitorId).sort()).toEqual(expectedMembers);
       expect([...destination.data]).toEqual(accepted); stale.mockRestore();
       const sourceSaved = structuredClone([...source.data]);
@@ -2194,22 +2229,45 @@ describe('W35.03 recoverable identity transfer', () => {
 
   it('binds transfer authority and intersects current consent without replaying an accepted merge', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+    const personRefusal = (subject: string) => { const at = Date.now(); return { version: 1, tenant: 'meridian', subject, revision: crypto.randomUUID(),
+      tracking: { value: true, chosenAt: at, expiresAt: at + CONSENT_LIFETIME_MS }, personalization: { value: false, chosenAt: at, expiresAt: at + CONSENT_LIFETIME_MS } }; };
     try {
       for (const refusal of ['source', 'target', 'retry']) {
         invalidateCache(); const f = boundary('do'), g = await warm(f), target = await shopperIdFor(f.env, g.tenant, 'w3503-person');
         await internal(f, target, '/identity/export'); const destination = item(f, target);
         if (refusal === 'source') expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, { trackingConsent: false })).status).toBe(200);
-        if (refusal === 'target') destination.data.set('consent', { tracking: true, personalization: false });
+        // W35 step-3 STALE correction (arrangement only): since W05 (settled decision
+        // D06-W05) a person's refusal is an explicit-choice instruction; the pre-W05 bare
+        // switch record now reads as NO choice (content/consent.ts storedConsent), so it
+        // no longer authored the refusal this case is about.
+        if (refusal === 'target') destination.data.set('consent', personRefusal(target));
         const accepted = await link(f, g), profile = structuredClone({ affinity: destination.data.get('affinity'), pipeline: destination.data.get('pipeline') });
+        // W35 step-3 STALE correction (expectation only): since W05 the answered consent
+        // is the person's stored consent WITH its explicit-choice instruction, carried to
+        // the person's subject (content/consent.ts carryConsent), not the bare switches.
+        const answered = (consent: unknown, owner: { data: Map<string, unknown> }, subject: string, tracking: boolean, personalization: boolean) => {
+          expect(consent).toEqual(storedConsent(owner.data.get('consent')));
+          expect(consent).toMatchObject({ tracking, personalization, instruction: { tenant: 'meridian', subject, tracking: { value: tracking }, personalization: { value: personalization } } });
+        };
         if (refusal !== 'retry') {
-          expect(accepted.consent).toEqual(refusal === 'source' ? { tracking: false, personalization: true } : { tracking: true, personalization: false });
-          expect(pipe(f, target).attributes.page_views).toBeUndefined(); expect(pipe(f, target).profileEnrichment).toBeUndefined();
+          answered(accepted.consent, destination, target, refusal !== 'source', refusal === 'source');
+          // W35 step-3 STALE correction (expectation only): under a refusal the person gets
+          // the identity receipt and no behavioral record at all (CW31), so there may be no
+          // pipeline to read; what the refusal forbids is still exactly what is checked.
+          expect(pipe(f, target)?.attributes.page_views).toBeUndefined(); expect(pipe(f, target)?.profileEnrichment).toBeUndefined();
         } else {
           expect(pipe(f, target).attributes.page_views).toBe(2);
           expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, { personalizationEnabled: false })).status).toBe(200);
           restart(f, g.subject); restart(f, target);
           const again = await link(f, g);
-          expect(again).toEqual({ ...accepted, consent: { tracking: true, personalization: false } });
+          // W35 step-3 STALE correction (expectation only): the accepted receipt is answered
+          // again, never re-merged, with the person's current consent; under that refusal the
+          // answer projects no memberships or changes (ShopperReflex.handleTransfer's refusal
+          // projection, the same one the refusal cases below observe) and the personalization
+          // cookie carries the refusal for the rest of the choice's lifetime (D06-W05).
+          expect(again).toEqual({ ...accepted, consent: again.consent, audiences: [], changes: { entered: [], exited: [], explain: [] },
+            cookieHeaders: accepted.cookieHeaders.map(cookie => cookie.replace(/^opt_personalization_enabled=true;/, 'opt_personalization_enabled=false;')) });
+          answered(again.consent, destination, target, true, false);
           expect({ affinity: destination.data.get('affinity'), pipeline: destination.data.get('pipeline') }).toEqual(profile);
         }
         const source = item(f, g.subject), saved = structuredClone([...destination.data]);
@@ -2246,13 +2304,22 @@ describe('W35.03 recoverable identity transfer', () => {
         destination.data.set('affinity', affinity); destination.data.set('pipeline', pipeline); destination.data.set('audienceOwner', owner);
         expect(tickReflex(affinity.reflex, Date.now(), DEFAULT_REFLEX_CONFIG).changes.exited).toContain(membership);
         if (refusal === 'source') expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, { trackingConsent: false })).status).toBe(200);
-        else destination.data.set('consent', { tracking: true, personalization: false });
+        else destination.data.set('consent', personRefusal(prior.shopperId)); // W35 step-3 STALE correction (arrangement only), as above.
         restart(f, prior.shopperId); const alarms = [...destination.alarms];
         const linked = await link(f, g);
-        expect(linked.consent).toEqual(refusal === 'source' ? { tracking: false, personalization: true } : { tracking: true, personalization: false });
+        // W35 step-3 STALE correction (expectation only), as in the loop above.
+        expect(linked.consent).toEqual(storedConsent(destination.data.get('consent')));
+        expect(linked.consent).toMatchObject({ tracking: refusal !== 'source', personalization: refusal === 'source',
+          instruction: { tenant: 'meridian', subject: prior.shopperId, tracking: { value: refusal !== 'source' }, personalization: { value: refusal === 'source' } } });
         expect({ affinity: destination.data.get('affinity'), pipeline: destination.data.get('pipeline'), owner: destination.data.get('audienceOwner'), alarms: destination.alarms })
           .toEqual({ affinity, pipeline, owner, alarms });
-        expect(linked).toMatchObject({ sessionId: prior.sessionId, changes: { entered: [], exited: [], explain: [] }, audiences: [membership] });
+        // W35 step-3 STALE correction (expectation only): a refused link answers no
+        // memberships (ShopperReflex.handleTransfer projects audiences [] whenever the
+        // person's consent does not personalize — a refusing shopper is not shown
+        // profile-derived output, as sort.ts states for drivers); the stored membership
+        // itself is untouched, which the state comparison above already proves.
+        expect(linked).toMatchObject({ sessionId: prior.sessionId, changes: { entered: [], exited: [], explain: [] }, audiences: [] });
+        expect(destination.data.get('pipeline')).toMatchObject({ segments: expect.arrayContaining([membership]) });
         expect([...destination.data.keys()].filter(key => key.startsWith('identityReceipt:'))).toHaveLength(2);
         expect((destination.data.get('identityMembers') as { visitors: Array<{ visitorId: string }> }).visitors.map(member => member.visitorId)).toEqual([existing.subject, g.subject]);
         await f.drain();
@@ -2270,8 +2337,25 @@ describe('W35.03 recoverable identity transfer', () => {
       expect(targetState.get('identitySequence')).toBe(1);
       expect(targetState.get('identityRegistration:0000000000000001')).toEqual({ version: 1, intent, targetEpoch: admittedEpoch, sequence: 1 });
       expect([...f.sessions.data]).toEqual(index);
-      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify({ shopperId: target, createdAt: 1, salted: false,
-        visitors: [{ visitorId: 'legacy-member', linkedAt: 1, assurance: 'signed', source: 'login' }] }));
+      // W35 delivery correction (arrangement, and one expectation on the old arrangement,
+      // 2026-09-28): a legacy membership the object may adopt is one the product wrote, and
+      // every identity projection the product writes carries its identity retention stamp,
+      // born from the record's own creation and admission (ShopperReflex handleTransfer and
+      // the history import: `retentionBirth(env, tenant, 'identity', <created>, <admitted>)`,
+      // published by IdentityStore.publish, src/identity/store.ts). Adoption pins that stamp
+      // (pinRetention(members.retention, …, 'identity'), the retention remedy present since
+      // the takeover baseline 7b01c14), and a row without one is never newly authorized
+      // (src/retention.ts readRetention: "A missing stamp means legacy, never newly
+      // authorized"). So the unstamped row this case used to seed is refused by that guard
+      // and commits nothing, and the stamped row is adopted with every assertion as before.
+      const legacyRow = { shopperId: target, createdAt: 1, salted: false,
+        visitors: [{ visitorId: 'legacy-member', linkedAt: 1, assurance: 'signed', source: 'login' }] };
+      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify(legacyRow));
+      const unstampedIndex = [...f.sessions.data], unstampedTarget = structuredClone([...targetState]);
+      await expect(link(f, g)).rejects.toMatchObject({ name: 'RetentionUnavailable' });
+      expect([...targetState]).toEqual(unstampedTarget); expect([...f.sessions.data]).toEqual(unstampedIndex);
+      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify({ ...legacyRow,
+        retention: retentionBirth(f.env, 'meridian', 'identity', legacyRow.createdAt, Date.now()) }));
       await link(f, g);
       expect((item(f, target).data.get('identityMembers') as { visitors: Array<{ visitorId: string }> }).visitors.map(member => member.visitorId)).toEqual(['legacy-member', g.subject]);
       await f.drain();
@@ -3708,8 +3792,18 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
             expect(response.status).toBe(200);
             const body = await response.json() as { dropped?: string; update?: { data: unknown } };
             if (policy === 'catalog-only') {
-              if (host === 'do') { expect(body.dropped).toBe('unknown_product'); expect(raw(f, g)).toBeUndefined(); }
-              else { expect(raw(f, g).reflex.dims).toEqual({}); expect(raw(f, g).attributes).toMatchObject({ product_views: 1, viewed_product_line: s.value, price_band_viewed: 'entry' }); }
+              // W35 step-3 collision correction (expectation only): W35.A1 requires the two
+              // hosts to answer one event sequence identically, and the rule for an event whose
+              // product the tenant does not hold and which leaves nothing placeable is the trust
+              // rule "unknown productId dropped and counted" (docs/architecture/16-edge-affinity-
+              // reflex.md:269; docs/kit/02-api-reference.md:111-113). The session host therefore
+              // answers the drop the object host already answers, and counts none of it.
+              expect(body.dropped).toBe('unknown_product');
+              if (host === 'do') expect(raw(f, g)).toBeUndefined();
+              else {
+                const kept = JSON.parse(f.sessions.data.get(tenantKey(g.tenant, `session:${g.sessionId}`)) ?? '{}') as { reflex?: { dims?: unknown }; attributes?: { product_views?: number } };
+                expect(kept.reflex?.dims ?? {}).toEqual({}); expect(kept.attributes?.product_views ?? 0).toBe(0);
+              }
               continue;
             }
             expect(body.dropped).toBeUndefined(); emptyLists(body.update?.data);
@@ -4164,9 +4258,29 @@ describe('W37.03 tenant-owned DO audiences', () => {
     const gate = () => { let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; }); return { wait, release }; };
     try {
       await getConnectors(f.env, g.tenant).audiences.createAudience(audience(2));
+      // W35 step-3 STALE correction (arrangement only): since W05 (settled decision
+      // D06-W05) tracking is off until an explicit choice and the object's consent door
+      // requires that choice (ShopperReflex POST /consent, chooseConsent), so the bare
+      // switch POST that followed the first action now answers 400 and the first action
+      // is not tracked. The shopper's explicit choice therefore comes first, through the
+      // same fixture helper every other owned-consent case uses. The tenant's published
+      // reflex document keeps the demo cadence this case was written under (a membership
+      // decays out within minutes): since the W16 production horizons the compiled default
+      // decays over days, so the crossing alarm below would fire after the shopper's 24-hour
+      // grant expired and every signed read after it would be refused for that reason alone.
+      await fixturePublication(f.env, g.tenant, [{ kind: REFLEX_KIND, scope: reflexScopeForTenant(g.tenant),
+        revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value: { ...DEFAULT_REFLEX_CONFIG, eventAttributes: 'event-when-unknown', tauMs: 60_000 } } }]);
+      await positiveChoice(f, g);
       expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200);
-      const item = itemFor(f, g), ws = socket(g); item.sockets.push(ws as unknown as WebSocket);
-      expect((await direct(item, '/consent', { tracking: true, personalization: true }, g)).status).toBe(200);
+      // W35 step-3 STALE correction (arrangement only): a hibernated socket's attachment is
+      // the VERIFIED principal handleUpgrade serializes (ShopperReflex.ts:856), never the
+      // issued capability bundle; the object's strict grant schema (ShopperReflex.ts:194-198)
+      // refuses the bundle's extra `capability` member and closes the socket, so this case's
+      // socket carries exactly the attachment the object writes. (The shared `socket()`
+      // helper above is left as it is: the W37.03 cases that use it belong to W37.)
+      const { capability: _issued, ...verified } = g; void _issued;
+      const item = itemFor(f, g), ws = { deserializeAttachment: () => ({ shopperId: g.subject, principal: verified }), send: vi.fn(), close: vi.fn() };
+      item.sockets.push(ws as unknown as WebSocket);
       const storage = item.state.storage as unknown as { put(key: string | Record<string, unknown>, value?: unknown): Promise<void> };
       const originalPut = storage.put.bind(storage), put = vi.spyOn(storage, 'put');
       const view = async () => {
@@ -4180,8 +4294,22 @@ describe('W37.03 tenant-owned DO audiences', () => {
         restart(f, g); ws.send.mockClear(); await view(); put.mockClear();
       };
       // A fallible decision tail must not leak even the aliased visitorId/segments.
-      const decisions = vi.spyOn(MockDecisionProvider.prototype, 'decideAll').mockRejectedValueOnce(new Error('synthetic derivation failure'));
-      await expect(direct(item, '/ingest', event(g), g)).rejects.toThrow('synthetic derivation failure');
+      // W35 step-3 STALE correction (arrangement only): `meridian` is not the legacy demo
+      // tenant (src/connectors/config.ts:106), so getConnectors builds a LiveDecisionProvider
+      // (src/connectors/index.ts:29-36) and a MockDecisionProvider spy no longer reaches the
+      // request path; the fault is injected into the provider the object actually calls,
+      // as the W35.02 visit-context case in this file already does.
+      const decisions = vi.spyOn(LiveDecisionProvider.prototype, 'decideAll').mockRejectedValueOnce(new Error('synthetic derivation failure'));
+      // W35 delivery correction (expectation only, 2026-09-28; lead ruling: W19's answer is the
+      // contract): since W19 LG1 (6219c50) the object's ingest door ANSWERS the reducer's own
+      // failure the way the session host's POST /realtime/action names it (500, "Failed to
+      // process action event", the cause in `details`; ShopperReflex.ts ingestFailure) instead
+      // of rejecting the call. What this case proves is unchanged and still checked on the next
+      // line: the failed derivation commits nothing (no storage write; the committed profile is
+      // served exactly as before) and publishes nothing to her socket.
+      const failedIngest = await direct(item, '/ingest', event(g), g);
+      expect(failedIngest.status).toBe(500);
+      expect(await failedIngest.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic derivation failure' });
       expect(await view()).toEqual(before); expect(put).not.toHaveBeenCalled(); expect(ws.send).not.toHaveBeenCalled(); decisions.mockRestore();
 
       const entered = gate(), release = gate(), publishedCounts: unknown[] = [];
@@ -4196,20 +4324,51 @@ describe('W37.03 tenant-owned DO audiences', () => {
       expect(health.lastSeen).toBe(before.affinity.lastSeen); expect([...item.data]).toEqual(baseline);
       expect(readDone).toBe(false); expect(ws.send).not.toHaveBeenCalled();
       release.release(); expect((await first).status).toBe(200); expect((await second).status).toBe(200);
-      expect((await queuedRead).pipeline.attributes.page_views).toBe(3); expect(publishedCounts).toEqual([2, 3]);
+      // W35 follow-up correction (expectation only, 2026-09-24): `second` and the read are
+      // concurrent, and neither the test nor the call order fixes their order at the object
+      // (forcing the read first reproduces this line's 1-in-30 failure exactly: the read
+      // answers 2 and the published counts stay [2, 3]). The read queued behind the held write
+      // answers the state after `first` or after both writes, never before `first` (readDone
+      // above), and no write is lost: both are published in order and the object then holds 3.
+      expect([2, 3]).toContain((await queuedRead).pipeline.attributes.page_views); expect(publishedCounts).toEqual([2, 3]);
+      expect((await view()).pipeline.attributes.page_views).toBe(3);
 
       // Application write-then-reject: never guess rollback, retry, or trust warm old bytes.
+      // W35 step-3 STALE correction (arrangement only): this object is ADOPTED (it holds a
+      // grant authority), so an unsigned internal absorb or an import without its admission is
+      // exactly the legacy writer W35.08 fences below. The absorb therefore goes through the
+      // retained signed door and the import through the retained operator admission + commit,
+      // with the same bodies the W35.08 case uses; the admission is committed before the fault
+      // is armed, so the ambiguous write is still the operation's own commit.
       for (const path of ['/ingest', '/segments', '/identity/absorb', '/identity/import']) {
         await restore();
+        const imported = { operationId: crypto.randomUUID(), now: Date.now(), shopperId: g.subject,
+          rows: [{ action: 'content_click', at: Date.now(), touches: [{ dim: 'contentType', value: 'video' }] }], audienceOwner: owner(g) };
+        if (path === '/identity/import') { expect((await internal(item, g, '/identity/import/admission', imported)).status).toBe(200); put.mockClear(); }
         put.mockImplementationOnce(async (key, value) => { await originalPut(key, value); throw new Error('synthetic ambiguous write'); });
         const call = path === '/ingest' ? direct(item, path, event(g), g)
           : path === '/segments' ? direct(item, path, { segment: 'accepted-manual' }, g)
-          : internal(item, g, path, path.endsWith('absorb') ? { shopperId: g.subject, affinity: before.affinity, pipeline: before.pipeline }
-            : { shopperId: g.subject, rows: [{ action: 'content_click', at: Date.now(), touches: [{ dim: 'contentType', value: 'video' }] }] });
-        await expect(call).rejects.toThrow('synthetic ambiguous write'); expect(ws.send).not.toHaveBeenCalled();
+          : path === '/identity/absorb' ? direct(item, path, { shopperId: g.subject, affinity: before.affinity,
+            pipeline: { ...before.pipeline, audienceOwner: owner(g) }, audienceOwner: owner(g) }, g)
+          : internal(item, g, path, imported);
+        // W35 delivery correction (expectation only, 2026-09-28), the same W19 ruling as above: the
+        // ingest door answers its own ambiguous write 500 with the cause; the other doors still
+        // reject. What this loop proves is unchanged and checked below: the write landed, the
+        // object never guesses a rollback, serves exactly what storage holds after the fault, and
+        // counts the next event on top of it.
+        if (path === '/ingest') {
+          const answer = await call; expect(answer.status).toBe(500);
+          expect(await answer.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic ambiguous write' });
+        } else await expect(call).rejects.toThrow('synthetic ambiguous write');
+        expect(ws.send).not.toHaveBeenCalled();
         const saved = structuredClone([...item.data]); expect(saved).not.toEqual(baseline);
         f.faults.read = true;
-        expect((await direct(item, '/snapshot?projection=content', undefined, g)).status).toBe(401);
+        // W35 step-3 STALE correction (expectation only): every object fetch now first reads
+        // the isolated-monitor marker (src/ops/synthetic.ts:310-311), so an unreadable store
+        // refuses by rejecting the call with the storage error before any handler runs, the
+        // form this file's W35.08 `refuses()` helper already accepts; nothing is served.
+        expect(await direct(item, '/snapshot?projection=content', undefined, g).then(response => response.status,
+          (error: unknown) => { expect(error).toMatchObject({ message: 'synthetic read failure' }); return 401; })).toBe(401);
         f.faults.read = false;
         const recovered = await view(); expect(recovered.affinity).toEqual(item.data.get('affinity')); expect(recovered.pipeline).toEqual(item.data.get('pipeline'));
         expect([...item.data]).toEqual(saved); expect(put).toHaveBeenCalledTimes(1);
@@ -4241,7 +4400,12 @@ describe('W37.03 tenant-owned DO audiences', () => {
 
       await restore();
       const alarm = vi.spyOn(item.state.storage, 'setAlarm').mockRejectedValueOnce(new Error('synthetic scheduling failure'));
-      await expect(direct(item, '/ingest', event(g), g)).rejects.toThrow('synthetic scheduling failure');
+      // W35 delivery correction (expectation only, 2026-09-28), the same W19 ruling as above: the
+      // ingest door answers the failed scheduling 500 with the cause. What this proves is unchanged
+      // and checked next: the accepted write is not undone by the later failure — it is stored,
+      // published once, and keeps her as the owner.
+      const unscheduled = await direct(item, '/ingest', event(g), g); expect(unscheduled.status).toBe(500);
+      expect(await unscheduled.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic scheduling failure' });
       expect((await view()).pipeline.attributes.page_views).toBe(2); expect(ws.send).toHaveBeenCalledTimes(1);
       expect(item.data.get('audienceOwner')).toEqual(owner(g)); alarm.mockRestore();
       await f.drain();
@@ -4438,7 +4602,11 @@ describe('W37.03 tenant-owned DO audiences', () => {
           f.effects.length = 0; f.cache.calls.length = 0; f.sessions.calls.length = 0;
           qualified.mockClear(); seed.mockClear(); f.faults.read = mode === 'read-failure';
           await refuses(writeLegacy(path, body), f.faults.read); f.faults.read = false;
-          expect(get.mock.calls).toEqual([['grantAuthority']]); get.mockRestore();
+          // W35 step-3 STALE correction (expectation only): every object fetch first reads the
+          // isolated-monitor marker (src/ops/synthetic.ts:310-311) before any handler; after it
+          // the fence still reads exactly its own presence key and nothing else. An unreadable
+          // store fails that first read, so the refusal happens before the fence is consulted.
+          expect(get.mock.calls).toEqual(mode === 'read-failure' ? [['__monitor_authority_v1']] : [['__monitor_authority_v1'], ['grantAuthority']]); get.mockRestore();
           expect([...item.data]).toEqual(before); expect(item.alarms).toEqual(alarms);
           expect(f.effects).toEqual([]); expect(f.cache.calls).toEqual([]); expect(f.sessions.calls).toEqual([]);
           expect(qualified).not.toHaveBeenCalled(); expect(seed).not.toHaveBeenCalled();
@@ -4512,7 +4680,18 @@ describe('W37.03 tenant-owned DO audiences', () => {
       for (const path of ['/ingest', '/segments']) {
         item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v); restart(f, g);
         f.faults.write = true;
-        await expect(direct(item, path, path === '/ingest' ? event(g, 'coach') : { segment: 'uncommitted' }, g)).rejects.toThrow('synthetic write failure');
+        // W35 delivery correction (expectation only, 2026-09-28; lead ruling: W19's answer is the
+        // contract): since W19 LG1 (6219c50) the object's ingest door answers its own failed
+        // write as the session host's POST /realtime/action does (500, "Failed to process action
+        // event", the cause in `details`; ShopperReflex.ts ingestFailure); the manual segment
+        // door still rejects. What this block proves is unchanged and checked below: the failed
+        // write commits nothing, and the object reloads the actual committed owner — its next
+        // alarm qualifies and writes nothing, and it serves her before and after a restart.
+        const failedWrite = direct(item, path, path === '/ingest' ? event(g, 'coach') : { segment: 'uncommitted' }, g);
+        if (path === '/ingest') {
+          const answer = await failedWrite; expect(answer.status).toBe(500);
+          expect(await answer.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic write failure' });
+        } else await expect(failedWrite).rejects.toThrow('synthetic write failure');
         f.faults.write = false; expect([...item.data]).toEqual(baseline);
         qualified.mockClear(); const before = structuredClone([...item.data]); await item.shopper.alarm();
         expect(qualified).not.toHaveBeenCalled(); expect([...item.data]).toEqual(before);
@@ -4526,6 +4705,11 @@ describe('W37.03 tenant-owned DO audiences', () => {
       qualified.mockClear(); const legacy = structuredClone([...item.data]); await item.shopper.alarm();
       expect([...item.data]).toEqual(legacy); expect(qualified).not.toHaveBeenCalled();
       const other = await newAnonymousSession(f.env, 'meridian');
+      // W35 step-3 STALE correction (arrangement only): since W11 a tenant's runtime
+      // configuration is read only from its coherent publication, with no KV fallback
+      // (src/reflex/configStore.ts, publication.ts requiredHead), so the second tenant's
+      // documents are published before its first read, as the W35.02 case does.
+      await fixturePublication(f.env, 'meridian');
       expect((await f.call(`/realtime/segments/${other.subject}`, other.capability, undefined, other.tenant)).status).toBe(200);
       const otherBefore = structuredClone([...itemFor(f, other).data]);
       expect([...itemFor(f, other).data.keys()]).toEqual(['grantAuthority']);

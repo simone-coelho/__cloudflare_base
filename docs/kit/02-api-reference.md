@@ -114,6 +114,13 @@ Release note: the object host's `dropped: "unknown_product"` answer now also fir
 product we do not hold and whose every attribute value your catalogue refuses, not only for an event
 that carried an unknown id and no attributes at all; it carries the same `signals` naming the id.
 
+Release note (both hosts): the session host now answers that drop too, by the same rule, so while
+Reflex is enabled the two hosts answer one event the same way. (With Reflex disabled neither host
+reads your catalogue: the session host drops nothing and answers no `signals`, and the object host
+still drops an unknown product whose event carries nothing it would score.) A dropped event is answered `{ success: true, dropped:
+"unknown_product", signals, sessionId, cookiesUpdated: false, consent, … }` and changes nothing: no
+counter, visit, affinity, regional count, outcome, provider forward or cookie.
+
 Release note (journey stage on the ODP profile): the `journey_stage` attribute written to your ODP
 profile is the **persisted** token (`early | mid | late`) on both hosts and on every path — the event
 path and the read-time stage projection. Until now the session host's event path wrote the reported
@@ -474,6 +481,23 @@ All under `/v1/{tenant}/identity/`. The first two take the site key; the rest ta
 | `GET visitor/{visitorId}` | | The link from the browser's end, if any |
 | `GET shopper/{shopperId}` | | The browsers on the person and the history applied; the account id is not on it |
 | `POST events` | JSON `{ rows }` or `text/csv`, each at most 1 MiB of actual streamed UTF-8 bytes and 1000 data rows | Historical actions or versioned typed profile snapshots; existing `accountId \| shopperId \| visitorId` resolution |
+
+Both hosts answer a sign-in and everything after it the same way:
+
+- A shopper who chose tracking only (personalization off) and then signs in is admitted with her
+  signed-in session on every route. Her browser's profile is not carried to the person under that
+  refusal, so the person holds nothing of her until her first tracked event, which starts the
+  person's record; tracking-only measurement stays permitted and both switches are still required
+  for personalization.
+- The session a browser held before it signed in can still withdraw consent: a choice that only
+  turns switches off is accepted from that session, and the refusal reaches the person on the next
+  retry of the sign-in and through the refusal cookie on that browser. Any other choice from it is
+  refused `401`; the person's own session makes her choices.
+- A sign-in that fails before the person accepts it leaves the browser's profile where it was. The
+  retried sign-in completes that same transfer or is refused `401`; it never starts another one. If
+  the person's record was reset in between, the transfer can never be accepted, and the browser's
+  own session gets its profile back on its next request: it browses as before, nothing of it was
+  merged into the person, and signing in again starts a fresh link that carries her whole profile.
 
 ### Experiment enrollment across a link
 
