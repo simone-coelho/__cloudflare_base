@@ -3373,9 +3373,11 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "7841d763346e7eb31e2c2afb9c13671cd9f939dc on rem/spec-w35: src/units/W35 and the W35-named legacy tests (step-3 corrections of W35.01, W35.03, W35.08 and the competing-links expectation)",
+        "reviewedRevision": "8d6aa25e299115eeb45fbd9fb06e7dc960ab2284 on rem/spec-w35 (the delivery corrections: merge 6b10077 of rem/integration 50db2de): src/units/W35 and the W35-named legacy tests (step-3 corrections of W35.01, W35.03, W35.08 and the competing-links expectation; delivery corrections: W35.03 seeded stamped, W35.01 and W35.08 expect W19's 500 answer, the A2 host cases accept any legal serialization)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
@@ -3385,6 +3387,9 @@
           "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/logs/nc-8d6aa25-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/logs/nc-8d6aa25-part2.log",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/specifier/logs/W35-negative-control-fix.log",
           "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W35-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/W35-flake.log",
           "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/logs/w35-controls.txt",
