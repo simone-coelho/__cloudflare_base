@@ -113,9 +113,16 @@ falls back to the default tenant, which is not provisioned on the deployed worke
 
 ## State at the pause (2026-09-25, credit reset)
 
-Branch `feature/real-time-personalization`. **Everything is committed. Nothing is unpushed except the final
-commit that carries this note** (held back deliberately: the owner asked for one substantial batch per push, and
-a push costs a long CI cycle on the shared self-hosted runner).
+Branch `feature/real-time-personalization`. Everything of this lane's is committed; the working tree is clean.
+
+**Re-checked 2026-09-28.** The branch has moved on under this lane: HEAD is now `b77cb51` and there are **7
+unpushed commits**, of which exactly one (`f42c085`) is this lane's. The other six belong to the Tapestry and
+Competitive lane and are stacked on top of it. `public/top-offers/`, `src/routes/topOffers.ts`, `docs/qvc/` and
+`scripts/seed-shn.mjs` are untouched by them, verified with `git log f42c085..HEAD -- <those paths>`.
+
+**This changes who may push.** `f42c085` can no longer be pushed alone: any push now sends all seven and
+therefore another lane's in-flight work with it. Do not push to "release" this lane's commit. Either the owner
+says push, or the other lane pushes its own batch and carries this one along.
 
 - **The demo is deployed and serving.** https://edge-platform.expedge.workers.dev/top-offers/ — worker version
   `9cd261ca-ecd8-4436-a53e-b04e2fe862ee`, verified 200 on the page, the script and the stylesheet.
@@ -135,9 +142,11 @@ a push costs a long CI cycle on the shared self-hosted runner).
 
 ### The single next action
 
-Push. `git push origin feature/real-time-personalization` sends the act-label commit. Then, if the demo is to be
-rehearsed locally, `npx wrangler dev` and reseed — remembering that a reseed must be followed by a deploy if it
-is aimed at the deployed worker.
+Ask the owner whether to push, and say that a push now carries six commits belonging to another lane. Nothing
+else in this lane is waiting on anything.
+
+To rehearse locally afterwards: `npx wrangler dev`, then reseed — remembering that a reseed aimed at the
+deployed worker must be followed by a deploy.
 
 ### The one open thread
 
