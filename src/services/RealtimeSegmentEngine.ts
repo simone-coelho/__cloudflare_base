@@ -1158,6 +1158,17 @@ export class RealtimeSegmentEngine {
      * session of their own and one visit was counted as two. Used when the
      * cookie says nothing, which on the decision route is always: that route
      * sets no cookie.
+     *
+     * W36 (F14 R8). It is tried BEFORE the `user:` pointer, so a pointer read
+     * that misses cannot move her onto a new, empty session while her client
+     * holds her own. It is hers only when the record stored at it names this
+     * `userId`, and a record that belongs to someone else is never served or
+     * written: when this read finds one, the lookup continues as if no id were
+     * sent; when this read misses or fails, the id may still name the session
+     * created for her (CW39), and that create's own read of it is bound to
+     * `userId` too, so someone else's record found there is treated as absent
+     * and nothing is written. Under a signed capability it must equal the
+     * capability's session.
      */
     clientSessionId?: string,
   ): Promise<{
@@ -1205,13 +1216,17 @@ export class RealtimeSegmentEngine {
       assertSessionTarget(this.principal, userId, sessionId);
       return { sessionId, sessionData: withConsent(sessionData, consent), isNewSession: true, reflexConfig };
     }
-    let sessionId = cookies.sessionId || (clientSessionId || '').trim();
+    // The cookie is the older claim; the client's id is bound to `userId` (W36).
+    const claimed = cookies.sessionId ? '' : (clientSessionId || '').trim();
+    let sessionId = cookies.sessionId || claimed;
     let sessionData: SessionData | null = null;
     let isNewSession = false;
 
     // Try to get existing session
     if (sessionId) {
-      sessionData = await this.sessionManager.getSession(sessionId);
+      const found = await this.sessionManager.resolveRecord(sessionId, claimed ? userId : undefined);
+      if (found.foreign) sessionId = '';
+      else sessionData = found.data;
     }
 
     // Fallback: resolve by stable userId (anon vuid) when the cookie is absent/blocked.
@@ -1264,7 +1279,9 @@ export class RealtimeSegmentEngine {
           personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
-      }, undefined, defer);
+      }, undefined, defer, undefined, true,
+      // W36: a session created under the client's id is bound to its owner.
+      claimed && sessionId === claimed ? userId : undefined);
     }
 
     return {
