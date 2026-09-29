@@ -114,8 +114,10 @@ Release note: the object host's `dropped: "unknown_product"` answer now also fir
 product we do not hold and whose every attribute value your catalogue refuses, not only for an event
 that carried an unknown id and no attributes at all; it carries the same `signals` naming the id.
 
-Release note (both hosts): the session host now answers that drop too, by the same rule, so the two
-hosts answer one event the same way. A dropped event is answered `{ success: true, dropped:
+Release note (both hosts): the session host now answers that drop too, by the same rule, so while
+Reflex is enabled the two hosts answer one event the same way. (With Reflex disabled neither host
+reads your catalogue: the session host drops nothing and answers no `signals`, and the object host
+still drops an unknown product whose event carries nothing it would score.) A dropped event is answered `{ success: true, dropped:
 "unknown_product", signals, sessionId, cookiesUpdated: false, consent, … }` and changes nothing: no
 counter, visit, affinity, regional count, outcome, provider forward or cookie.
 
