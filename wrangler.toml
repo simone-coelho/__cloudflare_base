@@ -186,6 +186,9 @@ REFLEX_HOST = "session"
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 # CW6: tenants whose region snapshots the hourly cron rolls up into country and everyone.
 TREND_ROLLUP_TENANTS = "coach"
+# W34: the external-model policy (src/learn/external.ts). `off` is the only implemented and the
+# only deployed state; absent or any other value is also off. No value enables a model.
+EXTERNAL_MODEL_POLICY = "off"
 
 # Static assets configuration
 [assets]
@@ -251,6 +254,8 @@ OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
 REFLEX_HOST = "session"   # 2026-09-05 load test (doc 31): the session host writes KV on every request, 580 to 720 ms per decision; the object host is faster but its ingest refuses the content events and the stage never reaches the cell, so the loop is wrong there. Session until the object host passes the acceptance run.
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
+# W34: off is the only deployed state of the external-model policy; absent or any other value is also off.
+EXTERNAL_MODEL_POLICY = "off"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE"
@@ -349,6 +354,8 @@ JWT_AUDIENCE = "edge-platform-api"
 OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
 REFLEX_HOST = "session"   # the object host takes this path once it passes the acceptance run (doc 31)
+# W34: off is the only deployed state of the external-model policy; absent or any other value is also off.
+EXTERNAL_MODEL_POLICY = "off"
 
 [[env.production.kv_namespaces]]
 binding = "CACHE"

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W34",
+  "workOrderHash": "sha256:97518fa4a87277b15763af373a64d2cd87221ecf67b726e3328464a1fc88d619",
+  "artifact": {
+    "revision": "c815ed4371eabad432669bdeef7bb63bc7003562",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/implementer/logs/gate-acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/implementer/logs/gate-integration.log",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/implementer/logs/eslint.log",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/implementer/logs/probe-reset.log",
+      "git commits 87106fb b74db01 e3b798e ba5e959 d69d827 c815ed4 on rem/w34-build (the d69d827 build report was cut off by a session limit after its gate exited 0; its logs are listed)"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W34 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t \"W34[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/reviewer/logs/gate-integration.log",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/implementer/logs/gate-integration.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W34-delivery/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W34-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-28T20:09:45.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

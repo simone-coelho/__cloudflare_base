@@ -28,7 +28,7 @@ import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { applyHistory, HistoryCsvError, historyRowSchema, parseHistoryCsv, MAX_ROWS } from '@/identity/history';
 import { eraseSubject, reconcileErasure, erasureReconciliationSchema, ErasureFailure } from '@/identity/erase';
 import type { AuthContext } from '@/middleware/auth';
-import { requireShopper, shopperPrincipal, capabilityToken, verifySessionCapability, issueSessionCapability, signSessionCapability, assertSessionTarget, readContinuityProof, CONTINUITY_COOKIE, SHOPPER_HEADER, SessionAccessError, type ContinuityDescriptor } from '@/identity/sessionCapability';
+import { requireShopper, shopperPrincipal, capabilityToken, verifySessionCapability, issueSessionCapability, signSessionCapability, assertSessionTarget, readContinuityProof, CONTINUITY_COOKIE, CONTINUITY_RETIRED_HEADER, SHOPPER_HEADER, SessionAccessError, type ContinuityDescriptor } from '@/identity/sessionCapability';
 import { anonymousWithConsent, establishRefusal, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { consentFromCookies, intersectConsent, personalizes, refusalHints, storedConsent, type Consent } from '@/content/consent';
 import { publishedContinuity } from '@/reflex/configStore';
@@ -215,6 +215,41 @@ async function reportContinuity(env: Env, tenant: string, decision: ContinuityDe
 
 const OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/** An explicit choice that refuses a purpose: absence of a choice is not one. */
+const refusedExplicitly = (consent: Consent): boolean =>
+  consent.instruction?.tracking?.value === false || consent.instruction?.personalization?.value === false;
+
+/**
+ * W16 R4 (LANE-LOG R81(c)): once her return is recognized beside the
+ * provisional capability an outage served her, the provisional subject is
+ * retired in its own object — its taste, its choice, its session projection and
+ * its grants — so it holds no state of its own. The object keeps only the
+ * operation id of this return until the retired grant's expiry, so the exact
+ * retry of a lost answer is answered as this return (see the session route).
+ *
+ * A retirement that cannot finish is a failure of the CALL, never a statement
+ * about the shopper: it is answered as a server error, not a session refusal, so
+ * the browser keeps the provisional capability and the pending consume and
+ * presents both again. The recognition is already decided; that retry is
+ * answered once from the one deterministic receipt and retires again.
+ */
+class ProvisionalRetirementUnavailable extends Error {
+  constructor() { super('Provisional retirement unavailable'); this.name = 'ProvisionalRetirementUnavailable'; }
+}
+async function retireProvisional(env: Env, principal: { tenant: string; subject: string }, capability: string, operationId: string): Promise<void> {
+  let body: { ok?: unknown; retired?: unknown };
+  try {
+    const response = await shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant)
+      .fetch('https://shopper-reflex/identity/continuity/retire', {
+        method: 'POST', headers: { [SHOPPER_HEADER]: capability, 'X-Tenant': principal.tenant, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId }),
+      });
+    if (!response.ok) throw new ProvisionalRetirementUnavailable();
+    body = await response.json() as typeof body;
+  } catch { throw new ProvisionalRetirementUnavailable(); }
+  if (body.ok !== true || body.retired !== true) throw new ProvisionalRetirementUnavailable();
+}
+
 /**
  * A return. The proof arrives by the published transport and only by it, is
  * verified here for signature, tenant, transport, covered purpose, revision and
@@ -276,14 +311,28 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
   const tenant = tenantOf(c);
   if (!tenant || tenant !== (c.get('tenant') ?? tenantForRequest(c.env, c.req.raw))) throw new SessionAccessError();
   const incoming = capabilityToken(c.req.raw);
+  // W16 R4: the exact retry of a return recognized beside a provisional
+  // capability. Recognition retired that capability in its own object, so the
+  // object refuses it — and says, by `CONTINUITY_RETIRED_HEADER`, that it was
+  // retired by THIS return (the same operation). The retry is then answered as
+  // the return it is, without the capability: the consume in her own object
+  // answers it once from its one receipt (same subject, generation, grant and
+  // successor proof), and anything after that is a cold shopper.
+  let retiredByReturn = false, early: string | undefined;
   if (incoming !== null) {
     const principal = await verifySessionCapability(c.env, incoming, tenant);
-    if (!shopperRequestHeld(c.req.raw, principal)) return forwardShopperRequest(c.env, c.req.raw, principal);
+    if (!shopperRequestHeld(c.req.raw, principal)) {
+      if (principal.kind === 'anonymous') early = await c.req.raw.clone().text();
+      const forwarded = await forwardShopperRequest(c.env, c.req.raw, principal);
+      if (early === undefined || forwarded.status !== 401 || forwarded.headers.get(CONTINUITY_RETIRED_HEADER) !== 'recognized') return forwarded;
+      void forwarded.body?.cancel().catch(() => undefined);
+      retiredByReturn = true;
+    }
   }
   let body: { consent?: unknown; continuity?: unknown } = {};
-  try { const text = await c.req.text(); if (text) body = JSON.parse(text); } catch { return c.json({ ok: false, error: 'invalid JSON body' }, 400); }
+  try { const text = early ?? await c.req.text(); if (text) body = JSON.parse(text); } catch { return c.json({ ok: false, error: 'invalid JSON body' }, 400); }
   const hints = intersectConsent(consentFromCookies(c.req.header('Cookie')), refusalHints(body?.consent));
-  const token = capabilityToken(c.req.raw);
+  const token = retiredByReturn ? null : capabilityToken(c.req.raw);
   const setCookie = (value: string) => c.header('Set-Cookie', value, { append: true });
   const decision = await continuityInForce(c.env, tenant);
   let session;
@@ -319,14 +368,23 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
     // is the ordinary consume, atomic in her own object, so the chain keeps its
     // single use, its one rotation and its one deterministic retry. Nothing of
     // the provisional subject is carried across: it is not merged, not read and
-    // not renewed — it is simply left behind to its own retention.
-    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined
+    // not renewed — and once she is recognized it is retired (W16 R4, LANE-LOG
+    // R81(c)): the provisional subject holds no state of its own afterwards.
+    //
+    // A choice made ON the provisional session that refuses a purpose is hers
+    // and outranks the return: a session that refused is not asking to be
+    // recognized, exactly as a refusing transition hint is not (fail closed).
+    const provisionalRefused = principal.kind === 'anonymous' && body?.continuity !== undefined
+      && refusedExplicitly(await ownedConsent(c.env, principal, token));
+    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined && !provisionalRefused
       ? await consumeContinuity(c.env, tenant, decision, c.req.raw, body.continuity, hints, setCookie)
       : null;
     if (returned !== null && returned !== 'unavailable') {
       session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
         consent: storedConsent(returned.consent) };
       continuity = returned.report;
+      // consumeContinuity recognized nobody without a valid operation id.
+      await retireProvisional(c.env, principal, token, String((body.continuity as { operationId?: unknown }).operationId));
     } else {
       if (returned === 'unavailable') continuity = UNAVAILABLE;
       const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);

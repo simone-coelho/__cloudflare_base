@@ -255,12 +255,22 @@ interface AffinityRead {
  *
  * `cookieHeader` is never passed: identity here is the Bright Hour visitorId,
  * so the coach session cookie can neither be read nor written on this path.
+ *
+ * W36 (F14 R8). `clientSessionId` is the session the page's client sent. On the
+ * session host it is looked up before the visitor's `user:` pointer, so a
+ * pointer read that misses composes her page from her own session instead of
+ * a new, empty one. It is used only when the record it names is this
+ * visitor's own: another visitor's record is never served or written, even
+ * when the first read of the id misses or fails (the engine binds its reread
+ * to this visitor), and an id that names none serves what no id serves. The
+ * object host needs none: the visitor's own object is the identity there.
  */
 async function readAffinity(
   env: Env, visitorId: string, realNowMs: number,
   // Named rather than defaulted silently: an invisible default is the exact
   // hazard @/tenancy is written against.
   tenant: TenantId = DEFAULT_TENANT,
+  clientSessionId?: string,
 ): Promise<AffinityRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
     const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
@@ -273,8 +283,9 @@ async function readAffinity(
     };
   }
 
-  const engine = new RealtimeSegmentEngine(env, getConnectors(env));
-  const { sessionId, sessionData } = await engine.getOrCreateSessionFromCookies(null, visitorId);
+  // The request's tenant, as the object host above already uses it.
+  const engine = new RealtimeSegmentEngine(env, getConnectors(env, tenant), { tenant });
+  const { sessionId, sessionData } = await engine.getOrCreateSessionFromCookies(null, visitorId, undefined, clientSessionId);
   if (!sessionData.reflex) return { sessionId, dims: {}, memberships: [] };
 
   const cfg = await resolveReflexConfig(env, SURFACE);
@@ -392,7 +403,7 @@ liveRoutes.post('/page', async (c) => {
     // has already had accepted, so drain their queue (bounded) before reading.
     await settleVisitor(input.visitorId);
 
-    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'));
+    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'), input.sessionId);
     const sessionId = input.sessionId ?? affinity.sessionId;
 
     const page = composePage({

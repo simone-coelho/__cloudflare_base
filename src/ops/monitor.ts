@@ -173,8 +173,11 @@ import { configuredDestinations, configuredOperationalDestinations, type Operati
 import { SLOT_GOVERNANCE_SCOPE, tenantSlotGovernance, type TenantSlotGovernance } from '@/learn/slotGovernance';
 import { EVIDENCE_LOSS_PATHS, readEvidenceLoss, type EvidenceLoss, type EvidenceLossPath } from '@/ledger/delivery';
 import { readWindowSummary, reportPrefix } from '@/learn/report';
-import { statsName } from '@/learn/fan';
+import { publishedSlotPagesOf, statsName } from '@/learn/fan';
 import type { LiftSnapshot } from '@/learn/stats';
+import { pinPublication, readPinnedPublication } from '@/config/publication';
+import { LEARN_KIND } from '@/content/kinds';
+import { PRIORS_KIND, priorUnitRefusedSlots } from '@/learn/priors';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
 export interface MonitorResult {
@@ -228,6 +231,52 @@ export interface MonitorResult {
    * legacy record and on a run that could not read one of the two sinks.
    */
   reconciliation?: SinkReconciliation;
+  /**
+   * W25 R1 (LANE-LOG R183): the slots whose statistics publication the tenant's
+   * own prior document stops. A retained prior document can still carry a
+   * probability row for a slot whose objective is `revenue` or `margin` (only
+   * the import door refuses one), and the statistics object then refuses to
+   * publish that slot rather than apply the prior in the wrong unit: the slot
+   * keeps recording exposures, the shopper keeps the last published snapshot,
+   * and nothing moves until the prior document is re-exported. That refusal is
+   * raised inside the object, on its alarm and on an operator's publish, where
+   * nobody who does not already suspect the slot looks; this is where it is
+   * raised unasked.
+   *
+   * DERIVED, never stamped: it is the object's refusal rule itself
+   * (`priorUnitErrors`, applied per slot by `priorUnitRefusedSlots`) run on the
+   * tenant's published learn and prior documents, read from one publication
+   * pin — no statistics object is asked and nothing is written. Absent on a
+   * legacy record and on a run that could not read the documents, so no result
+   * states a clean slate it did not observe.
+   */
+  stoppedSlots?: StoppedSlots;
+}
+
+/**
+ * One slot the tenant's prior document stops publishing. `brand` is the
+ * tenant's own brand, the one the monitor probes and the nightly report reads
+ * (`brand = tenant`); `scope` says the stop is the tenant's, because the prior
+ * and learn documents are the tenant's and every brand of it that serves this
+ * slot reads them, so the same slot is stopped in each.
+ */
+export interface StoppedSlot {
+  brand: string;
+  slot: string;
+  scope: 'tenant';
+  /** Why, in one closed word: an imported prior is a probability and the slot does not learn one. */
+  reason: 'prior_unit_incompatible';
+  /** The unit the slot learns in, from the tenant's learn document. */
+  objective: 'revenue' | 'margin';
+  /** How many rows of the prior document name the slot. */
+  priorRows: number;
+}
+export interface StoppedSlots {
+  /** The revision of the prior document the run read; 0 when the tenant publishes none. */
+  priorVersion: number;
+  /** Every slot stopped; `slots` carries at most the first 64 of them, in slot order. */
+  total: number;
+  slots: StoppedSlot[];
 }
 
 /** One (brand, slot) pair the two sinks disagreed about, with both numbers. */
@@ -241,6 +290,22 @@ export interface SinkDisagreement {
   difference: number;
   /** What the difference had to exceed to be named; stated on every row. */
   threshold: number;
+  /**
+   * W22 R5 (LANE-LOG R145): a collision on record, named. Present when the
+   * online side holds more than the ledger and the brand's published day this
+   * row compared excluded rows under the collision contract — the day report's
+   * `counts.conflicts`, copied: rows filed as two different rows under one
+   * stable decision or outcome id. Two different OUTCOME records under one id
+   * are each credited online (W22 D1.04) while the day keeps one (W22 D1.03),
+   * so that collision is one known cause of such a row. The member proves only
+   * that a collision is on record for the brand's day: it is the day's count,
+   * not this slot's, it cannot say which slot the excluded rows touched, and it
+   * cannot tell the collision from a credit the ledger lost on the same brand
+   * and day — it rides every such row of the brand, a lost credit's included.
+   * It is never a reason to dismiss a difference. A row without it names no
+   * collision.
+   */
+  conflicts?: { decisions: number; outcomes: number };
 }
 export interface SinkReconciliation {
   /** Epoch milliseconds: the day the comparison read. */
@@ -270,13 +335,21 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
  * them, or nothing at all. A record written before W20 G2, or one whose counters
  * were unreadable, carries none and keeps its former shape; a record written
  * before the scope was stated reads as `tenant` — the projection states the word
- * rather than copying one through, so no stored value can relabel the counts. */
+ * rather than copying one through, so no stored value can relabel the counts.
+ *
+ * W20 R5 (R111(i)): the counters are written as whole, non-negative numbers
+ * (`tenantSlotGovernance`), so a kept value that is not one — `1e999` read back
+ * as Infinity, a negative, a fraction, a number past the safe range — is a
+ * corrupted record, and clamping it would state a count nobody observed beside
+ * `scope: 'tenant'`. The whole member is dropped instead, exactly as for a run
+ * whose counters could not be read: no result states a zero it did not observe. */
+const observedCount = (value: unknown, max: number): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max;
 const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
   const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
-  if (typeof since !== 'number' || typeof refusedPinCount !== 'number' || typeof shortTakeCount !== 'number') return undefined;
-  return { since: bounded(since, 8_640_000_000_000_000), scope: SLOT_GOVERNANCE_SCOPE,
-    refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
-    shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
+  if (!observedCount(since, 8_640_000_000_000_000) || !observedCount(refusedPinCount, Number.MAX_SAFE_INTEGER)
+    || !observedCount(shortTakeCount, Number.MAX_SAFE_INTEGER)) return undefined;
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount, shortTakeCount };
 };
 
 /** The four loss counters a kept result carries, projected as safely as its
@@ -296,6 +369,12 @@ const safeEvidenceLoss = (value: unknown): MonitorResult['evidenceLoss'] | undef
  * two numbers, and a bounded list of rows whose members are rebuilt here rather
  * than copied through. A row that does not carry all five numbers is dropped. */
 const RECONCILED_ROWS = 64;
+/** A collision count is two whole, non-negative numbers, at least one of them non-zero, or nothing. */
+const safeConflicts = (value: unknown): SinkDisagreement['conflicts'] | undefined => {
+  const decisions = field(value, 'decisions'), outcomes = field(value, 'outcomes');
+  if (!observedCount(decisions, Number.MAX_SAFE_INTEGER) || !observedCount(outcomes, Number.MAX_SAFE_INTEGER) || decisions + outcomes === 0) return undefined;
+  return { decisions, outcomes };
+};
 const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | undefined => {
   const since = field(value, 'since'), compared = field(value, 'compared'), rows = field(value, 'disagreements');
   if (typeof since !== 'number' || typeof compared !== 'number' || !Array.isArray(rows)) return undefined;
@@ -307,9 +386,34 @@ const safeReconciliation = (value: unknown): MonitorResult['reconciliation'] | u
     if (typeof brand !== 'string' || !isValidTenantId(brand) || typeof slot !== 'string' || !slot || slot.length > 256
       || numbers.some(n => typeof n !== 'number')) continue;
     const [online, ledger, difference, threshold] = numbers.map(n => bounded(n, Number.MAX_SAFE_INTEGER));
-    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold! });
+    // W22 R5: the collision a row names is rebuilt from its two counts, or the
+    // member is dropped; no stored byte can name a collision the row did not.
+    const conflicts = safeConflicts(field(row, 'conflicts'));
+    disagreements.push({ brand, slot, online: online!, ledger: ledger!, difference: difference!, threshold: threshold!, ...(conflicts ? { conflicts } : {}) });
   }
   return { since: bounded(since, 8_640_000_000_000_000), compared: bounded(compared, Number.MAX_SAFE_INTEGER), disagreements };
+};
+
+/** The stopped slots a kept result carries, rebuilt the same way: a revision, a
+ * count and a bounded list of rows whose every member is rebuilt here from its
+ * closed vocabulary. `scope` and `reason` are stated by the projection, never
+ * copied from the store. A row that does not fit is dropped; a member whose
+ * revision or count is not a whole non-negative number is dropped whole, so no
+ * kept result states a count nobody observed. */
+const STOPPED_ROWS = 64;
+const safeStoppedSlots = (value: unknown): MonitorResult['stoppedSlots'] | undefined => {
+  const priorVersion = field(value, 'priorVersion'), total = field(value, 'total'), rows = field(value, 'slots');
+  if (!observedCount(priorVersion, Number.MAX_SAFE_INTEGER) || !observedCount(total, Number.MAX_SAFE_INTEGER) || !Array.isArray(rows)) return undefined;
+  const slots: StoppedSlot[] = [];
+  for (let index = 0; index < Math.min(rows.length, STOPPED_ROWS); index++) {
+    const row = field(rows, String(index));
+    const brand = field(row, 'brand'), slot = field(row, 'slot'), objective = field(row, 'objective'), priorRows = field(row, 'priorRows');
+    if (typeof brand !== 'string' || !isValidTenantId(brand) || typeof slot !== 'string' || !slot || slot.length > 256
+      || field(row, 'reason') !== 'prior_unit_incompatible' || (objective !== 'revenue' && objective !== 'margin')
+      || !observedCount(priorRows, Number.MAX_SAFE_INTEGER) || priorRows === 0) continue;
+    slots.push({ brand, slot, scope: 'tenant', reason: 'prior_unit_incompatible', objective, priorRows });
+  }
+  return { priorVersion, total: Math.max(total, slots.length), slots };
 };
 
 /** One safe projection for origin, historical reads and alert construction.
@@ -326,6 +430,7 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
   const governance = safeGovernance(field(value, 'governance'));
   const evidenceLoss = safeEvidenceLoss(field(value, 'evidenceLoss'));
   const reconciliation = safeReconciliation(field(value, 'reconciliation'));
+  const stoppedSlots = safeStoppedSlots(field(value, 'stoppedSlots'));
   return { at: bounded(field(value, 'at'), 8_640_000_000_000_000),
     tenant: isValidTenantId(tenant) ? tenant : 'unknown', environment: environmentOf(environment),
     ok: field(value, 'ok') === true, checks, problems,
@@ -333,7 +438,8 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
       status: ['not-needed', 'sent', 'no-webhook', 'cooling-down', 'failed', 'held'].includes(status as string) ? status as NonNullable<MonitorResult['alert']>['status'] : 'not-needed' },
     ...(governance ? { governance } : {}),
     ...(evidenceLoss ? { evidenceLoss } : {}),
-    ...(reconciliation ? { reconciliation } : {}) };
+    ...(reconciliation ? { reconciliation } : {}),
+    ...(stoppedSlots ? { stoppedSlots } : {}) };
 }
 type Admission = { destination: OperationalDestination; stamp: RetentionStamp };
 async function admit(env: Env, tenant: string, kind: OperationalDestination['kind'], at: number): Promise<Admission | null> {
@@ -468,6 +574,20 @@ export async function runChecks(env: Env, tenant: string, now = Date.now()): Pro
 const RECONCILIATION_TOLERANCE = 0.05;
 /** Brands, and slots per brand, one run will compare; the pairs are bounded by both. */
 const RECONCILED_BRANDS = 16, RECONCILED_SLOTS = 32;
+/**
+ * W26 R2: for each page-scoped slot name of the tenant's catalogue, the pages its
+ * statistics objects are named for; every other name is read page-less. Read
+ * once per run from the tenant's publication, the pin the statistics objects
+ * themselves read. A tenant that publishes no catalogue has no page-scoped name.
+ * Review D2: a catalogue that cannot be read otherwise THROWS, and the run then
+ * makes no comparison at all (`reconcileSinks` answers nothing) — a guessed
+ * page-less read could compare the ledger with an object nothing writes to.
+ */
+async function placementPages(env: Env, tenant: string): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  for (const [slot, pages] of await monitorDeadline(publishedSlotPagesOf(env, tenant))) if (pages.length > 1) out.set(slot, pages);
+  return out;
+}
 const onlineCredits = (snapshot: unknown): number | null => {
   const root = (snapshot as LiftSnapshot | null)?.slotRates?.['*'];
   return root && Number.isFinite(root.s) && root.s >= 0 ? Math.round(root.s) : null;
@@ -492,6 +612,13 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
     const since = date ? Date.parse(date + 'T00:00:00Z') : now;
     if (!date || !Number.isFinite(since)) return { since: now, compared: 0, disagreements: [] };
     const brands = (published.get(date) ?? []).sort().slice(0, RECONCILED_BRANDS);
+    // W26 R2 (F21 §6(b), §8): the day report counts a slot NAME, and a name the
+    // tenant's catalogue carries on more than one page is learned in one
+    // statistics object per page. The online side of such a slot is therefore
+    // the sum of its page objects — every page the catalogue carries it on —
+    // compared with the ledger per brand and slot as before; a name on one page
+    // is read from the one object it has always had.
+    const slotPages = await placementPages(env, tenant);
     const budget = { bytes: 0, cells: 0 };
     let compared = 0;
     const disagreements: SinkDisagreement[] = [];
@@ -503,24 +630,64 @@ export async function reconcileSinks(env: Env, tenant: string, now: number): Pro
         // statistics, so only its credits are the online store's counterpart.
         const rows = report.holdout[slot] ?? [];
         const ledger = rows.filter(row => row.arm === 'personalized').reduce((sum, row) => sum + (Number.isFinite(row.credited) ? row.credited : 0), 0);
-        let online: number | null = null;
+        let online: number | null = 0;
         try {
           const namespace = env.LEARN_STATS;
-          const answer = await monitorDeadline(namespace.get(namespace.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/snapshot'));
-          if (!answer.ok) continue;
-          const body = await answer.json() as { ok?: unknown; snapshot?: unknown };
-          if (body.ok !== true) continue;
-          online = body.snapshot === null ? 0 : onlineCredits(body.snapshot);
+          for (const page of slotPages.get(slot) ?? [undefined]) {
+            const answer = await monitorDeadline(namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch('https://learn/snapshot'));
+            if (!answer.ok) { online = null; break; }
+            const body = await answer.json() as { ok?: unknown; snapshot?: unknown };
+            if (body.ok !== true) { online = null; break; }
+            const credits = body.snapshot === null ? 0 : onlineCredits(body.snapshot);
+            if (credits === null) { online = null; break; }
+            online += credits;
+          }
         } catch { continue; }
         if (online === null) continue;   // a sink that could not be read is not a sink that agreed
         compared++;
         const difference = Math.abs(online - ledger);
         const threshold = Math.floor(RECONCILIATION_TOLERANCE * Math.max(online, ledger));
-        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold });
+        // W22 R5 (R145): a day that excluded rows under the admitted collision
+        // contract names it on every row of the brand whose online side is
+        // above the ledger — a cause on record for the brand's day, never a
+        // verdict on this row's difference (SinkDisagreement.conflicts).
+        const conflicts = online > ledger ? safeConflicts(report.counts?.conflicts) : undefined;
+        if (difference > threshold) disagreements.push({ brand, slot, online, ledger, difference, threshold, ...(conflicts ? { conflicts } : {}) });
         if (disagreements.length >= RECONCILED_ROWS) break;
       }
     }
     return { since, compared, disagreements };
+  } catch { return undefined; }
+}
+
+/**
+ * W25 R1 (LANE-LOG R183): the slots the tenant's prior document stops
+ * publishing, from the tenant's own published learn and prior documents, read
+ * from one publication pin (the pin the statistics objects themselves read, so
+ * both judge the same revision). The rule is the statistics object's own
+ * (`priorUnitErrors`, applied per slot by `priorUnitRefusedSlots`): no object is
+ * asked, no key-value store is read or written, and nothing here is on a
+ * decision path.
+ *
+ * A tenant whose publication set carries no prior document has no prior to
+ * refuse, and says so with `priorVersion: 0` and no slots. Documents that cannot
+ * be read leave the member absent rather than state a clean slate.
+ */
+export async function priorStoppedSlots(env: Env, tenant: string): Promise<StoppedSlots | undefined> {
+  try {
+    if (!isValidTenantId(tenant)) return undefined;
+    const pin = await monitorDeadline(pinPublication(env, tenant, true));
+    const publishesPriors = Object.values(pin.refs).some(ref => ref.kind === PRIORS_KIND.name && ref.scope === tenant);
+    const [learn, priors] = await monitorDeadline(Promise.all([
+      readPinnedPublication(env, LEARN_KIND, tenant, pin),
+      publishesPriors ? readPinnedPublication(env, PRIORS_KIND, tenant, pin) : Promise.resolve(null),
+    ]));
+    if (!priors) return { priorVersion: 0, total: 0, slots: [] };
+    const stopped = priorUnitRefusedSlots(priors.value, slot => learn.value.slots?.[slot]?.objective ?? 'unit')
+      .sort((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
+    return { priorVersion: priors.revision, total: stopped.length,
+      slots: stopped.slice(0, STOPPED_ROWS).map(({ slot, objective, rows }) =>
+        ({ brand: tenant, slot, scope: 'tenant' as const, reason: 'prior_unit_incompatible' as const, objective, priorRows: rows })) };
   } catch { return undefined; }
 }
 
@@ -539,9 +706,12 @@ export async function runMonitor(env: Env, tenant: string, now = Date.now(), thr
   // ever read on a decision path.
   const evidenceLoss = await readEvidenceLoss(env, tenant, now);
   const reconciliation = await reconcileSinks(env, tenant, now);
+  // W25 R1: the slots the tenant's own prior document stops publishing.
+  const stoppedSlots = await priorStoppedSlots(env, tenant);
   const result: MonitorResult = { at: now, tenant, environment: environmentOf(env.ENVIRONMENT), ok: problems.length === 0, checks, problems,
     alert: { kind: null, status: 'not-needed' }, ...(governance ? { governance } : {}),
-    ...(evidenceLoss ? { evidenceLoss } : {}), ...(reconciliation ? { reconciliation } : {}) };
+    ...(evidenceLoss ? { evidenceLoss } : {}), ...(reconciliation ? { reconciliation } : {}),
+    ...(stoppedSlots ? { stoppedSlots } : {}) };
   let previous: MonitorResult | null = null;
   let savedRecovery: unknown;
   try {

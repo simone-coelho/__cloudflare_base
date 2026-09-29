@@ -19,6 +19,9 @@
   const card = (title, why, ...body) => h('section', { class: 'card' },
     title ? h('h2', {}, title) : null, why ? h('div', { class: 'why' }, why) : null, ...body);
   const needSlot = () => h('div', { class: 'empty' }, 'Choose a slot in the rail on the left.');
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
 
   // ══════════════════════════════════════════════════════ Exploring ══════════
   const ex = { st: C.pageState(), meta: null };
@@ -54,6 +57,13 @@
         : `Exploring by ${m.mode}, ${Math.round((m.share || 0) * 100)}% of this slot’s impressions, until a piece reaches ${fmt(m.floor || 0)} observations.`;
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
         m.published === false ? 'No snapshot published for this slot yet, so nothing has been observed.' : words));
+      // W28.R5 (kit 02): the answer reports the mode the engine runs and, where the
+      // learn document keeps a mode the engine will not run, names that retained
+      // setting (`configuredMode`, `unsupported`) — it is dormant, not a live policy.
+      if (m.unsupported && m.configuredMode) {
+        host.append(h('div', { class: 'msg note' },
+          `${storedModeWords(m.configuredMode)}: this slot’s learn document keeps a ${m.configuredMode} setting the engine does not run, so it spends no share of impressions. Choose a supported mode in Dials to replace it.`));
+      }
 
       if (!d) { host.append(h('div', { class: 'empty' }, ex.st.loading ? 'Reading…' : 'Nothing to show yet.')); return; }
       if (!d.rows || !d.rows.length) {
