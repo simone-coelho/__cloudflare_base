@@ -10,30 +10,40 @@ Started 2026-09-18.
 
 ---
 
-## 0. Cold resume, written 2026-09-25 at a credit-reset pause
+## 0. Cold resume, refreshed 2026-09-28 at an account switch
 
-Assume no context. Nothing of this lane is running: no background job, no watcher, no rig, no container, no worktree, no branch. This lane writes customer documents in the primary checkout on `/mnt/c`; it has never created a worktree or branch.
+Assume no context. **Nothing in this lane is running**: no background job, no watcher, no rig, no port, no pid, no container, no worktree, no branch, no stash, and no sub-agent. This lane writes customer and competitive documents in the primary checkout on `/mnt/c`. The working tree is clean for every path it owns.
 
-**Branch** `feature/real-time-personalization`, HEAD `f42c085` at the pause. **Another lane commits in this same checkout**, so stage only named paths, never `-A`.
+**Branch** `feature/real-time-personalization`, HEAD `b77cb51`. Another lane commits in this same checkout, so stage only named paths, never `-A`.
 
-**Uncommitted at the pause, and the only work at risk**
+**Done, and committed**
 
-| Path | State | Why it matters |
-|---|---|---|
-| `docs/BTI-Parity-and-Mechanism.md` | Untracked | The Monday and 24 Sep deliverable. Section 3 is the module-sequencing mechanism, section 4 the embeddings position. |
-| `docs/BTI-Parity-and-Mechanism-v1.0.docx` | Untracked | Generated from the markdown above |
-| `docs/Tapestry-BTIE-Working-Notes.md` | Tracked, modified | This file. The uncommitted edit adds the parity document to §1.1 and three log lines. |
+| Commit | What |
+|---|---|
+| `aa670ec` | Parity document: the module-sequencing mechanism (its section 3 is the answer to "how would it learn without variations") and the embeddings position |
+| `8491258` | Semantic vector design, and the markdown-to-Word converter moved into `scripts/md2docx.mjs` |
+| `8540e55` | Quin compared against the whole platform, after a first pass that wrongly reduced us to a ranker |
+| `f32fff0` | A product-management front section on that comparison, and its Word copy |
+| `9233915` | The one-glance version of the comparison, and landscape support in the converter |
+| `b77cb51` | "Where we win" as a headed section in both comparison documents |
 
-The four earlier documents (implementation guide v1.1, the implementation one-pager, the content pool sizing one-pager, and the requirements extraction) are already committed by the other lane and are not at risk.
+Seven customer or field documents now exist, each with a markdown master and a Word copy: the implementation guide, the implementation one-pager, the content pool sizing page, the parity and mechanism document, the semantic vector design, the long Quin comparison, and the one-glance Quin comparison.
 
-**The single next action.** Ask the owner whether to commit those three paths. Nothing else in this lane is pending a decision from us. If the answer is yes: `git add` the three paths by name and commit locally, no push.
+**Next, in order**
 
-**Owed.** The vector-embeddings design document is written (25 Sep). Still not started: the identifier handshake specification (SDK-loaded hook, the call that passes their identifier, the signed link at recognition).
+1. **The identifier handshake specification.** The only thing still owed to the customer, and the parity document promises it: the SDK-loaded hook, the call that passes their identifier, and the signed link at recognition. Nothing blocks it.
+2. Re-issue `docs/BTI-Content-Pool-Sizing` at slot scope. It still argues the 180,000-variant figure at page scope, which the 18 September session superseded. It is the one stale document, and it contradicts a position we have since agreed with the customer.
+3. Await the customer's answers listed in §1.3 before touching the registry or the slot map.
+
+**Red, or waiting on the owner**
+
+- **Eleven worktrees under `.claude/worktrees/`, 2.0 GB**, from 27 and 28 August plus one from April. Not the `rem/*` lanes. Flagged to the AIM lane on 24 September and raised twice with the owner; no decision yet. Not this lane's to remove, and `AGENTS.md` denies the commands that would make removal safe to attempt.
+- Nothing else is red. No test of this lane's is failing, because this lane ships documents rather than code.
 
 **Two things a new reader would otherwise get wrong**
 
-- The Word files are generated from the markdown masters by `scripts/md2docx.mjs`, which is committed. It needs the `docx` package installed once per machine, outside the repo: `npm install --prefix ~/.md2docx docx`. It is deliberately not a repo dependency, because adding it to package.json without regenerating package-lock.json breaks `npm ci`, which is what CI runs. The seven rules that took a rejected draft to learn are in the script's own header.
-- `docs/BTI-Content-Pool-Sizing` is the one stale document. It argues the 180,000-variant figure at page scope, which the 18 September session superseded by scoping decisions to the slot. Re-issue at slot scope before it goes in any pack.
+- Word files are generated by `scripts/md2docx.mjs`, which is committed. It needs `docx` installed once per machine, outside the repo: `npm install --prefix ~/.md2docx docx`. It is deliberately not a repo dependency, because adding it without regenerating `package-lock.json` breaks `npm ci`, which is what CI runs. Pass `landscape` as the ninth argument for a wide matrix. The seven rules that took a rejected draft to learn are in the script's own header.
+- The tone rules are not cosmetic. No contractual language in any technical document, confident framing rather than a list of gaps, and never the sentence "we do not use a model", which undersells the engine to exactly the audience that reads these. §2.7 and the comparison documents carry the correct phrasing.
 
 ---
 
@@ -240,4 +250,5 @@ Full comparison in `docs/Competitive-Quin-Comparison.md`. The short version, bec
 - Committed for Monday 21 Sep: the parity document and the vector-embeddings design. Committed for 24 Sep: the module-sequencing mechanism (2.5), which gates the wider meeting.
 - Parity document written as one document with the mechanism at its centre (Simone's choice). Word and markdown in docs/. Still owed: the vector-embeddings design document and the identifier handshake.
 - **2026-09-25.** Quin researched and compared (§2.7 and the comparison document). Simone's correction on the first draft: the comparison undersold us as an intent engine, missed ODP memory, called cold start a weakness when it is a strength, and skipped the tuning surface and content-as-a-product entirely. All four folded in.
+- **2026-09-28, account switch.** Lane paused clean: nothing running, nothing uncommitted, §0 refreshed. Since the 25th: the Quin research and both comparison documents, the product-management front section, the one-glance matrix, "Where we win" in both, landscape support in the converter, and two cleanup sweeps that freed 305 KB then 11 MB while leaving other lanes' rigs, ports and temp files alone.
 - **2026-09-25, credit-reset pause.** Nothing running in this lane. Cold-resume note added as §0. Cleanup the day before: freed 305 KB of Word smoke-test artifacts; observed 2.0 GB of stale August worktrees under `.claude/worktrees/` that belong to other sessions and were left alone. Not committed at the pause: the commit decision is the owner's, and a peer relaying it does not substitute.
