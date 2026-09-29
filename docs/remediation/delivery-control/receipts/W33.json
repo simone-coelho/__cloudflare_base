@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W33",
+  "workOrderHash": "sha256:d4a2f941e509bfa105af5cf0ddda184456bde313462956144580049380235bed",
+  "artifact": {
+    "revision": "fff8103505972b143d371e10b3b23f708e9769bc",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W33-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/implementer/logs/gate-eslint.log",
+      "git commits 90df78e fbe01e3 bc788a2 ca63178 f6e425e da0fefa fff8103 on rem/w33-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W33 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t \"W33[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/implementer/logs/gate-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer/logs/gate1.log",
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/implementer/logs/gate-integration.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W33-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-28T14:28:59.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

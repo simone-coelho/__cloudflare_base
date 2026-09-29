@@ -13,10 +13,12 @@
     scope: qs.get('scope') || 'coach',
     brand: qs.get('brand') || qs.get('scope') || 'coach',
     slot: qs.get('slot') || '',
+    // W26 R2: the page of the chosen placement, used only where the catalogue carries the slot name on more than one page.
+    page: qs.get('page') || '',
     token: sessionStorage.getItem('tuning-token') || '',
     learn: null, draft: null, learnRevision: 0, learnSource: 'loading', learnHistory: [],
     slots: [], pieces: new Map(),
-    snapshot: null, archived: null, liftHistory: [], priorHistory: [], proposals: null, proposalsError: '',
+    snapshot: null, archived: null, liftHistory: [], liftError: '', priorHistory: [], proposals: null, proposalsError: '',
     report: null, reportError: '', reportPage: null, reportLoading: false, reportKey: '', reportGeneration: 0, customReport: null, customKey: '',
     errors: [], flash: '', checking: false,
     sort: { col: 'lift', dir: -1 }, filter: '', level: '0',
@@ -97,6 +99,12 @@
   const r3 = (x) => Math.round(x * 1000) / 1000;
   const pct = (x) => `${Math.round(x * 100)}%`;
   const when = (ms) => (ms ? new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+  /** W31 Z1.01: the published allocation an answer carries, or null where it carries none. */
+  const allocationNote = (a) => {
+    if (!a || a.version !== 1 || a.source !== 'published' || !Number.isFinite(a.share) || a.share < 0 || a.share > 1) return null;
+    if (!Array.isArray(a.arms) || !a.arms.length || !a.arms.every((arm) => typeof arm === 'string' && arm)) return null;
+    return `Published allocation: ${+(a.share * 100).toFixed(2)}% to ${a.arms.join(', ')}.`;
+  };
   const MIN = 60000, HOUR = 3600000, DAY = 86400000;
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const REWARDS = ['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'];
@@ -190,13 +198,28 @@
     S.slots = [];
     for (const [page, list] of Object.entries(pages)) for (const s of list) S.slots.push({ page, slot: s.slot, weights: s.weights || {}, pinned: Boolean(s.pinnedPieceId) });
     if (!S.slot || !S.slots.some((s) => s.slot === S.slot)) S.slot = (S.slots.find((s) => !s.pinned) || S.slots[0] || { slot: '' }).slot;
+    choosePage();
     S.pieces = new Map(((cat.document && cat.document.pieces) || []).map((p) => [p.id, p]));
   }
+  /**
+   * W26 R2 (review D4): a slot name the catalogue carries on more than one page
+   * is one placement per page — its own snapshot and its own archive — so the
+   * picker lists each page's placement, and its reads name the page.
+   */
+  const pagesOf = (slot) => S.slots.filter((s) => s.slot === slot).map((s) => s.page);
+  const pageScoped = (slot) => pagesOf(slot).length > 1;
+  function choosePage() {
+    const pages = pagesOf(S.slot);
+    S.page = pages.length > 1 ? (pages.includes(S.page) ? S.page : pages[0]) : '';
+  }
+  const placementQuery = () => (pageScoped(S.slot) ? `&page=${encodeURIComponent(S.page)}` : '');
   async function loadLift() {
-    if (!S.slot) { S.snapshot = null; S.liftHistory = []; return; }
-    const q = `?slot=${encodeURIComponent(S.slot)}&brand=${encodeURIComponent(S.brand)}`;
-    const [{ data: cur }, { data: hist }] = await Promise.all([json(v1(`/lift${q}${S.archived ? `&version=${S.archived}` : ''}`)), json(v1(`/lift/history${q}`))]);
+    if (!S.slot) { S.snapshot = null; S.liftHistory = []; S.liftError = ''; return; }
+    const q = `?slot=${encodeURIComponent(S.slot)}&brand=${encodeURIComponent(S.brand)}${placementQuery()}`;
+    const [{ data: cur }, { ok: histOk, data: hist }] = await Promise.all([json(v1(`/lift${q}${S.archived ? `&version=${S.archived}` : ''}`)), json(v1(`/lift/history${q}`))]);
     S.snapshot = cur.snapshot || null; S.liftHistory = hist.versions || [];
+    // A read that failed is said to have failed, never shown as an empty archive.
+    S.liftError = histOk && hist.ok !== false ? '' : hist.error || 'Could not read the snapshot archive.';
   }
   async function loadProposals() {
     const { ok, status, data } = await json(v1('/learn/proposals'));
@@ -254,7 +277,7 @@
   }
   async function resetItem(item) {
     if (!confirm(`Discard the evidence for ${nameOf(item)} in ${S.slot} and start again from the prior?`)) return;
-    const res = await request(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand }) });
+    const res = await request(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand, ...(pageScoped(S.slot) ? { page: S.page } : {}) }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) { S.errors = [data.error || 'The reset was refused.']; render(); return; }
     flash(data.had ? `Evidence for ${nameOf(item)} discarded; snapshot publication status is separate, recorded as revision ${data.revision}.` : `${nameOf(item)} had no evidence in this slot; recorded as revision ${data.revision}.`);
@@ -382,6 +405,45 @@
     ));
     if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, `${S.snapshot.measurementBasis || 'served-v1'} exposures`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'To the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
   }
+  /**
+   * W30 (F17 SS3.4): the per-hour honesty signals a day summed from hour
+   * aggregates now carries, rendered ONLY where the source really states them,
+   * so a report written before this release renders exactly as it did. The
+   * wording matches the modern console screen's: it is the same statement.
+   */
+  function foldCoverageNotes(coverage) {
+    const notes = [];
+    if (!coverage || coverage.version !== 1) return notes;
+    const hourRows = (value, keys) => Array.isArray(value) && value.length > 0 && value.length <= 24
+      && value.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && keys.every(key => Number.isInteger(row[key]) && row[key] >= 0)) ? value : null;
+    const many = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const horizon = coverage.refoldHorizonMs;
+    if (Number.isFinite(horizon) && horizon >= 0) notes.push(`Published re-fold horizon: ${horizon / 3600000}h measured from the end of each hour.`);
+    const maturities = Array.isArray(coverage.maturities) && coverage.maturities.length > 0 && coverage.maturities.length <= 24
+      && coverage.maturities.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && ['open', 'final', 'repaired'].includes(row.maturity)) ? coverage.maturities : null;
+    if (maturities) {
+      const hoursOf = (state) => maturities.filter(row => row.maturity === state).map(row => row.hour);
+      const settledHours = hoursOf('final'), openHours = hoursOf('open'), repairedHours = hoursOf('repaired');
+      if (settledHours.length) notes.push(`Hours past that horizon and final, whose late rows are counted and not applied, and which the platform folds again only when an earlier hour is folded after them or a higher object cap is asked for: ${settledHours.join(', ')}.`);
+      if (openHours.length) notes.push(`Hours still inside it, whose ledger is still re-checked: ${openHours.join(', ')}.`);
+      if (repairedHours.length) notes.push(`Hours marked repaired, because their aggregate was written after they were already final — a first fold that reached them only late, or a rebuild of numbers already read as final: ${repairedHours.join(', ')}.`);
+    }
+    const late = hourRows(coverage.lateAfterMaturity, ['objects']);
+    if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${many(row.objects, 'object')})`).join(', ')}.`);
+    const carry = hourRows(coverage.carryInHours, ['evicted', 'unplaced']);
+    const reached = carry ? carry.filter(row => row.evicted > 0 || row.unplaced > 0) : [];
+    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day known when the hour was folded)`).join(', ')}.`);
+    if (reached.some(row => row.evicted > 0)) notes.push('A full attribution ring is uncertainty about a credit, not proof that one was owed.');
+    const scan = hourRows(coverage.objectScan, ['objects', 'read']);
+    if (scan) notes.push(`Ledger objects the fold opened, of those each built hour holds: ${scan.map(row => `${row.hour}: ${row.read} of ${row.objects}`).join(', ')}.`);
+    const from = coverage.recoveryFromMs;
+    if (Number.isFinite(from) && from > 0 && from < 8640000000000000) {
+      notes.push(`Repair reaches back no further than ${new Date(from).toISOString().slice(0, 13)}:00Z, the earliest hour these rings still admit.`);
+    }
+    return notes;
+  }
   function renderReport() {
     reportContext();
     if (S.draft) renderExploring();
@@ -419,6 +481,7 @@
     host.append(h('div', { class: 'msg' }, known
       ? `Minimum reported contributing horizon: ${Math.min(...horizons.map(x => x.horizonMs)) / 3600000}h; not a completeness guarantee.` : 'Minimum contributing horizon: unknown.'));
     if (coverage && Array.isArray(coverage.unadvancedHours) && coverage.unadvancedHours.length) host.append(h('div', { class: 'msg' }, 'Unadvanced ring progress does not mean every reported credit is wrong.'));
+    for (const note of foldCoverageNotes(coverage)) host.append(h('div', { class: 'msg' }, note));
     const grid = R.grids[S.slot];
     if (!grid) { host.append(h('div', { class: 'empty' }, `No decisions for ${S.slot} on that day.`)); return; }
     const names = R.policies.map((p) => p.name);
@@ -437,6 +500,11 @@
     const arms = R.holdout[S.slot] || [];
     if (arms.length) {
       host.append(h('div', { class: 'subhead' }, 'Recorded arms, under the learning policy'));
+      // W31 Z1.01 (F25 §1.3): the published allocation the day was served under,
+      // read from the report and never compiled in. A day that records none — or
+      // one that names no arm — states nothing rather than a placeholder.
+      const allocation = allocationNote(R.allocation);
+      if (allocation) host.append(h('div', { class: 'msg' }, allocation));
       // Recompute from raw counts even when an older server sends rates or comparisons.
       host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Arm'), h('th', { class: 'num' }, 'Decisions'), h('th', { class: 'num' }, 'Credited outcomes'), h('th', { class: 'num' }, 'Credits per decision'))), h('tbody', {}, ...arms.map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, a.decisions), h('td', { class: 'num' }, a.credited), h('td', { class: 'num' }, a.decisions > 0 ? r3(a.credited / a.decisions) : '—'))))));
     }
@@ -489,7 +557,8 @@
       ));
     }
     const vh = clear($('lift-history'));
-    if (!S.liftHistory.length) vh.append(h('div', { class: 'empty' }, 'No archived snapshots for this slot yet; every publish from now on is archived by version.'));
+    if (S.liftError) vh.append(h('div', { class: 'empty' }, `Could not read the snapshot archive: ${S.liftError}`));
+    else if (!S.liftHistory.length) vh.append(h('div', { class: 'empty' }, `No archived snapshots for ${pageScoped(S.slot) ? `the ${S.page} page's ${S.slot}` : 'this slot'} yet; every publish from now on is archived by version.`));
     for (const v of S.liftHistory.slice(0, 12)) vh.append(h('div', { class: 'rev' }, h('div', { class: 'top' }, h('span', { class: 'n' }, when(v.version)), h('span', { class: 'v' }, `v${v.version}`), S.archived === v.version ? h('span', { class: 'chip pending' }, 'viewing') : null), h('div', { class: 'meta' }, `${(v.size / 1024).toFixed(1)} KB`), h('button', { class: 'link', onclick: async () => { S.archived = v.version; await loadLift(); render(); } }, 'View this snapshot in the grid')));
     const prh = clear($('prior-history'));
     if (!S.priorHistory.length) prh.append(h('div', { class: 'empty' }, 'No priors imported for this scope. PUT /content/priors takes JSON rows or the CSV a warehouse exports.'));
@@ -599,8 +668,8 @@
   }
   function renderBar() {
     const sl = $('slot');
-    if (sl.options.length !== S.slots.length) { clear(sl); for (const s of S.slots) sl.append(h('option', { value: s.slot }, `${s.slot}${s.pinned ? ' (pinned)' : ''} · ${s.page}`)); }
-    sl.value = S.slot;
+    if (sl.options.length !== S.slots.length) { clear(sl); for (const s of S.slots) sl.append(h('option', { value: pageScoped(s.slot) ? `${s.slot}#${s.page}` : s.slot }, `${s.slot}${s.pinned ? ' (pinned)' : ''} · ${s.page}`)); }
+    sl.value = pageScoped(S.slot) ? `${S.slot}#${S.page}` : S.slot;
     $('brand').value = S.brand;
     $('source').textContent = S.learnSource === 'stored' ? `learn r${S.learnRevision}` : 'compiled default';
     $('source').className = `badge ${S.learnSource === 'stored' ? 'stored' : 'compiled'}`;
@@ -716,7 +785,7 @@
   let reportSession = reportUser();
   if (window.OperatorSession) OperatorSession.onChange(() => { S.token = sessionStorage.getItem('tuning-token') || ''; renderSession(); const next = reportUser(); if (next !== reportSession) { reportSession = next; reportContext(); renderReport(); } });
   renderSession();
-  $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
+  $('slot').addEventListener('change', async (e) => { const [slot, page] = e.target.value.split('#'); S.slot = slot; S.page = page || ''; choosePage(); S.archived = null; S.diffs = {}; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('brand').addEventListener('change', async (e) => { S.brand = e.target.value.trim() || S.scope; S.archived = null; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('grid-filter').addEventListener('input', (e) => { S.filter = e.target.value; renderGrid(); });
   $('grid-level').addEventListener('change', (e) => { S.level = e.target.value; renderGrid(); });

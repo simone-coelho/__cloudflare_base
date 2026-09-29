@@ -12,7 +12,7 @@ import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
-import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attributeWindowed, creditWeight, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
@@ -29,7 +29,8 @@ import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry
  */
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
-import { deliverStats, emptyStatsDelivery, learningGenerations, moneyRefusal, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, moneyRefusal, pageScopedOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { isCatalogueName } from '@/content/kinds';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
 
@@ -120,6 +121,12 @@ async function bodyOf(request: Request): Promise<unknown> {
  * one event and is credited once. An entry stored before this (id only) still
  * suppresses every repeat of its id: it can lose a credit it cannot tell apart,
  * never grant one twice, and it ages out within the ring's horizon.
+ *
+ * W22 R2 (R143): when the digest cannot be computed the journal falls back to
+ * that same id-only rule, in both directions — a credited record whose digest
+ * fails is remembered as an id-only entry, and a delivery whose digest fails
+ * is a repeat of any entry of its id — so a digest failure never credits a
+ * redelivery again.
  */
 const CREDITED_KEY = 'credited';
 const CREDITED_MAX_BYTES = 256 * 1024;
@@ -132,7 +139,14 @@ interface CreditPlan { receipt: OutcomeReceipt; batches: Array<{ name: string; b
 interface ManagedOutcome { tenant: string; brand?: string; outcome: OutcomeRecord; policy: AttributionPolicy;
   slotConfig?: Record<string, SlotLearnConfig>; defaultSlotConfig?: SlotLearnConfig; version?: number; consentUntil?: number;
   /** W24 R1.04: the tenant's published money policy, resolved by the producer and decided here, per slot. */
-  money?: MoneyPolicy | null }
+  money?: MoneyPolicy | null;
+  /**
+   * W26 R2: the slot names whose storage identity carries the page, resolved by
+   * the producer from the tenant's catalogue. The ring knows the page of every
+   * decision it credits, so it is here that a credit is routed to its own
+   * page's statistics object. Absent means none.
+   */
+  pageScoped?: string[] }
 
 /**
  * W24 R1.04: the money policy as this object will use it, or null.
@@ -229,6 +243,8 @@ export class DecisionRing {
       case '/outcome': {
         const body = await bodyOf(request) as ManagedOutcome | null;
         if (!object(body) || !body.outcome || !body.policy || !body.tenant) return json({ ok: false, error: 'outcome and policy required' }, 400);
+        const scoped = pageScopedOf(body.pageScoped);
+        if (!scoped) return json({ ok: false, error: 'pageScoped must be catalogue slot names' }, 400);
         if (body.version === 2) {
           const saved = await this.managedPlan(body), key = 'creditPlan:' + await recoveryDigest(body.outcome.outcome_id);
           if (url.pathname === '/outcome/prepare') return json({ ok: true, digest: saved.digest, destinations: saved.plan.batches.map(batch => batch.name) });
@@ -256,7 +272,7 @@ export class DecisionRing {
         // sent, so a redelivered outcome leaves every online counter exactly
         // where one delivery left it.
         const repeat = await this.serialize(() => this.alreadyCredited(body.outcome!));
-        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money)));
+        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money), scoped));
         if (repeat) {
           // The receipt says what this outcome attributes to and that those
           // credits are applied in the statistics — which they are, by the
@@ -482,7 +498,7 @@ export class DecisionRing {
     return receipt;
   }
 
-  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null): Promise<CreditPlan> {
+  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null, scoped: ReadonlySet<string> = new Set()): Promise<CreditPlan> {
     const subject = recordSubject(outcome, 'outcome');
     if (tenant !== subject.tenant || brand !== outcome.brand) throw new Error('Ring scope unavailable');
     const { data: d, cutoff } = await this.current(subject);
@@ -499,6 +515,7 @@ export class DecisionRing {
     // Explicit references check ambiguity before arm filtering. Doc 22 §10
     // still forbids forwarding any holdout credit to online statistics.
     const all: RingEntry[] = d.ring.map(ringEntryOf), correlated = Object.hasOwn(outcome, 'decision_id');
+    const pageOfDecision = new Map(all.map(e => [e.id, e.page]));
     const ring = correlated ? all : all.filter((e) => e.arm === 'personalized' && e.brand === outcome.brand);
     const compatible = ring.filter(e => (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1'));
     const attribution = attributeWindowed(outcome, compatible, policy);
@@ -512,7 +529,15 @@ export class DecisionRing {
     // decision this outcome named but was served under another brand. Counted
     // over the same candidates attribution considered, so it reports a refusal
     // that happened and never a decision this outcome never named.
-    plan.receipt.brandMismatched = attribution.brandMismatched;
+    // W26 R4 (LANE-LOG R198): an outcome that names NO decision is counted as
+    // well — the placements of another brand it would have been credited to,
+    // under the same policy, in a slot its own brand credited nothing. Counted
+    // over the same personalized, basis-compatible entries attribution reads;
+    // an entry that carries no brand cannot establish a disagreement and is
+    // never counted.
+    plan.receipt.brandMismatched = correlated ? attribution.brandMismatched
+      : uncorrelatedBrandMismatches(outcome, all.filter(e => e.arm === 'personalized' && typeof e.brand === 'string' && e.brand !== outcome.brand
+        && (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1')), policy, attribution.credits);
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
@@ -569,8 +594,20 @@ export class DecisionRing {
         plan.retention = mergeRetention(plan.retention, original, tenant, 'online');
       }
       plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += list.length - weighed.length;
-      if (weighed.length) plan.batches.push({ name: statsName(tenant, brand, slot), received: weighed.length,
-        body: { tenant, brand, slot, config, credits: weighed } });
+      // W26 R2: each credit goes to the statistics object of the PLACEMENT its
+      // decision was served in — the slot, and the page where the tenant's
+      // catalogue carries this slot name on more than one page — read off the
+      // ring entry that earned it, never inferred from the outcome.
+      const placements = new Map<string, { page?: string; credits: typeof weighed }>();
+      for (const credit of weighed) {
+        const page = identityPage(scoped, slot, pageOfDecision.get(credit.decision_id));
+        if (scoped.has(slot) && !isCatalogueName(page)) throw new Error('Credit placement unavailable');
+        const name = statsName(tenant, brand, slot, page);
+        const group = placements.get(name) ?? { ...(page ? { page } : {}), credits: [] };
+        group.credits.push(credit); placements.set(name, group);
+      }
+      for (const [name, group] of placements) plan.batches.push({ name, received: group.credits.length,
+        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config, credits: group.credits } });
     }
     if (refusedBySlot.size) {
       plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);
@@ -626,25 +663,32 @@ export class DecisionRing {
     const id = outcome.outcome_id;
     if (typeof id !== 'string' || !id) return false;
     const digest = await this.creditedDigest(outcome);
-    // A digest this object cannot compute recognizes nothing new: the entry
-    // written without one still stops a repeat of its id.
+    // W22 R2 (R143): a digest this object cannot compute is told apart by the
+    // id alone, the journal's own contract for an entry it cannot tell apart:
+    // every entry of this id stops the repeat, so a redelivery met by a digest
+    // failure can lose a credit it cannot tell apart, never grant one twice.
+    // An entry written without a digest likewise stops every repeat of its id.
     return (await this.creditedOutcomes()).some(entry => entry.id === id
-      && (entry.digest === undefined || entry.digest === digest));
+      && (digest === null || entry.digest === undefined || entry.digest === digest));
   }
   private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
     try {
       if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
       const id = outcome.outcome_id;
       if (typeof id !== 'string' || !id || bytes(id) > RING_LIMITS.idBytes) return;
+      // W22 R2 (R143): a record whose digest cannot be computed is remembered
+      // by its id alone — the id-only shape this journal already reads, which
+      // stops every repeat of that id — never as nothing, which would credit
+      // its redelivery again.
       const digest = await this.creditedDigest(outcome);
-      if (digest === null) return;            // unrecordable is remembered as nothing, never as this id
       // The journal never outlives the online retention of the event it records.
       const expiresAt = readRetention(outcome.retention?.online, tenant, 'online').expiresAt;
       const now = Date.now();
-      // Only this exact record's own entry is replaced. An id-only entry from
-      // before the digest is kept: it is what still recognizes ITS repeat.
-      let kept = [...(await this.creditedOutcomes()).filter(entry => !(entry.id === id && entry.digest === digest)),
-        { id, ts: outcome.ts, expiresAt, digest }]
+      // Only this record's own entry is replaced (for an id-only entry, the
+      // id-only entry of this id). An id-only entry from before the digest is
+      // kept: it is what still recognizes ITS repeat.
+      const entry: CreditedOutcome = digest === null ? { id, ts: outcome.ts, expiresAt } : { id, ts: outcome.ts, expiresAt, digest };
+      let kept = [...(await this.creditedOutcomes()).filter(prior => !(prior.id === id && prior.digest === entry.digest)), entry]
         .sort((a, b) => a.ts - b.ts);
       if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
       while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
@@ -680,7 +724,7 @@ export class DecisionRing {
       const generation = await this.state.storage.get<number>('creditGeneration') ?? 0;
       if (!Number.isSafeInteger(generation) || generation < 0) throw new Collision();
       await this.state.storage.put('creditGeneration', generation);
-      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true, moneyPolicyOf(body.money));
+      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true, moneyPolicyOf(body.money), pageScopedOf(body.pageScoped) ?? new Set());
       return { plan, generation };
     });
     if (first.existing) return first.existing;

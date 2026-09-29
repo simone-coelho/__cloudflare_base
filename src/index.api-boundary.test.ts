@@ -1579,7 +1579,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     expect(observed.some(batch => batch.queue === 'w1202-source')).toBe(true);
     expect(external).toBe(0);
   } finally { await native.dispose(); }
-}, 135000); // Existing 90s native work plus the explicit 30s stalled-consumer boundary.
+}, 300000); // Existing 90s native work plus the explicit 30s stalled-consumer boundary; A50: 300s so a loaded machine cannot time it out (104-123s alone).
 
 it('W10.03 native SQLite bounded waves, exact repair, ambiguous writes and persisted process restart', async () => {
   const directory = mkdtempSync(resolve(tmpdir(), 'w1003-native-'));

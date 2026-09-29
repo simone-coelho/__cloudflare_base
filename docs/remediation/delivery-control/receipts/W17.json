@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "ADOPTION",
+  "ticketId": "W17",
+  "workOrderHash": "sha256:47fe8be0704efeee12c8ef85c7c5461ec928ed8d0c70fb21e235faf5795faa57",
+  "artifact": {
+    "revision": "0c1902654c8f7fc8888077c31ba05e2ee8efc377",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "docs/remediation/reviews/W17.json",
+      "/home/simonecoelho/rem/_evidence/W17/reviewer-whole/REPORT.md",
+      "git merges f00f74b 0aeff98"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W17 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/W17.acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/integration.log",
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/integration.vitest.json"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/adoption-1/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-24T23:49:53.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

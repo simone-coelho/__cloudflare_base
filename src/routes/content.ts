@@ -24,18 +24,18 @@ import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
-import { assertPublicationBase, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
+import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, type PriorsDoc } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
-import type { ContentCatalog, ContentPiece, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, ContentPiece, DocumentEnvelope, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
 import { ConnectorUnavailable } from '@/connectors/model';
 import { catalogDiagnostics } from '@/content/catalogDiagnostics';
-import { slotDiagnostics } from '@/content/slotDiagnostics';
+import { slotConstraintDiagnostics, slotDiagnostics } from '@/content/slotDiagnostics';
 
 type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext } };
 export const contentRoutes = new Hono<Ctx>();
@@ -74,6 +74,35 @@ const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any; fromCsv?: 
 };
 
 function kindOf(name: string | undefined) { return KINDS[(name ?? '').toLowerCase()] ?? null; }
+/**
+ * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): the size of the document this
+ * answer carries, against the ceiling it is stored under.
+ *
+ * F32's finding is that a merchandiser could only discover the publication
+ * ceiling by hitting it — the document grows, a publish is refused, and nothing
+ * before that moment said how close it was. The read every operator surface
+ * already makes now answers the two numbers that make the refusal predictable,
+ * beside `diagnostics` rather than inside it, because `diagnostics` is the
+ * catalog's own validation report and its key set is a contract of its own
+ * (`src/routes/content.test.ts:466`).
+ *
+ * It is a SIBLING of the document and never part of it: it is derived from the
+ * document on the way out, so nothing here can reach a stored body.
+ *
+ * `bytes` is the canonical length the ceiling is charged against, so it is the
+ * same number the refusal would use. The serialization is the one this answer
+ * is about to perform anyway, so the read costs no new order of work, and it
+ * cannot fail this read: a document whose shape `documentBytes` refuses to
+ * canonicalize would never have been stored, and if one ever is, the member is
+ * absent and the document still reads.
+ */
+function documentEnvelopeOf(kind: DocumentKind<unknown>, value: unknown): { envelope?: DocumentEnvelope } {
+  try {
+    const pieces = kind.name === CONTENT_KIND.name && value !== null && typeof value === 'object' && Array.isArray((value as ContentCatalog).pieces)
+      ? { pieces: (value as ContentCatalog).pieces.length } : {};
+    return { envelope: { ...pieces, bytes: documentBytes(value), limitBytes: PUBLICATION_MAX_BYTES } };
+  } catch { return {}; }
+}
 function inputCollection(kind: string, candidate: unknown): void {
   if (candidate && typeof candidate === 'object') {
     const body = candidate as Record<string, unknown>;
@@ -117,12 +146,14 @@ function catalogScope(c: Context<Ctx>): string {
   return tenant;
 }
 function scopeOf(c: Context<Ctx>, _kind?: DocumentKind<unknown>): string { void _kind; return catalogScope(c); }
+/** The slot document's own canonical catalog tenant, for the advisory channels that read the catalogue. */
+const slotCatalogTenant = (c: Context<Ctx>, scope: string) => () => {
+  const tenant = catalogScope(c);
+  if (scope !== tenant) throw new Error('Unbound slot scope');
+  return tenant;
+};
 function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | null, revision: number | null) {
-  return slotDiagnostics(c.env, slots, revision, () => {
-    const tenant = catalogScope(c);
-    if (scope !== tenant) throw new Error('Unbound slot scope');
-    return tenant;
-  });
+  return slotDiagnostics(c.env, slots, revision, slotCatalogTenant(c, scope));
 }
 /**
  * The records a direct publication submitted, for the advisory channel alone.
@@ -294,8 +325,12 @@ contentRoutes.get('/:kind', async (c) => {
   const value = rev ? rev.value : k.fallback;
   return c.json({ scope, kind: k.kind.name, source: rev ? 'stored' : 'compiled-default', revision: rev?.revision ?? 0,
     publication: rev?.publication, actor: rev?.actor ?? null, note: rev?.note ?? null, at: rev?.at ?? null, document: value,
+    ...documentEnvelopeOf(k.kind, value),
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, value, rev?.revision ?? 0) } : {}),
-    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, rev?.value ?? null, rev?.revision ?? null) } : {}) });
+    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, rev?.value ?? null, rev?.revision ?? null),
+      // W20 R1 (R77(b), R82(c)): the public home of the refusals the published
+      // hard controls make, beside the pin channel and in a channel of its own.
+      constraintDiagnostics: await slotConstraintDiagnostics(c.env, rev?.value ?? null, rev?.revision ?? null, slotCatalogTenant(c, scope)) } : {}) });
 });
 
 contentRoutes.get('/:kind/history', async (c) => {
