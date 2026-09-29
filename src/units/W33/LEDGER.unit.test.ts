@@ -34,7 +34,8 @@
 //     computed under. A day that records no provenance reads `provenance: null`
 //     (unknown), the convention this report already uses for `computation`.
 //   · `repairCanonicalDay(r2, ids, learn, now)` exported by src/learn/hourly.ts,
-//     answering `{ status: 'unaffected' | 'repaired' | 'declared' }`.
+//     with `r2: R2Agg` like its neighbours (catchUp, runDayReport), answering
+//     `{ status: 'unaffected' | 'repaired' | 'declared' }`.
 //
 // Storage is the only synthetic part: the writers (runDayReport, which the POST
 // route and the nightly job call; catchUp, which the five-minute job calls) and
@@ -301,6 +302,32 @@ describe('unit:W33.O2', () => {
     expect(after.windowText, 'O2 — and so is the window read').toBe(newer.windowText);
   });
 
+  it('host: the five-minute job\'s canonical write (catchUp → publishAggregateDay, strict) that read fewer hours never replaces the newer canonical day the POST/nightly path published meanwhile', async () => {
+    // The mirror of the case above: here the scheduler is the stale writer, so
+    // a guard on the non-strict (runDayReport) write alone does not satisfy O2.
+    const r2 = new DayR2();
+    ledger(r2, 'first', NOON.decisions, NOON.outcomes);
+    await buildHour(bucket(r2), TENANT, { date: DATE, hour: 12 }, LEARN, NOW, { shards: 1 });
+    // Writer A (the five-minute job) lists the date's hour aggregates and is held at its read of hour 12.
+    const held = holdFirstGet(r2, key => key === `aggregates/${TENANT}/${DATE}/12.json`);
+    const a = catchUp(bucket(r2), TENANT, LEARN, NOW, { shards: 1, maxHours: 0, lookbackHours: 26 }).then(() => 'resolved', () => 'rejected');
+    await held.ready;
+    // Meanwhile hour 13 is folded and the POST/nightly path publishes the day from both hours.
+    ledger(r2, 'next', ONE_PM.decisions, ONE_PM.outcomes);
+    await buildHour(bucket(r2), TENANT, { date: DATE, hour: 13 }, LEARN, NOW, { shards: 1 });
+    const b = await runDayReport(bucket(r2), IDS, LEARN, null, NOW + MIN);
+    expect(b.hours?.built, 'fixture: B read both hour aggregates').toEqual([12, 13]);
+    const newer = await reads(r2);
+    expect(newer.day.hours?.built, 'fixture: the newer canonical day sums hours 12 and 13').toEqual([12, 13]);
+
+    held.release(); await a;
+    const after = await reads(r2);
+    expect(after.day.hours?.built, 'O2 — the scheduler\'s stale write (hour 12 only) must not replace the newer canonical day (hours 12 and 13)').toEqual([12, 13]);
+    expect(after.day.counts.decisions, 'O2 — the newer day\'s three decisions stand').toBe(3);
+    expect(after.dayText, 'O2 — the canonical day GET is byte-identical to what the POST/nightly path published').toBe(newer.dayText);
+    expect(after.windowText, 'O2 — and so is the window read').toBe(newer.windowText);
+  });
+
   it('host: a ledger-path canonical write computed before the fold never replaces the aggregate-backed canonical day the fold published meanwhile', async () => {
     const r2 = new DayR2();
     ledger(r2, 'first', NOON.decisions, NOON.outcomes);
@@ -407,7 +434,7 @@ describe('unit:W33.O4', () => {
     for (const [label, r2] of [['recorded canonical day', recorded], ['c10ccff fold day', historicalFold],
       ['current-format fold day without provenance', unrecordedFold], ['c10ccff ledger day', historicalRaw]] as const) {
       const before = r2.snapshot(), puts = r2.puts.length;
-      const result = await repairCanonicalDay(r2, IDS, LEARN, NOW + H);
+      const result = await repairCanonicalDay(bucket(r2), IDS, LEARN, NOW + H);
       expect(result, `O4/D1 — ${label}: not contaminated, so not repaired`).toMatchObject({ status: 'unaffected' });
       expect(r2.snapshot(), `O4/D1 — ${label}: storage unchanged`).toEqual(before);
       expect(r2.puts.length, `O4/D1 — ${label}: no write`).toBe(puts);
@@ -427,7 +454,7 @@ describe('unit:W33.O4', () => {
     const r2 = source.clone(); r2.place(reportKey(TENANT, TENANT, DATE), canonicalReportJson(overlay));
     expect((await reads(r2)).day.hours?.source, 'fixture (L1): the overwritten day is ledger-sourced').toBe('ledger');
 
-    const result = await repairCanonicalDay(r2, IDS, LEARN, NOW + H);
+    const result = await repairCanonicalDay(bucket(r2), IDS, LEARN, NOW + H);
     expect(result, 'O4 — an affected day whose sources are retained is repaired').toMatchObject({ status: 'repaired' });
     const repaired = await reads(r2);
     expect(repaired.day.hours?.source, 'O4 (L1 remedy: leave the canonical key to the fold) — the repaired day is aggregate-backed again').toBe('aggregates');
@@ -437,7 +464,7 @@ describe('unit:W33.O4', () => {
       .toEqual({ version: 1, status: 'repaired', policies: CANONICAL_POLICIES });
 
     const puts = r2.puts.length, stable = r2.snapshot();
-    expect(await repairCanonicalDay(r2, IDS, LEARN, NOW + 2 * H), 'O4 — a repaired day is recognized as clean on the next pass').toMatchObject({ status: 'unaffected' });
+    expect(await repairCanonicalDay(bucket(r2), IDS, LEARN, NOW + 2 * H), 'O4 — a repaired day is recognized as clean on the next pass').toMatchObject({ status: 'unaffected' });
     expect(r2.puts.length).toBe(puts); expect(r2.snapshot()).toEqual(stable);
   });
 
@@ -451,7 +478,7 @@ describe('unit:W33.O4', () => {
     const r2 = source.clone(); r2.place(reportKey(TENANT, TENANT, DATE), preFixBody(overlay));
     expect((await reads(r2)).day.policies.map(p => p.name), 'fixture: the overlay day carries only the learning policy').toEqual(['learning']);
 
-    const result = await repairCanonicalDay(r2, IDS, LEARN, NOW + H);
+    const result = await repairCanonicalDay(bucket(r2), IDS, LEARN, NOW + H);
     expect(result, 'O4 — repaired from the ledger the canonical writer reads').toMatchObject({ status: 'repaired' });
     const repaired = await reads(r2);
     expect(repaired.day.policies.map(p => p.name), 'O4 — the canonical policy set is restored').toEqual(CANONICAL_POLICIES);
@@ -465,7 +492,7 @@ describe('unit:W33.O4', () => {
     const overlay = await runReport(bucket(scratch), IDS, LEARN, CUSTOM, NOW);
     const r2 = new DayR2(); r2.place(reportKey(TENANT, TENANT, DATE), canonicalReportJson(overlay));
 
-    const result = await repairCanonicalDay(r2, IDS, LEARN, NOW + H);
+    const result = await repairCanonicalDay(bucket(r2), IDS, LEARN, NOW + H);
     expect(result, 'O4 — an affected day that cannot be rebuilt is declared').toMatchObject({ status: 'declared' });
     const declared = await reads(r2);
     expect(declared.dayStatus, 'O4 — the declared day stays readable: declaring is not deleting evidence').toBe(200);

@@ -294,7 +294,12 @@ export class SessionManager {
         odpSeed: data.odpSeed ?? existingSession?.odpSeed,
         odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,
         odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,
-        identity: data.identity ?? existingSession?.identity,
+        // W35 A1: the first record a recognized grant creates is the person's
+        // own, anchored to her id exactly as a link publishes one
+        // (ShopperReflex.publishCurrentSession), so every later owned read of it
+        // recognizes it as hers.
+        identity: data.identity ?? existingSession?.identity
+          ?? (this.principal?.kind === 'recognized' && !existingSession ? { shopperId: userId, linkedAt: now } : undefined),
         journey: data.journey ?? existingSession?.journey,
         metadata: {
           firstSeen: existingSession?.metadata.firstSeen || now,
@@ -390,9 +395,14 @@ export class SessionManager {
     }
     if (this.principal) {
       assertSessionTarget(this.principal);
-      if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
-        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
-        : this.principal.kind === 'recognized') throw new SessionAccessError();
+      // W35 A1: a recognized grant may have no record YET — a sign-in whose
+      // shopper consented to tracking only carries no profile to the person, and
+      // the person's own object then creates nothing until her first tracked
+      // event (ShopperReflex.handleTransfer / ingest). The grant itself is the
+      // person's object's own receipt, checked by that owner before this read,
+      // so an absent record is her cold state, never a reason to refuse her.
+      if (raw && (raw.userId !== this.principal.subject || !!raw.forwardTo
+        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject))) throw new SessionAccessError();
     }
     if (raw) {
       const consent = await currentOwnerConsent();
@@ -564,9 +574,9 @@ export class SessionManager {
     if (!this.principal || snapshot.sessionId !== sessionId) throw new SessionAccessError();
     assertSessionTarget(this.principal, undefined, sessionId);
     const raw = snapshot.data === null ? null : withConsent(sessionDataSchema.parse(snapshot.data), consentOf(snapshot.data));
-    if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
-      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
-      : this.principal.kind === 'recognized') throw new SessionAccessError();
+    // W35 A1: as readRaw — a recognized grant's absent record is her cold state.
+    if (raw && (raw.userId !== this.principal.subject || !!raw.forwardTo
+      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject))) throw new SessionAccessError();
     return raw;
   }
 

@@ -27,6 +27,14 @@ export interface Env {
   LEARN_STATS?: DurableObjectNamespace;
   /** Phase 3 (doc 22 §9) — Workers AI, for the `workers_ai` model kind. Absent on this stamp; the kind reports unavailable. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
+  /**
+   * W34 (document 35 §5 row W34, F30) — the deployment's external-model policy, read by the decision
+   * path (src/learn/external.ts `externalModelPolicy`). `off` is the only policy this build implements
+   * and the only deployed state: wrangler.toml sets it in every environment, and a customer stamp,
+   * whose variables are a fixed set, deploys it absent. Absent, empty, mis-cased or any other value is
+   * `off`; no value enables a runtime model, a service, Workers AI or a table, and no stored document can.
+   */
+  EXTERNAL_MODEL_POLICY?: string;
   /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
   TREND_ROLLUP_TENANTS?: string;
   /**

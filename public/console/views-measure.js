@@ -19,6 +19,9 @@
   const card = (title, why, ...body) => h('section', { class: 'card' },
     h('header', {}, h('h3', {}, title), why ? h('div', { class: 'why' }, why) : null), ...body);
   const body = (...x) => h('div', { class: 'body' }, ...x);
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
   const iso = (d) => new Date(d).toISOString().slice(0, 10);
   const daysAgo = (n) => iso(Date.now() - n * 86400000);
 
@@ -84,6 +87,18 @@
 
   // Always derive the diagnostic from counts, including when an older server returns inferred fields.
   const intensity = (credited, decisions) => decisions > 0 ? dec(credited / decisions, 3) : '—';
+  /**
+   * W31 Z1.01 (F25 §1.3): the published allocation the answer carries, stated so
+   * the counts beside it are readable as an experiment. It is read from the
+   * report, never compiled in, and a report that records none — or records one
+   * that names no arm — states nothing rather than a placeholder.
+   */
+  const allocationNote = (allocation) => {
+    const a = allocation;
+    if (!a || a.version !== 1 || a.source !== 'published' || !Number.isFinite(a.share) || a.share < 0 || a.share > 1) return null;
+    if (!Array.isArray(a.arms) || !a.arms.length || !a.arms.every((arm) => typeof arm === 'string' && arm)) return null;
+    return `Published allocation: ${+(a.share * 100).toFixed(2)}% to ${a.arms.join(', ')}.`;
+  };
   const minimumHorizon = (coverage, hours) => {
     if (!coverage || coverage.version !== 1 || coverage.source !== 'aggregates' || coverage.metadata !== 'recorded' ||
       !Array.isArray(coverage.missingHours) || coverage.missingHours.length || !Array.isArray(coverage.unknownHours) || coverage.unknownHours.length) return null;
@@ -91,6 +106,44 @@
     if (!Array.isArray(rows) || !rows.length || rows.length > 24 || !Array.from(rows).every(x => x && Number.isInteger(x.hour) && x.hour >= 0 && x.hour < 24 && Number.isFinite(x.horizonMs) && x.horizonMs >= 0) || new Set(rows.map(x => x.hour)).size !== rows.length) return null;
     if (hours && (!Array.isArray(hours.missing) || hours.missing.length || !Array.isArray(hours.built) || hours.built.length !== rows.length || !hours.built.every(hour => rows.some(x => x.hour === hour)))) return null;
     return Math.min(...rows.map(x => x.horizonMs));
+  };
+  /**
+   * W30 (F17 SS3.4): the per-hour honesty signals a day summed from hour
+   * aggregates now carries, rendered ONLY where the source really states them,
+   * so a report written before this release renders exactly as it did.
+   */
+  const foldNotes = (coverage) => {
+    const notes = [];
+    if (!coverage || coverage.version !== 1) return notes;
+    const hourRows = (value, keys) => Array.isArray(value) && value.length > 0 && value.length <= 24
+      && value.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && keys.every(key => Number.isInteger(row[key]) && row[key] >= 0)) ? value : null;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const horizon = coverage.refoldHorizonMs;
+    if (Number.isFinite(horizon) && horizon >= 0) notes.push(`Published re-fold horizon: ${horizon / 3600000}h measured from the end of each hour.`);
+    const maturities = Array.isArray(coverage.maturities) && coverage.maturities.length > 0 && coverage.maturities.length <= 24
+      && coverage.maturities.every(row => row && Number.isInteger(row.hour) && row.hour >= 0 && row.hour < 24
+        && ['open', 'final', 'repaired'].includes(row.maturity)) ? coverage.maturities : null;
+    if (maturities) {
+      const hoursOf = (state) => maturities.filter(row => row.maturity === state).map(row => row.hour);
+      const settledHours = hoursOf('final'), openHours = hoursOf('open'), repairedHours = hoursOf('repaired');
+      if (settledHours.length) notes.push(`Hours past that horizon and final, whose late rows are counted and not applied, and which the platform folds again only when an earlier hour is folded after them or a higher object cap is asked for: ${settledHours.join(', ')}.`);
+      if (openHours.length) notes.push(`Hours still inside it, whose ledger is still re-checked: ${openHours.join(', ')}.`);
+      if (repairedHours.length) notes.push(`Hours marked repaired, because their aggregate was written after they were already final — a first fold that reached them only late, or a rebuild of numbers already read as final: ${repairedHours.join(', ')}.`);
+    }
+    const late = hourRows(coverage.lateAfterMaturity, ['objects']);
+    if (late) notes.push(`Rows reached these hours after they were final and were counted here rather than applied: ${late.map(row => `hour ${row.hour} (${plural(row.objects, 'object')})`).join(', ')}.`);
+    const carry = hourRows(coverage.carryInHours, ['evicted', 'unplaced']);
+    const reached = carry ? carry.filter(row => row.evicted > 0 || row.unplaced > 0) : [];
+    if (reached.length) notes.push(`Outcomes whose carry-in the fold could not reach: ${reached.map(row => `hour ${row.hour} (${row.evicted} with a full attribution ring, ${row.unplaced} with no decision of that visitor's day known when the hour was folded)`).join(', ')}.`);
+    if (reached.some(row => row.evicted > 0)) notes.push('A full attribution ring is uncertainty about a credit, not proof that one was owed.');
+    const scan = hourRows(coverage.objectScan, ['objects', 'read']);
+    if (scan) notes.push(`Ledger objects the fold opened, of those each built hour holds: ${scan.map(row => `${row.hour}: ${row.read} of ${row.objects}`).join(', ')}.`);
+    const from = coverage.recoveryFromMs;
+    if (Number.isFinite(from) && from > 0 && from < 8640000000000000) {
+      notes.push(`Repair reaches back no further than ${new Date(from).toISOString().slice(0, 13)}:00Z, the earliest hour these rings still admit.`);
+    }
+    return notes;
   };
   const coverageNotes = (coverage, hours) => {
     const notes = ['Outcome maturity: unknown. Source completeness is not established.'];
@@ -106,6 +159,7 @@
     notes.push(minimum !== null
       ? `Minimum reported contributing horizon: ${minimum / 3600000}h; not a completeness guarantee.` : 'Minimum contributing horizon: unknown.');
     if (Array.isArray(coverage.unadvancedHours) && coverage.unadvancedHours.length) notes.push('Unadvanced ring progress does not mean every reported credit is wrong.');
+    for (const note of foldNotes(coverage)) notes.push(note);
     return notes;
   };
 
@@ -129,7 +183,7 @@
 
       if (ms.windowError) host.append(h('div', { class: 'msg note' }, ms.windowError));
 
-      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report.'));
+      host.append(h('div', { class: 'msg note' }, 'Windows allow up to 184 days inclusive; byte and row budgets can still refuse a smaller window. Source coverage, outcome maturity and policy compatibility are not established by the presence of a report. Read a longer period as consecutive windows and pool them yourself.'));
       for (const day of (ms.window && ms.window.incomplete || [])) host.append(h('div', { class: 'msg note' },
         `Incomplete coverage for ${day.date}${day.truncated ? ': source coverage incomplete' : ''}${day.missingHours.length ? `; ${plural(day.missingHours.length, 'hour')} missing (${day.missingHours.join(', ')})` : ''}.`));
       if (ms.window) {
@@ -149,6 +203,7 @@
       // 1. Raw counts pooled over the requested window.
       const slots = ms.window ? Object.keys(ms.window.slots) : [];
       if (ms.window) host.append(h('div', { class: 'msg note' }, 'Recorded computation basis only. Experimental compatibility, served control and enrollment remain unverified.'));
+      if (ms.window && allocationNote(ms.window.allocation)) host.append(h('div', { class: 'msg note' }, allocationNote(ms.window.allocation)));
       if (ms.window && !slots.length) {
         host.append(card('Over the window', 'No attribution rows yet.', body(h('div', { class: 'empty' },
           ms.window.days.length
@@ -200,14 +255,19 @@
           R && R.hours && R.hours.missing.length ? h('div', { class: 'msg note' }, `Incomplete coverage: ${plural(R.hours.missing.length, 'hour')} missing (${R.hours.missing.join(', ')}).`) : null,
           ...(R ? coverageNotes(R.coverage, R.hours).map(note => h('div', { class: 'msg note' }, note)) : []),
           R && R.holdout && R.holdout[S.slot] ? h('div', { class: 'subhead' }, `The arms on ${S.slot}, under the learning policy`) : null,
+          R && R.holdout && R.holdout[S.slot] && allocationNote(R.allocation) ? h('div', { class: 'msg note' }, allocationNote(R.allocation)) : null,
           R && R.holdout && R.holdout[S.slot] ? C.table([
             { key: 'arm', label: 'Arm' }, { key: 'd', label: 'Decisions', num: true },
             { key: 'c', label: 'Credited outcomes', num: true }, { key: 'r', label: 'Credits per decision', num: true },
           ], R.holdout[S.slot].map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, fmt(a.decisions)), h('td', { class: 'num' }, fmt(a.credited)), h('td', { class: 'num' }, intensity(a.credited, a.decisions))))) : null,
           R && R.exploration ? (() => {
             const e = R.exploration.find((x) => x.slot === S.slot);
+            // W28.R5: the report row names a retained setting the engine did not run
+            // (`configuredMode`, `unsupported`); the line says so beside the effective mode.
             return e ? h('div', { class: 'kv' },
-              h('span', { class: 'k' }, 'Explored'), h('span', { class: 'v' }, `${pct(e.realized)} of ${plural(e.decisions, 'decision')} in the first position${e.configured === null || e.configured === undefined ? ', with exploration off' : `, against ${pct(e.configured)} configured`}`)) : null;
+              h('span', { class: 'k' }, 'Explored'), h('span', { class: 'v' }, `${pct(e.realized)} of ${plural(e.decisions, 'decision')} in the first position${e.configured === null || e.configured === undefined ? ', with exploration off' : `, against ${pct(e.configured)} configured`}`),
+              ...(e.unsupported && e.configuredMode ? [h('span', { class: 'k' }, 'Retained setting'),
+                h('span', { class: 'v' }, `${storedModeWords(e.configuredMode)}: the learn document keeps it and the engine did not run it, so it explored nothing.`)] : [])) : null;
           })() : null,
         )));
 
@@ -246,7 +306,46 @@
     { id: 'catalog', title: 'The content catalog', why: 'The pieces themselves, their tags and their lifecycle.', path: '/content/catalog/history', rollback: (n) => `/content/catalog/rollback/${n}` },
     { id: 'priors', title: 'Imported priors', why: 'Rates a team estimated elsewhere, used until live evidence outweighs them.', path: '/content/priors/history', rollback: (n) => `/content/priors/rollback/${n}` },
   ];
-  const hist = { rows: {}, lift: [], loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+  const hist = { rows: {}, envelopes: {}, lift: [], liftError: '', loading: false, scope: '', request: 0, rollbackRequest: 0, pins: null };
+  // W32 E1.01 (F32 §2.4-§2.6, §6.2): how big the document in force is, against
+  // the ceiling it is stored under, so a merchandiser sees the room left BEFORE
+  // a publish is refused for the size.
+  //
+  // The count comes from the answer's own `envelope`, never from counting the
+  // pieces this answer happened to carry: those are the same number today only
+  // because the read returns the whole document, and the moment it returns a
+  // page or a projection a recount would quietly understate the catalog. A
+  // deployment whose answer predates the member renders nothing here rather
+  // than a stray value, which is the rule every view on this console keeps.
+  const size = (bytes) => (bytes >= 1048576 ? `${dec(bytes / 1048576, 1)} MiB` : `${dec(bytes / 1024, 1)} KB`);
+  function envelopeLine(e) {
+    if (!e || typeof e !== 'object') return null;
+    const parts = [];
+    if (Number.isFinite(e.pieces)) parts.push(plural(e.pieces, 'piece'));
+    if (Number.isFinite(e.bytes)) parts.push(Number.isFinite(e.limitBytes)
+      ? `${size(e.bytes)} of the ${size(e.limitBytes)} one stored document may hold`
+      : size(e.bytes));
+    return parts.length ? h('div', { class: 'why' }, parts.join(' · ')) : null;
+  }
+
+  /**
+   * W26 R2 (review D4): the slot's archived snapshots. A slot name the catalogue
+   * carries on more than one page is one placement per page, each with its own
+   * archive, and the route names those pages when it is asked without one; every
+   * page's archive is then read and shown, each version with its page. A read
+   * that fails is said to have failed, never shown as an empty archive.
+   */
+  async function liftHistory(slot) {
+    const asked = S.params.page || undefined;
+    const first = await C.v1('/lift/history', { slot, page: asked });
+    if (first.ok && first.data.ok !== false) return { versions: (first.data.versions || []).map((v) => (first.data.page ? { ...v, page: first.data.page } : v)), error: '' };
+    const pages = !asked && first.status === 400 && Array.isArray(first.data.pages) ? first.data.pages : null;
+    if (!pages) return { versions: [], error: first.data.error || 'Could not read the snapshot archive.' };
+    const each = await Promise.all(pages.map((page) => C.v1('/lift/history', { slot, page })));
+    const failed = each.find((r) => !r.ok || r.data.ok === false);
+    if (failed) return { versions: [], error: failed.data.error || 'Could not read the snapshot archive.' };
+    return { versions: each.flatMap((r, i) => (r.data.versions || []).map((v) => ({ ...v, page: pages[i] }))).sort((a, b) => b.version - a.version), error: '' };
+  }
 
   async function loadHistory() {
     const scope = S.scope, slot = S.slot, request = ++hist.request;
@@ -256,14 +355,17 @@
     const got = await Promise.all(KINDS.map(async k => {
       const selector = C.query({ scope: k.id === 'reflex' ? C.configScope() : S.scope });
       const [history, current] = await Promise.all([C.call(k.path + selector), C.call(k.path.replace(/\/history$/, '') + selector)]);
-      return { ...history, authored: current.ok ? C.authored(current.data) : null };
+      // The same read this card already makes for the authored identity also
+      // carries the document's own envelope; nothing new is fetched for it.
+      return { ...history, authored: current.ok ? C.authored(current.data) : null, envelope: current.ok ? current.data.envelope : null };
     }));
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
     hist.authored = Object.fromEntries(KINDS.map((k, i) => [k.id, got[i].authored]));
+    hist.envelopes = Object.fromEntries(KINDS.map((k, i) => [k.id, got[i].envelope || null]));
     KINDS.forEach((k, i) => { hist.rows[k.id] = got[i].ok ? got[i].data.revisions || [] : null; });
-    const lift = slot ? await C.v1('/lift/history', { slot }) : { ok: false, data: {} };
+    const lift = slot ? await liftHistory(slot) : { versions: [], error: '' };
     if (scope !== S.scope || slot !== S.slot || request !== hist.request || S.path !== 'history') return;
-    hist.lift = lift.ok ? lift.data.versions || [] : [];
+    hist.lift = lift.versions; hist.liftError = lift.error;
     hist.loading = false;
     C.render();
   }
@@ -290,7 +392,7 @@
       for (const k of KINDS) {
         const rows = hist.rows[k.id];
         const current = rows && rows.length ? Math.max(...rows.map((r) => r.revision)) : 0;
-        host.append(card(k.title, k.why, rows === undefined
+        host.append(card(k.title, k.why, envelopeLine(hist.envelopes[k.id]), rows === undefined
           ? h('div', { class: 'empty' }, 'Reading…')
           : rows === null
           ? h('div', { class: 'empty' }, 'Could not read this history.')
@@ -314,10 +416,12 @@
       host.append(card(`Published snapshots · ${S.slot || 'no slot chosen'}`,
         'What the engine learned, as it was published. These are not edited by anyone: each is what the evidence said at that moment, kept so a decision made then can be replayed exactly.',
         !S.slot ? h('div', { class: 'empty' }, 'Choose a slot in the rail.')
+          : hist.liftError ? h('div', { class: 'msg err' }, `Could not read the snapshot archive: ${hist.liftError}`)
           : !hist.lift.length ? h('div', { class: 'empty' }, 'No archived snapshots for this slot yet; every publish from now on is archived by version.')
-          : C.table([{ key: 'v', label: 'Published' }, { key: 'ver', label: 'Version' }, { key: 'size', label: 'Size', num: true }],
+          : C.table([{ key: 'v', label: 'Published' }, ...(hist.lift.some((v) => v.page) ? [{ key: 'page', label: 'Page' }] : []), { key: 'ver', label: 'Version' }, { key: 'size', label: 'Size', num: true }],
               hist.lift.slice(0, 20).map((v) => h('tr', {},
                 h('td', {}, when(v.version)),
+                ...(hist.lift.some((x) => x.page) ? [h('td', {}, v.page || '—')] : []),
                 h('td', {}, h('span', { class: 'itemid' }, String(v.version))),
                 h('td', { class: 'num' }, `${dec((v.size || 0) / 1024, 1)} KB`))))));
     },
