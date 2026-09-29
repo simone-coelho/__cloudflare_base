@@ -260,7 +260,9 @@ interface AffinityRead {
  * session host it is looked up before the visitor's `user:` pointer, so a
  * pointer read that misses composes her page from her own session instead of
  * a new, empty one. It is used only when the record it names is this
- * visitor's own; otherwise the lookup is exactly what it was without it. The
+ * visitor's own: another visitor's record is never served or written, even
+ * when the first read of the id misses or fails (the engine binds its reread
+ * to this visitor), and an id that names none serves what no id serves. The
  * object host needs none: the visitor's own object is the identity there.
  */
 async function readAffinity(
