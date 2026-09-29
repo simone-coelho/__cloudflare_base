@@ -1162,9 +1162,13 @@ export class RealtimeSegmentEngine {
      * W36 (F14 R8). It is tried BEFORE the `user:` pointer, so a pointer read
      * that misses cannot move her onto a new, empty session while her client
      * holds her own. It is hers only when the record stored at it names this
-     * `userId`; an id whose record belongs to someone else is neither served nor
-     * used to name a session, and the lookup continues as if none were sent.
-     * Under a signed capability it must equal the capability's session.
+     * `userId`, and a record that belongs to someone else is never served or
+     * written: when this read finds one, the lookup continues as if no id were
+     * sent; when this read misses or fails, the id may still name the session
+     * created for her (CW39), and that create's own read of it is bound to
+     * `userId` too, so someone else's record found there is treated as absent
+     * and nothing is written. Under a signed capability it must equal the
+     * capability's session.
      */
     clientSessionId?: string,
   ): Promise<{
@@ -1275,7 +1279,9 @@ export class RealtimeSegmentEngine {
           personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
-      }, undefined, defer);
+      }, undefined, defer, undefined, true,
+      // W36: a session created under the client's id is bound to its owner.
+      claimed && sessionId === claimed ? userId : undefined);
     }
 
     return {
