@@ -163,6 +163,21 @@ The client sends `{"type":"heartbeat"}` on the SDK's interval. Frame bodies are 
 Expires the platform's cookies for this browser and deletes its session. The SDK's `logout` uses the
 identity route instead; this one is the erase.
 
+### Which session a shopper call acts on
+
+Every shopper event route acts on the session its signed shopper capability carries: a `userId` the
+call names must be the capability's subject and a `sessionId` its session, and the SDK keeps that one
+session across the event, decision and sort calls of a fresh page and of a returning one. A successful event answers from the result of
+its own write, without reading the record back. `POST /sort` reads the shopper's state without
+creating any and writes no shopper state other than a consent restriction; its product-sort ledger
+record is still written. The item-to-item catalogue graph is built at most once per isolate and reused
+across events, decisions and sorts.
+
+This is containment only (W36), not a fix: it does not make the session record's read-modify-write in
+KV atomic, so the KV race and the shopper-profile authority finding (F14) stay open until W35 passes.
+W35 makes the per-shopper object the local shopper authority; it is delivered locally and not accepted
+on the deployed hosts, and the shipped configuration keeps `REFLEX_HOST = "session"`.
+
 ## 2. Decisions
 
 ### `POST /sort/intent`
