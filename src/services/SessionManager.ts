@@ -445,10 +445,17 @@ export class SessionManager {
    * The session a request for `sessionId` actually lands on: the record itself,
    * or the person's session it forwards to. One hop. If the target has expired
    * the browser's own record is returned, which is what it had before the link.
+   *
+   * W36 (F14 R8). `owner` is for an id the CLIENT sent rather than the cookie:
+   * the record stored at that id must be `owner`'s own (a linked browser's
+   * record still carries the browser's id and forwards as above). When it is
+   * someone else's, nothing of it is returned and `foreign` says so, so the
+   * caller neither serves it nor names a record by that id.
    */
-  async resolveRecord(sessionId: string): Promise<{ id: string; data: SessionData | null }> {
+  async resolveRecord(sessionId: string, owner?: string): Promise<{ id: string; data: SessionData | null; foreign?: true }> {
     const raw = await this.readRaw(sessionId);
     if (this.principal) return { id: sessionId, data: raw };
+    if (owner !== undefined && raw && raw.userId !== owner) return { id: sessionId, data: null, foreign: true };
     if (raw?.forwardTo && raw.forwardTo !== sessionId) {
       const target = await this.readRaw(raw.forwardTo);
       if (target) {
