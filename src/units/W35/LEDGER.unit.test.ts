@@ -181,6 +181,27 @@ function ownerState(h: Harness, subject: string) {
     journey: pipeline?.journey ?? null, stage: pipeline?.journeyStage ?? null,
   };
 }
+/**
+ * W35 delivery correction (expectation only, 2026-09-28), as 7841d76 did for the competing
+ * links. Concurrent requests reach the object's queue in any order; neither the test nor the
+ * call order fixes it. The last viewed line and price band are the only members of the owner
+ * state that name WHICH write the object applied last: every product view, cart add and
+ * wishlist add overwrites both (applyEventToAttributes, src/services/RealtimeSegmentEngine.ts,
+ * the reducer both hosts run). Every other member — counts, taste, audiences, segments,
+ * journey, stage — is the same for every order of the same writes. So the state the same
+ * writes leave applied one after another in a legal order is the in-order twin's state with
+ * the pair of whichever concurrent write was applied last: the owner state must equal the
+ * twin's in every other member (no lost update), and its pair must be one that a concurrent
+ * write leaves when it is applied last (read off the twin right after that write).
+ */
+type LastApplied = { viewed_product_line: unknown; price_band_viewed: unknown };
+function lastApplied(state: ReturnType<typeof ownerState>): LastApplied {
+  return { viewed_product_line: state.attributes.viewed_product_line ?? null, price_band_viewed: state.attributes.price_band_viewed ?? null };
+}
+function orderFree(state: ReturnType<typeof ownerState>) {
+  const { viewed_product_line: _line, price_band_viewed: _band, ...attributes } = state.attributes; void _line; void _band;
+  return { ...state, attributes };
+}
 
 // ── A1 · the host leg: one event sequence through both hosts ────────────────
 interface Observed { checkpoints: Record<string, unknown>; anchors: Record<string, unknown> }
@@ -604,11 +625,15 @@ describe('unit:W35.A2', () => {
         () => act(h, g, { type: 'product_view', data: LOWLINE }, { processing: 'buffered', eventId: 'w35-buffered-0', timestamp: t0 + 500, browsingSessionId: 'w35-earlier-tab' }).then(r => r.status),
       ];
       const answers = await Promise.all(writes(concurrent).map(write => write()));
-      for (const write of writes(sequential)) await write();
+      // Every write of the burst is concurrent, so any of them may legally be applied last.
+      const legalLast: LastApplied[] = [];
+      for (const write of writes(sequential)) { await write(); legalLast.push(lastApplied(ownerState(h, sequential.subject))); }
       expect.soft(answers, 'W35.A2 — every concurrent write is answered, none refused or failed').toEqual([...BURST.map(() => 200), 'socket', 'socket', 200]);
       expect.soft(sockets.get(concurrent.subject)!.close.mock.calls, 'W35.A2 — her socket stays open through the burst').toEqual([]);
       const burstState = ownerState(h, concurrent.subject);
-      expect.soft(burstState, 'W35.A2 — the concurrent burst leaves exactly the owner state of the same writes applied one after another').toEqual(ownerState(h, sequential.subject));
+      expect.soft(orderFree(burstState), 'W35.A2 — the concurrent burst leaves exactly the owner state of the same writes applied one after another').toEqual(orderFree(ownerState(h, sequential.subject)));
+      expect.soft(legalLast, 'W35.A2 — and its last viewed line and price band are those of one write of the burst, applied last in some order of the same writes')
+        .toContainEqual(lastApplied(burstState));
       expect.soft(burstState.attributes.product_views, 'W35.A2 — all nine live product views are counted (eight over HTTP, one over her socket)').toBe(9);
       expect.soft(burstState.attributes.cart_adds, 'W35.A2 — the socket\'s cart add is counted').toBe(1);
       expect.soft(Object.keys(burstState.dims.line ?? {}).sort(), 'W35.A2 — every line she touched builds taste, the cross-category one included').toEqual(['Lowline', 'Rogue', 'Tabby']);
@@ -644,10 +669,17 @@ describe('unit:W35.A2', () => {
       release();
       const statuses = (await Promise.all([creating, ...meanwhile])).map(r => r.status);
       hold.mockRestore();
-      for (const data of [TABBY_450, TABBY_395, LOWLINE]) await act(h, twin, { type: 'product_view', data });
-      await act(h, twin, { type: 'add_to_cart', data: TABBY_450 });
+      // The creating write was already inside the object when the three writes behind it were
+      // sent, so it is applied first; any of those three may legally be applied last.
+      const legalLast: LastApplied[] = [];
+      for (const [index, data] of [TABBY_450, TABBY_395, LOWLINE].entries()) {
+        await act(h, twin, { type: 'product_view', data }); if (index > 0) legalLast.push(lastApplied(ownerState(h, twin.subject)));
+      }
+      await act(h, twin, { type: 'add_to_cart', data: TABBY_450 }); legalLast.push(lastApplied(ownerState(h, twin.subject)));
       expect.soft(statuses, 'W35.A2 — the delayed create and everything that arrived behind it are answered').toEqual([200, 200, 200, 200, 200, 200, 200]);
-      expect.soft(ownerState(h, delayed.subject), 'W35.A2 — the delayed create did not overwrite the writes behind it: her state is the same writes applied in order').toEqual(ownerState(h, twin.subject));
+      expect.soft(orderFree(ownerState(h, delayed.subject)), 'W35.A2 — the delayed create did not overwrite the writes behind it: her state is the same writes applied in order').toEqual(orderFree(ownerState(h, twin.subject)));
+      expect.soft(legalLast, 'W35.A2 — and her last viewed line and price band are those of one write that arrived behind the delayed create, applied last in some order of those writes')
+        .toContainEqual(lastApplied(ownerState(h, delayed.subject)));
       expect.soft(ownerState(h, delayed.subject).attributes.product_views, 'W35.A2 — all three product views survive the delayed create').toBe(3);
     } finally { clock.mockRestore(); vi.restoreAllMocks(); }
   }, 60_000);
@@ -713,11 +745,15 @@ describe('unit:W35.A2', () => {
       expect.soft(stored.alarms, 'W35.A2 — and her scheduled alarm').toEqual(alarms);
       clock.mockReturnValue(t0 + 2000);
       const after = await Promise.all(BURST.map(data => act(h, sarah, { type: 'product_view', data })));
+      // The second burst follows the first and the restart, and any of its writes may legally be applied last.
+      const legalLast: LastApplied[] = [];
       clock.mockReturnValue(t0 + 1000); for (const data of BURST) await act(h, twin, { type: 'product_view', data });
-      clock.mockReturnValue(t0 + 2000); for (const data of BURST) await act(h, twin, { type: 'product_view', data });
+      clock.mockReturnValue(t0 + 2000); for (const data of BURST) { await act(h, twin, { type: 'product_view', data }); legalLast.push(lastApplied(ownerState(h, twin.subject))); }
       expect.soft(after.map(r => r.status), 'W35.A2 — every concurrent write after the restart is answered').toEqual(BURST.map(() => 200));
       expect.soft(ownerState(h, sarah.subject).attributes.product_views, 'W35.A2 — both bursts are counted across the restart').toBe(2 * BURST.length);
-      expect.soft(ownerState(h, sarah.subject), 'W35.A2 — the two bursts across a restart leave the owner state of the same writes applied in order').toEqual(ownerState(h, twin.subject));
+      expect.soft(orderFree(ownerState(h, sarah.subject)), 'W35.A2 — the two bursts across a restart leave the owner state of the same writes applied in order').toEqual(orderFree(ownerState(h, twin.subject)));
+      expect.soft(legalLast, 'W35.A2 — and her last viewed line and price band are those of one write of the second burst, applied last in some order of that burst')
+        .toContainEqual(lastApplied(ownerState(h, sarah.subject)));
     } finally { clock.mockRestore(); vi.restoreAllMocks(); }
   }, 60_000);
 

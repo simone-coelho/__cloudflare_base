@@ -2337,8 +2337,25 @@ describe('W35.03 recoverable identity transfer', () => {
       expect(targetState.get('identitySequence')).toBe(1);
       expect(targetState.get('identityRegistration:0000000000000001')).toEqual({ version: 1, intent, targetEpoch: admittedEpoch, sequence: 1 });
       expect([...f.sessions.data]).toEqual(index);
-      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify({ shopperId: target, createdAt: 1, salted: false,
-        visitors: [{ visitorId: 'legacy-member', linkedAt: 1, assurance: 'signed', source: 'login' }] }));
+      // W35 delivery correction (arrangement, and one expectation on the old arrangement,
+      // 2026-09-28): a legacy membership the object may adopt is one the product wrote, and
+      // every identity projection the product writes carries its identity retention stamp,
+      // born from the record's own creation and admission (ShopperReflex handleTransfer and
+      // the history import: `retentionBirth(env, tenant, 'identity', <created>, <admitted>)`,
+      // published by IdentityStore.publish, src/identity/store.ts). Adoption pins that stamp
+      // (pinRetention(members.retention, …, 'identity'), the retention remedy present since
+      // the takeover baseline 7b01c14), and a row without one is never newly authorized
+      // (src/retention.ts readRetention: "A missing stamp means legacy, never newly
+      // authorized"). So the unstamped row this case used to seed is refused by that guard
+      // and commits nothing, and the stamped row is adopted with every assertion as before.
+      const legacyRow = { shopperId: target, createdAt: 1, salted: false,
+        visitors: [{ visitorId: 'legacy-member', linkedAt: 1, assurance: 'signed', source: 'login' }] };
+      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify(legacyRow));
+      const unstampedIndex = [...f.sessions.data], unstampedTarget = structuredClone([...targetState]);
+      await expect(link(f, g)).rejects.toMatchObject({ name: 'RetentionUnavailable' });
+      expect([...targetState]).toEqual(unstampedTarget); expect([...f.sessions.data]).toEqual(unstampedIndex);
+      f.sessions.data.set(tenantKey('meridian', 'identity:shopper:' + target), JSON.stringify({ ...legacyRow,
+        retention: retentionBirth(f.env, 'meridian', 'identity', legacyRow.createdAt, Date.now()) }));
       await link(f, g);
       expect((item(f, target).data.get('identityMembers') as { visitors: Array<{ visitorId: string }> }).visitors.map(member => member.visitorId)).toEqual(['legacy-member', g.subject]);
       await f.drain();
@@ -4283,7 +4300,16 @@ describe('W37.03 tenant-owned DO audiences', () => {
       // request path; the fault is injected into the provider the object actually calls,
       // as the W35.02 visit-context case in this file already does.
       const decisions = vi.spyOn(LiveDecisionProvider.prototype, 'decideAll').mockRejectedValueOnce(new Error('synthetic derivation failure'));
-      await expect(direct(item, '/ingest', event(g), g)).rejects.toThrow('synthetic derivation failure');
+      // W35 delivery correction (expectation only, 2026-09-28; lead ruling: W19's answer is the
+      // contract): since W19 LG1 (6219c50) the object's ingest door ANSWERS the reducer's own
+      // failure the way the session host's POST /realtime/action names it (500, "Failed to
+      // process action event", the cause in `details`; ShopperReflex.ts ingestFailure) instead
+      // of rejecting the call. What this case proves is unchanged and still checked on the next
+      // line: the failed derivation commits nothing (no storage write; the committed profile is
+      // served exactly as before) and publishes nothing to her socket.
+      const failedIngest = await direct(item, '/ingest', event(g), g);
+      expect(failedIngest.status).toBe(500);
+      expect(await failedIngest.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic derivation failure' });
       expect(await view()).toEqual(before); expect(put).not.toHaveBeenCalled(); expect(ws.send).not.toHaveBeenCalled(); decisions.mockRestore();
 
       const entered = gate(), release = gate(), publishedCounts: unknown[] = [];
@@ -4325,7 +4351,16 @@ describe('W37.03 tenant-owned DO audiences', () => {
           : path === '/identity/absorb' ? direct(item, path, { shopperId: g.subject, affinity: before.affinity,
             pipeline: { ...before.pipeline, audienceOwner: owner(g) }, audienceOwner: owner(g) }, g)
           : internal(item, g, path, imported);
-        await expect(call).rejects.toThrow('synthetic ambiguous write'); expect(ws.send).not.toHaveBeenCalled();
+        // W35 delivery correction (expectation only, 2026-09-28), the same W19 ruling as above: the
+        // ingest door answers its own ambiguous write 500 with the cause; the other doors still
+        // reject. What this loop proves is unchanged and checked below: the write landed, the
+        // object never guesses a rollback, serves exactly what storage holds after the fault, and
+        // counts the next event on top of it.
+        if (path === '/ingest') {
+          const answer = await call; expect(answer.status).toBe(500);
+          expect(await answer.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic ambiguous write' });
+        } else await expect(call).rejects.toThrow('synthetic ambiguous write');
+        expect(ws.send).not.toHaveBeenCalled();
         const saved = structuredClone([...item.data]); expect(saved).not.toEqual(baseline);
         f.faults.read = true;
         // W35 step-3 STALE correction (expectation only): every object fetch now first reads
@@ -4365,7 +4400,12 @@ describe('W37.03 tenant-owned DO audiences', () => {
 
       await restore();
       const alarm = vi.spyOn(item.state.storage, 'setAlarm').mockRejectedValueOnce(new Error('synthetic scheduling failure'));
-      await expect(direct(item, '/ingest', event(g), g)).rejects.toThrow('synthetic scheduling failure');
+      // W35 delivery correction (expectation only, 2026-09-28), the same W19 ruling as above: the
+      // ingest door answers the failed scheduling 500 with the cause. What this proves is unchanged
+      // and checked next: the accepted write is not undone by the later failure — it is stored,
+      // published once, and keeps her as the owner.
+      const unscheduled = await direct(item, '/ingest', event(g), g); expect(unscheduled.status).toBe(500);
+      expect(await unscheduled.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic scheduling failure' });
       expect((await view()).pipeline.attributes.page_views).toBe(2); expect(ws.send).toHaveBeenCalledTimes(1);
       expect(item.data.get('audienceOwner')).toEqual(owner(g)); alarm.mockRestore();
       await f.drain();
@@ -4640,7 +4680,18 @@ describe('W37.03 tenant-owned DO audiences', () => {
       for (const path of ['/ingest', '/segments']) {
         item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v); restart(f, g);
         f.faults.write = true;
-        await expect(direct(item, path, path === '/ingest' ? event(g, 'coach') : { segment: 'uncommitted' }, g)).rejects.toThrow('synthetic write failure');
+        // W35 delivery correction (expectation only, 2026-09-28; lead ruling: W19's answer is the
+        // contract): since W19 LG1 (6219c50) the object's ingest door answers its own failed
+        // write as the session host's POST /realtime/action does (500, "Failed to process action
+        // event", the cause in `details`; ShopperReflex.ts ingestFailure); the manual segment
+        // door still rejects. What this block proves is unchanged and checked below: the failed
+        // write commits nothing, and the object reloads the actual committed owner — its next
+        // alarm qualifies and writes nothing, and it serves her before and after a restart.
+        const failedWrite = direct(item, path, path === '/ingest' ? event(g, 'coach') : { segment: 'uncommitted' }, g);
+        if (path === '/ingest') {
+          const answer = await failedWrite; expect(answer.status).toBe(500);
+          expect(await answer.json()).toEqual({ success: false, error: 'Failed to process action event', details: 'synthetic write failure' });
+        } else await expect(failedWrite).rejects.toThrow('synthetic write failure');
         f.faults.write = false; expect([...item.data]).toEqual(baseline);
         qualified.mockClear(); const before = structuredClone([...item.data]); await item.shopper.alarm();
         expect(qualified).not.toHaveBeenCalled(); expect([...item.data]).toEqual(before);
