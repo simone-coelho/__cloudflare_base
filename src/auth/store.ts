@@ -64,6 +64,8 @@ export const SUBJECT_OPERATION_ROUTES = {
   identity_resolve: '/v1/:tenant/identity/resolve', identity_erase: '/v1/:tenant/identity/erase',
   ledger_erase: '/v1/:tenant/ledger/erasures', ledger_rewrite: '/v1/:tenant/ledger/erasures/rewrite',
   identity_import: '/v1/:tenant/identity/events',
+  // W37 T5: the per-shopper export, audited as the erase is; a read, by POST.
+  identity_export: '/v1/:tenant/identity/export',
 } as const;
 export type SubjectOperation = keyof typeof SUBJECT_OPERATION_ROUTES;
 const auditCount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -115,16 +117,18 @@ export const operationResultSchema = z.union([
 ]);
 export type OperationAuditResult = z.infer<typeof operationResultSchema>;
 const operationDetailSchema = z.object({
-  v: z.literal(2), requestId: z.string().uuid(), operation: z.enum(['identity_visitor', 'identity_shopper', 'identity_resolve', 'identity_erase', 'ledger_erase', 'ledger_rewrite', 'identity_import']),
+  v: z.literal(2), requestId: z.string().uuid(), operation: z.enum(['identity_visitor', 'identity_shopper', 'identity_resolve', 'identity_erase', 'ledger_erase', 'ledger_rewrite', 'identity_import', 'identity_export']),
   route: z.string(), method: z.enum(['GET', 'HEAD', 'POST']), phase: z.enum(['admitted', 'result']), selector: operationSelectorSchema,
   status: z.number().int().min(100).max(599).optional(), result: operationResultSchema.optional(), subjectRef: auditRef.optional(),
 }).strict().superRefine((d, context) => {
   const invalid = () => context.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid operation audit' });
-  const read = d.operation === 'identity_visitor' || d.operation === 'identity_shopper';
+  // The identity GETs and the export (W37 T5, a POST) are reads: they change nothing.
+  const fetched = d.operation === 'identity_visitor' || d.operation === 'identity_shopper';
+  const read = fetched || d.operation === 'identity_export';
   const kind = d.operation === 'identity_visitor' || d.operation === 'ledger_erase' ? 'visitor' : d.operation === 'identity_shopper' ? 'shopper'
-    : d.operation === 'identity_resolve' ? 'accounts' : d.operation === 'identity_erase' ? 'identity'
+    : d.operation === 'identity_resolve' ? 'accounts' : d.operation === 'identity_erase' || d.operation === 'identity_export' ? 'identity'
       : d.operation === 'identity_import' ? d.phase === 'admitted' ? 'history_inputs' : d.result?.outcome === 'outcome_unknown' ? 'history_unknown' : 'history_results' : 'tenant';
-  if (d.route !== SUBJECT_OPERATION_ROUTES[d.operation] || (read ? d.method === 'POST' : d.method !== 'POST') || d.selector.kind !== kind) invalid();
+  if (d.route !== SUBJECT_OPERATION_ROUTES[d.operation] || (fetched ? d.method === 'POST' : d.method !== 'POST') || d.selector.kind !== kind) invalid();
   if (d.phase === 'admitted') {
     if (d.status !== undefined || d.result !== undefined || d.subjectRef !== undefined) invalid();
   } else {

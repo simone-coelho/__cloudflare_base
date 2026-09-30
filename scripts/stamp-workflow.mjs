@@ -267,7 +267,12 @@ export function validateTransition(mode, desired, previous, rotate = []) {
   for (const k of ['customer', 'account', 'environment', 'script', 'resources', 'owners', 'ownership']) if (!same(desired[k], previous[k])) fail();
   if (desired.secrets.IDENTITY_SALT !== previous.secrets.IDENTITY_SALT) fail(); // Separate identity migration, never credential rotation.
   if (mode === 'add-brand') {
+    // W37 T3: a brand is added AFTER every existing one. The registry's order is
+    // each brand's position, and the first brand is the stamp's default
+    // (`GET /v1/{tenant}/brands` answers `default` by manifest position), so an
+    // insertion ahead of an existing brand would rebind that brand's default flag.
     if (desired.tenants.provisioned.length <= previous.tenants.provisioned.length
+      || previous.tenants.provisioned.some((t, position) => desired.tenants.provisioned[position] !== t)
       || previous.tenants.provisioned.some(t => !desired.tenants.provisioned.includes(t))
       || Object.entries(previous.tenants.hosts).some(([h,t]) => desired.tenants.hosts[h] !== t)
       || previous.origins.some(x => !desired.origins.includes(x)) || previous.routes.some(x => !desired.routes.some(y => same(x,y)))) fail();
@@ -711,6 +716,13 @@ async function inspectResource(api, d, kind, value) {
   }
   return row;
 }
+/**
+ * W37 T7 (amendment A45): the receipt key of one stamp resource. The protected
+ * store accepts only lower-case keys (`protectedOperation`), so a resource kind
+ * spelled in camel case is written with hyphens (`deadLetter` -> `dead-letter`);
+ * every other kind keeps the key it has always had (`resource-storage` included).
+ */
+const resourceReceipt = kind => 'resource-' + kind.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase());
 async function ensureResources(api, store, desired, create) {
   await accountCheck(api, desired); const d = structuredClone(desired);
   const ownedStorage = async value => {
@@ -730,7 +742,7 @@ async function ensureResources(api, store, desired, create) {
     else {
       if(!create)fail();const result=await api(p.collection+'?per_page=100');
       if(!Array.isArray(result)||result.length>=100)fail();
-      if(result.some(x=>x[p.name]===v.name)&&!await store.read('resource-'+kind+'.done'))fail();
+      if(result.some(x=>x[p.name]===v.name)&&!await store.read(resourceReceipt(kind)+'.done'))fail();
     }
   }
   for (const kind of ['cache', 'sessions', 'database', 'storage', 'queue', 'deadLetter']) {
@@ -747,8 +759,8 @@ async function ensureResources(api, store, desired, create) {
       if (!Array.isArray(rows) || rows.length >= 100) fail();
       return rows.filter(x => x[p.name] === value.name).map(x => ({ id: x[p.id], name: x[p.name] }));
     };
-    if (!await store.read('resource-' + kind + '.intent') && (await inspect()).length) fail(); // No name-based adoption.
-    const result = confirmed(await effect(store, 'resource-' + kind, { account: d.account, kind, name: value.name },
+    if (!await store.read(resourceReceipt(kind) + '.intent') && (await inspect()).length) fail(); // No name-based adoption.
+    const result = confirmed(await effect(store, resourceReceipt(kind), { account: d.account, kind, name: value.name },
       () => api(p.collection, { method: 'POST', body: p.create }), inspect));
     if (result?.[p.name] !== value.name || typeof result[p.id] !== 'string') fail();
     value.id = result[p.id];

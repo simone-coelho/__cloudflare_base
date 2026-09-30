@@ -1587,7 +1587,7 @@ describe('the objects', () => {
   });
 
   it('W10.02 holds invalid saved state and preserves restart, ambiguous reset, full fields and age boundaries', async () => {
-    const now = Date.now(), row = record('new', 'hero', 'A', now);
+    const row = record('new', 'hero', 'A', Date.now()), now = row.retention!.online!.bornAt; // A51: one clock read; now is the row's own retention start
     const invalid = [false, { ...saved([row]), extra: true }, saved(Array.from({ length: 201 }, () => row)),
       { ring: [], index: Array.from({ length: RING_LIMITS.index + 1 }, () => ({ id: row.decision_id, ts: now })) },
       saved([{ ...row, explain: { ...row.explain, note: '界'.repeat(350_000) } }]),

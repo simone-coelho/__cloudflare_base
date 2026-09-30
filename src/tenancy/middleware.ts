@@ -73,6 +73,16 @@ export function tenantConfig(env: Pick<Env, 'TENANTS' | 'DEPLOYMENT_PROFILE'>): 
   } catch { throw new TenantConfigurationError(); }
 }
 
+/**
+ * W37 T1: whether the stamp's registry names this tenant now. Work that carries
+ * a tenant outside any request (an object's alarm, a queued envelope) asks this
+ * before it does anything for that tenant; an unreadable registry names nobody.
+ */
+export function isRegisteredTenant(env: Pick<Env, 'TENANTS' | 'DEPLOYMENT_PROFILE'>, tenant: string): boolean {
+  try { return tenantConfig(env).provisioned.includes(tenant); }
+  catch { return false; }
+}
+
 /** Shared by Hono ingress and shopper capability checks, including WebSockets. */
 export function tenantForRequest(env: Env, req: Request): TenantId {
   const cfg = tenantConfig(env);

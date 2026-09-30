@@ -1,6 +1,6 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
-import { catchUp, runDayReport } from '@/learn/hourly';
+import { catchUp, runBrandDayReports } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
@@ -278,13 +278,18 @@ export default {
         break;
       }
       case '0 3 * * *': {
-        // Doc 31: yesterday's day report, built once by the platform and read by the console with GET.
+        // Doc 31: yesterday's day reports, built once by the platform and read by the console with GET.
+        // W37 T2: one per brand the tenant's own records carry (a tenant may serve more than one
+        // brand; there is no brand registry), each inside the tenant's one job.
         const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            const r = await runDayReport(env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null, Date.now(), {}, env);
-            console.log('day report; decisions/outcomes/unfolded/truncated', Number.isFinite(r.counts.decisions) ? r.counts.decisions : -1, Number.isFinite(r.counts.outcomes) ? r.counts.outcomes : -1, r.hours?.missing.length ?? 0, r.counts.truncated ? 1 : 0);
+            const days = await runBrandDayReports(env.STORAGE as unknown as Parameters<typeof runBrandDayReports>[0], tenant, yesterday, learn, Date.now(), env);
+            for (const { report: r } of days) {
+              if (!r) { console.error('day report failed'); continue; }
+              console.log('day report; decisions/outcomes/unfolded/truncated', Number.isFinite(r.counts.decisions) ? r.counts.decisions : -1, Number.isFinite(r.counts.outcomes) ? r.counts.outcomes : -1, r.hours?.missing.length ?? 0, r.counts.truncated ? 1 : 0);
+            }
           })().catch((e) => console.error('day report failed')));
         }
         // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.

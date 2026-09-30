@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W37",
+  "workOrderHash": "sha256:e7ae62731210d01642e7b26e46f00bcfc7de2bf59fbd8b8d05fe2b627189abfa",
+  "artifact": {
+    "revision": "60ceb5f45483b45e610afff3098c8a8f75621290",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix1/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/implementer/logs/eslint-compare.txt",
+      "git commits 3e488cb c204329 f88d2be 5f62c17 caba452 ff6604d 79f1a20 508f89e 7a1b087 0fba548 b1302a6 64679a2 bbfe456 f9ab778 f0cb015 d4c1b15 6f0d49a 60ceb5f on rem/w37-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W37 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts src/middleware/edgeAccess.test.ts src/reflex/odpLoop.test.ts src/reflex/regionTrend.test.ts src/routes/realtime.sdkContract.test.ts -t \"W37[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W37-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-30T16:43:28.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

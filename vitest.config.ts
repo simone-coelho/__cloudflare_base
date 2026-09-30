@@ -24,6 +24,12 @@ export default defineConfig({
     // @cloudflare/vitest-pool-workers for that project rather than putting the
     // whole suite back behind a runtime it does not use.
     environment: 'node',
+    // Amendment A51 (2026-09-29): in every test worker `Date.now` never goes
+    // backwards (floor = max(floor, real clock)); the host's wall clock steps
+    // back by milliseconds, and an exact retention check (src/retention.ts:98)
+    // turned that into intermittent 503s. Fake timers and Date.now spies keep
+    // working. Scope and limits: src/units/_monotonicClock.ts.
+    setupFiles: ['./src/units/_monotonicClock.setup.ts'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

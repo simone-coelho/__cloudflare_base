@@ -120,6 +120,41 @@ export function betaSample(rng: () => number, alpha: number, beta: number): numb
 /** Internal capability: only retained historical replay opts into withdrawn sampling. */
 export const HISTORICAL_EXPLORATION = Symbol('historical exploration');
 
+/**
+ * W28.R2 (LANE-LOG R204, amendment A20): the replay-compatibility marker of the
+ * exploration RULES a decision was made under. The rules this build runs are
+ * the ones W28.C1.01 and W28.M1.01 made: a draw inside the share is an
+ * exploration even where it lands on the ranking's own leader, the recorded
+ * support is the top candidates by score before the explored piece moved with
+ * that piece beside them, and an item under a merchandiser `reject` or `freeze`
+ * is never the pick. A record states it as `inputs.explorationRules` — beside
+ * the page manifest `inputs.replay`, never inside it — whenever its decision
+ * had the learning layer (without one no exploration rule runs and both rule
+ * sets decide identically). The replay CHOOSES its rules from this member and
+ * nothing else: absent, the record was written before these rules existed and
+ * replays under the ones before them ({@link HISTORICAL_EXPLORATION_RULES});
+ * present with any other value, the replay refuses. The axis is independent of
+ * the Thompson marker (`inputs.replay.exploration`), as the pin, content-type
+ * and governance markers are of each other.
+ */
+export const EXPLORATION_RULES = 'recorded-draws-v1';
+export type ExplorationRules = typeof EXPLORATION_RULES;
+
+/**
+ * Internal capability: only the replay of a record that carries no
+ * {@link EXPLORATION_RULES} marker opts into the rules before it — a rotation
+ * or epsilon draw that agreed with the leader was not an exploration, a
+ * controlled item could be drawn, and the recorded support was cut after the
+ * move (`decideContent`). Never on a live decision.
+ */
+export const HISTORICAL_EXPLORATION_RULES = Symbol('historical exploration rules');
+
+/** The rules a record's `inputs` state: the current ones, the ones before the marker existed, or a marker this build does not implement. */
+export function recordedExplorationRules(inputs: object): 'current' | 'historical' | 'invalid' {
+  if (!Object.prototype.hasOwnProperty.call(inputs, 'explorationRules')) return 'historical';
+  return (inputs as { explorationRules?: unknown }).explorationRules === EXPLORATION_RULES ? 'current' : 'invalid';
+}
+
 export function explorationPick(
   input: {
     visitorId: string; slot: string; nowMs: number; ranked: readonly Ranked[];
@@ -136,8 +171,13 @@ export function explorationPick(
     controlled?: ReadonlySet<string>;
   },
   historical?: typeof HISTORICAL_EXPLORATION,
+  historicalRules?: typeof HISTORICAL_EXPLORATION_RULES,
 ): ExplorePick | null {
-  const { visitorId, slot, nowMs, ranked, snapshot, cfg, controlled } = input;
+  const { visitorId, slot, nowMs, ranked, snapshot, cfg } = input;
+  // W28.R2: a record written before the current rules replays under the rules
+  // it was written with, where no item control governed exploration.
+  const before = historicalRules === HISTORICAL_EXPLORATION_RULES;
+  const controlled = before ? undefined : input.controlled;
   if (cfg.mode === 'off' || ranked.length < 2) return null;
   if (cfg.mode === 'thompson' && historical !== HISTORICAL_EXPLORATION) return null;
   const share = Math.min(1, Math.max(0, cfg.share));
@@ -166,9 +206,11 @@ export function explorationPick(
   // still the draw it was. The decision was made by this rule, inside the
   // configured share, so it is recorded as an exploration and counted in the
   // realized share; nothing is reordered, because the piece is already first.
+  // Under the rules before (W28.R2), such a draw was not flagged: it answered null.
   if (cfg.mode === 'epsilon') {
     const idx = Math.floor((bucket / share) * eligible.length) % eligible.length;
     const pick = eligible[idx]!;
+    if (before && pick.id === ranked[0]!.id) return null;
     return { mode: 'epsilon', pieceId: pick.id, reason: `bucket ${bucket} < share ${share}: uniform pick ${idx + 1} of ${eligible.length}`, bucket };
   }
   // Rotation: the under-observed item with the fewest observations, ties by id.
@@ -176,5 +218,6 @@ export function explorationPick(
     .sort((a, b) => (a.n - b.n) || a.r.id.localeCompare(b.r.id));
   if (under.length === 0) return null;
   const pick = under[0]!;
+  if (before && pick.r.id === ranked[0]!.id) return null;
   return { mode: 'rotation', pieceId: pick.r.id, reason: `bucket ${bucket} < share ${share}: under-observed, n ${pick.n} < floor ${cfg.floor}`, bucket };
 }

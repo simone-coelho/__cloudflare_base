@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W32",
+  "workOrderHash": "sha256:eb33bea7c238ec347228e936e13ccab8aca768f857fe52f2c0ad0a0fec75124f",
+  "artifact": {
+    "revision": "d7091ec5d18540581fd1a1307fc7d6c7588ddeca",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W32-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W32-delivery/implementer/logs/eslint.log",
+      "git commits e97fa8b (W32-B1) 049cb28 d7091ec on rem/w32-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W32 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/measure/window.test.ts -t \"W32[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W32-delivery/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W32-delivery/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W32-delivery/reviewer/logs/gate-2.log",
+      "/home/simonecoelho/rem/_evidence/W32-delivery/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W32-delivery/reviewer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W32-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-28T06:12:15.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE3",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
