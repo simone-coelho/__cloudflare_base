@@ -23,7 +23,12 @@
 #      exists on the worker, the deploy is refused; delete the secret first.
 #
 #   bash scripts/deploy-legacy-demos.sh            # build only (dry run)
+#   bash scripts/deploy-legacy-demos.sh --dev      # run it locally on :9100
 #   bash scripts/deploy-legacy-demos.sh --deploy   # build and deploy
+#
+# --dev exists because `npm run dev` runs TODAY's code, which cannot run these
+# three demos either. It uses the repo's own .dev.vars and persistent local state,
+# which needs the D1 seed once (see docs/demos/BOOTSTRAP.md) for Meridian's cold start.
 set -euo pipefail
 
 COMMIT=26e2db1
@@ -60,8 +65,14 @@ s = s[:j] + ('\n\n[[migrations]]\ntag = "v6"\nnew_sqlite_classes = ["RegionTrend
 io.open(p, 'w', encoding='utf-8').write(s)
 PY
 
+[ -f "$ROOT/.dev.vars" ] && ln -s "$ROOT/.dev.vars" "$WORK/.dev.vars"
+
 cd "$WORK"
-if [ "${1:-}" = "--deploy" ]; then
+if [ "${1:-}" = "--dev" ]; then
+  echo "legacy demos ($COMMIT) on http://localhost:9100 — /storefront, /live/, /meridian/, /visual-demo.html"
+  # The repo's own persistent local state, so the local D1 seed survives between runs.
+  npx wrangler dev --port 9100 --persist-to "$ROOT/.wrangler/state"
+elif [ "${1:-}" = "--deploy" ]; then
   if npx wrangler secret list --name edge-platform 2>/dev/null | grep -q '"JWT_SECRET"'; then
     echo "refusing: a JWT_SECRET secret exists on edge-platform and $COMMIT defines it as a plain var." >&2
     echo "delete it first: npx wrangler secret delete JWT_SECRET --name edge-platform" >&2
