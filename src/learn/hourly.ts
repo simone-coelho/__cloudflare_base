@@ -26,7 +26,7 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type ReportPolicy, type ReportPriors } from './report';
+import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type ReportPolicy, type ReportPriors } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts, loadDay,
@@ -2799,20 +2799,44 @@ async function dayBrands(r2: R2Agg, tenant: string, date: string, now: number): 
 }
 
 /**
+ * W37 T2: whether the day this job built for a brand is the day stored for it.
+ * `runDayReport` answers the day it computed even where its write was refused
+ * or failed (W33 O2), so the job reads the stored day back and compares it with
+ * the bytes its own write carries (`canonicalReportJson`). A read that fails
+ * answers "not stored".
+ */
+async function storedAsBuilt(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, report: DayReport): Promise<boolean> {
+  try {
+    const saved = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
+    return !!saved && await saved.text() === canonicalReportJson(report);
+  } catch { return false; }
+}
+
+/**
  * W37 T2: the nightly day reports of one tenant's date — one per brand its own
  * records carry (`dayBrands`), each built from that brand's rows only, and the
  * tenant's own day beside them as it has always been built — never
- * `{ brand: tenant }` alone. Each brand is built and published on its own
- * (`runDayReport`), so one brand's failure never withholds another's day; the
- * tenant's own day comes last, as the five-minute job writes it.
+ * `{ brand: tenant }` alone. Each other brand is built and published on its own
+ * (`runDayReport`), so one brand's failure never withholds another brand's day.
+ * The tenant's own day is the date's publication record, as the five-minute job
+ * writes it (`publishAggregateDate`): it comes last, and only once every other
+ * brand's day of the date is stored as this job built it. Where one is not, the
+ * own day is withheld (`report: null`) and nothing more is written, so the next
+ * five-minute run finds the date without its saved own day and publishes it
+ * again, whole.
  */
 export async function runBrandDayReports(r2: R2Agg, tenant: string, date: string, learn: LearnConfig, now = Date.now(),
   retentionEnv?: RetentionEnv): Promise<Array<{ brand: string; report: DayReport | null }>> {
   const brands = [...(await dayBrands(r2, tenant, date, now)).filter(brand => brand !== tenant), tenant];
   const results: Array<{ brand: string; report: DayReport | null }> = [];
+  let stored = true;
   for (const brand of brands) {
-    try { results.push({ brand, report: await runDayReport(r2, { tenant, brand, date }, learn, null, now, {}, retentionEnv) }); }
-    catch { results.push({ brand, report: null }); }
+    if (brand === tenant && !stored) { results.push({ brand, report: null }); continue; }
+    try {
+      const report = await runDayReport(r2, { tenant, brand, date }, learn, null, now, {}, retentionEnv);
+      if (brand !== tenant && !await storedAsBuilt(r2, { tenant, brand, date }, report)) stored = false;
+      results.push({ brand, report });
+    } catch { stored = false; results.push({ brand, report: null }); }
   }
   return results;
 }
