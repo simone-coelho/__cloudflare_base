@@ -266,47 +266,77 @@ export const SUBJECT_EXPORT_LIMITS = { objects: REPORT_LIMITS.objects, bytes: 16
 const EXPORT_STREAMS: readonly LedgerStream[] = ['decision', 'outcome', 'product-sort', 'behavior'];
 
 /**
+ * W37 T5: where a subject's ledger scan resumes. `key: null` is the partition's
+ * start. With `line: null` the object `key` has been read whole and the scan
+ * continues after it; with `line: n` the scan resumes inside the object `key`
+ * at its row n (rows are its non-empty lines, in order).
+ */
+export interface LedgerScanPosition { key: string | null; line: number | null }
+
+/**
  * W37 T5 (decision D2): every row of hers the tenant's ledger partition holds,
  * per stream, as stored — the R2 partition "is the export" (doc 22 §12.4), and
  * a row names its person or browser in `visitor_id`. The partition has no
  * per-shopper index, so the whole of the tenant's partition is read, oldest key
- * first, and nothing of any other tenant (its keys start with `{tenant}/`). One
- * call opens at most `SUBJECT_EXPORT_LIMITS` of it; `next` is then the last key
- * it read, and the same export with `cursor: next` continues after it. A row an
- * erasure hides is never answered.
+ * first, and nothing of any other tenant (its keys start with `{tenant}/`).
+ * Whether a row's person or browser is hers is decided by `owns`, again by
+ * every call; `owns` answers `null` when the call may decide no more, and the
+ * scan then stops at that row. One call also opens at most
+ * `SUBJECT_EXPORT_LIMITS` of the partition. `next` is where the same export
+ * continues. A row an erasure hides is never answered.
  */
-export async function subjectLedgerRows(env: Env, tenant: string, ids: ReadonlySet<string>, after?: string): Promise<{
-  rows: Record<LedgerStream, Record<string, unknown>[]>; complete: boolean; next: string | null;
-}> {
+export async function subjectLedgerRows(env: Env, tenant: string, owns: (visitorId: string) => Promise<boolean | null>,
+  from: LedgerScanPosition | null): Promise<{ rows: Record<LedgerStream, Record<string, unknown>[]>; complete: boolean; next: LedgerScanPosition | null }> {
   const prefix = `${tenant}/`;
-  if (!TENANT.test(tenant) || (after !== undefined && (!after.startsWith(prefix) || after.length > 1024))) throw new Error('Ledger export unavailable');
+  if (!TENANT.test(tenant) || (from?.key != null && (!from.key.startsWith(prefix) || from.key.length > 1024))) throw new Error('Ledger export unavailable');
   const tombs = await loadTombstones(env.STORAGE as unknown as R2Erasable, tenant);
   const rows = Object.fromEntries(EXPORT_STREAMS.map(stream => [stream, [] as Record<string, unknown>[]])) as Record<LedgerStream, Record<string, unknown>[]>;
-  let cursor: string | undefined, opened = 0, bytes = 0, last: string | null = after ?? null;
+  let opened = 0, bytes = 0;
+  /** Reads one object's rows from row `skip`; answers the row at which `owns` stopped the call, or null when the object is read whole. */
+  const read = async (key: string, skip: number): Promise<number | null> => {
+    const stream = key.split('/')[3] as LedgerStream;
+    if (!EXPORT_STREAMS.includes(stream)) return null;
+    const object = await env.STORAGE.get(key);
+    opened++;
+    if (!object) return null;
+    const text = await object.text();
+    bytes += text.length;
+    let index = -1;
+    for (const line of text.split('\n')) {
+      if (!line) continue;
+      index++;
+      if (index < skip) continue;
+      let row: unknown;
+      try { row = JSON.parse(line); } catch { continue; }
+      if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+      const value = row as { tenant?: unknown; visitor_id?: unknown; ts?: unknown };
+      if ((value.tenant !== undefined && value.tenant !== tenant) || typeof value.visitor_id !== 'string') continue;
+      const verdict = await owns(value.visitor_id);
+      if (verdict === null) return index;
+      if (!verdict) continue;
+      if (tombs.has(value.visitor_id) && (typeof value.ts !== 'number' || hidden(tombs, value as { visitor_id: string; ts: number }))) continue;
+      rows[stream].push(row as Record<string, unknown>);
+    }
+    return null;
+  };
+  let last: string | null = from?.key ?? null;
+  if (from?.key != null && from.line !== null) {
+    const stopped = await read(from.key, from.line);
+    if (stopped !== null) return { rows, complete: false, next: { key: from.key, line: stopped } };
+  }
+  let cursor: string | undefined;
   const cursors = new Set<string>();
   for (;;) {
-    const page = await env.STORAGE.list({ prefix, limit: 1000, ...(cursor ? { cursor } : after ? { startAfter: after } : {}) });
+    const page = await env.STORAGE.list({ prefix, limit: 1000, ...(cursor ? { cursor } : last ? { startAfter: last } : {}) });
     for (const listed of page.objects) {
-      if (!listed.key.startsWith(prefix) || (last !== null && listed.key <= last)) throw new Error('Ledger export unavailable');
+      if (!listed.key.startsWith(prefix)) throw new Error('Ledger export unavailable');
+      // Keys at or before the position are already read (a listing may not honour startAfter).
+      if (last !== null && listed.key <= last) continue;
       const stream = listed.key.split('/')[3] as LedgerStream;
-      if (!EXPORT_STREAMS.includes(stream)) { last = listed.key; continue; }
-      if (opened >= SUBJECT_EXPORT_LIMITS.objects || (opened > 0 && bytes + (listed.size ?? 0) > SUBJECT_EXPORT_LIMITS.bytes)) return { rows, complete: false, next: last };
-      const object = await env.STORAGE.get(listed.key);
-      opened++;
-      if (object) {
-        const text = await object.text();
-        bytes += text.length;
-        for (const line of text.split('\n')) {
-          if (!line) continue;
-          let row: unknown;
-          try { row = JSON.parse(line); } catch { continue; }
-          if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
-          const value = row as { tenant?: unknown; visitor_id?: unknown; ts?: unknown };
-          if ((value.tenant !== undefined && value.tenant !== tenant) || typeof value.visitor_id !== 'string' || !ids.has(value.visitor_id)) continue;
-          if (tombs.has(value.visitor_id) && (typeof value.ts !== 'number' || hidden(tombs, value as { visitor_id: string; ts: number }))) continue;
-          rows[stream].push(row as Record<string, unknown>);
-        }
-      }
+      if (EXPORT_STREAMS.includes(stream) && opened > 0
+        && (opened >= SUBJECT_EXPORT_LIMITS.objects || bytes + (listed.size ?? 0) > SUBJECT_EXPORT_LIMITS.bytes)) return { rows, complete: false, next: { key: last, line: null } };
+      const stopped = await read(listed.key, 0);
+      if (stopped !== null) return { rows, complete: false, next: { key: listed.key, line: stopped } };
       last = listed.key;
     }
     if (!page.truncated) return { rows, complete: true, next: null };
