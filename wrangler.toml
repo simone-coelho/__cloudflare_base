@@ -137,15 +137,16 @@ dataset = "edge_ops_development_v1"
 
 # D1 database — Coach demo dataset (ODP profiles + commerce + warehouse-export mirror).
 # Powers the Opal chat's aggregate-then-reason query surface (v_profiles / meta_attribute_catalog).
-# Legacy seed generation and apply/remote instructions are withdrawn.
-# scripts/seed-d1.mjs is retired; the mixed demo migration/seed chain is not an
-# approved customer setup or recovery workflow. Scoped ownership and recovery
-# remain pending W08/W39; see docs/remediation/README.md and doc 10 Operations.
+# W39: the default local database applies the PRODUCT migrations only, like staging and
+# production. The demo chain (migrations/*.sql, then migrations/seed/*.sql, in order) reaches a
+# LOCAL database only when requested explicitly: node scripts/init-local.mjs --scope <tenant>
+# --demo-data (docs/10-d1-schema.md). scripts/seed-d1.mjs stays retired, and no demo migration or
+# seed is an approved customer setup or recovery workflow.
 [[d1_databases]]
 binding = "DB"
 database_name = "coach-demo-db"
 database_id = "80fcd6e1-4764-4ba2-bf95-587c3debdc73"
-migrations_dir = "migrations"
+migrations_dir = "migrations/product"
 
 # Environment Variables (use wrangler secret for sensitive values)
 [vars]
