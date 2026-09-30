@@ -7,10 +7,26 @@
 import type { Env } from '@/types/env';
 import type { LiftSnapshot } from './stats';
 
-/** Live authority is never satisfied by an eventually-consistent KV/cache hit. */
-export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string): Promise<boolean> {
+/**
+ * Live authority is never satisfied by an eventually-consistent KV/cache hit.
+ *
+ * W38 B7 (amendment A36): the 50 ms budget is the round trip to the statistics
+ * object, and nothing else. The snapshot's own digest — the reader's work, which
+ * grows with the snapshot (a snapshot at the object's counter caps is about
+ * 680 KB) — is settled BEFORE the budget starts, so a large snapshot is never
+ * refused because digesting it and the round trip together outlasted 50 ms. A
+ * caller that holds the snapshot across reads passes its memoized digest
+ * (`digest`, asked for only once the witness will be checked), so a cached read
+ * never digests the snapshot again. The comparison itself is
+ * unchanged: a digest the object did not publish, or an answer after the budget,
+ * serves nothing, and a digest that cannot be computed is a failed witness.
+ */
+export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>): Promise<boolean> {
   if (!env.LEARN_STATS || typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return false;
   const namespace = env.LEARN_STATS;
+  let expected: string;
+  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return false; }
   const abort = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
   const probe = async () => { try {
     // W26 R2: a page-scoped placement is witnessed by its own page's object,
@@ -22,7 +38,7 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
     const publication = value.publication as { witness?: string; digest?: string; version?: number } | null;
     return response.ok && value.ok === true && value.state === 'healthy' && value.tenant === tenant && value.brand === brand
       && value.slot === slot && (value.page ?? undefined) === page && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
-      && publication.version === snapshot.version && publication.digest === await recoveryDigest(snapshot);
+      && publication.version === snapshot.version && publication.digest === expected;
   } catch { return false; } };
   try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
