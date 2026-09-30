@@ -2765,6 +2765,7 @@ export class ShopperReflex {
       }
       const transfer = await this.validateTransfer(prepared.transfer, prepared.scrubbed === true);
       if (JSON.stringify(intentSchema.strip().parse(transfer)) !== JSON.stringify(intent)) throw new SessionAccessError();
+      const completedBefore = prepared.status === 'complete';
       if (transfer.tenant !== context.tenant || transfer.visitorId !== context.subject || transfer.shopperId !== body.shopperId
         || transfer.assurance !== body.assurance || transfer.source !== body.source || transfer.salted !== body.salted
         || (principal && transfer.sourceSessionId !== principal.sessionId)) throw new SessionAccessError();
@@ -2781,8 +2782,14 @@ export class ShopperReflex {
       });
       const resultBody = await response.json() as { ok?: unknown; result?: unknown };
       if (!response.ok || resultBody.ok !== true) throw new SessionAccessError();
-      const result = identityResultSchema.parse(resultBody.result);
-      if (result.shopperId !== transfer.shopperId || result.visitorId !== transfer.visitorId || result.assurance !== transfer.assurance) throw new SessionAccessError();
+      const accepted = identityResultSchema.parse(resultBody.result);
+      if (accepted.shopperId !== transfer.shopperId || accepted.visitorId !== transfer.visitorId || accepted.assurance !== transfer.assurance) throw new SessionAccessError();
+      // W37 LG1 (lead ruling 2026-09-30): a trusted re-link, without the
+      // browser's own grant, of a browser whose transfer had already completed
+      // is answered `already`, as the session host answers it (kit 02 §3). A
+      // retry carrying her grant returns the answer it recorded (W35.03). The
+      // person's durable receipt keeps the outcome of the link that made her.
+      const result = completedBefore && !principal ? { ...accepted, outcome: 'already' as const } : accepted;
       // A compact completed operation may recover only its already-issued
       // identity receipt. Never re-publish a profile or renew a copied deadline.
       if (prepared.scrubbed) { if (principal) assertSessionTarget(principal); return json({ ok: true, result }); }
