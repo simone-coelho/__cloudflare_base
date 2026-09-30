@@ -89,6 +89,12 @@ async function encodeSessionCapability(env: Env, principal: SessionCapability, v
 const CONTINUITY_PREFIX = 'rc1';
 /** Ruled member: the broker-mode cookie that carries the long proof. */
 export const CONTINUITY_COOKIE = 'opt_shopper_continuity';
+/**
+ * W16 R4: set by a shopper object, and only on the 401 it answers for a
+ * provisional grant it retired when that same return was recognized, so the
+ * session route can answer the exact retry of that lost answer as a return.
+ */
+export const CONTINUITY_RETIRED_HEADER = 'X-Continuity-Retired';
 const CONTINUITY_MAX_PURPOSE = 120;
 
 export interface ContinuityDescriptor {

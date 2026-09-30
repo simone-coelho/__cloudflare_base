@@ -39,6 +39,27 @@ export interface ContentCatalog {
 }
 
 /**
+ * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): what a stored configuration
+ * document costs against the ceiling it is published under, answered beside the
+ * document so an operator sees the size BEFORE a publish is refused for it.
+ *
+ * `bytes` is the canonical UTF-8 length the ceiling is really charged against
+ * (`documentBytes`, `src/config/publication.ts`), not the length of the JSON as
+ * it happens to be ordered; `limitBytes` is that ceiling, read off the module
+ * rather than restated here, so the two can never drift. `pieces` is the piece
+ * count of a catalog document and is absent for every other kind — a count of
+ * something that does not exist would be a worse answer than none.
+ *
+ * A reader that does not find the member says nothing rather than printing a
+ * stray value: a deployment older than the member answers without it.
+ */
+export interface DocumentEnvelope {
+  pieces?: number;
+  bytes: number;
+  limitBytes: number;
+}
+
+/**
  * One slot's strategy — Mandeep's word: a combination of dimensions and weights
  * applied to a slot. `take` is how many pieces it holds; `pinnedPieceId` makes it
  * non-personalizable (the merchandiser's piece, ranking never runs).
@@ -542,4 +563,20 @@ export interface ConstraintDiagnostics {
   warningCount: number;
   omittedWarningCount: number;
   warnings: ConstraintDiagnostic[];
+}
+
+/**
+ * W20 R1: one of those refusals as the operator's read of a whole slot document
+ * names it (`GET /content/slots`), where several pages share one bounded sample:
+ * the same entry, with the page whose decision would refuse the piece.
+ */
+export interface PageConstraintDiagnostic extends ConstraintDiagnostic {
+  page: string;
+}
+
+/** The document-wide channel: the same bound and counts, across every page in document order. */
+export interface DocumentConstraintDiagnostics {
+  warningCount: number;
+  omittedWarningCount: number;
+  warnings: PageConstraintDiagnostic[];
 }

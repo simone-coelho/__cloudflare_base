@@ -23,7 +23,17 @@ export function inputTextBytes(text: string): void {
 
 /** Ignore Content-Length: count delivered bytes before copying, then decode as HTTP text does. */
 export async function readInputText(stream: ReadableStream<Uint8Array> | null): Promise<string> {
-  if (stream === null) return '';
+  return new TextDecoder('utf-8', { fatal: false, ignoreBOM: false }).decode(await readInputBytes(stream));
+}
+
+/**
+ * The admitted bytes themselves, undecoded: the same budget, counted the same
+ * way, for a consumer that decodes the body under its own rules (W38 B2 — the
+ * enrichment routes read strict UTF-8 JSON). Over budget it stops reading,
+ * cancels the stream and throws the named 413 before the consumer sees a byte.
+ */
+export async function readInputBytes(stream: ReadableStream<Uint8Array> | null): Promise<Uint8Array> {
+  if (stream === null) return new Uint8Array(0);
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let complete = false;
   try {
@@ -41,7 +51,7 @@ export async function readInputText(stream: ReadableStream<Uint8Array> | null): 
       }
       buffer.set(value, bytes); bytes = next;
     }
-    return new TextDecoder('utf-8', { fatal: false, ignoreBOM: false }).decode(buffer.subarray(0, bytes));
+    return buffer.subarray(0, bytes);
   } catch (error) {
     if (error instanceof InputError) throw error;
     throw new InputError(400);

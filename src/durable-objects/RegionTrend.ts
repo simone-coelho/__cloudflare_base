@@ -7,6 +7,7 @@
 
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary } from '@/ops/synthetic';
+import { isRegisteredTenant } from '@/tenancy/middleware';
 import { isEventTimestamp } from '@/events/actionTypes';
 import {
   REGION_GENERATION, REGION_STATE_KEY, REGION_TAU_MS, applyTrend, matchesTrendScope,
@@ -102,6 +103,11 @@ export class RegionTrend {
     // is an optimization for the explicit /publish door only: an alarm after an
     // eviction must still write, or a burst of frames would never reach KV.
     if (!this.trend || !this.boundScope(this.trend) || this.trend.events === 0) return;
+    // W37 T1: one registry for the regional trend too. A tenant the stamp's
+    // registry no longer names gets no background publication: its population
+    // is kept as it is, and the next ingest after it is registered again arms
+    // the alarm that publishes it.
+    if (!isRegisteredTenant(this.env, this.trend.tenant)) return;
     const now = Date.now();
     const snap = snapshotOf(this.trend, now, now);
     try {
