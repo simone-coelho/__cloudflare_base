@@ -218,6 +218,103 @@ async function operatorRecent(env: Env, tenant: string, visitorId: string): Prom
   assertRecent(env, tenant, result); return result;
 }
 
+/**
+ * W37 T5 (decision D2): the decision history the per-shopper export answers for
+ * the ids of one person at one tenant — for each id her receipts, exactly as
+ * `GET visitors/{id}/receipts` answers them (every one, not one page), the
+ * entries of her own ring as `GET visitors/{id}/recent` answers them, and each
+ * receipted decision's ledger record as `GET ledger/{id}` answers it. It writes
+ * no per-read audit: the export's own subject-operation audit covers it. A ring
+ * that cannot be read, or a record whose retention authority is no longer
+ * honoured, refuses the export rather than leaving her history out; an erased
+ * record is never answered.
+ */
+export async function subjectDecisionHistory(c: { env: Env }, tenant: string, ids: readonly string[]): Promise<{
+  receipts: Record<string, ReturnType<typeof receiptOf>[]>; recent: Record<string, DecisionRecord[]>; records: Record<string, Record<string, unknown>>;
+}> {
+  const receipts: Record<string, ReturnType<typeof receiptOf>[]> = {}, recent: Record<string, DecisionRecord[]> = {};
+  const records: Record<string, Record<string, unknown>> = {};
+  const rings: Array<[string, DecisionRecord[]]> = [];
+  for (const id of ids) {
+    if (!HISTORY_VISITOR.test(id)) throw new Error(HISTORY_UNAVAILABLE);
+    rings.push([id, (await operatorRecent(c.env, tenant, id)).ring]);
+  }
+  if (!rings.some(([, ring]) => ring.length)) return { receipts, recent, records };
+  const catalog = await readConfig<ContentCatalog>(c, CONTENT_KIND, tenant);
+  const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
+  for (const [id, ring] of rings) {
+    recent[id] = ring;
+    const ordered = ring.slice().sort((a, b) => b.ts - a.ts || a.position - b.position);
+    const names = catalogNames(catalog, ordered.map(r => r.item_id));
+    receipts[id] = ordered.map(r => receiptOf(r, names));
+    for (const decision of ordered) {
+      const recordId = decision.decision_id;
+      if (Object.hasOwn(records, recordId) || !validLedgerSelector(tenant, recordId)) continue;
+      const found = await findById<CapturedRecord>(c.env.STORAGE as unknown as R2Like, recordId, 'decision');
+      if (!found) continue;
+      if (!ownedLedgerRecord(found.record, tenant, recordId, 'decision')) throw new Error(HISTORY_UNAVAILABLE);
+      if (hidden(tombs, found.record)) continue;
+      requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger');
+      records[recordId] = Object.fromEntries(Object.entries(found.record).filter(([key]) => key !== DELIVERY_FIELD));
+    }
+  }
+  return { receipts, recent, records };
+}
+
+/** W37 T5: the ledger objects one export call may open, and the stored bytes it may read. */
+export const SUBJECT_EXPORT_LIMITS = { objects: REPORT_LIMITS.objects, bytes: 16 * 1024 * 1024 } as const;
+const EXPORT_STREAMS: readonly LedgerStream[] = ['decision', 'outcome', 'product-sort', 'behavior'];
+
+/**
+ * W37 T5 (decision D2): every row of hers the tenant's ledger partition holds,
+ * per stream, as stored — the R2 partition "is the export" (doc 22 §12.4), and
+ * a row names its person or browser in `visitor_id`. The partition has no
+ * per-shopper index, so the whole of the tenant's partition is read, oldest key
+ * first, and nothing of any other tenant (its keys start with `{tenant}/`). One
+ * call opens at most `SUBJECT_EXPORT_LIMITS` of it; `next` is then the last key
+ * it read, and the same export with `cursor: next` continues after it. A row an
+ * erasure hides is never answered.
+ */
+export async function subjectLedgerRows(env: Env, tenant: string, ids: ReadonlySet<string>, after?: string): Promise<{
+  rows: Record<LedgerStream, Record<string, unknown>[]>; complete: boolean; next: string | null;
+}> {
+  const prefix = `${tenant}/`;
+  if (!TENANT.test(tenant) || (after !== undefined && (!after.startsWith(prefix) || after.length > 1024))) throw new Error('Ledger export unavailable');
+  const tombs = await loadTombstones(env.STORAGE as unknown as R2Erasable, tenant);
+  const rows = Object.fromEntries(EXPORT_STREAMS.map(stream => [stream, [] as Record<string, unknown>[]])) as Record<LedgerStream, Record<string, unknown>[]>;
+  let cursor: string | undefined, opened = 0, bytes = 0, last: string | null = after ?? null;
+  const cursors = new Set<string>();
+  for (;;) {
+    const page = await env.STORAGE.list({ prefix, limit: 1000, ...(cursor ? { cursor } : after ? { startAfter: after } : {}) });
+    for (const listed of page.objects) {
+      if (!listed.key.startsWith(prefix) || (last !== null && listed.key <= last)) throw new Error('Ledger export unavailable');
+      const stream = listed.key.split('/')[3] as LedgerStream;
+      if (!EXPORT_STREAMS.includes(stream)) { last = listed.key; continue; }
+      if (opened >= SUBJECT_EXPORT_LIMITS.objects || (opened > 0 && bytes + (listed.size ?? 0) > SUBJECT_EXPORT_LIMITS.bytes)) return { rows, complete: false, next: last };
+      const object = await env.STORAGE.get(listed.key);
+      opened++;
+      if (object) {
+        const text = await object.text();
+        bytes += text.length;
+        for (const line of text.split('\n')) {
+          if (!line) continue;
+          let row: unknown;
+          try { row = JSON.parse(line); } catch { continue; }
+          if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+          const value = row as { tenant?: unknown; visitor_id?: unknown; ts?: unknown };
+          if ((value.tenant !== undefined && value.tenant !== tenant) || typeof value.visitor_id !== 'string' || !ids.has(value.visitor_id)) continue;
+          if (tombs.has(value.visitor_id) && (typeof value.ts !== 'number' || hidden(tombs, value as { visitor_id: string; ts: number }))) continue;
+          rows[stream].push(row as Record<string, unknown>);
+        }
+      }
+      last = listed.key;
+    }
+    if (!page.truncated) return { rows, complete: true, next: null };
+    if (!page.cursor || cursors.has(page.cursor)) throw new Error('Ledger export unavailable');
+    cursors.add(page.cursor); cursor = page.cursor;
+  }
+}
+
 /** Only minimized tenant read-audit rows, never the global account audit. */
 decisionRoutes.get('/:tenant/audit', operatorJwt(), async (c) => {
   const tenant = c.req.param('tenant'), auth = c.get('auth');

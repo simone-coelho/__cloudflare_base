@@ -797,6 +797,19 @@ export class ShopperReflex {
         return json({ ok: true, affinity: this.affinity, pipeline: this.pipeline, forwardTo: await this.forwardTarget(), ...(principal ? { consent: storedConsent(await this.state.storage.get('consent')) } : {}) });
       });
     }
+    // W37 T5 (decision D2): the operator's per-shopper export reads what this
+    // object keeps of her — her profile, her consent instruction and her
+    // pipeline — exactly as stored. Internal operator context only; a shopper's
+    // own capability never reaches it, and it writes nothing.
+    if (request.method === 'GET' && url.pathname === '/identity/operator-export') {
+      if (principal || !internal) return json({ ok: false, error: 'Shopper context unavailable' }, 401);
+      return this.serialize(async () => {
+        const stored = await this.state.storage.get(['affinity', 'consent', 'pipeline']);
+        const held: Record<string, unknown> = {};
+        for (const [key, value] of stored) if (value !== undefined && value !== null) held[key] = value;
+        return json({ ok: true, ...held });
+      });
+    }
     if (request.method === 'POST' && url.pathname === '/identity/absorb') {
       return this.handleAbsorb(request, principal ?? internal!);
     }
