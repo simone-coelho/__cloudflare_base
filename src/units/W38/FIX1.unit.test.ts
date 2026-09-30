@@ -41,9 +41,10 @@
 // therefore this engine's history with `derived` absent and every digest taken
 // over what remains: the envelope's own, the set references that name it, the
 // chain of sets (each names its base set's digest) and the head. The history
-// is built through the mounted routes and then given exactly that form; the
-// engine re-verifies every digest when it reads it. Nothing under test is
-// stubbed.
+// is built through the mounted routes and given exactly that form after every
+// publication, so each later publication's If-Match and request digest are
+// taken over the pre-W21 chain; the engine re-verifies every digest when it
+// reads it. Nothing under test is stubbed.
 //
 // EXPECTED VALUES (from the witnesses, never from the engine): revision 1 is
 // DEFAULT_LEARN (effective salt: the brand, `coach`), revisions 2-4 rotate to
@@ -150,7 +151,8 @@ const sealed = async (basis: Record<string, unknown>) => ({ ...basis, digest: aw
  * stored: each learn envelope without `derived`, and every digest that names
  * it — set references, the chain of sets, the head — over what remains.
  * Answers how many learn revisions it found annotated (the engine that built
- * the history annotates every one).
+ * the history annotates every one); a store already in that form is left
+ * byte for byte as it is.
  */
 async function asStoredBeforeW21(storage: LedgerR2): Promise<number> {
   const revisions = `config-publication/v1/${TENANT}/learn/rev/`, sets = `config-publication/v2/${TENANT}/set/`, head = `config-publication/v2/${TENANT}/head.json`;
@@ -233,11 +235,15 @@ async function preW21Tenant(configuration: boolean, salts: string[]) {
   const defaults: Record<string, unknown> = { content: catalogOf(1), slots: DEFAULT_SLOTS, learn: DEFAULT_LEARN, reflex: DEFAULT_REFLEX_CONFIG, prior: EMPTY_PRIORS, proposals: EMPTY_PROPOSALS };
   await initializePublicationSet(env, KINDS.map(kind => ({ kind, scope: scopeFor(kind),
     revision: { revision: 1, value: defaults[kind.name], actor: 'w38-fix1-initializer', note: '', at: at(0) } })), '0:00000000-0000-4000-8000-000000000000');
+  // Each step leaves the store as the pre-W21 writer left it, so the next
+  // publication's If-Match and request digest are taken over that chain.
+  let annotated = await asStoredBeforeW21(storage);
   for (const [i, salt] of salts.entries()) {
     await publish(i + 1, 'learn', LEARN_KIND as DocumentKind<unknown>, learnOf(salt, i + 2));
-    if (i < 2) await publish(i + 1, 'catalog', CONTENT_KIND as DocumentKind<unknown>, catalogOf(i + 2));
+    annotated += await asStoredBeforeW21(storage);
+    if (i < 2) { await publish(i + 1, 'catalog', CONTENT_KIND as DocumentKind<unknown>, catalogOf(i + 2)); annotated += await asStoredBeforeW21(storage); }
   }
-  expect(await asStoredBeforeW21(storage), 'fixture: every learn revision the engine wrote carried its annotation, and now carries none').toBe(salts.length + 1);
+  expect(annotated, 'fixture: every learn revision the engine wrote carried its annotation, and now carries none').toBe(salts.length + 1);
   // The W38 build meets the pre-W21 history in a fresh isolate.
   invalidateCache(); invalidateSaltVersions();
   expect(carriedSaltVersion(await readPublication(env, LEARN_KIND, TENANT)), 'fixture: the engine reads the pre-W21 head, which carries no salt annotation (kit 02 :532)').toBeNull();
