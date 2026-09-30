@@ -3701,9 +3701,12 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "2e0fb145c3373f5bbe6761864e2862d647dcd93b on rem/spec-w37: src/units/W37 and the W37-named legacy tests, with the amendment-A45 test unit:W37.T7 (T7.unit.test.ts, helper src/units/_cloudflare.mjs) added on 4649023",
+        "reviewedRevision": "84147aa10a6d741fc045609e2263959880148095 on rem/spec-w37 (the refresh: merge e2965bd of rem/integration 1a60736): src/units/W37 and the W37-named legacy tests as they stand at this revision (including the integration branch's W35 corrections to W37.05, W35.01 and W35.08 in realtime.sdkContract.test.ts), with unit:W37.T7 and helper src/units/_cloudflare.mjs; W37.BASE.05 arranged for W19's publication cache; shopperReflex.identity.test.ts :372 restored to already (lead ruling 2026-09-30)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W37/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
@@ -3713,6 +3716,10 @@
           "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N1-acceptance-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N2-part2-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N3-identity-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/logs/W37-acceptance-84147aa.log",
           "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/W37-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/controls-summary.log",
           "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/acceptance.log",
