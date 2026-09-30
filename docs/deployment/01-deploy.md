@@ -39,7 +39,7 @@ For creation, `bootstrap = { owner: { id, email, name }, password }` binds the s
 
 ## Artifact, schema and partial-operation safety
 
-Product migrations are `migrations/product/0010_operator_accounts.sql`, `0011_operator_audit_tenant.sql`, `0012_operator_authority.sql` (original bytes/history preserved), then forward `0013_operator_oidc.sql`. New artifacts name `schemaContract: operator-oidc-v2`, separately from the asset contract. Older genuine artifacts retain their archived schema validator; that does not authorize activation against an incompatible newer security schema. Demo migrations and seed records are never replayed. The historical default demo declaration remains separate; customer environments use the product migration directory. Unknown migration names/order, unsupported schema or unknown DO migration tags refuse.
+Product migrations are `migrations/product/0010_operator_accounts.sql`, `0011_operator_audit_tenant.sql`, `0012_operator_authority.sql` (original bytes/history preserved), then forward `0013_operator_oidc.sql`. New artifacts name `schemaContract: operator-oidc-v2`, separately from the asset contract. Older genuine artifacts retain their archived schema validator; that does not authorize activation against an incompatible newer security schema. Demo migrations and seed records are never replayed. Customer environments use the product migration directory, and so does the default local declaration: demo migrations and seeds reach a local database only on an explicit request (`scripts/init-local.mjs --demo-data`, [docs/10-d1-schema.md](../10-d1-schema.md)). Unknown migration names/order, unsupported schema or unknown DO migration tags refuse.
 
 Artifacts bind exact module, SDK, customer-asset, source/dependency, configuration, tool and product migration identities. Source/package inputs are held and checked across the actual build. Upload and environment promotion use those same module/asset bytes: no promotion rebuild and no unsupported secret `version_id` inheritance. Provider module content is read back; assets use the installed provider's content-addressed upload session. Acknowledged asset upload is not live served-byte verification, and an Analytics binding is not verified dataset existence.
 
@@ -66,3 +66,14 @@ Default success remains `restored-quarantined`, with a complete protected result
 Resume rechecks the exact admitted latest-upload/material/active state immediately before final activation and verifies the resulting topology afterwards. Visible concurrent deployment or material changes refuse instead of overwriting. This transport provides no cross-operation compare-and-swap: the local receipt lock does not serialize other deployers, and a concurrent mutation after the final read remains a partial-operation risk requiring owner coordination, not an atomicity guarantee.
 
 Independent local review, actual account/resource ownership, required provider permission and secret retention, live Analytics/asset behavior, approved retention/access/delivery, real quiescence, forward-compatible deployed rollback/restore, and customer/release acceptance remain separate evidence gates. Local SQLite, injected-provider and outbound-denied native checks do not close them.
+
+## Published backups
+
+A tracked file whose name marks it a backup or a copy is published with every clone, and one under `public/` is also served by any worker whose assets directory is `public/`. Each is listed here with its disposition. This review removes and untracks nothing: a removal runs only under a separately reviewed and authorized cleanup (document 35 §5 row W39; live cleanup record LIVE2).
+
+- public/meridian/_meridian-v1.js.bak — proposed for authorized removal. A superseded Meridian engine build (33,900 bytes), served at /meridian/_meridian-v1.js.bak wherever `public/` is the assets directory; no credential-shaped string (F35 §4.2). It is not in the customer stamp's asset list, and no page, script or Worker module references it.
+- .npmrc.bak — proposed for authorized removal. A superseded npm settings rationale (`legacy-peer-deps=true`, which `.npmrc` still sets); no credential. It is not to be restored.
+- COMPLETE_ARCHITECTURE_DOCUMENTATION copy.md — proposed for authorized removal. A byte-identical duplicate of COMPLETE_ARCHITECTURE_DOCUMENTATION.md, which is kept.
+- .claude/worktrees/agent-a96c30a326d3da233/COMPLETE_ARCHITECTURE_DOCUMENTATION copy.md — proposed for authorized removal, with the tracked agent-worktree snapshot it belongs to. Byte-identical to COMPLETE_ARCHITECTURE_DOCUMENTATION.md.
+
+Until an authorized cleanup runs, each stays tracked and unchanged.
