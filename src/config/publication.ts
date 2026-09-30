@@ -14,7 +14,7 @@ const object = (v: unknown): v is Record<string, unknown> => v !== null && typeo
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
 export class PublicationError extends Error {
-  constructor(message: string, readonly status: 400 | 401 | 403 | 404 | 409 | 413 | 422 | 428 | 503 = 503,
+  constructor(message: string, readonly status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 428 | 503 = 503,
     readonly code = 'publication_unavailable') { super(message); }
 }
 const unavailable = () => new PublicationError('Configuration publication authority unavailable');
@@ -171,12 +171,28 @@ export function carriedSaltVersion(revision: object | null | undefined): Carried
   return revision && typeof revision === 'object' ? carried.get(revision) ?? null : null;
 }
 /**
+ * The salt walk's own horizon (`SALT_HISTORY_READS`, src/content/holdout.ts): a
+ * count is carried forward only where the walk itself could still reach the
+ * first revision, so W21 E1.07's unknown past the horizon stays unknown.
+ */
+const SALT_CARRY_REVISIONS = 24;
+/**
  * The annotation a document about to be published carries. Learn documents only;
  * every other kind carries nothing, and a count that cannot be established is
  * `null` rather than a smaller number (W21 E1.07, NR4). It never throws, so a
  * derived annotation can never refuse a publication.
+ *
+ * W38 B4: where the revision before this one carries an exact count, this one's
+ * is built from it — the same count, or one more where the effective salt
+ * changed, which is exactly what the walk counts — and no earlier revision is
+ * read. A purge under the tenant's configuration-revision setting may have
+ * removed revisions the walk would need; the count they contributed is already
+ * in the annotation the previous revision carries, so the purge never turns an
+ * exact count into an unknown. Past the walk's horizon, and wherever the
+ * previous revision carries no exact count, the walk decides as before.
  */
-async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, revision: number, value: unknown): Promise<{ derived: CarriedSalt } | Record<string, never>> {
+async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, revision: number, value: unknown,
+  previous?: CarriedSalt | null): Promise<{ derived: CarriedSalt } | Record<string, never>> {
   if (kind.name !== 'learn') return {};
   try {
     const owner = publicationScope(kind, scope);
@@ -184,6 +200,9 @@ async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, 
     // The published salt, or the brand fallback the decision service applies.
     const salt = typeof holdout?.salt === 'string' && holdout.salt.trim() === holdout.salt && holdout.salt ? holdout.salt : owner;
     if (!text(salt, 256)) return {};
+    if (revision > 1 && revision - 1 <= SALT_CARRY_REVISIONS && previous && integer(previous.version) && previous.version > 0) {
+      return { derived: { salt, version: previous.salt === salt ? previous.version : previous.version + 1 } };
+    }
     const { saltVersionOf } = await import('@/content/holdout');
     return { derived: { salt, version: await saltVersionOf(env, owner, revision, owner, salt) } };
   } catch { return {}; }
@@ -421,7 +440,15 @@ export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, sco
   const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; required(ref);
   if (n < ref.minRevision) throw new PublicationError('History predates the explicitly retained baseline', 409, 'legacy_history_unavailable');
   if (n > ref.revision) return null;
-  const value = await retained(storageOf(env), kind, scope, n); if (n === ref.revision) required(value.digest === ref.digest);
+  const found = await readObject(storageOf(env), revisionKey(kind.name, scope, n));
+  // W38 B4: a historical body absent under a tenant that sets the
+  // configuration-revision retention setting is one that setting purged, and is
+  // answered by name. Absent anywhere else, it is the store failing, as before.
+  if (!found && n < ref.revision && await purgesConfiguration(env, set.scope)) {
+    throw new PublicationError('Revision was purged under the tenant configuration-revision retention setting', 410, 'revision_purged');
+  }
+  required(found);
+  const value = await envelope(found.value, kind, scope, n); if (n === ref.revision) required(value.digest === ref.digest);
   return publicRevision(value, set, kind);
 }
 async function put(storage: R2Bucket, key: string, body: string, etag?: string): Promise<boolean> {
@@ -499,7 +526,7 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
         revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op,
         // W21 E1.07 (R130): computed on the operator's publish, where the history
         // is already being read, and never on the shopper's decision.
-        ...(await derivedFor(env, change.kind, change.scope, revision, value)) }), change.kind, change.scope);
+        ...(await derivedFor(env, change.kind, change.scope, revision, value, carriedSaltVersion(current))) }), change.kind, change.scope);
       serialized(document); documents.push(document);
       const key = member(change.kind, change.scope), old = refs[key];
       refs[key] = { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) };
@@ -512,7 +539,10 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
     await meta.authorize?.();
     if (!await put(storage, headKey(scope), serialized(next), loaded.etag)) throw conflict();
     const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
-    return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, await finish(storage, reservation, meta.authorize)) };
+    const committed = await finish(storage, reservation, meta.authorize);
+    // W38 B4: only after the new set is committed, and never able to fail it.
+    await purgeByPolicy(env, storage, scope, committed);
+    return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, committed) };
   });
 }
 export async function publish<T>(env: Env, kind: DocumentKind<T>, scope: string, request: unknown, meta: WriteMeta,
@@ -645,4 +675,263 @@ export async function initializePublicationSet(env: Env, baselines: PublicationB
 export async function initializePublication<T>(env: Env, kind: DocumentKind<T>, scope: string, baseline: Revision<T>, operationId: string): Promise<Revision<T>> {
   const set = await initializePublicationSet(env, [{ kind, scope, revision: baseline } as PublicationBaseline], operationId);
   return readPinnedPublication(env, kind, scope, set);
+}
+
+/*
+ * W38 B4 (decision D3, amendment A35; decision D2; document 35 §5 row W38
+ * "retain needed immutable revisions and purge by policy"): purge by policy.
+ *
+ * WHAT IS PURGED. Nothing, unless the tenant's retention registry sets its
+ * configuration-revision category (`configuration`, src/retention.ts). Unset,
+ * or a registry that cannot be read, stops here before any storage call, so the
+ * tenants that set nothing keep every revision exactly as before (D2). Where it
+ * is set, a configuration publication — the only writer of configuration
+ * revisions — purges, after its own set is committed, the stored revisions of
+ * every member of its scope that are
+ *   · neither the current nor the previous revision of their kind (rollback);
+ *   · older than the setting, counted from when the revision stopped being in
+ *     force (the publication of the next stored revision): a revision is never
+ *     aged while it is the one that serves;
+ *   · named by no stored replay manifest (below).
+ * "Purged" means its immutable body object is deleted. The set, its index rows
+ * and every other revision stay as they are; a read of a purged revision
+ * answers 410 `revision_purged` (publicationVersion, above).
+ *
+ * NAMED BY A STORED REPLAY MANIFEST. A stored decision record (the ledger's
+ * decision stream, `{tenant}/{yyyy-mm-dd}/{hh}/decision/{min}-{max}-….ndjson`,
+ * src/ledger/writer.ts) names the catalog, slots, learning and Reflex revisions
+ * in force when it was served (`versions.catalog/slots/learn/config`) and, per
+ * learning slot, the prior revision its lift snapshot was built with
+ * (`versions.prior`, `inputs.replay.slots[].prior`). Proposals are never named.
+ * The ledger is never scanned whole: a revision can only be named by decisions
+ * served while it could be read, so only the ledger hours of that window are
+ * listed, the days and hours the ledger actually holds found by rolled-up
+ * listings, and each object placed by the time range its key carries:
+ *   · a document revision is served between its publication and the next one,
+ *     plus the serving cache's staleness (30 s) and clock skew — PURGE_MARGIN_MS
+ *     on each side. An object wholly inside the window's interior holds only
+ *     decisions that name it; objects at the edges are read.
+ *   · a prior revision reaches a decision only through a lift snapshot built
+ *     while it was in force, and such a snapshot is served until its placement
+ *     publishes the next one (the live witness refuses any other). The lift
+ *     archive (`lift/{tenant}/{brand}/{placement}/{version}.json`, versions are
+ *     millisecond publication times) bounds that reach; a placement that has
+ *     published nothing since still serves it, and the prior is kept. The
+ *     objects of the reached window are read.
+ * Anything this cannot establish — an object it cannot place or parse, a
+ * listing it cannot page, the work budget running out, a storage failure —
+ * keeps the revision. Each publication examines at most PURGE_CANDIDATES
+ * candidates, rotated by the set's revision so none is starved, within
+ * PURGE_OPERATIONS storage calls and PURGE_BYTES of ledger text; what it does
+ * not reach stays retained until a later publication. It never throws: a purge
+ * can never fail, delay into failure or roll back the publication it follows.
+ */
+const PURGE_MARGIN_MS = 5 * 60_000;
+const PURGE_CANDIDATES = 16, PURGE_OPERATIONS = 256, PURGE_BYTES = 16 * 1024 * 1024;
+const HOUR_MS = 3_600_000;
+/** The fields of a decision record's `versions` that name a revision of each document kind. */
+const NAMING_FIELDS: Record<string, readonly string[]> = { content: ['catalog'], slots: ['slots'], learn: ['learn', 'policy'], reflex: ['config'] };
+class PurgeStopped extends Error {}
+interface PurgeWork { operations: number; bytes: number }
+function spend(work: PurgeWork, bytes = 0): void {
+  if (++work.operations > PURGE_OPERATIONS || (work.bytes += bytes) > PURGE_BYTES) throw new PurgeStopped();
+}
+interface Listed { objects: Array<{ key: string; size: number }>; delimitedPrefixes: string[]; truncated: boolean; cursor?: string }
+/** Every page of one listing, in key order, until `visit` answers true. */
+async function eachListed(storage: R2Bucket, work: PurgeWork, options: R2ListOptions, visit: (page: Listed) => boolean | void): Promise<void> {
+  let cursor: string | undefined;
+  for (let first = true; first || cursor; first = false) {
+    spend(work);
+    const page = await storage.list(first ? options : { prefix: options.prefix, ...(options.delimiter ? { delimiter: options.delimiter } : {}), cursor }) as unknown as Listed;
+    if (!page || !Array.isArray(page.objects) || typeof page.truncated !== 'boolean') throw new PurgeStopped();
+    if (visit({ objects: page.objects, delimitedPrefixes: Array.isArray(page.delimitedPrefixes) ? page.delimitedPrefixes : [], truncated: page.truncated })) return;
+    cursor = page.truncated ? page.cursor : undefined;
+    if (page.truncated && !cursor) throw new PurgeStopped();
+  }
+}
+/** W38 B4: does this tenant set the configuration-revision retention setting? Never throws. */
+async function purgesConfiguration(env: Env, tenant: string): Promise<boolean> {
+  try { return (await import('@/retention')).configurationRetention(env, tenant) !== null; } catch { return false; }
+}
+async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: PublicationPin): Promise<void> {
+  let durationMs: number;
+  try {
+    const policy = (await import('@/retention')).configurationRetention(env, scope);
+    if (!policy || typeof storage.list !== 'function' || typeof storage.delete !== 'function') return;
+    durationMs = policy.durationMs;
+  } catch { return; }
+  const work: PurgeWork = { operations: 0, bytes: 0 }, now = set.operation.at;
+  try {
+    const { hourPrefix, fromTs36 } = await import('@/ledger/records');
+    const ledger = { hourPrefix, fromTs36 };
+    const candidates: Array<{ ref: Ref; n: number; next: number }> = [];
+    for (const ref of Object.values(set.refs)) {
+      if (ref.revision - 2 < ref.minRevision) continue;
+      const stored = await storedRevisions(storage, work, ref);
+      for (const [i, n] of stored.entries()) {
+        const next = stored[i + 1];
+        if (n >= ref.minRevision && n <= ref.revision - 2 && next !== undefined) candidates.push({ ref, n, next });
+      }
+    }
+    const start = candidates.length ? (set.revision * PURGE_CANDIDATES) % candidates.length : 0;
+    for (let i = 0; i < Math.min(PURGE_CANDIDATES, candidates.length); i++) {
+      const { ref, n, next } = candidates[(start + i) % candidates.length]!;
+      // Its successor's publication is when it stopped being in force; where that
+      // successor was itself purged, the next stored revision's is later still.
+      const born = await revisionTime(storage, work, ref, n), superseded = ref.index.find(entry => entry.revision === n + 1)?.at ?? await revisionTime(storage, work, ref, next);
+      if (born === null || superseded === null || now - superseded <= durationMs) continue;
+      if (await namedByStoredManifest(storage, work, ledger, scope, ref.kind, n, born, superseded)) continue;
+      spend(work);
+      await storage.delete(revisionKey(ref.kind, ref.scope, n));
+    }
+  } catch { /* whatever this publication did not reach stays retained */ }
+}
+/** The revision numbers of one member whose bodies are still stored, ascending. */
+async function storedRevisions(storage: R2Bucket, work: PurgeWork, ref: Ref): Promise<number[]> {
+  const prefix = revisionKey(ref.kind, ref.scope, 0).slice(0, -'0.json'.length), out: number[] = [];
+  await eachListed(storage, work, { prefix }, page => {
+    for (const { key } of page.objects) {
+      const m = /^([1-9][0-9]*)\.json$/.exec(key.slice(prefix.length)), n = m ? Number(m[1]) : NaN;
+      if (integer(n)) out.push(n);
+    }
+  });
+  return out.sort((a, b) => a - b);
+}
+/**
+ * A revision's publication time: from the set's own index where the revision is
+ * still listed there, otherwise from the head of its stored body. The body is
+ * canonical JSON (`serialized`), whose sorted keys begin `{"actor":…,"at":N`, so
+ * a bounded ranged read answers it without reading a document of up to 2 MiB.
+ */
+async function revisionTime(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number): Promise<number | null> {
+  const row = ref.index.find(entry => entry.revision === n);
+  if (row) return row.at;
+  spend(work);
+  const found = await storage.get(revisionKey(ref.kind, ref.scope, n), { range: { offset: 0, length: 4096 } });
+  if (!found) return null;
+  const m = /^\{"actor":"(?:[^"\\]|\\.)*","at":(0|[1-9][0-9]*)[,}]/.exec(await found.text()), at = m ? Number(m[1]) : NaN;
+  return integer(at) ? at : null;
+}
+type LedgerKeys = { hourPrefix(tenant: string, ms: number): string; fromTs36(value: string): number };
+async function namedByStoredManifest(storage: R2Bucket, work: PurgeWork, ledger: LedgerKeys, tenant: string, kind: string, n: number, born: number, superseded: number): Promise<boolean> {
+  if (kind === 'proposals') return false;
+  const versions = (record: unknown): Record<string, unknown> => {
+    const value = object(record) ? record.versions : undefined;
+    return object(value) ? value : {};
+  };
+  if (kind === 'prior') {
+    const reach = await priorReach(storage, work, tenant, born - PURGE_MARGIN_MS, superseded + PURGE_MARGIN_MS);
+    if (reach === 'serving') return true;
+    if (reach === null) return false;
+    return decisionsName(storage, work, ledger, tenant, reach.from - PURGE_MARGIN_MS, reach.to + PURGE_MARGIN_MS, null, record => {
+      if (versions(record).prior === n) return true;
+      const inputs = object(record) ? record.inputs : undefined, replay = object(inputs) ? inputs.replay : undefined, slots = object(replay) ? replay.slots : undefined;
+      return Array.isArray(slots) && slots.some(row => object(row) && row.prior === n);
+    });
+  }
+  const fields = NAMING_FIELDS[kind];
+  if (!fields) return true;
+  return decisionsName(storage, work, ledger, tenant, born - PURGE_MARGIN_MS, superseded + PURGE_MARGIN_MS,
+    [born + PURGE_MARGIN_MS, superseded - PURGE_MARGIN_MS], record => fields.some(field => versions(record)[field] === n));
+}
+/**
+ * Does a stored decision served in [from, to] name the revision (`names`)? An
+ * object wholly inside `interior` counts without being read.
+ */
+async function decisionsName(storage: R2Bucket, work: PurgeWork, ledger: LedgerKeys, tenant: string, from: number, to: number,
+  interior: [number, number] | null, names: (record: unknown) => boolean): Promise<boolean> {
+  if (to < from) return false;
+  const root = tenant + '/', dayOf = (ms: number) => ledger.hourPrefix(tenant, ms).slice(root.length, root.length + 10);
+  const first = dayOf(from), last = dayOf(to), days: string[] = [];
+  await eachListed(storage, work, { prefix: root, delimiter: '/', startAfter: root + first }, page => {
+    for (const prefix of page.delimitedPrefixes) {
+      const day = prefix.slice(root.length, -1);
+      if (day > last) return true;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day) && day >= first) days.push(day);
+    }
+  });
+  for (const day of days) {
+    const hours: string[] = [];
+    await eachListed(storage, work, { prefix: `${root}${day}/`, delimiter: '/' }, page => {
+      for (const prefix of page.delimitedPrefixes) { const hour = prefix.slice(root.length + 11, -1); if (/^\d{2}$/.test(hour)) hours.push(hour); }
+    });
+    for (const hour of hours.sort()) {
+      const opens = Date.parse(`${day}T${hour}:00:00Z`);
+      if (!(opens <= to && opens + HOUR_MS > from)) continue;
+      const prefix = `${root}${day}/${hour}/decision/`, read: Array<{ key: string; size: number }> = [];
+      let kept = false;
+      await eachListed(storage, work, { prefix }, page => {
+        for (const listed of page.objects) {
+          const m = /^([0-9a-z]{9})-([0-9a-z]{9})-[^/]+\.ndjson$/.exec(listed.key.slice(prefix.length));
+          const min = m ? ledger.fromTs36(m[1]!) : NaN, max = m ? ledger.fromTs36(m[2]!) : NaN;
+          // An object this reader cannot place in time could hold anything: keep the revision.
+          if (!integer(min) || !integer(max) || min > max) { kept = true; return true; }
+          if (min > to || max < from) continue;
+          if (interior && min >= interior[0] && max <= interior[1]) { kept = true; return true; }
+          read.push(listed);
+        }
+      });
+      if (kept) return true;
+      for (const listed of read) if (await objectNames(storage, work, listed, names)) return true;
+    }
+  }
+  return false;
+}
+async function objectNames(storage: R2Bucket, work: PurgeWork, listed: { key: string; size: number }, names: (record: unknown) => boolean): Promise<boolean> {
+  spend(work, integer(listed.size) ? listed.size : PURGE_BYTES + 1);
+  const found = await storage.get(listed.key);
+  // Gone since it was listed (a rewrite after erasure): it names nothing any more.
+  if (!found) return false;
+  for (const line of (await found.text()).split('\n')) {
+    if (!line) continue;
+    let record: unknown;
+    try { record = JSON.parse(line); } catch { return true; }
+    if (names(record)) return true;
+  }
+  return false;
+}
+/**
+ * The window in which a decision could have been served a lift snapshot built
+ * while a prior revision was in force ([builtFrom, builtTo]): from the first
+ * such snapshot of any placement to the first snapshot each of those placements
+ * published after it. `null` where no snapshot was built then, so nothing can
+ * name the prior; `'serving'` where a placement has published nothing since,
+ * so the prior may still be named by the next decision.
+ */
+async function priorReach(storage: R2Bucket, work: PurgeWork, tenant: string, builtFrom: number, builtTo: number): Promise<{ from: number; to: number } | 'serving' | null> {
+  const root = `lift/${tenant}/`, brands: string[] = [];
+  let from = Infinity, to = builtTo;
+  await eachListed(storage, work, { prefix: root, delimiter: '/' }, page => { brands.push(...page.delimitedPrefixes); });
+  for (const brand of brands) {
+    const placements: string[] = [];
+    await eachListed(storage, work, { prefix: brand, delimiter: '/' }, page => { placements.push(...page.delimitedPrefixes); });
+    for (const placement of placements) {
+      const built = await versionAbove(storage, work, placement, builtFrom - 1);
+      if (built === null || built > builtTo) continue;
+      const after = await versionAbove(storage, work, placement, builtTo);
+      if (after === null) return 'serving';
+      from = Math.min(from, built); to = Math.max(to, after);
+    }
+  }
+  return from === Infinity ? null : { from, to };
+}
+/**
+ * The smallest archived snapshot version above `t` in one placement's archive.
+ * Versions are millisecond times, 13 digits wide from 2001 to 2286, and key
+ * order is numeric order among keys of one width: from a 13-digit `t` the
+ * listing starts after it and stops at the first 13-digit version above it.
+ * Any other `t` reads the whole archive listing.
+ */
+async function versionAbove(storage: R2Bucket, work: PurgeWork, placement: string, t: number): Promise<number | null> {
+  const ordered = t >= 1e12 && t < 1e13 - 1;
+  let found: number | null = null;
+  await eachListed(storage, work, ordered ? { prefix: placement, startAfter: placement + String(t) } : { prefix: placement }, page => {
+    for (const { key } of page.objects) {
+      const m = /^(0|[1-9][0-9]*)\.json$/.exec(key.slice(placement.length)), v = m ? Number(m[1]) : NaN;
+      if (!integer(v) || v <= t) continue;
+      found = found === null ? v : Math.min(found, v);
+      if (ordered && m![1]!.length === 13) return true;
+    }
+  });
+  return found;
 }
