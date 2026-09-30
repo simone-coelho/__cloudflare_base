@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 // scripts/import-content.mjs — the manual import adapter for the demo catalog.
 //
 // Pulls the Meridian content catalog through the worker's own CMS/DAM seam into the NAMED

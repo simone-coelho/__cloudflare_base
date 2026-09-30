@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 // scripts/init-local.mjs — prepare a fresh clone's LOCAL worker store for one named tenant.
 //
 //   node scripts/init-local.mjs --scope <tenant> [--demo-data] [--persist-to <dir>]

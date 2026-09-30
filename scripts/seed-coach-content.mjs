@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 // scripts/seed-coach-content.mjs — the Coach demo's CMS export into the content engine.
 //
 // public/data/coach-content.json is the demo's content catalog: every hero and story the
