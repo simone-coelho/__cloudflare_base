@@ -50,14 +50,18 @@
 // DEFAULT_LEARN (effective salt: the brand, `coach`), revisions 2-4 rotate to
 // `spring-26`; so revision 5 on `spring-26` counts 2 and revision 6 on
 // `autumn-26` counts 3 — with the setting unset (the whole history is read)
-// and, by B4 with kit 02 :706, with it set. Past the horizon (a 26-revision
-// pre-W21 history) the count is W21's explicit unknown either way: a purge
-// never manufactures a number.
+// and, by B4 with kit 02 :706, with it set. At the edge (current pre-W21
+// learn revision 24, the last whose successor still reads back to revision 1
+// through the walk's 24 reads) revision 25 counts 2 either way. Past the
+// horizon (a 26-revision pre-W21 history) the count is W21's explicit unknown
+// either way — a purge never manufactures a number — and the setting still
+// purges learn revisions there (B4: older revisions are purged under the
+// setting; no later count can need them).
 //
-// NOT RULED: which learn revisions the purge removes in this history — either
-// the purge spares the learn revisions a later count needs, or the count does
-// not need them; the test observes only the counts, what the setting purges of
-// the other kinds, and that nothing is purged with the setting unset.
+// NOT RULED: which learn revisions the purge removes inside the horizon —
+// either the purge spares the learn revisions a later count needs, or the count
+// does not need them; there the test observes only the counts, what the setting
+// purges of the other kinds, and that nothing is purged with the setting unset.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Hono } from 'hono';
@@ -313,28 +317,59 @@ describe('unit:W38.B4.x', () => {
   }, 60_000);
 
   /**
+   * The exact edge of the carry: a pre-W21 history whose current learn revision
+   * is 24. Learn 25's walk reads revisions 24 … 1 — its 24 reads reach revision
+   * 1 — so with the setting unset it counts exactly, and a purge must leave the
+   * same count (the walk's horizon, src/content/holdout.ts SALT_HISTORY_READS,
+   * and the carry's, src/config/publication.ts SALT_CARRY_REVISIONS).
+   *
+   *   day 0      initialized: catalog 1, learn 1 = DEFAULT_LEARN (brand `coach`)
+   *   day 1-23   learn 2 … 24 on `spring-26`; catalog 2 (day 1), 3 (day 2) — stored by the pre-W21 writer
+   *   day 100    catalog 4: with the setting set, the purge runs
+   *   day 101    learn 25 on `spring-26`  → count 2
+   */
+  it('B4.x: edge — a pre-W21 history whose current learn revision is 24, the last whose successor still reads back to revision 1, keeps its exact count across the purge: learn 25 carries spring-26, 2 with the setting set, as unset', async () => {
+    const run = async (configuration: boolean) => {
+      const tenant = await preW21Tenant(configuration, Array.from({ length: 23 }, () => 'spring-26'));
+      await tenant.publish(100, 'catalog', CONTENT_KIND as DocumentKind<unknown>, catalogOf(4));
+      const catalogAfterPurge = tenant.storage.revisions('content');
+      await tenant.publish(101, 'learn', LEARN_KIND as DocumentKind<unknown>, learnOf('spring-26', 25));
+      return { catalogAfterPurge, count: await tenant.saltCount() };
+    };
+    const unset = await run(false), set = await run(true);
+    expect(unset.count, 'with the setting unset, learn 25 reads back 24 revisions to revision 1: the brand fallback then spring-26 (W21 E1.03; kit 02 :527-529)')
+      .toEqual({ annotation: { salt: 'spring-26', version: 2 }, outcome: 2 });
+    expect(set.catalogAfterPurge, 'fixture: with the setting set, the day-100 publication purges catalog 1 and 2').toEqual([3, 4]);
+    expect(set.count, 'W38.B4.x edge — with the setting set, learn 25 on a pre-W21 history whose current revision was 24 carries the exact count it carries unset (spring-26, 2), never null')
+      .toEqual(unset.count);
+  }, 60_000);
+
+  /**
    * The boundary the exception must not cross: past the 24 revisions a count
    * reads back (W21 E1.07, W21/B2.unit.test.ts:975-978), the pre-W21 history
    * gives the explicit unknown with the setting unset, and a purge must give
-   * the same unknown — never a number counted over what it left readable.
+   * the same unknown — never a number counted over what it left readable. No
+   * later count can need these learn revisions, so the setting purges them as
+   * it purges every other old revision (B4).
    *
    *   day 0      initialized: learn 1 = DEFAULT_LEARN (brand `coach`)
    *   day 1-25   learn 2 … 26 on `spring-26`; catalog 2 (day 1), 3 (day 2) — stored by the pre-W21 writer
-   *   day 100    catalog 4: with the setting set, the purge runs
+   *   day 100    catalog 4: with the setting set, the purge runs and removes old learn revisions
    *   day 101    learn 27 on `spring-26`  → the explicit unknown
    */
   it('B4.x: boundary — past the 24-revision horizon a pre-W21 history counts the explicit unknown with the setting set exactly as unset: a purge never manufactures a number', async () => {
     const run = async (configuration: boolean) => {
       const tenant = await preW21Tenant(configuration, Array.from({ length: 25 }, () => 'spring-26'));
       await tenant.publish(100, 'catalog', CONTENT_KIND as DocumentKind<unknown>, catalogOf(4));
-      const purged = tenant.storage.deletes.length;
+      const learnPurged = tenant.storage.deletes.map(key => /\/learn\/rev\/(\d+)\.json$/.exec(key)).filter(match => match !== null).map(match => Number(match![1]));
       await tenant.publish(101, 'learn', LEARN_KIND as DocumentKind<unknown>, learnOf('spring-26', 27));
-      return { purged, count: await tenant.saltCount() };
+      return { learnPurged, count: await tenant.saltCount() };
     };
     const unset = await run(false), set = await run(true);
     expect(unset.count, 'with the setting unset, learn 27 cannot read back to revision 1 through 24 revisions: salt spring-26, version unknown (W21 E1.07; kit 02 :529)')
       .toEqual({ annotation: { salt: 'spring-26', version: null }, outcome: null });
-    expect(set.purged, 'fixture: with the setting set, the day-100 publication purged stored revisions').toBeGreaterThan(0);
+    expect({ removesLearn: set.learnPurged.length > 0, currentOrPrevious: set.learnPurged.filter(n => n >= 25) }, 'W38.B4 past the horizon — with the setting set, the day-100 publication purges learn revisions of this pre-W21 history (older than 30 days; never the current 26 nor the previous 25): no later count can need them')
+      .toEqual({ removesLearn: true, currentOrPrevious: [] });
     expect(set.count, 'W38.B4.x boundary — with the setting set, learn 27 carries the same explicit unknown as unset: a purge never turns a count W21 cannot establish into a number').toEqual(unset.count);
   }, 60_000);
 });
