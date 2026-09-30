@@ -365,11 +365,11 @@ describe('linkVisitor on the object host', () => {
     const folded = structuredClone(ns.object(sh).storage.map.get('pipeline'));
     const foldedAffinity = structuredClone(ns.object(sh).storage.map.get('affinity'));
     const again = await linkVisitor(env, 'coach', { visitorId: PHONE, accountId: 'acct-1001', source: 'login', assurance: 'site' });
-    // The object host answers every idempotent commit with the same durable
-    // receipt, whose outcome is pinned to 'linked' (ShopperReflex.ts:222, :2452);
-    // "folds nothing" is proved by the person's own counters, not by a word.
+    // W37 STALE correction (expectation only, lead ruling 2026-09-30): a trusted re-link without the browser's
+    // grant answers 'already', as the session host does (W37.04; W35 A1 parity); a retry carrying the grant
+    // replays its recorded answer (W35.03). "Folds nothing" is proved by the person's own counters, not by a word.
     expect(again.shopperId).toBe(sh);
-    expect(again.outcome).toBe('linked');
+    expect(again.outcome).toBe('already');
     expect(again.audiences).toContain(TABBY);
     expect(ns.object(sh).storage.map.get('pipeline')).toEqual(folded);
     expect(ns.object(sh).storage.map.get('affinity')).toEqual(foldedAffinity);

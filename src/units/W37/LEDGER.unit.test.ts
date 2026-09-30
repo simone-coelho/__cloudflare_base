@@ -55,7 +55,7 @@ import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { newAnonymousSession, issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { storedConsent, CONSENT_LIFETIME_MS, CONSENT_SWITCHES, type ConsentInstruction } from '@/content/consent';
-import { initializePublicationSet, publicationScope, PublicationError, type PublicationBaseline } from '@/config/publication';
+import { initializePublicationSet, publicationScope, PublicationError, PUBLICATION_CACHE_MS, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache } from '@/config/versionedStore';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
 import { REFLEX_KIND, reflexScopeForTenant, ReflexConfigUnavailableError } from '@/reflex/configStore';
@@ -283,7 +283,9 @@ const names = (tenant: string) => (name: string) => segments(name).includes(tena
 // in workerd by the one shared harness, src/units/_native.ts. The wrapper adds
 // fixture doors only: publish a tenant's documents, seed raw ledger objects, mint
 // an anonymous grant, withdraw a publication, run a cron with every job it hands
-// to waitUntil awaited, and read stored objects back.
+// to waitUntil awaited, read stored objects back, and move the runtime's clock
+// forward (standing in for a real wait of that long: installed only when a leg
+// asks, and never moved back).
 // ===========================================================================
 
 const NATIVE_WRAPPER = `
@@ -293,6 +295,7 @@ import { REFLEX_KIND, reflexScopeForTenant } from './src/reflex/configStore.ts';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from './src/content/kinds.ts';
 import { newAnonymousSession } from './src/identity/sessionCapability.ts';
 export { ShopperReflex, PersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend };
+let clockAdvance = 0, clockInstalled = false;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -315,6 +318,12 @@ export default {
       do { const page = await env.STORAGE.list({ prefix: 'config-publication/v2/' + input.tenant + '/', cursor });
         for (const o of page.objects) { await env.STORAGE.delete(o.key); removed++; } cursor = page.truncated ? page.cursor : undefined; } while (cursor);
       return Response.json({ removed });
+    }
+    if (url.pathname === '/clock') {
+      if (!(Number.isSafeInteger(input.advanceMs) && input.advanceMs > 0)) return new Response(null, { status: 400 });
+      if (!clockInstalled) { const wall = Date.now.bind(Date); Date.now = () => wall() + clockAdvance; clockInstalled = true; }
+      clockAdvance += input.advanceMs;
+      return Response.json({ advancedMs: clockAdvance });
     }
     if (url.pathname === '/scheduled') {
       const pending = [];
@@ -795,6 +804,12 @@ describe('unit:W37.T6', () => {
         const event = { type: 'product_view', userId: g.subject, sessionId: g.sessionId, source: 'sdk', data: TABBY_VIEW };
         expect((await shopper('/realtime/action', event)).status, `${reflexHost}: served while the authority stands`).toBe(200);
         await stamp.door('/unpublish', { tenant: ACME });
+        // Refreshed arrangement (W19 LG1, 6219c50): the shopper path serves from the bounded
+        // publication cache, and "a verified cached set can serve until expiry"
+        // (docs/kit/02-api-reference.md:709; src/config/publication.ts:8, :344). The withdrawal
+        // is observed once the set the action above cached has expired: the runtime's clock
+        // moves PUBLICATION_CACHE_MS forward, as a real wait of that long would.
+        await stamp.door('/clock', { advanceMs: PUBLICATION_CACHE_MS });
         for (const [path, body] of [['/realtime/action', event], ['/realtime/reflex', undefined], [`/realtime/personalization/${g.subject}`, undefined],
           [`/realtime/segments/${g.subject}`, undefined], ['/sort', { userId: g.subject, sessionId: g.sessionId, candidates: [{ id: 'tabby', line: 'Tabby' }] }],
           [`/v1/${ACME}/decisions/snapshot?page=home`, undefined]] as const) {
