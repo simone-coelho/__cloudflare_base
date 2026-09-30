@@ -94,6 +94,7 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
   { path: '/v1/:tenant/identity/shopper/:shopperId', methods: read },
   { path: '/v1/:tenant/identity/events', methods: post },
   { path: '/v1/:tenant/identity/erase', methods: post },
+  { path: '/v1/:tenant/identity/export', methods: post },
   { path: '/v1/:tenant/audit', methods: read },
   { path: '/v1/:tenant/brands', methods: read },
   { path: '/v1/:tenant/monitor', methods: [...read, 'POST'] },

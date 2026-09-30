@@ -26,10 +26,10 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type ReportPolicy, type ReportPriors } from './report';
+import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type ReportPolicy, type ReportPriors } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
-import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts,
+import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts, loadDay,
   type ArmVisitors, type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts, type VisitorOutcomes } from './report';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
 
@@ -2646,6 +2646,10 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   if (interrupted && !dateHours.has(interrupted.date)) reports.deferred.push(interrupted.date);
   const builtDates = new Set(built.map(b => b.date)), summaryBudget = { bytes: 0, cells: 0 };
   for (const date of dates.slice(-3)) {
+    // The tenant's own day is the date's publication record: it is written last,
+    // after the day of every other brand the date's hour aggregates carry
+    // (`publishAggregateDate`), so a saved day that names every built hour means
+    // every brand of that date was published by the same run.
     const ids = { tenant, brand: tenant, date };
     try {
       // W33 O2: the day object this run notes before it reads the date's
@@ -2661,8 +2665,8 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
         if (hasReportedHours(saved.report, dateHours.get(date)!) && namesLateObjects(saved.report, lateByDate.get(date))) continue;
         note = { etag: saved.etag };
       }
-      const published = await publishAggregateDay(r2, ids, learn, now, true, note);
-      if (published?.written) reports.published.push(date);
+      const published = await publishAggregateDate(r2, tenant, date, learn, now, note);
+      if (published.written) reports.published.push(date);
       else reports.failed.push({ date, error: 'day report superseded by a concurrent publication' });
     } catch { reports.failed.push({ date, error: 'day report publication failed' }); }
   }
@@ -2726,6 +2730,115 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
   try { written = await writeCanonicalDay(r2, ids, body, noted); }
   catch (error) { if (strict) throw error; /* The public response still carries the computation. */ }
   return { report, written };
+}
+
+/**
+ * W37 T2: the brands a date's hour aggregates carry. A tenant may serve more than
+ * one brand, and the brand rides on its decisions and outcomes
+ * (docs/kit/03-payload-schemas.md); there is no brand registry, so a tenant's
+ * brands on a date are exactly the brands its own folded records carry.
+ */
+function aggregateBrands(aggs: readonly HourAggregate[]): string[] {
+  return [...new Set(aggs.flatMap(a => Object.keys(a.brands)))].sort();
+}
+
+/**
+ * W37 T2: the five-minute job's publication of one folded date, for EVERY brand
+ * the date's hour aggregates carry, each day built from its own brand's rows
+ * only (`reportFromHours`). The tenant's own day is written last, and only once
+ * every other brand's day was written: it is the day the catch-up reads back to
+ * decide whether a date is already published (`hasReportedHours`), so a date
+ * whose other brand's day failed or was superseded is published again, whole,
+ * by the next run. W33 O2 holds for each brand: every day is written on the
+ * condition of the day object noted before the aggregates it is built from were
+ * read — the tenant's before the first listing, each other brand's before the
+ * listing its day is built from, which is a second listing only for a tenant
+ * that serves more than its own brand. A brand first folded between the two
+ * listings leaves the date unpublished for the next run to finish.
+ */
+async function publishAggregateDate(r2: R2Agg, tenant: string, date: string, learn: LearnConfig, now: number,
+  note?: CanonicalNote): Promise<{ written: boolean }> {
+  const ids = { tenant, brand: tenant, date };
+  const noted = note ?? await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], ids);
+  let hours = await loadHours(r2, tenant, date, now);
+  if (!hours.aggs.length) unavailable();
+  const notes = new Map<string, CanonicalNote>();
+  const others = aggregateBrands(hours.aggs).filter(brand => brand !== tenant);
+  if (others.length) {
+    for (const brand of others) notes.set(brand, await noteCanonicalDay(r2 as unknown as Parameters<typeof noteCanonicalDay>[0], { tenant, brand, date }));
+    hours = await loadHours(r2, tenant, date, now);
+    if (!hours.aggs.length) unavailable();
+  }
+  const tombs = await loadTombstones(r2, tenant);
+  const day = (brand: string) => reportFromHours(hours.aggs, { tenant, brand, date }, learn, now, { pending: tombs.size, missing: hours.missing });
+  let complete = aggregateBrands(hours.aggs).every(brand => brand === tenant || notes.has(brand));
+  for (const [brand, brandNote] of notes) {
+    if (!await writeCanonicalDay(r2, { tenant, brand, date }, canonicalReportJson(day(brand)), brandNote)) complete = false;
+  }
+  if (!complete) return { written: false };
+  return { written: await writeCanonicalDay(r2, ids, canonicalReportJson(day(tenant)), noted) };
+}
+
+/**
+ * W37 T2: the brands a tenant's own records carry on a date — those of its hour
+ * aggregates where the date has any, else those of the date's decision and
+ * outcome rows in the ledger (a day the fold never reached). Bounded by the same
+ * caps as the day it is read for; a read that fails names no brand.
+ */
+async function dayBrands(r2: R2Agg, tenant: string, date: string, now: number): Promise<string[]> {
+  try {
+    const { aggs } = await loadHours(r2, tenant, date, now);
+    if (aggs.length) return aggregateBrands(aggs);
+    const brands = new Set<string>();
+    for (const stream of ['decision', 'outcome'] as const) {
+      const day = await loadDay<{ brand?: unknown }>(r2 as unknown as R2Like, tenant, date, stream, REPORT_LIMITS.records);
+      for (const row of day.records) if (typeof row.brand === 'string') brands.add(row.brand);
+    }
+    return [...brands].filter(brand => { try { validateReportIds({ tenant, brand, date }); return true; } catch { return false; } }).sort();
+  } catch { return []; }
+}
+
+/**
+ * W37 T2: whether the day this job built for a brand is the day stored for it.
+ * `runDayReport` answers the day it computed even where its write was refused
+ * or failed (W33 O2), so the job reads the stored day back and compares it with
+ * the bytes its own write carries (`canonicalReportJson`). A read that fails
+ * answers "not stored".
+ */
+async function storedAsBuilt(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, report: DayReport): Promise<boolean> {
+  try {
+    const saved = await r2.get(reportKey(ids.tenant, ids.brand, ids.date));
+    return !!saved && await saved.text() === canonicalReportJson(report);
+  } catch { return false; }
+}
+
+/**
+ * W37 T2: the nightly day reports of one tenant's date — one per brand its own
+ * records carry (`dayBrands`), each built from that brand's rows only, and the
+ * tenant's own day beside them as it has always been built — never
+ * `{ brand: tenant }` alone. Each other brand is built and published on its own
+ * (`runDayReport`), so one brand's failure never withholds another brand's day.
+ * The tenant's own day is the date's publication record, as the five-minute job
+ * writes it (`publishAggregateDate`): it comes last, and only once every other
+ * brand's day of the date is stored as this job built it. Where one is not, the
+ * own day is withheld (`report: null`) and nothing more is written, so the next
+ * five-minute run finds the date without its saved own day and publishes it
+ * again, whole.
+ */
+export async function runBrandDayReports(r2: R2Agg, tenant: string, date: string, learn: LearnConfig, now = Date.now(),
+  retentionEnv?: RetentionEnv): Promise<Array<{ brand: string; report: DayReport | null }>> {
+  const brands = [...(await dayBrands(r2, tenant, date, now)).filter(brand => brand !== tenant), tenant];
+  const results: Array<{ brand: string; report: DayReport | null }> = [];
+  let stored = true;
+  for (const brand of brands) {
+    if (brand === tenant && !stored) { results.push({ brand, report: null }); continue; }
+    try {
+      const report = await runDayReport(r2, { tenant, brand, date }, learn, null, now, {}, retentionEnv);
+      if (brand !== tenant && !await storedAsBuilt(r2, { tenant, brand, date }, report)) stored = false;
+      results.push({ brand, report });
+    } catch { stored = false; results.push({ brand, report: null }); }
+  }
+  return results;
 }
 
 /**

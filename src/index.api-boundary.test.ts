@@ -548,6 +548,10 @@ export default {
         storage.set(tenant + '/' + day + '/00/decisions/erasure.ndjson', JSON.stringify({ visitor_id: 'same-subject', ts: erased - 1 }) + '\\n');
         storage.set('erasures/' + tenant + '/pending/same-subject.json', JSON.stringify({ tenant, visitor_id: 'same-subject', erased_at: erased,
           actor: 'synthetic', rows_removed: 0, objects_rewritten: 0, objects_deleted: 0 }));
+        // W37 step-3 STALE arrangement: real R2 answers every stored object with an
+        // etag, and the erasure rewrite's conditional state requires one on each
+        // read (src/ledger/erasure.ts:75, :179, :405). The seeded objects carry one.
+        for (const key of [tenant + '/' + day + '/00/decisions/erasure.ndjson', 'erasures/' + tenant + '/pending/same-subject.json']) publicationEtags.set(key, 'seeded-' + tenant);
       }
     }
     if (input.cachedScene) storage.set('scene/live/w0701-subject__w0701-scene.jpg', 'synthetic-image');
@@ -3257,7 +3261,12 @@ it('W37.09 refuses wildcard grants before tenant effects while retaining explici
           expect(result.after).toEqual(result.before); expect(result.pending).toBe(0);
         } else {
           expect(JSON.parse(result.body)).toMatchObject({ destination });
-          expect(result.calls).toEqual([['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.get', destination], ['SHOPPER_REFLEX.fetch', destination]]);
+          // W37 step-3 STALE expectation: the owned router names the actual object twice
+          // more, the owner's identity (src/identity/sessionAuthority.ts:628) and the
+          // redispatched route's own address, whose get is served locally (:630-636);
+          // identity computations with no effect, the same list W37.08 asserts for this probe.
+          expect(result.calls).toEqual([['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.get', destination], ['SHOPPER_REFLEX.fetch', destination],
+            ['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.idFromName', destination]]);
           if (kind === 'write') expect((result.after as { state: unknown[] }).state).toContainEqual([destination, { subject: shopperCapability.subject, eventType: 'page_view' }]);
           else expect(result.after).toEqual(result.before);
         }
