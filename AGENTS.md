@@ -51,29 +51,47 @@ The lead updates LANE-LOG.md whenever lanes, commits, rulings or authority chang
 **Not part of the remediation programme above.** These are operating rules for the hosted demos; they authorize
 nothing in document 35 and nothing above authorizes them.
 
-## The demo worker
+## The two demo workers — read this before any deploy
 
-Demo surfaces live on the DEFAULT wrangler environment — `edge-platform`, `ENVIRONMENT=development`,
-`DEPLOYMENT_PROFILE=demo`, deployed with plain `npx wrangler deploy`. Staging and production are
-`DEPLOYMENT_PROFILE=customer`: `/ops/demo-bootstrap` refuses there by design, the customer-stamp workflow
-deliberately omits demo bindings and assets, and demo API roots are 404'd under `AUTH_MODE=enforced`. A demo
-does not go there. `npm run deploy staging|production` is the guarded customer-stamp workflow and is a
-different thing entirely.
+There are **two** demo workers, because no single version of the code can run every demo.
+
+| Worker | URL | Runs | Deploy with |
+|---|---|---|---|
+| `edge-platform` (shared) | `edge-platform.expedge.workers.dev` | Coach storefront, Bright Hour `/live`, Meridian `/meridian`, the bank demo — on commit `26e2db1`, exactly as they were built and rehearsed | `bash scripts/deploy-legacy-demos.sh --deploy` **and nothing else** |
+| `edge-platform-top-offers` | `edge-platform-top-offers.expedge.workers.dev` | the QVC Top Offers demo `/top-offers` — on today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` |
+
+**Never run plain `npx wrangler deploy` from the repo root.** `wrangler.toml` names the shared worker, so it
+ships today's code onto it, and today's code cannot run the older demos: it requires a shopper session on every
+shopper call, which the Coach storefront and Bright Hour never create, and under `AUTH_MODE=enforced` it
+deliberately answers 404 for `/meridian/api`, `/live/api`, `/geo/cohort`, `/ai`, `/agents`, `/experiment`,
+`/signals` and `/funnel`. That is precisely how all three broke on 2026-09-23 and stayed broken for a week.
+
+**Verify a deploy through the APIs, never the pages.** Every page returned 200 throughout that week; the APIs
+behind them returned 404 and 403. After a shared-worker deploy, run
+`MERIDIAN_BASE=https://edge-platform.expedge.workers.dev node scripts/meridian-rehearsal.mjs` and
+`node scripts/meridian-isolation.mjs` (which exercises Coach's pipeline). After a Top Offers deploy, run both
+`scripts/rehearse-top-offers-*.mjs` with `--base https://edge-platform-top-offers.expedge.workers.dev`.
+
+**Do not change a demo worker's settings or secrets without the owner.** Adding `TENANTS` to the shared worker
+removed its implicit `coach` tenant and cut Coach off even from basic calls. Staging and production are
+`DEPLOYMENT_PROFILE=customer` and are never demo targets; `npm run deploy staging|production` is the guarded
+customer-stamp workflow and is a different thing entirely.
 
 ## A reseed must be followed by a deploy
 
 `scripts/seed-shn.mjs` (and any seed shaped like it) **re-anchors every content window to now and rewrites the
 beat documents under `public/`**. The worker reads those documents from its own `ASSETS` binding when it applies
-a beat. So after seeding a deployed demo, redeploy:
+a beat. So after seeding the Top Offers worker, redeploy it:
 
 ```bash
-node scripts/seed-shn.mjs --base https://<worker> --token <operator token>
-npx wrangler deploy
+node scripts/seed-shn.mjs --base https://edge-platform-top-offers.expedge.workers.dev --token <operator token>
+npx wrangler deploy --config wrangler.top-offers.toml
 ```
 
 Skip the deploy and the served assets drift from what was published: a beat then applies a *different* document
-than the one that was seeded, and the demo misbehaves in a way that looks like an engine fault. This is the
-coupling to remember — seeding a hosted demo is two steps, never one.
+than the one that was seeded, and the demo misbehaves in a way that looks like an engine fault. Seeding a hosted
+demo is two steps, never one. Before any deploy, `npm run check:generated` must pass: `npm run dev` rebuilds the
+Meridian and SDK bundles, but a deploy does not.
 
 ## No demo page carries a credential
 

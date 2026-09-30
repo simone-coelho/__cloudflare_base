@@ -1,6 +1,6 @@
 # Top Offers: the presenter script
 
-**https://edge-platform.expedge.workers.dev/top-offers/**
+**https://edge-platform-top-offers.expedge.workers.dev/top-offers/**
 
 Fifteen beats, about twenty minutes with questions. Written to be spoken. Every number in it was measured
 against the running engine, not estimated. Where something is designed rather than built, the script says so in

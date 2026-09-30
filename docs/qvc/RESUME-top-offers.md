@@ -28,44 +28,53 @@ by accident. An earlier build made exactly that mistake and was rejected.
 3. `scripts/lib/shn-promotions.mjs` — the pool. One file, twenty-one promotions.
 4. `scripts/seed-shn.mjs` — the only place the demo's world is defined.
 
-## It is deployed
+## It is deployed — on its own worker
 
-**https://edge-platform.expedge.workers.dev/top-offers/**
+**https://edge-platform-top-offers.expedge.workers.dev/top-offers/**
 
-That is the repo's own demo worker: the DEFAULT wrangler environment, `ENVIRONMENT=development`,
-`DEPLOYMENT_PROFILE=demo`. It also hosts `/live/` (Bright Hour) and `/meridian/`, both verified still serving
-after the deploy. Staging and production are `DEPLOYMENT_PROFILE=customer`, where `/ops/demo-bootstrap` refuses
-by design and the stamp workflow deliberately omits demo assets — a demo does not belong there.
+Top Offers has had its own worker since 2026-09-30. Until then it ran on the shared demo worker
+(`edge-platform`), and putting it there broke Coach, Bright Hour and Meridian for a week: today's engine requires
+a shopper session on every shopper call, which those older pages never create, and under `AUTH_MODE=enforced` it
+refuses their API roots. No single version of the code runs every demo, so each worker runs the code its demos
+were built on. Rules for both workers: `AGENTS.md` → "The two demo workers".
 
-Deployed with `npx wrangler deploy` (the default env, no `--env`). The guarded `npm run deploy staging|production`
-stamp workflow is a different thing entirely and is not used for this.
+The config is generated from `wrangler.toml` so it cannot drift:
 
-### What had to be provisioned on that worker, once
+```bash
+node scripts/build-top-offers-config.mjs          # writes wrangler.top-offers.toml
+npx wrangler deploy --config wrangler.top-offers.toml
+```
+
+It differs from `wrangler.toml` in three ways only: its own name, its own queue pair (`events-top-offers`,
+`events-top-offers-dlq` — a queue has exactly one consumer), and no staging/production stamps. **It keeps the
+scheduled jobs, and needs them:** beat 15's day report is the sum of hour aggregates built by the five-minute
+fold, so a report for a brand-new hour is empty until that hour closes and is folded.
+
+### What is provisioned on that worker
 
 | | |
 |---|---|
 | `TENANTS` | `{"provisioned":["shn"],"operatorGrants":{"top-offers-demo":["shn"],"seed-shn":["shn"]}}` |
 | `SDK_KEYS` | `shn:demo-site` |
 | `RETENTION` | version-1 policy for `shn`, all seven categories |
-| `JWT_SECRET` | generated for this worker; held only in the operator's own store |
-| queue `events-dead-letter` | the config gained this consumer after the previous deploy; the deploy fails without it |
+| `JWT_SECRET` | the value held as `DEMO_REMOTE_JWT_SECRET` in `.dev.vars` (gitignored) |
+| queues | `events-top-offers`, `events-top-offers-dlq` |
 
-None of these existed on that worker before, so nothing was overwritten. `JWT_SECRET` first refused as
-"binding name already in use" — it was a stale plain var from an older deploy, and the deploy cleared it because
-the current `[vars]` has none.
+The `shn` publication set lives in the shared R2 bucket and was created once; the seed reports it as existing.
 
-### To reseed the deployed demo
+### To reseed it
 
 ```bash
-export JWT_SECRET=... JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api DEPLOYMENT_PROFILE=demo
-node -e "import('./scripts/lib/tool-token.mjs').then(m=>m.resolveToolToken({payload:{sub:'seed-shn',roles:['operator']},expiresIn:'45m',allowMint:true}).then(console.log))"
-node scripts/seed-shn.mjs --base https://edge-platform.expedge.workers.dev --token <that token>
-npx wrangler deploy     # the seed re-anchors the beat files; the served assets must match what was seeded
+export JWT_SECRET="$(grep '^DEMO_REMOTE_JWT_SECRET=' .dev.vars | cut -d= -f2)" \
+       JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api DEPLOYMENT_PROFILE=demo
+TOKEN=$(node -e "import('./scripts/lib/tool-token.mjs').then(m=>m.resolveToolToken({payload:{sub:'seed-shn',roles:['operator']},expiresIn:'45m',allowMint:true}).then(t=>process.stdout.write(t)))")
+node scripts/seed-shn.mjs --base https://edge-platform-top-offers.expedge.workers.dev --token "$TOKEN"
+npx wrangler deploy --config wrangler.top-offers.toml     # the seed rewrote the beat documents
 ```
 
-**The seed re-anchors every window to now and rewrites the beat documents, so a reseed must be followed by a
-deploy.** The worker reads those documents from its own ASSETS binding when it applies a beat; if they drift
-from what was published, a beat applies a different document than the one that was seeded.
+**A reseed must be followed by a deploy.** The worker reads the beat documents from its own ASSETS binding when
+it applies a beat; if they drift from what was published, a beat applies a different document than the one that
+was seeded.
 
 ## To bring it back up locally
 
@@ -124,7 +133,7 @@ Competitive lane and are stacked on top of it. `public/top-offers/`, `src/routes
 therefore another lane's in-flight work with it. Do not push to "release" this lane's commit. Either the owner
 says push, or the other lane pushes its own batch and carries this one along.
 
-- **The demo is deployed and serving.** https://edge-platform.expedge.workers.dev/top-offers/ — worker version
+- **The demo is deployed and serving.** https://edge-platform-top-offers.expedge.workers.dev/top-offers/ — worker version
   `9cd261ca-ecd8-4436-a53e-b04e2fe862ee`, verified 200 on the page, the script and the stylesheet.
 - **Nothing is running locally.** The `wrangler dev` rig was stopped during the 2026-09-24 cleanup sweep (the
   box was at 95% disk and load 40). No watcher, poller or builder is armed. Nothing to tear down.
