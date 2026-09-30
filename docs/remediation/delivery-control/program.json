@@ -3701,9 +3701,11 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "0dbcca83317b01403b5db4a6b65fd2f3a60b3556 on rem/spec-w37 (fix 2, one commit on 84147aa): src/units/W37 (LEDGER, T7, FIX2) and the W37-named legacy tests as they stand at this revision (including the integration branch's W35 corrections to W37.05, W35.01 and W35.08), shopperReflex.identity.test.ts :372 restored to already (lead ruling 2026-09-30)",
+        "reviewedRevision": "92da2405970b8b85d966aa5d68370143b8ff38ae on rem/spec-w37 (fix 3, one commit on 0dbcca8): src/units/W37 (LEDGER, T7, FIX2, FIX3) and the W37-named legacy tests as they stand at this revision (including the integration branch's W35 corrections to W37.05, W35.01 and W35.08), shopperReflex.identity.test.ts :372 restored to already (lead ruling 2026-09-30)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/REPORT.md",
@@ -3718,6 +3720,9 @@
           "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/logs/N1-red-f9ab778-FIX3.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/logs/C1-trust-cursor-T5.05.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/specifier/logs/W37-negative-control-fix3.log",
           "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/reviewer-spec/logs/N1-red-7a1b087-FIX2.log",
           "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/specifier/logs/W37-negative-control-fix2.log",
           "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N1-acceptance-84147aa.log",
