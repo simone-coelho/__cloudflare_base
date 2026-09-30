@@ -32,7 +32,7 @@ import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
 import { captureRetention, RetentionUnavailable } from '@/retention';
-import { recoverDecisions } from '@/ledger/recovery';
+import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
 import { syntheticOperation } from '@/ops/synthetic';
 
@@ -74,8 +74,47 @@ export interface ServeRequest {
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
 /** KV/cache supplies immutable estimates; the object supplies current health/generation. */
 const LIFT_TTL_MS = 60_000;
-const liftCache = new Set<{ binding: Env['CACHE']; stats: Env['LEARN_STATS']; key: string; at: number; value: LiftSnapshot | null }>();
-export function invalidateLiftCache(): void { liftCache.clear(); }
+/** The serving read's own limit on one stored snapshot's UTF-8 bytes. */
+const LIFT_SNAPSHOT_MAX_BYTES = 2 * 1024 * 1024;
+/** At most this many snapshots are held by one isolate, whatever their size. */
+export const LIFT_CACHE_MAX_ENTRIES = 256;
+/**
+ * W38 B1 (F32 §4.4, document 35 §6 "bound … cache"): at most this many bytes of
+ * snapshot text are held by one isolate, however few entries they make.
+ *
+ * The entry cap alone bounds nothing about memory: 256 snapshots at the read's
+ * own 2 MiB limit are 512 MiB of text in a 128 MB isolate (F32 §1.5). The byte
+ * cap admits four snapshots at that limit, or a dozen at the statistics object's
+ * own counter caps (about 680 KB each), and is the same order as the
+ * publication cache beside it (8 MiB, src/config/publication.ts). It is charged
+ * with the UTF-8 bytes each snapshot was read as, which is what the serving
+ * read's own limit counts; the oldest entries are evicted first, so a byte cap
+ * bounds the cache without disabling it.
+ */
+export const LIFT_CACHE_MAX_BYTES = 8 * 1024 * 1024;
+interface LiftEntry {
+  binding: Env['CACHE']; stats: Env['LEARN_STATS']; key: string; at: number; value: LiftSnapshot | null; bytes: number;
+  /**
+   * W38 B7: the digest of the snapshot this entry holds, computed at most once
+   * per entry and never inside the witness's 50 ms budget.
+   */
+  digest?: Promise<string>;
+}
+const liftCache = new Set<LiftEntry>();
+let liftCacheBytes = 0;
+function forgetLift(entry: LiftEntry): void { if (liftCache.delete(entry)) liftCacheBytes -= entry.bytes; }
+export function invalidateLiftCache(): void { liftCache.clear(); liftCacheBytes = 0; }
+/**
+ * W38 B7 (amendment A36): the witness compares the statistics object's
+ * published digest with the digest of the snapshot this isolate holds. Digesting
+ * a large snapshot is this reader's own work, so it is done once per cached
+ * entry, before the witness's 50 ms round-trip budget starts, and a cached read
+ * reuses it. A failure to digest is a failed witness: no lift, never an error.
+ */
+function liftDigest(entry: LiftEntry): Promise<string> {
+  entry.digest ??= recoveryDigest(entry.value);
+  return entry.digest;
+}
 /**
  * The lift snapshot in force for one placement. W26 R2: `page` is passed only
  * for a page-scoped slot name (`identityPage`), and then the snapshot, its
@@ -90,26 +129,34 @@ export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: 
     && value.liftMin === config.stats.liftMin && value.liftMax === config.stats.liftMax;
   const key = liftKey(tenant, brand, slot, page);
   const binding = ownerBindingIdentity(env.CACHE), stats = ownerBindingIdentity(env.LEARN_STATS);
-  const hit = [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
-  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!, page) ? hit.value : null;
-  let value: LiftSnapshot | null = null;
+  const resident = () => [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
+  const hit = resident();
+  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) {
+    return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!, page, () => liftDigest(hit)) ? hit.value : null;
+  }
+  let value: LiftSnapshot | null = null, bytes = 0;
   try {
     const stream = await env.CACHE.get(key, 'stream');
     if (stream) {
       const reader = stream.getReader(), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
       let size = 0, raw = '';
       try { for (;;) { const next = await reader.read(); if (next.done) break; size += next.value.byteLength;
-        if (size > 2 * 1024 * 1024) { await reader.cancel(); throw new Error('Snapshot capacity'); }
+        if (size > LIFT_SNAPSHOT_MAX_BYTES) { await reader.cancel(); throw new Error('Snapshot capacity'); }
         raw += decoder.decode(next.value, { stream: true }); } raw += decoder.decode(); }
       finally { reader.releaseLock(); }
-      value = JSON.parse(raw) as LiftSnapshot;
+      value = JSON.parse(raw) as LiftSnapshot; bytes = size;
     }
-  } catch { value = null; }
-  if (hit) liftCache.delete(hit);
-  if (liftCache.size >= 256) liftCache.delete(liftCache.values().next().value!);
-  liftCache.add({ binding, stats, key, at: now, value });
+  } catch { value = null; bytes = 0; }
+  // One entry per placement: whatever another request stored for it while this
+  // one read is replaced, so no snapshot is ever charged to the cache twice.
+  for (let stale = resident(); stale; stale = resident()) forgetLift(stale);
+  const entry: LiftEntry = { binding, stats, key, at: now, value, bytes };
+  if (bytes <= LIFT_CACHE_MAX_BYTES) {
+    while (liftCache.size && (liftCache.size >= LIFT_CACHE_MAX_ENTRIES || liftCacheBytes + bytes > LIFT_CACHE_MAX_BYTES)) forgetLift(liftCache.values().next().value!);
+    liftCache.add(entry); liftCacheBytes += bytes;
+  }
   // Cache the raw snapshot, never one request's compatibility verdict.
-  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!, page) ? value : null;
+  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!, page, () => liftDigest(entry)) ? value : null;
 }
 
 /** What each slot learns against: its reward and the estimator's constants, from the learn document. */

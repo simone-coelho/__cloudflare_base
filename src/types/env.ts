@@ -80,6 +80,8 @@ export interface Env {
   /** Explicit per-tenant/per-category approved lifetimes. No implicit defaults. */
   // Explicit per-category policy; telemetry.* is separate from behavioral
   // external.*. Local descriptors/access references do not attest deployment.
+  // The optional `configuration` category (W38 B4, decision D3) is the purge
+  // setting for configuration revisions: absent, no revision is ever purged.
   RETENTION?: string;
   /** Exact source/DLQ identities and explicit unknown-owner policy; no defaults. */
   LEDGER_RECOVERY_CONFIG?: string;

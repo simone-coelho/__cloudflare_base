@@ -18,7 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Hono, type Context } from 'hono';
-import { InputError, inputRecords, readInputJson, readInputText } from '@/config/input';
+import { InputError, inputRecords, readInputBytes, readInputJson, readInputText } from '@/config/input';
 import type { Env } from '@/types/env';
 import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
@@ -39,9 +39,11 @@ import { slotConstraintDiagnostics, slotDiagnostics } from '@/content/slotDiagno
 
 type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext } };
 export const contentRoutes = new Hono<Ctx>();
+/** W38.04: the one representation of an input refusal, named, on every consuming route. */
+const inputRefusal = (c: Context<Ctx>, error: InputError) => c.json({ ok: false, error: error.message, code: error.code,
+  ...(error.status === 413 ? { budget: error.budget, limit: error.limit, observed: error.observed } : {}) }, error.status);
 contentRoutes.onError((error, c) => {
-  if (error instanceof InputError) return c.json({ ok: false, error: error.message, code: error.code,
-    ...(error.status === 413 ? { budget: error.budget, limit: error.limit, observed: error.observed } : {}) }, error.status);
+  if (error instanceof InputError) return inputRefusal(c, error);
   if (error instanceof LegacyDocumentError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   throw error;
@@ -249,9 +251,22 @@ enrichmentRoutes.use('*', async (c, next) => {
   }
   return next();
 });
+/**
+ * W38 B2: an enrichment body is admitted by the byte budget every other
+ * consuming route applies (W38.04), counted on the bytes actually delivered and
+ * refused BY NAME — 413 `input_budget_exceeded` with its budget, limit and
+ * observed count — before the proposal reader, storage or any model sees it.
+ * The admitted bytes then reach the enrichment reader unchanged, so its own
+ * content-type, strict UTF-8 and JSON rules still decide everything else.
+ */
+async function enrichmentBody(request: Request): Promise<unknown> {
+  const body = request.body === null ? null : await readInputBytes(request.body), type = request.headers.get('Content-Type');
+  return readEnrichmentBody(new Request(request.url, { method: request.method, headers: type === null ? {} : { 'Content-Type': type }, body }));
+}
 async function enrichmentResult(c: Context<Ctx>, operation: () => Promise<object>, status: 200 | 201 = 200) {
   try { return c.json(await operation(), status); }
   catch (error) {
+    if (error instanceof InputError) return inputRefusal(c, error);
     if (error instanceof ConnectorUnavailable) return c.json({ ok: false, error: 'Enrichment generation unavailable', code: error.code }, error.code === 'conflict' ? 409 : 503);
     if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
     return error instanceof EnrichmentError ? c.json({ error: error.message, ...(error.proposalId ? { proposalId: error.proposalId } : {}) }, error.status)
@@ -259,12 +274,12 @@ async function enrichmentResult(c: Context<Ctx>, operation: () => Promise<object
   }
 }
 enrichmentRoutes.post('/', c => enrichmentResult(c, async () => {
-  const input = await readEnrichmentBody(c.req.raw), user = c.get('auth').user!;
+  const input = await enrichmentBody(c.req.raw), user = c.get('auth').user!;
   const proposal = await captureEnrichment(c.env.STORAGE, c.get('tenant'), user.sub, user.type as 'access' | 'service', input);
   return { status: 'pending', published: false, proposal, review: null };
 }, 201));
 enrichmentRoutes.post('/generate', c => enrichmentResult(c, async () => {
-  const input = await readEnrichmentBody(c.req.raw), user = c.get('auth').user!, actor = user.sub;
+  const input = await enrichmentBody(c.req.raw), user = c.get('auth').user!, actor = user.sub;
   const authorize = async () => {
     let allowed = false;
     await operatorJwt()(c, async () => {
@@ -284,7 +299,7 @@ enrichmentRoutes.post('/:id/review', c => {
   if (user.type !== 'access') return c.json({ error: 'Current human operator session required' }, 403);
   if (!user.roles?.some(role => role === 'operator' || role === 'admin')) return c.json({ error: 'Operator or admin role required' }, 403);
   return enrichmentResult(c, async () => {
-    const input = await readEnrichmentBody(c.req.raw);
+    const input = await enrichmentBody(c.req.raw);
     const tenant = c.get('tenant'), actor = user.sub;
     const authorize = async () => {
       let allowed = false;
@@ -309,7 +324,7 @@ enrichmentRoutes.post('/:id/publish', c => {
   if (user.type !== 'access') return c.json({ error: 'Current human operator session required' }, 403);
   if (!user.roles?.some(role => role === 'operator' || role === 'admin')) return c.json({ error: 'Operator or admin role required' }, 403);
   return enrichmentResult(c, async () => {
-    const meta = catalogMeta(c), input = await readEnrichmentBody(c.req.raw);
+    const meta = catalogMeta(c), input = await enrichmentBody(c.req.raw);
     const result = await publishEnrichment(c.env, c.get('tenant'), c.req.param('id'), input, meta);
     if (!result.ok) throw new EnrichmentError(result.errors.join('; '), 422);
     return { ...result, diagnostics: await catalogDiagnostics(c.env, c.get('tenant'), result.document, result.revision) };

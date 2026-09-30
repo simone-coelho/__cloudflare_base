@@ -188,6 +188,44 @@ size; either way nothing is stored. This is a measured application envelope, not
 latency or SLO commitment: a larger corpus is a conversation about sharding the catalog, not a number
 to raise here.
 
+**What serving a catalog of that size costs.** Measured, not estimated: the whole path one decision
+set takes — the published catalog read from storage, parsed and validated, then the shopper, trend,
+lift and compose stages — for one page of four slots and nine placements (a pinned merchandising slot,
+a hero, two stories, five carousel positions) over three realistic catalogues built from this
+repository's shipped catalogue shape, with its cross-category pieces and a dimension the registry does
+not know: the shipped 26 pieces (17.5 KB of JSON), 500 pieces (346 KB) and 2,826 pieces (1.96 MB,
+the largest such catalogue one 2 MiB publication admits). Each was measured alone and with 8 and 32
+decisions in flight at once, cold (an isolate that has not yet read the publication) and warm.
+Milliseconds, wall time per decision; *documents* is the read-and-validate stage and *compose* the
+ranking stage, each at its median:
+
+| Catalogue | In flight | Cold p50 / p95 | Cold documents | Warm p50 / p95 | Compose cold / warm |
+|---|---|---|---|---|---|
+| 26 pieces | 1 | 7 / 7 | 4 | 3 / 3 | 1 / 0 |
+| 26 pieces | 8 | 31 / 43 | 29 | 3 / 5 | 0 / 0 |
+| 26 pieces | 32 | 133 / 180 | 129 | 2 / 6 | 0 / 0 |
+| 500 pieces | 1 | 22 / 22 | 14 | 3 / 3 | 3 / 1 |
+| 500 pieces | 8 | 109 / 136 | 104 | 5 / 6 | 2 / 1 |
+| 500 pieces | 32 | 431 / 566 | 425 | 4 / 5 | 1 / 1 |
+| 2,826 pieces | 1 | 70 / 70 | 57 | 9 / 9 | 9 / 7 |
+| 2,826 pieces | 8 | 441 / 575 | 426 | 11 / 12 | 10 / 9 |
+| 2,826 pieces | 32 | 1,878 / 2,562 | 1,862 | 14 / 19 | 12 / 11 |
+
+What the numbers say. Composing is cheap at every size (12 ms at the largest catalogue with 32 in
+flight). A warm decision reads its documents from the 30-second publication cache and costs 2–19 ms
+whatever the concurrency. The cost is the COLD document read: parsing and validating the whole
+catalogue, about 57 ms at 2,826 pieces, and until the first of them has filled the publication cache
+every decision that arrives cold reads and validates it for itself, so in one isolate 32 cold
+decisions at once wait about 1.9 s. Concurrency never changes a decision: every concurrent decision
+served exactly the slots, pieces and scores one decision alone served. No retrieval, sharding or
+other change to what is ranked was built; the optimization this points at — one shared cold read per
+isolate — changes no score or candidate, and whether the accepted workload needs it is part of that
+workload's qualification. These are one local Node.js process (v22.15, a 12-core
+Intel i7-14700K at a load of about 9) with storage in memory, measured on 2026-09-30: no R2, KV or
+network latency and not a Workers isolate, so they state the platform's own work, never a deployed
+latency, capacity or SLO. `node node_modules/vitest/vitest.mjs run src/units/W38 -t B5` repeats the
+measurement and prints each row as a `W38.B5 measurement` line.
+
 Supplied arrays, tags and merchandising replace that whole field; `merchandising: {}` clears its
 signals. In a merge, a nonempty window replaces only its supplied bounds, preserving an omitted
 expiry. Explicit JSON `window: {}` clears both bounds. CSV uses `status`, `windowFrom` and `windowTo`;
@@ -371,7 +409,11 @@ at most 128 UTF-16 units, content/customer IDs and tag dimensions/values 256, de
 and optional model 256. These bounded strings must be nonempty, without outer whitespace or ASCII
 control characters. Prototype keys are rejected throughout JSON, including proposed dimension names;
 nesting is limited to 16 levels. Each request and each stored envelope has a separate 2 MiB actual
-UTF-8 byte limit, including server metadata in the stored limit. No truncation occurs. Other envelope,
+UTF-8 byte limit, including server metadata in the stored limit. No truncation occurs. On all four
+`POST` routes a request body over its limit is refused `413` with `code: "input_budget_exceeded"`,
+`budget: "bytes"`, `limit` and `observed` — the refusal every other consuming route answers — counted
+on the bytes actually delivered, before the body is parsed and before any storage or model call; the
+platform stops reading at the limit. Other envelope,
 label, provenance and disposition fields are rejected; arbitrary metadata belongs in `sample`.
 
 The server generates a UUID, tenant, actor, timestamp and SHA-256 `digest` for each proposal. Its
