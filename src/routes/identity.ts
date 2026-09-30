@@ -617,47 +617,62 @@ identityRoutes.post('/:tenant/identity/erase', operatorJwt(), async (c) => {
 });
 
 /**
- * W37 T5 (decision D2, lead ruling of 2026-09-24): the per-shopper export — the
- * right of access beside the right to be forgotten. It takes the erase route's
- * selector (`visitorId` and/or `shopperId`, at least one), operator
- * authentication and tenant scope, and it is audited as the erase is
- * (`identity_export`, a read). The subject is the one the erasure reaches: a
- * browser resolves to its person, and the person to every browser linked to
- * her. For those ids it answers, as each store holds it: her identity links and
+ * W37 T5 (decision D2, lead rulings of 2026-09-24 and 2026-09-30): the
+ * per-shopper export — the right of access beside the right to be forgotten. It
+ * takes the erase route's selector (`visitorId` and/or `shopperId`, at least
+ * one), operator authentication and tenant scope, and it is audited as the
+ * erase is (`identity_export`, a read). Its subject is the erasure's: a browser
+ * resolves to its person, and the person to every browser linked to her — the
+ * browsers her person record lists, and every other browser whose current
+ * identity link in the tenant names her, found by the same scan of the tenant's
+ * `identity:visitor:` links and the same condition the erasure's discovery uses
+ * (src/identity/erase.ts discoverPage).
+ *
+ * For those ids it answers, as each store holds it: her identity links and
  * person record (SESSIONS), each of her shopper objects' profile, consent
  * instruction and pipeline (SHOPPER_REFLEX), every session record of hers
  * (SESSIONS — those her pointers and remembered own sessions name, and every
- * other one the scan of the tenant's session records finds carrying her id,
- * as the erasure's own session discovery scans them), her profile copies and
- * overrides (CACHE), her receipts, ring and receipted ledger records
- * (DECISION_RING, STORAGE), and every row of hers in the tenant's ledger
- * partition (STORAGE). Nothing of another tenant is read, the account id is on
- * none of these records, and what an erasure removed or hides is never
- * answered. A read that fails refuses the export rather than leaving a store
- * out. The two scans have no per-shopper index, so one call reads a bounded
- * slice of each: `complete` says whether both are finished, and `next` is the
- * `cursor` the same export sends to continue them. `limits` names what the
- * export does not answer.
+ * other one the scan of the tenant's session records finds carrying her id, as
+ * the erasure's session discovery scans them), her profile copies and overrides
+ * (CACHE), her receipts, ring and receipted ledger records (DECISION_RING,
+ * STORAGE), and every row of hers in the tenant's ledger partition (STORAGE).
+ * Nothing of another tenant is read, the account id is on none of these
+ * records, and what an erasure removed or hides is never answered. A read that
+ * fails refuses the export rather than leaving a store out.
+ *
+ * The link, session and ledger scans have no per-shopper index, so one call
+ * reads a bounded slice, in that order: at most `EXPORT_SCAN_READS` link and
+ * session records together, then at most the ledger scan's own bound
+ * (`SUBJECT_EXPORT_LIMITS`). While the link scan is unfinished a call answers
+ * only its continuation. The call that finishes it answers everything read per
+ * id, and every later call answers only the scans' next slices. `complete`
+ * says whether all three are finished; `next` is the `cursor` the same export
+ * sends to continue. A browser the cursor carries is answered only while its
+ * current link still names her. `limits` names what the export does not answer.
  */
 const EXPORT_LIMITS = [
   'Learning bookkeeping (LEARN_STATS effect markers, hourly shard rings and aggregates, day reports) holds her contribution as attribution state and counts; it is not exported per shopper',
   'Analytics Engine datasets, worker logs, ODP and other external destinations and tenantless historical D1 are outside this export, as they are outside local erasure',
-  'A browser is hers when her person record lists it (at most 50) or the selector names it',
 ] as const;
-/** W37 T5: the session records one export call reads while it scans the tenant's session records. */
-const EXPORT_SESSION_SCAN = 256;
-const exportCursorSchema = z.object({ v: z.literal(1), sessions: z.union([z.literal('done'), z.string().min(1).max(4096), z.null()]),
-  ledger: z.string().min(1).max(1024).nullable() }).strict();
+/** W37 T5: the link and session records one export call reads while it scans the tenant's links and sessions. */
+const EXPORT_SCAN_READS = 256;
+const EXPORT_CURSOR_BYTES = 16_384;
+const scanPosition = z.union([z.literal('done'), z.string().min(1).max(4096), z.null()]);
+const exportCursorSchema = z.object({ v: z.literal(2), links: scanPosition, browsers: z.array(identityId).max(400), answered: z.boolean(),
+  sessions: scanPosition, ledger: z.string().min(1).max(1024).nullable() }).strict();
 type ExportCursor = z.infer<typeof exportCursorSchema>;
 function encodeExportCursor(cursor: ExportCursor): string {
-  return btoa(JSON.stringify(cursor)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+  const encoded = btoa(JSON.stringify(cursor)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+  // A continuation that cannot be carried is refused, never shortened.
+  if (encoded.length > EXPORT_CURSOR_BYTES) throw new Error('Export continuation unavailable');
+  return encoded;
 }
 function decodeExportCursor(value: string): ExportCursor | null {
   try { return exportCursorSchema.parse(JSON.parse(atob(value.replaceAll('-', '+').replaceAll('_', '/')))); }
   catch { return null; }
 }
 const exportSchema = z.object({ visitorId: z.string().trim().refine(validVisitorId).optional(),
-  shopperId: z.string().trim().refine(isShopperId).optional(), cursor: z.string().min(1).max(8192).optional() }).strict().refine(s => !!(s.visitorId || s.shopperId));
+  shopperId: z.string().trim().refine(isShopperId).optional(), cursor: z.string().min(1).max(EXPORT_CURSOR_BYTES).optional() }).strict().refine(s => !!(s.visitorId || s.shopperId));
 async function exportRaw(kv: TenantKV, key: string): Promise<{ key: string; record: unknown } | null> {
   const value = await kv.get(key);
   if (value === null) return null;
@@ -667,27 +682,30 @@ async function exportRaw(kv: TenantKV, key: string): Promise<{ key: string; reco
   return { key: tenantKey(kv.tenant, key), record };
 }
 const exportOwner = (record: unknown): string => String((record as { userId?: unknown } | null)?.userId);
-/**
- * W37 T5: the session records of the tenant, from `after`, whose owner is one of
- * her ids — at most `EXPORT_SESSION_SCAN` records read. `next` continues the
- * scan; `'done'` when it has read the last one.
- */
-async function scanSessions(sessions: TenantKV, ids: readonly string[], after: string | null): Promise<{ found: Array<{ key: string; record: unknown }>; next: string }> {
-  const found: Array<{ key: string; record: unknown }> = [];
+/** The browser's current identity link at the tenant, validated as the documented read validates it. */
+async function exportLink(env: Env, tenant: string, visitorId: string) {
+  const raw = await identityRaw(env, tenant, 'identity:visitor:' + visitorId);
+  const link = raw === null ? null : visitorLinkRead.parse(raw);
+  if (link && link.visitorId !== visitorId) throw new Error('Identity unavailable');
+  return link;
+}
+/** One bounded slice of a scan of the tenant's records under `prefix`, from `after`. `next` continues it; `'done'` when it has read the last one. */
+async function scanSlice(kv: TenantKV, prefix: string, after: string | null, budget: number,
+  visit: (id: string) => Promise<void>): Promise<{ next: string; read: number }> {
   let cursor = after, read = 0;
-  while (read < EXPORT_SESSION_SCAN) {
-    const page = await sessions.list({ prefix: 'session:', limit: Math.min(1000, EXPORT_SESSION_SCAN - read), ...(cursor ? { cursor } : {}) });
+  while (read < budget) {
+    const page = await kv.list({ prefix, limit: Math.min(1000, budget - read), ...(cursor ? { cursor } : {}) });
     if (!page || !Array.isArray(page.keys) || (page.list_complete === false && (!page.cursor || page.cursor === cursor))) throw new Error('Export unavailable');
     for (const { name } of page.keys) {
-      if (!identityId.safeParse(name.slice('session:'.length)).success) continue;
+      const id = name.slice(prefix.length);
+      if (!name.startsWith(prefix) || !identityId.safeParse(id).success) continue;
       read++;
-      const record = await exportRaw(sessions, name);
-      if (record && ids.includes(exportOwner(record.record))) found.push(record);
+      await visit(id);
     }
-    if (page.list_complete !== false) return { found, next: 'done' };
+    if (page.list_complete !== false) return { next: 'done', read };
     cursor = page.cursor!;
   }
-  return { found, next: cursor! };
+  return { next: cursor!, read };
 }
 identityRoutes.post('/:tenant/identity/export', operatorJwt(), async (c) => {
   const tenant = tenantOf(c);
@@ -697,16 +715,15 @@ identityRoutes.post('/:tenant/identity/export', operatorJwt(), async (c) => {
   const parsed = exportSchema.safeParse(body);
   if (!parsed.success) return c.json({ ok: false, error: 'visitorId or shopperId required and must be a valid id' }, 400);
   const { visitorId, shopperId: selected } = parsed.data;
-  const cursor = parsed.data.cursor === undefined ? { v: 1 as const, sessions: null, ledger: null } : decodeExportCursor(parsed.data.cursor);
+  const cursor: ExportCursor | null = parsed.data.cursor === undefined
+    ? { v: 2, links: null, browsers: [], answered: false, sessions: null, ledger: null } : decodeExportCursor(parsed.data.cursor);
   if (!cursor || (cursor.ledger !== null && !cursor.ledger.startsWith(tenant + '/'))) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
   const selector = { ...(visitorId ? { visitorId } : {}), ...(selected ? { shopperId: selected } : {}) };
   return auditedSubjectOperation(c, tenant, 'identity_export', { kind: 'identity', ...selector }, async report => {
     const env = c.env;
     if (!env.SESSIONS || !env.CACHE || !env.SHOPPER_REFLEX || !env.DECISION_RING || !env.STORAGE) throw new Error('Export unavailable');
-    // The subject the erasure reaches (src/identity/erase.ts discover).
-    const browserLink = visitorId && !isShopperId(visitorId) ? await identityRaw(env, tenant, 'identity:visitor:' + visitorId) : null;
-    const browser = browserLink === null ? null : visitorLinkRead.parse(browserLink);
-    if (browser && browser.visitorId !== visitorId) throw new Error('Identity unavailable');
+    // The subject the erasure reaches (src/identity/erase.ts discover, then discoverPage).
+    const browser = visitorId && !isShopperId(visitorId) ? await exportLink(env, tenant, visitorId) : null;
     const resolved = visitorId && isShopperId(visitorId) ? visitorId : browser?.shopperId ?? null;
     if (selected && visitorId && resolved !== selected) {
       report.result({ outcome: 'read', found: false });
@@ -717,79 +734,98 @@ identityRoutes.post('/:tenant/identity/export', operatorJwt(), async (c) => {
     const person = personRaw === null ? null : shopperRead.parse(personRaw);
     if (person && person.shopperId !== shopperId) throw new Error('Identity unavailable');
     const ids = [...new Set([...(shopperId ? [shopperId] : []), ...(person?.visitors.map(v => v.visitorId) ?? []), ...(visitorId ? [visitorId] : [])])];
-
-    const links: unknown[] = [];
+    const linksOf = new Map<string, NonNullable<Awaited<ReturnType<typeof exportLink>>>>();
+    if (browser) linksOf.set(browser.visitorId, browser);
     const sessions = new TenantKV(env.SESSIONS as unknown as KVLike, tenant), cache = new TenantKV(env.CACHE as unknown as KVLike, tenant);
-    const sessionIds = new Set<string>();
-    for (const id of ids) {
-      if (!isShopperId(id)) {
-        const raw = id === visitorId ? browserLink : await identityRaw(env, tenant, 'identity:visitor:' + id);
-        const link = raw === null ? null : visitorLinkRead.parse(raw);
-        if (link && (link.visitorId !== id || link.shopperId !== shopperId)) throw new Error('Identity unavailable');
-        if (link) { links.push(link); if (link.ownSessionId) sessionIds.add(link.ownSessionId); }
-      }
-      const pointer = await sessions.get('user:' + id);
-      if (pointer !== null) {
-        if (typeof pointer !== 'string' || !identityId.safeParse(pointer).success) throw new Error('Identity unavailable');
-        sessionIds.add(pointer);
-      }
+
+    // Every browser whose current link names her: those an earlier call of this export found (each checked again
+    // now), then the next slice of the scan of the tenant's identity links — the erasure's own condition.
+    const browsers: string[] = [];
+    const hers = async (id: string) => {
+      if (ids.includes(id) || isShopperId(id)) return;
+      const link = await exportLink(env, tenant, id);
+      if (link && shopperId && link.shopperId === shopperId) { ids.push(id); browsers.push(id); linksOf.set(id, link); }
+    };
+    for (const id of cursor.browsers) await hers(id);
+    let budget = EXPORT_SCAN_READS, linkScan: string = 'done';
+    if (shopperId && cursor.links !== 'done') {
+      const scanned = await scanSlice(sessions, 'identity:visitor:', cursor.links, budget, hers);
+      linkScan = scanned.next; budget -= scanned.read;
     }
-    const objects: Array<{ subject: string; affinity?: unknown; consent?: unknown; pipeline?: unknown }> = [];
-    for (const id of ids) {
-      const response = await shopperObject(env.SHOPPER_REFLEX, id, tenant).fetch('https://shopper-reflex/identity/operator-export', {
-        headers: { 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': id } });
-      const held = await response.json() as { ok?: unknown; affinity?: unknown; consent?: unknown; pipeline?: unknown };
-      if (!response.ok || held.ok !== true) throw new Error('Export unavailable');
-      if (held.affinity !== undefined || held.consent !== undefined || held.pipeline !== undefined) {
-        objects.push({ subject: id, ...(held.affinity === undefined ? {} : { affinity: held.affinity }),
-          ...(held.consent === undefined ? {} : { consent: held.consent }), ...(held.pipeline === undefined ? {} : { pipeline: held.pipeline }) });
+
+    const answered = cursor.answered || linkScan === 'done';
+    const links: unknown[] = [], objects: Array<{ subject: string; affinity?: unknown; consent?: unknown; pipeline?: unknown }> = [];
+    const sessionRecords = new Map<string, { key: string; record: unknown }>(), cached: Array<{ key: string; record: unknown }> = [];
+    let decisions: Awaited<ReturnType<typeof subjectDecisionHistory>> = { receipts: {}, recent: {}, records: {} };
+    if (linkScan === 'done' && !cursor.answered) {
+      // Everything read per id, once, by the call that knows every one of her ids.
+      const sessionIds = new Set<string>();
+      for (const id of ids) {
+        if (!isShopperId(id)) {
+          const link = linksOf.has(id) ? linksOf.get(id)! : await exportLink(env, tenant, id);
+          if (link && link.shopperId !== shopperId) throw new Error('Identity unavailable');
+          if (link) { links.push(link); if (link.ownSessionId) sessionIds.add(link.ownSessionId); }
+        }
+        const pointer = await sessions.get('user:' + id);
+        if (pointer !== null) {
+          if (typeof pointer !== 'string' || !identityId.safeParse(pointer).success) throw new Error('Identity unavailable');
+          sessionIds.add(pointer);
+        }
       }
+      for (const id of ids) {
+        const response = await shopperObject(env.SHOPPER_REFLEX, id, tenant).fetch('https://shopper-reflex/identity/operator-export', {
+          headers: { 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': id } });
+        const held = await response.json() as { ok?: unknown; affinity?: unknown; consent?: unknown; pipeline?: unknown };
+        if (!response.ok || held.ok !== true) throw new Error('Export unavailable');
+        if (held.affinity !== undefined || held.consent !== undefined || held.pipeline !== undefined) {
+          objects.push({ subject: id, ...(held.affinity === undefined ? {} : { affinity: held.affinity }),
+            ...(held.consent === undefined ? {} : { consent: held.consent }), ...(held.pipeline === undefined ? {} : { pipeline: held.pipeline }) });
+        }
+      }
+      for (const sid of [...sessionIds].sort()) {
+        const record = await exportRaw(sessions, 'session:' + sid);
+        if (record && ids.includes(exportOwner(record.record))) sessionRecords.set(record.key, record);
+      }
+      for (const id of ids) {
+        for (const key of ['profile:' + id, 'profile:user:' + id, 'profile:anon:' + id]) {
+          const record = await exportRaw(cache, key);
+          if (record) cached.push(record);
+        }
+        let page: string | undefined;
+        const seen = new Set<string>();
+        for (;;) {
+          const listed = await cache.list({ prefix: 'override:' + id + ':', limit: 1000, ...(page ? { cursor: page } : {}) });
+          for (const { name } of listed.keys) { const record = await exportRaw(cache, name); if (record) cached.push(record); }
+          if (listed.list_complete !== false || !listed.cursor || seen.has(listed.cursor)) break;
+          seen.add(listed.cursor); page = listed.cursor;
+        }
+      }
+      decisions = await subjectDecisionHistory(c, tenant, ids);
     }
-    // Her session records: those her pointers and remembered own sessions name, and a
-    // bounded slice of the scan of every session record of the tenant.
-    const sessionRecords = new Map<string, { key: string; record: unknown }>();
-    for (const sid of [...sessionIds].sort()) {
-      const record = await exportRaw(sessions, 'session:' + sid);
-      if (record && ids.includes(exportOwner(record.record))) sessionRecords.set(record.key, record);
-    }
-    let sessionScan: string = 'done';
-    if (cursor.sessions !== 'done') {
-      const scanned = await scanSessions(sessions, ids, cursor.sessions);
-      for (const record of scanned.found) sessionRecords.set(record.key, record);
+    // Then the next slice of the scan of every session record of the tenant, and then of the ledger partition.
+    let sessionScan = cursor.sessions;
+    if (linkScan === 'done' && sessionScan !== 'done' && budget > 0) {
+      const scanned = await scanSlice(sessions, 'session:', sessionScan, budget, async sid => {
+        const record = await exportRaw(sessions, 'session:' + sid);
+        if (record && ids.includes(exportOwner(record.record))) sessionRecords.set(record.key, record);
+      });
       sessionScan = scanned.next;
     }
-    const cached: Array<{ key: string; record: unknown }> = [];
-    for (const id of ids) {
-      for (const key of ['profile:' + id, 'profile:user:' + id, 'profile:anon:' + id]) {
-        const record = await exportRaw(cache, key);
-        if (record) cached.push(record);
-      }
-      let page: string | undefined;
-      const seen = new Set<string>();
-      for (;;) {
-        const listed = await cache.list({ prefix: 'override:' + id + ':', limit: 1000, ...(page ? { cursor: page } : {}) });
-        for (const { name } of listed.keys) { const record = await exportRaw(cache, name); if (record) cached.push(record); }
-        if (listed.list_complete !== false || !listed.cursor || seen.has(listed.cursor)) break;
-        seen.add(listed.cursor); page = listed.cursor;
-      }
-    }
-    const decisions = await subjectDecisionHistory(c, tenant, ids);
-    // The ledger partition is scanned once the session scan is finished, so one call's work stays bounded.
-    const ledger = sessionScan === 'done' ? await subjectLedgerRows(env, tenant, new Set(ids), cursor.ledger ?? undefined)
+    const ledger = linkScan === 'done' && sessionScan === 'done' ? await subjectLedgerRows(env, tenant, new Set(ids), cursor.ledger ?? undefined)
       : { rows: { decision: [], outcome: [], 'product-sort': [], behavior: [] }, complete: false, next: cursor.ledger };
-    const complete = sessionScan === 'done' && ledger.complete;
-    const next = complete ? null : encodeExportCursor({ v: 1, sessions: sessionScan, ledger: ledger.next });
+    const complete = linkScan === 'done' && sessionScan === 'done' && ledger.complete;
+    const next = complete ? null : encodeExportCursor({ v: 2, links: linkScan, browsers, answered, sessions: sessionScan, ledger: ledger.next });
 
     const held = links.length > 0 || person !== null || objects.length > 0 || sessionRecords.size > 0 || cached.length > 0
       || Object.values(decisions.recent).some(ring => ring.length > 0) || Object.values(ledger.rows).some(rows => rows.length > 0);
-    // An unfinished scan is answered with its continuation even where this slice held nothing of hers.
-    report.result({ outcome: 'read', found: held || !complete });
-    if (!held && complete) return c.json({ ok: false, error: 'unknown shopper' }, 404);
+    // A continuation is answered while any scan is unfinished, even where this slice held nothing of hers.
+    report.result({ outcome: 'read', found: held || !complete || cursor.answered });
+    if (!held && complete && !cursor.answered) return c.json({ ok: false, error: 'unknown shopper' }, 404);
     if (shopperId) await report.subject(shopperId);
     c.header('Cache-Control', 'no-store');
     return c.json({
       ok: true, tenant, subject: { shopperId, visitorIds: ids.filter(id => !isShopperId(id)) },
-      identity: { links, shopper: person },
+      identity: { links, shopper: answered && !cursor.answered ? person : null },
       objects, sessions: [...sessionRecords.values()], cache: cached,
       decisions, ledger: ledger.rows, complete, next,
       limits: EXPORT_LIMITS,
