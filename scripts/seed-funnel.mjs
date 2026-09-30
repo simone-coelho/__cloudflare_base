@@ -4,7 +4,9 @@
  * --------------------------------------------------------------------------
  * Deterministic seed emitter for Revenue Radar — the checkout-funnel baseline
  * (`funnel_seed`) that gives the demo a stable, pre-loaded funnel shape with
- * three readable, brand-specific leaks. Writes migrations/0003_funnel_seed.sql.
+ * three readable, brand-specific leaks. It EMITS the SQL of the committed demo migration
+ * migrations/0003_funnel_seed.sql and never writes a migration: an applied migration is immutable,
+ * and a changed baseline is a new migration someone writes and reviews.
  *
  * Determinism contract (same as scripts/seed-d1.mjs):
  *   - seeded Mulberry32 PRNG (no bare Math.random)
@@ -28,19 +30,31 @@
  *
  * The 'all' cohort is NOT stored — the compute layer sums the real cohorts.
  *
- * Apply the generated migration (LOCAL then REMOTE):
- *   npx wrangler d1 migrations apply coach-demo-db --local
- *   npx wrangler d1 migrations apply coach-demo-db --remote
+ * Usage (nothing is written, nothing is sent):
+ *   node scripts/seed-funnel.mjs           the SQL on stdout, the story summary on stderr
+ *   node scripts/seed-funnel.mjs --check   provenance: exit 0 only when the committed
+ *                                          migrations/0003_funnel_seed.sql is exactly what this emits
+ *
+ * The demo migration reaches a LOCAL database only on an explicit demo-data request
+ * (node scripts/init-local.mjs --scope <tenant> --demo-data; docs/10-d1-schema.md). The
+ * "Apply" lines inside the emitted SQL are the committed migration's own historical text, kept
+ * byte-identical for the provenance check; they are not an instruction.
  * --------------------------------------------------------------------------
  */
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
-const OUT_FILE = join(REPO_ROOT, 'migrations', '0003_funnel_seed.sql');
+const MIGRATION = join(REPO_ROOT, 'migrations', '0003_funnel_seed.sql');
+const USAGE = 'usage: node scripts/seed-funnel.mjs [--check]';
+const options = process.argv.slice(2);
+if (options.some((option) => option !== '--check') || options.length > 1) {
+  console.error(`seed-funnel: ${USAGE}. It never writes a migration.`);
+  process.exit(2);
+}
 const SEED = 20260625; // house seed (matches scripts/seed-d1.mjs / generate-synthetic-data.mjs)
 
 // ── Contract mirror (src/services/funnel/contract.ts is the source of truth) ──
@@ -202,26 +216,37 @@ const footer = [
   '',
 ].join('\n');
 
-writeFileSync(OUT_FILE, `${header}\n${ddl}\n${body}\n${footer}`);
+const sql = `${header}\n${ddl}\n${body}\n${footer}`;
+if (options.includes('--check')) {
+  // Provenance: the committed migration is exactly this generator's output. Read-only.
+  if (readFileSync(MIGRATION, 'utf8') !== sql) {
+    console.error('seed-funnel: migrations/0003_funnel_seed.sql is NOT what this generator emits (drift). The migration is not rewritten; a changed baseline is a new, reviewed migration.');
+    process.exit(1);
+  }
+  console.error('seed-funnel: migrations/0003_funnel_seed.sql is exactly what this generator emits.');
+  process.exit(0);
+}
+process.stdout.write(sql);
 
 // ── Console summary (the story is visible on every run) ──
 const get = (brand, cohort, stage) =>
   rows.find((r) => r.brand === brand && r.cohort === cohort && r.stage === stage).sessions;
 const sumAll = (brand, stage) => COHORTS.reduce((s, c) => s + get(brand, c, stage), 0);
 
-console.log(`seed-funnel: wrote migrations/0003_funnel_seed.sql — ${rows.length} rows (${BRANDS.length} brands × ${COHORTS.length} cohorts × ${STAGE_KEYS.length} stages)`);
+// ── The story summary, on stderr so stdout stays the SQL alone ──
+console.error(`seed-funnel: emitted the SQL of migrations/0003_funnel_seed.sql — ${rows.length} rows (${BRANDS.length} brands × ${COHORTS.length} cohorts × ${STAGE_KEYS.length} stages)`);
 for (const brand of BRANDS) {
-  console.log(`\n=== ${brand} ===  ${LEAK_NOTE[brand]}`);
-  console.log(['stage'.padEnd(18), 'gen_z'.padStart(7), 'all'.padStart(8), 'all step%'.padStart(11)].join(''));
+  console.error(`\n=== ${brand} ===  ${LEAK_NOTE[brand]}`);
+  console.error(['stage'.padEnd(18), 'gen_z'.padStart(7), 'all'.padStart(8), 'all step%'.padStart(11)].join(''));
   let prevAll = null;
   for (const stage of STAGE_KEYS) {
     const gz = get(brand, 'gen_z', stage);
     const all = sumAll(brand, stage);
     const stepAll = prevAll == null ? 100 : (100 * all) / prevAll;
-    console.log([stage.padEnd(18), String(gz).padStart(7), String(all).padStart(8), `${stepAll.toFixed(1)}%`.padStart(11)].join(''));
+    console.error([stage.padEnd(18), String(gz).padStart(7), String(all).padStart(8), `${stepAll.toFixed(1)}%`.padStart(11)].join(''));
     prevAll = all;
   }
   const ovGz = (100 * get(brand, 'gen_z', 'purchase')) / get(brand, 'gen_z', 'add_to_cart');
   const ovAll = (100 * sumAll(brand, 'purchase')) / sumAll(brand, 'add_to_cart');
-  console.log(`  overall conv — gen_z ${ovGz.toFixed(1)}%  ·  all ${ovAll.toFixed(1)}%`);
+  console.error(`  overall conv — gen_z ${ovGz.toFixed(1)}%  ·  all ${ovAll.toFixed(1)}%`);
 }
