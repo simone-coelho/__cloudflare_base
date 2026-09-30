@@ -573,6 +573,18 @@ export interface PublicationBaseline {
   /** Explicit reviewed old catalog head identity; never discovered/adopted implicitly. */
   retainedCatalogHead?: { digest: string };
 }
+/**
+ * W38 B3 (F32 §1.1, §6.1): the document of a revision the retired store wrote,
+ * read exactly as its own reader read it — `'value' in envelope ? envelope.value
+ * : envelope.config`. Before 1877fc6 the Reflex writer stored the document under
+ * `config` alone; from 1877fc6 to 7b01c14 every kind stored it under `value` and
+ * duplicated it under `config`. Both forms are adopted as stored: `value` wins
+ * where it is present, and nothing is merged, repaired or rewritten.
+ */
+function retainedDocument(revision: Revision<unknown>): unknown {
+  const stored = revision as unknown as Record<string, unknown>;
+  return Object.hasOwn(stored, 'value') || !Object.hasOwn(stored, 'config') ? stored.value : stored.config;
+}
 /** Library-only explicit baseline. No KV inference, live route or migration.
  * All required members must be supplied together by the authorized initializer. */
 export async function initializePublicationSet(env: Env, baselines: PublicationBaseline[], operationId: string): Promise<PublicationPin> {
@@ -601,12 +613,13 @@ export async function initializePublicationSet(env: Env, baselines: PublicationB
         required(canonical(rowOf(b.kind, document)) === canonical(ref.index[0]));
         refs[key] = ref; documents.push(document); continue;
       }
-      const validated = (b.retainedValue ? b.kind.validateStored ?? b.kind.validate : b.kind.validate)(raw.value);
+      const stored = b.retainedValue ? retainedDocument(raw) : raw.value;
+      const validated = (b.retainedValue ? b.kind.validateStored ?? b.kind.validate : b.kind.validate)(stored);
       if (!validated.ok) throw new PublicationError('Invalid baseline configuration', 422, 'invalid_baseline');
-      const document = await envelope(await sealed({ revision: raw.revision, value: b.retainedValue ? raw.value : validated.value, actor: raw.actor, note: raw.note, at: raw.at,
+      const document = await envelope(await sealed({ revision: raw.revision, value: b.retainedValue ? stored : validated.value, actor: raw.actor, note: raw.note, at: raw.at,
         schema: 'catalog-revision/v1' as const, kind: b.kind.name, scope: b.scope,
         operation: { operationId: (raw.revision - 1) + ':' + operationId.split(':')[1], expectedRevision: raw.revision - 1, requestDigest, initialize: true },
-        ...(await derivedFor(env, b.kind, b.scope, raw.revision, b.retainedValue ? raw.value : validated.value)) }), b.kind, b.scope);
+        ...(await derivedFor(env, b.kind, b.scope, raw.revision, b.retainedValue ? stored : validated.value)) }), b.kind, b.scope);
       serialized(document); documents.push(document);
       refs[key] = { kind: b.kind.name, scope: b.scope, revision: raw.revision, digest: document.digest, minRevision: raw.revision, index: [rowOf(b.kind, document)] };
     }

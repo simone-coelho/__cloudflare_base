@@ -151,6 +151,13 @@ configRoutes.get('/reflex/revisions/:n', async (c) => {
 
 /**
  * Authenticated dry run: a patch can disclose the stored configuration it merges.
+ *
+ * W38 B3 (F32 §1.1, §6.1; document 35 §5 row W38 "verify old readers before
+ * removing duplicated envelope field"): the body is `{ config }` or, as callers
+ * written before that envelope send it, the bare document. The bare form is
+ * ACCEPTED here and on `PUT` below and validates and publishes exactly what the
+ * same document under `config` does; no verification of its callers exists, so
+ * it is not removed.
  */
 configRoutes.post('/reflex/validate', async (c) => {
   const body = await readInputJson(c.req.raw.body);
