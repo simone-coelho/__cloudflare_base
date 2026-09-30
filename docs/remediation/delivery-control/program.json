@@ -3534,7 +3534,7 @@
     {
       "id": "W37",
       "title": "One tenant registry and per-customer stamps",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3749,7 +3749,7 @@
     {
       "id": "W38",
       "title": "Content and cache bounds with read-path performance",
-      "state": "PARTIAL",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
