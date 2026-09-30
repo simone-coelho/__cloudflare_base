@@ -3912,15 +3912,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "ffb05baf47ef6a9658df0f791b14346667681214 on rem/spec-w38: src/units/W38 and the W38-named legacy tests",
+        "reviewedRevision": "ffa33a344cfb014cde44b8751779e1ec714c3819 on rem/spec-w38 (fix 1, three commits on ffb05ba): src/units/W38 (LEDGER and FIX1) and the W38-named legacy tests",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W38/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/red-8624159.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/mutant-offby1.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/mutant-unbounded.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/logs/W38-negative-control-fix1-v3.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/W38-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/control-purge-no-carry.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/acceptance-full.log"
