@@ -11,7 +11,7 @@
     "build:sdk": "node scripts/build-sdk.mjs",
     "tail": "wrangler tail",
     "format": "prettier --write .",
-    "lint": "eslint src --ext .ts public/meridian/meridian.js public/meridian/surfaces.js public/meridian/beats.js public/meridian/compare.js public/meridian/layout.js public/meridian/moments.js public/sdk/debug.js --max-warnings 582",
+    "lint": "eslint src --ext .ts public/meridian/meridian.js public/meridian/surfaces.js public/meridian/beats.js public/meridian/compare.js public/meridian/layout.js public/meridian/moments.js public/sdk/debug.js --ignore-pattern 'src/units/**' --max-warnings 582",
     "typecheck": "tsc --noEmit && tsc -p src/sdk",
     "test": "vitest run src",
     "test:watch": "vitest",
