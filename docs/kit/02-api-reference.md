@@ -518,9 +518,9 @@ Both hosts answer a sign-in and everything after it the same way:
 ### Interest restoration from ODP
 
 When your connector registry configures `odp` for your tenant, ODP is also the memory the edge
-re-seeds from. A signed-in (recognized) shopper whose interest state is empty is restored from her
-ODP profile at the first event of her session, before that event is applied, identically on both
-hosts. Nothing is read at sign-in or on a read.
+re-seeds from. Once per sign-in, at a signed-in (recognized) shopper's first event after it, her ODP
+profile is read and her interests are merged into what she already holds, before that event is
+applied, identically on both hosts. Nothing is read at the sign-in itself or on a read.
 
 - **What is read.** Her profile, by the vuid your `identityNamespace` gives her shopper id, from your
   `apiHost` with your key: `customer(vuid) { vuid last_modified_at <attributes> }`. Only your own
@@ -531,18 +531,29 @@ hosts. Nothing is read at sign-in or on a read.
   affinity was at ODP's `last_modified_at` (epoch seconds), so it decays from that observation by your
   published `tauMs`, never from the moment it was restored. A `{ dimension }` label, a
   `{ journey: true }` label and ODP audiences are never restored as interests.
-- **When it is not.** Only under her current personalization choice. Never an observation at or
-  before her erasure, and never one older than your `profile` retention policy. At most one attempt
-  per session.
+- **Merged, never overwritten.** Every interest she built before or since signing in, including what
+  she built anonymously in the session she signed in from, keeps its value. A restored interest is
+  added where she has none; where she already holds the same `dimension`/`value`, the stronger of the
+  two at that moment stays.
+- **When.** One attempt per sign-in: a sign-in folds her browser into her person's record, and her
+  first event after it makes the attempt and records it. An attempt that could not read (`unavailable`)
+  is made again once in each later visit until it gets an answer; every other answer stands until her
+  next sign-in.
+- **When it is not.** Only under her personalization choice current at that event. Never after her
+  erasure: once an erasure barrier exists for her shopper id her profile is not read and nothing is
+  restored from ODP, whatever its `last_modified_at` says, because that timestamp covers the whole
+  profile, any writer moves it, and the platform's erasure leaves her ODP profile to your operator.
+  Never an observation older than your `profile` retention policy.
 - **What she is told.** `GET /realtime/reflex` answers the outcome as `affinity.restoration`:
   `{ source: "odp", status: "restored", observedAt }` (epoch milliseconds), or
   `{ source: "odp", status: "cold", reason }` where `reason` is `cold` (her profile records no
   interest), `missing` (ODP has no profile for her), `malformed` (a mapped value or the observation
-  time is not usable), `unavailable` (ODP, the erasure barrier, the catalogue or your retention policy could not be read),
-  `erased` (the profile was observed at or before her erasure) or `expired` (older than your profile
-  retention). It is absent when no restoration applies to her.
+  time is not usable), `unavailable` (ODP, her erasure barrier, the catalogue or your retention policy
+  could not be read), `erased` (she has been erased, so nothing is restored from ODP and her profile
+  is not read) or `expired` (older than your profile retention). It is absent when no attempt has
+  been made since her sign-in.
 - **A failed read never blocks.** The read is capped at 1500 ms like the audience read. An error
-  status, a network failure, a timeout or an unreadable answer leaves her cold with
+  status, a network failure, a timeout or an unreadable answer leaves her with what she holds and
   `reason: "unavailable"`, and the event and every decision are served exactly as they would be for a
   shopper ODP knows nothing about.
 
