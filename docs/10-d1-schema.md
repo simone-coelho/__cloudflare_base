@@ -32,9 +32,11 @@ No command in this repository applies the demo chain or the demo seeds to a depl
 
 1. **Local database and publication:** `node scripts/init-local.mjs --scope <tenant>`, with `--demo-data` only when demo data is wanted. Besides the database, it initializes the named tenant's configuration publication (catalog, slots, learning, Reflex, priors, proposals) from the compiled defaults, through the library initializer in `src/config/publication.ts`. A content seed has no draft to write over before this has run: no HTTP route initializes a publication (docs/kit/02-api-reference.md §4).
 2. **Local worker:** `npm run dev`, with `.dev.vars` granting the seed operators that tenant (README.md, "Quick Start").
-3. **Content seeds, each naming its tenant:** `node scripts/seed-coach-content.mjs --scope coach` publishes the Coach catalog, its slots and its learning dials; `node scripts/import-content.mjs --scope <tenant>` pulls the Meridian catalog through the worker's own CMS seam and writes matching slots. There is no default tenant: without `--scope` a seed refuses before sending anything.
+3. **Content seed, naming its tenant:** `node scripts/seed-coach-content.mjs --scope coach` publishes the Coach catalog, its slots and its learning dials. There is no default tenant: without `--scope` a seed refuses before sending anything.
 
-Both init-local and the seeds act on the named tenant only. A content seed reaches a deployed worker only with an operator token issued for that tenant, given as `--token` or `OPERATOR_TOKEN` (the W03 scoped tool token); it never mints one for anything but a loopback target.
+**Demo step, not part of this order:** `node scripts/import-content.mjs --scope <tenant>` pulls the Meridian demo catalogue through the worker's own CMS seam and writes matching slots. Its source is a demo API, which a worker running with the tracked `AUTH_MODE = "enforced"` answers 404 by design (`src/index.ts`). It therefore runs only on a local worker started with `AUTH_MODE=open` in `.dev.vars` (and `import-content` granted the tenant in `TENANTS` there); on the enforced default it refuses, naming `AUTH_MODE` and `.dev.vars`, and writes nothing, because the Worker fetches the source before it publishes anything. `wrangler.toml` keeps `AUTH_MODE = "enforced"`.
+
+Both init-local and the seeds (the demo import included) act on the named tenant only. A content seed reaches a deployed worker only with an operator token issued for that tenant, given as `--token` or `OPERATOR_TOKEN` (the W03 scoped tool token); it never mints one for anything but a loopback target.
 
 ## Repeat runs and scoped recovery
 

@@ -278,7 +278,7 @@ will seed, granted to the seed commands' operators:
 
 ```text
 JWT_SECRET=replace-with-your-own-random-local-secret-of-32-or-more-characters
-TENANTS={"provisioned":["coach"],"operatorGrants":{"seed-coach-content":["coach"],"import-content":["coach"]}}
+TENANTS={"provisioned":["coach"],"operatorGrants":{"seed-coach-content":["coach"]}}
 ```
 
 ### Local database and publication
@@ -312,6 +312,19 @@ export JWT_SECRET='the JWT_SECRET value from your .dev.vars'
 
 # The Coach catalog, its slots and its learning dials, into the tenant you name
 node scripts/seed-coach-content.mjs --scope coach
+```
+
+#### Demo step: the Meridian catalogue import (not part of the product seed order)
+
+`scripts/import-content.mjs` pulls the Meridian demo catalogue through the worker's own CMS seam.
+That catalogue is a demo API, and the tracked `wrangler.toml` keeps `AUTH_MODE = "enforced"`, under
+which every demo API answers 404 by design. So this step runs only on a local worker you start with
+`AUTH_MODE=open` added to `.dev.vars` (and `"import-content":["<tenant>"]` added to the
+`operatorGrants` there), restarted after the change; on the enforced default it refuses, names
+`AUTH_MODE` and `.dev.vars`, and writes nothing. Never change `AUTH_MODE` in `wrangler.toml` for it.
+
+```bash
+node scripts/import-content.mjs --scope coach
 ```
 
 Every seed command takes the tenant with `--scope` and refuses to run without one. A second run

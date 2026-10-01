@@ -8,6 +8,10 @@
 //
 //   node scripts/import-content.mjs --scope <tenant> [--base http://localhost:9100] [--vertical retail] [--token <jwt>]
 //
+// A DEMO step, not part of the product seed order: the catalogue it pulls is the Meridian demo API,
+// which a worker running with AUTH_MODE = "enforced" (the tracked default) answers 404 by design. On
+// a local worker it needs AUTH_MODE=open in .dev.vars; otherwise it refuses and writes nothing.
+//
 // --scope is required: an unscoped import never picks a default tenant. The target defaults to the
 // local worker. Use --token or OPERATOR_TOKEN; local minting requires explicit JWT_SECRET,
 // JWT_ISSUER, JWT_AUDIENCE and DEPLOYMENT_PROFILE=demo, and is refused for anything but a loopback
@@ -87,6 +91,12 @@ const write = async (method, path, current, body) => {
 // 1. The catalog, through the seam, over the catalog draft.
 const pull = await write('POST', '/content/catalog/pull', await draft('catalog'),
   JSON.stringify({ url: `${base}/meridian/api/catalog?vertical=${vertical}`, path: 'content', note: `demo catalog import (${vertical})` }));
+// The Worker fetches the source before it publishes anything (src/routes/content.ts, /catalog/pull),
+// so a source that answers 404 leaves every document as it was. On this importer's own source that
+// 404 means the Worker does not serve the demo APIs: it enforces authentication.
+if (pull.ok !== true && (pull.errors ?? []).some((error) => /source responded 404\b/.test(String(error)))) {
+  fail(`refused, nothing was written: ${base}/meridian/api/catalog answered 404, because the Worker runs with AUTH_MODE = "enforced", under which the demo APIs answer 404 by design. import-content is a DEMO step and not part of the product seed order. On a local worker it needs AUTH_MODE=open in .dev.vars (the tracked wrangler.toml keeps AUTH_MODE = "enforced"; restart npm run dev after adding it); a deployed worker that enforces authentication never serves this import. See docs/10-d1-schema.md.`);
+}
 console.log('catalog:', JSON.stringify({ ok: pull.ok, revision: pull.revision, version: pull.version, pieces: pull.pieces, changed: pull.changed, removed: pull.removed, errors: pull.errors ?? pull.error }));
 if (pull.ok !== true) process.exit(1);
 
