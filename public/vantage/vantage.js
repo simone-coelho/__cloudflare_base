@@ -48,7 +48,14 @@
   };
   const QS = new URLSearchParams(location.search);
   const FIXTURE = QS.has('fixtures');
-  const OVERRIDE = { region: QS.get('region'), metro: QS.get('metro') };
+  // ?region=US-NY is a REHEARSAL OVERRIDE, never the default: the suites pass it so their figures stay
+  // reproducible, and the panel labels it. Without it the arrival asserts no region and the edge locates the
+  // request (lane F2, 2026-10-01: the real location always leads).
+  const regionParam = (s) => { const k = String(s || '').trim().toUpperCase(); return /^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$/.test(k) ? k : null; };
+  const OVERRIDE = { region: regionParam(QS.get('region')), metro: QS.get('metro'),
+    ignored: QS.has('region') && !regionParam(QS.get('region')) ? String(QS.get('region')).slice(0, 16) : null };
+  /** Under local wrangler dev, request.cf is the runtime's stand-in, not an edge's reading of the request; the panel says so. */
+  const LOCAL_RUNTIME = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /\.localhost$/.test(location.hostname);
 
   let PAGES = { home: 'home', phone: 'phone' };
   let SLOTS = { hero: 'hero', deals: 'deals', rail: 'phones-rail', modules: 'pdp-modules', plans: 'plan-pairing', offer: null };
@@ -96,6 +103,7 @@
     visitors: {}, who: null,
     view: 'home', phoneId: null, pageKey: null, pageFrom: null, phonesBrand: null,
     ctx: { region: null }, regionSource: 'edge',
+    own: null,                            // her own region, as the arrival read it: { key, label, source: edge | override | none }
     home: { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null },
     phone: { previous: null, current: null, set: null },
     rail: { status: 'site', order: null, items: null, off: false },
@@ -477,9 +485,12 @@
       el.armChip.classList.toggle('arm--default', set.arm !== 'personalized');
       el.armChip.title = set.arm === 'personalized' ? 'Served decisions.' : 'The holdout: the site default for this shopper.';
     } else el.armChip.hidden = true;
+    const own = state.own;
     const chips = [state.ctx.region
-      ? `<span title="Asserted on the request, labelled">region <b>${esc(state.ctx.region)}</b> · ${esc(state.regionSource)}</span>`
-      : '<span>region <b>from the edge</b></span>'];
+      ? `<span title="${state.regionSource === 'rehearsal override' ? 'A rehearsal override (?region=): asserted on the request, labelled' : 'Asserted on the request, labelled: not observed'}">region <b>${esc(state.ctx.region)}</b> · ${esc(state.regionSource)}</span>`
+      : own && own.key
+        ? `<span title="${LOCAL_RUNTIME ? 'From the request, as the local runtime fills request.cf' : 'From the request: the edge located her, nothing asserted'}">region <b>${esc(own.key)}</b> · from the request</span>`
+        : `<span title="Nothing asserted: the region comes from the request when it carries one">region <b>${own ? 'none on this request' : 'from the request'}</b></span>`];
     if (v && v.intent) chips.push(`<span title="Asserted, as her account would; it gates offers and never prices">intent <b>${esc(v.intent)}</b> · asserted</span>`);
     if (v && v.stage) chips.push(`<span title="The journey stage the engine reads from her profile">stage <b>${esc(v.stage)}</b></span>`);
     el.ctxChips.innerHTML = chips.join('');
@@ -1726,6 +1737,11 @@
     const hit = [...arr(R.rehearsed), R.uncoveredRegion].find((x) => x && x.key === key);
     return hit ? hit.label : null;
   }
+  /**
+   * The Arrival panel's read. A region goes on the query only when one is asserted (beat 2's contrast,
+   * 14a/14b, the hand's assert buttons, or the ?region= rehearsal override); otherwise the route reads the
+   * region the edge put on the request, and the page records that as her own.
+   */
   async function loadColdStart() {
     const q = new URLSearchParams();
     if (state.ctx.region) q.set('region', state.ctx.region);
@@ -1737,11 +1753,16 @@
       if (!doc) why = `The cold-start read did not answer (${r.status}); lane L2’s labelled fixture is shown.`;
     }
     if (!doc) {
-      const fx = await tryJson(`/vantage/fixtures/coldstart-${state.ctx.region || 'US-TX'}.json`) || await tryJson('/vantage/fixtures/coldstart-US-TX.json');
+      // A fixture never names a place nobody asked for: with nothing asserted it is the no-region fixture.
+      const fx = await tryJson(`/vantage/fixtures/coldstart-${state.ctx.region || 'none'}.json`) || await tryJson('/vantage/fixtures/coldstart-none.json');
       if (fx) doc = { ...fx, fixture: why || fx.fixture || 'lane L2 fixture' };
     }
     state.coldstart = doc;
+    const r = (doc && doc.region) || {};
+    if (doc && !state.ctx.region) state.own = { key: r.source === 'edge' && r.key ? r.key : null, label: r.source === 'edge' && r.key ? coldLabel() : null, source: r.source === 'edge' && r.key ? 'edge' : 'none' };
+    else if (doc && OVERRIDE.region && state.ctx.region === OVERRIDE.region) state.own = { key: OVERRIDE.region, label: coldLabel(), source: 'override' };
     renderColdStart();
+    renderWho();
     return doc;
   }
   function renderColdStart() {
@@ -1750,29 +1771,47 @@
     const r = c.region || {}, cen = c.census || {}, lean = c.lean || {};
     const leanInForce = Boolean(c.lean && Object.keys(c.lean.share || c.lean.shares || {}).length);
     const grain = typeof c.grain === 'string' ? c.grain : (c.grain && (c.grain.label || c.grain.used)) || cen.grain || '—';
-    const asserted = Boolean(OVERRIDE.region) || r.source === 'asserted' || Boolean(state.ctx.region);
-    const src = OVERRIDE.region ? 'a rehearsal override, labelled' : asserted ? 'asserted on the request, labelled' : r.source === 'edge' ? 'the edge, from the request' : 'not resolved';
-    // "geo real" only when the edge located her; an asserted region is labelled as asserted, never as real (R1 N8).
+    // How the region is known: a rehearsal override, asserted, from the request, or not at all.
+    const override = Boolean(OVERRIDE.region) && state.ctx.region === OVERRIDE.region;
+    const asserted = override || r.source === 'asserted' || Boolean(state.ctx.region);
+    const located = !asserted && r.source === 'edge' && Boolean(r.key);
+    const src = override ? 'a rehearsal override (?region=), asserted and labelled'
+      : asserted ? 'asserted on the request, labelled'
+        : located ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills it' : 'from the request: the edge located her')
+          : 'no region on this request';
+    // "geo real" only when the edge located her; an asserted region is labelled as asserted, never as real (R1 N8),
+    // and under local wrangler dev request.cf is the runtime's stand-in, so it is not called real either.
     const geoTag = asserted ? '<span class="tg tg--rep">region asserted, not observed</span>'
-      : r.source === 'edge' ? '<span class="tg tg--real">geo real</span>' : '<span class="tg tg--rep">region not resolved</span>';
+      : located ? (LOCAL_RUNTIME ? '<span class="tg tg--rep">region from the local runtime, not an edge</span>' : '<span class="tg tg--real">geo real</span>')
+        : '<span class="tg tg--rep">no region on this request</span>';
     const shares = [];
     for (const [dim, values] of Object.entries(lean.share || lean.shares || {})) for (const [value, s] of Object.entries(values || {})) shares.push({ dim, value, s: num(s) });
     shares.sort((a, b) => b.s - a.s);
     const income = cen.medianHouseholdIncomeUsd != null ? cen.medianHouseholdIncomeUsd : cen.medianHhIncomeUsd;
     const synthetic = /synthetic/i.test(`${lean.dataSource || ''} ${lean.label || ''}`);
+    // What the lean counts (seeded sales, plus this worker's own visits from the region) and the grain that
+    // answered: doc 13 §4, the roll-up ladder names its grain.
+    const seeded = lean.seeded && Number(lean.seeded.units) > 0 ? Number(lean.seeded.units) : 0;
+    const live = Number(lean.liveEvents) || 0;
+    const counted = !leanInForce || !lean.events ? '' : seeded
+      ? `${seeded.toLocaleString('en-US')} synthetic sales${live ? ` + ${live.toLocaleString('en-US')} live events from the region` : ''}`
+      : `${Number(lean.events).toLocaleString('en-US')} events`;
+    const answered = lean.level === 'region' ? `answered at ${lean.answered}` : lean.level === 'country' ? `rolled up to ${lean.answered}` : lean.level === 'global' ? 'rolled up to everyone' : '';
     el.coldStart.innerHTML = `<div class="cold">
-      <div class="cold-row"><span>Region</span><b>${esc([coldLabel(), r.key].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' · ') || 'unknown')}</b></div>
+      <div class="cold-row"><span>Region</span><b>${esc([coldLabel(), r.key].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' · ') || 'none on this request')}</b></div>
       <div class="cold-row"><span>How it is known</span><b>${esc(src)}</b></div>
       <div class="cold-row"><span>Grain used</span><b>${esc(grain)}${r.metro ? ` · metro ${esc(r.metro)}` : ''}</b></div>
       ${income != null ? `<div class="cold-row"><span>Median household income</span><b>${money0(income)}</b></div>` : ''}
       ${cen.medianHomeValueUsd != null ? `<div class="cold-row"><span>Median home value</span><b>${money0(cen.medianHomeValueUsd)}</b></div>` : ''}
-      <div class="cold-row"><span>Census</span><b>${esc([cen.estimate || cen.source, cen.vintage && `vintage ${cen.vintage}`].filter(Boolean).join(' · ') || '—')}</b></div>
+      <div class="cold-row"><span>Census</span><b>${esc([cen.grain === 'national' ? cen.label : null, cen.estimate || cen.source, cen.vintage && `vintage ${cen.vintage}`].filter(Boolean).join(' · ') || '—')}</b></div>
       ${lean.lambdaForStranger != null ? `<div class="cold-row"><span>The prior’s share for a stranger</span><b>λ = ${fmt2(lean.lambdaForStranger)}</b></div>` : ''}
     </div>
-    <p class="cold-h">Regional lean${leanInForce ? ` · relative to each leader · ${esc(lean.label || lean.dataSource || 'representative')}${lean.events ? ` · ${esc(Number(lean.events).toLocaleString('en-US'))} sales` : ''}${lean.level ? ` · ${esc(lean.level)}` : ''}` : ''}</p>
+    <p class="cold-h">Regional lean${leanInForce ? ` · relative to each leader · ${esc(lean.label || lean.dataSource || 'representative')}${counted ? ` · ${esc(counted)}` : ''}${answered ? ` · ${esc(answered)}` : ''}` : ''}</p>
     <div class="cold-lean" title="Each value relative to its dimension's leader in the region's sales">${shares.slice(0, 6).map((x) => `<div><span>${esc(x.value)} <em>${esc(DIM_LABEL[x.dim] || x.dim)}</em></span><i><s style="width:${Math.round(Math.min(1, x.s) * 100)}%"></s></i><b>${fmt2(x.s)}</b></div>`).join('') || '<p class="m-empty">No regional lean is in force for this region yet: the prior waits for the carrier’s regional sales, and the page shows none rather than invent one.</p>'}</div>
     ${leanInForce && lean.seeded && lean.seeded.label ? `<p class="m-note" style="margin-top:8px">${esc(lean.seeded.label)}${lean.swapTo ? ` · swaps to the ${esc(lean.swapTo)}` : ''}</p>` : ''}
+    ${live && seeded ? `<p class="m-note">Also counted: this worker’s own visits from the region (${live.toLocaleString('en-US')}), on every dimension; the seed writes only brand, ecosystem, price band and category.</p>` : ''}
     ${cen.fellBack ? `<p class="m-note" style="margin-top:8px">${esc(cen.fellBack)}</p>` : ''}
+    ${located && LOCAL_RUNTIME ? '<p class="m-note">Local wrangler dev: request.cf is the runtime’s stand-in, not an edge’s reading of this request: Miniflare’s cached copy of Cloudflare’s location for this machine, or a fixed Austin, Texas placeholder when it cannot fetch one. Hosted, the edge locates every request.</p>' : ''}
     ${c.scored && c.scored.sentence ? `<p class="m-note">${esc(c.scored.sentence)}</p>` : ''}
     ${arr(r.notes).map((n) => `<p class="m-note">${esc(n)}</p>`).join('')}
     <p class="cold-sentence">${esc((c.sentence || 'aggregate, never the individual; we curate, never price.').replace(/^./, (x) => x.toUpperCase()))}</p>
@@ -1960,7 +1999,7 @@
     const vec = [];
     for (const [dim, values] of Object.entries((v && v.vector) || {})) for (const [value, a] of Object.entries(values || {})) vec.push({ dim, value, a: num(a) });
     vec.sort((a, b) => b.a - a.a);
-    const base = { who: v ? v.label : 'no visitor', at: Date.now(), view: state.view, vector: vec.slice(0, 6), intent: v && v.intent, region: state.ctx.region };
+    const base = { who: v ? v.label : 'no visitor', at: Date.now(), view: state.view, vector: vec.slice(0, 6), intent: v && v.intent, region: regionShown() };
     if (state.view === 'phone' && state.phone.set) {
       const p = phone(state.phoneId);
       return { ...base, where: `${p ? p.name : 'phone'} page`,
@@ -2064,7 +2103,7 @@
       note('arrived', 'A fresh visitor', 'direct · consent granted · no event sent', f);
       const r = await ask('phone', f);
       if (!r.ok) throw new Error(r.error);
-      const live = { who: f.label, at: Date.now(), view: 'phone', vector: [], intent: f.intent, region: state.ctx.region, where: `${p.name} page`,
+      const live = { who: f.label, at: Date.now(), view: 'phone', vector: [], intent: f.intent, region: regionShown(), where: `${p.name} page`,
         lists: [['Modules, in the order returned', bySlot(r.set, SLOTS.modules).map((d) => ({ id: d.customerContentId, t: moduleTitle(d), s: d.score }))],
           ['Pair with a plan', bySlot(r.set, SLOTS.plans).map((d) => ({ id: d.customerContentId, t: (tierOfDecision(d) || {}).name || d.customerContentId, s: d.score }))]] };
       useVisitor(back.who);
@@ -2287,26 +2326,35 @@
   }
   const regionKey = (x) => (x && typeof x === 'object' ? x.key : x) || null;
   /**
-   * The rehearsal regions, from lane L4's measurement: the hinge is rehearsed in
-   * New York (the first paint answers the ad there), Texas is beat 2's contrast.
-   * The anchor may name them (hinge, contrast); 5G Home is shown in the rehearsed
-   * region when the coverage list names it, and Montana is the uncovered one.
+   * Regions (lane F2, 2026-10-01). Her own region leads: the edge locates the request and the page asserts
+   * nothing, unless the address bar carries the ?region= rehearsal override (the suites pass US-NY, where
+   * lane L1 measured beats 3 to 15). An assertion is for beat 2's contrast and 14a/14b's availability pair:
+   * the contrast is Texas unless her own region is Texas, then New York (the anchor's two rehearsed regions);
+   * 5G Home is shown in the anchor's covered region (New York) and withdrawn in the uncovered one (Montana).
    */
   const regions = () => {
     const r = state.anchor.regions || {};
-    const first = regionKey(r.hinge) || regionKey(r.first) || 'US-NY';
-    const second = regionKey(r.contrast) || regionKey(r.second) || (first === 'US-TX' ? 'US-NY' : 'US-TX');
-    const covered = regionKey(r.covered) || (arr(r.coverage).includes(first) ? first : 'US-TX');
-    return { first, second, covered, uncovered: regionKey(r.uncoveredRegion) || regionKey(r.uncovered) || 'US-MT' };
+    const first = regionKey(r.first) || 'US-NY', second = regionKey(r.second) || 'US-TX';
+    return { first, second, covered: regionKey(r.covered) || first, uncovered: regionKey(r.uncoveredRegion) || regionKey(r.uncovered) || 'US-MT' };
   };
+  /** Her own region: the rehearsal override when the address bar carries one, else null (nothing asserted: the request's own). */
+  const ownRegion = () => OVERRIDE.region || null;
+  const ownSource = () => (OVERRIDE.region ? 'rehearsal override' : 'edge');
+  const ownName = () => (state.own && (state.own.label || state.own.key)) || (OVERRIDE.region ? regionName(OVERRIDE.region) || OVERRIDE.region : 'her own region');
+  /** Beat 2's asserted contrast: the anchor's second rehearsed region (Texas), unless that is her own, then its first (New York). */
+  const contrast = () => { const r = regions(); const own = OVERRIDE.region || (state.own && state.own.key) || null; return own === r.second ? r.first : r.second; };
+  /** The region a frame was decided in, with how it is known, for Compare's columns. */
+  const regionShown = () => (state.ctx.region ? `${state.ctx.region} (${state.regionSource === 'rehearsal override' ? 'rehearsal override' : 'asserted'})`
+    : state.own && state.own.key ? `${state.own.key} (from the request)` : null);
   const act = (type, attrs, action) => ({ type, attrs: attrs || {}, ...(action ? { action } : {}) });
   function setRegion(region, source) { state.ctx.region = region || null; state.regionSource = source || (region ? 'asserted' : 'edge'); renderWho(); }
-  /** Back in the rehearsed region, where lane L1 measured beats 3 to 15, and said so on screen. */
+  /** Back in her own region (from the request, or the rehearsal override), and said so on screen. */
   async function restoreRegion() {
-    const home = regions().first;
-    if (!home || state.ctx.region === home) return;
-    setRegion(home, 'asserted');
-    note('asserted', `region = ${home}`, 'back in the rehearsed region');
+    const own = ownRegion();
+    if ((state.ctx.region || null) === own) return;
+    setRegion(own, ownSource());
+    if (own) note('asserted', `region = ${own}`, 'back in the rehearsal override’s region (?region=), labelled');
+    else note('located', `back in ${ownName()}`, 'her own region: from the request, nothing asserted');
     await loadColdStart();
   }
   function storageStep(id) {
@@ -2318,10 +2366,14 @@
 
   const BEATS = [
     { key: 'arrive', no: '1', act: 1, who: 'shopper', label: 'A stranger arrives from the ad',
-      declare: () => [`<b>Taps</b> a paid-social ad and lands on the homepage (${esc(describeEntry(landingEntry(adParams())))})`],
+      declare: () => [`<b>Taps</b> a paid-social ad and lands on the homepage (${esc(describeEntry(landingEntry(adParams())))})`,
+        OVERRIDE.region ? `<b>Rehearsal override</b>: region = ${esc(OVERRIDE.region)} from the address bar (?region=), asserted and labelled`
+          : 'Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted'],
       acts: () => [act('page_view', {})],
-      will: () => ['The hero and the four answer <b>the ad and the region</b>: the campaign lifts its promotion, the region’s own sales lean the rest', 'The Arrival panel names the region, the grain, the census figure and the regional lean, each labelled', 'Her own meters are empty: nothing about <b>her</b> is known yet'],
-      line: () => 'A stranger taps a paid-social ad. The first paint answers <b>the ad and the region</b>: the campaign lifts its promotion and the carrier’s own regional sales lean the rest. Aggregate, never the individual; we curate, never price.',
+      will: () => ['The hero and the four answer <b>the ad and her region</b>: the campaign lifts its promotion, her region’s own sales lean the rest',
+        `The Arrival panel names ${OVERRIDE.region ? 'the override’s region, labelled as asserted' : 'the region <b>the edge located, from the request</b>'}, the grain, the census figure and the regional lean, each labelled`,
+        'Her own meters are empty: nothing about <b>her</b> is known yet'],
+      line: () => `A stranger taps a paid-social ad. The first paint answers <b>the ad and where she is</b>: ${OVERRIDE.region ? 'her region is a rehearsal override, labelled' : 'her region comes from the request'}, the campaign lifts its promotion and the carrier’s own regional sales lean the rest. Aggregate, never the individual; we curate, never price.`,
       async run() {
         await resetTenant();
         await useCatalog(beatName('open', 'catalog'));
@@ -2335,22 +2387,33 @@
         const v = await mintVisitor('A', landingEntry(params));
         useVisitor('A');
         note('arrived', 'A stranger, from a paid-social ad', `${describeEntry(v.entry)} · anonymous · consent granted`);
-        setRegion(OVERRIDE.region || regions().first || null, OVERRIDE.region ? 'rehearsal override' : regions().first ? 'rehearsed region, asserted' : 'edge');
+        // Her own region leads: nothing is asserted unless the address bar carries the ?region= rehearsal override.
+        state.own = null;
+        setRegion(ownRegion(), ownSource());
+        if (OVERRIDE.region) note('asserted', `region = ${OVERRIDE.region}`, 'a rehearsal override (?region=), labelled · never the default');
+        else if (OVERRIDE.ignored) note('ignored', `?region=${OVERRIDE.ignored}`, 'not a region key, so nothing is asserted');
         note('asserted', `ctx.intent = ${v.intent}`, 'a signed-out visitor is a new line until she says otherwise');
         await loadColdStart();
+        if (!OVERRIDE.region) {
+          const o = state.own || {};
+          note('located', o.key ? `region ${o.key}${o.label && o.label !== o.key ? ` (${o.label})` : ''}` : 'no region on this request',
+            o.key ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills request.cf · nothing asserted' : 'from the request: the edge located her · nothing asserted')
+              : 'the national figure is shown · nothing invented');
+        }
         connectSocket(v);
         selectTab('tab-arrival');
         await openHome({ quiet: true, focus: 'hero' });
       } },
 
     { key: 'region', no: '2', act: 1, who: 'merch', label: 'The same visitor, another region',
-      declare: () => [`<b>Asserts</b> region = ${esc(regions().second)}${regionName(regions().second) ? ` (${esc(regionName(regions().second))})` : ''} on the request; nothing about her changes`],
+      declare: () => [`<b>Asserts</b> region = ${esc(contrast())}${regionName(contrast()) ? ` (${esc(regionName(contrast()))})` : ''} on the request: asserted, not observed; nothing about her changes`],
       acts: () => [],
-      will: () => ['A <b>different opening four</b>: only the region changed', 'The Arrival panel shows the new grain, census figure and lean', 'Her meters do not move: a region is context, never evidence about her'],
-      line: () => `Same visitor, same ad. Only the region changes, to <b>${esc(regionName(regions().second) || regions().second)}</b>, and the page opens differently: the prior is that region’s own sales. The census figure explains the lean and is never scored.`,
+      will: () => ['A <b>different opening four</b>: only the region changed', 'The Arrival panel shows the asserted region’s grain, census figure and lean, labelled <b>asserted, not observed</b>', 'Her meters do not move: a region is context, never evidence about her'],
+      line: () => `Same visitor, same ad. Only the region changes, to <b>${esc(regionName(contrast()) || contrast())}</b>, asserted, not observed, and the page opens differently: the prior is that region’s own sales. The census figure explains the lean and is never scored.`,
       async run() {
-        setRegion(regions().second, 'asserted');
-        note('asserted', `region = ${regions().second}`, 'context on the request · never evidence about her');
+        const to = contrast();
+        setRegion(to, 'asserted');
+        note('asserted', `region = ${to}`, 'asserted, not observed · context on the request · never evidence about her');
         await loadColdStart();
         selectTab('tab-arrival');
         await refreshHome();
@@ -2358,7 +2421,7 @@
       } },
 
     { key: 'browse', no: '3', act: 2, who: 'shopper', label: 'She browses Samsung',
-      declare: () => [...(state.ctx.region !== regions().first ? [`<b>Back</b> in ${esc(regionName(regions().first) || regions().first)}, the rehearsed region (asserted)`] : []),
+      declare: () => [...((state.ctx.region || null) !== ownRegion() ? [`<b>Back</b> in ${esc(ownName())}, her own region (${OVERRIDE.region ? 'the rehearsal override, labelled' : 'from the request, nothing asserted'})`] : []),
         '<b>Opens</b> Phones', ...browseTouches().map((t) => (t.view === 'page' ? `<b>Opens</b> the ${esc(phone(t.id).name)} page` : `<b>Quick look</b> on the ${esc(phone(t.id).name)}`))],
       acts: () => {
         const out = [act('page_view', {})];
@@ -2617,7 +2680,7 @@
       } },
 
     { key: 'cart', no: '15a', act: 5, who: 'shopper', label: 'She adds it to her cart and comes back',
-      declare: () => [...(state.ctx.region !== regions().first ? [`<b>Back</b> in ${esc(regionName(regions().first) || regions().first)}`] : []),
+      declare: () => [...((state.ctx.region || null) !== ownRegion() ? [`<b>Back</b> in ${esc(ownName())}, her own region`] : []),
         `<b>Adds</b> the ${esc(focusName())} to her cart`, '<b>Returns</b> to the homepage'],
       acts: () => {
         const p = phone(focusPhone()); const v = cur();
@@ -2736,8 +2799,9 @@
   /** What the presenter may assert by hand: the region and her answer, both labelled on screen. */
   function renderAsserts() {
     const r = regions();
-    const list = [null, ...new Set([r.first, r.second, r.covered, r.uncovered].filter(Boolean))];
-    el.assertRegion.innerHTML = '<span class="wlabel">region</span>' + list.map((x) => `<button type="button" data-region="${esc(x || '')}" aria-pressed="${(state.ctx.region || null) === x}">${esc(x || 'edge')}</button>`).join('');
+    const list = [null, ...new Set([OVERRIDE.region, r.first, r.second, r.covered, r.uncovered].filter(Boolean))];
+    el.assertRegion.innerHTML = '<span class="wlabel">region</span>' + list.map((x) => `<button type="button" data-region="${esc(x || '')}" aria-pressed="${(state.ctx.region || null) === x}"`
+      + ` title="${x ? (x === OVERRIDE.region ? 'The rehearsal override, asserted and labelled' : 'Assert this region on the request, labelled') : 'Assert nothing: the region comes from the request'}">${esc(x || 'from the request')}</button>`).join('');
     const v = cur();
     // Always one answer: without ctx.intent the gated offers fail closed and the four come back short.
     el.assertIntent.innerHTML = '<span class="wlabel">intent</span>' + INTENTS.map(([k, l]) => `<button type="button" data-intent="${k}" aria-pressed="${((v && v.intent) || defaultIntent()) === k}">${esc(l)}</button>`).join('');
@@ -2746,7 +2810,8 @@
   el.assertRegion.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn || state.busy) return;
-    setRegion(btn.dataset.region || null, btn.dataset.region ? 'asserted' : 'edge');
+    const to = btn.dataset.region || null;
+    setRegion(to, to ? (to === OVERRIDE.region ? 'rehearsal override' : 'asserted') : 'edge');
     await loadColdStart();
     if (state.view === 'home') await refreshHome(); else if (state.view === 'phone') await refreshPhone();
   });
@@ -3022,6 +3087,8 @@
       if (state.anchor.events && state.anchor.events.source) SOURCE = state.anchor.events.source;
       if (state.anchor.brand && state.anchor.brand.name) { BRAND.name = state.anchor.brand.name; el.wordmark.textContent = BRAND.name; }
       await useCatalog(beatName('open', 'catalog'));
+      // The rehearsal override applies from the first read, a direct phone-page load included; without it nothing is asserted.
+      if (OVERRIDE.region) { state.ctx.region = OVERRIDE.region; state.regionSource = 'rehearsal override'; }
       renderRoadmap();
       renderAsserts();
       renderPresses();

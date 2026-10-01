@@ -22,19 +22,19 @@ Fifteen beats in five acts, pressed as 22 presses: about twenty minutes with que
 
 Every carrier story in the market starts from a known subscriber. This one starts from a stranger.
 
-### Beat 1. A stranger lands from a paid-social ad, in New York
-**They see:** the hero and the four deals answer the ad: the launch hero, and the iPhone 18 Pro launch offer leading the four. The Arrival panel names New York, the grain, the census figure and the regional lean, labelled "region asserted, not observed".
+### Beat 1. A stranger lands from a paid-social ad, wherever you are
+**They see:** the hero and the four deals answer the ad: the launch hero, and the iPhone 18 Pro launch offer leading the four. The Arrival panel names the state the edge located, "from the request", with its grain, its census figure and its regional lean, labelled synthetic → warehouse. Nothing is asserted.
 **You say:**
-> "She tapped an ad for the iPhone 18 Pro, and we know nothing about her. The first paint answers the ad and the place. The campaign lifts its own promotion, and the receipt itemises the lift. The rest leans on what people from New York actually buy: iPhone, premium. That lean is the carrier's own regional sales: synthetic here, labelled, and swapped for your warehouse. The census figure beside it is real and public. It explains the lean and never enters a score. Aggregate, never the individual; we curate, never price."
+> "She tapped an ad for the iPhone 18 Pro, and we know nothing about her except where the request came from: the panel says [the state on the panel], and that's where we are. The first paint answers the ad and the place. The campaign lifts its own promotion, and the receipt itemises the lift. The rest leans on what people from here actually buy. That lean is the carrier's own regional sales: synthetic here, labelled, and swapped for your warehouse; for the demo we modelled every state from a national mix tilted by its census income, and in production it's your own sales. The census figure beside it is real and public. It explains the lean and never enters a score. Aggregate, never the individual; we curate, never price. And the ad leads only until she shows us otherwise: within her first four presses her own browsing overtakes it, sooner in a state that already leans Android."
 
-**Backed by:** launch offer first at 0.671, the Duo pre-order second (every run). New York, state grain, ACS 2024 1-year, $85,820 median household income, 425 synthetic sales; the campaign adds +0.066 on the launch offer's receipt; the record says the census is not scored. The launch hero scores 0.260 with the ad and 0.200 without: the campaign's +0.060.
+**Backed by** (2026-10-01, lane F2): the launch offer first with the ad in all 51 seeded regions (0.623 to 0.671), the best Android offer 0.10 to 0.25 behind in the 49 modelled states. Hosted, from North Carolina: launch 0.651, Duo 0.532, Fold8 0.497, Galaxy S26 0.485; launch hero 0.248; North Carolina, state grain, ACS 2024 1-year, $73,958, 458 synthetic sales. The campaign adds +0.066 on the launch offer's receipt and +0.060 on the hero's; the record says the census is not scored. The hinge, measured: Android leads the four from her first Galaxy touch in most states (Texas, North Carolina, Mississippi, Arizona, Illinois, Oregon, Virginia, Alaska), from the second in New York and DC, at 5 s and at 15 s a press; the page shows it at beat 4, when she next goes home. A VPN or a corporate proxy can place her elsewhere: the panel names what the edge saw. The suites rehearse on New York through `?region=US-NY`, the labelled rehearsal override (launch 0.671, Duo 0.550). Reseed your own state before you present (`RESUME-vantage.md`): a walkthrough leaves its touches in its state's lean.
 
 ### Beat 2. The same visitor, asserted in Texas
-**They see:** the same four, reordered: the Galaxy S26 offer moves to second. The panel switches to Texas.
+**They see:** the same four, reordered: the Galaxy S26 offer moves to second. The panel switches to Texas, labelled "region asserted, not observed". Presenting from Texas, the contrast is New York.
 **You say:**
-> "Same person, same ad. Only the region changed, and the page labels it asserted. Texas leans Android and core in the regional sales, so the Galaxy offer climbs. The ad still leads; without it, Texas opens on the Galaxy. A region is context. Her meters are still empty."
+> "Same person, same ad. Now I tell the page she's in Texas, and it says so: asserted, not observed. Texas leans Android and core in the regional sales, so the Galaxy offer climbs. The ad still leads, just; without it, Texas opens on the Galaxy, and her first Galaxy touch there would overtake it. A region is context. Her meters are still empty."
 
-**Backed by:** launch 0.563, Galaxy S26 0.550; Texas, $79,721, 490 synthetic sales. Control: a Texas visitor with no ad opens on the Galaxy offer (0.550), with the launch offer third (0.497).
+**Backed by:** launch 0.563, Galaxy S26 0.550; Texas, $79,721, 490 synthetic sales. Control: a Texas visitor with no ad opens on the Galaxy offer (0.550), with the launch offer third (0.497). From Texas the contrast is New York: launch 0.671, Duo 0.550. Beat 3 takes her back to her own region, from the request.
 
 ---
 
@@ -162,7 +162,7 @@ Point at the window line: the report sums the folded hours of the UTC day. The f
 | Do you read her device? | "Only the operating-system family from the request, iOS or Android, nothing finer; when that seed fires it shows on the receipt. A laptop sends none." |
 | Does this touch credit? | "No. Financing is yours, unchanged. Ecosystem, income and geography never decide who sees it." |
 | What do you hand our systems at sign-in? | "Designed, not built: her session's signals (lines, storage, switching, market) go to your decisioning as context. Nothing personal is used before sign-in. We're the anonymous front door to your next-best-action, not a replacement." |
-| What happens with no ad? | "The region's own sales lean the page: in Texas a visitor with no ad opens on the Galaxy offer; in New York the launch offer still leads on the iPhone lean." |
+| What happens with no ad? | "Her real region's own sales lean the page. Of the 51 regions we seeded, only Texas opens on the Galaxy offer without the ad; everywhere else the launch offer leads on the region's lean until she browses, and her own presses overtake it within her first four, sooner where the state leans Android." |
 | Our app traffic? | "The same decisions API answers an app: events in, decisions out, by slot name. No app on screen today." |
 | Is she out of the audience? (beat 5) | "Her score is under the exit line, and ranking reads the score. On this host the audience flag is re-evaluated at her next event." |
 

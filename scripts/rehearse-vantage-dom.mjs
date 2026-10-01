@@ -26,6 +26,13 @@
 // "!" on every run and named on the last line (docs/verizon/lanes/L5.md has the
 // fix); --strict makes it a failure.
 //
+// The region (lane F2). The page's arrival asserts no region: the edge locates the
+// request, which differs from machine to machine. So the walk loads the page with
+// the ?region=US-NY REHEARSAL OVERRIDE (asserted on every snapshot and labelled,
+// where lane L1 measured the beats), after one beat 1 without it, which checks the
+// panel says the region comes from the request (locally, as wrangler dev's runtime
+// fills request.cf; or "no region on this request") and that no snapshot asserted one.
+//
 // --wait shortens beat 5's on-screen minute (the page's ?wait=N, rehearsal only).
 // Brand memory is 60 s for the room, so the re-ask must land about 41 s or more
 // after her third Samsung touch; 45 leaves a margin over beat 4's few seconds.
@@ -155,7 +162,7 @@ const API = (url) => { try { const p = new URL(url).pathname; return /^\/(v1|rea
 on('Network.requestWillBeSent', (e) => {
   const path = API(e.request.url);
   if (!path) return;
-  requests.set(e.requestId, { press, path, method: e.request.method, headers: e.request.headers || {}, status: null, failed: null });
+  requests.set(e.requestId, { press, path, url: e.request.url, method: e.request.method, headers: e.request.headers || {}, status: null, failed: null });
 });
 on('Network.responseReceived', (e) => { const r = requests.get(e.requestId); if (r) r.status = e.response.status; });
 on('Network.loadingFailed', (e) => { const r = requests.get(e.requestId); if (r && !e.canceled) r.failed = e.errorText; });
@@ -260,6 +267,7 @@ const OUTCOMES = {
       S.cold.text.slice(0, 160));
     ok('and says the sentence: aggregate, never the individual; we curate, never price', has(S.cold.text, 'Aggregate, never the individual; we curate, never price.'));
     ok('an asserted region is labelled "region asserted, not observed", never "geo real"', has(S.cold.text, 'region asserted, not observed') && !has(S.cold.text, 'geo real'));
+    ok('and the panel names it the rehearsal override, never the default', has(S.cold.text, 'rehearsal override') && has(S.ctx, 'rehearsal override'), S.ctx);
     ok('her own meters are empty: nothing about her is known yet', S.meters.length === 0 && has(S.vectorsText, 'No evidence of her own yet'));
   },
   1: (S) => {
@@ -414,12 +422,41 @@ try {
   await cdp('Page.enable'); await cdp('Runtime.enable'); await cdp('Network.enable');
   await cdp('Network.setCacheDisabled', { cacheDisabled: true });
   await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
-  const url = `${base}/vantage/?debug=1&wait=${WAIT}`;
-  console.log(`\nVantage DOM rehearsal: ${url} at ${WIDTH}×${HEIGHT} in ${CHROME.split(/[\\/]/).pop()}`);
+  const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname);
+  const OVERRIDE = (anchor.regions && anchor.regions.first) || 'US-NY';
+  const booted = () => waitFor("/^ready|error|missing|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
+  console.log(`\nVantage DOM rehearsal against ${base} at ${WIDTH}×${HEIGHT} in ${CHROME.split(/[\\/]/).pop()}`);
+
+  {
+    // Beat 1 as the page runs by default, with no ?region=: the region must come from the request.
+    const plain = `${base}/vantage/?debug=1`;
+    console.log(`\n── 1 without the override: ${plain}`);
+    press = 'edge';
+    await cdp('Page.navigate', { url: plain });
+    const up = await booted();
+    await evaluate(`(${pageHelpers.toString()})()`);
+    const landed = up ? await evaluate("(async () => { const run = window.__vantage.go(0); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()") : 'the page did not boot';
+    await sleep(SETTLE_MS);
+    const S = await evaluate('window.__l5.snapshot()');
+    const asked = [...requests.values()].filter((r) => r.press === 'edge' && /\/decisions\/snapshot/.test(r.path));
+    const panelReads = [...requests.values()].filter((r) => r.press === 'edge' && /\/vantage\/api\/coldstart/.test(r.path));
+    ok('beat 1 lands without the override', landed === 'done', landed);
+    const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : has(S.cold.text, 'the edge located her') && has(S.cold.text, 'geo real'));
+    const none = has(S.cold.text, 'no region on this request') && has(S.cold.text, 'national');
+    ok(`the panel says the region comes from the request${LOOPBACK ? ' (locally: as the runtime fills request.cf, not an edge)' : ''}, or that there is none`,
+      S.cold.ok && (fromRequest || none) && !has(S.cold.text, 'asserted, not observed') && !has(S.cold.text, 'rehearsal override'), S.cold.text.slice(0, 220));
+    ok('no snapshot and no panel read asserted a region', asked.length > 0 && panelReads.length > 0
+      && asked.every((r) => !/[?&]ctx\.region=/.test(r.url)) && panelReads.every((r) => !/[?&]region=/.test(r.url)), `${asked.length} snapshot(s), ${panelReads.length} panel read(s)`);
+    info(`hero “${S.hero.title}” · deals ${titles(S).join(' | ')} · ${S.ctx}`);
+  }
+
+  const url = `${base}/vantage/?debug=1&wait=${WAIT}&region=${OVERRIDE}`;
+  console.log(`\n── The walk, with the rehearsal override: ${url}`);
+  press = -1;
   await cdp('Page.navigate', { url });
 
   console.log('\n── The page loads, and asks for no credential');
-  const ready = await waitFor("/^ready|error|missing|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
+  const ready = await booted();
   await evaluate(`(${pageHelpers.toString()})()`);
   const boot = await evaluate('window.__l5.snapshot()');
   ok('the page loaded its content and the engine documents', ready && /^ready/.test(boot.status), boot.status.slice(0, 160));

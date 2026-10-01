@@ -17,6 +17,16 @@
 // Scores move run to run (memory decays in real time), so the checks are on
 // positions, memberships and thresholds, the claims the presenter makes.
 //
+// The region (lane F2). The page's arrival asserts no region: the edge locates
+// the request. That is not reproducible from one machine to the next, so this
+// suite walks the page as the ?region=US-NY REHEARSAL OVERRIDE runs it (the
+// page then asserts New York on every snapshot, labelled, exactly as lane L1
+// measured), and checks once, at beat 1, that without the override the region
+// comes from the request: the panel's own read, and a stranger's first snapshot
+// decided on that region's prior. Locally, wrangler dev fills request.cf with
+// the runtime's stand-in (Miniflare's cached copy of this machine's location),
+// and the page says so; a request with no region reads national, named.
+//
 //   node scripts/rehearse-vantage-page.mjs [--base http://localhost:9110] [--exit-wait 50]
 //
 // --exit-wait is how long after her third Samsung touch beat 5 asks again. Brand
@@ -127,6 +137,9 @@ const HINGE = anchor.hingePhone || 'pixel-11';
 const TOUCHES = anchor.browseTouches || [{ id: FOCUS, view: 'card' }, { id: FOCUS, view: 'page' }, { id: 'galaxy-s26-ultra', view: 'card' }];
 const R = anchor.regions || {};
 const NY = R.first || 'US-NY', TX = R.second || 'US-TX', COVERED = R.covered || NY, UNCOVERED = R.uncovered || 'US-MT';
+/** The rehearsal override the suites load the page with (?region=US-NY): her own region for the walk, asserted and labelled. */
+const OVERRIDE = NY;
+const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname);
 const KIDS_WATCH = { page: 'kids-watch', category: 'watches-tablets', intent: 'add-line', lines: 'family' };
 const LANDING = new URLSearchParams(anchor.landing ? anchor.landing.url.split('?')[1] : 'utm_source=tiktok&utm_medium=paid-social&utm_term=iphone-18-pro');
 const AD_ENTRY = { utmSource: LANDING.get('utm_source'), utmMedium: LANDING.get('utm_medium'), utmTerm: LANDING.get('utm_term') };
@@ -315,13 +328,31 @@ try {
     .map((p) => p.customerContentId);
 
   // ════════════════════════ Act 1 · The arrival ════════════════════════
-  console.log('\n── 1 · A stranger lands from the paid-social ad, in New York');
+  console.log('\n── 1 · Without the override: her region comes from the request');
   const reset = await demoRoute('/vantage/api/reset', {});
   ok('the tenant is reset to its opening state', (reset.applied || []).map((x) => x.name).join(',') === 'open-slots,open-catalog',
     (reset.applied || []).map((x) => `${x.name}@${x.revision}`).join(' '));
+  {
+    // What the page does with no ?region=: the panel's read carries no region, and nor does any snapshot.
+    const cs = await coldstart(null);
+    const r = (cs && cs.region) || {}, l = (cs && cs.lean) || null;
+    const said = r.source === 'edge' && r.key ? `from the request${LOOPBACK ? ', as the local runtime fills it (wrangler dev: request.cf is Miniflare’s stand-in, not an edge)' : ': the edge located her'}`
+      : r.source === 'none' ? 'no region on this request' : `unexpected source “${r.source}”`;
+    ok(`without the override the panel says: ${said}`, Boolean(cs) && ((r.source === 'edge' && Boolean(r.key)) || (r.source === 'none' && cs.grain === 'national' && /no region/.test((cs.census || {}).fellBack || ''))),
+      cs ? `${r.key || 'no key'} · ${cs.grain} · ${cs.census ? `${cs.census.label} $${cs.census.medianHouseholdIncomeUsd}` : 'no census'} · lean ${l ? `${l.level} ${l.answered}, ${l.label}` : 'none'}` : 'no answer');
+    const stranger = await mintVisitor(AD_ENTRY, 'from the request');
+    await send(stranger, 'page_view', { page: 'home' });
+    const s = await ask(stranger, 'home');
+    const reg = s.deals.map((d) => (d.explain.drivers || []).find((x) => x.dim === 'regional')).find(Boolean);
+    info(`a stranger from the ad, region from the request: ${fmt(s.deals)} | hero ${fmt(s.hero)}`);
+    ok('and her first snapshot is decided on that region’s prior, nothing asserted', s.asked.region === null && Boolean(reg) && Boolean(l) && reg.value === l.answered,
+      reg ? `regional driver ${reg.value} λ ${reg.a}` : 'no regional driver');
+  }
+
+  console.log(`\n── 1 · A stranger lands from the paid-social ad: the rehearsal override, ?region=${OVERRIDE}`);
   A = await mintVisitor(AD_ENTRY, 'Shopper A');
   ok('a visitor is minted with consent, carrying the landing entry', Boolean(A.session.subject), `${A.entry.utmMedium} · ${A.entry.utmSource} · term ${A.entry.utmTerm}`);
-  page.region = NY;
+  page.region = OVERRIDE;                      // the page asserts the override on every snapshot, labelled
   const csNY = await coldstart(NY);
   ok('the cold-start panel answers for New York at state grain', csNY && csNY.region.key === NY && csNY.grain === 'state' && csNY.census.label === 'New York',
     csNY ? `${csNY.census.label} · ${csNY.grain} · ${csNY.census.estimate} · $${csNY.census.medianHouseholdIncomeUsd}` : 'no answer');

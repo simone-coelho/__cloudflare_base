@@ -41,10 +41,11 @@ node scripts/seed-vantage.mjs --files-only          # the beat files exist befor
 npx wrangler dev --config wrangler.vantage.toml --port 9110 --persist-to .wrangler/state-vantage-l1
 export JWT_SECRET="$(grep '^JWT_SECRET=' .dev.vars | cut -d= -f2- | tr -d "'")" JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api DEPLOYMENT_PROFILE=demo
 node scripts/seed-vantage.mjs --base http://localhost:9110          # re-anchors every window to now
-node scripts/seed-vantage-region.mjs --base http://localhost:9110   # after every reseed
+node scripts/seed-vantage-region.mjs --base http://localhost:9110   # after every reseed: all 50 states and DC, about 4 minutes
 ```
 
-- **The regional prior has a 24-hour horizon. Rerun `seed-vantage-region.mjs` on the morning of every rehearsal**, and after every reseed. Without it, New York and Texas open on whatever rehearsal traffic the worker has seen.
+- **The regional prior has a 24-hour horizon. Rerun `seed-vantage-region.mjs` on the morning of every rehearsal**, and after every reseed. It seeds every state and DC (lane F2), because beat 1 opens on the visitor's real region: the edge's, never asserted. Locally, `wrangler dev` fills `request.cf` with Miniflare's cached copy of this machine's location (North Carolina here), or a fixed Austin, Texas placeholder when it cannot fetch one; the panel says it is the local runtime's, not an edge's.
+- **Every walkthrough leaves its touches in its own state.** Each event fans into the region the edge places the visitor in, on every dimension, and the seed writes only brand, ecosystem, price band and category; one intent or lines touch takes beat 1 off the ad for the next visitor from that state (measured: after one suite run, North Carolina opened on the family hero and 5G Home). So reseed that state with `--regions here` before showing beat 1 from it again, and after any suite run. A transient 5xx is asked again by the script.
 - **The seed anchors every promotion window to the moment it runs.** The windows are absolute, so a week-old seed has a flash offer already closed. Reseed on the morning of a rehearsal.
 - **Restart `wrangler dev` after any `.dev.vars` edit or any new file under `public/`.** It lists the static assets at startup.
 - `wrangler dev` never runs the scheduled jobs. The five-minute fold, the hourly trend rollup and the 03:00 day report run only on a deployed worker.
@@ -134,11 +135,19 @@ mint() { env -u OPERATOR_TOKEN JWT_SECRET="$S" JWT_ISSUER=edge-platform JWT_AUDI
   node -e "import('./scripts/lib/tool-token.mjs').then(m=>m.resolveToolToken({payload:{sub:process.argv[1],roles:['operator']},expiresIn:'30m',allowMint:true})).then(t=>process.stdout.write(t))" "$1"; }
 node scripts/seed-vantage.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage)"
 npx wrangler deploy --config wrangler.vantage.toml        # the seed rewrote public/vantage/beats/
-node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage-region)"
+node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage-region)"   # 51 regions, about 11 minutes
 ```
 
 - `S` comes from `.dev.vars`, **this machine's only copy; the owner must back it up.**
-- Then, with time, run the request-level suite with `--base https://edge-platform-vantage.expedge.workers.dev`. It ends with the reset.
+- The region seed covers all 50 states and DC (lane F2): New York and Texas as L4 measured them, the other 49 from the model in the script's header (`docs/verizon/lanes/F2.md` §2). It reads every region back through the panel and reseeds any that read wrong; the last line says how many answer at region level, labelled synthetic → warehouse.
+- Then, with time, run the suites with `--base https://edge-platform-vantage.expedge.workers.dev`. They rehearse on New York through the `?region=US-NY` override, and check once that without it the panel reads the region from the request. They end with the reset.
+- **Before every walkthrough from this machine, and after any suite run, reseed the state you present from** (the suites' events and every walkthrough's fan into it, intent and lines included, and those take beat 1 off the ad):
+
+  ```bash
+  node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage-region)" --regions here
+  ```
+
+  `here` is the state the edge places this machine in (North Carolina, 2026-10-01); under a minute (33 s measured). The decision path reads the prior through a one-minute cache, so give it a minute before beat 1.
 
 ## Known engine findings (none changed here)
 
