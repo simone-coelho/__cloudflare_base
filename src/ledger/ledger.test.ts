@@ -41,7 +41,13 @@ const fixtureBirth = Date.now() - 1000;
 const ledgerFixturePolicy = { TENANTS: JSON.stringify({ provisioned: ['coach', 'meridian', 'harbor'] }), RETENTION: JSON.stringify({ version: 1,
   tenants: Object.fromEntries(['coach', 'meridian', 'harbor'].map(tenant => [tenant, Object.fromEntries(['ledger', 'online', 'hourly'].map(category => [category,
     { id: 'synthetic-' + category, revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' }]))])) }) } as RetentionEnv;
-const stamped = (tenant: string, at: number) => captureRetention(ledgerFixturePolicy, tenant, at, fixtureBirth);
+// Date-bomb correction (lead ruling 2026-10-01; arrangement only): a fixture
+// record is admitted at `fixtureBirth`, one second before the host clock at load,
+// or one second before the test's clock when a test pins that clock earlier. The
+// W09.09 tests pin `Date.now` to T0 (2026-11-27 14:05 UTC); from that moment on a
+// host-clock birth would come after their clock, and retention refuses a record
+// born in the future. Before T0 this is exactly `fixtureBirth`, as it was.
+const stamped = (tenant: string, at: number) => captureRetention(ledgerFixturePolicy, tenant, at, Math.min(fixtureBirth, Date.now() - 1000));
 const decideContent = (...args: Parameters<typeof decideActual>) => { const result = decideActual(...args); result.records = result.records.map(row => ({ ...row, retention: stamped(row.tenant, row.ts) })); return result; };
 const outcomeFromAction = (...args: Parameters<typeof outcomeActual>) => { const row = outcomeActual(...args); return row ? { ...row, retention: stamped(row.tenant, row.ts) } : null; };
 
