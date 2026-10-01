@@ -741,6 +741,22 @@ no other part of the difference is explained by it. A row without `conflicts` na
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
 
+## The interest hydrate's restoration provenance
+
+`GET /realtime/reflex` answers `affinity: { dims, audiences, odpConfirmed[], restoration? }` on both
+hosts. `restoration` is present once a signed-in shopper's session has attempted the restoration
+from your ODP profile described in the API reference (Identity, "Interest restoration from ODP"):
+
+| Member | Meaning |
+|---|---|
+| `source` | Always `"odp"` |
+| `status` | `restored`: her mapped interests were restored. `cold`: nothing was restored |
+| `observedAt` | With `restored`: ODP's `last_modified_at` for the profile, in epoch milliseconds. The restored interests decay from this instant |
+| `reason` | With `cold`: `cold` (no interest recorded), `missing` (no profile), `malformed` (a mapped value or the observation time is unusable), `unavailable` (a read failed), `erased` (observed at or before her erasure) or `expired` (older than your profile retention) |
+
+The provider's own attribute values are never echoed. Labels (`{ dimension }`, `{ journey: true }`
+and ODP audiences) never appear in `dims` because of a restoration.
+
 ## Socket frames
 
 | Frame | Body |

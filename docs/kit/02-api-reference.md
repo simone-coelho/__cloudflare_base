@@ -515,6 +515,37 @@ Both hosts answer a sign-in and everything after it the same way:
   own session gets its profile back on its next request: it browses as before, nothing of it was
   merged into the person, and signing in again starts a fresh link that carries her whole profile.
 
+### Interest restoration from ODP
+
+When your connector registry configures `odp` for your tenant, ODP is also the memory the edge
+re-seeds from. A signed-in (recognized) shopper whose interest state is empty is restored from her
+ODP profile at the first event of her session, before that event is applied, identically on both
+hosts. Nothing is read at sign-in or on a read.
+
+- **What is read.** Her profile, by the vuid your `identityNamespace` gives her shopper id, from your
+  `apiHost` with your key: `customer(vuid) { vuid last_modified_at <attributes> }`. Only your own
+  configuration is used; the platform's stamp-global demo ODP settings never restore anyone.
+- **What is restored.** Each `odp.profile` attribute mapped as `{ dimension, value }` on a dimension
+  your reflex registry defines, with a value your published catalogue admits, is a recorded affinity
+  `a` (a number in `[0, 1)`, the value `upsertOdpProfile` writes). It is restored as the interest that
+  affinity was at ODP's `last_modified_at` (epoch seconds), so it decays from that observation by your
+  published `tauMs`, never from the moment it was restored. A `{ dimension }` label, a
+  `{ journey: true }` label and ODP audiences are never restored as interests.
+- **When it is not.** Only under her current personalization choice. Never an observation at or
+  before her erasure, and never one older than your `profile` retention policy. At most one attempt
+  per session.
+- **What she is told.** `GET /realtime/reflex` answers the outcome as `affinity.restoration`:
+  `{ source: "odp", status: "restored", observedAt }` (epoch milliseconds), or
+  `{ source: "odp", status: "cold", reason }` where `reason` is `cold` (her profile records no
+  interest), `missing` (ODP has no profile for her), `malformed` (a mapped value or the observation
+  time is not usable), `unavailable` (ODP, the erasure barrier, the catalogue or your retention policy could not be read),
+  `erased` (the profile was observed at or before her erasure) or `expired` (older than your profile
+  retention). It is absent when no restoration applies to her.
+- **A failed read never blocks.** The read is capped at 1500 ms like the audience read. An error
+  status, a network failure, a timeout or an unreadable answer leaves her cold with
+  `reason: "unavailable"`, and the event and every decision are served exactly as they would be for a
+  shopper ODP knows nothing about.
+
 ### Experiment enrollment across a link
 
 A shopper who has consented to personalization is enrolled once, against a persistent enrollment
