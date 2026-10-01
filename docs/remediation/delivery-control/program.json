@@ -4386,15 +4386,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "611afc6c470e6e6e9763a0d96d6ca7dcaeeb26b3 on rem/spec-w40-w41 (fix 1, one commit on 5e57c08): src/units/W41 (LEDGER and FIX1)",
+        "reviewedRevision": "150c20695d1ff82104bfa6952939a18f6dce9424 on rem/spec-w40-w41 (fix 2, one commit on 611afc6): src/units/W41 (LEDGER, FIX1 and FIX2)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/reviewer-spec/logs/red-e8a8f4d.log",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/specifier/logs/acceptance-150c206.log",
           "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/red-90e458b.log",
           "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/acceptance-611afc6.log",
           "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/W41-negative-control.log",
