@@ -8,10 +8,14 @@
 //   §8  the publish: the demo bootstrap once, then one versioned write per document against exactly
 //       what was read (revision and publication digest in If-Match)
 //
-// A demo's beat documents are DATA. A seed run reads them, slides every window by (now − the recorded
-// anchor), writes them back (the worker applies beats from its own ASSETS copy, so a reseed is followed
-// by a deploy on a hosted worker) and publishes the opening documents. Nothing here knows Vantage.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+// A demo's beat documents are DATA, the edited source of its story (the design's ruling, K3 part b). A seed
+// run reads them, slides every window by (now − the recorded anchor), writes them back (the worker applies
+// beats from its own ASSETS copy, so a reseed is followed by a deploy on a hosted worker) and publishes the
+// opening documents. Because nothing generates them any more, the local checks also hold the copies a
+// generator once kept equal by construction: the anchor file's registry, learn summary, reset and closed
+// list against what the seed publishes, and each piece's art against the files the worker serves.
+// Nothing here knows Vantage.
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const MINUTE = 60_000, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
@@ -219,6 +223,71 @@ export function seedRuleProblems({ slotsDocument, pieces }) {
   return { errors, warnings };
 }
 
+/**
+ * The anchor file carries the page's own copies of what the seed publishes: the registry its arithmetic
+ * reads (`registry`, with the room-memory labels it shows), the learn summary (`learn`), the reset and the
+ * closed list by role (`reset`, `beats`). A generator used to write them from the same definitions; as
+ * data they must be checked, because a copy that disagrees puts a figure on stage the engine does not use,
+ * or a press the route refuses. Only the copies the anchor file carries are compared. Returns errors.
+ */
+export function anchorCopyProblems({ anchorDoc, anchorFile = 'the anchor file', documents = {}, seed }) {
+  const errors = [];
+  const differs = (a, b) => deepDiff(a, b).length > 0;
+  const reg = anchorDoc?.registry, reflex = documents.reflex;
+  if (isObject(reg) && isObject(reflex)) {
+    for (const [k, v] of Object.entries(reg)) {
+      if (k === 'vocabulary') { if (differs(v, seed.vocabulary)) errors.push(`${anchorFile}: registry.vocabulary differs from the config's seed.vocabulary`); continue; }
+      if (k === 'memory') {
+        const dims = new Map((reflex.dimensions ?? []).map((d) => [d.key, d.tauMs ?? reflex.tauMs]));
+        for (const m of v?.dimensions ?? []) {
+          if (!dims.has(m?.key)) errors.push(`${anchorFile}: registry.memory names ${m?.key}, not a dimension of the registry the seed publishes`);
+          else if (m.tauMs !== dims.get(m.key)) errors.push(`${anchorFile}: registry.memory says ${m.key} remembers for ${m.tauMs} ms; the registry the seed publishes says ${dims.get(m.key)} ms`);
+        }
+        continue;
+      }
+      if (Object.hasOwn(reflex, k) && differs(v, reflex[k])) errors.push(`${anchorFile}: registry.${k} differs from the registry the seed publishes`);
+    }
+  }
+  const learn = anchorDoc?.learn, learnDoc = documents.learn;
+  if (isObject(learn) && isObject(learnDoc)) {
+    for (const [k, v] of Object.entries(learn)) {
+      if (k === 'gamma') {
+        const off = Object.entries(learnDoc.slots ?? {}).filter(([, s]) => s?.gamma !== v).map(([slot]) => slot);
+        if (off.length) errors.push(`${anchorFile}: learn.gamma says ${v}; the learn document the seed publishes gives ${off.join(', ')} another γ`);
+        continue;
+      }
+      if (Object.hasOwn(learnDoc, k) && differs(v, learnDoc[k])) errors.push(`${anchorFile}: learn.${k} differs from the learn document the seed publishes`);
+    }
+  }
+  if (Array.isArray(anchorDoc?.reset) && anchorDoc.reset.join() !== (seed.beats.reset ?? []).join()) {
+    errors.push(`${anchorFile}: reset is ${anchorDoc.reset.join(', ')}; the config's seed.beats.reset is ${(seed.beats.reset ?? []).join(', ')}`);
+  }
+  if (isObject(anchorDoc?.beats)) {
+    const named = Object.values(anchorDoc.beats).flatMap((byKind) => (isObject(byKind) ? Object.entries(byKind) : []));
+    for (const [kind, name] of named) {
+      const listed = seed.beats.publishable[name];
+      if (listed !== kind) errors.push(`${anchorFile}: beats names ${name} as a ${kind} publish; the closed list ${listed ? `says ${listed}` : 'does not name it'}`);
+    }
+    const reached = new Set(named.map(([, name]) => name));
+    for (const name of Object.keys(seed.beats.publishable)) if (!reached.has(name)) errors.push(`${anchorFile}: beats gives the page no role for ${name}, which the closed list publishes`);
+  }
+  return errors;
+}
+
+/**
+ * Each piece's art is a file the worker serves (public/ is served at the site root), so a card paints its
+ * image or, with no renderUrl, the placeholder; never a broken tag. `served(url)` says whether a site path
+ * names a served file. Returns warnings.
+ */
+export function renderUrlProblems(pieces, served) {
+  const out = [];
+  for (const p of pieces) {
+    if (typeof p.renderUrl !== 'string' || !p.renderUrl.startsWith('/')) continue;
+    if (!served(p.renderUrl)) out.push(`${p.customerContentId ?? p.id}: renderUrl ${p.renderUrl} is not a file under public/, so its card would paint a broken image`);
+  }
+  return out;
+}
+
 // ── Reading, preparing and writing ─────────────────────────────────────────
 
 export const jsonText = (value) => `${JSON.stringify(value, null, 1)}\n`;
@@ -277,9 +346,19 @@ export function prepareSeed({ config, path, nowMs }) {
       if (!e) warnings.push(`${seed.beats.anchor.file}: beatIndex names ${b?.name}, which is not a beat document`);
       else if (e.beat !== b.beat || e.kind !== b.kind) warnings.push(`${seed.beats.anchor.file}: beatIndex says ${b.name} is beat ${b.beat} (${b.kind}); the document says ${e.beat} (${e.kind})`);
     }
+    const indexed = new Set(anchorDoc.beatIndex.map((b) => b?.name));
+    for (const [name, e] of Object.entries(envelopes)) if (e.beat > 0 && !indexed.has(name)) warnings.push(`${seed.beats.anchor.file}: beatIndex leaves out ${name}, beat ${e.beat}`);
   }
+  errors.push(...anchorCopyProblems({ anchorDoc, anchorFile: seed.beats.anchor.file, documents, seed }));
 
   const pieces = catalogPieces(envelopes);
+  const served = (url) => {
+    let rel;
+    try { rel = `public${decodeURIComponent(url.split(/[?#]/)[0])}`; } catch { return false; }
+    const abs = path(rel);
+    return Boolean(abs) && existsSync(abs) && statSync(abs).isFile();
+  };
+  warnings.push(...renderUrlProblems(pieces, served));
   if (documents.reflex && documents.learn) {
     errors.push(...vocabularyProblems({
       pieces, vocabulary: seed.vocabulary,

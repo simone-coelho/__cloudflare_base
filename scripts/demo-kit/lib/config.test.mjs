@@ -1,11 +1,11 @@
 // node --test scripts/demo-kit/lib/config.test.mjs
-// The demo config's validation: the Vantage config passes every section; each rule refuses the mutation
-// it exists for, naming the field; and the Vantage config agrees with what scripts/seed-vantage.mjs last
-// wrote (its registry, learn summary, closed list and reset), so a drift between the two is caught here
-// until part b makes the kit the only source.
+// The demo config's validation: the Vantage config passes every section, and each rule refuses the mutation
+// it exists for, naming the field. (Part a's guard that compared the config with what scripts/seed-vantage.mjs
+// last wrote retired with the generator in part b; the anchor file's copies of the registry, the learn
+// summary, the reset and the closed list are now checked on every seed, lib/seed.mjs anchorCopyProblems.)
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -125,20 +125,4 @@ test('the command lines read --config or the first plain argument, and never tak
   assert.equal(configArg(['--dry-run']), null);
   assert.equal(argOf(['--base', '--token'], '--base', 'fallback'), 'fallback');
   assert.equal(argOf(['--out', 'dir'], '--out'), 'dir');
-});
-
-test('the Vantage config agrees with what scripts/seed-vantage.mjs last wrote', () => {
-  const anchor = JSON.parse(readFileSync(join(REPO_ROOT, config.seed.beats.dir, config.seed.beats.anchor.file), 'utf8'));
-  const reflex = JSON.parse(readFileSync(join(REPO_ROOT, config.seed.documents.reflex.file), 'utf8'));
-  const learn = JSON.parse(readFileSync(join(REPO_ROOT, config.seed.documents.learn.file), 'utf8'));
-  assert.deepEqual(config.seed.vocabulary, anchor.registry.vocabulary, 'the vocabulary');
-  for (const k of ['version', 'dimensions', 'weights', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'journey']) assert.deepEqual(reflex[k], anchor.registry[k], `registry ${k}`);
-  assert.deepEqual(learn.holdout, anchor.learn.holdout, 'learn holdout');
-  assert.deepEqual(learn.regional, anchor.learn.regional, 'learn regional');
-  assert.deepEqual(Object.keys(learn.slots), Object.keys(anchor.slotWeights), 'the slots the learn document names');
-  assert.ok(Object.values(learn.slots).every((s) => s.gamma === anchor.learn.gamma), 'γ');
-  assert.deepEqual(config.seed.beats.reset, anchor.reset, 'the reset');
-  const closed = Object.values(anchor.beats).flatMap((b) => Object.entries(b).map(([kind, name]) => [name, kind]));
-  assert.deepEqual(Object.fromEntries(closed), config.seed.beats.publishable, 'the closed list');
-  assert.deepEqual(anchor.beatIndex.map((b) => b.name).sort(), config.seed.beats.files.filter((n) => !n.startsWith('open-')).sort(), 'every numbered beat');
 });

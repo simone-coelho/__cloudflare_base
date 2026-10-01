@@ -1,5 +1,5 @@
 {
-  "about": "Vantage device imagery for the demo kit: the URL list scripts/fetch-vantage-devices.mjs fetches (its DEVICES, as exported on 2026-10-01), the makers’ licence notes and the two view sentences as public/vantage/img/MANIFEST.json records them. Rendered at the defaults in scripts/demo-kit/lib/imagery.mjs (800 square, 86 % fill), which are Vantage’s own.",
+  "about": "Vantage device imagery for the demo kit, and since part b (2026-10-01) the source: scripts/fetch-vantage-devices.mjs is a thin wrapper over scripts/demo-kit/fetch-imagery.mjs with this section. The URL list, the makers’ licence notes and the two view sentences were transcribed from that script (its DEVICES and LICENCE, commit c720907) and match public/vantage/img/MANIFEST.json; `gate` is its GATE, the human defect-check verdict per device, each bound to the sha256 of the exact file reviewed (a changed byte reads pending until someone looks again). Rendered at 800 square, 86 % fill, the kit’s defaults, which are Vantage’s own.",
   "dir": "public/vantage/img",
   "manifest": "public/vantage/img/MANIFEST.json",
   "section": "devices",
@@ -284,5 +284,109 @@
         }
       ]
     }
-  ]
+  ],
+  "gate": {
+    "iphone-18-pro-max": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "866decdd9c4bc6392bca6f0f1678a0ac22e07d84abb62274e0ad68fdf266ec0a",
+      "note": "Apple's own back-and-front pair; edges intact; only the Apple mark on the back; wallpaper on screen, no status bar, no carrier name."
+    },
+    "iphone-18-pro": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "4710ecc5ff8efed8760e1cf7dde7b2a8cbbfbbbd62c8417357f8f8d513e8a35e",
+      "note": "Apple's own back-and-front pair in the launch colour; edges intact; Apple mark only; clean at 1:1."
+    },
+    "iphone-duo": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "af9dff3cfeb7c1c00cb965ddf3ff703a686da3c3e7e940b8fda1a7cbd14c8007",
+      "note": "Back and the open inner display. Wider than tall, so it fills by width and sits lower than the bar phones: correct, not a framing fault."
+    },
+    "iphone-air": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "8ce5713f3bc3bd9363e1e41503ce48542127e5aa9a20bd06044e1a610ca8d610",
+      "note": "Apple's own back-and-front pair in Sky Blue; edges intact; Apple mark only."
+    },
+    "iphone-17": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "9802af1c7a0a3c4e89d1296392e153738185938659ea8ed8ba432dc0247edd78",
+      "note": "US (eSIM-only) render; clean."
+    },
+    "galaxy-s26-ultra": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "255347990688db7d8e7c3621422230f208ebae6218022d61f9c6d73ddd0105d0",
+      "note": "Samsung's default pair with the S Pen, as Samsung shoots it; SAMSUNG wordmark on the back is the maker's own; unlocked SKU image."
+    },
+    "galaxy-s26-plus": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "42e4cd9aca7d9df95f562b443fa5d486db085565d3723485c688509dca10f6cf",
+      "note": "Clean pair, unlocked SKU."
+    },
+    "galaxy-s26": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "af985f4c056275188bb71d057fdd39a3aeb140f6e870164209df1a00e54c03d4",
+      "note": "White back carries its own grey outline, so it holds on a white card."
+    },
+    "galaxy-z-fold8": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "1d9fd43701258caf88b64dc12aabed36dcb7b174235741eeae275a64915122ac",
+      "note": "Cover side and open inner screen; wide, fills by width."
+    },
+    "galaxy-z-flip8": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "9e6e110c966a20f2a81178114115b487c487e163a032bb3f21f473231ae339db",
+      "note": "Folded cover screen and open phone; clean."
+    },
+    "pixel-11-pro-xl": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "b337c120020d806ac0b1c66a8b80b80d594de202496b080f27d1369a3404ef4b",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only."
+    },
+    "pixel-11-pro": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "6ee1fcf9e3450a2606f78351d7de6ddb798ec1a364f4844a4465d925050b0d21",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+    },
+    "pixel-11": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "8b29bd79d29d1e4e27589821428436ef04f85ea5a63b60635f849c8ee05612fb",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+    },
+    "pixel-10a": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "eb493f8a0981429bfb36eff5912d30060e39a1b6f36afb59d008164b4db49227",
+      "note": "Front keyed from the store's black JPEG ground. A faint grey fringe of one to two pixels is visible at the front's corners only at 3x zoom; clean at 1:1 on white. Recorded, not hidden."
+    },
+    "razr-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "64c27422d763eac552a633054ad4df00b082038dfe2f3b34f5107a1f50345fe8",
+      "note": "Press hero, open and folded; the floor shadow ran off the source frame and showed as a grey box, so it is dropped. Lock screens show the time and date of the maker's render, no carrier; razr and batwing marks are the maker's own."
+    },
+    "edge-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "edda551883ba62622abf8db4d0340c090c37805228b7808b54790b744353b431",
+      "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+    },
+    "moto-g-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "b20436309916a732b97f79d03b20ab1c7e250ee421d9d233c8afea0fad896f3d",
+      "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+    }
+  }
 }

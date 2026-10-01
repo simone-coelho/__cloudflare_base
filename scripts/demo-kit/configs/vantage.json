@@ -1,5 +1,5 @@
 {
-  "about": "The demo kit's config for Vantage, the Verizon carrier demo: the first instance of demo.config.json (docs/demo-kit/Demo-Kit-Design.md §2.4), not the whole of it. It points at Vantage's existing files: the beat documents scripts/seed-vantage.mjs writes under public/vantage/beats/ (re-anchored to now on every seed), the shared census rows, the image manifest. The two documents no existing file holds whole, the registry and the learn document, are the exact objects scripts/seed-vantage.mjs publishes, in configs/vantage/. Paths are relative to the repository root. A config never carries a credential: the seed's token comes from --token or from local minting.",
+  "about": "The demo kit's config for Vantage, the Verizon carrier demo: the first instance of demo.config.json (docs/demo-kit/Demo-Kit-Design.md §2.4), not the whole of it. Since part b (2026-10-01) it and the files it names are Vantage's source, and scripts/seed-vantage.mjs, seed-vantage-region.mjs and fetch-vantage-devices.mjs are thin wrappers over the kit's command lines with this file. The beat documents under public/vantage/beats/ are the edited data (the design's ruling): every seed re-anchors their windows to now, checks them, writes them back for the worker's ASSETS binding and publishes the opening ones. The registry and the learn document are configs/vantage/reflex.json and learn.json, published as they are; the regional seed and the device imagery are configs/vantage/region.json and imagery.json. Paths are relative to the repository root. A config never carries a credential: the seed's token comes from --token or from local minting.",
   "name": "Vantage",
   "slug": "vantage",
   "tenant": "vantage",
@@ -8,10 +8,10 @@
   "seed": {
     "operator": "seed-vantage",
     "documents": {
-      "reflex": { "file": "scripts/demo-kit/configs/vantage/reflex.json", "about": "seed-vantage.mjs §1: eight dimensions, memory compressed for the room" },
+      "reflex": { "file": "scripts/demo-kit/configs/vantage/reflex.json", "about": "the registry, published as it is: eight dimensions on the shipped K 1.8 and θ 0.60 / 0.45, memory compressed for the room (brand and contentType τ 60 s; priceBand, intent and perk 10 min; the rest the shipped 14 days), the engine's compiled action weights plus the carrier actions it does not name (page_view, search, select, filter, compare, start_order), the journey thresholds. The anchor file's registry is the page's copy of it, and the seed refuses the two disagreeing" },
       "catalog": { "beat": "open-catalog" },
       "slots": { "beat": "open-slots" },
-      "learn": { "file": "scripts/demo-kit/configs/vantage/learn.json", "about": "seed-vantage.mjs §4: holdout 0, γ 0, exploration off, the regional prior on four dimensions" }
+      "learn": { "file": "scripts/demo-kit/configs/vantage/learn.json", "about": "what the slots learn, published as it is: holdout 0 on stage, γ 0 and exploration off on every slot, the regional prior on with kBlend 0.5 on the four dimensions the seeded sales speak for (lane F3), the shipped policy and the 21-day learning horizon. The anchor file's learn summary is the page's copy of it" }
     },
     "notes": {
       "reflex": "Vantage registry, eight dimensions: memory compressed for this room; production runs days",

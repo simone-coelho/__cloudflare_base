@@ -1,5 +1,8 @@
 # Vantage carrier demo: resume state
 
+> **Status 2026-10-01 evening.** Commit `c720907` carries the Compare fix (Simone's finding: Compare did nothing without a prior Capture) on the demo kit's shared widget (`public/demo-kit/compare.*`), the server route factories (`src/demos/kit/`) and the kit's script libraries (`scripts/demo-kit/`); both suites green locally, DOM 279 of 279 and request level 113 of 113. **Not yet deployed:** the hosted worker still runs the previous version. Deploy from WSL with the documented command below; note that `public/vantage/how-it-works.*` and `docs/verizon/explainer/` are another session's uncommitted work and `public/` ships wholesale, so deploy from a clean worktree of `c720907` if they must not go out yet. After the deploy run both suites with `--base https://edge-platform-vantage.expedge.workers.dev`. The kit's design and lanes: `docs/demo-kit/Demo-Kit-Design.md`.
+
+
 **Written 2026-09-30, late evening, by lane L5. Assume the reader has none of the prior context.**
 
 Branch `feature/real-time-personalization`. Committed at `3851f35`, not pushed. **The hosted worker is live** since 2026-10-01, on Simone's go (lane D1, below).
@@ -159,6 +162,9 @@ node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedg
 5. **The session host's ledger consumer stalled twice on 9110, at 22:11 and about 23:16 on 2026-09-30.** Both followed a beat-15c report build, among bursts of finding 3's errors (L5 finding 4). It is a hypothesis, not a cause, that the restarts those errors trigger leave an owner forward unsettled. Receipt reads also answered 503 now and then (F1 finding 4).
 6. **A busy hour can fail to fold on every run**, logged as "hourly fold hours failed and skipped 1" with the cause unlogged. The day report then lists that hour as missing and sums the rest. It happened to 9110's 21:00–22:00 EDT hour on 2026-09-30 (L5). On a hosted rehearsal day, read beat 15's report once the rehearsal hours have folded.
 7. **Hosted, observed once: a receipt waited 35 seconds after a report build** (lane D1, 2026-10-01 at 03:44 UTC). A snapshot taken 4 s after a report build answered 202 for 35 s, with 0 of 5 records written. The records were written late, not lost: the next report build counted that visitor. Three rechecks wrote receipts in 4.3 to 4.8 s, one of them straight after a build, and `wrangler tail` showed every queue batch consumed 2 to 3 s after its snapshot, with no exception or retry. The miss came before the tail ran, so its cause was not caught (compare findings 3 and 5).
+
+8. **A pin whose piece is ineligible empties the whole slot** (`src/reflex/contentCompose.ts:187-199, :229`; found by the explainer facts sheet, 2026-10-01). The Duo pre-order pin (beat 13) is gated to device-purchase intents, so a shopper whose toggle says "bring your own" would see an empty deals module under it. The walk never does this because Act 4 starts with the answer back on "new line". **Presenters: never press beat 13 while the toggle is on bring-your-own.** Engine fix belongs with the pin and contradiction work (W20).
+9. **The regional prior is fed by every visitor's events in its state**, including rehearsals. The learn document limits what it blends to brand, ecosystem, price band and category (F3), so a walkthrough no longer changes which offer leads for the next stranger, but the four blended dimensions still move slightly (about 0.01 per run). `node scripts/seed-vantage-region.mjs --regions here` restores the clean seed for the presenter's own state in about half a minute.
 
 ## The phone page URL
 

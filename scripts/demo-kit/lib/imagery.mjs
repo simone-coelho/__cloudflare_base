@@ -9,13 +9,18 @@
 // changes one byte puts the image back to "pending" until someone looks again. Nothing here is on the
 // serving path, and a missing image renders the demo's placeholder, never a broken tag.
 //
+// Since part b, scripts/fetch-vantage-devices.mjs is a thin wrapper over fetch-imagery.mjs (its lineup,
+// licences and reviewed verdicts are configs/vantage/imagery.json), and scripts/generate-vantage-art.mjs,
+// which stays vertical-specific, takes its shared pieces from here: sharp on first use, sha256, the
+// manifest's read and write with its totals, and the verdict bound to a sha256 (`reviewFor`).
+//
 // sharp is loaded on first use, not at import: on a Windows checkout whose node_modules carries the Linux
 // sharp binary, everything but the pixel work (the manifest, the gate, the totals) still runs; the pixel
 // work runs under WSL there, as the Vantage scripts' headers say.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 let sharpModule = null;
 export function loadSharp() {
@@ -233,12 +238,18 @@ export const failedRow = (d, placeholderFile, reason) => ({ id: d.id, name: d.na
 export const PENDING = Object.freeze({ verdict: 'pending', note: 'not yet checked by eye at 1:1 for this exact file' });
 
 /**
+ * A person's review, `{ verdict, checked, sha, note, … }`, when it was given to exactly this file (its sha
+ * is the file's sha256); null otherwise, so one changed byte means nobody has looked at the file yet.
+ */
+export const reviewFor = (review, sha) => (review && typeof review.sha === 'string' && review.sha === sha ? review : null);
+
+/**
  * The human defect-check verdict for a row, bound to the exact output file. A review entry from the config
- * (`{ verdict, checked, sha, note }`, the shape of fetch-vantage-devices.mjs's GATE) decides when there is
- * one; otherwise the previous manifest row's verdict carries over only if it was given to this sha256.
+ * (`{ verdict, checked, sha, note }`, imagery.gate) decides when there is one; otherwise the previous
+ * manifest row's verdict carries over only if it was given to this sha256.
  */
 export function gateOf(row, { review = null, previous = null } = {}) {
-  if (review) return review.sha === row.sha256 ? { verdict: review.verdict, checked: review.checked, note: review.note } : { ...PENDING };
+  if (review) { const r = reviewFor(review, row.sha256); return r ? { verdict: r.verdict, checked: r.checked, note: r.note } : { ...PENDING }; }
   const g = previous?.gate;
   if (g && previous.sha256 === row.sha256 && g.verdict && !['pending', 'missing'].includes(g.verdict)) return { ...g };
   return { ...PENDING };
@@ -262,6 +273,17 @@ export function totals(dir, budgetMegabytes, manifestName = 'MANIFEST.json') {
 
 export function readManifest(file) {
   try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return {}; }
+}
+
+/**
+ * Write a manifest with its totals over `dir` (the manifest itself excluded), as both Vantage image scripts
+ * write it: two-space JSON and a final newline. `totals` is set in place, so an existing key keeps its place.
+ */
+export function writeManifest(file, manifest, { dir, budgetMegabytes }) {
+  manifest.totals = totals(dir, budgetMegabytes, basename(file));
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+  return manifest.totals;
 }
 
 /** What is wrong with a row's shape, against the shape the Vantage manifest carries; empty when sound. */
@@ -345,9 +367,7 @@ export async function fetchImagery({ imagery, outDir, manifestPath, cacheDir, on
   manifest.about = imagery.manifestAbout;
   manifest[imagery.section] = rows;
   manifest.placeholders = { ...(manifest.placeholders || {}), [imagery.placeholder.key]: imagery.placeholder.file };
-  manifest.totals = totals(outDir, imagery.budgetMegabytes, basename(manifestPath));
-  mkdirSync(join(manifestPath, '..'), { recursive: true });
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  writeManifest(manifestPath, manifest, { dir: outDir, budgetMegabytes: imagery.budgetMegabytes });
   log(`${imagery.section}: ${made} written, ${kept} kept, ${failed} failed; image payload ${manifest.totals.megabytes} MB of ${imagery.budgetMegabytes}`);
   return { manifest, rows, made, kept, failed };
 }

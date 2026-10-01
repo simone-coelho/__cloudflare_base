@@ -1,16 +1,14 @@
 // node --test scripts/demo-kit/lib/region.test.mjs
 // The regional seed library: the census, the rehearsed regions verbatim, the per-state unit counts of the
-// income-tilt model, the route's own limits, the read-back loop, and the model's equality with
-// scripts/seed-vantage-region.mjs (its own dry run, read-only, no network).
+// income-tilt model, the route's own limits and the read-back loop. (Part a's line-for-line guard against
+// scripts/seed-vantage-region.mjs's own dry run retired in part b: that script is now a wrapper over this
+// library, and vantage-wrappers.test.mjs runs its documented flags.)
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { loadValidConfig, REPO_ROOT } from './config.mjs';
+import { loadValidConfig } from './config.mjs';
 import {
-  buildRegions, extraRegions, modelLine, panelLine, panelProblems, parseCensus, regionLine, rowsLine, rowsProblems, runRegionSeed,
-  seedRegion, sharesOf, unitsByDimension, unitsOf,
+  buildRegions, extraRegions, panelLine, panelProblems, parseCensus, rowsProblems, runRegionSeed, seedRegion, sharesOf, unitsByDimension, unitsOf,
 } from './region.mjs';
 
 const configFile = fileURLToPath(new URL('../configs/vantage.json', import.meta.url));
@@ -90,21 +88,6 @@ test('rowsProblems refuses what the seed route refuses', () => {
   assert.match(rowsProblems([{ touches: { brand: 'apple' }, units: 400 }, { touches: { brand: 'google' }, units: 401 }], v, l).join(), /at most 800 units/);
   assert.match(rowsProblems(Array.from({ length: 65 }, () => ({ touches: { brand: 'apple' }, units: 1 })), v, l).join(), /rows: 1\.\.64/);
   assert.match(rowsProblems([], v, l).join(), /rows: 1\.\.64/);
-});
-
-const REFERENCE = `${REPO_ROOT}/scripts/seed-vantage-region.mjs`;
-test('the kit\'s model is the reference\'s: the same rows, units per state per dimension, line for line', { skip: !existsSync(REFERENCE) && 'the reference script is gone' }, () => {
-  const reference = execFileSync(process.execPath, [REFERENCE, '--dry-run', '--rows'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  const kit = [modelLine(region, built), ...Object.keys(all).flatMap((k) => [regionLine(region, k, all[k]), rowsLine(all[k])])].join('\n');
-  assert.equal(kit.trim(), reference.trim(), 'the dry runs print the same lines');
-  // And structurally, from the reference's own rows lines: units per state per dimension.
-  const rowsLines = reference.split('\n').filter((l) => l.startsWith('       ['));
-  const keys = reference.split('\n').filter((l) => /^US-[A-Z]{2} /.test(l)).map((l) => l.slice(0, 5));
-  assert.equal(rowsLines.length, 51);
-  keys.forEach((key, i) => {
-    const refRows = JSON.parse(rowsLines[i].trim());
-    assert.deepEqual(all[key].rows.map((r) => [Object.values(r.touches).join('/'), r.units]), refRows, key);
-  });
 });
 
 /** A stand-in for the seed route and the panel. `wrongReads` regions read wrong that many times first. */

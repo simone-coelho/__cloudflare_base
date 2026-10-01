@@ -1,9 +1,11 @@
 // node --test scripts/demo-kit/lib/imagery.test.mjs
 // The imagery library: the manifest rows it writes have exactly the shape public/vantage/img/MANIFEST.json
 // carries (rebuilt from the committed rows' own numbers), verdicts hold only for the sha256 they were
-// given to, the totals, the cache naming, the download's retries, and — where sharp loads (WSL on this
-// checkout) — the pixel work itself on a synthetic image. Nothing here reads the network or writes outside
-// a temporary directory.
+// given to (the config's own review or the previous row's), the manifest write with its totals, the cache
+// naming, the download's retries, and — where sharp loads (WSL on this checkout) — the pixel work itself on
+// a synthetic image. Nothing here reads the network or writes outside a temporary directory. (Part a's guard
+// comparing the config's URL list with the committed manifest retired in part b, when the config became the
+// source and scripts/fetch-vantage-devices.mjs a wrapper over it.)
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -13,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { loadValidConfig } from './config.mjs';
 import {
   RENDER_DEFAULTS, cacheFileOf, cutout, download, failedRow, fetchImagery, gateOf, loadSharp, manifestRow, manifestRowProblems, place, renderOf,
-  sha256, sourceRecord, totals,
+  reviewFor, sha256, sourceRecord, totals, writeManifest,
 } from './imagery.mjs';
 
 const configFile = fileURLToPath(new URL('../configs/vantage.json', import.meta.url));
@@ -73,6 +75,34 @@ test('a verdict holds only for the sha256 it was given to', () => {
   for (const d of committed.devices) assert.equal(gateOf(d, { previous: d }).verdict, 'accept', `${d.id}: the committed verdict carries over for the committed file`);
 });
 
+test('a review binds to one file: reviewFor answers only for the exact sha256, and the config\'s reviews reproduce the committed verdicts', () => {
+  const review = { verdict: 'accept', checked: '2026-09-30', sha: 'e'.repeat(64), note: 'clean', rejected: ['b: a hand'] };
+  assert.equal(reviewFor(review, 'e'.repeat(64)), review, 'the whole review, extra fields included (the art generator keeps rejected)');
+  assert.equal(reviewFor(review, 'f'.repeat(64)), null);
+  assert.equal(reviewFor(null, 'e'.repeat(64)), null);
+  assert.equal(reviewFor({ verdict: 'accept' }, undefined), null, 'a review without a sha binds to nothing');
+  assert.deepEqual(Object.keys(imagery.gate), imagery.sources.map((s) => s.id), 'one review per device, in lineup order');
+  for (const [id, g] of Object.entries(imagery.gate)) assert.deepEqual(Object.keys(g), ['verdict', 'checked', 'sha', 'note'], id);
+  for (const d of committed.devices) {
+    assert.deepEqual(gateOf(d, { review: imagery.gate[d.id] }), d.gate, `${d.id}: the config's review gives the committed file its committed verdict`);
+    assert.equal(gateOf({ ...d, sha256: '0'.repeat(64) }, { review: imagery.gate[d.id] }).verdict, 'pending', `${d.id}: and any other file reads pending`);
+  }
+});
+
+test('writeManifest sets the totals in place over the directory and writes two-space JSON with a final newline', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'demo-kit-manifest-'));
+  mkdirSync(join(dir, 'tiles'));
+  writeFileSync(join(dir, 'tiles', 'a.png'), Buffer.alloc(2048));
+  const file = join(dir, 'MANIFEST.json');
+  const manifest = { about: 'x', totals: { stale: true }, promos: [] };
+  const t = writeManifest(file, manifest, { dir, budgetMegabytes: 25 });
+  assert.deepEqual(t, { files: 1, bytes: 2048, megabytes: 0, budgetMegabytes: 25 });
+  assert.deepEqual(Object.keys(manifest), ['about', 'totals', 'promos'], 'an existing totals key keeps its place');
+  assert.equal(readFileSync(file, 'utf8'), `${JSON.stringify(manifest, null, 2)}\n`);
+  const fresh = writeManifest(join(dir, 'nested', 'MANIFEST.json'), { about: 'y' }, { dir: join(dir, 'tiles'), budgetMegabytes: 10 });
+  assert.equal(fresh.files, 1, 'the directory is created, and only the image payload counts');
+});
+
 test('the totals exclude the manifest; the render settings merge over Vantage\'s; the cache is named as the Vantage script names it', () => {
   const dir = mkdtempSync(join(tmpdir(), 'demo-kit-imagery-'));
   mkdirSync(join(dir, 'devices'));
@@ -96,19 +126,6 @@ test('the download retries a 5xx, stops on a 404 and refuses what is not an imag
   assert.deepEqual([(await download('u', { fetchImpl: gone.fetchImpl, sleep: async () => {} })).error, gone.seen.length], ['HTTP 404', 1]);
   const page = answers([res(200, 'text/html')]);
   assert.match((await download('u', { fetchImpl: page.fetchImpl, sleep: async () => {} })).error, /not an image \(text\/html\)/);
-});
-
-test('the Vantage imagery config lists every committed device with the same source URLs, page, maker and licence', () => {
-  assert.equal(imagery.sources.length, committed.devices.length);
-  for (const row of committed.devices) {
-    const d = sourceOf(row.id);
-    assert.ok(d, row.id);
-    assert.deepEqual(d.src.map((s) => [s.role, s.url]), row.sources.map((s) => [s.role, s.url]), row.id);
-    assert.equal(d.page, row.sources[0].page, row.id);
-    assert.deepEqual([d.name, d.maker, d.colour], [row.name, row.maker, row.colour], row.id);
-    assert.equal(imagery.licences[d.maker], row.licence, row.id);
-    assert.equal(d.kind === 'compose' ? imagery.views.compose : imagery.views.pair, row.view, row.id);
-  }
 });
 
 test('the pixel work on a synthetic render: a white ground keyed from the border, placed at 86 % of an 800 square', { skip: !sharpLoads && 'sharp does not load on this platform (run under WSL)' }, async () => {
@@ -156,4 +173,10 @@ test('fetchImagery end to end on a stand-in host: three files, a row of the comm
   assert.equal(row.sources[0].sha256, sha256(img), 'the source hash is the raw download\'s');
   const again = await fetchImagery({ imagery: conf, outDir: out, manifestPath: join(out, 'MANIFEST.json'), cacheDir, log: () => {}, fetchImpl: async () => { throw new Error('no network'); } });
   assert.deepEqual([again.made, again.kept], [0, 1], 'a row already on disk is kept and nothing is fetched');
+  const reviewed = { ...conf, gate: { 'phone-one': { verdict: 'accept', checked: '2026-10-01', sha: row.sha256, note: 'looked at 1:1' } } };
+  const third = await fetchImagery({ imagery: reviewed, outDir: out, manifestPath: join(out, 'MANIFEST.json'), cacheDir, log: () => {}, fetchImpl: async () => { throw new Error('no network'); } });
+  assert.deepEqual(third.rows[0].gate, { verdict: 'accept', checked: '2026-10-01', note: 'looked at 1:1' }, 'the config\'s review, given to this exact file, is its verdict');
+  const stale = { ...conf, gate: { 'phone-one': { ...reviewed.gate['phone-one'], sha: 'a'.repeat(64) } } };
+  const fourth = await fetchImagery({ imagery: stale, outDir: out, manifestPath: join(out, 'MANIFEST.json'), cacheDir, log: () => {}, fetchImpl: async () => { throw new Error('no network'); } });
+  assert.equal(fourth.rows[0].gate.verdict, 'pending', 'a review of another file is no verdict for this one');
 });

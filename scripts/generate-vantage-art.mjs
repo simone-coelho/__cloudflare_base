@@ -29,15 +29,20 @@
 // the composed file's sha256. The candidates are not committed, so a re-roll is a new review, never a
 // silent replacement: a changed file reads "pending" in MANIFEST.json until someone looks again.
 //
+// This script stays Vantage's own (the sets, the prompts, the layouts, the tiles and their reviews), and
+// takes the pieces it shares with the device fetch from the demo kit (scripts/demo-kit/lib/imagery.mjs):
+// sharp, loaded on first use; sha256; the manifest's read, and its write with the totals; and the verdict
+// bound to the exact file's sha256 (`reviewFor`).
+//
 // On a Windows checkout whose node_modules carries the Linux sharp binary, run it under WSL.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadSharp, readManifest as readManifestFile, reviewFor, sha256, writeManifest as writeManifestFile } from './demo-kit/lib/imagery.mjs';
 
-const sharp = createRequire(import.meta.url)('sharp');
+/** sharp on first use, so importing this module (its SVG builders, its sets) needs no native binary. */
+const sharp = (...args) => loadSharp()(...args);
 
 const MODEL = process.env.VANTAGE_ART_MODEL || 'gemini-3.1-flash-image';
 const GLAPI = 'https://generativelanguage.googleapis.com/v1beta';
@@ -219,7 +224,6 @@ const fitSize = (text, max, width = 1000) => Math.max(56, Math.min(max, Math.flo
 // ---------------------------------------------------------------------------------------------------
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function apiKey() {
@@ -409,8 +413,8 @@ async function compose() {
   for (const f of readdirSync(join(IMG, 'promos'))) if (f.endsWith('.jpg') && !keep.has(f)) { unlinkSync(join(IMG, 'promos', f)); console.log(`  removed stale promos/${f}`); }
   for (const r of [...rows, ...heroRows]) {
     if (!r.file) continue;
-    const g = GATE[r.key];
-    r.gate = g && g.sha === r.sha256 ? { verdict: g.verdict, checked: g.checked, note: g.note, rejected: g.rejected || [] }
+    const g = reviewFor(GATE[r.key], r.sha256);
+    r.gate = g ? { verdict: g.verdict, checked: g.checked, note: g.note, rejected: g.rejected || [] }
       : { verdict: 'pending', note: 'not yet checked by eye for this exact file' };
   }
   manifest.promos = rows;
@@ -539,20 +543,14 @@ async function tiles() {
 
 // ---------------------------------------------------------------------------------------------------
 
-function readManifest() { try { return JSON.parse(readFileSync(MANIFEST, 'utf8')); } catch { return {}; } }
+/** The image payload budget, in megabytes, that MANIFEST.json's totals are measured against. */
+const BUDGET_MB = 25;
 
-function walk(dir) {
-  const out = [];
-  for (const name of existsSync(dir) ? readdirSync(dir) : []) { const p = join(dir, name); if (statSync(p).isDirectory()) out.push(...walk(p)); else out.push(p); }
-  return out;
-}
+const readManifest = () => readManifestFile(MANIFEST);
 
 function writeManifest(m) {
-  const files = walk(IMG).filter((p) => !p.endsWith('MANIFEST.json'));
-  const bytes = files.reduce((n, p) => n + statSync(p).size, 0);
-  m.totals = { files: files.length, bytes, megabytes: Math.round((bytes / 1048576) * 100) / 100, budgetMegabytes: 25 };
-  writeFileSync(MANIFEST, `${JSON.stringify(m, null, 2)}\n`);
-  console.log(`manifest: ${m.totals.files} files, ${m.totals.megabytes} MB of 25`);
+  const totals = writeManifestFile(MANIFEST, m, { dir: IMG, budgetMegabytes: BUDGET_MB });
+  console.log(`manifest: ${totals.files} files, ${totals.megabytes} MB of ${BUDGET_MB}`);
 }
 
 async function sheet(out) {

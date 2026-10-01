@@ -1,5 +1,5 @@
 {
-  "about": "Vantage's regional seed for the demo kit, transcribed from scripts/seed-vantage-region.mjs on 2026-10-01: lane L4's two rehearsed regions verbatim (REGIONS), the income-tilt model for the other 49 (MODEL, docs/verizon/lanes/F2.md §2) and the seed route's vocabulary and limits (SEED_VOCABULARY and MAX_*, src/routes/vantageColdStart.ts). Synthetic and representative: not a claim about any state's market; labelled synthetic → warehouse wherever it shows.",
+  "about": "Vantage’s regional seed for the demo kit, and since part b (2026-10-01) the source: scripts/seed-vantage-region.mjs is a thin wrapper over scripts/demo-kit/region-seed.mjs with this section, and its header still states the model. Transcribed from that script (commit c720907): lane L4’s two rehearsed regions verbatim (REGIONS), the income-tilt model for the other 49 (MODEL, docs/verizon/lanes/F2.md §2) and the seed route’s vocabulary and limits (SEED_VOCABULARY and MAX_*, src/routes/vantageColdStart.ts). Synthetic and representative: not a claim about any state’s market; labelled synthetic → warehouse wherever it shows.",
   "operator": "seed-vantage-region",
   "route": "/vantage/api/coldstart/prior",
   "panel": "/vantage/api/coldstart",

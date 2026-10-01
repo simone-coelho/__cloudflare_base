@@ -1,16 +1,18 @@
 // node --test scripts/demo-kit/lib/seed.test.mjs
 // The seed library: windows re-anchored to now, the beat envelope, the local checks and the publish's
-// preconditions, proven on Vantage's own beat documents (read, never written) and on synthetic ones.
+// preconditions, proven on Vantage's own beat documents (read, never written; a mutated copy lives in a
+// temporary directory) and on synthetic ones.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadValidConfig, REPO_ROOT } from './config.mjs';
 import {
-  DAY, MINUTE, actOfFrom, beatOrderProblems, bootstrapScope, catalogPieces, deepDiff, envelope, envelopeProblems, fillNote, iso,
-  loneTimestamps, prepareSeed, publishOpening, readBeats, reanchorBeats, reanchorEnvelope, relativeTimestamps, seedRuleProblems, shifted,
-  versionedPut, vocabularyProblems, windowAt,
+  DAY, MINUTE, actOfFrom, anchorCopyProblems, beatOrderProblems, bootstrapScope, catalogPieces, deepDiff, envelope, envelopeProblems, fillNote, iso,
+  jsonText, loneTimestamps, prepareSeed, publishOpening, readBeats, reanchorBeats, reanchorEnvelope, relativeTimestamps, renderUrlProblems,
+  seedRuleProblems, shifted, versionedPut, vocabularyProblems, windowAt,
 } from './seed.mjs';
 
 const configFile = fileURLToPath(new URL('../configs/vantage.json', import.meta.url));
@@ -229,6 +231,56 @@ test('deepDiff names every difference by path and ignores key order', () => {
   assert.deepEqual(deepDiff({ a: 1, b: [1, 2] }, { b: [1, 2], a: 1 }), []);
   assert.deepEqual(deepDiff({ a: 1, b: [1, 2] }, { a: 2, b: [1], c: 0 }).map((d) => d.path), ['$.a', '$.b.length', '$.c']);
   assert.deepEqual(deepDiff(null, {}).map((d) => d.path), ['$']);
+});
+
+test('the anchor file\'s copies agree with what the seed publishes, and each disagreement is refused by name', () => {
+  const p = prepareSeed({ config: vantage.config, path: vantage.path, nowMs: T });
+  const base = { anchorDoc: p.anchorDoc, anchorFile: 'anchor.json', documents: p.documents, seed };
+  assert.deepEqual(anchorCopyProblems(base), [], 'Vantage\'s anchor file agrees with its registry, learn document, reset and closed list');
+  const mutated = (fn) => { const a = structuredClone(p.anchorDoc); fn(a); return anchorCopyProblems({ ...base, anchorDoc: a }).join('\n'); };
+  assert.match(mutated((a) => { a.registry.K = 2; }), /anchor\.json: registry\.K differs from the registry the seed publishes/);
+  assert.match(mutated((a) => { a.registry.weights.compare = 3; }), /registry\.weights differs/);
+  assert.match(mutated((a) => { a.registry.vocabulary.brand.push('nokia'); }), /registry\.vocabulary differs from the config's seed\.vocabulary/);
+  assert.match(mutated((a) => { a.registry.memory.dimensions.find((d) => d.key === 'brand').tauMs = 120_000; }),
+    /registry\.memory says brand remembers for 120000 ms; the registry the seed publishes says 60000 ms/);
+  assert.match(mutated((a) => { a.learn.holdout.share = 0.05; }), /learn\.holdout differs from the learn document the seed publishes/);
+  assert.match(mutated((a) => { a.learn.regional.kBlend = 1; }), /learn\.regional differs/);
+  assert.match(mutated((a) => { a.learn.gamma = 0.5; }), /learn\.gamma says 0\.5; the learn document the seed publishes gives hero, deals, pdp-modules, plan-pairing another γ/);
+  assert.match(mutated((a) => { a.reset = ['open-catalog', 'open-slots']; }), /reset is open-catalog, open-slots; the config's seed\.beats\.reset is open-slots, open-catalog/);
+  assert.match(mutated((a) => { a.beats.pinDuo = { catalog: '13-pin-duo-preorder' }; }), /beats names 13-pin-duo-preorder as a catalog publish; the closed list says slots/);
+  assert.match(mutated((a) => { a.beats.encore = { catalog: '16-encore' }; }), /beats names 16-encore as a catalog publish; the closed list does not name it/);
+  assert.match(mutated((a) => { delete a.beats.blackFriday; }), /beats gives the page no role for 12-black-friday, which the closed list publishes/);
+  const edited = { ...p.documents, reflex: { ...p.documents.reflex, thetaIn: 0.65 } };
+  assert.match(anchorCopyProblems({ ...base, documents: edited }).join(), /registry\.thetaIn differs/, 'a registry edited without the page\'s copy is caught too');
+  assert.deepEqual(anchorCopyProblems({ ...base, anchorDoc: { anchor: p.anchorDoc.anchor } }), [], 'only the copies an anchor file carries are compared');
+});
+
+test('every piece\'s art is a file the worker serves; a renderUrl naming none is a warning, not a broken tag', () => {
+  const pieces = catalogPieces(onDisk.envelopes);
+  assert.deepEqual(renderUrlProblems(pieces, () => true), []);
+  const extra = { id: 'promo_x', customerContentId: 'promo-x', renderUrl: '/vantage/img/promos/promo-x.jpg' };
+  assert.deepEqual(renderUrlProblems([...pieces, extra, { id: 'no_art' }], (url) => url !== extra.renderUrl),
+    ['promo-x: renderUrl /vantage/img/promos/promo-x.jpg is not a file under public/, so its card would paint a broken image'], 'a piece with no renderUrl paints the placeholder and is fine');
+});
+
+/** prepareSeed over a copy of Vantage's beat documents in a temporary directory, after `mutate(files)` edits the copy. */
+function preparedFromCopy(mutate) {
+  const dir = mkdtempSync(join(tmpdir(), 'demo-kit-beats-'));
+  const files = { ...structuredClone(onDisk.envelopes), [seed.beats.anchor.file.replace(/\.json$/, '')]: structuredClone(onDisk.anchorDoc) };
+  mutate(files);
+  for (const [name, value] of Object.entries(files)) writeFileSync(join(dir, `${name}.json`), jsonText(value));
+  return prepareSeed({ config: vantage.config, path: (rel) => (rel === seed.beats.dir ? dir : vantage.path(rel)), nowMs: T });
+}
+
+test('prepareSeed holds the edited data to its copies: a desynced anchor file stops the seed before anything is written', () => {
+  assert.deepEqual(preparedFromCopy(() => {}).errors, [], 'an unedited copy prepares cleanly');
+  const desynced = preparedFromCopy((f) => { f.anchor.registry.thetaOut = 0.5; });
+  assert.deepEqual(desynced.errors, ['anchor.json: registry.thetaOut differs from the registry the seed publishes'], 'an error, so the command line writes nothing and sends nothing');
+  const missingArt = preparedFromCopy((f) => { f['open-catalog'].publish.document.pieces[0].renderUrl = '/vantage/img/promos/no-such-tile.jpg'; });
+  assert.deepEqual(missingArt.errors, []);
+  assert.match(missingArt.warnings.join(), /promo-iphone-18-pro-launch: renderUrl \/vantage\/img\/promos\/no-such-tile\.jpg is not a file under public\//);
+  const unindexed = preparedFromCopy((f) => { f.anchor.beatIndex = f.anchor.beatIndex.filter((b) => b.name !== '07-compare-storage'); });
+  assert.match(unindexed.warnings.join(), /anchor\.json: beatIndex leaves out 07-compare-storage, beat 7/);
 });
 
 test('the seed never needed a file outside the config: every document path resolves inside the repository', () => {
