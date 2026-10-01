@@ -45,7 +45,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished, vi } from 'vitest';
 import { Hono } from 'hono';
 import { JSDOM } from 'jsdom';
 import * as jose from 'jose';
@@ -91,7 +91,28 @@ const CRON_EVERY_MS = 5 * MIN;
 
 const DATE = '2026-09-03';
 
-const piece = (id: string, over: Partial<ContentPiece>): ContentPiece => ({
+/**
+ * The clock of a test that renders a SHIPPED SCREEN over the fixed day above
+ * (date-bomb correction, lead ruling 2026-10-01; arrangement only). The console
+ * measure screen opens on a window from `daysAgo(27)` to today and a day box of
+ * today, from its own `Date.now()` (public/console/views-measure.js:26-30), so
+ * on the host clock DATE left that window on 2026-10-01. Such a test runs on
+ * this clock instead — Node's `Date` faked from this instant and advancing in
+ * real time, and the jsdom window's `Date.now` reading it — fourteen days after
+ * DATE: after every fixture moment, DATE inside the window with thirteen days
+ * to spare on each side, and a day box on a day with no report. That is the
+ * relation every run from 2026-09-04 to 2026-09-30 had with the host clock, so
+ * the screens render what they rendered then, on any host date — also one
+ * before DATE, where the product would refuse the fixture's records as born in
+ * the future. W30.F1.01 runs on the same clock (src/units/W30/B1.unit.test.ts).
+ */
+const SCREEN_TEST_NOW = Date.parse(`${DATE}T12:00:00Z`) + 14 * DAY_MS;
+function runOnTheScreenTestClock(): void {
+  vi.useFakeTimers({ toFake: ['Date'], now: SCREEN_TEST_NOW, shouldAdvanceTime: true });
+  onTestFinished(() => { vi.useRealTimers(); });
+}
+
+const piece =(id: string, over: Partial<ContentPiece>): ContentPiece => ({
   id, customerContentId: `CMS-${id.replace(/^cnt-/, '').toUpperCase()}`, type: 'editorial',
   title: id, tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' }, ...over,
 });
@@ -491,6 +512,7 @@ describe('unit:W30.L1', () => {
 
 interface ScreenElement { value: string; dispatchEvent: (event: unknown) => boolean }
 interface ScreenWindow extends Record<string, unknown> {
+  Date: { now: () => number };
   document: { body: { textContent: string | null }; getElementById: (id: string) => ScreenElement | null };
   Event: new (type: string, options: Record<string, unknown>) => unknown;
   localStorage: { setItem: (key: string, value: string) => void };
@@ -506,6 +528,8 @@ async function renderScreens(m: Mounted): Promise<Array<{ name: string; text: st
     const dom = new JSDOM(repoFile(`public/${page}`),
       { url: `${OPERATOR_ORIGIN}/${screen === 'console' ? `console/#/measure?scope=${TENANT}&date=${DATE}` : `legacy/learning.html?scope=${TENANT}&brand=${BRAND}&slot=hero`}`, pretendToBeVisual: true, runScripts: 'outside-only' });
     const w = dom.window as unknown as ScreenWindow;
+    // The window has its own `Date`; the screen reads the test's clock (SCREEN_TEST_NOW).
+    w.Date.now = () => Date.now();
     w.fetch = async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
       const target = new URL(url, `${OPERATOR_ORIGIN}/`);
       return m.fetch(new Request(OPERATOR_ORIGIN + target.pathname + target.search, {
@@ -562,6 +586,7 @@ describe('unit:W30.S1', () => {
   const HOUR = 12;
 
   it('screens: an hour the cron first folded after its horizon reads `repaired`, as kit 02 defines it, and both shipped screens say it was written after it was final without claiming it was repaired rather than first folded', async () => {
+    runOnTheScreenTestClock();
     const maturity = maturityWindow();
     expect(typeof maturity === 'number' ? 'published' : absent(MATURITY_EXPORT, hourly),
       'W30.S1 — the published re-fold horizon exists before an hour can be folded past it').toBe('published');
