@@ -59,7 +59,8 @@ test('the Top Offers build is the committed Top Offers config, plus the ledger-r
   const { LEDGER_RECOVERY_CONFIG: built, ...builtVars } = topOffers.vars;
   const { LEDGER_RECOVERY_CONFIG: shipped, ...shippedVars } = committed.vars;
   assert.deepEqual({ ...topOffers, vars: builtVars }, { ...committed, vars: shippedVars });
-  assert.equal(JSON.parse(shipped).sourceQueue, 'events', 'the committed Top Offers config still names the shared queue');
+  const { sourceQueue, deadLetterQueue } = JSON.parse(shipped);
+  assert.deepEqual({ sourceQueue, deadLetterQueue }, { sourceQueue: 'events-top-offers', deadLetterQueue: 'events-top-offers-dlq' }, 'the committed Top Offers config names its own queues for ledger recovery');
   assert.equal(JSON.parse(built).sourceQueue, 'events-top-offers');
 });
 

@@ -38,17 +38,22 @@ a shopper session on every shopper call, which those older pages never create, a
 refuses their API roots. No single version of the code runs every demo, so each worker runs the code its demos
 were built on. Rules for both workers: `AGENTS.md` → "The two demo workers".
 
-The config is generated from `wrangler.toml` so it cannot drift:
+The config is generated from `wrangler.toml` so it cannot drift. Run both lines from WSL; Windows `npx` finds an
+old wrangler:
 
 ```bash
-node scripts/build-top-offers-config.mjs          # writes wrangler.top-offers.toml
+node scripts/build-top-offers-config.mjs          # delegates to build-demo-worker-config.mjs; writes wrangler.top-offers.toml
 npx wrangler deploy --config wrangler.top-offers.toml
 ```
 
-It differs from `wrangler.toml` in three ways only: its own name, its own queue pair (`events-top-offers`,
-`events-top-offers-dlq` — a queue has exactly one consumer), and no staging/production stamps. **It keeps the
-scheduled jobs, and needs them:** beat 15's day report is the sum of hour aggregates built by the five-minute
-fold, so a report for a brand-new hour is empty until that hour closes and is folded.
+`build-top-offers-config.mjs` now delegates to the generalised builder, so the two write the same bytes:
+`node scripts/build-demo-worker-config.mjs --name edge-platform-top-offers --queue events-top-offers`. It differs
+from `wrangler.toml` in four ways only: its own name, its own queue pair (`events-top-offers`,
+`events-top-offers-dlq` — a queue has exactly one consumer), the ledger-recovery queues renamed with that pair
+(`LEDGER_RECOVERY_CONFIG`), and no staging/production stamps. The old builder left the recovery variable naming
+the shared worker's `events`, so the queue consumer retried every ledger message on this worker and the day report
+stayed empty. **It keeps the scheduled jobs, and needs them:** beat 15's day report is the sum of hour aggregates
+built by the five-minute fold, so a report for a brand-new hour is empty until that hour closes and is folded.
 
 ### What is provisioned on that worker
 
@@ -264,3 +269,9 @@ renders two containers of the same ranking.
 - **A beat that changes nothing visible is a broken beat.** The harness fails any press that neither moves the module
   nor says why it did not.
 - **This checkout is shared with another session.** Stage only your own files; never `git add -A`.
+
+## 2026-10-01 · the ledger fix, and two notes
+
+- **Deployed `00304d6e…` at 04:10Z** with the recovery queues renamed to this worker's own (`events-top-offers`, `events-top-offers-dlq`). Before it, the day report had read zero decisions for every day since 2026-09-23, because the consumer retried every batch whose queue was not the configured source. After hour 04 folded: 132 decisions, 2 outcomes, 5 visitors, 7 promotion rows. Rollback target `8787caef…`. Verified through both suites against the hosted worker (page 36 of 37, DOM 90 of 91 after the fold); the one failure is the cook cap, because `SHN-KIT-02`'s seeded window closed on 2026-09-30, so **reseed and redeploy within the hour before any rehearsal**, as above.
+- **The page suite's click shape is wrong:** `rehearse-top-offers-page.mjs` sends `contentId: "shn_" + id.toLowerCase()` (giving `shn_shn-bea-01`) and no `decisionId`; the page itself sends `shn_bea_01` with its `decisionId` (`top-offers.js:1303`). The suite's clicks therefore credit only under the any-item rule and show as 0 in the learning grid. Fix the suite before reading its click counts as evidence.
+- `IDENTITY_SALT` is not set on this worker, so dead-letter capture is unavailable and poison messages are retried then dropped, as before the fix. Setting it is the owner's call.

@@ -2,7 +2,7 @@
 
 **Written 2026-09-30, late evening, by lane L5. Assume the reader has none of the prior context.**
 
-Branch `feature/real-time-personalization`. **Nothing of this demo is committed, pushed or deployed**: the lead commits by path at integration, and creating the hosted worker waits for Simone's go.
+Branch `feature/real-time-personalization`. Committed at `3851f35`, not pushed. **The hosted worker is live** since 2026-10-01, on Simone's go (lane D1, below).
 
 ---
 
@@ -21,7 +21,7 @@ A demo for Verizon that sells nothing. It shows how we think about personalisati
 | | |
 |---|---|
 | Local worker | `http://localhost:9110/vantage/`: `wrangler dev` **inside WSL**, `--config wrangler.vantage.toml --persist-to .wrangler/state-vantage-l1`, on the session host (`REFLEX_HOST=session`). It will not be running after a restart. |
-| Hosted worker | **none yet.** It will be `edge-platform-vantage.expedge.workers.dev`, its own worker, never the shared `edge-platform` and never the Top Offers worker. |
+| Hosted worker | **`https://edge-platform-vantage.expedge.workers.dev/vantage/`**, live since 2026-10-01 (version `222b29ab`, lane D1): its own worker, never the shared `edge-platform` and never the Top Offers worker. Reseed it every rehearsal morning (below). |
 | Other ports | 9111 and 9112 were lanes L2 and L4's scratch servers. Not needed. |
 
 The page is `public/vantage/index.html` and `phone.html` with `vantage.js`. The worker side is `src/routes/vantage.ts` (beats by name, reset, receipt, report), `src/routes/vantageColdStart.ts` (the Arrival panel) and the engine changes listed in L4.md.
@@ -51,6 +51,8 @@ node scripts/seed-vantage-region.mjs --base http://localhost:9110   # after ever
 
 **Local-only state not in git.** `.dev.vars` is gitignored and must carry five things for `vantage`: `TENANTS` (provisioned, with operator grants for `vantage-demo`, `seed-vantage` and `seed-vantage-region`), `SDK_KEYS` (`vantage:demo-site`), `RETENTION` (the seven categories), `JWT_SECRET` and `IDENTITY_SALT` (the audited receipt read needs it). Never copy a value into a document or a page.
 
+It also carries `VANTAGE_REMOTE_JWT_SECRET`: the hosted worker's own `JWT_SECRET`, which nothing reads automatically. The morning reseed mints its tokens from it. **`.dev.vars` is this machine's only copy, and the owner must back it up.** Without it, the hosted demo cannot be reseeded until a new `JWT_SECRET` is put on the worker (Simone's go).
+
 ## The two suites
 
 ```bash
@@ -65,6 +67,7 @@ node scripts/rehearse-vantage-dom.mjs  --base http://localhost:9110   # the real
 - A line marked `!` is a known defect in another lane's file, named on the last line; `--strict` makes it fail.
 - Both run against a hosted worker with `--base https://edge-platform-vantage.expedge.workers.dev`.
 - **Last results, 2026-09-30, on the code after F1:** DOM 220 of 221 at 1920×1080. The one failure was a receipt read answering 503. The request-level suite passed 110 of 110 at 22:09 on a healthy ledger consumer. At 23:17 it passed 102 of 110, after the consumer had stalled, with every receipt check finding "no record". Outputs are in `lanes/L5.md`.
+- **Hosted, 2026-10-01, 03:37 to 03:43 UTC (lane D1):** request level 111 of 111, DOM 221 of 221 at 1440×900, no line marked `!`.
 - **If every receipt check says "no record", the ledger consumer has stalled.** The worker log stops printing `QUEUE events-vantage` lines and receipts answer 202. Restarting `wrangler dev` clears it. That is the owner's process, so ask; never kill it from a lane.
 
 **Beat 15's report sums folded hours** (`runDayReport`, `src/learn/hourly.ts`). The five-minute cron folds hours closed at least five minutes (`CLOSE_GRACE_MS`), two per run, oldest first, over a 26-hour lookback. So a click appears once its hour has closed and the next fold has run, never in the same second. A click at 10:20 shows from about 11:05. The script says so.
@@ -120,6 +123,23 @@ Every beat goes by name through `src/routes/vantage.ts`, with a 60-second operat
 - **A reseed is followed by a deploy, always.** The worker applies beats from its own `ASSETS` copy of `public/vantage/beats/`.
 - **Deploy forward only.** A slots document carrying `platform` or `dampen` fails the stored parse on older builds (L4 §8.6). Never redeploy an older build, and never touch the shared worker, the Top Offers worker or a customer stamp.
 
+### Reseed the hosted worker, every rehearsal morning
+
+The earliest opening-catalog window closes 24 hours after the seed's anchor, and the regional prior's horizon is 24 hours, so a rehearsal morning needs all three steps. From WSL, at the repo root:
+
+```bash
+npm run check:generated
+S="$(grep '^VANTAGE_REMOTE_JWT_SECRET=' .dev.vars | cut -d= -f2-)"     # the hosted worker's JWT_SECRET; never print it
+mint() { env -u OPERATOR_TOKEN JWT_SECRET="$S" JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api DEPLOYMENT_PROFILE=demo \
+  node -e "import('./scripts/lib/tool-token.mjs').then(m=>m.resolveToolToken({payload:{sub:process.argv[1],roles:['operator']},expiresIn:'30m',allowMint:true})).then(t=>process.stdout.write(t))" "$1"; }
+node scripts/seed-vantage.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage)"
+npx wrangler deploy --config wrangler.vantage.toml        # the seed rewrote public/vantage/beats/
+node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage-region)"
+```
+
+- `S` comes from `.dev.vars`, **this machine's only copy; the owner must back it up.**
+- Then, with time, run the request-level suite with `--base https://edge-platform-vantage.expedge.workers.dev`. It ends with the reset.
+
 ## Known engine findings (none changed here)
 
 1. **The object host stalls the ledger consumer** after 20 to 40 quick snapshots (L1; not reproduced by L4). The worker runs the **session host**. Beat 5 is a timed re-ask on the engine's lazy decay, and the alarm push over `/realtime/ws` stays behind `?exit=1`.
@@ -128,6 +148,7 @@ Every beat goes by name through `src/routes/vantage.ts`, with a 60-second operat
 4. **On the session host an audience flag outlives its score.** The score decays below 0.45 at read, but `brand_samsung_affinity` stays listed until her next event. Ranking reads the score (L5).
 5. **The session host's ledger consumer stalled twice on 9110, at 22:11 and about 23:16 on 2026-09-30.** Both followed a beat-15c report build, among bursts of finding 3's errors (L5 finding 4). It is a hypothesis, not a cause, that the restarts those errors trigger leave an owner forward unsettled. Receipt reads also answered 503 now and then (F1 finding 4).
 6. **A busy hour can fail to fold on every run**, logged as "hourly fold hours failed and skipped 1" with the cause unlogged. The day report then lists that hour as missing and sums the rest. It happened to 9110's 21:00–22:00 EDT hour on 2026-09-30 (L5). On a hosted rehearsal day, read beat 15's report once the rehearsal hours have folded.
+7. **Hosted, observed once: a receipt waited 35 seconds after a report build** (lane D1, 2026-10-01 at 03:44 UTC). A snapshot taken 4 s after a report build answered 202 for 35 s, with 0 of 5 records written. The records were written late, not lost: the next report build counted that visitor. Three rechecks wrote receipts in 4.3 to 4.8 s, one of them straight after a build, and `wrangler tail` showed every queue batch consumed 2 to 3 s after its snapshot, with no exception or retry. The miss came before the tail ran, so its cause was not caught (compare findings 3 and 5).
 
 ## The phone page URL
 
@@ -139,7 +160,7 @@ The phone page is `/vantage/phone?id=<id>`, which the assets binding serves ever
 |---|---|
 | Lane F1, landed (`lanes/F1.md`) | Done: her own phone state after Compare, the named 413 and the report window, the retired path form, the footer's geography sentence, the hero campaign seed, the chips, one reseed. Residuals: the address bar keeps the streaming shopper's `/vantage/phone?id=` until her next press; beat 5's "fading" sentence says "still above" when the minute starts late (L5.md findings 1 and 3). |
 | R1's remaining items | The design's geography and "never stored" wording, cold-start route tests, receipt-ownership route tests, manifest hashes (R1.md, verdict) |
-| The hosted worker | Simone's go; then the checklist above |
+| The hosted worker | Live since 2026-10-01 (lane D1). Its crons fired only after a triggers-only redeploy, `npx wrangler triggers deploy --config wrangler.vantage.toml`, at 04:43 UTC (the worker began as an empty draft from `secret put`, and the first code deploys did not attach the crons). Firing since 04:50, five-minute and hourly both seen; the fold caught up its 26-hour lookback two hours per run, so today's hours fold around 05:50–05:55; until then the report reads the raw day ledger. |
 | The sign-in hand-off | designed, not built |
 | ASN-based switch seeding | held in reserve (design §5) |
 

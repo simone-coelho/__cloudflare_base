@@ -58,7 +58,8 @@ There are **two** demo workers, because no single version of the code can run ev
 | Worker | URL | Runs | Deploy with |
 |---|---|---|---|
 | `edge-platform` (shared) | `edge-platform.expedge.workers.dev` | Coach storefront, Bright Hour `/live`, Meridian `/meridian`, the bank demo — on commit `26e2db1`, exactly as they were built and rehearsed | `bash scripts/deploy-legacy-demos.sh --deploy` **and nothing else** |
-| `edge-platform-top-offers` | `edge-platform-top-offers.expedge.workers.dev` | the QVC Top Offers demo `/top-offers` — on today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` |
+| `edge-platform-top-offers` | `edge-platform-top-offers.expedge.workers.dev` | the QVC Top Offers demo `/top-offers` — on today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` (the builder delegates to `scripts/build-demo-worker-config.mjs`, which also renames the recovery queues; a config whose `LEDGER_RECOVERY_CONFIG` still names the shared `events` queue leaves that worker's ledger unconsumed and its day report empty, as it was from 2026-09-23 to 2026-09-30) |
+| `edge-platform-vantage` | `edge-platform-vantage.expedge.workers.dev` | the Verizon demo `/vantage` — on today's engine, session host | `node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage && npx wrangler deploy --config wrangler.vantage.toml`, from WSL; after a reseed, redeploy, then `scripts/seed-vantage-region.mjs`; see `docs/verizon/RESUME-vantage.md` |
 
 **Never run plain `npx wrangler deploy` from the repo root.** `wrangler.toml` names the shared worker, so it
 ships today's code onto it, and today's code cannot run the older demos: it requires a shopper session on every

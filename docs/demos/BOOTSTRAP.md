@@ -47,6 +47,7 @@ because it belongs to a demo you are not working on.
 | **The Bright Hour** | QVC, first demo: live shopping | [`/live/`](https://edge-platform.expedge.workers.dev/live/) · Offer Desk [`/live/ops`](https://edge-platform.expedge.workers.dev/live/ops) | `src/demos/brighthour/`, `src/routes/live*.ts`, `public/live/` | Generation 1 | Live, shared worker |
 | **Meridian** (on screen: **Calder**) | Opticon NYC, CEO session, retail + banks | [`/meridian/`](https://edge-platform.expedge.workers.dev/meridian/) | `src/demos/meridian/`, `public/meridian/` | Generation 1 fork | Live, shared worker |
 | **Top Offers** (Lantern & Lane) | QVC, their number one use case | [`/top-offers/`](https://edge-platform-top-offers.expedge.workers.dev/top-offers/) | `public/top-offers/`, `src/routes/topOffers.ts`, `scripts/seed-shn.mjs` | **Generation 2** | Live, **own worker** |
+| **Vantage** | Verizon, a lighthouse conversation about affinity for the anonymous shopper | [`/vantage/`](https://edge-platform-vantage.expedge.workers.dev/vantage/) | `public/vantage/`, `src/routes/vantage.ts`, `src/routes/vantageColdStart.ts`, `scripts/seed-vantage*.mjs` | **Generation 2** | Live, **own worker** |
 
 Only two demos live in `src/demos/`. Coach is the repository's core, and Top Offers is built on the product
 engine rather than a demo fork. `src/demos/README.md` maps all five.
@@ -76,6 +77,7 @@ each deliberately leaves things out.
 | **The Bright Hour** | QVC, displacing Adobe Target | **Decisioning under expiry**: offers that live hours to days, a new offer born and ranked with no history, the page reading the window field QVC already populates. | Recommendations, and urgency theatre. QVC deliberately hides countdowns and scarcity; the demo enforces a banned-vocabulary list. |
 | **Meridian** | ~30 retailers and banks at Opticon | **Agnosticism, demonstrated**: one brand, two businesses, and a live vertical swap where the same eight instrument bars stay on screen while only their labels change. **Legibility over density.** | Let anything move without a press. The page is frozen between actions and engine time advances only when the presenter acts. |
 | **Top Offers** | QVC's merchandising and engineering team | **Their literal requirement, on the product**: a four-container module filled from a pool of promotions, the visitor earning it, a merchandiser's day of real publishes, a weather rule, a page reorder, and the click report. | Products. The pool is promotions, because Constructor already owns product discovery at QVC and a product grid argues on the incumbent's ground. |
+| **Vantage** | Verizon's digital and personalization people, shown what the engine does rather than sold anything | **The moment before identity**: a stranger served from the first paint on an ad click, the region's own sales and her OS family; the page following her away from the ad; a phone page whose modules reorder around her intent while the buy box stays off limits; the merchandiser's pin and availability rule visible as overrides; receipts behind every card. Fifteen beats in Verizon's colours with real phones. | Price, financing or credit. Nothing geographic beyond availability. No claim that the deals module reorders when a claim decays. No "more upgrades", no lift number, no critique of the systems they run today. |
 
 The practical consequence: **reuse the patterns, never the pitch.** A new customer gets a demo built from their
 own words (§12), not a reskin of whichever demo is newest.
@@ -323,12 +325,17 @@ isolation suite passed 10 of 10 with Coach's pipeline included.
 | Worker | Runs | Deploy with |
 |---|---|---|
 | `edge-platform.expedge.workers.dev` | Coach, bank, Bright Hour, Meridian — commit `26e2db1` | `bash scripts/deploy-legacy-demos.sh --deploy` |
-| `edge-platform-top-offers.expedge.workers.dev` | Top Offers — today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` |
+| `edge-platform-top-offers.expedge.workers.dev` | Top Offers — today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` (the builder delegates to `build-demo-worker-config.mjs` and renames the recovery queues; a config naming the shared `events` queue leaves the ledger unconsumed, the 2026-09-30 finding) |
+| `edge-platform-vantage.expedge.workers.dev` | Vantage — today's engine, session host | `node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage && npx wrangler deploy --config wrangler.vantage.toml` (from WSL); after any reseed, redeploy, then `scripts/seed-vantage-region.mjs`; details in `docs/verizon/RESUME-vantage.md` |
 
 - **Never** `npx wrangler deploy` from the repo root (§0, rule 1).
 - `npm run check:generated` must pass first: `npm run dev` rebuilds the Meridian and SDK bundles, a deploy does not.
 - **A reseed of Top Offers must be followed by a deploy.** The seed re-anchors every window to now and rewrites the
   beat documents under `public/`; the worker reads those documents from its own assets when it applies a beat.
+- **A new worker whose secrets were set before its first deploy may not get its crons.** `secret put` creates the
+  worker as an empty draft; the Vantage worker's three crons did not fire for 66 minutes after its first code
+  deploy, and `npx wrangler triggers deploy --config <toml>` attached them within seven minutes (2026-10-01). Check
+  the `monitor:<tenant>:recovery` KV key after any first deploy.
 - **Do not change a demo worker's secrets or settings without the owner.** Adding a tenant list to the shared
   worker once removed its implicit `coach` tenant and cut Coach off.
 - A straight `wrangler rollback` of the shared worker is refused: the Top Offers period applied Durable Object
@@ -344,6 +351,7 @@ isolation suite passed 10 of 10 with Coach's pipeline included.
 |---|---|
 | Any shared-worker change | `MERIDIAN_BASE=<base> node scripts/meridian-rehearsal.mjs` and `node scripts/meridian-isolation.mjs` — the second exercises Coach's pipeline |
 | Any Top Offers change | `node scripts/rehearse-top-offers-page.mjs --base <base>` (request level) and `node scripts/rehearse-top-offers-dom.mjs --base <base>` (loads the real page script and presses the real buttons) |
+| Any Vantage change | `node scripts/rehearse-vantage-page.mjs --base <base>` (request level, 110 checks) and `node scripts/rehearse-vantage-dom.mjs --base <base>` (the real page in a fresh browser profile, 221 checks); never two suites at once on one tenant, and restart a local rig after a report build |
 | A Coach storefront change | `bash scripts/rehearse-storefront.sh` — drives both transports headlessly and compares them; needs `SHOT_TOKEN` |
 
 Two hand-offs of Top Offers passed a request-level test and still failed in the browser, because both bugs lived
@@ -408,5 +416,6 @@ What worked, in the order it matters:
 | Bright Hour | `docs/qvc/BrightHour-*.md`, `src/demos/brighthour/README.md` |
 | Meridian | `src/demos/meridian/README.md`, `docs/opticon/` |
 | Top Offers | `docs/qvc/QVC-Top-Offers-Demo-Script.md`, `docs/qvc/RESUME-top-offers.md` |
+| Vantage | `docs/verizon/Vantage-Demo-Design.md` (the governing brief and decisions log), `docs/verizon/Vantage-Presenter-Script.md`, `docs/verizon/RESUME-vantage.md`, `docs/verizon/Verizon-Use-Cases-and-Engine-Fit.md` |
 | The engine's maths and design | `docs/architecture/16-edge-affinity-reflex.md`, `18-content-affinity-engine.md` |
 | An earlier audit of all of this | `docs/handover/02-demo-handover.md` (2026-08-29; predates Top Offers and the two-worker split) |

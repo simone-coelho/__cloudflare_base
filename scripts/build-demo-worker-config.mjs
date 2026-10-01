@@ -45,8 +45,9 @@
 // one iterates this worker's own TENANTS list, so never provision one tenant on
 // two cron-running workers.
 //
-// scripts/build-top-offers-config.mjs is left exactly as it is; Top Offers keeps
-// its own builder and its committed wrangler.top-offers.toml.
+// scripts/build-top-offers-config.mjs now delegates to this builder with Top
+// Offers' name and queue (2026-09-30), so both commands write the same
+// wrangler.top-offers.toml, with the recovery queues renamed to match.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
