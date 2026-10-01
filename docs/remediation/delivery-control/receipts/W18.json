@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "ADOPTION",
+  "ticketId": "W18",
+  "workOrderHash": "sha256:333fd46adb834a4c0abc4b31c5c216e343531913a976f282adde0fd75acb5d09",
+  "artifact": {
+    "revision": "0c1902654c8f7fc8888077c31ba05e2ee8efc377",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "docs/remediation/reviews/W18.json",
+      "/home/simonecoelho/rem/_evidence/W18/reviewer-whole/REPORT.md",
+      "git merge bf1812a"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W18 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t \"W18[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/W18.acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/integration.log",
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/logs/integration.vitest.json"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/adoption-2/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/adoption-1/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-24T23:49:53.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

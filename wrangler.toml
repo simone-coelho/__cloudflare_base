@@ -137,15 +137,16 @@ dataset = "edge_ops_development_v1"
 
 # D1 database — Coach demo dataset (ODP profiles + commerce + warehouse-export mirror).
 # Powers the Opal chat's aggregate-then-reason query surface (v_profiles / meta_attribute_catalog).
-# Legacy seed generation and apply/remote instructions are withdrawn.
-# scripts/seed-d1.mjs is retired; the mixed demo migration/seed chain is not an
-# approved customer setup or recovery workflow. Scoped ownership and recovery
-# remain pending W08/W39; see docs/remediation/README.md and doc 10 Operations.
+# W39: the default local database applies the PRODUCT migrations only, like staging and
+# production. The demo chain (migrations/*.sql, then migrations/seed/*.sql, in order) reaches a
+# LOCAL database only when requested explicitly: node scripts/init-local.mjs --scope <tenant>
+# --demo-data (docs/10-d1-schema.md). scripts/seed-d1.mjs stays retired, and no demo migration or
+# seed is an approved customer setup or recovery workflow.
 [[d1_databases]]
 binding = "DB"
 database_name = "coach-demo-db"
 database_id = "80fcd6e1-4764-4ba2-bf95-587c3debdc73"
-migrations_dir = "migrations"
+migrations_dir = "migrations/product"
 
 # Environment Variables (use wrangler secret for sensitive values)
 [vars]
@@ -186,6 +187,9 @@ REFLEX_HOST = "session"
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 # CW6: tenants whose region snapshots the hourly cron rolls up into country and everyone.
 TREND_ROLLUP_TENANTS = "coach"
+# W34: the external-model policy (src/learn/external.ts). `off` is the only implemented and the
+# only deployed state; absent or any other value is also off. No value enables a model.
+EXTERNAL_MODEL_POLICY = "off"
 
 # Static assets configuration
 [assets]
@@ -251,6 +255,8 @@ OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
 REFLEX_HOST = "session"   # 2026-09-05 load test (doc 31): the session host writes KV on every request, 580 to 720 ms per decision; the object host is faster but its ingest refuses the content events and the stage never reaches the cell, so the loop is wrong there. Session until the object host passes the acceptance run.
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
+# W34: off is the only deployed state of the external-model policy; absent or any other value is also off.
+EXTERNAL_MODEL_POLICY = "off"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE"
@@ -349,6 +355,8 @@ JWT_AUDIENCE = "edge-platform-api"
 OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
 REFLEX_HOST = "session"   # the object host takes this path once it passes the acceptance run (doc 31)
+# W34: off is the only deployed state of the external-model policy; absent or any other value is also off.
+EXTERNAL_MODEL_POLICY = "off"
 
 [[env.production.kv_namespaces]]
 binding = "CACHE"

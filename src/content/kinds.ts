@@ -415,6 +415,9 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
    * `validateStored`: a document already retained with a cross-page duplicate
    * keeps reading exactly as it did, because refusing it at read time would
    * take a tenant's live catalogue away from them to fix a naming problem.
+   * W26 R2 gives that retained document the first remedy as well: for the
+   * names it carries on more than one page, the page is part of the storage
+   * identity (`pageScopedSlotNames` below), so it never pools silently either.
    */
   const pageOfSlot = new Map<string, string>();
   for (const [page, slots] of Object.entries(checked.value.pages)) {
@@ -439,6 +442,46 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
     }
   }
   return errors.length ? { ok: false, errors } : checked;
+}
+
+/** A page or slot name as every catalogue spells it (`SLUG`): no `:`, `@` or `/`. */
+export const isCatalogueName = (v: unknown): v is string => typeof v === 'string' && SLUG.test(v);
+
+/**
+ * W26 R2 (F21 §6(b), §8 "Page in `statsName`/`liftKey`"; LANE-LOG R198): the
+ * pages each slot name of a catalogue is carried on, in catalogue order.
+ *
+ * I1.01 above refuses a NEW catalogue that reuses a slot name on a second page.
+ * A document RETAINED from before that rule still reads (`validateStored`), and
+ * for its cross-page names the page is part of the learning identity: those
+ * placements are learned, published, served, reported, monitored and cleaned up
+ * as separate objects (`statsName`, `liftKey`, `liftArchiveKey` in
+ * `src/learn/fan.ts`), never pooled. Every occurrence counts, an off-limits one
+ * included, so switching a placement on or off never moves another placement's
+ * evidence to a different object.
+ */
+export function slotPagesOf(catalog: Pick<SlotCatalog, 'pages'> | null | undefined): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const [page, slots] of Object.entries(catalog?.pages ?? {})) {
+    if (!Array.isArray(slots)) continue;
+    for (const s of slots) {
+      if (!isRecord(s) || typeof s.slot !== 'string') continue;
+      const pages = out.get(s.slot) ?? [];
+      if (!pages.includes(page)) pages.push(page);
+      out.set(s.slot, pages);
+    }
+  }
+  return out;
+}
+
+/**
+ * W26 R2: the slot names whose storage identity carries the page — the names a
+ * catalogue carries on MORE than one page. A name carried on one page keeps the
+ * page-less identity it has always had, and every statistic learned under it.
+ * Sorted, so every consumer that commits to the list sees one order.
+ */
+export function pageScopedSlotNames(catalog: Pick<SlotCatalog, 'pages'> | null | undefined): string[] {
+  return [...slotPagesOf(catalog)].filter(([, pages]) => pages.length > 1).map(([slot]) => slot).sort();
 }
 
 /**
@@ -528,7 +571,13 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
   let external: LearnConfig['external'];
   if (candidate.external !== undefined) {
     const g = candidate.external;
-    if (!isRecord(g) || !['service', 'table', 'workers_ai'].includes(String(g.kind)) || typeof g.ref !== 'string' || !g.ref.trim()) errors.push('external: kind service|table|workers_ai and a ref');
+    // W34 E3 (F30, decision D1): the deployment's external-model policy
+    // (`EXTERNAL_MODEL_POLICY`, src/learn/external.ts) enables no model — `off`
+    // is its only state — so a NEW document naming one is refused, whatever the
+    // kind. A document stored before this rule still reads (`validateStored`),
+    // and its term is served withdrawn, never scored.
+    if (!historical) errors.push('external: refused — the deployment\'s external-model policy (EXTERNAL_MODEL_POLICY) is off and enables no service, table or workers_ai model; remove `external`');
+    else if (!isRecord(g) || !['service', 'table', 'workers_ai'].includes(String(g.kind)) || typeof g.ref !== 'string' || !g.ref.trim()) errors.push('external: kind service|table|workers_ai and a ref');
     else {
       const timeoutMs = g.timeoutMs === undefined ? 20 : g.timeoutMs;
       if (!isNum(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) errors.push('external.timeoutMs: 1..5000 milliseconds');

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W39",
+  "workOrderHash": "sha256:2f4035bfa6595ee31bce661e84f79ff8e8d779dfb5cbb9cf11c9a9b33e1a503e",
+  "artifact": {
+    "revision": "ddbdd62d1decc63b9a5618a0c07b5fc3054c3e92",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/REPORT-3.md",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/logs/fix1-eslint-c7d3cde-vs-ddbdd62.log",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/logs/fix1-fast-suite-ratchet.log",
+      "git commits c7d3cde a43580b 0cc5359 6dbaf75 176253e 5aadda6 81f1d96 ddbdd62 on rem/w39-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W39 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W39-delivery/fix1/reviewer/logs/acceptance-ddbdd62.log",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/implementer/logs/fix1-acceptance-ddbdd62.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W39-delivery/fix1/reviewer/logs/gate-ddbdd62.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W39-delivery/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W39-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-01T05:13:16.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

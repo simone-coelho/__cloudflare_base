@@ -60,7 +60,10 @@ function ga4Item(e: Record<string, unknown>): Record<string, unknown> {
     ...(it.item_name !== undefined ? { name: it.item_name } : {}),
     ...(it.price !== undefined ? { price: it.price } : {}),
     ...(it.item_category !== undefined ? { category: it.item_category } : {}),
-    ...(it.item_brand !== undefined ? { brand: it.item_brand } : {}),
+    // W26 R3 (review D1): a product's brand label is the PRODUCT's, sent as
+    // `productBrand`. `data.brand` is the brand the page was served under,
+    // which only the client's configuration names (`envelope`, core.ts).
+    ...(it.item_brand !== undefined ? { productBrand: it.item_brand } : {}),
     ...(it.item_variant !== undefined ? { variant: it.item_variant } : {}),
   };
 }

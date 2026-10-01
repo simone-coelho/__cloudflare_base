@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W35",
+  "workOrderHash": "sha256:ee6cf9d5225829b2303d4e4febb81a7c83b0fa9e388f64327cbbad86fbce864f",
+  "artifact": {
+    "revision": "ff35cd17264a0fd81b34a7a1af6b9d48c53df55a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W35-delivery/fix1/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/fix1/implementer/logs/eslint-ff35cd1-head.log",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/fix1/implementer/logs/acceptance-run2.log",
+      "git commits cc85e91 952b96e 731ff3f e15e0d3 f424cfb bd26a26 ff35cd1 on rem/w35-build (the implementer's two gate runs each failed on one environmental test outside W35; the lead ruled the reviewer's gate at the artifact the gate evidence)"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W35 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/sdk/listen.test.ts -t \"W35[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W35-delivery/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/fix1/implementer/logs/acceptance-run2.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W35-delivery/reviewer/logs/integration-gate.log",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/reviewer/logs/gate-meta.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W35-delivery/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-29T09:31:40.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

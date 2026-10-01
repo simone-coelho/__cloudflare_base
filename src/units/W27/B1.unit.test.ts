@@ -74,7 +74,7 @@
 //        refused. The two absent members this batch rules by name are listed in
 //        the units that demand them; everything else here is a lock.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished, vi } from 'vitest';
 import { Hono } from 'hono';
 import * as jose from 'jose';
 
@@ -185,6 +185,24 @@ const SLOT_CONFIG = { reward: 'click' as const, objective: 'unit' as const, stat
  * every record is inside its horizon at assertion time.
  */
 const NOW = Date.UTC(2026, 8, 18, 12, 0, 0);
+
+/**
+ * The clock of a test whose ranking depends on the evidence observed at `NOW`
+ * (date-bomb correction, lead ruling 2026-10-01; arrangement only). The real
+ * LearnStats object publishes that evidence decayed to its own `Date.now()`
+ * (`DEFAULT_STATS.tauLearnMs`, 21 days), so on the host clock 100 exposures fell
+ * below `nMin` (30) at `NOW` + 25.3 days, 2026-10-13 ~18:44 UTC, and the coupled
+ * page flipped (bisected between 18:39 and 19:21 UTC). Such a test runs on this
+ * clock instead — Node's `Date` faked from this instant and advancing in real
+ * time — two days after `NOW`, the relation the suite had with the host clock
+ * when it was specified (2026-09-20), so it reads the same evidence on any host
+ * date. `NOW` itself stays the literal epoch the rotation gate is asserted at.
+ */
+const EVIDENCE_TEST_NOW = NOW + 2 * 86_400_000;
+function runOnTheEvidenceTestClock(): void {
+  vi.useFakeTimers({ toFake: ['Date'], now: EVIDENCE_TEST_NOW, shouldAdvanceTime: true });
+  onTestFinished(() => { vi.useRealTimers(); });
+}
 
 // ===========================================================================
 // The stores, the real statistics object and the published documents. Harness
@@ -645,6 +663,7 @@ describe('unit:W27.M1.01', () => {
 
 describe('unit:W27.R1.01', () => {
   it('logic: the later slot of a coupled page replays equal from the real archive, at gamma one and at gamma zero through rotation', async () => {
+    runOnTheEvidenceTestClock();
     // ---- γ = 1: the earlier slot's lift flips the earlier pick (F22 §2.1) ----
     const lifted = await world();
     await observe(lifted, 'chero', [{ item: 'cnt-charms-slg', exposures: 100, clicks: 90 }, { item: 'cnt-tabby-evening', exposures: 100, clicks: 1 },
@@ -1008,6 +1027,7 @@ describe('unit:W27.O1.01', () => {
 describe('unit:W27.E1.01', () => {
   for (const host of HOSTS) {
     it(`host (${host}): the operator endpoint replays the served coupled page equal, audited and no-store, and classifies a difference by kind`, async () => {
+      runOnTheEvidenceTestClock();
       const m = await mounted(host);
       const page = await ledgeredPage(m);
       const earlier = page.records.find(record => record.slot === 'chero')!;

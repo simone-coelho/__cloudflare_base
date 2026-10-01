@@ -9,6 +9,16 @@ import { ENTRY_TERM_LIMIT } from '../services/visit';
 import type { EntrySignals, Host } from './types';
 
 export const DEFAULT_VISITOR_KEY = 'opt_visitor_id';
+
+/**
+ * W16 R4 (LANE-LOG R81(c)): in BROKER mode the recognition proof belongs to the
+ * first-party broker as an HttpOnly cookie this script never sees, so the one
+ * thing the browser keeps for a return is the operation id its consume is keyed
+ * by. It travels to the broker in this header — never in the body the broker
+ * contract pins to `{ consent? }` — and the broker relays it beside the proof,
+ * so a return whose answer was lost is retried as the SAME consume.
+ */
+export const CONTINUITY_OPERATION_HEADER = 'X-Continuity-Operation';
 const YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 export function mintVisitorId(host: Host, key = DEFAULT_VISITOR_KEY): string {
