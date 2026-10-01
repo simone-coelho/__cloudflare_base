@@ -246,6 +246,8 @@ function createCore(config, host) {
   const capabilityKey = `opt_shopper_session:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
+  const continuityBrokerKey = `${continuityKey}:broker`;
+  const continuityOperationHeader = "X-Continuity-Operation";
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1e3;
@@ -690,35 +692,54 @@ function createCore(config, host) {
     return true;
   }
   function presentContinuity() {
-    if (cfg.sessionBroker) return null;
     try {
-      const proof = host.storage.get(continuityKey) ?? "";
-      if (!proof) return null;
+      const proof = cfg.sessionBroker ? "" : host.storage.get(continuityKey) ?? "";
+      if (cfg.sessionBroker ? !brokerHoldsProof() : !proof) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? "";
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
         host.storage.set(continuityOperationKey, operationId);
       }
-      return { proof, operationId };
+      return cfg.sessionBroker ? { operationId } : { proof, operationId };
     } catch {
       return null;
     }
   }
   function pendingContinuity() {
-    if (cfg.sessionBroker) return null;
     try {
-      const proof = host.storage.get(continuityKey) ?? "";
       const operationId = host.storage.get(continuityOperationKey) ?? "";
+      if (cfg.sessionBroker) return brokerHoldsProof() && CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      const proof = host.storage.get(continuityKey) ?? "";
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch {
       return null;
     }
   }
+  function returnInFlight(interruptedTransition) {
+    try {
+      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? "")) return false;
+      if (!(cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey))) return false;
+      return !host.storage.get(capabilityKey) || !interruptedTransition;
+    } catch {
+      return false;
+    }
+  }
+  function brokerHoldsProof() {
+    try {
+      return host.storage.get(continuityBrokerKey) === "1";
+    } catch {
+      return false;
+    }
+  }
   function keepContinuity(value) {
-    if (cfg.sessionBroker) return;
     const report = value;
     try {
-      if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
+      if (cfg.sessionBroker) {
+        if (report?.enabled === false && report.reason === "unavailable") return;
+        if (report?.enabled === true && report.mode === "broker") host.storage.set(continuityBrokerKey, "1");
+        else if (report?.enabled === false) host.storage.set(continuityBrokerKey, "");
+        host.storage.set(continuityOperationKey, "");
+      } else if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
         host.storage.set(continuityKey, report.proof);
         host.storage.set(continuityOperationKey, "");
       } else if (report?.enabled === false && report.reason !== "unavailable") {
@@ -801,7 +822,7 @@ function createCore(config, host) {
           } catch {
             return false;
           }
-          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length) rememberUnknownConsent();
+          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight(saved.pending === true)) rememberUnknownConsent();
         }
         let persisted = "";
         try {
@@ -811,11 +832,12 @@ function createCore(config, host) {
         if (Object.keys(recovery).length) persisted = "";
         const request = () => {
           const returning = persisted ? pendingContinuity() : presentContinuity();
+          const brokered = cfg.sessionBroker && returning ? { [continuityOperationHeader]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), {
             method: "POST",
             credentials: "include",
-            headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {} },
-            body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning ? { continuity: returning } : {} })
+            headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {}, ...brokered },
+            body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
           }, 16384);
         };
         let res = await request();
@@ -868,6 +890,8 @@ function createCore(config, host) {
   function envelope(type, data = {}) {
     const tracking = trackingAllowed();
     const w = toWire(type, tracking ? data : {});
+    const { brand: _supplied, ...own } = w.data;
+    void _supplied;
     const timestamp = host.now();
     let eventId;
     if (tracking && isCurrent(generation)) {
@@ -883,7 +907,7 @@ function createCore(config, host) {
       anonymousId: anonId,
       sessionId,
       browsingSessionId: session(),
-      data: w.data,
+      data: tracking && cfg.brand ? { ...own, brand: cfg.brand } : own,
       source: cfg.source,
       ...cfg.surface ? { surface: cfg.surface } : {},
       entry: entryOf(),
@@ -1397,7 +1421,10 @@ function ga4Item(e) {
     ...it.item_name !== void 0 ? { name: it.item_name } : {},
     ...it.price !== void 0 ? { price: it.price } : {},
     ...it.item_category !== void 0 ? { category: it.item_category } : {},
-    ...it.item_brand !== void 0 ? { brand: it.item_brand } : {},
+    // W26 R3 (review D1): a product's brand label is the PRODUCT's, sent as
+    // `productBrand`. `data.brand` is the brand the page was served under,
+    // which only the client's configuration names (`envelope`, core.ts).
+    ...it.item_brand !== void 0 ? { productBrand: it.item_brand } : {},
     ...it.item_variant !== void 0 ? { variant: it.item_variant } : {}
   };
 }

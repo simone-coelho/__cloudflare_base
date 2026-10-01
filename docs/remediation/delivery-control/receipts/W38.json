@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W38",
+  "workOrderHash": "sha256:395b11a1a548c0bb67a743f239b75f25d7583686dfcdc9521fb34900fa9af6e4",
+  "artifact": {
+    "revision": "e8c1af54bd85abcf50a5bcf4e0ddb908e21c9f6a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W38-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/implementer/logs/eslint.log",
+      "git commits 1278df2 3bb0cc0 6093d8a 908f0af 6713e7f 8624159 46809c8 f05810c e8c1af5 on rem/w38-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W38 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/reflex/contentCompose.test.ts src/routes/content.test.ts -t \"W38[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W38-delivery/reviewer/RESUME-NOTE.md"
+    ]
+  },
+  "completedAt": "2026-09-30T23:03:38.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

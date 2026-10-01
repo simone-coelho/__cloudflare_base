@@ -20,6 +20,8 @@ Load optional `/sdk/debug.js` after the SDK and call `EdgePersonalizationDebug.a
 
 Generic NL search uses dedicated `/search`, not supplied-candidate `/sort`. Real feed IDs, stock, price/currency, gift eligibility and entitlement remain hard constraints. Ordinary serving is model-free. Product Rec entitlement and SFCC D4/rendering remain accountable commercial/customer evidence. Optional no-additional-cost widgets/templates are handed over when available; no January widget construction is implied.
 
+External models are off by deployment. The Worker setting `EXTERNAL_MODEL_POLICY` is `off` in every environment `wrangler.toml` declares, and `off` is its only deployed state: it is the only value this build implements, an absent, empty or any other value is read as `off`, and a customer stamp, whose variables the stamp workflow sets from a fixed list, deploys it absent, which is `off`. No value, and nothing in a published document, turns a model on. With it off, a content decision, a product sort and a replay call no model URL, service binding or Workers AI and read no `ext:` key. A learn document stored before this rule that names a model (`external`) is still served, with that term withdrawn: a weighted receipt names the withdrawn term with `status: "unavailable"` and `reason: "external scoring disabled by deployment policy"`. Every publication of a learn document that names one is refused with 422 naming `external` — an edit and `POST learn/items/reset`, which republishes the current document, included; a rollback answers 404 with the same error — and the refusal changes nothing: the operator removes the term in the console first (the [payload schemas](./03-payload-schemas.md#the-learn-document) list every such write). No offline external table is published: the platform has no route or job that publishes a model's score table, and nothing reads one. `POST /v1/{tenant}/models/reference`, the reference implementation of the model contract, answers an operator token of the tenant only, and no decision calls it.
+
 This is the document your front-end engineers integrate from. It assumes a page that renders its own
 content by id and a tag layer or an event stream you already own. Everything here runs against the
 platform as it stands today; the request shapes are in the [API reference](./02-api-reference.md).
@@ -43,7 +45,7 @@ One script, served from the platform host we give you. No dependencies.
 <script>
   const client = EdgePersonalization.createClient({
     tenant: 'coach',                       // the brand scope decisions are made for
-    brand: 'coach',                        // recorded on every decision
+    brand: 'coach',                        // recorded on every decision, sent as data.brand on every event
     endpoint: 'https://<platform-host>',   // omit when the platform is on your own hostname
     sdkKey: '<your site key>',             // identifies the site; not a secret
     source: 'coach-web',                   // names your integration on every event
@@ -56,6 +58,48 @@ As a module:
 ```js
 import { createClient } from 'https://<platform-host>/sdk/edge-personalization.esm.js';
 ```
+
+**Pinning a release.** Each release is also served under a path that names its version. The file at a
+versioned path never changes, so the platform serves it with
+`Cache-Control: public, max-age=31536000, immutable` and a browser keeps it for a year without asking
+again:
+
+```html
+<script src="https://<platform-host>/sdk/0.2.0/edge-personalization.js"></script>
+```
+
+```js
+import { createClient } from 'https://<platform-host>/sdk/0.2.0/edge-personalization.esm.js';
+```
+
+The unversioned paths above always serve the release the host runs and are revalidated on every load,
+so a fix reaches your pages with no change on your side. A host serves the versioned path of the release
+it runs and no earlier one: after an upgrade the previous version's path answers 404. Pin a version only
+where your page's URL changes in the same release window as the host; everywhere else use the
+unversioned path.
+
+**As a package, in your own build.** The kit includes the SDK as the package `edge-personalization`
+(the directory `packages/sdk`): the same ES module and script-tag build, with TypeScript declarations.
+It is not on a package registry yet; publication, and the name or scope it is published under, is a
+release step agreed with you. Until then install it from the delivered directory
+(`npm install <path to packages/sdk>`), and import it by name:
+
+```js
+import { createClient } from 'edge-personalization';
+
+const client = createClient({
+  tenant: 'coach',                       // the brand scope decisions are made for
+  brand: 'coach',                        // recorded on every decision, sent as data.brand on every event
+  endpoint: 'https://<platform-host>',   // omit when the platform is on your own hostname
+  sdkKey: '<your site key>',             // identifies the site; not a secret
+  source: 'coach-web',                   // names your integration on every event
+});
+```
+
+`ClientConfig`, `Client`, `ContentDecision` and the other types in this guide are exported from the same
+name. `import 'edge-personalization/iife'` loads the script-tag build for its `EdgePersonalization`
+global instead. The package's `version` is the SDK version (`client.VERSION`), the one in the versioned
+paths above.
 
 **Where the platform lives matters for cookies.** The platform keeps its own first-party cookies on
 its host, and it does not depend on them: the visitor id travels in every request, so the integration
@@ -119,7 +163,7 @@ headers.set('Content-Type', 'text/html; charset=utf-8');
 return new Response(renderPage(bootstrap, bootstrap ? bootstrapJSON(bootstrap) : null), { headers });
 ```
 
-Forward the helper's Set-Cookie, private/no-store and Vary:Cookie headers; never share-cache this HTML. The HttpOnly first-party cookie resolves the canonical current grant/consent before HTML. Render exactly one element per choice with `data-op-page-instance`, `data-op-slot`, `data-op-content`, `data-op-position` and `data-op-decision-id`. Embed only `bootstrapJSON(bootstrap)` inside an inert `application/json` script; never embed bearer, full receipts or profile. The host's `renderPage` must escape its own HTML attributes/content.
+Forward every one of the helper's Set-Cookie headers, and its private/no-store and Vary:Cookie headers; never share-cache this HTML. The broker and the snapshot helper can set two cookies: the session cookie and, when your tenant publishes broker-mode return recognition, `__Host-opt-continuity-<tenant>`, which carries the recognition proof and is relayed back to us only on a return the SDK names an operation for. The HttpOnly first-party cookie resolves the canonical current grant/consent before HTML. Render exactly one element per choice with `data-op-page-instance`, `data-op-slot`, `data-op-content`, `data-op-position` and `data-op-decision-id`. Embed only `bootstrapJSON(bootstrap)` inside an inert `application/json` script; never embed bearer, full receipts or profile. The host's `renderPage` must escape its own HTML attributes/content.
 
 Create the browser client with `sessionBroker:'/shopper-broker'`, register the usual default/slot callbacks, then `await client.listen.adopt(parsedBootstrap, {page:'home'})`. Matching current grant/tenant/endpoint/page/deadline and complete DOM adopt without subscriber repaint and admit the rendered elements. On false, defaults are restored; call `refresh({page:'home'})`. Bare `apply(serverPayload)` is not authenticated SSR adoption. Real host SSR/browser/no-flash and latency acceptance remain open.
 
@@ -156,6 +200,9 @@ const detach = client.emit.declarative();   // authenticated offer + rendered AC
 
 **Your data layer**, the cheapest path where a tag layer exists. GA4 event names are mapped by default
 (`page_view`, `view_item`, `add_to_cart`, `add_to_wishlist`, `purchase`); override or add any of them.
+A GA4 item's `item_brand` is the product's brand label and is sent as `productBrand`, never as
+`data.brand`: that member is the brand the page was served under, and only the client's `brand` option
+sets it (see the configuration reference).
 
 ```js
 const release = client.emit.dataLayer();   // wraps window.dataLayer.push and replays what is already there
@@ -266,7 +313,7 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | Option | Default | Meaning |
 |---|---|---|
 | `tenant` | required | The brand scope decisions are made for |
-| `brand` | tenant | Recorded on every decision |
+| `brand` | tenant | Recorded on every decision, and sent as `data.brand` on every action the client sends, whatever its type, so an outcome is measured in the brand its exposure was counted in. `data.brand` is the SDK's own member: a `brand` a page, a mapping or a tag layer puts on an event is never sent under that name. A client configured without one sends none on any event, and the platform measures the tenant's own brand |
 | `endpoint` | page origin | Platform base URL |
 | `sdkKey` | none | Sent on every request; enforced on staging and production |
 | `source` | `sdk` | Names the caller on every event |

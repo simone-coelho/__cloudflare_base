@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W30",
+  "workOrderHash": "sha256:89daa7a1f9ddc177b5c629ce88bd8e59a28b941c263e00a0f131839d9f3545ef",
+  "artifact": {
+    "revision": "a8ab372c0137a993b5bed181edce0c8d1d75ac09",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W30-fix2/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W30-delivery/implementer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W30-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W30-fix2/implementer/logs/eslint-a8ab372.log",
+      "git commits 1c4d153 (W30-B1) a6c9177 7c2523e 278c588 d7bed14 4ef3e54 40beb75 7f8b10a on rem/w30-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W30 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts src/learn/hourly.test.ts src/learn/report.test.ts -t \"W30[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W30-delivery/reviewer/logs/acceptance-3.log",
+      "/home/simonecoelho/rem/_evidence/W30-fix2/implementer/logs/acceptance-a8ab372.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W30-delivery/reviewer/logs/integration-gate-3.log",
+      "/home/simonecoelho/rem/_evidence/W30-fix2/implementer/logs/integration-gate-a8ab372.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W30-delivery/reviewer/REPORT-3.md",
+      "/home/simonecoelho/rem/_evidence/W30-delivery/reviewer/REPORT-2.md",
+      "/home/simonecoelho/rem/_evidence/W30-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-09-28T02:29:16.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -247,11 +247,13 @@ flowchart LR
 
 ## 🚀 Quick Start
 
+Everything in this section runs on your machine. No Cloudflare account is needed, and nothing here
+contacts one: the local worker, its database and its storage run in Miniflare.
+
 ### Prerequisites
 
-- Node.js 18+
-- Cloudflare account with Workers, KV, R2, and Queues enabled
-- Optimizely account (optional)
+- Node.js 22 (the version CI uses)
+- git
 
 ### Installation
 
@@ -260,13 +262,37 @@ flowchart LR
 git clone <your-repo>
 cd cloudflare-edge-platform
 
-# Install dependencies
+# Install dependencies (npm install, never npm ci; see ONBOARDING.md §9)
 npm install
-
-# Configure your environment
-cp wrangler.toml.example wrangler.toml
-# Edit wrangler.toml with your Cloudflare settings
 ```
+
+`wrangler.toml` is tracked and used as it is: there is no example file to copy, and nothing in it
+needs editing to run locally. Its top-level declarations are the local worker's; `[env.staging]`
+and `[env.production]` are customer declarations that only the customer-stamp workflow uses.
+
+### Local secrets and tenants
+
+`wrangler dev` reads local-only values from `.dev.vars`, which is git-ignored and never committed.
+Create it yourself, with a signing secret of your own (at least 32 characters) and the tenant you
+will seed, granted to the seed commands' operators:
+
+```text
+JWT_SECRET=replace-with-your-own-random-local-secret-of-32-or-more-characters
+TENANTS={"provisioned":["coach"],"operatorGrants":{"seed-coach-content":["coach"]}}
+```
+
+### Local database and publication
+
+```bash
+# Product migrations into the local D1 database, and the tenant's configuration publication
+node scripts/init-local.mjs --scope coach
+```
+
+The default local database gets the product migrations only (`migrations/product`). Demo data is
+applied only when you ask for it, and only locally: `node scripts/init-local.mjs --scope coach --demo-data`
+applies the demo chain `migrations/*.sql` and then the demo seeds `migrations/seed/*.sql`, in order
+([docs/10-d1-schema.md](docs/10-d1-schema.md)). Run it again at any time: what already ran is not
+run twice, and the seeds change nothing that is already there.
 
 ### Development
 
@@ -277,39 +303,57 @@ npm run dev
 # The server will be available at http://localhost:9100
 ```
 
-### Deployment
+### Seed content (local worker, one named tenant)
 
 ```bash
-# Deploy to Cloudflare (the one safe path — deploys the "edge-platform" worker with all bindings)
-npm run deploy
+# The seed signs its local operator token with the worker's own settings
+export DEPLOYMENT_PROFILE=demo JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api
+export JWT_SECRET='the JWT_SECRET value from your .dev.vars'
 
-# NOTE: do NOT use `wrangler deploy --env staging|production` yet — those named envs
-# declare only a worker name in wrangler.toml and would ship with NO bindings/vars.
-# See docs/deployment/01-deploy.md.
+# The Coach catalog, its slots and its learning dials, into the tenant you name
+node scripts/seed-coach-content.mjs --scope coach
 ```
+
+#### Demo step: the Meridian catalogue import (not part of the product seed order)
+
+`scripts/import-content.mjs` pulls the Meridian demo catalogue through the worker's own CMS seam.
+That catalogue is a demo API, and the tracked `wrangler.toml` keeps `AUTH_MODE = "enforced"`, under
+which every demo API answers 404 by design. So this step runs only on a local worker you start with
+`AUTH_MODE=open` added to `.dev.vars` (and `"import-content":["<tenant>"]` added to the
+`operatorGrants` there), restarted after the change; on the enforced default it refuses, names
+`AUTH_MODE` and `.dev.vars`, and writes nothing. Never change `AUTH_MODE` in `wrangler.toml` for it.
+
+```bash
+node scripts/import-content.mjs --scope coach
+```
+
+Every seed command takes the tenant with `--scope` and refuses to run without one. A second run
+publishes nothing new, and a run that failed part-way is finished by running the same command again
+([docs/10-d1-schema.md](docs/10-d1-schema.md) gives the seed order and the recovery). A seed reaches a
+deployed worker only with an operator token issued for that tenant (`--token`), never one minted
+from local settings.
+
+### Deployment
+
+Nothing above deploys anything. There is no default deploy target: `npm run deploy` accepts only
+`staging` or `production` and runs the guarded customer-stamp workflow, which is operated only under
+its own authority ([docs/deployment/01-deploy.md](docs/deployment/01-deploy.md)). Tracked backup files
+and their dispositions are listed there too.
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-Set these secrets using `wrangler secret`:
-
-```bash
-wrangler secret put JWT_SECRET
-wrangler secret put OPTIMIZELY_SDK_KEY
-wrangler secret put API_KEYS
-wrangler secret put WEBHOOK_ENDPOINTS
-wrangler secret put CDP_ENDPOINTS
-```
+Locally, secrets live in `.dev.vars` (above). A deployed customer stamp receives its secrets
+(`JWT_SECRET`, `SDK_KEYS`, `IDENTITY_SALT`, `IDENTITY_SECRETS`, `ALERT_WEBHOOK_URL`) only through the
+customer-stamp workflow ([docs/deployment/01-deploy.md](docs/deployment/01-deploy.md)), never by
+setting secrets by hand on the top-level worker.
 
 ### wrangler.toml
 
-Update the following in your `wrangler.toml`:
-
-- KV namespace IDs
-- R2 bucket names
-- Queue configurations
-- Durable Object bindings
+Local development needs no edits. KV, R2, D1, Queues and Durable Objects run locally under
+`wrangler dev`, whatever IDs the file names. Customer environments are declared under
+`[env.staging]` and `[env.production]` and are changed only through the customer-stamp workflow.
 
 ## 📚 API Documentation
 

@@ -444,10 +444,16 @@ export class RealtimeSegmentEngine {
       // Cold owned actions cannot import a cookie/profile mirror. Resolve before
       // any behavioral creation; the one necessary refusal record is separate.
       const profile = !stored && !this.principal ? await this.getUserProfile(event.userId) : null;
+      // W35 A1: a cold OWNED record starts where the shopper's own object starts
+      // a new pipeline (ShopperReflex.ingest): no memberships and the floor of
+      // the journey, so the first event of a new shopper is judged against the
+      // same prior state on both hosts and neither pushes a change that is only
+      // the absence of a record. Unsigned legacy callers keep their profile seed.
       let sessionData: SessionData = stored ?? {
         userId: event.userId, anonymousId: event.anonymousId,
-        segments: profile?.segments ?? ['new_user'], attributes: profile?.attributes ?? {},
-        metadata: { firstSeen: profile?.metadata.firstSeen ?? now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+        segments: profile?.segments ?? (this.principal ? [] : ['new_user']), attributes: profile?.attributes ?? {},
+        metadata: { firstSeen: profile?.metadata.firstSeen ?? now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now,
+          ...(this.principal ? { journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE] } : {}) },
         preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true },
       };
       if (!consent.tracking || !consent.personalization) {
@@ -504,6 +510,18 @@ export class RealtimeSegmentEngine {
       const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
         ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null)
         : EMPTY_VOCABULARY;
+      // W35 A1 (doc 16 §12 trust & abuse; kit 02): an event naming a product this
+      // tenant does not hold, whose every value the catalogue refuses, is dropped
+      // and counted, never scored — by the rule and at the point the shopper's
+      // own object drops it (ShopperReflex.ingest): after placement, before any
+      // counter, visit, taste, region count, provider forward or stored write.
+      // The answer names the product in the same `signals` the object host sends.
+      const placed = reflexOn ? placeEvent(eventData, heldProduct, reflexConfig, vocabulary) : null;
+      const unknownTouches = placed && !heldProduct && reflexConfig.eventAttributes === 'event-when-unknown' ? placed.touches : [];
+      if (placed && eventProductId != null && !heldProduct && unknownTouches.length === 0) {
+        signals = placed.signals;
+        return { ...answer(null), dropped: 'unknown_product' };
+      }
       const contentEventTouches = reflexOn && contentEvent
         ? await resolvedContentTouches(this.env, this.tenant, eventData, reflexConfig, vocabulary) : null;
       await this.ensureSeeded(surface);
@@ -539,12 +557,11 @@ export class RealtimeSegmentEngine {
         // names every product reference the engine could not place. A content
         // event is placed by the content catalogue above, against the same
         // vocabulary, so its diagnostic comes from those touches.
-        const placed = placeEvent(eventData, heldProduct, reflexConfig, vocabulary);
         signals = contentEventTouches
           ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
-          : placed.signals;
+          : placed!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
-        const touches = contentEventTouches ?? placed.touches;
+        const touches = contentEventTouches ?? placed!.touches;
         reflex = applyReflex(
           sessionData.reflex,
           {
@@ -648,7 +665,11 @@ export class RealtimeSegmentEngine {
       // attribute, or the reported journey word the SDK paints (W16 C4).
       const stageChanged = sessionData.metadata.journeyStage !== journeyStage || priorWord !== journeyWord;
 
-      if (!segmentsChanged && !stageChanged) {
+      // W35 A1: the personalized event that creates her record always answers
+      // her initial state, on both hosts by one rule (ShopperReflex.ingest), so a
+      // new shopper's page learns its first decisions from the event that
+      // started her profile; afterwards only a change is pushed.
+      if (!segmentsChanged && !stageChanged && stored) {
         // No personalization change — persist the accrued attributes/activity and stop.
         sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData,
@@ -712,8 +733,11 @@ export class RealtimeSegmentEngine {
           affinity: reflex
             ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed }
             : undefined,
-          cookies: personalizationConfig.cookieUpdates,
-          cookieHeaders: personalizationConfig.cookieHeaders,
+          // W35 A1: the documented personalization_update carries no cookie
+          // member (kit 03). Cookies travel only as the action answer's own
+          // Set-Cookie headers; the update is page-visible data, and the session
+          // cookie is HttpOnly, so no cookie value or header is ever put in it —
+          // the shopper's own object sends none either (ShopperReflex.buildUpdate).
           sessionId: currentSessionId,
           engagementScore: newEngagementScore,
           timestamp: Date.now(),
@@ -812,7 +836,7 @@ export class RealtimeSegmentEngine {
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     if (this.principal && !personalizes(consentOf(sessionData))) return {
       decisions: {}, featureFlags: {}, experiments: {}, featureVariables: {}, enhancedFeatureVariables: {},
-      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: 'early', sessionData,
+      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionData,
     };
     if (this.principal) requireConsentPurpose(consentOf(sessionData), 'personalization');
     // The session remembers which demo it belongs to (absent ⇒ coach), so the
@@ -855,7 +879,10 @@ export class RealtimeSegmentEngine {
       personalization_enabled: sessionData.preferences.personalizationEnabled
     };
 
-    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? 'early';
+    // The floor of the journey through the one mapping point (R32(2)): a session
+    // born this visit, and a legacy record written before the stored stage
+    // existed, carry none (docs/kit/02-api-reference.md).
+    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE];
 
     // Decide the full storefront module set through the Optimizely FX seam.
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
@@ -1131,6 +1158,17 @@ export class RealtimeSegmentEngine {
      * session of their own and one visit was counted as two. Used when the
      * cookie says nothing, which on the decision route is always: that route
      * sets no cookie.
+     *
+     * W36 (F14 R8). It is tried BEFORE the `user:` pointer, so a pointer read
+     * that misses cannot move her onto a new, empty session while her client
+     * holds her own. It is hers only when the record stored at it names this
+     * `userId`, and a record that belongs to someone else is never served or
+     * written: when this read finds one, the lookup continues as if no id were
+     * sent; when this read misses or fails, the id may still name the session
+     * created for her (CW39), and that create's own read of it is bound to
+     * `userId` too, so someone else's record found there is treated as absent
+     * and nothing is written. Under a signed capability it must equal the
+     * capability's session.
      */
     clientSessionId?: string,
   ): Promise<{
@@ -1178,13 +1216,17 @@ export class RealtimeSegmentEngine {
       assertSessionTarget(this.principal, userId, sessionId);
       return { sessionId, sessionData: withConsent(sessionData, consent), isNewSession: true, reflexConfig };
     }
-    let sessionId = cookies.sessionId || (clientSessionId || '').trim();
+    // The cookie is the older claim; the client's id is bound to `userId` (W36).
+    const claimed = cookies.sessionId ? '' : (clientSessionId || '').trim();
+    let sessionId = cookies.sessionId || claimed;
     let sessionData: SessionData | null = null;
     let isNewSession = false;
 
     // Try to get existing session
     if (sessionId) {
-      sessionData = await this.sessionManager.getSession(sessionId);
+      const found = await this.sessionManager.resolveRecord(sessionId, claimed ? userId : undefined);
+      if (found.foreign) sessionId = '';
+      else sessionData = found.data;
     }
 
     // Fallback: resolve by stable userId (anon vuid) when the cookie is absent/blocked.
@@ -1237,7 +1279,9 @@ export class RealtimeSegmentEngine {
           personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
-      }, undefined, defer);
+      }, undefined, defer, undefined, true,
+      // W36: a session created under the client's id is bound to its owner.
+      claimed && sessionId === claimed ? userId : undefined);
     }
 
     return {
@@ -1325,6 +1369,10 @@ export class RealtimeSegmentEngine {
     const result = await this.processAction(event, sessionId, cookieHeader);
     if (event.processing === 'buffered') return { update: null, sessionId, cookieHeaders: [], consent: result.consent,
       interestApplied: result.interestApplied, ...(result.dropped ? { dropped: result.dropped } : {}),
+      ...(result.signals ? { signals: result.signals } : {}) };
+    // W35 A1: a dropped event changed nothing, so it refreshes no cookie either,
+    // exactly as the shopper's own object answers it (`cookiesUpdated: false`).
+    if (result.dropped) return { update: null, sessionId, cookieHeaders: [], consent: result.consent, dropped: result.dropped,
       ...(result.signals ? { signals: result.signals } : {}) };
     const cookieHeaders = personalizes(result.consent)
       ? this.sessionManager.createCookieHeaders(this.sessionManager.generateSessionCookies(result.sessionData, sessionId))

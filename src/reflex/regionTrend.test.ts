@@ -258,7 +258,9 @@ describe('the region object', () => {
     const counted = applyTrend(owned, { touches: [{ dim: 'line', value: 'current' }], w: 1, ts: now });
     const current = snapshotOf(counted, now, now);
     const legacy = { ...counted, generation: undefined, events: 900 };
-    const env = { CACHE: kv, REGION_TREND: { idFromName: (name: string) => name } } as unknown as Env;
+    // W37 step-3 R10 arrangement (unit:W37.T1): the regional object serves only a tenant the registry
+    // names, so the stamp this object belongs to registers `brighthour` (src/tenancy/middleware.ts:41-74).
+    const env = { CACHE: kv, REGION_TREND: { idFromName: (name: string) => name }, TENANTS: JSON.stringify({ provisioned: ['brighthour'] }) } as unknown as Env;
     const make = (name: string, store: FakeStorage) => new RegionTrend({ id: name, storage: store } as unknown as DurableObjectState, env);
     const ingest = (value: object) => new Request('https://region-trend/ingest', { method: 'POST', body: JSON.stringify(value) });
     const frame = { generation: 2, tenant: 'brighthour', region: 'US-NY', touches: [{ dim: 'line', value: 'current' }], w: 1, ts: now };

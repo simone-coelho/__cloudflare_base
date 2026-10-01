@@ -60,7 +60,7 @@
     {
       "id": "W16",
       "title": "Validated visit and channel through both hosts; seeded, journey, memory and cold-start behavior",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -126,7 +126,7 @@
         {
           "id": "R3",
           "kind": "LOCAL",
-          "observable": "The literal 'early' floor at src/services/RealtimeSegmentEngine.ts line 858 goes through the one persisted-stage mapping point, and the kit states that a legacy record without a stage adopts as early.",
+          "observable": "Every literal persisted-stage floor (src/services/RealtimeSegmentEngine.ts around lines 815 and 858, src/durable-objects/ShopperReflex.ts around lines 637, 1189 and 2885) goes through the one persisted-stage mapping point or is shown to be the documented legacy-record floor, and the kit states that a legacy record without a stage adopts as early.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -138,7 +138,7 @@
         {
           "id": "R5",
           "kind": "LOCAL",
-          "observable": "A client can tell a refusing shopper from an unreadable record on the public route that serves the decision (LANE-LOG R19 and R98(b)).",
+          "observable": "On the public decision route an unreadable record is served the default decision (200, catalogue order) with a stable member naming it unreadable, distinct from a refusal and from an expired session (LANE-LOG R19 and R98(b)).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -218,9 +218,9 @@
       "remainingWork": [
         "R1: keep the visit journey at both adoption sites of ShopperReflex.ts.",
         "R2: delete or deprecate deriveStage and stageFromCounters with a test that guards against re-import.",
-        "R3: route the literal 'early' floor through the persisted-stage mapping point and state the legacy-record floor in docs/kit/02-api-reference.md.",
+        "R3: route every literal persisted-stage floor through the mapping point (or show it is the documented legacy-record floor) and state that floor in docs/kit/02-api-reference.md.",
         "R4: close the three continuity follow-ups of LANE-LOG R81(c).",
-        "R5: expose the refusing-versus-unreadable distinction on the public decision route.",
+        "R5: serve an unreadable record the default decision with a stable member naming it unreadable.",
         "R6: add the native (workerd) continuity leg."
       ],
       "decisions": [
@@ -294,6 +294,7 @@
         "src/sdk/types.ts",
         "src/sdk/server.ts",
         "src/identity/sessionCapability.ts",
+        "src/identity/sessionAuthority.ts",
         "src/identity/consentContinuity.ts",
         "src/routes/identity.ts",
         "src/routes/realtime.ts",
@@ -309,13 +310,27 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "942dfbd0d7fa3ada808c6b0da6547c70227bec3d on rem/spec-w16: src/units/W16, 116 tests (the batch tests of W16-B1 to W16-B9 and LEDGER.unit.test.ts, with the fix-1 tests unit:W16.C6.14, C6.15, C6.16 and R4.retry added for the delivery-review defects found at 55a4490)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W16/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/REPORT-2.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W16-R3R5-controls.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W16-R3-legacy-control.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-control2-build-55a4490.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/specifier/logs/W16-control2-broad-exemption-1506a62.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/logs/control-fix-1506a62-broad-2.log",
+          "/home/simonecoelho/rem/_evidence/W16-fix1/reviewer-spec/logs/control-55a4490-new-tests.log"
         ]
       },
       "doneWhen": [
@@ -383,13 +398,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "4fbdddcdaede6c308c57a8e855fc9b7360a7aceb on rem/integration: src/units/W17 (the batch tests of W17-B1 and W17-B2)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W17-B1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W17-B2/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W17.control-mute.log",
+          "/home/simonecoelho/rem/_evidence/W17-B1/specifier/vitest-red.log",
+          "/home/simonecoelho/rem/_evidence/W17-B2/specifier/logs/vitest-L2-final.log"
         ]
       },
       "doneWhen": [
@@ -480,13 +499,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "4fbdddcdaede6c308c57a8e855fc9b7360a7aceb on rem/integration: src/units/W18 and the W18-named legacy tests of src/console/console.render.test.ts",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W18-B1/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W18.control-O4.01.log",
+          "/home/simonecoelho/rem/_evidence/W18-B1/reviewer-spec/logs/ctlB.log",
+          "/home/simonecoelho/rem/_evidence/W18-B1/reviewer-spec/logs/ctlC.log"
         ]
       },
       "doneWhen": [
@@ -499,7 +521,7 @@
     {
       "id": "W19",
       "title": "Lossless versioned content import, direct PUT and merge contract",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -587,7 +609,7 @@
         }
       ],
       "remainingWork": [
-        "Make legacy test W19.02 pass: the specifier classifies it in step 3 as a stale assertion it corrects or a product defect the implementer fixes inside the allowed paths."
+        "Fix the three product defects the corrected legacy test W19.02 exposes: D-a the serving cache is never hit on the shopper path (src/config/publication.ts around lines 295-315 keys it by storage identity; src/identity/sessionAuthority.ts around lines 568-613 wraps storage per request); D-b the object host answers a bare Internal Server Error where the session host names the refusal (src/routes/realtime.ts around lines 373-385); D-c the object host reads the catalogue with REFLEX_ENABLED false (src/durable-objects/ShopperReflex.ts around lines 1137-1139)."
       ],
       "decisions": [
         {
@@ -620,19 +642,25 @@
         "src/reflex/contentTelemetry.ts",
         "src/routes/content.ts",
         "docs/kit/03-payload-schemas.md",
-        "docs/api/01-rest-endpoints.md"
+        "docs/api/01-rest-endpoints.md",
+        "src/config/publication.ts",
+        "src/routes/realtime.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/durable-objects/ShopperReflex.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/W19 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/import.test.ts src/reflex/contentTelemetry.test.ts src/routes/content.test.ts src/routes/realtime.sdkContract.test.ts -t \"W19[.]\" --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "6af410e841c80f042d1997d4e5a02216c439d22e on rem/spec-w19-w20: src/units/W19 and the W19-named legacy tests (W19.02 corrected, RED on the product defects)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W20/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W19-W20/specifier/W19-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/logs/W19-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -646,7 +674,7 @@
     {
       "id": "W20",
       "title": "Merchandising governance: pins, contradictions, catalog references, fallback",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -670,7 +698,7 @@
         {
           "id": "R1",
           "kind": "LOCAL",
-          "observable": "constraintDiagnostics has a public observable on an operator route (LANE-LOG R82(c)).",
+          "observable": "constraintDiagnostics has a public observable on GET /content/slots (LANE-LOG R82(c)).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -694,7 +722,7 @@
         {
           "id": "R5",
           "kind": "LOCAL",
-          "observable": "safeGovernance drops coerced non-finite values instead of stating them.",
+          "observable": "safeGovernance drops coerced non-finite or negative values instead of stating them.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -764,8 +792,7 @@
       ],
       "remainingWork": [
         "R1–R6: the owed W20-B4 work of LANE-LOG R111.",
-        "R7: correct the delivery-guide sentences contradicted by decisions D1 and D2.",
-        "Make legacy tests W20.03, W20.04 and W20.05 pass: the specifier classifies each in step 3 as a stale assertion it corrects or a product defect the implementer fixes."
+        "R7: correct the delivery-guide sentences contradicted by decisions D1 and D2."
       ],
       "decisions": [
         {
@@ -827,13 +854,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "c999953c5596444bf5fc8a320fa054e6cfe6dc95 on rem/spec-w19-w20: src/units/W20 and the W20-named legacy tests (W20.03-.05 corrected)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W20/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W19-W20/specifier/W20-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/logs/W20-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/logs/W20-legacy-only.log"
         ]
       },
       "doneWhen": [
@@ -847,7 +877,7 @@
     {
       "id": "W21",
       "title": "Experiment claims containment and persistent enrollment",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -883,7 +913,7 @@
         {
           "id": "R3",
           "kind": "LOCAL",
-          "observable": "In src/measure/holdout.ts the sentence at line 334 is true, ArmSummary.s is clamped and neededPerArm never answers NaN for a rate above 1, or the unreachable code is deleted (LANE-LOG R158).",
+          "observable": "In src/measure/holdout.ts the sentence at line 334 is true, ArmSummary.s is clamped and neededPerArm never answers NaN for a rate above 1 (LANE-LOG R158).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -925,7 +955,7 @@
       "remainingWork": [
         "R1: count a later-hour-only outcome identically on both report branches.",
         "R2: prove erasure reaches ShardState.enrollment.",
-        "R3: correct or delete the three holdout mechanics of LANE-LOG R158."
+        "R3: correct the three holdout mechanics of LANE-LOG R158."
       ],
       "decisions": [
         {
@@ -964,13 +994,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "7959eb9efbfb72e78c709ac8b4ba9c2643fe4884 on rem/spec-w21-w22: src/units/W21",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W21-W22/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W21-W22/specifier/W21-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/logs/W21-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/logs/W21-R2-control-archived-half.log"
         ]
       },
       "doneWhen": [
@@ -984,7 +1017,7 @@
     {
       "id": "W22",
       "title": "Event and evidence consistency",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1021,12 +1054,6 @@
           "id": "R2",
           "kind": "LOCAL",
           "observable": "The credited journal de-duplicates by id when the digest cannot be computed instead of crediting again (LANE-LOG R143).",
-          "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
-        },
-        {
-          "id": "R3",
-          "kind": "LOCAL",
-          "observable": "A stored version-1 shard does not treat every hour at or below its through mark as folded (LANE-LOG R143).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1084,9 +1111,8 @@
         }
       ],
       "remainingWork": [
-        "R2–R4: the later-W22-batch residuals of LANE-LOG R143.",
-        "R5: the later-W22 kit unit of LANE-LOG R145.",
-        "Make the two legacy W22.07 tests pass; the triage classed them as stale fixtures without a configuration publication, which the specifier corrects in step 3."
+        "R2 and R4: the later-W22-batch residuals of LANE-LOG R143 (R3 dropped by the owner, decision D3).",
+        "R5: the later-W22 kit unit of LANE-LOG R145."
       ],
       "decisions": [
         {
@@ -1101,6 +1127,12 @@
           "authorityRef": "F17.md §6; units.json W22.P1.01",
           "effect": "The seven-day window storage is decided with the workload numbers in LIVE2.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A42",
+          "effect": "A stored version-1 shard keeps the bound W30.F1.01 states (recovery begins at its first version-2 fold); the version-1 repair is not built."
         }
       ],
       "deferredLiveAcceptance": [
@@ -1125,6 +1157,7 @@
         "src/durable-objects/DecisionRing.ts",
         "src/ledger/writer.ts",
         "src/ledger/recovery.ts",
+        "src/ops/monitor.ts",
         "docs/api/01-rest-endpoints.md",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md"
@@ -1133,13 +1166,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "18487e8abbbfd0b3ea0b7103d1d6d936632a7f35 on rem/spec-w21-w22: src/units/W22 and the W22-named legacy tests (R3 removed, decision D3)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W19-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W21-W22/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/specifier/W22-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W22-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W22-legacy-only.log"
         ]
       },
       "doneWhen": [
@@ -1153,7 +1191,7 @@
     {
       "id": "W23",
       "title": "Order-invariant counters, exact rates, bounded event time",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1201,7 +1239,7 @@
         {
           "id": "R3",
           "kind": "LOCAL",
-          "observable": "The kit documents Receipt.lift_terms, LiftSnapshot.rebuiltFrom, OutcomeReceipt.outsideWindow and the reset intent, completes the snapshot line of docs/kit/03-payload-schemas.md (around lines 433 and 437) and states that the purchase window equals the ring reach (LANE-LOG R175).",
+          "observable": "The kit documents Receipt.lift_terms, LiftSnapshot.rebuiltFrom, OutcomeReceipt.outsideWindow and the reset intent, completes the snapshot line of docs/kit/03-payload-schemas.md (lines 448-449 at 4fbdddc) and states that the purchase window equals the ring reach (LANE-LOG R175).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1250,7 +1288,6 @@
         }
       ],
       "remainingWork": [
-        "R1: the ledger-rebuild branch of H1.01.",
         "R2: keep the basis marker across a reset.",
         "R3: the later-W23 kit unit of LANE-LOG R175."
       ],
@@ -1312,13 +1349,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "ca804bc07875d83c3b54696b2e958922ffcb3f21 on rem/spec-w23: src/units/W23 and the W23-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/specifier/W23-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/logs/ctl-w23-r3-rebuiltFrom-only.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/logs/W23-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -1332,7 +1373,7 @@
     {
       "id": "W24",
       "title": "Versioned accumulation, generation transitions, reward and money policy",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1374,7 +1415,7 @@
         {
           "id": "R4",
           "kind": "LOCAL",
-          "observable": "A reply carrying refused without refusedBySlot is refused or named (LANE-LOG R203).",
+          "observable": "A reply carrying refused without refusedBySlot is refused (LANE-LOG R203).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1474,13 +1515,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "83ff8b8d96714f06776d3aa9d5d4a1b3d2364727 on rem/spec-w23-w24: src/units/W24 and the W24-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W24/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W23-W24/specifier/W24-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/logs/W24-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/logs/ctl-w24-r5-on.log"
         ]
       },
       "doneWhen": [
@@ -1494,7 +1538,7 @@
     {
       "id": "W25",
       "title": "Structured priors and versioned cell grammar",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1542,7 +1586,7 @@
         {
           "id": "R1",
           "kind": "LOCAL",
-          "observable": "A slot stopped by the publish-time money-prior refusal raises an operator monitor or health signal (LANE-LOG R183).",
+          "observable": "A slot stopped by the publish-time money-prior refusal raises a signal on the operator monitor, in its run and its kept result (LANE-LOG R183).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1560,7 +1604,7 @@
         {
           "id": "R4",
           "kind": "LOCAL",
-          "observable": "The priors input of buildReport has a production caller or is removed (LANE-LOG R183).",
+          "observable": "The priors input of buildReport has a production caller (LANE-LOG R183).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1630,6 +1674,7 @@
         "src/learn/priors.ts",
         "src/durable-objects/LearnStats.ts",
         "src/learn/report.ts",
+        "src/learn/hourly.ts",
         "src/ops/monitor.ts",
         "src/routes/decisions.ts",
         "docs/kit/02-api-reference.md",
@@ -1639,13 +1684,15 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "adf24e1ce33f9308a870008340c6e75dce9e72d5 on rem/spec-w25-w26: src/units/W25 and the W25-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/W25-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/logs/W25-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -1659,7 +1706,7 @@
     {
       "id": "W26",
       "title": "Exposure unit, placement identity and fatigue",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1707,7 +1754,7 @@
         {
           "id": "R2",
           "kind": "LOCAL",
-          "observable": "page is part of the storage identity, so a retained catalogue with a cross-page duplicate never pools silently (LANE-LOG R198).",
+          "observable": "page is part of the storage identity for a slot name used on more than one page, so a retained catalogue with a cross-page duplicate never pools silently, and serving, the operator lift reads, the monitor, recovery, the managed exposure path, the synthetic monitor and the decision replay read the page-separated object and its archive; single-page names keep their names (LANE-LOG R198; amendment A49).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1768,7 +1815,7 @@
       ],
       "remainingWork": [
         "R2–R5: the later W26 unit of LANE-LOG R198.",
-        "Make legacy test W26.02 pass; the triage classed it as a stale fixture without a configuration publication, which the specifier corrects in step 3."
+        "A49: the synthetic monitor (src/ops/synthetic.ts about :88 and :623) and the decision replay (src/learn/replay.ts about :98) follow the page for a cross-page slot name."
       ],
       "decisions": [
         {
@@ -1783,6 +1830,12 @@
           "authorityRef": "units.json W26.P1.01; HANDOFF-2026-09-18 §8 D04 D09",
           "effect": "Locally the platform names its basis, states its non-correction and counts legacy credits apart.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A47–A50 on 2026-09-26 (\"approved\"), row A49",
+          "effect": "W26 fixes the two regressions its page-separated storage causes outside its first write boundary: the synthetic monitor and the decision replay."
         }
       ],
       "deferredLiveAcceptance": [
@@ -1806,6 +1859,12 @@
         "src/learn/policy.ts",
         "src/learn/rows.ts",
         "src/content/kinds.ts",
+        "src/content/service.ts",
+        "src/routes/decisions.ts",
+        "src/ops/monitor.ts",
+        "src/ops/synthetic.ts",
+        "src/learn/replay.ts",
+        "src/ledger/recovery.ts",
         "src/sdk/core.ts",
         "src/sdk/emit.ts",
         "src/sdk/types.ts",
@@ -1813,6 +1872,7 @@
         "public/sdk/edge-personalization.js",
         "public/console/views-measure.js",
         "public/learning.js",
+        "public/console/views.js",
         "docs/kit/01-integration-guide.md",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md"
@@ -1821,13 +1881,28 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "88b129b979e5fe128ea9b7f15ef25d0bfee4d719 on rem/spec-w25-w26: src/units/W26 and the W26-named legacy tests (W26.02 corrected; console.render.test.ts:893 corrected for the correction column), the time-of-day anchors corrected at ad80567 and 3587d98, and the amendment-A49 legs unit:W26.R2.synthetic and unit:W26.R2.replay added at 88b129b",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W25-W26/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/REPORT-a49.md",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/REPORT-a49.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W26-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-split-writes.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-control-uncredited-uncorrelated.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/logs/w26-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/negative-control.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-3.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/specifier/logs/W26-negative-control-4.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/bac-legs-a49.log",
+          "/home/simonecoelho/rem/_evidence/W26-fix1/reviewer-spec/logs/fixwide-synthetic-a49.log"
         ]
       },
       "doneWhen": [
@@ -1841,7 +1916,7 @@
     {
       "id": "W27",
       "title": "Replay: archive before visible, page manifests, explicit failure",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -1881,21 +1956,15 @@
           "proof": "The W27 acceptance command runs the tests named unit:W27.E1.* in src/units/W27 and they pass."
         },
         {
-          "id": "R2",
-          "kind": "LOCAL",
-          "observable": "Replay of a slot and position that has no decision answers a stated classification instead of ok with an item diff (src/learn/replay.ts around line 308; LANE-LOG R200).",
-          "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
-        },
-        {
           "id": "R3",
           "kind": "LOCAL",
-          "observable": "A corrupt manifest at version 2 or above is refused, not only reported as a rollout event (LANE-LOG R200).",
+          "observable": "A manifest at version 2 or above whose dependency identity is not a nonnegative safe integer is refused, not only reported as a rollout event (LANE-LOG R200).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
           "id": "R4",
           "kind": "LOCAL",
-          "observable": "The raw setAlarm at src/durable-objects/LearnStats.ts line 587 goes through the guarded alarm path (LANE-LOG R200).",
+          "observable": "The raw setAlarm in src/durable-objects/LearnStats.ts (line 835 at 4fbdddc) never pushes the effect-expiry alarm later (LANE-LOG R200).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -1937,7 +2006,7 @@
         }
       ],
       "remainingWork": [
-        "R2–R4: the later W27 unit of LANE-LOG R200."
+        "R3 and R4: the later W27 unit of LANE-LOG R200 (R2 dropped by the owner, decision D3)."
       ],
       "decisions": [
         {
@@ -1953,6 +2022,12 @@
           "authorityRef": "units.json W27.P1.01 (2)",
           "effect": "No historical record is repaired locally.",
           "deferredAcceptanceId": "LIVE3"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A18",
+          "effect": "A replay of a slot and position with no decision keeps its current answer (ok with an item difference), judged consistent in LANE-LOG R200 and locked by src/learn/phase3.test.ts:341 and :595."
         }
       ],
       "deferredLiveAcceptance": [
@@ -1986,13 +2061,22 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "85055cb6412a48f9d9bed8e49d1cb7b24e107555 on rem/spec-w27: src/units/W27 and the W27-named legacy tests (R2 removed, decision D3), with unit:W27.R3 extended at 85055cb to every present non-identity lift or prior, numbers and non-numbers (the frozen R3 text)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/W27-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W16-W22/reviewer-spec/logs/W27-legacy-only.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/specifier/logs/W27-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/logs/build-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W27-fix1/reviewer-spec/logs/broad-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -2006,7 +2090,7 @@
     {
       "id": "W28",
       "title": "Thompson exploration withdrawn and consistent",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2048,13 +2132,13 @@
         {
           "id": "R2",
           "kind": "LOCAL",
-          "observable": "Records written before the change carry a versioned replay marker so replay compatibility is explicit (LANE-LOG R204).",
+          "observable": "Records written after the change carry a replay-compatibility marker outside inputs.replay, and a record written before the change never replays as an item difference (LANE-LOG R204).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
           "id": "R3",
           "kind": "LOCAL",
-          "observable": "The second word at src/learn/rows.ts line 252 reads configuredExploration consistently (LANE-LOG R204).",
+          "observable": "The slots row uses the kit member names configuredMode and unsupported (docs/kit/02-api-reference.md line 321); configuredExploration stays (LANE-LOG R204).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -2118,8 +2202,7 @@
         }
       ],
       "remainingWork": [
-        "Make legacy test W28.01 pass (the explain.lift null cause it shares with W20.03 to W20.05 and W10.03 in that file): classified by the specifier in step 3, fixed by the implementer if it is a product defect.",
-        "R2–R6: the later W28 unit of LANE-LOG R204."
+        "R2–R5: the later W28 unit of LANE-LOG R204 (W28.01 corrected and R6 proven at specification)."
       ],
       "decisions": [
         {
@@ -2159,6 +2242,7 @@
         "src/content/service.ts",
         "public/console/views-explore.js",
         "public/console/views-measure.js",
+        "public/console/views.js",
         "public/learning.js",
         "public/meridian/engine.bundle.js",
         "docs/kit/02-api-reference.md",
@@ -2168,13 +2252,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "9bf3b042ae9e8c6471b57dace00a43d3204567bf on rem/spec-w28: src/units/W28 and the W28-named legacy tests (W28.01 corrected)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/specifier/W28-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/logs/ctl-w28-r2-fallback.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W23-W28/reviewer-spec/logs/W28-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -2188,7 +2276,7 @@
     {
       "id": "W29",
       "title": "Autonomy safely unavailable and reported",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2254,7 +2342,7 @@
         }
       ],
       "remainingWork": [
-        "R2 and R3: the later W29 unit of LANE-LOG R176."
+        "R3: the later W29 unit of LANE-LOG R176 (R2 proven at specification)."
       ],
       "decisions": [
         {
@@ -2297,13 +2385,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "b4486bb32b1c9b65120482d62764eda0799fc4db on rem/spec-w27-w29: src/units/W29",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/W29-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W23-W29/reviewer-spec/logs/W29-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/W27-W29/specifier/logs/w29-r2-negative-control.log"
         ]
       },
       "doneWhen": [
@@ -2317,8 +2408,8 @@
     {
       "id": "W30",
       "title": "Late and mutable hour repair, maturity and coverage flags",
-      "state": "BUILT_PENDING_VERIFY",
-      "executionMode": "VERIFICATION_ONLY",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
         "locator": "§5 row W30 (line 432); earliest gate G1 capacity / G3 reconstruction; findings F17/F18/F25; N08/N23",
@@ -2363,6 +2454,30 @@
           "proof": "The second command of the acceptance command runs every test whose name matches W30[.] in the listed legacy files."
         },
         {
+          "id": "L1",
+          "kind": "LOCAL",
+          "observable": "A late row that reaches a final hour past the re-fold horizon reaches its published day: the cron republishes that date with the row counted and named, as kit 02 states for late rows (adoption defect D1, a regression against 7e65a26).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A46) passes at the artifact revision."
+        },
+        {
+          "id": "S1",
+          "kind": "LOCAL",
+          "observable": "The console measurement screen and the learning screen describe an hour as repaired exactly as maturityOf and kit 02 define it (an hour folded after the re-fold horizon, whether or not it was folded before), never as repaired rather than first folded (adoption defect D2).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A46), or for a screen sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
+          "id": "P1",
+          "kind": "LOCAL",
+          "observable": "A later-hour carry-in outcome is placed on the arm of the decision that carried it in, so a folded day answers visitorOutcomes whenever the raw day does (amendment A47).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A47) passes at the artifact revision."
+        },
+        {
+          "id": "E1",
+          "kind": "LOCAL",
+          "observable": "When the attribution ring has evicted a visitor's earlier decision, a purchase made before consent is never folded under an arm: the fold flags or corrects it, and the kit sentence on it in docs/kit/03-payload-schemas.md is true (amendment A48).",
+          "proof": "A test the specifier adds to the W30 acceptance command before the build (amendment A48), or for the kit sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
           "observable": "The released artifact shows the behavior of every LOCAL criterion on the deployed hosts.",
@@ -2389,10 +2504,17 @@
         {
           "ref": "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-build/BRIEF.md",
           "description": "The build review that stopped without a verdict; its checklist carries into the verification."
+        },
+        {
+          "ref": "/home/simonecoelho/rem/_evidence/adoption-1/reviewer/REPORT.md",
+          "description": "The adoption verification at 68db4f6: W30 FAIL on two defects (D1 a late row past the horizon is never republished, a regression against 7e65a26; D2 both screens call first folds repaired rather than first folded)."
         }
       ],
       "remainingWork": [
-        "Verify the build at 1c4d153 on rem/w30-b1-build against this contract (the stopped build review is the checklist: repaired, the conditional lateObjects put, the single-cause evicted, the filedConflict fail-closed read, the quarantine import), then record an ADOPTION receipt or amend this ticket with the finite defects."
+        "L1: starting from the W30-B1 build (1c4d153 on rem/w30-b1-build) merged with the integration head, republish a date whose late row reaches a final hour past the re-fold horizon (src/learn/hourly.ts: staleHour records lateObjects around lines 1946-1947 and 2033; catchUp republishes only dates built in the same run around lines 2067 and 2071).",
+        "S1: correct the repaired wording in public/console/views-measure.js (around line 129) and public/learning.js (around line 414) to match maturityOf (src/learn/hourly.ts around lines 1213-1215) and kit 02.",
+        "P1: place a later-hour carry-in outcome on the arm of the decision that carried it in, so the folded day answers visitorOutcomes whenever the raw day does (amendment A47; W21 delivery review residual 1).",
+        "E1: flag or correct the fold when the ring has evicted a visitor's earlier decision, so a pre-consent purchase never folds under an arm, and make the kit 03 sentence true (amendment A48; W21 delivery review residual 2, src/learn/hourly.ts about :750-751)."
       ],
       "decisions": [
         {
@@ -2407,6 +2529,18 @@
           "authorityRef": "units.json W30.P1.01 on rem/w30-b1-build",
           "effect": "The build asserts the mechanism against the compiled values; the values and the workload are approved in LIVE2.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), row A46",
+          "effect": "The W30 adoption failed on two defects; W30 is delivered as an implementation ticket in its place after W29, from the W30-B1 build merged with the integration head, within the W30-B1 write grant."
+        },
+        {
+          "id": "D4",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A47–A50 on 2026-09-26 (\"approved\"), rows A47 and A48",
+          "effect": "W30 also places later-hour carry-in outcomes and flags or corrects ring-eviction misattribution, both found by the W21 delivery review."
         }
       ],
       "deferredLiveAcceptance": [
@@ -2423,24 +2557,65 @@
           "proof": "A workload record at a signed-off workload."
         }
       ],
-      "allowedPaths": [],
+      "allowedPaths": [
+        "src/learn/hourly.ts",
+        "src/learn/report.ts",
+        "src/measure/window.ts",
+        "src/index.ts",
+        "src/routes/decisions.ts",
+        "public/console/views-measure.js",
+        "public/learning.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "docs/api/01-rest-endpoints.md"
+      ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/W30 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts src/learn/hourly.test.ts src/learn/report.test.ts -t \"W30[.]\" --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "36f5883909335b9ada6178537fc7a86cd3154950 on rem/w30-spec: src/units/W30 and the W30-named legacy tests, with L1, S1, P1, E1, the round-1 tests P1.02, P1.03 and F1.02, and the round-2 double-count tests unit:W30.P1.04, P1.05 and P1.06 (FIX1.unit.test.ts; only a general per-hour placement rule passes all three)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-B1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT-3.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT-3.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-V1.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W30.control-C1-budget.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/W30-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-L1S1-at-1c4d153.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W30-acceptance-on-reviewer-fix.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/specifier/logs/W30-negative-control-2.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/logs/P1E1-at-integration-9df3365.log",
+          "/home/simonecoelho/rem/_evidence/amend3-W30/reviewer-spec/logs/P1E1-at-w30build-1c4d153.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/specifier/logs/W30-negative-control-4.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/logs/FIX1-fb96462-at-at-278c588.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix1/reviewer-spec/logs/FIX1-fb96462-at-ctl-named.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/specifier/logs/W30-negative-control-7.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/logs/r3-P104-P106-at-e1c929e.log",
+          "/home/simonecoelho/rem/_evidence/W30-fix2/reviewer-spec/logs/r3-P104-P106-at-fixN-e1c929e.log"
         ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
         "The program integration gate command exits 0 once at the same artifact revision.",
-        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision."
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
       ],
       "blockers": []
     },
@@ -2566,13 +2741,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "9fde36f76267c74b87dac4a4662ba7f498320237 on rem/w31-spec: src/units/W31 and the W31-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W31-B1/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W31.acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W31.control-S1.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W31.control-C1.log"
         ]
       },
       "doneWhen": [
@@ -2585,7 +2763,7 @@
     {
       "id": "W32",
       "title": "Report and catalogue bounds; zero-base honesty stated",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2729,13 +2907,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "edc01a7c0a90e6f000094bff250433f301cbf45d on rem/w32-spec: src/units/W32 and the W32-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W32-B1/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W32.acceptance.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W32.control-L1.log",
+          "/home/simonecoelho/rem/_evidence/step3/existing/reviewer-spec/logs/W32.control-S1-membership.log"
         ]
       },
       "doneWhen": [
@@ -2749,7 +2930,7 @@
     {
       "id": "W33",
       "title": "Custom overlays never overwrite canonical day reports",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2867,13 +3048,22 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "583b2e07fdd9b21cb30f3fc08e0f921384ff8f22 on rem/spec-w33: src/units/W33 (LEDGER and FIX1) and the W33-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/reviewer-spec/logs/red-bc788a2.log",
+          "/home/simonecoelho/rem/_evidence/W33-delivery/fix1/specifier/logs/W33-negative-control-fix1.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W33-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W33-nonstrict.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W33-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -2887,7 +3077,7 @@
     {
       "id": "W34",
       "title": "External-model policy: off makes zero calls",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3014,6 +3204,7 @@
         "src/learn/replay.ts",
         "src/routes/decisions.ts",
         "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "docs/api/01-rest-endpoints.md"
       ],
@@ -3021,13 +3212,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "82235876763c7cb160069f0ca114c42cb1907dfa on rem/spec-w34 (the refresh: merge 334828c of rem/integration ca5094b): src/units/W34 and the W34-named legacy tests (W34.01 and W20.03 corrected to publish retained)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W20.03-uncorrected-e3.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W20.03-bite.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/reviewer-spec/logs/control-W34-E1-egress.log",
+          "/home/simonecoelho/rem/_evidence/W34-delivery/spec/specifier/logs/W34-negative-control-refresh.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W34-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W34-E3-validator.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W34-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -3041,7 +3243,7 @@
     {
       "id": "W35",
       "title": "Transactional shopper authority",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3111,9 +3313,9 @@
         }
       ],
       "remainingWork": [
-        "Make the five failing legacy W35 tests pass: the specifier corrects stale fixtures (triage group A) in step 3 and the implementer fixes any product defect.",
-        "A1: prove and close object-host parity on every dimension the parity tests expose.",
-        "A2 and A3: prove concurrency, restart, ownership and rollback on the object host."
+        "A1: close the host parity gaps (the unknown-product drop, the reflex answer shape, the link view under a refusal, the tracking-only sign-in refused on the session host) and the SDK update-stream gaps, including cookie values (the HttpOnly opt_session_id among them) sent in update data.",
+        "A3: roll back a prepared transfer whose target owner was reset.",
+        "LG1: a withdrawal from a transferred device's own session is admitted (src/durable-objects/ShopperReflex.ts around line 774)."
       ],
       "decisions": [
         {
@@ -3171,13 +3373,27 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "8d6aa25e299115eeb45fbd9fb06e7dc960ab2284 on rem/spec-w35 (the delivery corrections: merge 6b10077 of rem/integration 50db2de): src/units/W35 and the W35-named legacy tests (step-3 corrections of W35.01, W35.03, W35.08 and the competing-links expectation; delivery corrections: W35.03 seeded stamped, W35.01 and W35.08 expect W19's 500 answer, the A2 host cases accept any legal serialization)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W26-W35/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/logs/nc-8d6aa25-acceptance.log",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/reviewer-spec/logs/nc-8d6aa25-part2.log",
+          "/home/simonecoelho/rem/_evidence/W35-delivery/spec/specifier/logs/W35-negative-control-fix.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix2-W26-W35/specifier/W35-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/W35-flake.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/logs/w35-controls.txt",
+          "/home/simonecoelho/rem/_evidence/step3/fix3-W35/reviewer-spec/logs/w35-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -3191,7 +3407,7 @@
     {
       "id": "W36",
       "title": "Session containment on event routes",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3203,7 +3419,7 @@
         {
           "id": "S1",
           "kind": "LOCAL",
-          "observable": "Every production event route passes the client browsing session to the engine (src/routes/realtime.ts around lines 406 and 493, src/routes/live.ts around line 277, src/services/RealtimeSegmentEngine.ts around line 1324); today only sessionDefer.test.ts passes it.",
+          "observable": "Every production event route acts on the session its signed capability carries, and a page that falls back when the pointer read misses uses the session its client sent (the Bright Hour page, src/routes/live.ts around line 277, is the gap).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3215,7 +3431,7 @@
         {
           "id": "S3",
           "kind": "LOCAL",
-          "observable": "Sort reads strictly with no create and writes nothing but a consent restriction.",
+          "observable": "Sort reads strictly with no create and writes no shopper state other than a consent restriction; its product-sort ledger record, required by W14, stays.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3256,8 +3472,7 @@
         }
       ],
       "remainingWork": [
-        "S1: thread the client session through the production event callers.",
-        "S2 and S5: prove delayed writes and the fresh and returning SDK flows on the mounted routes."
+        "S1: the Bright Hour page (src/routes/live.ts around line 277) uses the session its client sent when the pointer read misses (S2–S5 proven at specification)."
       ],
       "decisions": [
         {
@@ -3289,13 +3504,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "2f1988ffb7d07a33d26be014abc879e3810c5552 on rem/spec-w36 (fix 1, one commit on f54b034): src/units/W36 (LEDGER and FIX1)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W36/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/logs/r1-fix1-at-head-e2030e7.log",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/reviewer-spec/logs/r2-fix1-at-base-3c68192.log",
+          "/home/simonecoelho/rem/_evidence/W36-delivery/fix1/specifier/logs/W36-negative-control-fix1.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/specifier/W36-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/control-W36-S5-returning-snapshot.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W33-W36/reviewer-spec/logs/W36-acceptance.log"
         ]
       },
       "doneWhen": [
@@ -3309,7 +3534,7 @@
     {
       "id": "W37",
       "title": "One tenant registry and per-customer stamps",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3321,13 +3546,13 @@
         {
           "id": "T1",
           "kind": "LOCAL",
-          "observable": "The engine, connectors, retention, SDK keys and operator OIDC resolve a tenant from one registry, and an unregistered tenant is refused everywhere (today split across TENANTS, TENANT_CONNECTORS at src/connectors/config.ts:108, RETENTION at src/retention.ts:57, SDK_KEYS at src/middleware/edgeAccess.ts:82 and OPERATOR_OIDC at src/auth/oidc.ts:29).",
+          "observable": "A tenant the registry does not name is refused by every request surface and gets no background work, the regional-trend alarm included.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
           "id": "T2",
           "kind": "LOCAL",
-          "observable": "Every cron iterates registered tenants and their brands; the day-report cron does not assume brand equals tenant (src/index.ts around line 286).",
+          "observable": "Every cron and the hourly fold publish per brand as the tenant's own records define brands (no brand registry exists); the day-report cron does not assume brand equals tenant (src/index.ts around line 286).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3345,7 +3570,7 @@
         {
           "id": "T5",
           "kind": "LOCAL",
-          "observable": "Tenant-level export and erasure cover every store the registry names.",
+          "observable": "Per-shopper export and erasure work for shoppers of two non-default brands and reach every store that holds that tenant's shopper data (decision D2).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3353,6 +3578,12 @@
           "kind": "LOCAL",
           "observable": "The owed regression units: /realtime/segments answers 401 for a refusing shopper with a mismatched audienceOwner (W37.BASE.03); a refused alarm re-arms the retention deadline (W37.BASE.04); the object host names the typed refusal reason (W37.BASE.05).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
+          "id": "T7",
+          "kind": "LOCAL",
+          "observable": "A stamp whose queues do not exist yet can be created: every receipt key the stamp workflow writes passes the protected store's key check (the resource-deadLetter key fails it today, scripts/stamp-workflow.mjs around lines 358 and 750).",
+          "proof": "A test the specifier adds to the W37 acceptance command before the build (amendment A45) passes at the artifact revision."
         },
         {
           "id": "LG1",
@@ -3390,9 +3621,12 @@
         }
       ],
       "remainingWork": [
-        "T1–T5: the one-registry, cron, brand, isolation and tenant export and erasure work.",
-        "T6: the three owed W37.BASE regression units.",
-        "Make the fourteen failing legacy W37 tests pass: the specifier corrects stale fixtures in step 3 and the implementer fixes product defects."
+        "T1: no background work for an unregistered tenant (the regional-trend alarm).",
+        "T2: every cron and the hourly fold publish per brand.",
+        "T3: adding a brand never takes another brand's default position (scripts/stamp-workflow.mjs).",
+        "T5: per-shopper export and erasure across two non-default brands (decision D2).",
+        "LG1 defect: the object host answers already, not linked, for a repeated link (src/durable-objects/ShopperReflex.ts around line 266).",
+        "T7: fresh-stamp creation — the resource-deadLetter receipt key must pass the protected store's key check (scripts/stamp-workflow.mjs around lines 358 and 750)."
       ],
       "decisions": [
         {
@@ -3401,6 +3635,18 @@
           "authorityRef": "HANDOFF-2026-09-18 §8 D08",
           "effect": "Local proof uses fixture tenants; the real topology is confirmed in LIVE2. Five-region scale is not a residency agreement.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A32",
+          "effect": "Complete export and erasure means per-shopper export and erasure proven for two non-default brands across every store holding that tenant's shopper data; whole-tenant offboarding is not built."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), rows A43 and A45",
+          "effect": "W37 also fixes fresh-stamp creation (T7), a defect found outside the 26 as frozen; its write boundary adds src/customerBoundary.ts, src/routes/decisions.ts, src/auth/store.ts and src/auth/subjectAudit.ts for the audited per-shopper export (T5)."
         }
       ],
       "deferredLiveAcceptance": [
@@ -3423,6 +3669,7 @@
         "src/tenancy/objects.ts",
         "src/tenancy/d1.ts",
         "src/index.ts",
+        "src/learn/hourly.ts",
         "src/connectors/config.ts",
         "src/connectors/index.ts",
         "src/connectors/AudienceStore.ts",
@@ -3440,6 +3687,10 @@
         "src/middleware/edgeAccess.ts",
         "src/retention.ts",
         "src/auth/oidc.ts",
+        "src/customerBoundary.ts",
+        "src/routes/decisions.ts",
+        "src/auth/store.ts",
+        "src/auth/subjectAudit.ts",
         "scripts/stamp-workflow.mjs",
         "scripts/provision-stamp.sh",
         "docs/deployment/01-deploy.md",
@@ -3450,13 +3701,41 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "92da2405970b8b85d966aa5d68370143b8ff38ae on rem/spec-w37 (fix 3, one commit on 0dbcca8): src/units/W37 (LEDGER, T7, FIX2, FIX3) and the W37-named legacy tests as they stand at this revision (including the integration branch's W35 corrections to W37.05, W35.01 and W35.08), shopperReflex.identity.test.ts :372 restored to already (lead ruling 2026-09-30)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W27-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup2-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/logs/N1-red-f9ab778-FIX3.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/reviewer-spec/logs/C1-trust-cursor-T5.05.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix3/specifier/logs/W37-negative-control-fix3.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/reviewer-spec/logs/N1-red-7a1b087-FIX2.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/fix2/specifier/logs/W37-negative-control-fix2.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N1-acceptance-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N2-part2-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/reviewer-spec/logs/N3-identity-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/W37-delivery/spec/specifier/logs/W37-acceptance-84147aa.log",
+          "/home/simonecoelho/rem/_evidence/step3/followup3-W37/specifier/W37-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/controls-summary.log",
+          "/home/simonecoelho/rem/_evidence/step3/W37/reviewer-spec/logs/acceptance.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/specifier/W37-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-at-2e0fb14.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-control-keyfix.log",
+          "/home/simonecoelho/rem/_evidence/amend2-W30-W37/reviewer-spec/logs/W37-T7-control-guard.log"
         ]
       },
       "doneWhen": [
@@ -3470,7 +3749,7 @@
     {
       "id": "W38",
       "title": "Content and cache bounds with read-path performance",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3500,7 +3779,7 @@
         {
           "id": "B4",
           "kind": "LOCAL",
-          "observable": "Revisions a live pointer, a replay manifest or a rollback needs are retained; older revisions are purged only under an explicit configured policy, and with no policy set nothing is purged (src/config/publication.ts).",
+          "observable": "The current and the previous published revision of each kind and every revision a stored replay manifest names are retained; older revisions are purged only under a per-category retention setting for configuration revisions in the existing retention registry, and with that setting unset nothing is purged (src/config/publication.ts, src/retention.ts; decision D3).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3513,6 +3792,12 @@
           "id": "B6",
           "kind": "LOCAL",
           "observable": "Any optimization keeps final scores and candidates identical to the W38.05 oracle.",
+          "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
+          "id": "B7",
+          "kind": "LOCAL",
+          "observable": "A large lift snapshot is served: the lift health witness (src/learn/fan.ts around line 25) does not re-digest the whole snapshot inside its 50 ms budget.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3566,9 +3851,11 @@
       ],
       "remainingWork": [
         "B1: total byte cap on the lift cache.",
-        "B3: test the old-reader and alias behavior.",
-        "B4: the configurable retention and purge mechanism for revisions.",
-        "B5: the whole-path measurement."
+        "B2: the four enrichment routes answer the named input_budget_exceeded refusal.",
+        "B3: adopt a revision stored with only the config field.",
+        "B4: the retention-registry purge setting for configuration revisions (decision D3).",
+        "B5: publish the whole-path measurement in the kit.",
+        "B7: serve large lift snapshots within the health budget."
       ],
       "decisions": [
         {
@@ -3582,6 +3869,12 @@
           "status": "RESOLVED",
           "authorityRef": "HANDOFF-2026-09-18 §7 Retention; docs/remediation/decisions/D06-W06-retention-configuration-approved-2026-09-17.json",
           "effect": "Existing revisions are never deleted automatically; purge values arrive with LIVE2."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A35",
+          "effect": "Purge by policy is a per-category retention setting for configuration revisions in the existing retention registry, the form of the settled D06-W06 retention decision; unset means nothing is purged."
         }
       ],
       "deferredLiveAcceptance": [
@@ -3609,6 +3902,9 @@
         "src/reflex/configStore.ts",
         "src/reflex/contentCompose.ts",
         "public/meridian/engine.bundle.js",
+        "src/retention.ts",
+        "src/types/env.ts",
+        "src/learn/fan.ts",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md"
       ],
@@ -3616,13 +3912,26 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "ffa33a344cfb014cde44b8751779e1ec714c3819 on rem/spec-w38 (fix 1, three commits on ffb05ba): src/units/W38 (LEDGER and FIX1) and the W38-named legacy tests",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W38/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/red-8624159.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/mutant-offby1.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/reviewer-spec/logs-v3/mutant-unbounded.log",
+          "/home/simonecoelho/rem/_evidence/W38-delivery/fix1/specifier/logs/W38-negative-control-fix1-v3.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/specifier/W38-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/control-purge-no-carry.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W38/reviewer-spec/logs/acceptance-full.log"
         ]
       },
       "doneWhen": [
@@ -3636,7 +3945,7 @@
     {
       "id": "W39",
       "title": "Safe setup, seed and handoff",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3660,7 +3969,7 @@
         {
           "id": "H3",
           "kind": "LOCAL",
-          "observable": "Seed commands take a named tenant, are idempotent on a repeat run and refuse an unscoped or remote target; scripts/seed-funnel.mjs no longer writes into migrations/.",
+          "observable": "Seed commands take a named tenant, are idempotent on a repeat run, send the required publication headers and refuse an unscoped target; a remote target is allowed only through the W03 scoped tool token; scripts/seed-funnel.mjs no longer writes into migrations/.",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3754,19 +4063,24 @@
         "scripts/import-content.mjs",
         "scripts/seed-funnel.mjs",
         "scripts/stamp-workflow.mjs",
+        "scripts/init-local.mjs",
+        "docs/10-d1-schema.md",
         "migrations/seed/"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/W39 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "de4c04d05b98b08e9eedd21573e01c3ada4da6bf on rem/spec-w38-w39: src/units/W39",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W38-W39/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/W39-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/logs/W39-acceptance-de4c04d.log"
         ]
       },
       "doneWhen": [
@@ -3780,7 +4094,7 @@
     {
       "id": "W40",
       "title": "SDK distribution package",
-      "state": "PARTIAL",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -3804,7 +4118,7 @@
         {
           "id": "P3",
           "kind": "LOCAL",
-          "observable": "The bundles stay reproducible (node scripts/build-sdk.mjs --check), and a size check fails when a bundle exceeds its published budget.",
+          "observable": "The bundles stay reproducible (node scripts/build-sdk.mjs --check), and a size check fails when a bundle exceeds its budget: each bundle's measured size at the W40 build rounded up to the next 5 KB, recorded in packages/sdk/package.json (decision D3).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3817,6 +4131,12 @@
           "id": "P5",
           "kind": "LOCAL",
           "observable": "docs/kit/01-integration-guide.md documents package and script-tag consumption, and its integration example builds against the package.",
+          "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
+        },
+        {
+          "id": "P6",
+          "kind": "LOCAL",
+          "observable": "The release lint the deploy's package step runs passes with its warning cap unchanged at 582, because the lint script in package.json excludes src/units/** (decision D4).",
           "proof": "A test the specifier adds to the acceptance command in step 3, or for a document sentence the reviewer reading it, passes at the artifact revision."
         },
         {
@@ -3848,7 +4168,8 @@
         }
       ],
       "remainingWork": [
-        "P1–P5: the package, types, size check, versioned serving and kit example."
+        "P1–P5: the package, types, size check, versioned serving and kit example.",
+        "P6: exclude src/units/** from the release lint script in package.json, keeping --max-warnings 582 (decision D4)."
       ],
       "decisions": [
         {
@@ -3863,6 +4184,18 @@
           "authorityRef": "HANDOFF-2026-09-18 §8 D10",
           "effect": "No registry publish locally.",
           "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of the step-3 amendments on 2026-09-24 (\"approved\"), row A40",
+          "effect": "The size budget is each bundle's measured size at the W40 build rounded up to the next 5 KB; a later change is an owner decision."
+        },
+        {
+          "id": "D4",
+          "status": "RESOLVED",
+          "authorityRef": "Owner approval of amendments A43–A46 on 2026-09-25 (\"It is approved.\"), row A44",
+          "effect": "The release lint covers shipped code only: src/units/** (the ledger acceptance tests) is excluded from the lint script and the warning cap stays 582; a later change is an owner decision."
         }
       ],
       "deferredLiveAcceptance": [
@@ -3886,6 +4219,7 @@
         "src/sdk/README.md",
         "src/sdk/tsconfig.json",
         "src/customerBoundary.ts",
+        "scripts/stamp-workflow.mjs",
         "public/sdk/",
         "public/_headers",
         "package.json",
@@ -3896,13 +4230,26 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "2f1d34424bce209a032f6cb5506991bf3bce6112 on rem/spec-w40 (the refresh: merge e7cbb47 of rem/integration cd0240c with the src/units/_native.ts union, and unit:W40.P6): src/units/W40 (LEDGER and P6) with src/units/_native.ts and src/units/_cloudflare.mjs",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/followup-W38-W40/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/logs/W40-acceptance-2f1d344.log",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/logs/W40-P6-control-unchanged.log",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/logs/W40-negative-control-p6.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/W40-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect1-unversioned-immutable.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect2-header-not-uploaded.log",
+          "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-acceptance-0349bc2.log"
         ]
       },
       "doneWhen": [
@@ -3916,7 +4263,7 @@
     {
       "id": "W41",
       "title": "ODP interest-vector restoration",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -4039,13 +4386,15 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: the acceptance-test revision rem-reviewer judges in step 3",
-        "verdict": "TBD",
+        "reviewedRevision": "5e57c08918cbaec11346f354ec437b0a2d1c65a1 on rem/spec-w40-w41: src/units/W41",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the step-3 specification review report"
+          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the step-3 negative-control run"
+          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/W41-negative-control.log",
+          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/logs/W41-units.log"
         ]
       },
       "doneWhen": [

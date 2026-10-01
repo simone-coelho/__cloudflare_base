@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Explicit local packaging and separately authorized stamp maintenance. Importing
-// this file performs no I/O. Provider calls are bounded, never automatically retried.
+// this file writes nothing and calls no provider: its one read is the SDK version,
+// which names the versioned SDK assets. Provider calls are bounded, never
+// automatically retried.
 import { createHash, createPrivateKey, createPublicKey } from 'node:crypto';
 import { createRequire, builtinModules } from 'node:module';
 import { open, lstat, realpath, readFile, mkdir, unlink, readdir } from 'node:fs/promises';
@@ -12,7 +14,7 @@ import { parse as parseToml } from 'smol-toml';
 import { safeIdentitySecret, parseIdentitySecrets } from '../src/identity/material.mjs';
 import { readSigningConfig } from '../src/auth/signingConfig.mjs';
 import { bootstrapExactOwner, validateExactOwner } from './operator-seed.mjs';
-import { verifySDK, sdkBuildOptions, sdkOptionsForVersion } from './build-sdk.mjs';
+import { verifySDK, sdkBuildOptions, sdkOptionsForVersion, sdkVersion, versionedOutput, SDK_TARGETS, SDK_VERSION } from './build-sdk.mjs';
 import { verifyMeridian, meridianBuildOptions } from './build-meridian.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -42,7 +44,20 @@ const securityTablesFor = artifact => oidcSchema(artifact) ? SECURITY_TABLES : L
 const LEGACY_ASSETS = ['console/index.html', 'console/shell.js', 'console/views.js', 'console/views-config.js',
   'console/views-measure.js', 'console/views-accounts.js', 'console/views-explore.js', 'operator-session.js',
   'sdk/edge-personalization.js', 'sdk/edge-personalization.esm.js', 'tuning.html', 'learning.html'].sort();
-export const ASSETS = [...LEGACY_ASSETS, 'sdk/debug.js'].sort();
+const UNVERSIONED_ASSETS = [...LEGACY_ASSETS, 'sdk/debug.js'].sort();
+// A release also serves its two SDK bundles under the path that names their
+// version, and uploads the header rules that make exactly those two files
+// long-lived and immutable. The unversioned paths keep the asset default, so a
+// release reaches every page that loads them. Each rule names one file: a
+// wildcard would put the header on whatever else the asset service answers
+// under it, a not-found included.
+const servedPath = output => output.slice('public/'.length);
+const pinnedSDK = version => SDK_TARGETS.map(target => ({ served: servedPath(target.output), pinned: servedPath(versionedOutput(target, version)) }));
+const customerAssets = version => [...UNVERSIONED_ASSETS, ...pinnedSDK(version).map(sdk => sdk.pinned)].sort();
+export const ASSETS = customerAssets(sdkVersion());
+const ASSET_HEADERS = 'public/_headers';
+const assetHeaderRules = version => pinnedSDK(version).flatMap(sdk => ['/' + sdk.pinned, '  Cache-Control: public, max-age=31536000, immutable']);
+const headerRules = bytes => bytes.toString('utf8').split('\n').filter(line => line.trim() && !line.trimStart().startsWith('#'));
 const SECRETS = ['JWT_SECRET', 'SDK_KEYS', 'IDENTITY_SALT', 'IDENTITY_SECRETS', 'ALERT_WEBHOOK_URL'];
 const connectorRef = v => typeof v === 'string' && /^CONNECTOR_SECRET_[A-Z0-9_]{1,80}$/.test(v);
 const integer = (v,min,max) => Number.isSafeInteger(v) && v>=min && v<=max;
@@ -267,7 +282,12 @@ export function validateTransition(mode, desired, previous, rotate = []) {
   for (const k of ['customer', 'account', 'environment', 'script', 'resources', 'owners', 'ownership']) if (!same(desired[k], previous[k])) fail();
   if (desired.secrets.IDENTITY_SALT !== previous.secrets.IDENTITY_SALT) fail(); // Separate identity migration, never credential rotation.
   if (mode === 'add-brand') {
+    // W37 T3: a brand is added AFTER every existing one. The registry's order is
+    // each brand's position, and the first brand is the stamp's default
+    // (`GET /v1/{tenant}/brands` answers `default` by manifest position), so an
+    // insertion ahead of an existing brand would rebind that brand's default flag.
     if (desired.tenants.provisioned.length <= previous.tenants.provisioned.length
+      || previous.tenants.provisioned.some((t, position) => desired.tenants.provisioned[position] !== t)
       || previous.tenants.provisioned.some(t => !desired.tenants.provisioned.includes(t))
       || Object.entries(previous.tenants.hosts).some(([h,t]) => desired.tenants.hosts[h] !== t)
       || previous.origins.some(x => !desired.origins.includes(x)) || previous.routes.some(x => !desired.routes.some(y => same(x,y)))) fail();
@@ -421,7 +441,7 @@ const PROOF_FILES = ['.eslintrc.json', 'package.json', 'package-lock.json', '.gi
   'scripts/operator-seed.mjs', ...['meridian','surfaces','beats','compare','layout','moments'].map(n=>'public/meridian/'+n+'.js'),
   ...['esbuild','wrangler','typescript','eslint','@typescript-eslint/parser','@typescript-eslint/eslint-plugin','vitest','miniflare','workerd','unenv','@cloudflare/unenv-preset','jsdom'].map(n=>'node_modules/'+n+'/package.json')];
 const proofPath = path => PROOF_FILES.includes(path)||/^src\/.*\.(?:ts|tsx|mjs|json)$/.test(path)
-  ||/^public\/.*\.(?:js|html|css|json)$/.test(path)||/^scripts\/.*\.(?:mjs|sh|sql)$/.test(path)||/^migrations\/.*\.sql$/.test(path);
+  ||/^public\/.*\.(?:js|html|css|json)$/.test(path)||path===ASSET_HEADERS||/^scripts\/.*\.(?:mjs|sh|sql)$/.test(path)||/^migrations\/.*\.sql$/.test(path);
 async function verificationBasis(root) {
   const paths = new Set(PROOF_FILES);
   const visit = async directory => { for (const entry of await readdir(resolve(root,directory),{withFileTypes:true})) {
@@ -527,7 +547,12 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   if (result.outputFiles.length !== 1) fail();
   const modules = [blob('worker.mjs', Buffer.from(result.outputFiles[0].contents), 'application/javascript+module')];
   const assets = [];
-  for (const path of ASSETS) assets.push(blob('/' + path, await readFile(resolve(root, 'public', path)), path.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript'));
+  const version = sdkVersion(root);
+  for (const path of customerAssets(version)) assets.push(blob('/' + path, await readFile(resolve(root, 'public', path)), path.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript'));
+  // The header rules travel in the package: the upload sends these held bytes,
+  // never a later read of public/, and only the workflow's own rules are accepted.
+  const assetHeaders = blob('_headers', await readFile(resolve(root, ASSET_HEADERS)), 'text/plain; charset=utf-8');
+  if (held.get(ASSET_HEADERS) !== assetHeaders.sha256 || !same(headerRules(bytesOf(assetHeaders)), assetHeaderRules(version))) fail();
   // Verify the held SDK against its actual source/options without editing public/.
   const sdkResults=await verifySDK({root,build:esbuild,plugins});
   for (const sdk of sdkResults) {
@@ -551,7 +576,7 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   for(const asset of assets)if(sha256(await readFile(resolve(root,'public',asset.name.slice(1))))!==asset.sha256)fail();
   if(sha256(await readFile(resolve(root,'wrangler.toml')))!==sha256(configBytes))fail();
   if(!same(checks.basis,await verificationBasis(root)))fail();
-  const artifact = { version: 2, assetContract: 'customer-assets-v2', schemaContract: 'operator-oidc-v2', main: 'worker.mjs', modules, assets, migrations, sourcePins, barriers,
+  const artifact = { version: 2, assetContract: 'customer-assets-v2', schemaContract: 'operator-oidc-v2', main: 'worker.mjs', modules, assets, assetHeaders, migrations, sourcePins, barriers,
     compatibility_date: config.compatibility_date, compatibility_flags: config.compatibility_flags, doMigrations: config.migrations,
     config: pin('wrangler.toml', configBytes),configuration:blob('wrangler.toml',configBytes,'application/toml'),
     basisInventory:blob('verification-basis.json',Buffer.from(canonical(checks.basis.map(p=>p.path))),'application/json'),
@@ -564,6 +589,19 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   const attested={...artifact,verification:proof};
   return validateArtifact({...attested,digest:digest(attested)});
 }
+// The asset set a package must carry. `assetHeaders` marks a package made since
+// the versioned SDK paths: it carries the two bundles again under the path that
+// names the version its own SDK reports, and exactly the header rules for those
+// two paths. An older package has neither and keeps the set it was checked with.
+function artifactAssets(body) {
+  const base = body.assetContract === 'customer-assets-v2' ? UNVERSIONED_ASSETS : LEGACY_ASSETS, rules = body.assetHeaders;
+  if (rules === undefined) return base;
+  const version = body.verification?.native?.sdk?.version;
+  if (base !== UNVERSIONED_ASSETS || typeof version !== 'string' || !SDK_VERSION.test(version)
+    || !exact(rules, ['name','type','bytes','sha256','base64']) || rules.name !== '_headers' || rules.type !== 'text/plain; charset=utf-8'
+    || !same(headerRules(bytesOf(rules)), assetHeaderRules(version))) fail();
+  return customerAssets(version);
+}
 export function validateArtifact(artifact) {
   if (!object(artifact) || artifact.version !== 2 || !SHA.test(artifact.digest)) fail();
   const { digest: hash, ...body } = artifact;
@@ -571,7 +609,7 @@ export function validateArtifact(artifact) {
     || body.modules[0].name !== body.main || body.modules[0].type !== 'application/javascript+module'
     || body.assetContract !== undefined && body.assetContract !== 'customer-assets-v2'
     || body.schemaContract !== undefined && body.schemaContract !== 'operator-oidc-v2'
-    || !Array.isArray(body.assets) || !same(body.assets.map(x => x.name).sort(), (body.assetContract === 'customer-assets-v2' ? ASSETS : LEGACY_ASSETS).map(x => '/' + x))
+    || !Array.isArray(body.assets) || !same(body.assets.map(x => x.name).sort(), artifactAssets(body).map(x => '/' + x))
     || body.assets.some(p=>p.type!==(p.name.endsWith('.html')?'text/html; charset=utf-8':'application/javascript'))
     || !same(body.migrations.map(x => x.name), migrationsFor(body)) || !same(body.migrations.map(x=>x.sha256),oidcSchema(body)?MIGRATION_HASHES:LEGACY_MIGRATION_HASHES) || !Array.isArray(body.doMigrations)
     || !same(body.doMigrations.map(x => x.tag), ['v1','v2','v3','v4','v5','v6','v7'])
@@ -613,6 +651,14 @@ export function validateArtifact(artifact) {
   if(typeof root!=='string'||!root.startsWith('/')||!same(body.buildOptions,{worker:workerBuildOptions(root),
     sdk:sdkOptionsForVersion(root,native.sdk.version),meridian:meridianBuildOptions(root)}))fail();
   for(const asset of body.assets){const p=proof.basis.find(p=>p.path==='public'+asset.name);if(!p||p.sha256!==asset.sha256||p.bytes!==asset.bytes)fail();}
+  // The uploaded header rule is the file the checks ran against, and each
+  // versioned SDK path holds the very bytes its unversioned path serves.
+  const rules=body.assetHeaders,rulesPin=proof.basis.find(p=>p.path===ASSET_HEADERS);
+  if(rules===undefined?rulesPin!==undefined:!rulesPin||rulesPin.sha256!==rules.sha256||rulesPin.bytes!==rules.bytes)fail();
+  if(rules!==undefined)for(const sdk of pinnedSDK(native.sdk.version)){
+    const pinned=body.assets.find(p=>p.name==='/'+sdk.pinned),served=body.assets.find(p=>p.name==='/'+sdk.served);
+    if(!pinned||!served||pinned.sha256!==served.sha256||pinned.bytes!==served.bytes)fail();
+  }
   return artifact;
 }
 function validateAssetReuse(body,proof) {
@@ -711,6 +757,13 @@ async function inspectResource(api, d, kind, value) {
   }
   return row;
 }
+/**
+ * W37 T7 (amendment A45): the receipt key of one stamp resource. The protected
+ * store accepts only lower-case keys (`protectedOperation`), so a resource kind
+ * spelled in camel case is written with hyphens (`deadLetter` -> `dead-letter`);
+ * every other kind keeps the key it has always had (`resource-storage` included).
+ */
+const resourceReceipt = kind => 'resource-' + kind.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase());
 async function ensureResources(api, store, desired, create) {
   await accountCheck(api, desired); const d = structuredClone(desired);
   const ownedStorage = async value => {
@@ -730,7 +783,7 @@ async function ensureResources(api, store, desired, create) {
     else {
       if(!create)fail();const result=await api(p.collection+'?per_page=100');
       if(!Array.isArray(result)||result.length>=100)fail();
-      if(result.some(x=>x[p.name]===v.name)&&!await store.read('resource-'+kind+'.done'))fail();
+      if(result.some(x=>x[p.name]===v.name)&&!await store.read(resourceReceipt(kind)+'.done'))fail();
     }
   }
   for (const kind of ['cache', 'sessions', 'database', 'storage', 'queue', 'deadLetter']) {
@@ -747,8 +800,8 @@ async function ensureResources(api, store, desired, create) {
       if (!Array.isArray(rows) || rows.length >= 100) fail();
       return rows.filter(x => x[p.name] === value.name).map(x => ({ id: x[p.id], name: x[p.name] }));
     };
-    if (!await store.read('resource-' + kind + '.intent') && (await inspect()).length) fail(); // No name-based adoption.
-    const result = confirmed(await effect(store, 'resource-' + kind, { account: d.account, kind, name: value.name },
+    if (!await store.read(resourceReceipt(kind) + '.intent') && (await inspect()).length) fail(); // No name-based adoption.
+    const result = confirmed(await effect(store, resourceReceipt(kind), { account: d.account, kind, name: value.name },
       () => api(p.collection, { method: 'POST', body: p.create }), inspect));
     if (result?.[p.name] !== value.name || typeof result[p.id] !== 'string') fail();
     value.id = result[p.id];
@@ -986,7 +1039,9 @@ async function uploadVersion(api, store, d, artifact, operation, prefix = 'uploa
   const assets = await assetUpload(api, store, d, artifact, prefix);
   const metadata = { main_module: quarantine ? 'quarantine.mjs' : artifact.main,
     compatibility_date: artifact.compatibility_date, compatibility_flags: artifact.compatibility_flags,
-    bindings: bindings(d), assets: { jwt: assets.jwt, config: { html_handling: 'none', not_found_handling: 'none', run_worker_first: true } },
+    bindings: bindings(d), assets: { jwt: assets.jwt, config: { html_handling: 'none', not_found_handling: 'none', run_worker_first: true,
+      // Header rules reach the asset service only here, as Wrangler sends a directory's _headers file.
+      ...(artifact.assetHeaders === undefined ? {} : { _headers: bytesOf(artifact.assetHeaders).toString('utf8') }) } },
     ...(migrations ? { migrations } : {}), annotations: { 'workers/tag': operation + '-' + prefix,
       'workers/message': artifact.digest },
     ...(before.settings?.logpush === undefined ? {} : { logpush: before.settings.logpush }),

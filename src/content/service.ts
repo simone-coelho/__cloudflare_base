@@ -19,19 +19,20 @@ import {
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
-import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
-import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
+import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
+import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
-import { captureRetention } from '@/retention';
-import { recoverDecisions } from '@/ledger/recovery';
+import { captureRetention, RetentionUnavailable } from '@/retention';
+import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
 import { syntheticOperation } from '@/ops/synthetic';
 
@@ -73,37 +74,89 @@ export interface ServeRequest {
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
 /** KV/cache supplies immutable estimates; the object supplies current health/generation. */
 const LIFT_TTL_MS = 60_000;
-const liftCache = new Set<{ binding: Env['CACHE']; stats: Env['LEARN_STATS']; key: string; at: number; value: LiftSnapshot | null }>();
-export function invalidateLiftCache(): void { liftCache.clear(); }
-export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig): Promise<LiftSnapshot | null> {
+/** The serving read's own limit on one stored snapshot's UTF-8 bytes. */
+const LIFT_SNAPSHOT_MAX_BYTES = 2 * 1024 * 1024;
+/** At most this many snapshots are held by one isolate, whatever their size. */
+export const LIFT_CACHE_MAX_ENTRIES = 256;
+/**
+ * W38 B1 (F32 §4.4, document 35 §6 "bound … cache"): at most this many bytes of
+ * snapshot text are held by one isolate, however few entries they make.
+ *
+ * The entry cap alone bounds nothing about memory: 256 snapshots at the read's
+ * own 2 MiB limit are 512 MiB of text in a 128 MB isolate (F32 §1.5). The byte
+ * cap admits four snapshots at that limit, or a dozen at the statistics object's
+ * own counter caps (about 680 KB each), and is the same order as the
+ * publication cache beside it (8 MiB, src/config/publication.ts). It is charged
+ * with the UTF-8 bytes each snapshot was read as, which is what the serving
+ * read's own limit counts; the oldest entries are evicted first, so a byte cap
+ * bounds the cache without disabling it.
+ */
+export const LIFT_CACHE_MAX_BYTES = 8 * 1024 * 1024;
+interface LiftEntry {
+  binding: Env['CACHE']; stats: Env['LEARN_STATS']; key: string; at: number; value: LiftSnapshot | null; bytes: number;
+  /**
+   * W38 B7: the digest of the snapshot this entry holds, computed at most once
+   * per entry and never inside the witness's 50 ms budget.
+   */
+  digest?: Promise<string>;
+}
+const liftCache = new Set<LiftEntry>();
+let liftCacheBytes = 0;
+function forgetLift(entry: LiftEntry): void { if (liftCache.delete(entry)) liftCacheBytes -= entry.bytes; }
+export function invalidateLiftCache(): void { liftCache.clear(); liftCacheBytes = 0; }
+/**
+ * W38 B7 (amendment A36): the witness compares the statistics object's
+ * published digest with the digest of the snapshot this isolate holds. Digesting
+ * a large snapshot is this reader's own work, so it is done once per cached
+ * entry, before the witness's 50 ms round-trip budget starts, and a cached read
+ * reuses it. A failure to digest is a failed witness: no lift, never an error.
+ */
+function liftDigest(entry: LiftEntry): Promise<string> {
+  entry.digest ??= recoveryDigest(entry.value);
+  return entry.digest;
+}
+/**
+ * The lift snapshot in force for one placement. W26 R2: `page` is passed only
+ * for a page-scoped slot name (`identityPage`), and then the snapshot, its
+ * isolate cache entry and its live witness are that page's own.
+ */
+export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig, page?: string): Promise<LiftSnapshot | null> {
   const compatible = (value: LiftSnapshot | null) => value !== null && typeof value === 'object' && !Array.isArray(value)
     && value.tenant === tenant && value.brand === brand && value.slot === slot && value.reward === config.reward
     && (value.measurementBasis ?? 'served-v1') === (config.measurementBasis ?? 'served-v1')
     && (value.objective === undefined ? 'unit' : value.objective) === (config.objective ?? 'unit') && value.tauLearnMs === config.stats.tauLearnMs
     && value.n0 === config.stats.n0 && value.nMin === config.stats.nMin
     && value.liftMin === config.stats.liftMin && value.liftMax === config.stats.liftMax;
-  const key = liftKey(tenant, brand, slot);
+  const key = liftKey(tenant, brand, slot, page);
   const binding = ownerBindingIdentity(env.CACHE), stats = ownerBindingIdentity(env.LEARN_STATS);
-  const hit = [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
-  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!) ? hit.value : null;
-  let value: LiftSnapshot | null = null;
+  const resident = () => [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
+  const hit = resident();
+  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) {
+    return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!, page, () => liftDigest(hit)) ? hit.value : null;
+  }
+  let value: LiftSnapshot | null = null, bytes = 0;
   try {
     const stream = await env.CACHE.get(key, 'stream');
     if (stream) {
       const reader = stream.getReader(), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
       let size = 0, raw = '';
       try { for (;;) { const next = await reader.read(); if (next.done) break; size += next.value.byteLength;
-        if (size > 2 * 1024 * 1024) { await reader.cancel(); throw new Error('Snapshot capacity'); }
+        if (size > LIFT_SNAPSHOT_MAX_BYTES) { await reader.cancel(); throw new Error('Snapshot capacity'); }
         raw += decoder.decode(next.value, { stream: true }); } raw += decoder.decode(); }
       finally { reader.releaseLock(); }
-      value = JSON.parse(raw) as LiftSnapshot;
+      value = JSON.parse(raw) as LiftSnapshot; bytes = size;
     }
-  } catch { value = null; }
-  if (hit) liftCache.delete(hit);
-  if (liftCache.size >= 256) liftCache.delete(liftCache.values().next().value!);
-  liftCache.add({ binding, stats, key, at: now, value });
+  } catch { value = null; bytes = 0; }
+  // One entry per placement: whatever another request stored for it while this
+  // one read is replaced, so no snapshot is ever charged to the cache twice.
+  for (let stale = resident(); stale; stale = resident()) forgetLift(stale);
+  const entry: LiftEntry = { binding, stats, key, at: now, value, bytes };
+  if (bytes <= LIFT_CACHE_MAX_BYTES) {
+    while (liftCache.size && (liftCache.size >= LIFT_CACHE_MAX_ENTRIES || liftCacheBytes + bytes > LIFT_CACHE_MAX_BYTES)) forgetLift(liftCache.values().next().value!);
+    liftCache.add(entry); liftCacheBytes += bytes;
+  }
   // Cache the raw snapshot, never one request's compatibility verdict.
-  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!) ? value : null;
+  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!, page, () => liftDigest(entry)) ? value : null;
 }
 
 /** What each slot learns against: its reward and the estimator's constants, from the learn document. */
@@ -127,6 +180,13 @@ export interface DecisionSources {
   /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */
   external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
+  /**
+   * W16 R5 (LANE-LOG R19, R98(b)): present, as `'unreadable'`, only when her
+   * stored record exists but cannot be read out under the retention policy in
+   * force, so she was served the site's default decision. Absent otherwise: a
+   * refusal is named by `consent`, and an expired session gets no decision.
+   */
+  record?: 'unreadable';
   /** CW31: the shopper's consent switches as the host reported them, and whether the engine personalized at all. */
   consent: Consent & { personalized: boolean };
   /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */
@@ -149,7 +209,20 @@ interface ShopperRead {
   consent: Consent;
   visit?: VisitContext | null;
   lastSeen?: number | null;
+  /**
+   * W16 R5 (LANE-LOG R19, R98(b)): her stored record exists but cannot be read
+   * out — the retained-data authority its profile stamp was born under is no
+   * longer the one in force (`requireRetention`). Nothing of the record is
+   * carried (no affinity, stage or visit), and the decision serves the site's
+   * default, naming why. Distinct from a refusal (her own choice) and from an
+   * expired session (no answer at all).
+   */
+  unreadable?: true;
 }
+
+/** Her record could not be read out: the answer carries nothing of it (W16 R5). */
+const unreadableShopper = (sessionId: string, state: DecisionSources['state'], consent: Consent): ShopperRead =>
+  ({ affinity: null, sessionId, isNewSession: null, state, stage: null, consent, visit: null, lastSeen: null, unreadable: true });
 
 /**
  * One owned read, with necessary refusal persistence before any profile view.
@@ -171,8 +244,16 @@ async function readShopper(
       ].join('; ') };
       const res = await stub.fetch('https://shopper-reflex/snapshot?projection=content', { headers });
       if (!res.ok) throw new SessionAccessError();
-      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number } };
+      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
+      // W16 R5: the object answered that her record cannot be read out. Only a
+      // consenting shopper's record is ever read, so only she can be told so; a
+      // refusal is answered as the refusal it is.
+      if (body.record !== undefined) {
+        const consent = intersectConsent(storedConsent(body.consent), hints);
+        if (body.record !== 'unreadable' || body.affinity != null || body.journeyStage != null || body.visit != null) throw new SessionAccessError();
+        if (personalizes(consent)) return unreadableShopper(principal.sessionId, 'do', consent);
+      }
       if (body.visit != null && (!validVisitContext(body.visit) || (body.visit.lastSeen !== undefined
         && (typeof body.visit.lastSeen !== 'number' || !Number.isFinite(body.visit.lastSeen) || body.visit.lastSeen < 0)))) throw new SessionAccessError();
       const consent = intersectConsent(storedConsent(body.consent), hints);
@@ -189,7 +270,16 @@ async function readShopper(
     const sessionData = await manager.readRaw(sessionId, true);
     const consent = intersectConsent(await currentOwnerConsent() ?? consentOf(sessionData), hints);
     if (!personalizes(consent)) await manager.restrictConsent(sessionId, consent, { sessionId, data: sessionData });
-    if (personalizes(consent) && sessionData) pinProfileRetention(env, sessionData, tenant);
+    if (personalizes(consent) && sessionData) {
+      // W16 R5: a record whose profile stamp the authority in force no longer
+      // honours is not read out, and refusing to SERVE her page is not a
+      // retention remedy: she is served the site's default, named unreadable.
+      try { pinProfileRetention(env, sessionData, tenant); }
+      catch (error) {
+        if (!(error instanceof RetentionUnavailable)) throw error;
+        return unreadableShopper(sessionId, 'session', consent);
+      }
+    }
     if (personalizes(consent) && !cfg) throw new ReflexConfigUnavailableError(tenant);
     return {
       affinity: personalizes(consent) && sessionData?.reflex && cfg ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
@@ -369,18 +459,25 @@ export async function serveContentDecisions(
   lap('shopper');
   const consent = shopper.consent;
   if (consent.tracking) requireConsentPurpose(consent, personalizes(consent) ? 'personalization' : 'tracking');
+  // W16 R5: an unreadable record is served the site's default decision under her
+  // own consent — nothing of the record is an input, and nothing is written that
+  // her consent does not already cover. Her ASSIGNMENT is untouched: it is a pure
+  // function of her anchor and the published salt, not of the record, so the
+  // experiment keeps her where she is and the served experience says `default`.
+  const unreadable = shopper.unreadable === true;
+  const personalized = personalizes(consent) && !unreadable;
   const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined);
   const cell = cellFor({
-    cf: consent.tracking ? r.cf : null, snap: personalizes(consent) ? shopper.affinity : null, cfg,
+    cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
     // A caller cannot relabel an already-established visit. The explicit
     // channel is only a bounded fallback when owned state has no entry yet.
     channel: consent.tracking ? visit.entryChannel ?? entryChannelOf(r.channel) : null,
-    visitNumber: personalizes(consent) ? visit.visitNumber : null,
+    visitNumber: personalized ? visit.visitNumber : null,
     // R32(2): the ONE mapping point from the reported vocabulary to the
     // persisted cell token, so the ladder key and every learning statistic keyed
     // on `s=mid` are exactly what they were before C4. `cellFor` records
     // anything it does not recognise as unknown.
-    stage: personalizes(consent) && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
+    stage: personalized && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
   });
   // W21 E1 (F07 §1.4, §7(b)): consent first, then enrollment. A shopper without
   // personalization consent is not drawn into the experiment at all; a
@@ -413,15 +510,21 @@ export async function serveContentDecisions(
   const enrollment: EnrollmentProvenance | null = enrolled?.provenance
     ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
       reason: personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);
-  const arm = armUnder(consent, enrolled?.arm ?? 'default');
+  const arm = unreadable ? 'default' : armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
+  // W26 R2: the slot names this catalogue — the one this page is decided with —
+  // carries on more than one page. Derived from the document already read
+  // above, so it adds no read to the serving path and cannot fail on it: each
+  // such placement reads its own page's lift, and its exposures are fanned to
+  // its own page's object.
+  const pageScoped: ReadonlySet<string> = new Set(pageScopedSlotNames(slotsDoc));
 
   // CW6: the population prior. Read from KV through the isolate cache, never
   // from the object; blended into a COPY of the affinity view. Off for the
   // holdout's default arm, since defaults are the point of that arm.
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
-  let affinity: { dims: Record<string, Record<string, number>> } | null = personalizes(consent) ? shopper.affinity : null;
+  let affinity: { dims: Record<string, Record<string, number>> } | null = personalized ? shopper.affinity : null;
   let regional: Parameters<typeof decideContent>[0]['regional'] = null;
   if (regionalCfg.enabled && arm !== 'default') {
     const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
@@ -441,11 +544,16 @@ export async function serveContentDecisions(
   // W34.01: external scoring is withdrawn from live decisions, including table
   // lookup. Stored settings cannot authorize runtime inference or external work.
   // Keep the omission explicit on weighted receipts and replayable from them.
+  // W34 E2: the policy in force is the deployment's `EXTERNAL_MODEL_POLICY`,
+  // read here and resolved fail-closed (absent, invalid or unreadable is off,
+  // the only policy this build implements), so the read cannot fail the
+  // decision or change what is served; the receipt's reason is the policy's.
+  const externalPolicy = externalModelPolicy(env);
   const extCfg = learn.external ?? null;
   const extWeightOf = (slot: string) => learn.slots?.[slot]?.external?.weight ?? 0;
   const wantsExt = extCfg !== null && arm !== 'default' && activeSlots.some((s) => extWeightOf(s.slot) > 0);
   const external: ExternalTerm | null = wantsExt && extCfg
-    ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: 'external scoring disabled by deployment policy' }
+    ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: EXTERNAL_POLICY_REASON[externalPolicy] }
     : null;
 
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
@@ -453,7 +561,7 @@ export async function serveContentDecisions(
   const configOf = slotLearnConfigOf(learn);
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
   const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
-  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot)); }))]);
+  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
   lap('lift');
@@ -486,12 +594,14 @@ export async function serveContentDecisions(
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
-  if (personalizes(consent) && shopper.stage) {
+  if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
     for (const record of set.records) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
+  // W16 R5: and one whose record could not be read sees that, not a choice she never made.
+  else if (unreadable) for (const rec of set.records) rec.explain.note = "the site's defaults: the shopper's stored record is unreadable under the retention policy in force";
   // The owner drains actual private I/O. In durable mode the shared admission
   // must finish before either ledger or learning effects can start.
   // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).
@@ -504,7 +614,7 @@ export async function serveContentDecisions(
   const captured = consent.tracking && captureRecords.length > 0
     ? env.LEDGER_RECOVERY_ENABLED === 'true'
       ? recoverDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => { if (result.source.state !== 'recovered') reportLearningIncomplete('decisions', result.learning ?? null); })
-      : fanDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => reportLearningIncomplete('decisions', result))
+      : fanDecisions(env, captureSet, slotLearnConfigOf(learn), undefined, pageScoped).then(result => reportLearningIncomplete('decisions', result))
     : Promise.resolve();
   // W20 G2 (R83, R86(a)/(b)): a refused pin has no decision and no ledger row,
   // and a pinned slot that fell short writes only what it served, so neither
@@ -559,7 +669,8 @@ export async function serveContentDecisions(
       journey: journeySource,
       external: external ? { kind: external.kind, ref: external.ref, ok: false, ms: 0, version: null, reason: external.reason } : null,
       state: shopper.state,
-      consent: { ...consent, personalized: personalizes(consent) },
+      ...(unreadable ? { record: 'unreadable' as const } : {}),
+      consent: { ...consent, personalized },
       timings,
     },
   };
