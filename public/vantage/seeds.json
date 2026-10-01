@@ -1,0 +1,20 @@
+{
+  "about": {
+    "lane": "L4, 2026-09-30. Merged by scripts/seed-vantage.mjs into each slot named below (this key is ignored by that loader).",
+    "arrival": "The landing URL carries utm_source=tiktok&utm_medium=paid-social&utm_term=iphone-18-pro. campaign_term reads utm_term only, and utm_term is never persisted, so the page must send the visit's landing entry on EVERY home snapshot of the visit, or the seed fires on the landing page alone and the hinge is not arithmetic.",
+    "platform": "The OS family is read from the request (Sec-CH-UA-Platform, else the user agent); the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept. It does not fire from a desktop. Halved while her own evidence holds intent=switch; withdrawn once she holds the other ecosystem, so a phone visitor's own browsing still wins.",
+    "measured": "On L1's opening documents (public/vantage/beats/open-*.json, anchor registry reflex-vantage-v2-room-memory) with the seeded regional prior, 2026-09-30: with the deals slot's merchandising.promotion at 0.1, the ad flips the Texas first paint (no ad: Galaxy S26 0.55 leads, launch 0.497 third; from the ad: launch 0.563 leads) and Android takes the top at press 1 in Texas and press 3 in New York (fast presses), press 1 and 4 at 15 s between presses. At L1's current 0.25 the launch offer leads Texas with or without the ad, and this weight still hands off in Texas by press 3. See docs/verizon/lanes/L4.md section 5.",
+    "requires": "deals.weights.campaign > 0 (L1: 0.3) and the launch piece tagged campaign: [iphone-18-pro]; deals.weights.ecosystem > 0 (L1: 0.15); hero.weights.campaign > 0 (L1: 0.3) and the launch hero tagged campaign: [iphone-18-pro]. Engine: the platform signal and dampen lists (src/services/platform.ts, src/content/kinds.ts, src/content/decide.ts); a slots document carrying them is unreadable on any older build.",
+    "hero": "Lane F1, 2026-09-30 (R1 N6): the same campaign seed on the hero slot, at the same weight, so the hero answers the ad as beat 1 says. The hero slot carries no platform seed. See docs/verizon/lanes/F1.md."
+  },
+  "hero": [
+    { "signal": "campaign_term", "value": "iphone-18-pro", "tags": [{ "dimension": "campaign", "value": "iphone-18-pro" }], "weight": 0.2 }
+  ],
+  "deals": [
+    { "signal": "campaign_term", "value": "iphone-18-pro", "tags": [{ "dimension": "campaign", "value": "iphone-18-pro" }], "weight": 0.2 },
+    { "signal": "platform", "value": "ios", "tags": [{ "dimension": "ecosystem", "value": "ios" }], "weight": 1,
+      "dampen": [{ "dimension": "intent", "value": "switch", "factor": 0.5 }, { "dimension": "ecosystem", "value": "android", "factor": 0 }] },
+    { "signal": "platform", "value": "android", "tags": [{ "dimension": "ecosystem", "value": "android" }], "weight": 1,
+      "dampen": [{ "dimension": "intent", "value": "switch", "factor": 0.5 }, { "dimension": "ecosystem", "value": "ios", "factor": 0 }] }
+  ]
+}

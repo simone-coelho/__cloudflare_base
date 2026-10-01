@@ -114,8 +114,19 @@ export interface SlotStrategy {
 
 export interface DiversityRule { dimension: string; max: number }
 
-/** The arrival signals a seed rule may read. Each is context, never learned evidence. */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network';
+/**
+ * The arrival signals a seed rule may read. Each is context, never learned
+ * evidence. `platform` is the OS family the request itself reports (`ios` or
+ * `android`, nothing finer; src/services/platform.ts).
+ */
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform';
+
+/**
+ * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
+ * holds this interest, that is, while she is a member of the `dimension:value`
+ * audience. Never read from the regional prior or from asserted context.
+ */
+export interface SeedDampen { dimension: string; value: string; factor: number }
 
 /**
  * W16 C3 (document 35 §2 F13): the interest an ARRIVAL is evidence for, before
@@ -130,13 +141,20 @@ export interface SeedRule {
   /**
    * The value of that signal this rule fires on: one of the six channel words
    * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
-   * network's registrable domain for `referrer_network`.
+   * network's registrable domain for `referrer_network`, `ios` or `android` for
+   * `platform`.
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
   tags: Array<{ dimension: string; value: string }>;
   /** 0..1, the codebase's rule-weight range. */
   weight: number;
+  /**
+   * Optional: each interest the shopper's own evidence holds multiplies the
+   * weight by its factor (for example, halve an OS-family seed while intent is
+   * switch, and let it yield once she holds the other ecosystem).
+   */
+  dampen?: SeedDampen[];
 }
 
 /** What one fired rule contributed to one candidate, itemised as a delta like every other term. */
@@ -148,6 +166,8 @@ export interface SeedDriver {
   weight: number;
   /** The delta this rule caused in the final pre-lift base, after merchandising. */
   contribution: number;
+  /** Present when the rule's `dampen` applied: each interest she holds and the factor it cost the rule. */
+  dampened?: SeedDampen[];
 }
 
 /** Refused seed configuration, never a fabricated influence, in the pattern of `pinDiagnostics`. */

@@ -182,9 +182,12 @@ retail to a bank, and the same instrument keeps working.
 
 **Arc.** Six acts, about forty minutes: the frame, the arrival, the handoff and the session, the operator (Opal
 and experimentation), the business, and the moment. The strongest single beat is the **unprompted exit**: the
-presenter stops touching the page, and about fifty seconds later it changes on its own because a closed-form
-alarm fired as an interest decayed below the exit threshold. That exists only on a Durable Object host, which is
-why Meridian has its own, `MeridianReflex`, rather than flipping a global switch under Coach.
+presenter stops touching the page, and about fifty seconds later it changes on its own as an interest decays
+below the exit threshold. **As built, the page draws that exit from its own clock** (`public/meridian/meridian.js:1358-1367`,
+`:2966-2987`) and discards the server's frames; `MeridianReflex` does fire the closed-form alarm and push, but the
+page does not use it (read from the code on 2026-09-30, `docs/verizon/Vantage-Demo-Design.md` §5). Say the beat as
+the engine's decay arithmetic re-asked on a timer, never as an alarm-driven push. The object host also stalls its
+ledger consumer under a burst of snapshots (same finding), so new demos run the session host until that is fixed.
 
 **Stage rules the owner set** (`docs/opticon/`, and the charter): nothing changes without a press; engine time
 advances only on the presenter's acts ("let two minutes pass" is a button); the director performs beats through
@@ -251,6 +254,12 @@ honestly with its progress.
 to a different company (a public dataset of Amazon product photos was rejected for Meridian because a
 competitor's logo was legible on the first image); split by category and curate, never promise "all AI"; the
 owner distrusts unreviewed generated imagery, so every image passes a gate a person could defend.
+
+**One exception, ruled by the owner on 2026-09-30 for the Vantage (Verizon) demo:** the products the customer
+itself sells may appear under their real names with their makers' own renders (a carrier sells iPhones and Galaxys;
+a fictional phone reads as a toy). Provenance, source hash and a by-eye verdict per file live in the demo's
+`img/MANIFEST.json`, and legal confirms before any public or recorded use. The rule against another company's brand
+assets stands for everything else, and the customer's own logo is never used: its colours only.
 
 ---
 

@@ -49,6 +49,8 @@ import { signalRoutes } from '@/routes/signals'; // Signal-Led Moment DETECT lay
 import { liveRoutes } from '@/routes/live'; // The Bright Hour storefront API (docs/qvc)
 import { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk (Beat 2)
 import { topOffersRoutes } from '@/routes/topOffers'; // Lantern & Lane merchandiser half (docs/qvc)
+import { vantageRoutes } from '@/routes/vantage'; // Vantage carrier demo: beats and receipts (docs/verizon)
+import { vantageColdStartRoutes } from '@/routes/vantageColdStart'; // Vantage cold-start panel (docs/verizon)
 
 import { routeAgentRequest } from 'agents';
 
@@ -148,6 +150,10 @@ app.route('/live/ops-api', liveOpsRoutes);
 // short-lived operator token so the page never holds a credential; mounted
 // only where DEPLOYMENT_PROFILE is 'demo' (the route refuses otherwise).
 app.route('/top-offers/api', topOffersRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+// The Vantage demo's beats and receipts, the same pattern; and its cold-start
+// panel. Both answer 404 unless DEPLOYMENT_PROFILE is 'demo'.
+app.route('/vantage/api', vantageRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+app.route('/vantage/api/coldstart', vantageColdStartRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {

@@ -11,6 +11,8 @@ import type {
 } from './types';
 import { validateSeedRules } from './kinds';
 import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
+import type { PlatformWord } from '@/services/platform';
+import { audienceKey } from '@/reflex/core';
 import { isEligibleAt, type EligibilityContext } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
@@ -77,9 +79,24 @@ export interface DecideInput {
    * W16 C3: the arrival this page load reports, for the contextual seed rules
    * that read the campaign term and the referrer network. The entry-channel
    * signal is read from the cell, which already carries the established owned
-   * channel (R13). Observed context only: it is never stored by this decision.
+   * channel (R13). Observed context: the arrival is read from the request; a
+   * fired seed (its signal and value) is recorded on the receipt as a driver;
+   * nothing else of it is kept by this decision.
    */
   entry?: ChannelSignals;
+  /**
+   * The OS family the request itself reports, for seed rules that read
+   * `platform` (src/services/platform.ts). Observed context, like `entry`: the
+   * OS family is read from the request; the fired seed (ios or android) is
+   * recorded on the receipt as a driver; nothing finer is read or kept.
+   */
+  platform?: PlatformWord | null;
+  /**
+   * The shopper's OWN current audience memberships, for a seed rule's
+   * `dampen`. Never the regional prior and never asserted context. Absent
+   * means she holds none.
+   */
+  audiences?: readonly string[];
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -235,7 +252,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const fires = (rule: SeedRule): boolean =>
     rule.signal === 'entry_channel' ? i.cell.channel === rule.value
       : rule.signal === 'campaign_term' ? arrivalTerm !== '' && arrivalTerm === term(rule.value)
-        : arrivedFromNetwork(i.entry, rule.value);
+        : rule.signal === 'platform' ? i.platform != null && i.platform === rule.value
+          : arrivedFromNetwork(i.entry, rule.value);
+  // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
+  const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
   /** The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`. */
   const seedDriversFor = (p: ContentPieceLike, slot: string): SeedDriver[] => {
@@ -245,10 +265,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const drivers: SeedDriver[] = [];
     for (const rule of rules) {
       if (!fires(rule)) continue;
+      // Each interest her own evidence holds multiplies the rule down; the receipt names every one.
+      const damped = (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
+      const weight = damped.reduce((w, d) => w * d.factor, rule.weight);
       for (const tag of rule.tags) {
         const w = weights[tag.dimension] ?? 0;
         if (!w || !(piece.tags[tag.dimension] ?? []).includes(tag.value)) continue;
-        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(rule.weight * w) });
+        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(weight * w),
+          ...(damped.length ? { dampened: damped.map((d) => ({ dimension: d.dimension, value: d.value, factor: d.factor })) } : {}) });
       }
     }
     return drivers;

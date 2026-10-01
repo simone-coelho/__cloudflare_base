@@ -17,6 +17,7 @@ import {
   journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
+import { platformWordOf, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
@@ -60,6 +61,8 @@ export interface ServeRequest {
   context?: Readonly<Record<string, string>>;
   /** Observed arrival context, not an override of an established visit entry. */
   entry?: ChannelSignals;
+  /** The OS family the request reports (src/services/platform.ts), for `platform` seed rules: the OS family is read from the request; the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept. */
+  platform?: PlatformWord | null;
   nowMs?: number;
   /** The brand whose shopper state this request reads, as the tenancy middleware resolved it. */
   stateTenant?: TenantId;
@@ -316,6 +319,17 @@ export async function tenantCatalogVocabulary(
   return value;
 }
 
+/**
+ * The region a caller asserted, as a region key, when it may select the
+ * regional prior: on the demo profile only. Null everywhere else, and for a
+ * value that is not a region key, so the edge region stays the prior's input.
+ */
+export function demoAssertedRegion(env: Pick<Env, 'DEPLOYMENT_PROFILE'>, asserted: string | undefined): string | null {
+  if (env.DEPLOYMENT_PROFILE !== 'demo' || typeof asserted !== 'string') return null;
+  const key = asserted.trim().toUpperCase();
+  return /^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$/.test(key) ? key : null;
+}
+
 export async function serveContentDecisions(
   env: Env, r: ServeRequest,
 ): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean }> {
@@ -429,14 +443,19 @@ export async function serveContentDecisions(
   // holdout's default arm, since defaults are the point of that arm.
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
   let affinity: { dims: Record<string, Record<string, number>> } | null = personalizes(consent) ? shopper.affinity : null;
-  let regional: Parameters<typeof decideContent>[0]['regional'] = null;
+  let regional: (NonNullable<Parameters<typeof decideContent>[0]['regional']> & { asserted?: true }) | null = null;
   if (regionalCfg.enabled && arm !== 'default') {
-    const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
+    // DEMO PROFILE ONLY: an asserted region also selects the prior, so one
+    // laptop can rehearse two regions. Every other profile keeps the rule
+    // below (an asserted region moves no affinity); the receipt says asserted.
+    const assertedPrior = demoAssertedRegion(env, consent.tracking ? r.context?.region : undefined);
+    const trend = await readTrend(env, scope, assertedPrior ?? regionKeyOf(r.cf), regionalCfg.minEvents, now);
     if (trend) {
       const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
       const blended = blendAffinity(shopper.affinity?.dims, trend.snapshot.share, lambda);
       affinity = { dims: blended.dims };
-      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share };
+      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share,
+        ...(assertedPrior ? { asserted: true as const } : {}) };
     }
   }
 
@@ -499,8 +518,14 @@ export async function serveContentDecisions(
     served,
     // W16 C3: the arrival's context for this page load, for the slots that
     // publish seed rules. Observed only, under the same tracking gate as the
-    // visit it is read with, and never stored by the decision.
+    // visit it is read with: the arrival is read from the request; a fired seed
+    // (its signal and value) is recorded on the receipt as a driver; nothing
+    // else of it is kept by the decision.
     ...(consent.tracking && r.entry ? { entry: r.entry } : {}),
+    // The OS family the request reports, under the same gate as the arrival,
+    // and her own memberships for a seed rule's dampen (none without consent).
+    ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
+    ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
   });
 
   lap('decide');

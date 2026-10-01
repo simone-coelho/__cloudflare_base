@@ -6,6 +6,7 @@
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
+import { platformWordOf } from '@/services/platform';
 import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -239,10 +240,10 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
-/** W16 C3: the three arrival signals a seed rule may read. */
-const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network']);
+/** W16 C3: the arrival signals a seed rule may read; `platform` is the request's own OS family. */
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform']);
 /** Bounded like every other authored list in this document. */
-const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50;
+const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50, SEED_DAMPEN_MAX = 4;
 
 /**
  * W16 C3 / R30: one slot's contextual seed rule set, against the dimensions that
@@ -263,13 +264,31 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
     const before = errors.length;
     const signal = raw.signal, value = raw.value, weight = raw.weight;
-    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network`);
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform`);
     if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
     // A signal value outside its own vocabulary names a context that cannot
     // occur, so it could only ever be dead configuration or a typo for a live one.
     else if (signal === 'entry_channel' && entryChannelOf(value) !== value) errors.push(`${at}.value: entry_channel names one of the six channel words, exactly`);
     else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
+    else if (signal === 'platform' && platformWordOf(value) !== value) errors.push(`${at}.value: platform names an OS family, ios | android, exactly`);
     if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
+    // The dampen reads the SHOPPER's own memberships, not the piece, so its
+    // dimensions need not be ones this slot weights.
+    let dampen: SeedRule['dampen'];
+    if (raw.dampen !== undefined) {
+      const list = raw.dampen, held = new Set<string>();
+      if (!Array.isArray(list) || list.length < 1 || list.length > SEED_DAMPEN_MAX) errors.push(`${at}.dampen: 1..${SEED_DAMPEN_MAX} of { dimension, value, factor 0..1 }`);
+      else {
+        dampen = [];
+        for (const d of list as unknown[]) {
+          if (!isRecord(d) || !isStr(d.dimension) || !isStr(d.value) || !isNum(d.factor) || d.factor < 0 || d.factor > 1) { errors.push(`${at}.dampen: each is { dimension, value, factor 0..1 }`); continue; }
+          const pair = `${d.dimension}\u0000${d.value}`;
+          if (held.has(pair)) { errors.push(`${at}.dampen: duplicate interest`); continue; }
+          held.add(pair);
+          dampen.push({ dimension: d.dimension, value: d.value, factor: d.factor });
+        }
+      }
+    }
     const tags: SeedRule['tags'] = [];
     if (!Array.isArray(raw.tags) || raw.tags.length < 1 || raw.tags.length > SEED_TAGS_MAX) errors.push(`${at}.tags: 1..${SEED_TAGS_MAX} canonical tags`);
     else {
@@ -285,7 +304,7 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
         tags.push({ dimension: tag.dimension, value: tag.value });
       }
     }
-    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number });
+    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number, ...(dampen ? { dampen } : {}) });
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: rules };
 }
