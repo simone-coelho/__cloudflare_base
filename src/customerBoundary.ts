@@ -1,4 +1,5 @@
 import type { Env } from '@/types/env';
+import { VERSION as SDK_VERSION } from '@/sdk/version';
 
 /** A missing or misspelled profile must never select the demo deployment. */
 export function deploymentProfile(env: Env): 'customer' | 'demo' | null {
@@ -144,6 +145,11 @@ export const CUSTOMER_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   '/operator-session.js': '/operator-session.js',
   '/sdk/edge-personalization.js': '/sdk/edge-personalization.js',
   '/sdk/edge-personalization.esm.js': '/sdk/edge-personalization.esm.js',
+  // The same two bundles under the path that names their version: the copy a
+  // page pins. Only this release's version is served; public/_headers makes
+  // these two long-lived and immutable and leaves the paths above revalidating.
+  [`/sdk/${SDK_VERSION}/edge-personalization.js`]: `/sdk/${SDK_VERSION}/edge-personalization.js`,
+  [`/sdk/${SDK_VERSION}/edge-personalization.esm.js`]: `/sdk/${SDK_VERSION}/edge-personalization.esm.js`,
   '/sdk/debug.js': '/sdk/debug.js',
   '/tuning.html': '/tuning.html',
   '/learning.html': '/learning.html',

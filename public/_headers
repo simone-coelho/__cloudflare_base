@@ -1,0 +1,5 @@
+# A served SDK bundle under a directory that names its version (/sdk/<version>/...)
+# never changes once released, so a browser keeps it for a year without asking
+# again. Every other path keeps the asset default: revalidated on each use.
+/sdk/:version/*
+  Cache-Control: public, max-age=31536000, immutable
