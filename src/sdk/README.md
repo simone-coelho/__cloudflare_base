@@ -25,6 +25,16 @@ import { createClient } from '/sdk/edge-personalization.esm.js';
 const client = createClient({ tenant: 'coach' });
 ```
 
+or from the package `edge-personalization` (`packages/sdk`: the same two bundles with TypeScript
+declarations; private until a registry publication is authorized), in a build of your own:
+
+```js
+import { createClient } from 'edge-personalization';
+```
+
+A page that pins a release loads `/sdk/<version>/edge-personalization.js` (or `.esm.js`) instead: the
+same bytes, served long-lived and immutable. The unversioned paths are revalidated on every load.
+
 ## Ten lines that personalize a homepage
 
 ```js
@@ -250,8 +260,25 @@ acknowledged `sent`/receipt events remain independent. Snapshot polls are read-o
 
 ## Building
 
-`npm run build:sdk` writes `public/sdk/edge-personalization.js` (script tag, global `EdgePersonalization`)
-and `public/sdk/edge-personalization.esm.js` (module). Both run in `npm run dev` and `npm run deploy`.
+`npm run build:sdk` (`node scripts/build-sdk.mjs`) builds each bundle once and writes those bytes to three
+places: `public/sdk/edge-personalization.js` (script tag, global `EdgePersonalization`) and
+`public/sdk/edge-personalization.esm.js` (module), the same two files under `public/sdk/<version>/`, and
+the package in `packages/sdk`. It also writes the package's type declarations (`packages/sdk/types/`,
+emitted from this directory under `src/sdk/tsconfig.json`) and carries the version into
+`packages/sdk/package.json`. `npm run dev` runs it. `npm run deploy` does not build: its package step
+refuses a tree whose generated SDK files differ from this source.
+
+`node scripts/build-sdk.mjs --check` writes nothing. It fails when any generated file differs from what
+the source builds, when the package's version is not the one in `version.ts`, when the package exports a
+script the build does not generate, or when an exported bundle is larger than its `sizeBudget` in
+`packages/sdk/package.json`. The budget is each bundle's size when the package was first built, rounded up
+to the next 5 KB (5 × 1024 bytes); the build never changes it, and raising it is the owner's decision.
+
+Releasing a new version: change `version.ts`, run the build, replace the version in the two pinned URLs of
+`docs/kit/01-integration-guide.md`, and delete the previous `public/sdk/<version>/` directory. A host
+serves only its own release's versioned path (`src/customerBoundary.ts`); `public/_headers` makes that
+path long-lived and immutable, so bundle bytes must not change without a new version.
+
 Typecheck: `tsc -p src/sdk`. Tests run in Node against `memoryHost` with fakes; no browser is required.
 # Withdrawal continuity
 

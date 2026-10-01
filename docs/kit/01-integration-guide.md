@@ -59,6 +59,48 @@ As a module:
 import { createClient } from 'https://<platform-host>/sdk/edge-personalization.esm.js';
 ```
 
+**Pinning a release.** Each release is also served under a path that names its version. The file at a
+versioned path never changes, so the platform serves it with
+`Cache-Control: public, max-age=31536000, immutable` and a browser keeps it for a year without asking
+again:
+
+```html
+<script src="https://<platform-host>/sdk/0.2.0/edge-personalization.js"></script>
+```
+
+```js
+import { createClient } from 'https://<platform-host>/sdk/0.2.0/edge-personalization.esm.js';
+```
+
+The unversioned paths above always serve the release the host runs and are revalidated on every load,
+so a fix reaches your pages with no change on your side. A host serves the versioned path of the release
+it runs and no earlier one: after an upgrade the previous version's path answers 404. Pin a version only
+where your page's URL changes in the same release window as the host; everywhere else use the
+unversioned path.
+
+**As a package, in your own build.** The kit includes the SDK as the package `edge-personalization`
+(the directory `packages/sdk`): the same ES module and script-tag build, with TypeScript declarations.
+It is not on a package registry yet; publication, and the name or scope it is published under, is a
+release step agreed with you. Until then install it from the delivered directory
+(`npm install <path to packages/sdk>`), and import it by name:
+
+```js
+import { createClient } from 'edge-personalization';
+
+const client = createClient({
+  tenant: 'coach',                       // the brand scope decisions are made for
+  brand: 'coach',                        // recorded on every decision, sent as data.brand on every event
+  endpoint: 'https://<platform-host>',   // omit when the platform is on your own hostname
+  sdkKey: '<your site key>',             // identifies the site; not a secret
+  source: 'coach-web',                   // names your integration on every event
+});
+```
+
+`ClientConfig`, `Client`, `ContentDecision` and the other types in this guide are exported from the same
+name. `import 'edge-personalization/iife'` loads the script-tag build for its `EdgePersonalization`
+global instead. The package's `version` is the SDK version (`client.VERSION`), the one in the versioned
+paths above.
+
 **Where the platform lives matters for cookies.** The platform keeps its own first-party cookies on
 its host, and it does not depend on them: the visitor id travels in every request, so the integration
 works when the platform is on a different host from your page. The preferred production topology is
