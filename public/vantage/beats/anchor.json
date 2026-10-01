@@ -1,5 +1,5 @@
 {
- "anchor": "2026-10-01T03:34:29.173Z",
+ "anchor": "2026-10-01T14:34:44.845Z",
  "tenant": "vantage",
  "scope": "vantage",
  "brand": {
@@ -552,7 +552,13 @@
   "regional": {
    "enabled": true,
    "kBlend": 0.5,
-   "minEvents": 30
+   "minEvents": 30,
+   "dimensions": [
+    "brand",
+    "ecosystem",
+    "priceBand",
+    "category"
+   ]
   },
   "gamma": 0,
   "exploration": "off"

@@ -326,7 +326,7 @@ isolation suite passed 10 of 10 with Coach's pipeline included.
 |---|---|---|
 | `edge-platform.expedge.workers.dev` | Coach, bank, Bright Hour, Meridian — commit `26e2db1` | `bash scripts/deploy-legacy-demos.sh --deploy` |
 | `edge-platform-top-offers.expedge.workers.dev` | Top Offers — today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` (the builder delegates to `build-demo-worker-config.mjs` and renames the recovery queues; a config naming the shared `events` queue leaves the ledger unconsumed, the 2026-09-30 finding) |
-| `edge-platform-vantage.expedge.workers.dev` | Vantage — today's engine, session host | `node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage && npx wrangler deploy --config wrangler.vantage.toml` (from WSL); after any reseed, redeploy, then `scripts/seed-vantage-region.mjs`; details in `docs/verizon/RESUME-vantage.md` |
+| `edge-platform-vantage.expedge.workers.dev` | Vantage — today's engine, session host | `node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage --dev-port 9110 && npx wrangler deploy --config wrangler.vantage.toml` (from WSL); after any reseed, redeploy, then `scripts/seed-vantage-region.mjs`; details in `docs/verizon/RESUME-vantage.md` |
 
 - **Never** `npx wrangler deploy` from the repo root (§0, rule 1).
 - `npm run check:generated` must pass first: `npm run dev` rebuilds the Meridian and SDK bundles, a deploy does not.

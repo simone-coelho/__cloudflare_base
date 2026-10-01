@@ -39,10 +39,9 @@
     "plan-pairing"
    ],
    "ctx": {
-    "intent": "new",
-    "region": "US-NY"
+    "intent": "new"
    },
-   "label": "phone page, covered: New York"
+   "label": "phone page, covered: her own region (else New York, asserted)"
   },
   {
    "page": "phone",
@@ -55,7 +54,7 @@
     "intent": "new",
     "region": "US-MT"
    },
-   "label": "phone page, not covered: Montana"
+   "label": "phone page, not covered: Montana, asserted"
   },
   {
    "page": "home",
@@ -64,15 +63,14 @@
     "deals"
    ],
    "ctx": {
-    "intent": "new",
-    "region": "US-NY"
+    "intent": "new"
    },
    "entry": {
     "utmSource": "tiktok",
     "utmMedium": "paid-social",
     "utmTerm": "iphone-18-pro"
    },
-   "label": "covered: New York"
+   "label": "covered: her own region (else New York, asserted)"
   },
   {
    "page": "home",
@@ -89,9 +87,44 @@
     "utmMedium": "paid-social",
     "utmTerm": "iphone-18-pro"
    },
-   "label": "not covered: Montana"
+   "label": "not covered: Montana, asserted"
   }
  ],
- "engine": "eligibleWhen.regions on the home-bundle module and the 5G Home offer, evaluated before scoring, failing closed: a region that is not named, or no region at all, does not admit either. The address check moves intent home and category home-internet.",
- "sees": "On the phone page “Add home internet” leads the six in the covered region and is absent in the other. On the homepage the same rule gates the 5G Home offer: for her it takes container two in New York, behind the pin (measured 0.96, on the home intent her address check declared), and is absent in Montana. Nothing else about her changed."
+ "availability": {
+  "covered": {
+   "region": "her own, from the request (or the ?region= override)",
+   "when": "the catalog’s eligibleWhen.regions names it",
+   "asserted": false,
+   "otherwise": {
+    "region": "US-NY",
+    "label": "asserted, not observed"
+   }
+  },
+  "uncovered": {
+   "region": "US-MT",
+   "label": "asserted, not observed"
+  },
+  "coverage": [
+   "US-TX",
+   "US-NY",
+   "US-NJ",
+   "US-PA",
+   "US-MA",
+   "US-IL",
+   "US-FL",
+   "US-GA",
+   "US-NC",
+   "US-CA",
+   "US-AZ",
+   "US-CO",
+   "US-WA",
+   "US-MI",
+   "US-OH",
+   "US-VA",
+   "US-MN",
+   "US-TN"
+  ]
+ },
+ "engine": "eligibleWhen.regions on the home-bundle module and the 5G Home offer, evaluated before scoring, failing closed: a region that is not named, or no region at all, does not admit either. 14a reads her own region from the request and asserts nothing when the list names it; otherwise the page asserts New York, labelled asserted, not observed. 14b asserts Montana, the uncovered contrast. The address check moves intent home and category home-internet.",
+ "sees": "On the phone page “Add home internet” leads the six in the covered region (hers, or New York asserted) and is absent in Montana. On the homepage the same rule gates the 5G Home offer: for her it takes container two in New York, behind the pin (measured 0.96, on the home intent her address check declared), and is absent in Montana. Nothing else about her changed."
 }

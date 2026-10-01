@@ -25,7 +25,7 @@ import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUn
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
-import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
+import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
@@ -452,9 +452,13 @@ export async function serveContentDecisions(
     const trend = await readTrend(env, scope, assertedPrior ?? regionKeyOf(r.cf), regionalCfg.minEvents, now);
     if (trend) {
       const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
-      const blended = blendAffinity(shopper.affinity?.dims, trend.snapshot.share, lambda);
+      // Only the dimensions the tenant lets the prior blend (absent: all). The
+      // same shares travel to the decision, so its receipt and the record's
+      // replay inputs itemise exactly what the region contributed.
+      const share = sharesWithin(trend.snapshot.share, regionalCfg.dimensions);
+      const blended = blendAffinity(shopper.affinity?.dims, share, lambda);
       affinity = { dims: blended.dims };
-      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share,
+      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share,
         ...(assertedPrior ? { asserted: true as const } : {}) };
     }
   }

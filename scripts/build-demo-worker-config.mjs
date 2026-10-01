@@ -15,9 +15,10 @@
 //            exactly ONE consumer and the shared worker already consumes
 //            `events`, so every demo worker needs its own pair.
 //   --set    KEY=VALUE, repeatable: override one [vars] entry on this worker
-//            only, so it moves nobody else's demo. Vantage sets none: it runs
-//            the shipped REFLEX_HOST=session (on the object host the ledger
-//            consumer stalls under a burst of snapshots; lanes/L1.md finding 9).
+//            only, so it moves nobody else's demo. Vantage sets none and passes
+//            only --dev-port 9110; it runs the shipped REFLEX_HOST=session (on the
+//            object host the ledger consumer stalls under a burst of snapshots;
+//            lanes/L1.md finding 9).
 //   --dev-port  the local `wrangler dev` port written into [dev], so a bare
 //            `npx wrangler dev --config <file>` cannot collide with another
 //            demo's server on 9100 (Vantage: 9110)

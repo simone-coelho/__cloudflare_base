@@ -41,10 +41,11 @@ import { tenantConfig } from '@/tenancy/middleware';
 import { operatorJwt } from '@/middleware/operatorAuth';
 import { readPublication, PublicationError } from '@/config/publication';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
+import type { RegionalConfig } from '@/content/types';
 import { demoAssertedRegion } from '@/content/service';
 import {
   REGION_GENERATION, REGION_TAU_MS, invalidateTrendCache, lambdaFor, objectName, readTrend, regionKeyOf, rollupTenant,
-  trendKey, type IngestFrame, type TrendSnapshot,
+  sharesWithin, trendKey, type IngestFrame, type TrendSnapshot,
 } from '@/reflex/regionTrend';
 
 /** The demo's own tenant. Not configurable: this sub-app exists for one demo. */
@@ -191,7 +192,7 @@ async function readMarker(env: Env): Promise<SeedMarker | null> {
   try { return (await env.CACHE.get(SEED_MARKER_KEY, 'json')) as SeedMarker | null; } catch { return null; }
 }
 
-async function regionalSettings(env: Env): Promise<{ enabled: boolean; kBlend: number; minEvents: number } | null> {
+async function regionalSettings(env: Env): Promise<RegionalConfig | null> {
   try {
     const learn = (await readPublication(env, LEARN_KIND, VANTAGE_TENANT, true))?.value ?? DEFAULT_LEARN;
     return learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
@@ -219,12 +220,15 @@ vantageColdStartRoutes.get('/', async (c) => {
   // Labelled by what answered: a region is synthetic only if it was seeded; a
   // country or everyone level is synthetic when any seeded region rolled into it.
   const synthetic = trend?.level === 'region' ? Boolean(seeded) : Boolean(marker && Object.keys(marker.regions).length);
+  // Only the dimensions the prior blends (learn.regional.dimensions; absent: all), so the panel never shows
+  // a lean the decision does not use: live intent, lines, perk or content type stay off it (lane F3).
+  const share = trend ? sharesWithin(trend.snapshot.share, settings?.dimensions) : {};
   const lean = trend ? {
     inForce: Boolean(settings?.enabled),
     level: trend.level, answered: trend.region, events: trend.snapshot.events, minEvents: settings!.minEvents,
     // A stranger has no evidence of her own, so the population speaks at full weight: λ = K/(K + 0).
     lambdaForStranger: lambdaFor(null, settings!.kBlend), kBlend: settings!.kBlend,
-    leaders: leadersOf(trend.snapshot.share), share: trend.snapshot.share, publishedAt: trend.snapshot.updatedAt,
+    leaders: leadersOf(share), share, publishedAt: trend.snapshot.updatedAt,
     // Labelled for what it is: the seeded synthetic sales (swap to the warehouse), or, with no seed, only this worker's own visits.
     dataSource: synthetic ? 'synthetic' as const : 'observed' as const, swapTo: 'warehouse' as const,
     label: synthetic ? 'synthetic → warehouse' : 'observed on this demo worker only',

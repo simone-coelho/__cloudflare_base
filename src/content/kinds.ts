@@ -527,6 +527,23 @@ export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
 
 const ARMS = new Set(['default', 'no_learning']);
 
+/**
+ * `regional.dimensions` names registry dimensions, so it is held to what a
+ * registry can define (src/reflex/configStore.ts): at most its 32 dimensions,
+ * each an exact, distinct, non-empty key that is not a reserved object key. An
+ * empty list is refused: `enabled: false` is how the prior is switched off.
+ * This document is validated without the registry in hand; a well-formed name
+ * the tenant's registry does not define matches nothing at decision time,
+ * because a region only ever holds the dimensions its events carried.
+ */
+const REGIONAL_DIMENSIONS_MAX = 32;
+const RESERVED_DIMENSION_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+function regionalDimensionsOf(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length < 1 || v.length > REGIONAL_DIMENSIONS_MAX) return null;
+  if (!v.every((d) => isStr(d) && d.trim() === d && !RESERVED_DIMENSION_KEYS.has(d)) || new Set(v).size !== v.length) return null;
+  return [...v] as string[];
+}
+
 export function validateLearnConfig(candidate: unknown): ValidationResult<LearnConfig> {
   return validateRetainedLearn(candidate, false);
 }
@@ -550,7 +567,10 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (typeof g.enabled !== 'boolean') errors.push('regional.enabled: boolean');
       if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) errors.push('regional.kBlend: number in (0, 100]');
       if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) errors.push('regional.minEvents: positive integer');
-      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents };
+      // Absent means every dimension the region carries, so a document without it reads exactly as before.
+      const dimensions = g.dimensions === undefined ? undefined : regionalDimensionsOf(g.dimensions);
+      if (dimensions === null) errors.push(`regional.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
+      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents, ...(dimensions ? { dimensions } : {}) };
     }
   }
   const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);

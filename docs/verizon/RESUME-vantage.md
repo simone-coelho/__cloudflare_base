@@ -45,7 +45,7 @@ node scripts/seed-vantage-region.mjs --base http://localhost:9110   # after ever
 ```
 
 - **The regional prior has a 24-hour horizon. Rerun `seed-vantage-region.mjs` on the morning of every rehearsal**, and after every reseed. It seeds every state and DC (lane F2), because beat 1 opens on the visitor's real region: the edge's, never asserted. Locally, `wrangler dev` fills `request.cf` with Miniflare's cached copy of this machine's location (North Carolina here), or a fixed Austin, Texas placeholder when it cannot fetch one; the panel says it is the local runtime's, not an edge's.
-- **Every walkthrough leaves its touches in its own state.** Each event fans into the region the edge places the visitor in, on every dimension, and the seed writes only brand, ecosystem, price band and category; one intent or lines touch takes beat 1 off the ad for the next visitor from that state (measured: after one suite run, North Carolina opened on the family hero and 5G Home). So reseed that state with `--regions here` before showing beat 1 from it again, and after any suite run. A transient 5xx is asked again by the script.
+- **A walkthrough nudges its own state's lean only slightly** (lane F3). Each event still fans into the region the edge places the visitor in, but the prior blends only the four seeded dimensions (`learn.regional.dimensions`: brand, ecosystem, price band, category), so intent, lines, perk and content type never reach it. A walkthrough moves those four a little: the Galaxy offers rise about 0.01 per suite run (measured: after three hosted suite runs, North Carolina still opened on the launch offer, 0.112 ahead). `--regions here` restores the clean seed when wanted. A transient 5xx is asked again by the script.
 - **The seed anchors every promotion window to the moment it runs.** The windows are absolute, so a week-old seed has a flash offer already closed. Reseed on the morning of a rehearsal.
 - **Restart `wrangler dev` after any `.dev.vars` edit or any new file under `public/`.** It lists the static assets at startup.
 - `wrangler dev` never runs the scheduled jobs. The five-minute fold, the hourly trend rollup and the 03:00 day report run only on a deployed worker.
@@ -130,6 +130,7 @@ The earliest opening-catalog window closes 24 hours after the seed's anchor, and
 
 ```bash
 npm run check:generated
+node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage --dev-port 9110   # the worker config, regenerated from wrangler.toml
 S="$(grep '^VANTAGE_REMOTE_JWT_SECRET=' .dev.vars | cut -d= -f2-)"     # the hosted worker's JWT_SECRET; never print it
 mint() { env -u OPERATOR_TOKEN JWT_SECRET="$S" JWT_ISSUER=edge-platform JWT_AUDIENCE=edge-platform-api DEPLOYMENT_PROFILE=demo \
   node -e "import('./scripts/lib/tool-token.mjs').then(m=>m.resolveToolToken({payload:{sub:process.argv[1],roles:['operator']},expiresIn:'30m',allowMint:true})).then(t=>process.stdout.write(t))" "$1"; }
@@ -141,7 +142,7 @@ node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedg
 - `S` comes from `.dev.vars`, **this machine's only copy; the owner must back it up.**
 - The region seed covers all 50 states and DC (lane F2): New York and Texas as L4 measured them, the other 49 from the model in the script's header (`docs/verizon/lanes/F2.md` §2). It reads every region back through the panel and reseeds any that read wrong; the last line says how many answer at region level, labelled synthetic → warehouse.
 - Then, with time, run the suites with `--base https://edge-platform-vantage.expedge.workers.dev`. They rehearse on New York through the `?region=US-NY` override, and check once that without it the panel reads the region from the request. They end with the reset.
-- **Before every walkthrough from this machine, and after any suite run, reseed the state you present from** (the suites' events and every walkthrough's fan into it, intent and lines included, and those take beat 1 off the ad):
+- **To restore the clean seed for the state you present from** (walkthroughs nudge only the four blended dimensions, about 0.01 per suite run; intent, lines, perk and content type never reach the prior):
 
   ```bash
   node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedge.workers.dev --token "$(mint seed-vantage-region)" --regions here

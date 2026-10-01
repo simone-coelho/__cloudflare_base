@@ -2330,7 +2330,8 @@
    * nothing, unless the address bar carries the ?region= rehearsal override (the suites pass US-NY, where
    * lane L1 measured beats 3 to 15). An assertion is for beat 2's contrast and 14a/14b's availability pair:
    * the contrast is Texas unless her own region is Texas, then New York (the anchor's two rehearsed regions);
-   * 5G Home is shown in the anchor's covered region (New York) and withdrawn in the uncovered one (Montana).
+   * 5G Home is shown in her own region when it is available there, else in the anchor's covered region (New
+   * York), asserted (lane F3), and withdrawn in the uncovered one (Montana).
    */
   const regions = () => {
     const r = state.anchor.regions || {};
@@ -2343,6 +2344,23 @@
   const ownName = () => (state.own && (state.own.label || state.own.key)) || (OVERRIDE.region ? regionName(OVERRIDE.region) || OVERRIDE.region : 'her own region');
   /** Beat 2's asserted contrast: the anchor's second rehearsed region (Texas), unless that is her own, then its first (New York). */
   const contrast = () => { const r = regions(); const own = OVERRIDE.region || (state.own && state.own.key) || null; return own === r.second ? r.first : r.second; };
+  /**
+   * Beat 14a's region (lane F3, 2026-10-01). Where 5G Home is available is the catalog's own rule:
+   * eligibleWhen.regions on the home-bundle module, else on the 5G Home offer, else the anchor's coverage list.
+   * When her own region (the edge's, or the ?region= override) is on it, 14a asserts nothing; otherwise, or with
+   * no region on her request, it asserts the anchor's covered region (New York), labelled asserted, not observed.
+   */
+  const homeCoverage = () => {
+    const rule = (id) => { const e = id && enginePieces().find((p) => p.customerContentId === id); return e && e.eligibleWhen && Array.isArray(e.eligibleWhen.regions) ? e.eligibleWhen.regions : null; };
+    return rule('home-bundle') || rule(anchorId('homeBundle')) || arr((state.anchor.regions || {}).coverage);
+  };
+  const homeRegion = () => {
+    const own = OVERRIDE.region || (state.own && state.own.key) || null;
+    return own && homeCoverage().includes(own) ? { key: own, own: true } : { key: regions().covered, own: false };
+  };
+  const homeName = () => { const h = homeRegion(); return h.own ? ownName() : regionName(h.key) || h.key; };
+  /** Why 14a asserts the covered region: her own region has no 5G Home, or her request carried no region. */
+  const notHomeWhy = () => (state.own && state.own.key ? `5G Home is not available in ${ownName()}` : 'her request carried no region');
   /** The region a frame was decided in, with how it is known, for Compare's columns. */
   const regionShown = () => (state.ctx.region ? `${state.ctx.region} (${state.regionSource === 'rehearsal override' ? 'rehearsal override' : 'asserted'})`
     : state.own && state.own.key ? `${state.own.key} (from the request)` : null);
@@ -2648,15 +2666,24 @@
 
     { key: 'covered', no: '14a', act: 4, who: 'shopper', label: '5G Home where it is available',
       target: () => anchorId('homeBundle'),
-      declare: () => [`In ${esc(regionName(regions().covered) || regions().covered)}, where 5G Home is available`,
+      declare: () => [homeRegion().own
+          ? `In ${esc(homeName())}, her own region, where 5G Home is available: ${OVERRIDE.region ? 'the rehearsal override (?region=), as before' : 'from the request, nothing asserted'}`
+          : `<b>Asserts</b> region = ${esc(homeRegion().key)}${regionName(homeRegion().key) ? ` (${esc(regionName(homeRegion().key))})` : ''}, where 5G Home is available: asserted, not observed, because ${esc(notHomeWhy())}`,
         ...(state.view === 'phone' && state.phoneId === focusPhone() ? [] : [canBackTo(focusPhone()) ? `<b>Goes back</b> to the ${esc(focusName())} page (the browser’s Back)` : `<b>Opens</b> the ${esc(focusName())}`]),
         '<b>Opens</b> Home Internet and <b>checks an address</b>', '<b>Goes back</b> to the phone page'],
       acts: () => [...(state.view === 'phone' && state.phoneId === focusPhone() || canBackTo(focusPhone()) ? [] : [act('product_view', phoneAttrs(phone(focusPhone()), { view: 'page' }))]),
         act('page_view', PAGE_EVENTS['home-internet']), act('custom', { category: 'home-internet', intent: 'home', contentType: 'tool' }, 'start_order')],
       will: () => ['<b>intent home</b> and <b>category home-internet</b> move: the address check is a start order, the heaviest touch here', '<b>Add home internet</b> carries a rule (only where 5G Home is available): eligible here, it rises on her address check'],
-      line: () => `In ${esc(regionName(regions().covered) || regions().covered)} she checks an address for 5G Home. The home-internet module carries a rule, <b>only where 5G Home is available</b>: here it is eligible, and her address check moves it up the page. A condition the request does not carry fails closed.`,
+      line: () => `${homeRegion().own ? `In ${esc(homeName())}, her own region,` : `${esc(notHomeWhy().replace(/^./, (c) => c.toUpperCase()))}, so the page asserts <b>${esc(homeName())}</b>, where it is, labelled asserted, not observed; there`} she checks an address for 5G Home. The home-internet module carries a rule, <b>only where 5G Home is available</b>: here it is eligible, and her address check moves it up the page. A condition the request does not carry fails closed.`,
       async run() {
-        if (state.ctx.region !== regions().covered) { setRegion(regions().covered, 'asserted'); note('asserted', `region = ${regions().covered}`, 'covered by 5G Home'); await loadColdStart(); }
+        // Her own region when 5G Home is available there (nothing asserted); otherwise the covered region, asserted.
+        const home = homeRegion();
+        if (home.own) await restoreRegion();
+        else if (state.ctx.region !== home.key) {
+          setRegion(home.key, 'asserted');
+          note('asserted', `region = ${home.key}`, `asserted, not observed · 5G Home is available there · ${notHomeWhy()}`);
+          await loadColdStart();
+        }
         if (state.view !== 'phone' || state.phoneId !== focusPhone()) { await backToPhone(focusPhone()); await sleep(400); }
         await performClick(ctl('mainnav', 'nav-home-internet'));
         await sleep(600);
@@ -2674,7 +2701,7 @@
       line: () => `The same shopper in ${esc(regionName(regions().uncovered) || regions().uncovered)}. Nothing about her changed; the module is gone because its rule does not hold here. A rule on the piece, not a preference.`,
       async run() {
         setRegion(regions().uncovered, 'asserted');
-        note('asserted', `region = ${regions().uncovered}`, 'not covered by 5G Home');
+        note('asserted', `region = ${regions().uncovered}`, 'asserted, not observed · not covered by 5G Home');
         await loadColdStart();
         if (state.view === 'phone') { await refreshPhone(); focusOn($('modulesModule')); } else { await refreshHome(); focusOn(el.dealsModule); }
       } },

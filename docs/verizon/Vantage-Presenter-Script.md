@@ -127,7 +127,7 @@ Say once: "Each of these is a real versioned publish, with history and rollback.
 > "Launch week for the foldable: pinned for everyone. The receipt says ranking was skipped, so an instruction never passes for a decision. The other three are still hers."
 
 ### Beat 14. 5G Home where it's available (14a, 14b)
-**They see:** in New York she checks an address and Add home internet rises into the top two, with "New York is served · no address used". Asserted in Montana, it leaves the six.
+**They see:** in her own state, where 5G Home is available (North Carolina from here), she checks an address and Add home internet rises into the top two, with "[her state] is served · no address used"; presenting from a state without it, the page asserts New York instead, labelled "asserted, not observed". Asserted in Montana, it leaves the six.
 > "The only geography rule in the demo is availability: an offer for a service appears only where that service exists. A condition the request doesn't carry fails closed. Nothing about her changed in Montana, and no price moved anywhere."
 
 **Backed by:** top two in New York (first or second, about 0.35); absent in Montana. On the homepage the 5G Home offer sits second behind the pin in New York (about 0.96), absent in Montana.

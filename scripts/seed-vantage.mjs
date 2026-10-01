@@ -15,7 +15,8 @@
 //   • the slots                (PUT /content/slots)   — hero, deals, pdp-modules,
 //                                                       plan-pairing
 //   • what the slots learn     (PUT /content/learn)   — holdout 0, γ 0, the
-//                                                       regional prior ON
+//                                                       regional prior ON, on
+//                                                       four dimensions
 //
 // and it writes, deterministically from the same definitions:
 //
@@ -613,8 +614,9 @@ function slotsDoc({ pinned = null } = {}) {
 // 5 percent arm could put the presenter's own visitor in the default arm; the
 // holdout is shown as a setting in beat 15, not run. γ 0 on every slot (the lift
 // is computed, shown and ignored until a person raises the dial), exploration
-// off, the regional prior ON (an absent block means OFF, service.ts:430), and
-// the shipped policy and the 21-day learning horizon.
+// off, the regional prior ON (an absent block means OFF, service.ts:430) on the
+// four dimensions the seeded sales speak for, and the shipped policy and the
+// 21-day learning horizon.
 // ─────────────────────────────────────────────────────────────────────────────
 const DIALS = { reward: 'click', objective: 'unit', gamma: 0, exploration: { mode: 'off', share: 0, floor: 0 } };
 const learnDoc = {
@@ -622,7 +624,13 @@ const learnDoc = {
   holdout: { share: 0, salt: 'vantage', arms: ['default'] },
   // kBlend 0.5 (the lead's dial, 2026-09-30): λ = k / (k + Σa), so the prior gives
   // way to her own behaviour twice as fast as at the shipped 1.
-  regional: { enabled: true, kBlend: 0.5, minEvents: 30 },
+  // `dimensions` (lane F3, 2026-10-01): the prior blends only what the seeded
+  // regional sales speak for (design §4). Every live event also fans into its
+  // region on every dimension, so without the list one shopper's intent, lines,
+  // perk or content-type touches reached full share for the next stranger from
+  // her state (lanes/F2.md finding 1). Lines has no population prior by rule,
+  // perk and content type none, intent only the campaign seed.
+  regional: { enabled: true, kBlend: 0.5, minEvents: 30, dimensions: ['brand', 'ecosystem', 'priceBand', 'category'] },
   policy: { scope: 'session', match: 'direct', credit: 'last',
     windowsMs: { click: 1_800_000, dwell: 1_800_000, video_complete: 1_800_000, wishlist: 21_600_000, add_to_bag: 21_600_000, purchase: 604_800_000, custom: 1_800_000 } },
   stats: { n0: 30, tauLearnMs: 1_814_400_000, liftMin: 0.5, liftMax: 2, nMin: 30 },
@@ -700,16 +708,18 @@ const CONTEXT_BEATS = {
   '01-arrival': {
     beat: 1, press: 'A stranger lands from the paid-social ad',
     visitor: { id: 'shopper-1', fresh: true, consent: { tracking: true, personalization: true } },
-    landing: LANDING.url, entry: LANDING.entry, snapshot: home(NEW_STRANGER.ctx, { entry: LANDING.entry }),
-    engine: 'The entry sets the paid-social channel and fires the campaign_term seed on utm_term; the regional prior blends the region’s seeded sales into an empty vector; the page asserts ctx.intent=new (a signed-out visitor) and the rehearsed region.',
-    sees: 'The hero and the deals module answer the ad (the iPhone 18 Pro launch) and the region; the cold-start panel names the grain.',
+    // Beat 1 asserts no region (lane F2): the edge locates the request, and ?region= is the labelled rehearsal override.
+    landing: LANDING.url, entry: LANDING.entry, snapshot: home({ intent: NEW_STRANGER.ctx.intent }, { entry: LANDING.entry }),
+    engine: 'The entry sets the paid-social channel and fires the campaign_term seed on utm_term; the regional prior blends the seeded sales of the region the edge located into an empty vector, with nothing asserted (?region= is the rehearsal override, labelled, never the default); the page asserts ctx.intent=new (a signed-out visitor).',
+    sees: 'The hero and the deals module answer the ad (the iPhone 18 Pro launch) and her real region; the cold-start panel names that region, from the request, with its grain, census figure and lean.',
   },
   '02-another-region': {
     beat: 2, press: 'Same visitor, another region',
     visitor: { id: 'shopper-1' },
+    // The contrast: Texas, or New York when her own region is Texas (the page decides; this is the Texas case).
     snapshot: home({ intent: 'new', region: REGIONS.rehearsed[1].key }, { entry: LANDING.entry }),
-    engine: 'Only the asserted region changes. On the demo profile ctx.region also selects the regional prior (lane L4’s override); eligibility reads it everywhere.',
-    sees: 'The same four in a different order (measured: Texas puts the Galaxy S26 offer second, New York the Duo pre-order); the grain and the census figure shown for the other region.',
+    engine: 'Only the asserted region changes: Texas, or New York when her own region is Texas. On the demo profile ctx.region also selects the regional prior (lane L4’s override), labelled asserted, not observed; eligibility reads it everywhere.',
+    sees: 'The same four in a different order (measured: Texas puts the Galaxy S26 offer second); the grain and the census figure shown for the asserted region, labelled asserted, not observed.',
   },
   '03-browse-galaxy-pixel': {
     beat: 3, press: 'Browse Samsung: the Galaxy S26 card, its page, then the S26 Ultra card',
@@ -805,14 +815,22 @@ const CONTEXT_BEATS = {
       pageView('home-internet', { category: 'home-internet', intent: 'home' }, 'the home internet page'),
       ev('custom', { event: 'start_order', control: 'address', category: 'home-internet', intent: 'home', contentType: 'tool' }, 'the address check (a start order, weight 3; lane L2 to add the control)'),
     ],
+    // 14a in her own region when 5G Home is available there, nothing asserted (lane F3); where it is not, or her
+    // request carries no region, the page asserts the covered rehearsed region, labelled. 14b asserts the uncovered one.
     snapshots: [
-      phonePage('galaxy-s26', { intent: 'new', region: REGIONS.rehearsed[0].key }),
-      phonePage('galaxy-s26', { intent: 'new', region: REGIONS.uncovered.key }),
-      home({ intent: 'new', region: REGIONS.rehearsed[0].key }, { entry: LANDING.entry, label: `covered: ${REGIONS.rehearsed[0].label}` }),
-      home({ intent: 'new', region: REGIONS.uncovered.key }, { entry: LANDING.entry, label: `not covered: ${REGIONS.uncovered.label}` }),
-    ].map((s, i) => ({ ...s, label: s.label ?? `phone page, ${i === 0 ? `covered: ${REGIONS.rehearsed[0].label}` : `not covered: ${REGIONS.uncovered.label}`}` })),
-    engine: 'eligibleWhen.regions on the home-bundle module and the 5G Home offer, evaluated before scoring, failing closed: a region that is not named, or no region at all, does not admit either. The address check moves intent home and category home-internet.',
-    sees: 'On the phone page “Add home internet” leads the six in the covered region and is absent in the other. On the homepage the same rule gates the 5G Home offer: for her it takes container two in New York, behind the pin (measured 0.96, on the home intent her address check declared), and is absent in Montana. Nothing else about her changed.',
+      { ...phonePage('galaxy-s26', { intent: 'new' }), label: `phone page, covered: her own region (else ${REGIONS.rehearsed[0].label}, asserted)` },
+      { ...phonePage('galaxy-s26', { intent: 'new', region: REGIONS.uncovered.key }), label: `phone page, not covered: ${REGIONS.uncovered.label}, asserted` },
+      home({ intent: 'new' }, { entry: LANDING.entry, label: `covered: her own region (else ${REGIONS.rehearsed[0].label}, asserted)` }),
+      home({ intent: 'new', region: REGIONS.uncovered.key }, { entry: LANDING.entry, label: `not covered: ${REGIONS.uncovered.label}, asserted` }),
+    ],
+    availability: {
+      covered: { region: 'her own, from the request (or the ?region= override)', when: 'the catalog’s eligibleWhen.regions names it', asserted: false,
+        otherwise: { region: REGIONS.rehearsed[0].key, label: 'asserted, not observed' } },
+      uncovered: { region: REGIONS.uncovered.key, label: 'asserted, not observed' },
+      coverage: REGIONS.coverage,
+    },
+    engine: 'eligibleWhen.regions on the home-bundle module and the 5G Home offer, evaluated before scoring, failing closed: a region that is not named, or no region at all, does not admit either. 14a reads her own region from the request and asserts nothing when the list names it; otherwise the page asserts New York, labelled asserted, not observed. 14b asserts Montana, the uncovered contrast. The address check moves intent home and category home-internet.',
+    sees: 'On the phone page “Add home internet” leads the six in the covered region (hers, or New York asserted) and is absent in Montana. On the homepage the same rule gates the 5G Home offer: for her it takes container two in New York, behind the pin (measured 0.96, on the home intent her address check declared), and is absent in Montana. Nothing else about her changed.',
   },
   '15-continue-and-report': {
     beat: 15, press: 'Back to the homepage, then the template changes; clicks; the day report',
@@ -906,6 +924,9 @@ if (BEAT_ORDER.length !== 15 || BEAT_ORDER.some((n, i) => BEAT_FILES[n].beat !==
     if (missing.length) throw new Error(`no piece names ${dim}=${missing.join(', ')}; events carrying it would build no taste`);
   }
   if (reflex.dimensions.map((d) => d.key).join() !== Object.keys(VOCABULARY).join()) throw new Error('registry and vocabulary disagree');
+  // The regional prior's list names registry dimensions only: a misspelt name would silently leave one out.
+  const unknown = (learnDoc.regional.dimensions ?? []).filter((d) => !reflex.dimensions.some((x) => x.key === d));
+  if (unknown.length) throw new Error(`learn.regional.dimensions names ${unknown.join(', ')}, not a registry dimension`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1067,5 +1088,5 @@ let ok = true;
 ok = report('reflex', await put('/config/reflex', reflex, `${BRAND.name} registry, eight dimensions: ${MEMORY.label}`)) && ok;
 ok = report('catalog', await put('/content/catalog', opened.catalog, `${BRAND.name} opening catalog: ${promos.length} promotions, heroes, modules, plans; windows anchored ${iso(anchor)}`)) && ok;
 ok = report('slots', await put('/content/slots', opened.slots, 'hero take 1 with a stage rule; deals take 4, two per brand; pdp-modules take 6; plan-pairing take 3')) && ok;
-ok = report('learn', await put('/content/learn', learnDoc, 'holdout 0 on stage; γ 0; exploration off; the regional prior on')) && ok;
+ok = report('learn', await put('/content/learn', learnDoc, 'holdout 0 on stage; γ 0; exploration off; the regional prior on brand, ecosystem, price band and category')) && ok;
 process.exit(ok ? 0 : 1);

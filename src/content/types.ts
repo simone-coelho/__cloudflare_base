@@ -259,6 +259,12 @@ export interface RegionalConfig {
   kBlend: number;
   /** The finest level with at least this many events is used; the same gate as the geo cold start. */
   minEvents: number;
+  /**
+   * The registry dimensions the prior may blend. Absent means every dimension
+   * the region carries (the shipped behaviour). A dimension not listed takes no
+   * share from the region, exactly like a dimension the region has never seen.
+   */
+  dimensions?: string[];
 }
 
 /** Doc 22 §4: the learning policy's four axes and the per-reward windows. */

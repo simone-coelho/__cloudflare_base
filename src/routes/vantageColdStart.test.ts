@@ -10,6 +10,10 @@ import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 import type { Env } from '@/types/env';
 import { tenantMiddleware } from '@/tenancy/middleware';
+import { initializePublicationSet } from '@/config/publication';
+import { invalidateCache } from '@/config/versionedStore';
+import { LEARN_KIND } from '@/content/kinds';
+import { invalidateTrendCache, trendKey, REGION_GENERATION } from '@/reflex/regionTrend';
 import { SEED_MARKER_KEY, SEED_VOCABULARY, vantageColdStartRoutes } from './vantageColdStart';
 
 const SECRET = 'f1-cold-start-test-secret-long-enough-0000';
@@ -208,5 +212,51 @@ describe('the seed door’s closed vocabulary', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ region: 'US-NY', label: 'New York scriptalert(1)script rehearsal' });
     expect(JSON.parse(kv.get(SEED_MARKER_KEY)!).regions['US-NY'].label).toBe('New York scriptalert(1)script rehearsal');
+  });
+});
+
+describe('the panel’s lean names only what the prior blends (lane F3)', () => {
+  // A region whose seed wrote brand and price band, and whose live traffic also wrote intent and lines.
+  const SHARE = { brand: { samsung: 1, apple: 0.5 }, priceBand: { core: 1, premium: 0.4 }, intent: { home: 1 }, lines: { family: 1 } };
+  /** An R2 stand-in that holds a real publication set, so the route reads the tenant's own learn document. */
+  const publicationStorage = () => {
+    const objects = new Map<string, { text: string; etag: string }>();
+    let version = 0;
+    return {
+      async list(options: { prefix: string }) { return { objects: [...objects.keys()].filter((key) => key.startsWith(options.prefix)).map((key) => ({ key })), truncated: false }; },
+      async get(key: string) {
+        const value = objects.get(key);
+        return value ? { key, etag: value.etag, size: new TextEncoder().encode(value.text).length,
+          body: new Response(value.text).body, text: async () => value.text, json: async () => JSON.parse(value.text) as unknown } : null;
+      },
+      async put(key: string, text: string, options?: R2PutOptions) {
+        const condition = options?.onlyIf;
+        if (condition instanceof Headers ? objects.has(key) : condition && condition.etagMatches !== objects.get(key)?.etag) return null;
+        const etag = 'fixture-' + (++version); objects.set(key, { text, etag });
+        return { key, etag, size: new TextEncoder().encode(text).length };
+      },
+    };
+  };
+  async function leanFor(dimensions?: string[]) {
+    const { env, kv } = envFor();
+    Object.assign(env, { STORAGE: publicationStorage() });
+    invalidateCache(); invalidateTrendCache();
+    const learn = { holdout: { share: 0, salt: '', arms: ['default'] }, regional: { enabled: true, kBlend: 0.5, minEvents: 30, ...(dimensions ? { dimensions } : {}) } };
+    await initializePublicationSet(env, [{ kind: LEARN_KIND, scope: 'vantage', revision: { revision: 1, at: 1, actor: 'test', note: '', value: learn } }], '0:' + crypto.randomUUID());
+    kv.set(trendKey('vantage', 'US-TX'), JSON.stringify({ generation: REGION_GENERATION, tenant: 'vantage', region: 'US-TX', level: 'region', events: 400, updatedAt: 1, version: 7, r: SHARE, share: SHARE }));
+    const res = await app.request('https://demo.example/vantage/api/coldstart?region=US-TX', { headers: { 'X-Tenant': 'vantage' } }, env, ctx);
+    expect(res.status).toBe(200);
+    invalidateCache(); invalidateTrendCache();
+    return ((await res.json()) as { lean: { share: Record<string, Record<string, number>>; leaders: Record<string, string>; events: number } }).lean;
+  }
+
+  it('shows only learn.regional.dimensions when the list is published, and every dimension when it is not (the control)', async () => {
+    const listed = await leanFor(['brand', 'priceBand']);
+    expect(listed.share).toEqual({ brand: SHARE.brand, priceBand: SHARE.priceBand });
+    expect(listed.leaders).toEqual({ brand: 'samsung', priceBand: 'core' });
+    expect(listed.events).toBe(400);                     // the counts still say what the region object holds
+    const all = await leanFor(undefined);
+    expect(all.share).toEqual(SHARE);
+    expect(all.leaders).toEqual({ brand: 'samsung', priceBand: 'core', intent: 'home', lines: 'family' });
   });
 });
