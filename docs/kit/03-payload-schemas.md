@@ -744,9 +744,10 @@ in it. Current `computation.version` is4 with per-slot measurement basis; retain
 ## The interest hydrate's restoration provenance
 
 `GET /realtime/reflex` answers `affinity: { dims, audiences, odpConfirmed[], restoration? }` on both
-hosts. `restoration` is present once a signed-in shopper has made the one restoration attempt of
-her current sign-in, from your ODP profile, described in the API reference (Identity, "Interest
-restoration from ODP"):
+hosts. `restoration` is the outcome of the latest restoration attempt from your ODP profile recorded
+on the interests a signed-in shopper holds, described in the API reference (Identity, "Interest
+restoration from ODP"). Every sign-in makes one attempt, at her first event under personalization
+after it; until then `restoration` is absent or still the outcome of an earlier sign-in's attempt:
 
 | Member | Meaning |
 |---|---|

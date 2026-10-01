@@ -518,9 +518,10 @@ Both hosts answer a sign-in and everything after it the same way:
 ### Interest restoration from ODP
 
 When your connector registry configures `odp` for your tenant, ODP is also the memory the edge
-re-seeds from. Once per sign-in, at a signed-in (recognized) shopper's first event after it, her ODP
-profile is read and her interests are merged into what she already holds, before that event is
-applied, identically on both hosts. Nothing is read at the sign-in itself or on a read.
+re-seeds from. Once per sign-in, at a signed-in (recognized) shopper's first event under
+personalization after it, her ODP profile is read and her interests are merged into what she already
+holds, before that event is applied, identically on both hosts. Nothing is read at the sign-in
+itself, at a consent choice or on a read.
 
 - **What is read.** Her profile, by the vuid your `identityNamespace` gives her shopper id, from your
   `apiHost` with your key: `customer(vuid) { vuid last_modified_at <attributes> }`. Only your own
@@ -535,9 +536,12 @@ applied, identically on both hosts. Nothing is read at the sign-in itself or on 
   she built anonymously in the session she signed in from, keeps its value. A restored interest is
   added where she has none; where she already holds the same `dimension`/`value`, the stronger of the
   two at that moment stays.
-- **When.** One attempt per sign-in: a sign-in folds her browser into her person's record, and her
-  first event after it makes the attempt and records it. An attempt that could not read (`unavailable`)
-  is made again once in each later visit until it gets an answer; every other answer stands until her
+- **When.** One attempt per sign-in, whatever her choice at the moment she signs in: it is made at her
+  first event under personalization after the sign-in and recorded against that sign-in. Every later
+  sign-in gets its own attempt, also one made under tracking only that keeps her record as it was; a
+  consent choice is not a sign-in, so withdrawing personalization and granting it again within one
+  sign-in makes no second attempt. An attempt that could not read (`unavailable`) is made again once in
+  each later visit of the same sign-in until it gets an answer; every other answer stands until her
   next sign-in.
 - **When it is not.** Only under her personalization choice current at that event. Never after her
   erasure: once an erasure barrier exists for her shopper id her profile is not read and nothing is
@@ -550,8 +554,10 @@ applied, identically on both hosts. Nothing is read at the sign-in itself or on 
   interest), `missing` (ODP has no profile for her), `malformed` (a mapped value or the observation
   time is not usable), `unavailable` (ODP, her erasure barrier, the catalogue or your retention policy
   could not be read), `erased` (she has been erased, so nothing is restored from ODP and her profile
-  is not read) or `expired` (older than your profile retention). It is absent when no attempt has
-  been made since her sign-in.
+  is not read) or `expired` (older than your profile retention). It is the outcome of the latest
+  attempt recorded on the interests she holds: between a sign-in and that sign-in's attempt it is
+  absent, or still the outcome of an earlier sign-in's attempt, and it is absent when no attempt has
+  ever been recorded on them.
 - **A failed read never blocks.** The read is capped at 1500 ms like the audience read. An error
   status, a network failure, a timeout or an unreadable answer leaves her with what she holds and
   `reason: "unavailable"`, and the event and every decision are served exactly as they would be for a
