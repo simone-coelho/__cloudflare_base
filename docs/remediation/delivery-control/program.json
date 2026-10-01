@@ -4230,9 +4230,12 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "0349bc265319cc591cf423c22431782e1d55f411 on rem/spec-w40: src/units/W40 with src/units/_native.ts and src/units/_cloudflare.mjs",
+        "reviewedRevision": "2f1d34424bce209a032f6cb5506991bf3bce6112 on rem/spec-w40 (the refresh: merge e7cbb47 of rem/integration cd0240c with the src/units/_native.ts union, and unit:W40.P6): src/units/W40 (LEDGER and P6) with src/units/_native.ts and src/units/_cloudflare.mjs",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/REPORT-2.md",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W39-W40/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md",
@@ -4240,6 +4243,9 @@
           "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/logs/W40-acceptance-2f1d344.log",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/reviewer-spec/logs/W40-P6-control-unchanged.log",
+          "/home/simonecoelho/rem/_evidence/W40-delivery/spec/specifier/logs/W40-negative-control-p6.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W40/specifier/W40-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect1-unversioned-immutable.log",
           "/home/simonecoelho/rem/_evidence/step3/fix-W40/reviewer-spec/logs/W40-control-defect2-header-not-uploaded.log",
