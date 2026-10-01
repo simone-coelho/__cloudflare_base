@@ -147,7 +147,8 @@ export const CUSTOMER_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   '/sdk/edge-personalization.esm.js': '/sdk/edge-personalization.esm.js',
   // The same two bundles under the path that names their version: the copy a
   // page pins. Only this release's version is served; public/_headers makes
-  // these two long-lived and immutable and leaves the paths above revalidating.
+  // these two files long-lived and immutable and leaves the paths above
+  // revalidating. Any other path under /sdk/ never reaches the asset service.
   [`/sdk/${SDK_VERSION}/edge-personalization.js`]: `/sdk/${SDK_VERSION}/edge-personalization.js`,
   [`/sdk/${SDK_VERSION}/edge-personalization.esm.js`]: `/sdk/${SDK_VERSION}/edge-personalization.esm.js`,
   '/sdk/debug.js': '/sdk/debug.js',

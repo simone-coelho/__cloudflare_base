@@ -274,10 +274,12 @@ script the build does not generate, or when an exported bundle is larger than it
 `packages/sdk/package.json`. The budget is each bundle's size when the package was first built, rounded up
 to the next 5 KB (5 × 1024 bytes); the build never changes it, and raising it is the owner's decision.
 
-Releasing a new version: change `version.ts`, run the build, replace the version in the two pinned URLs of
-`docs/kit/01-integration-guide.md`, and delete the previous `public/sdk/<version>/` directory. A host
-serves only its own release's versioned path (`src/customerBoundary.ts`); `public/_headers` makes that
-path long-lived and immutable, so bundle bytes must not change without a new version.
+Releasing a new version: change `version.ts`, run the build, replace the version in the two rule paths of
+`public/_headers` and in the two pinned URLs of `docs/kit/01-integration-guide.md`, and delete the
+previous `public/sdk/<version>/` directory. A host serves only its own release's versioned path
+(`src/customerBoundary.ts`). `public/_headers` makes those two files long-lived and immutable, so bundle
+bytes must not change without a new version; the deploy's package step refuses a `public/_headers` whose
+rules are not exactly the two for the current version.
 
 Typecheck: `tsc -p src/sdk`. Tests run in Node against `memoryHost` with fakes; no browser is required.
 # Withdrawal continuity

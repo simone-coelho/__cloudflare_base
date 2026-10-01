@@ -46,15 +46,17 @@ const LEGACY_ASSETS = ['console/index.html', 'console/shell.js', 'console/views.
   'sdk/edge-personalization.js', 'sdk/edge-personalization.esm.js', 'tuning.html', 'learning.html'].sort();
 const UNVERSIONED_ASSETS = [...LEGACY_ASSETS, 'sdk/debug.js'].sort();
 // A release also serves its two SDK bundles under the path that names their
-// version, and uploads the one header rule that makes exactly those copies
+// version, and uploads the header rules that make exactly those two files
 // long-lived and immutable. The unversioned paths keep the asset default, so a
-// release reaches every page that loads them.
+// release reaches every page that loads them. Each rule names one file: a
+// wildcard would put the header on whatever else the asset service answers
+// under it, a not-found included.
 const servedPath = output => output.slice('public/'.length);
 const pinnedSDK = version => SDK_TARGETS.map(target => ({ served: servedPath(target.output), pinned: servedPath(versionedOutput(target, version)) }));
 const customerAssets = version => [...UNVERSIONED_ASSETS, ...pinnedSDK(version).map(sdk => sdk.pinned)].sort();
 export const ASSETS = customerAssets(sdkVersion());
 const ASSET_HEADERS = 'public/_headers';
-const ASSET_HEADER_RULES = ['/sdk/:version/*', '  Cache-Control: public, max-age=31536000, immutable'];
+const assetHeaderRules = version => pinnedSDK(version).flatMap(sdk => ['/' + sdk.pinned, '  Cache-Control: public, max-age=31536000, immutable']);
 const headerRules = bytes => bytes.toString('utf8').split('\n').filter(line => line.trim() && !line.trimStart().startsWith('#'));
 const SECRETS = ['JWT_SECRET', 'SDK_KEYS', 'IDENTITY_SALT', 'IDENTITY_SECRETS', 'ALERT_WEBHOOK_URL'];
 const connectorRef = v => typeof v === 'string' && /^CONNECTOR_SECRET_[A-Z0-9_]{1,80}$/.test(v);
@@ -545,11 +547,12 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   if (result.outputFiles.length !== 1) fail();
   const modules = [blob('worker.mjs', Buffer.from(result.outputFiles[0].contents), 'application/javascript+module')];
   const assets = [];
-  for (const path of customerAssets(sdkVersion(root))) assets.push(blob('/' + path, await readFile(resolve(root, 'public', path)), path.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript'));
+  const version = sdkVersion(root);
+  for (const path of customerAssets(version)) assets.push(blob('/' + path, await readFile(resolve(root, 'public', path)), path.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript'));
   // The header rules travel in the package: the upload sends these held bytes,
-  // never a later read of public/, and only the workflow's one rule is accepted.
+  // never a later read of public/, and only the workflow's own rules are accepted.
   const assetHeaders = blob('_headers', await readFile(resolve(root, ASSET_HEADERS)), 'text/plain; charset=utf-8');
-  if (held.get(ASSET_HEADERS) !== assetHeaders.sha256 || !same(headerRules(bytesOf(assetHeaders)), ASSET_HEADER_RULES)) fail();
+  if (held.get(ASSET_HEADERS) !== assetHeaders.sha256 || !same(headerRules(bytesOf(assetHeaders)), assetHeaderRules(version))) fail();
   // Verify the held SDK against its actual source/options without editing public/.
   const sdkResults=await verifySDK({root,build:esbuild,plugins});
   for (const sdk of sdkResults) {
@@ -587,16 +590,16 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   return validateArtifact({...attested,digest:digest(attested)});
 }
 // The asset set a package must carry. `assetHeaders` marks a package made since
-// the versioned SDK paths: it holds the workflow's one header rule and carries
-// the two bundles again under the path that names the version its own SDK
-// reports. An older package has neither and keeps the set it was checked with.
+// the versioned SDK paths: it carries the two bundles again under the path that
+// names the version its own SDK reports, and exactly the header rules for those
+// two paths. An older package has neither and keeps the set it was checked with.
 function artifactAssets(body) {
   const base = body.assetContract === 'customer-assets-v2' ? UNVERSIONED_ASSETS : LEGACY_ASSETS, rules = body.assetHeaders;
   if (rules === undefined) return base;
   const version = body.verification?.native?.sdk?.version;
   if (base !== UNVERSIONED_ASSETS || typeof version !== 'string' || !SDK_VERSION.test(version)
     || !exact(rules, ['name','type','bytes','sha256','base64']) || rules.name !== '_headers' || rules.type !== 'text/plain; charset=utf-8'
-    || !same(headerRules(bytesOf(rules)), ASSET_HEADER_RULES)) fail();
+    || !same(headerRules(bytesOf(rules)), assetHeaderRules(version))) fail();
   return customerAssets(version);
 }
 export function validateArtifact(artifact) {

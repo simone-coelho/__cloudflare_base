@@ -1,5 +1,10 @@
-# A served SDK bundle under a directory that names its version (/sdk/<version>/...)
-# never changes once released, so a browser keeps it for a year without asking
-# again. Every other path keeps the asset default: revalidated on each use.
-/sdk/:version/*
+# The two SDK bundles under the path that names their version never change once
+# released, so a browser keeps them for a year without asking again. Every other
+# path, the unversioned SDK paths included, keeps the asset default: revalidated
+# on each use. The rules name the two files exactly, so no other answer under
+# /sdk/ can carry the header. The deploy's package step accepts only these
+# rules (scripts/stamp-workflow.mjs); a new SDK version changes the two paths.
+/sdk/0.2.0/edge-personalization.esm.js
+  Cache-Control: public, max-age=31536000, immutable
+/sdk/0.2.0/edge-personalization.js
   Cache-Control: public, max-age=31536000, immutable
