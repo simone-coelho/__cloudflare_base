@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" />
 <link rel="stylesheet" href="/vantage/vantage.css" />
+<!-- The demo kit's Before / Now compare (public/demo-kit/): its tokens are set for Vantage in vantage.css. -->
+<link rel="stylesheet" href="/demo-kit/compare.css" />
 </head>
 <!-- index.html and phone.html carry the same shell. phone.html only boots
      straight into the phone view (data-entry="phone"). Change both together. -->
@@ -331,7 +333,7 @@
 
   <div class="m-tools">
     <button type="button" class="m-tool" id="captureBtn" data-ctl="capture">Capture</button>
-    <button type="button" class="m-tool" id="compareBtn" data-ctl="compare" disabled>Compare</button>
+    <button type="button" class="m-tool" id="compareBtn" data-ctl="compare" title="Before: none yet. Act, then Compare.">Compare</button>
     <span class="m-tool-note" id="captureNote">Capture this page, then compare it with another moment or another shopper.</span>
   </div>
 </aside>
@@ -382,18 +384,8 @@
   </div>
 </div>
 
-<!-- ── Compare: capture, then compare ───────────────────────────────────── -->
-<div class="cmp-back" id="cmpBack" hidden role="dialog" aria-modal="true" aria-labelledby="cmpTitle">
-  <div class="cmp-box">
-    <div class="cmp-head">
-      <h2 id="cmpTitle">Compare</h2>
-      <p class="cmp-sub" id="cmpSub"></p>
-      <button type="button" class="cmp-x" id="cmpClose" aria-label="Close">&times;</button>
-    </div>
-    <div class="cmp-cols" id="cmpCols"></div>
-    <p class="cmp-foot" id="cmpFoot">Same page, same catalog, same buy box and the same public prices. Only what each moment knew about the shopper is different.</p>
-  </div>
-</div>
+<!-- ── Compare: the demo kit's overlay (public/demo-kit/compare.js) is injected
+     into <body> on first use: Seam, Side by side, and What changed. ─────── -->
 
 <button type="button" class="pd-pill" id="pdPill">Explain &mdash; predict &amp; prove</button>
 

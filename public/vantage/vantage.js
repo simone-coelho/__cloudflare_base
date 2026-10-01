@@ -62,7 +62,7 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    cursor: $('demo-cursor'), fixtureFlag: $('fixtureFlag'),
+    cursor: $('demo-cursor'), fixtureFlag: $('fixtureFlag'), site: $('site'),
     wordmark: $('wordmark'), tagline: $('tagline'), mainnav: $('mainnav'), cartCount: $('cartCount'),
     viewHome: $('viewHome'), viewPhones: $('viewPhones'), viewPhone: $('viewPhone'), viewPage: $('viewPage'),
     hero: $('hero'), heroModule: $('heroModule'),
@@ -90,7 +90,6 @@
     pdBack: $('pdBack'), pdMode: $('pdMode'), pdDone: $('pdDone'), pdAct: $('pdAct'), pdArith: $('pdArith'), pdArithK: $('pdArithK'),
     pdWill: $('pdWill'), pdNow: $('pdNow'), pdNowK: $('pdNowK'), pdWhyWrap: $('pdWhyWrap'), pdWhy: $('pdWhy'), pdWhyHead: $('pdWhyHead'),
     pdMapNow: $('pdMapNow'), pdMapAfter: $('pdMapAfter'), pdGo: $('pdGo'), pdPill: $('pdPill'), pdNote: $('pdNote'),
-    cmpBack: $('cmpBack'), cmpCols: $('cmpCols'), cmpSub: $('cmpSub'), cmpTitle: $('cmpTitle'), cmpClose: $('cmpClose'), cmpFoot: $('cmpFoot'),
     beatNo: $('beatNo'), engineLine: $('engineLine'), nextBeat: $('nextBeat'), nextLabel: $('nextLabel'),
     explainBtn: $('explainBtn'), directorHandle: $('directorHandle'), presses: $('presses'), status: $('status'),
     assertRegion: $('assertRegion'), assertIntent: $('assertIntent'), compareTools: $('compareTools'),
@@ -109,7 +108,7 @@
     rail: { status: 'site', order: null, items: null, off: false },
     beat: null, busy: false, fixtureStep: null, fixtureDone: new Set(), showBefore: false,
     receipts: new Map(), coldstart: null, lastVector: {}, fresh: new Set(),
-    capture: null, socket: null, exitArmedAt: 0, exitNote: null, pdProof: null, sheet: null,
+    socket: null, exitArmedAt: 0, exitNote: null, pdProof: null, sheet: null,
   };
 
   const say = (t, tone) => { el.status.textContent = t; el.status.dataset.tone = tone || ''; };
@@ -581,6 +580,7 @@
       renderDealsChanges(); renderWhy(); refreshReceiptLines(); renderPool();
       sayAfter();
     });
+    afterDecidedPaint('home');
     return true;
   }
   function engineDown(node, message) {
@@ -642,6 +642,7 @@
     await renderVectors();
     renderWhy();
     void prefetchReceipts([...bySlot(r.set, SLOTS.modules), ...bySlot(r.set, SLOTS.plans)], r.set.asked).then(renderWhy);
+    afterDecidedPaint(`phone:${state.phoneId}`);
     return true;
   }
 
@@ -841,10 +842,12 @@
       return { customerContentId: id, contentId: p ? p.id : id, slot: SLOTS.deals, order: i, score: 0, strategy: 'site', explain: { drivers: [] } };
     });
   }
-  function renderDeals(decisions, site) {
+  /** opts.rotate false repaints what state already holds (her page back after Compare): no new before, no entrance. */
+  function renderDeals(decisions, site, opts = {}) {
+    const rotate = !site && opts.rotate !== false;
     const previousOrder = (state.home.current || []).map((c) => c.id);
     const after = decisions.map(dealView);
-    if (!site) {
+    if (rotate) {
       state.home.previous = state.home.current; state.home.current = after;
       state.home.prevDecisions = state.home.curDecisions; state.home.curDecisions = decisions;
     }
@@ -863,7 +866,7 @@
     }
     el.deals.setAttribute('aria-busy', 'false');
     el.deals.dataset.take = String(decisions.length || 4);
-    el.deals.innerHTML = decisions.map((d, i) => dealCardHtml(d, i, { moves, entered: (j, x) => !site && previousOrder[j] !== x.customerContentId })).join('')
+    el.deals.innerHTML = decisions.map((d, i) => dealCardHtml(d, i, { moves, entered: (j, x) => rotate && previousOrder[j] !== x.customerContentId })).join('')
       || '<p class="fine">The slot returned nothing, and the page shows nothing rather than invent a module.</p>';
     if (!site) renderDealsChanges();
     renderBeforeRow();
@@ -990,17 +993,21 @@
     const w = railDoc().weights || { affinity: 1 };
     return state.rail.off ? { ...w, affinity: 0 } : w;
   }
+  /** POST /sort for one visitor: the rail as the engine answers it for her, on top of `base` (default: the rail on screen). */
+  async function askRail(v, base) {
+    const candidates = state.phones.map((p) => ({ id: p.id, brand: p.brand, ecosystem: ecoOf(p), os: ecoOf(p), price_usd: num(p.price_usd) }));
+    const r = await api('/sort', { userId: v.session.subject, sessionId: v.session.sessionId, candidates, weights: railWeights() }, { visitor: v });
+    const from = base || state.rail;
+    const prevOrder = from.order;
+    if (!r.ok || !r.body || !Array.isArray(r.body.order)) {
+      return { ...from, status: r.status === 503 ? 'no-capture' : 'down', order: null, items: null, prevOrder, error: (r.body && r.body.error) || String(r.status) };
+    }
+    return { ...from, status: 'sorted', order: r.body.order, items: r.body.items || [], prevOrder, affinityWeight: r.body.affinityWeight };
+  }
   async function sortRail() {
     const v = cur();
     if (!v) { state.rail = { ...state.rail, status: 'site', order: null, items: null }; renderRail(); return; }
-    const candidates = state.phones.map((p) => ({ id: p.id, brand: p.brand, ecosystem: ecoOf(p), os: ecoOf(p), price_usd: num(p.price_usd) }));
-    const r = await api('/sort', { userId: v.session.subject, sessionId: v.session.sessionId, candidates, weights: railWeights() }, { visitor: v });
-    const prevOrder = state.rail.order;
-    if (!r.ok || !r.body || !Array.isArray(r.body.order)) {
-      state.rail = { ...state.rail, status: r.status === 503 ? 'no-capture' : 'down', order: null, items: null, prevOrder, error: (r.body && r.body.error) || String(r.status) };
-    } else {
-      state.rail = { ...state.rail, status: 'sorted', order: r.body.order, items: r.body.items || [], prevOrder, affinityWeight: r.body.affinityWeight };
-    }
+    state.rail = await askRail(v);
     renderRail();
   }
   function renderRail() {
@@ -1229,7 +1236,9 @@
     el.pdpBefore.innerHTML = prev && prev.modules.length ? prev.modules.map((m) => `<li>${esc(m.title)}</li>`).join('')
       : '<li class="ghost-empty">She had not seen this page’s modules yet.</li>';
     if (!prev) {
-      el.pdpDeltas.innerHTML = `<li class="delta-none">The first decision for this page: <b>${esc(now.modules.map((m) => m.title).join(' → '))}</b>. Plans lead with <b>${esc(now.plans[0] || '—')}</b>. ${isTemplate(now.modules) ? 'Nothing she has done weighs on a module yet, so this is the template order.' : 'The order her browsing already earns; <b>Why these</b> explains each one, and <b>Compare → Fresh visitor</b> shows the template order beside it.'}</li>`;
+      const fresh = Boolean(cur() && cur().fresh);   // Compare's fresh visitor: nothing sent, so nothing of hers to credit
+      el.pdpDeltas.innerHTML = `<li class="delta-none">The first decision for this page: <b>${esc(now.modules.map((m) => m.title).join(' → '))}</b>. Plans lead with <b>${esc(now.plans[0] || '—')}</b>. ${fresh ? 'A fresh visitor has sent nothing: the template order, with the region’s prior.'
+        : isTemplate(now.modules) ? 'Nothing she has done weighs on a module yet, so this is the template order.' : 'The order her browsing already earns; <b>Why these</b> explains each one, and <b>Compare → Fresh visitor</b> shows the template order beside it.'}</li>`;
       return;
     }
     const rows = [];
@@ -1992,67 +2001,237 @@
   el.buildReport.addEventListener('click', () => { void loadReport(true); });
 
   // ════════════════════════════════════════════════════════════════════════
-  // COMPARE: capture, then compare. The Meridian manner, on decided state.
+  // COMPARE: the demo kit's widget (public/demo-kit/compare.js). Before and Now
+  // as the room saw them (Seam, Side by side) and as the decided state behind
+  // them (What changed: the lists each answer returned, in order).
+  // A Before always exists: one after each view's first decided paint, in idle
+  // time, outside a performed beat; one at the start of every performed beat,
+  // before it acts; and Capture's own, which replaces either. Nothing here
+  // ranks, asserts or asks the engine anything new: the frames are the page,
+  // and What changed is the page's own record of the answers it painted.
   // ════════════════════════════════════════════════════════════════════════
+  /** In a frame the sticky price bar sits where the page puts it: a full-page frame has no viewport to stick it to. */
+  const FREEZE_EXTRA = '.stickybar{position:relative!important;bottom:auto!important}';
+  /**
+   * Left out of every clone: the chrome outside the site, and the site's views that are not on screen. None of it
+   * shapes what is (the machine sits in a grid column its template fixes, or below the site on a narrow screen; the
+   * rest is fixed or closed; a hidden view has no box, and no rule selects a view by its position among them), and
+   * the clone of the whole document is the only thing a beat waits for when it takes its Before.
+   */
+  const CLONE_IGNORE = '.machine, .director, .pd-back, .sheet-back, .pd-pill, #demo-cursor, .back-chip, .fixture-flag, .skip, #site > .stage > .view[hidden]';
+  let kitMod = null, kitLoad = null;
+  /** The kit, loaded on first use (it touches nothing at import); the page runs without it. */
+  function kit() {
+    if (kitMod) return Promise.resolve(kitMod);
+    if (!kitLoad) {
+      kitLoad = import('/demo-kit/compare.js').then((m) => {
+        m.configure({ freezeCss: FREEZE_EXTRA, ignore: CLONE_IGNORE });
+        // The press is the capture: the main bar's Capture starts its frame in the press itself (the director's Capture presses it).
+        m.armPress(el.captureBtn, { root: () => el.site, label: frameLabel, meta: frameMeta, when: () => !state.busy });
+        kitMod = m;
+        return m;
+      }).catch((error) => { kitLoad = null; throw error; });
+    }
+    return kitLoad;
+  }
+  const clock = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  /** Where a frame was taken, as its tag and the Compare buttons name it. */
+  const whereNow = () => (state.view === 'phone' ? `${(phone(state.phoneId) || {}).name || 'phone'} page`
+    : state.view === 'phones' ? 'phones grid' : state.view === 'page' ? `${pageTitle(state.pageKey)} page` : 'homepage');
+  const whoNow = () => (cur() ? cur().label : 'nobody yet');
+  /** What a frame keeps: where, who, and the decided state on screen at its clone, for What changed. */
+  const frameMeta = () => ({ where: whereNow(), who: whoNow(), snap: snapshotOfPage() });
+  const frameLabel = (m) => `${m.where} · ${m.who}`;
+  /** "Before: homepage at 14:02, Shopper A": the title on every Compare button. */
+  function compareTitle() {
+    const b = kitMod && kitMod.baselineInfo();
+    return b && b.meta ? `Before: ${b.meta.where} at ${clock(b.at)}, ${b.meta.who}` : 'Before: none yet. Act, then Compare.';
+  }
+  function syncCompareTitles() {
+    const t = compareTitle();
+    el.compareBtn.title = t;
+    const tool = el.compareTools.querySelector('[data-tool="compare"]');
+    if (tool) tool.title = t;
+  }
+  /** The decided state on screen: what each list returned, in order, and her strongest signals. */
   function snapshotOfPage() {
     const v = cur();
     const vec = [];
     for (const [dim, values] of Object.entries((v && v.vector) || {})) for (const [value, a] of Object.entries(values || {})) vec.push({ dim, value, a: num(a) });
     vec.sort((a, b) => b.a - a.a);
-    const base = { who: v ? v.label : 'no visitor', at: Date.now(), view: state.view, vector: vec.slice(0, 6), intent: v && v.intent, region: regionShown() };
-    if (state.view === 'phone' && state.phone.set) {
-      const p = phone(state.phoneId);
-      return { ...base, where: `${p ? p.name : 'phone'} page`,
-        lists: [['Modules, in the order returned', bySlot(state.phone.set, SLOTS.modules).map((d) => ({ id: d.customerContentId, t: moduleTitle(d), s: d.score }))],
-          ['Pair with a plan', bySlot(state.phone.set, SLOTS.plans).map((d) => ({ id: d.customerContentId, t: (tierOfDecision(d) || {}).name || d.customerContentId, s: d.score }))]] };
+    const base = { who: whoNow(), at: Date.now(), view: state.view, where: whereNow(), vector: vec.slice(0, 6), intent: v && v.intent, region: regionShown() };
+    if (state.view === 'phone') {
+      const set = state.phone.set;
+      return { ...base,
+        lists: [['Modules, in the order returned', set ? bySlot(set, SLOTS.modules).map((d) => ({ id: d.customerContentId, t: moduleTitle(d), s: d.score })) : []],
+          ['Pair with a plan', set ? bySlot(set, SLOTS.plans).map((d) => ({ id: d.customerContentId, t: (tierOfDecision(d) || {}).name || d.customerContentId, s: d.score })) : []]] };
     }
-    return { ...base, where: 'homepage',
-      lists: [['Hero', bySlot(state.home.set, SLOTS.hero).map((d) => ({ id: d.customerContentId, t: (pieceOfDecision(d) || {}).title || d.customerContentId, s: d.score }))],
-        ['The deals four', bySlot(state.home.set, SLOTS.deals).map((d) => ({ id: d.customerContentId, t: (pieceOfDecision(d) || {}).title || d.customerContentId, s: d.score }))],
+    if (state.view !== 'home') return { ...base, lists: [] };
+    // Before anyone arrives the homepage is the site's own: the same for everyone, labelled so, nothing decided.
+    const set = state.home.set;
+    const own = (id) => ({ id, t: `${(pieceOf(id) || {}).title || id} (the site’s own)`, s: null });
+    return { ...base,
+      lists: [['Hero', set ? bySlot(set, SLOTS.hero).map((d) => ({ id: d.customerContentId, t: (pieceOfDecision(d) || {}).title || d.customerContentId, s: d.score })) : [own(el.hero.dataset.key)]],
+        ['The deals four', set ? bySlot(set, SLOTS.deals).map((d) => ({ id: d.customerContentId, t: (pieceOfDecision(d) || {}).title || d.customerContentId, s: d.score }))
+          : siteDefaultDeals().map((d) => own(d.customerContentId))],
         ['Phones for you', (state.rail.order || state.phones.map((p) => p.id)).slice(0, railTake()).map((id) => ({ id, t: (phone(id) || {}).name || id, s: null }))]] };
   }
-  function capture() {
-    state.capture = snapshotOfPage();
-    el.compareBtn.disabled = false;
-    el.captureNote.textContent = `Captured ${state.capture.who} on the ${state.capture.where} at ${hhmm(state.capture.at)}. Change something, or bring in another shopper, then Compare.`;
-    note('captured', `The ${state.capture.where}`, `for Compare · ${hhmm(state.capture.at)}`);
-  }
-  function openCompare(title, live) {
-    if (!state.capture) return;
-    const now = live || snapshotOfPage();
-    const col = (s, other, k) => `<div class="cmp-col"><p class="ck">${k}</p><h3>${esc(s.who)} · ${esc(s.where)}</h3>
+  /** What changed: the two frames' decided state in two columns. A row in red differs from the other column at the same position. */
+  function compareCols(a, b, keys) {
+    if (!a || !b) return '<p class="cmp-cols-sub">The decided state behind one of the two frames was not recorded, so there are no columns to set side by side.</p>';
+    const col = (s, other, k) => `<div class="cmp-col"><p class="ck">${esc(k)}</p><h3>${esc(s.who)} · ${esc(s.where)}</h3>
       <p class="cwhen">${esc(hhmm(s.at))}${s.intent ? ` · intent ${esc(s.intent)} (asserted)` : ''}${s.region ? ` · region ${esc(s.region)}` : ''}</p>
-      ${s.lists.map(([name, rows], li) => {
+      ${s.lists.length ? s.lists.map(([name, rows], li) => {
         const o = (other.lists[li] || [null, []])[1];
         return `<p class="cmp-sec">${esc(name)}</p><ol class="cmp-list">${rows.map((r, i) => `<li class="${o[i] && o[i].id === r.id ? '' : 'diff'}"><span class="cn">${i + 1}</span><span>${esc(r.t)}</span><span class="cs">${r.s == null ? '' : fmt3(r.s)}</span></li>`).join('') || '<li><span></span><span>nothing returned</span><span></span></li>'}</ol>`;
-      }).join('')}
+      }).join('') : `<p class="cmp-sec">Nothing on the ${esc(s.where)} is decided</p>`}
       <p class="cmp-sec">Strongest signals</p><div class="cmp-sig">${s.vector.map((x) => `<div><span>${esc(x.value)} · ${esc(DIM_LABEL[x.dim] || x.dim)}</span><b>${x.a.toFixed(2)}</b></div>`).join('') || '<div><span>none yet</span><b></b></div>'}</div></div>`;
-    el.cmpTitle.textContent = title || 'Compare';
-    el.cmpSub.textContent = `Captured at ${hhmm(state.capture.at)}, against ${live ? 'the second shopper' : 'now'}. A row in red differs from the other column at the same position.`;
-    el.cmpCols.innerHTML = col(state.capture, now, 'Captured') + col(now, state.capture, live ? 'Second shopper' : 'Now');
-    el.cmpBack.hidden = false;
+    return `<p class="cmp-cols-sub">${esc(keys[0])} at ${esc(hhmm(a.at))}, against ${esc(keys[1].replace(/^(Now|The|A)\b/, (w) => w.toLowerCase()))} at ${esc(hhmm(b.at))}. A row in red differs from the other column at the same position.</p>
+      <div class="cmp-cols" id="cmpCols">${col(a, b, keys[0])}${col(b, a, keys[1])}</div>`;
   }
-  el.captureBtn.addEventListener('click', () => { if (!state.busy) capture(); });
-  el.compareBtn.addEventListener('click', () => { if (!state.busy) openCompare(); });
-  el.cmpClose.addEventListener('click', () => { el.cmpBack.hidden = true; });
-  el.cmpBack.addEventListener('click', (e) => { if (e.target === el.cmpBack) el.cmpBack.hidden = true; });
+  /** The sentence under every comparison: what is the same on both sides, and the one thing that is not. */
+  const FOOT = {
+    moment: 'Same page, same catalog, same buy box and the same public prices. Only what each moment knew about the shopper is different.',
+    streaming: 'Same page, same catalog, same buy box, same public prices. Only what each of them did is different.',
+    phone: 'Same phone, same moment, same region, same buy box and the same public prices. The fresh visitor has sent nothing: the template order, with the region’s prior. Hers, on the left, is what her browsing earned.',
+    home: 'Same homepage, same moment, same region, same catalog and the same public prices. The fresh visitor has sent nothing: the region’s prior alone. Hers, on the left, is what her visit earned.',
+  };
+  /**
+   * A Before of the site as it is now: the kit keeps its pixels and, with them, the decided state on screen.
+   * reason: 'manual' (Capture), 'beat', 'first-paint' or 'tool'. Resolves at the clone, when the page may change
+   * again, with { cloned, done } (the frame lands once it has rendered, and Compare waits for it), or null
+   * when the kit could not load.
+   */
+  async function takeBaseline(reason, renderAfter) {
+    let m;
+    try { m = await kit(); } catch { return null; }
+    const done = m.captureBaseline(el.site, { label: frameLabel, meta: frameMeta, quiet: reason !== 'manual', fresh: reason !== 'manual', renderAfter });
+    void done.then(syncCompareTitles);
+    const cloned = await done.cloned;
+    return { cloned, done };
+  }
+  /** Capture: the Before is the page at the press, replacing any automatic one. */
+  async function capture() {
+    if (state.busy) { el.captureNote.textContent = 'A press is still landing: Capture once it has.'; return; }
+    const t = await takeBaseline('manual');
+    if (!t) { el.captureNote.textContent = 'Capture could not load the compare kit (public/demo-kit/compare.js).'; return; }
+    const c = t.cloned;
+    if (c && c.meta) {
+      el.captureNote.textContent = c.meta.who === 'nobody yet'
+        ? `Captured the ${c.meta.where} before anyone arrived, at ${hhmm(c.at)}. Change something, or bring in another shopper, then Compare.`
+        : `Captured ${c.meta.who} on the ${c.meta.where} at ${hhmm(c.at)}. Change something, or bring in another shopper, then Compare.`;
+      note('captured', `The ${c.meta.where}`, `for Compare · ${hhmm(c.at)}`);
+    }
+    const r = await t.done;
+    if (!r.ok) el.captureNote.textContent = `Capture did not land: ${r.error}.`;
+    syncCompareTitles();
+  }
+  let compareReq = 0;
+  /** Compare: the Before against the page now. Never nothing: with no Before yet it says so; a press still landing is waited for, on screen. */
+  async function compareNow() {
+    const my = ++compareReq;
+    let m;
+    try { m = await kit(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
+    if (my !== compareReq) return;
+    if (!m.hasBaseline()) { void m.openCompare(el.site, { title: 'Before and now' }); return; }   // the kit says there is no earlier frame, and nothing else
+    if (state.busy) {
+      m.showWaiting({ title: 'Before and now', heading: 'A press is still landing.', text: 'Compare opens when it has.' });
+      while (state.busy) {
+        await sleep(150);
+        if (my !== compareReq || !m.isOpen()) return;   // closed, or another comparison took the screen
+      }
+    }
+    await m.openCompare(el.site, {
+      title: 'Before and now', nowLabel: frameLabel, nowMeta: frameMeta, foot: FOOT.moment,
+      details: (b, n) => compareCols(b.meta && b.meta.snap, n.meta && n.meta.snap, ['Before', 'Now']),
+    });
+  }
+  el.captureBtn.addEventListener('click', () => { void capture(); });
+  el.compareBtn.addEventListener('click', () => { void compareNow(); });
 
   /**
-   * The streaming shopper, for Compare (a tool, not a beat): capture what the
+   * A second shopper's decided set on the live page, for one clone: drawn by the page's own renderers, as the
+   * streaming shopper's pages are, with no event, no route and no meter read. Returns the function that puts her
+   * page back from state, with no re-ask: her answer, her before and now, her chips, her scroll and her address.
+   */
+  function paintQuietly(f, set, rail, onPhone) {
+    const railDeltas = $('railDeltas');
+    const keep = { who: state.who, home: state.home, phone: state.phone, rail: state.rail, exitNote: state.exitNote, heroKey: el.hero.dataset.key,
+      railDeltasHidden: railDeltas ? railDeltas.hidden : true, scroll: window.scrollY, url: location.pathname + location.search };
+    state.who = f.key;          // the renderers read cur(): her selections stay off the stranger's page
+    state.exitNote = null;
+    if (onPhone) {
+      state.phone = { previous: null, current: null, set, moves: {} };
+      renderBuyBox();
+      renderModules(set);       // the stranger's first answer on this page: no before of hers, no move chips
+    } else {
+      state.home = { ...keep.home, previous: null, current: null, set, prevDecisions: null, curDecisions: null };
+      state.rail = rail || { status: 'site', order: null, items: null, off: keep.rail.off };
+      renderHero(bySlot(set, SLOTS.hero)[0] || null);
+      renderDeals(bySlot(set, SLOTS.deals), false);
+      renderRail();
+      if (railDeltas) railDeltas.hidden = true;
+      renderPool();
+    }
+    return () => {
+      state.who = keep.who; state.home = keep.home; state.phone = keep.phone; state.rail = keep.rail; state.exitNote = keep.exitNote;
+      if (onPhone) {
+        renderBuyBox();
+        if (state.phone.set) renderModules(state.phone.set, { rotate: false });
+        if (state.phone.current) renderPdpChanges();
+      } else {
+        el.hero.dataset.key = keep.heroKey || '';     // her hero comes back without an entrance
+        renderHero(state.home.set ? (bySlot(state.home.set, SLOTS.hero)[0] || null) : null);
+        if (state.home.set) renderDeals(bySlot(state.home.set, SLOTS.deals), false, { rotate: false });
+        else renderDeals(siteDefaultDeals(), true);
+        renderRail();
+        if (railDeltas) railDeltas.hidden = keep.railDeltasHidden;
+        renderPool();
+        refreshReceiptLines();
+      }
+      try { window.scrollTo({ top: keep.scroll, behavior: 'instant' }); } catch { /* optional */ }
+      try { if (location.pathname + location.search !== keep.url) history.replaceState({ vantage: true }, '', keep.url); } catch { /* a sandboxed document has no history */ }
+    };
+  }
+
+  /**
+   * The streaming shopper, for Compare (a tool, not a beat): a Before of what the
    * first shopper sees, then a second, direct visitor opens the streaming
-   * starter on the phone page, and the two sit side by side. Then back to her.
+   * starter on the phone page, on screen, with the cursor; his page is the Now
+   * frame. Then her page comes back from state and the two open side by side.
    */
   async function streamingShopper() {
-    if (state.busy) return;
+    if (state.busy) { say('a beat is running; the page is frozen until it lands', 'bad'); return; }
+    let m;
+    try { m = await kit(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
     state.busy = true;
+    compareReq += 1;                               // a Compare still waiting for a press gives way to this one
     say('the streaming shopper is browsing…');
+    const title = 'Two shoppers, one phone page, one engine';
+    const keys = ['Her page', 'The streaming shopper'];
+    let restore = null;
     try {
       await ensureVisitor();
+      await takeBaseline('tool');                  // her page as it is now: the Before, pixels and decided state
       // Her phone-page state too: the second shopper's presses rotate state.phone, and her next press
       // must diff against what SHE last saw, not against his page (R1 7b-i).
-      const back = { who: state.who, view: state.view, phoneId: state.phoneId, url: location.pathname + location.search,
+      const back = { who: state.who, view: state.view, phoneId: state.phoneId, url: location.pathname + location.search, scroll: window.scrollY,
         phone: { previous: state.phone.previous, current: state.phone.current, moves: state.phone.moves, set: state.phone.set } };
-      capture();                                   // her page as it is now, beside the second shopper
+      restore = () => {
+        useVisitor(back.who);
+        const v = cur();
+        state.phoneId = back.phoneId;
+        Object.assign(state.phone, back.phone);    // her before and now, her move chips, her answer
+        state.quietRoute = false;
+        try { history.replaceState({ vantage: true }, '', back.url); } catch { /* a sandboxed document has no history */ }   // her address, not his
+        if (back.view === 'phone' && v && v.phoneSet) {
+          showView('phone'); renderBuyBox(); renderStaticPdp(); state.phone.set = v.phoneSet; renderModules(v.phoneSet, { rotate: false });
+          if (state.phone.current) renderPdpChanges();   // the before/now row as she left it, not his
+        } else if (back.view === 'home' && v && v.homeSet) { showView('home'); state.home.set = v.homeSet; }
+        else showView(back.view);
+        renderWho();
+        try { window.scrollTo({ top: back.scroll, behavior: 'instant' }); } catch { /* optional */ }
+      };
       state.quietRoute = true;                     // his pages take her history entry for the moment; it is handed back below
       const cfg = state.anchor.streamingShopper || {};
       const pid = cfg.phone && phone(cfg.phone) ? cfg.phone : (state.phoneId || focusPhone());
@@ -2065,52 +2244,93 @@
       const btn = el.modules.querySelector(`[data-perk="${perk}"][data-plan="${plan}"]`) || el.modules.querySelector(`[data-perk="${perk}"]`);
       if (btn) { await performClick(`#modules [data-ctl="${btn.getAttribute('data-ctl')}"]`); await sleep(500); await performClick('#sheetBody [data-ctl="sheet-done"]'); }
       const live = snapshotOfPage();
-      useVisitor(back.who);
-      const v = cur();
-      state.phoneId = back.phoneId;
-      Object.assign(state.phone, back.phone);      // her before and now, her move chips, her answer
-      state.quietRoute = false;
-      try { history.replaceState({ vantage: true }, '', back.url); } catch { /* a sandboxed document has no history */ }   // her address, not his
-      if (back.view === 'phone' && v && v.phoneSet) {
-        showView('phone'); renderBuyBox(); renderStaticPdp(); state.phone.set = v.phoneSet; renderModules(v.phoneSet, { rotate: false });
-        if (state.phone.current) renderPdpChanges();   // the before/now row as she left it, not his
-      } else if (v && v.homeSet) { showView('home'); state.home.set = v.homeSet; }
-      renderWho(); await renderVectors();
-      openCompare('Two shoppers, one phone page, one engine', live);
-      el.cmpFoot.textContent = 'Same page, same catalog, same buy box, same public prices. Only what each of them did is different.';
-      note('returned', `Back to ${v ? v.label : 'the first shopper'}`, 'her page as she left it · nothing re-asked');
+      const theirs = m.captureFrame(el.site, { kind: 'streaming', label: frameLabel, meta: () => ({ where: whereNow(), who: whoNow(), snap: live }) });
+      await theirs.cloned;                         // his page is in the frame; it may leave the screen now
+      el.cursor.classList.remove('show');
+      m.showWaiting({ title, heading: 'Back to her page', text: 'His frame is taken; hers comes back as she left it.' });
+      restore(); restore = null;
+      await renderVectors();
+      await m.openCompare(el.site, { now: theirs, title, tags: { before: keys[0], now: keys[1] }, foot: FOOT.streaming,
+        details: (bf, nf) => compareCols(bf.meta && bf.meta.snap, nf.meta && nf.meta.snap, keys),
+        sameNote: 'Her page and his are the same: nothing either of them did weighs on it yet.',
+        nearNote: 'Her page and his differ only in small print: What changed has the answers behind both.' });
+      note('returned', `Back to ${cur() ? cur().label : 'the first shopper'}`, 'her page as she left it · nothing re-asked');
       say('done', 'good');
     } catch (error) { say(String(error.message || error), 'bad'); }
-    finally { el.cursor.classList.remove('show'); state.busy = false; state.quietRoute = false; }
+    finally {
+      if (restore) { try { restore(); } catch { /* her page, as far as it can be put back */ } }
+      el.cursor.classList.remove('show'); state.busy = false; state.quietRoute = false;
+    }
   }
 
   /**
-   * A fresh visitor, for Compare: the same phone page asked for someone who has
-   * done nothing yet, beside her, so the template order (with the region's
-   * prior) sits next to the order her browsing earned. It sends no event.
+   * A fresh visitor, for Compare, on the homepage or the phone page: the same
+   * page asked for someone who has done nothing yet, in the same region, with no
+   * event sent. Her page is the Before; the stranger's decided set is drawn on the
+   * live page under the overlay for one frame; then her page and address come back
+   * from state, with no re-ask, and the two open side by side.
    */
   async function freshVisitor() {
-    if (state.busy) return;
-    if (state.view !== 'phone' || !state.phoneId || !cur()) { say('open a phone page first: Compare puts a fresh visitor beside her there', 'bad'); return; }
+    if (state.busy) { say('a beat is running; the page is frozen until it lands', 'bad'); return; }
+    let m;
+    try { m = await kit(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
+    const onPhone = state.view === 'phone' && Boolean(state.phoneId && phone(state.phoneId));
+    const title = onPhone ? 'Her phone page, and a fresh visitor’s' : 'Her homepage, and a fresh visitor’s';
+    if (!cur() || !(onPhone || state.view === 'home')) {
+      m.showMessage({ title, heading: 'No shopper on a page yet:', text: 'Fresh visitor sets a stranger’s homepage or phone page beside hers. Bring her in with Next, then press it again.' });
+      say('open the homepage or a phone page with her first: Compare puts a fresh visitor beside her there', 'bad');
+      return;
+    }
     state.busy = true;
+    compareReq += 1;                               // a Compare still waiting for a press gives way to this one
     say('a fresh visitor is asking…');
+    const keys = ['Her page', 'A fresh visitor, same region'];
+    m.showWaiting({ title, heading: 'Her page, then a fresh visitor’s', text: 'Same region, nothing sent.' });
+    let restore = null;
     try {
-      const back = { who: state.who, phoneId: state.phoneId };
-      const p = phone(back.phoneId);
-      capture();                                   // her phone page as it is now
+      await takeBaseline('tool');                  // her page as it is now: the Before, pixels and decided state
+      const p = onPhone ? phone(state.phoneId) : null;
       const f = await mintVisitor('F', directEntry(), 'Fresh visitor');
-      f.config = { phoneId: p.id, color: defaultColorOf(p), storage: optionsOf(p)[0].storage, term: 36 };
+      f.fresh = true;
+      if (p) f.config = { phoneId: p.id, color: defaultColorOf(p), storage: optionsOf(p)[0].storage, term: 36 };
       note('arrived', 'A fresh visitor', 'direct · consent granted · no event sent', f);
-      const r = await ask('phone', f);
+      const r = await ask(onPhone ? 'phone' : 'home', f);
       if (!r.ok) throw new Error(r.error);
-      const live = { who: f.label, at: Date.now(), view: 'phone', vector: [], intent: f.intent, region: regionShown(), where: `${p.name} page`,
-        lists: [['Modules, in the order returned', bySlot(r.set, SLOTS.modules).map((d) => ({ id: d.customerContentId, t: moduleTitle(d), s: d.score }))],
-          ['Pair with a plan', bySlot(r.set, SLOTS.plans).map((d) => ({ id: d.customerContentId, t: (tierOfDecision(d) || {}).name || d.customerContentId, s: d.score }))]] };
-      useVisitor(back.who);
-      openCompare('Her phone page, and a fresh visitor’s', live);
-      el.cmpFoot.textContent = 'Same phone, same moment, same region. The fresh visitor has sent nothing: the template order, with the region’s prior. The left column is what her browsing earned.';
+      const rail = onPhone ? null : await askRail(f, { status: 'site', order: null, items: null, off: state.rail.off });
+      restore = paintQuietly(f, r.set, rail, onPhone);
+      const live = snapshotOfPage();               // the stranger's decided state, read off the page as drawn
+      const theirs = m.captureFrame(el.site, { kind: 'fresh', label: frameLabel, meta: () => ({ where: whereNow(), who: whoNow(), snap: live }) });
+      await theirs.cloned;                         // the stranger's page is in the frame; hers comes back now
+      restore(); restore = null;
+      await m.openCompare(el.site, { now: theirs, title, tags: { before: keys[0], now: keys[1] }, foot: onPhone ? FOOT.phone : FOOT.home,
+        details: (bf, nf) => compareCols(bf.meta && bf.meta.snap, nf.meta && nf.meta.snap, keys),
+        sameNote: 'Her page and the fresh visitor’s are the same: nothing she has done weighs on it yet.',
+        nearNote: 'Her page and the fresh visitor’s differ only in small print: What changed has the answers behind both.' });
       say('done', 'good');
-    } catch (error) { say(String(error.message || error), 'bad'); } finally { state.busy = false; }
+    } catch (error) {
+      say(String(error.message || error), 'bad');
+      if (m.isOpen()) m.showMessage({ title, heading: 'No fresh visitor’s page:', text: String(error.message || error) });
+    } finally {
+      if (restore) { try { restore(); } catch { /* her page, as far as it can be put back */ } }
+      state.busy = false;
+    }
+  }
+
+  /** (a) A Before always exists: after a view's first decided paint for this visitor, outside a performed beat, in idle time. */
+  let idleGen = 0;
+  const idle = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
+  function afterDecidedPaint(viewKey) {
+    const v = cur();
+    if (!v || v.fresh) return;
+    v.painted = v.painted || new Set();
+    if (v.painted.has(viewKey)) return;
+    v.painted.add(viewKey);
+    if (state.busy) return;                        // a performed beat, or a compare tool, took its own Before
+    const my = ++idleGen;
+    setTimeout(() => idle(() => {
+      if (my !== idleGen || state.busy || cur() !== v) return;
+      void takeBaseline('first-paint');
+    }), 600);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -2395,7 +2615,8 @@
       async run() {
         await resetTenant();
         await useCatalog(beatName('open', 'catalog'));
-        state.visitors = {}; state.who = null; state.capture = null; el.compareBtn.disabled = true; state.receipts.clear();
+        // The Before taken as this press landed (the page before she arrives) stays: it is beat 1's own comparison.
+        state.visitors = {}; state.who = null; state.receipts.clear();
         state.home = { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null };
         state.phone = { previous: null, current: null, set: null };
         state.rail = { status: 'site', order: null, items: null, off: false };
@@ -2780,7 +3001,7 @@
   function go(i) {
     if (state.busy) return undefined;
     if (!el.pdBack.hidden) el.pdBack.hidden = true;
-    if (!el.cmpBack.hidden) el.cmpBack.hidden = true;
+    if (kitMod && kitMod.isOpen()) kitMod.closeCompare();
     closeDirector();
     return runBeat(i);
   }
@@ -2797,6 +3018,12 @@
     state.fixtureStep = b.key;
     if (FIXTURE) state.fixtureDone.add(b.key);
     say('working…');
+    // (b) Every performed beat starts with a Before: the page as the room saw it when the press landed, cloned
+    // before the beat acts. Its render waits until the beat has landed, so the beat's own motion is not held.
+    idleGen += 1;                                  // a first-paint Before still waiting gives way to this one
+    let landedNow = () => {};
+    const landed = new Promise((r) => { landedNow = r; });
+    await takeBaseline('beat', () => landed).catch(() => null);
     try {
       if (!cur() && b.key !== 'arrive') await ensureVisitor();
       await b.run();
@@ -2812,6 +3039,7 @@
       renderPresses();
       renderNext();
       captureProof(b, before);
+      landedNow();                                 // the Before taken as it started may render now
     }
   }
   el.presses.addEventListener('click', (e) => { const btn = e.target.closest('.press'); if (btn) void go(Number(btn.dataset.i)); });
@@ -2832,7 +3060,9 @@
     const v = cur();
     // Always one answer: without ctx.intent the gated offers fail closed and the four come back short.
     el.assertIntent.innerHTML = '<span class="wlabel">intent</span>' + INTENTS.map(([k, l]) => `<button type="button" data-intent="${k}" aria-pressed="${((v && v.intent) || defaultIntent()) === k}">${esc(l)}</button>`).join('');
-    el.compareTools.innerHTML = '<span class="wlabel">compare</span><button type="button" data-tool="capture">Capture</button><button type="button" data-tool="compare">Compare</button><button type="button" data-tool="fresh">Fresh visitor</button><button type="button" data-tool="streaming">Streaming shopper</button>';
+    // Compare is always enabled, and its title names the Before it will show.
+    el.compareTools.innerHTML = '<span class="wlabel">compare</span><button type="button" data-tool="capture">Capture</button>'
+      + `<button type="button" data-tool="compare" title="${esc(compareTitle())}">Compare</button><button type="button" data-tool="fresh">Fresh visitor</button><button type="button" data-tool="streaming">Streaming shopper</button>`;
   }
   el.assertRegion.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
@@ -2852,9 +3082,10 @@
   });
   el.compareTools.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
-    if (!btn || state.busy) return;
-    if (btn.dataset.tool === 'capture') capture();
-    if (btn.dataset.tool === 'compare') openCompare();
+    if (!btn) return;
+    // The same presses as the main bar's: Capture clicks it, so the kit's armed press is the capture.
+    if (btn.dataset.tool === 'capture') el.captureBtn.click();
+    if (btn.dataset.tool === 'compare') void compareNow();
     if (btn.dataset.tool === 'streaming') void streamingShopper();
     if (btn.dataset.tool === 'fresh') void freshVisitor();
   });
@@ -2976,7 +3207,9 @@
   el.pdPill.addEventListener('click', openExplain);
   el.explainBtn.addEventListener('click', openExplain);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (!el.pdBack.hidden) closeExplain(); else if (!el.cmpBack.hidden) el.cmpBack.hidden = true; else if (!el.sheetBack.hidden && !state.busy) void closeSheet(); }
+    // Compare's overlay takes its own keys (Escape closes it) and stops them there.
+    if (kitMod && kitMod.isOpen()) return;
+    if (e.key === 'Escape') { if (!el.pdBack.hidden) closeExplain(); else if (!el.sheetBack.hidden && !state.busy) void closeSheet(); }
     else if ((e.key === 'e' || e.key === 'E') && el.pdBack.hidden && !state.busy && !/input|textarea/i.test((e.target && e.target.tagName) || '')) openExplain();
   });
   window.addEventListener('popstate', () => {
@@ -3130,7 +3363,9 @@
       const directPhone = bootPhoneView();
       const loaded = ['phones', 'plans', 'anchor', 'display', 'catalog'].map((k) => `${k}: ${state.sources[k] || 'missing'}`).join(' · ');
       say(`ready · ${loaded} · registry: ${state.sources.registry} · images: ${state.manifest ? 'MANIFEST' : 'no manifest'}`, 'good');
-      if (QS.has('debug')) window.__vantage = { state, go, beats, handleControl, performClick };
+      if (QS.has('debug')) window.__vantage = { state, go, beats, handleControl, performClick, compare: () => kit() };
+      // The compare kit and html2canvas, fetched in idle time, so the first Before is quick to take.
+      idle(() => { kit().then((m) => m.preload()).catch(() => { /* Compare says so when it is pressed */ }); });
       // A direct load of the phone page is a real arrival on it: a visitor, her view of the phone, and the live answer.
       if (directPhone) {
         await openPhone(directPhone, { scroll: false }).then(() => loadColdStart())

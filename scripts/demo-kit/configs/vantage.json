@@ -1,0 +1,61 @@
+{
+  "about": "The demo kit's config for Vantage, the Verizon carrier demo: the first instance of demo.config.json (docs/demo-kit/Demo-Kit-Design.md §2.4), not the whole of it. It points at Vantage's existing files: the beat documents scripts/seed-vantage.mjs writes under public/vantage/beats/ (re-anchored to now on every seed), the shared census rows, the image manifest. The two documents no existing file holds whole, the registry and the learn document, are the exact objects scripts/seed-vantage.mjs publishes, in configs/vantage/. Paths are relative to the repository root. A config never carries a credential: the seed's token comes from --token or from local minting.",
+  "name": "Vantage",
+  "slug": "vantage",
+  "tenant": "vantage",
+  "publicDir": "public/vantage",
+  "worker": { "name": "edge-platform-vantage", "queue": "events-vantage", "devPort": 9110, "config": "wrangler.vantage.toml" },
+  "seed": {
+    "operator": "seed-vantage",
+    "documents": {
+      "reflex": { "file": "scripts/demo-kit/configs/vantage/reflex.json", "about": "seed-vantage.mjs §1: eight dimensions, memory compressed for the room" },
+      "catalog": { "beat": "open-catalog" },
+      "slots": { "beat": "open-slots" },
+      "learn": { "file": "scripts/demo-kit/configs/vantage/learn.json", "about": "seed-vantage.mjs §4: holdout 0, γ 0, exploration off, the regional prior on four dimensions" }
+    },
+    "notes": {
+      "reflex": "Vantage registry, eight dimensions: memory compressed for this room; production runs days",
+      "catalog": "Vantage opening catalog: {{count.promotion}} promotions, heroes, modules, plans; windows anchored {{anchor}}",
+      "slots": "hero take 1 with a stage rule; deals take 4, two per brand; pdp-modules take 6; plan-pairing take 3",
+      "learn": "holdout 0 on stage; γ 0; exploration off; the regional prior on brand, ecosystem, price band and category"
+    },
+    "beats": {
+      "dir": "public/vantage/beats",
+      "anchor": { "file": "anchor.json", "field": "anchor" },
+      "count": 15,
+      "files": [
+        "open-catalog", "open-slots",
+        "01-arrival", "02-another-region", "03-browse-galaxy-pixel", "04-the-hinge", "05-stop-touching",
+        "06-open-the-galaxy", "07-compare-storage", "08-hotspot-perk", "09-four-lines", "10-intent-toggle",
+        "11-two-weeks-pass", "12-black-friday", "13-pin-duo-preorder", "14-5g-home", "15-continue-and-report"
+      ],
+      "publishable": {
+        "open-catalog": "catalog",
+        "open-slots": "slots",
+        "11-two-weeks-pass": "catalog",
+        "12-black-friday": "catalog",
+        "13-pin-duo-preorder": "slots"
+      },
+      "reset": ["open-slots", "open-catalog"]
+    },
+    "vocabulary": {
+      "category": ["phones", "plans", "home-internet", "accessories", "watches-tablets"],
+      "brand": ["apple", "samsung", "google", "motorola"],
+      "ecosystem": ["ios", "android"],
+      "priceBand": ["entry", "core", "premium"],
+      "intent": ["new", "switch", "upgrade", "add-line", "byod", "home"],
+      "perk": ["streaming", "music-games", "hotspot-travel", "international", "family"],
+      "lines": ["solo", "duo", "family"],
+      "contentType": ["deal", "compare", "explainer", "tool"]
+    },
+    "seedOnlyDimensions": ["campaign"]
+  },
+  "region": "scripts/demo-kit/configs/vantage/region.json",
+  "imagery": "scripts/demo-kit/configs/vantage/imagery.json",
+  "check": {
+    "suites": [
+      { "name": "request level", "script": "scripts/rehearse-vantage-page.mjs" },
+      { "name": "DOM", "script": "scripts/rehearse-vantage-dom.mjs" }
+    ]
+  }
+}

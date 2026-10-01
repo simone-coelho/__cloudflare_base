@@ -20,7 +20,19 @@
 // carry an Authorization header.
 //
 //   node scripts/rehearse-vantage-dom.mjs [--base http://localhost:9110] [--wait 45]
-//        [--size 1440x900] [--chrome "<path to Chrome or Edge>"] [--strict]
+//        [--size 1440x900] [--chrome "<path to Chrome or Edge>"] [--strict] [--shots <dir>]
+//
+// Compare (lane C1, the demo kit's widget, public/demo-kit/compare.js). The suite
+// presses Compare with no earlier frame (the message, not nothing), and during the
+// first paint of a direct phone-page load; checks that a Before exists after that
+// paint and at the start of every performed beat; opens Compare on the homepage
+// with no Capture pressed (two frames of real pixels, the Before / Now tags), drags
+// the seam with the mouse and nudges it with the keys, switches to Side by side
+// and What changed; runs Fresh visitor on the homepage and checks her page, her
+// visitor and her address after it closes; runs Fresh visitor and Streaming
+// shopper on the phone page as before, now with their frames; and presses Capture.
+// It prints how long each Before took to capture. --shots <dir> saves the Seam,
+// Side by side, What changed and Fresh visitor (homepage) views there as PNGs.
 //
 // A defect in another lane's file that this suite cannot repair is printed with
 // "!" on every run and named on the last line (docs/verizon/lanes/L5.md has the
@@ -42,7 +54,7 @@
 // (never shared with another run) and closed through the DevTools protocol at the
 // end. Run it from Windows on this machine (Node 22 or later, Chrome or Edge).
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -50,6 +62,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? proces
 const base = arg('--base', 'http://localhost:9110').replace(/\/+$/, '');
 const WAIT = Number(arg('--wait', '45'));
 const [WIDTH, HEIGHT] = arg('--size', '1440x900').split('x').map(Number);
+const SHOTS = arg('--shots', null);
 const SETTLE_MS = 1500;               // the longest entrance animation is 1.2 s; the meters' fill eases over 0.4 s
 const THETA_IN = 0.6, THETA_OUT = 0.45;
 
@@ -229,13 +242,43 @@ function pageHelpers() {
       }
       return out;
     })() },
-    compare: { ok: vis('#cmpBack').ok, title: txt('#cmpTitle'), cols: shown('#cmpCols .cmp-col').map((c) => ({ head: txt(c.querySelector('h3')),
-      sections: shown('.cmp-sec', c).map(txt), lists: [...c.querySelectorAll('.cmp-list')].map((ol) => [...ol.querySelectorAll('li')].map((li) => txt(li.children[1]))) })) },
+    // The demo kit's overlay (public/demo-kit/compare.js), as it is on screen: which view is live, the
+    // message or the two frames and their tags, the panes of Side by side, the columns of What changed.
+    compare: (() => {
+      const box = (sel) => { const v = vis(sel); return v.ok ? { w: v.w, h: v.h } : null; };
+      const stage = document.getElementById('cmp-stage');
+      return { ok: vis('#cmp-back').ok, title: txt('#cmp-title'),
+        mode: ['seam', 'split', 'details'].find((m) => { const b = document.getElementById(`cmp-mode-${m}`); return b && vis(b).ok && b.classList.contains('on') && !b.disabled; }) || null,
+        msg: vis('#cmp-msg').ok ? txt('#cmp-msg') : '',
+        tags: { before: vis('#cmp-tag-before').ok ? txt('#cmp-tag-before') : '', now: vis('#cmp-tag-now').ok ? txt('#cmp-tag-now') : '' },
+        frames: { before: box('#cmp-before'), now: box('#cmp-after') },
+        seam: stage ? getComputedStyle(stage).getPropertyValue('--cmp-seam').trim() : '',
+        panes: shown('#cmp-split .cmp-pane').map((p) => ({ ...box(p), tag: txt(p.querySelector('.cmp-pane-tag')) })),
+        hint: vis('#cmp-hint').ok ? txt('#cmp-hint') : '', caption: vis('#cmp-caption').ok ? txt('#cmp-caption') : '',
+        cols: shown('#cmpCols .cmp-col').map((c) => ({ kicker: txt(c.querySelector('.ck')), head: txt(c.querySelector('h3')),
+          sections: shown('.cmp-sec', c).map(txt), lists: [...c.querySelectorAll('.cmp-list')].map((ol) => [...ol.querySelectorAll('li')].map((li) => txt(li.children[1]))) })) };
+    })(),
     focus: { hero: vis('#heroModule'), deals: vis('#dealsModule'), rail: vis('#railModule'), modules: vis('#modulesModule'), buybox: vis('#buyBox'), page: vis('#viewPage'), phones: vis('#viewPhones') },
     overflow: document.documentElement.scrollWidth - innerWidth,
     broken: [...document.images].filter((i) => vis(i).ok && i.complete && i.naturalWidth === 0).map((i) => i.getAttribute('src')),
   });
-  window.__l5 = { vis, txt, snapshot };
+  /** Her page as it stands: what Fresh visitor and Streaming shopper must hand back unchanged. */
+  const mine = () => ({
+    view: view(), hero: txt('#hero .hero-h') || txt('#hero .hero-label'),
+    order: ['heroModule', 'dealsModule', 'railModule'].map((id) => ({ id, v: vis(`#${id}`) })).filter((x) => x.v.ok).sort((a, b) => a.v.top - b.v.top).map((x) => x.id),
+    deals: shown('#deals .deal').map((c) => txt(c.querySelector('.dtitle'))), dealsRow: shown('#dealsDeltas li').map(txt),
+    rail: shown('#rail .pcard').map((c) => txt(c.querySelector('.pname'))),
+    modules: shown('#modules > .pmod').map((m) => own(m.querySelector('.pmod-head h2'))), plans: shown('#modules .plan').map((p) => txt(p.querySelector('h3'))),
+    pdpRow: [...shown('#pdpBefore li').map(txt), '|', ...shown('#pdpDeltas li').map(txt)],
+    who: txt('#whoChip'), url: location.pathname + location.search,
+  });
+  /** The two frames' own pixels: each frame's image, loaded, at its natural size. */
+  const framePixels = async () => {
+    const urlOf = (id) => { const m = /url\("?(.*?)"?\)$/.exec(getComputedStyle(document.getElementById(id)).backgroundImage || ''); return m ? m[1] : null; };
+    const size = (u) => new Promise((r) => { if (!u) { r(null); return; } const im = new Image(); im.onload = () => r({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => r(null); im.src = u; });
+    return { before: await size(urlOf('cmp-before')), now: await size(urlOf('cmp-after')) };
+  };
+  window.__l5 = { vis, txt, snapshot, mine, framePixels };
   return true;
 }
 
@@ -416,6 +459,49 @@ function legible(i, S) {
   return ok(`↳ ${NO[i]} is legible: off the homepage, her meters moved`, S.meters.length > 0, S.meters.slice(0, 3).map((m) => `${m.value} ${m.a.toFixed(2)}`).join(' · '));
 }
 
+// ── Compare: the demo kit's overlay (lane C1) ─────────────────────────────────
+const NO_FRAME = 'No earlier frame yet: the first page is still being captured. Act, then Compare.';
+const fmtBox = (b) => (b ? `${b.w}×${b.h}` : 'none');
+const sameJSON = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const framesUp = "window.__l5.vis('#cmp-canvas').ok";
+const toolDone = `${framesUp} && /done/.test(document.getElementById('status').textContent)`;
+/** Installed before a direct phone-page load: Compare is pressed the instant the page says ready, while its
+    first decided paint is still in flight (the status flips to ready just before the page asks the engine). */
+const FIRST_PAINT_PRESS = `(() => {
+  const arm = () => {
+    const s = document.getElementById('status');
+    if (!s) return false;
+    const obs = new MutationObserver(() => {
+      if (!/^ready/.test(s.textContent) || window.__c1press) return;
+      obs.disconnect();
+      window.__c1press = { at: Date.now(), decided: document.querySelectorAll('#modules > .pmod[data-op-decision-id]:not([data-op-decision-id=""])').length };
+      document.getElementById('compareBtn').click();
+    });
+    obs.observe(s, { childList: true, characterData: true, subtree: true });
+    return true;
+  };
+  if (!arm()) document.addEventListener('DOMContentLoaded', arm, { once: true });
+})();`;
+/** --shots <dir>: the view on screen, as a PNG. */
+async function shoot(name) {
+  if (!SHOTS) return;
+  mkdirSync(SHOTS, { recursive: true });
+  const r = await cdp('Page.captureScreenshot', { format: 'png' });
+  const file = join(SHOTS, `C1-${WIDTH}-${name}.png`);
+  writeFileSync(file, Buffer.from(r.data, 'base64'));
+  info(`screenshot ${file}`);
+}
+async function closeCompare() {
+  await evaluate("document.getElementById('cmp-close').click()");
+  await sleep(300);
+  return !(await evaluate("window.__l5.vis('#cmp-back').ok"));
+}
+/** The Before the kit holds now: when it was cloned, and its label. */
+const kitBefore = () => evaluate("window.__vantage.compare().then((k) => k.baselineInfo() && { at: k.baselineInfo().at, label: k.baselineInfo().label })");
+const firstPaintCaptures = [];
+const phonesDoc = await (await fetch(`${base}/vantage/phones.json`)).json();
+const phoneName = (id) => ((phonesDoc.phones || []).find((p) => p.id === id) || {}).name || id;
+
 const port = await devtoolsPort();
 try {
   await connect(port);
@@ -450,6 +536,33 @@ try {
     info(`hero “${S.hero.title}” · deals ${titles(S).join(' | ')} · ${S.ctx}`);
   }
 
+  {
+    // Compare during the first paint (lane C1). A direct load of the phone page is a real arrival on it: the
+    // page decides it live for a direct visitor. Compare is pressed the instant the page says ready, while
+    // that first decided paint is still in flight, so there is no earlier frame yet.
+    const focus = anchor.focusPhone || 'galaxy-s26';
+    const direct = `${base}/vantage/phone?id=${encodeURIComponent(focus)}&debug=1&region=${OVERRIDE}`;
+    console.log(`\n── Compare during the first paint: ${direct}`);
+    press = 'first-paint';
+    const { identifier } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: FIRST_PAINT_PRESS });
+    await cdp('Page.navigate', { url: direct });
+    await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    await booted();
+    await evaluate(`(${pageHelpers.toString()})()`);
+    const up = await waitFor("window.__l5.vis('#cmp-back').ok", 15000);
+    const F = await evaluate('({ pressed: window.__c1press || null, compare: window.__l5.snapshot().compare })');
+    ok('Compare pressed during the first paint opens the overlay on the message, not nothing', up && F.pressed && F.pressed.decided === 0 && F.compare.msg === NO_FRAME,
+      `${F.compare.msg || 'no overlay'}${F.pressed ? ` · ${F.pressed.decided} decided module(s) on the page at the press` : ''}`);
+    ok('and nothing else: no frame, no tag, no view to switch to', F.compare.ok && !F.compare.frames.before && !F.compare.frames.now && !F.compare.tags.before && !F.compare.tags.now && F.compare.mode === null);
+    ok('the message closes', await closeCompare());
+    const before = await waitFor("window.__vantage.compare().then((k) => k.hasBaseline())", 20000);
+    const T = await evaluate("window.__vantage.compare().then((k) => ({ title: document.getElementById('compareBtn').title, caps: k.timings().filter((x) => x.kind === 'baseline') }))");
+    ok('once the phone page’s first decided paint settles, a Before exists, and Compare’s title names it', before
+      && new RegExp(`^Before: ${phoneName(focus)} page at \\d\\d:\\d\\d, Shopper A$`).test(T.title), T.title);
+    firstPaintCaptures.push(...T.caps);
+    if (T.caps[0]) info(`that Before: ${T.caps[0].w}×${T.caps[0].h}, cloned ${T.caps[0].wait} ms after it started, the frame ready in ${T.caps[0].total} ms`);
+  }
+
   const url = `${base}/vantage/?debug=1&wait=${WAIT}&region=${OVERRIDE}`;
   console.log(`\n── The walk, with the rehearsal override: ${url}`);
   press = -1;
@@ -468,12 +581,23 @@ try {
   ok('the director’s opening sentence is on screen', boot.director.lineOk && boot.director.line.length > 20, boot.director.line.slice(0, 90));
   ok('no horizontal overflow', boot.overflow <= 1, `${boot.overflow}px`);
   ok('the page can scroll clear of the director bar', await evaluate(`(() => { const d = document.querySelector('.director'); return d && parseFloat(getComputedStyle(document.body).paddingBottom) >= d.getBoundingClientRect().height - 1; })()`));
+  // Compare (lane C1): always enabled, its title naming the Before it would show; with none yet, it says so.
+  const compareTitles = () => evaluate(`(() => { const t = document.querySelector('#compareTools button[data-tool="compare"]'), m = document.getElementById('compareBtn');
+    return { main: m.title, tool: t ? t.title : '', disabled: m.disabled || !t || t.disabled }; })()`);
+  const T0 = await compareTitles();
+  ok('every Compare button is enabled, its title saying there is no Before yet', !T0.disabled && T0.main === 'Before: none yet. Act, then Compare.' && T0.tool === T0.main, T0.main);
+  await evaluate("document.getElementById('compareBtn').click()");
+  await waitFor("window.__l5.vis('#cmp-back').ok", 10000);
+  const M0 = (await evaluate('window.__l5.snapshot()')).compare;
+  ok('Compare before any frame exists opens the overlay on the message, not nothing', M0.ok && M0.msg === NO_FRAME && !M0.frames.before && !M0.frames.now, M0.msg);
+  ok('and that message closes', await closeCompare());
 
   for (let i = 0; i < NO.length; i += 1) {
     press = i;
     console.log(`\n── ${NO[i]} · ${await evaluate(`(() => { const b = window.__vantage.beats()[${i}]; return typeof b.label === 'function' ? b.label() : b.label; })()`)}`);
     const t0 = Date.now();
     const landed = await evaluate(`(async () => { const run = window.__vantage.go(${i}); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()`);
+    const beatMs = Date.now() - t0;   // the press itself, from go() to its landing (the line's first figure adds the settle and the waits)
     await sleep(SETTLE_MS);
     let S = await evaluate('window.__l5.snapshot()');
     if (i === 0) {
@@ -490,9 +614,14 @@ try {
       S = await evaluate('window.__l5.snapshot()');
     }
     snaps[i] = S;
-    info(`${((Date.now() - t0) / 1000).toFixed(1)} s · ${S.view} · ${S.view === 'viewPhone' ? `modules ${moduleTitles(S).join(' | ')} · plans ${S.plans.map((p) => p.name).join(' | ')}`
+    info(`${((Date.now() - t0) / 1000).toFixed(1)} s (the press ${(beatMs / 1000).toFixed(1)} s) · ${S.view} · ${S.view === 'viewPhone' ? `modules ${moduleTitles(S).join(' | ')} · plans ${S.plans.map((p) => p.name).join(' | ')}`
       : S.view === 'viewHome' ? `hero “${S.hero.title || S.hero.label}” · deals ${titles(S).join(' | ')}` : `meters ${S.meters.slice(0, 4).map((m) => `${m.value} ${m.a.toFixed(2)}`).join(' · ')}`}`);
     ok(`↳ ${NO[i]}: the press landed`, landed === 'done', landed);
+    // Every performed beat starts with a Before (lane C1), cloned as the press lands, before the beat acts;
+    // it renders once the beat has landed.
+    await waitFor(`window.__vantage.compare().then((k) => { const b = k.baselineInfo(); return Boolean(b && b.at >= ${t0 - 500}); })`, 8000);
+    const bf = await kitBefore();
+    ok(`↳ ${NO[i]}: a Before was taken as the press landed`, bf && bf.at >= t0 - 500 && bf.at <= t0 + 5000, bf ? `${bf.label} · cloned ${bf.at - t0} ms after the press` : 'no Before');
     const refused = refusedIn(i);
     ok(`↳ ${NO[i]}: the decision service answered`, !S.down.deals && !S.down.modules && refused.length === 0,
       [S.down.text, ...refused].filter(Boolean).join(' ~ ').slice(0, 220));
@@ -504,12 +633,104 @@ try {
     ok(`↳ ${NO[i]}: no horizontal overflow, no broken image`, S.overflow <= 1 && S.broken.length === 0, `${S.overflow}px · ${S.broken.join(', ')}`);
     OUTCOMES[i](S);
 
+    if (i === 0) {
+      // Compare with no Capture pressed (lane C1): the Before is the frame taken as beat 1 landed, the page before she arrived.
+      console.log('   · Compare, with no Capture pressed');
+      const T = await compareTitles();
+      ok('every Compare button is enabled, and its title names the Before', !T.disabled && /^Before: homepage at \d\d:\d\d, nobody yet$/.test(T.main) && T.tool === T.main, T.main);
+      const addr = await evaluate('location.pathname + location.search');
+      await evaluate("window.scrollTo(0, 0); document.getElementById('compareBtn').click()");
+      const up = await waitFor(framesUp, 20000);
+      await sleep(400);
+      let C = (await evaluate('window.__l5.snapshot()')).compare;
+      const px = await evaluate('window.__l5.framePixels()');
+      ok('Compare on the homepage opens the overlay on the Seam', up && C.ok && C.mode === 'seam', C.title);
+      ok('with two frames of non-zero size, each a whole page of real pixels', C.frames.before && C.frames.now && C.frames.before.w > 0 && C.frames.before.h > 0 && C.frames.now.w > 0 && C.frames.now.h > 0
+        && px.before && px.now && px.before.w > 0 && px.before.h > 0 && px.now.w > 0 && px.now.h > 0,
+        `on screen ${fmtBox(C.frames.before)} · ${fmtBox(C.frames.now)}; pixels ${fmtBox(px.before)} · ${fmtBox(px.now)}`);
+      ok('tagged Before and Now, each with its time, where and who', /^Before · \d\d:\d\d · homepage · nobody yet$/i.test(C.tags.before) && /^Now · \d\d:\d\d · homepage · Shopper A$/i.test(C.tags.now),
+        `${C.tags.before} | ${C.tags.now}`);
+      ok('the footer sentence stays: same page, same catalog, same buy box, same public prices', has(C.caption, 'Same page, same catalog, same buy box and the same public prices'), C.caption.slice(0, 90));
+      await shoot('01-seam');
+      // The seam, dragged with a real mouse through the DevTools protocol, then nudged with the arrow key.
+      const r = await evaluate("(() => { const b = document.getElementById('cmp-stage').getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; })()");
+      const y = Math.round(r.y + Math.min(r.h / 2, 300)), x = (f) => Math.round(r.x + r.w * f);
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x(0.5), y });
+      await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: x(0.5), y, button: 'left', buttons: 1, clickCount: 1 });
+      for (const f of [0.44, 0.37, 0.3, 0.25]) await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x(f), y, button: 'left', buttons: 1 });
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x(0.25), y, button: 'left', buttons: 0, clickCount: 1 });
+      const seamDragged = (await evaluate('window.__l5.snapshot()')).compare.seam;
+      await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+      await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+      const seamNudged = (await evaluate('window.__l5.snapshot()')).compare.seam;
+      ok('dragging the seam moves it: the seam variable follows the pointer', parseFloat(C.seam) === 50 && Math.abs(parseFloat(seamDragged) - 25) < 1.5, `${C.seam} → ${seamDragged}`);
+      ok('and the arrow keys nudge it', Math.abs(parseFloat(seamNudged) - parseFloat(seamDragged) - 2) < 0.01, `${seamDragged} → ${seamNudged}`);
+      await evaluate("document.getElementById('cmp-mode-split').click()");
+      await sleep(400);
+      C = (await evaluate('window.__l5.snapshot()')).compare;
+      ok('Side by side shows two panes, each a whole page, and no seam', C.mode === 'split' && C.panes.length === 2 && C.panes.every((p) => p.w > 100 && p.h > 100) && !C.frames.before && !C.frames.now,
+        C.panes.map((p) => `${fmtBox(p)} ${p.tag}`).join(' | '));
+      await shoot('02-side-by-side');
+      await evaluate("document.getElementById('cmp-mode-details').click()");
+      await sleep(400);
+      C = (await evaluate('window.__l5.snapshot()')).compare;
+      const [l, rt] = C.cols;
+      ok('What changed shows two columns: the decided state behind the Before and the Now', C.mode === 'details' && C.cols.length === 2 && has(l.kicker, 'Before') && has(rt.kicker, 'Now')
+        && has(l.head, 'nobody yet') && has(rt.head, 'Shopper A'), C.cols.map((c) => c.head).join(' | '));
+      ok('the site’s own four on the left, her opening four on the right, as the page shows them', l && rt && (l.lists[1] || []).length === 4 && (l.lists[1] || []).every((t) => has(t, '(the site’s own)'))
+        && sameJSON(rt.lists[1], titles(S)), `${(l.lists[1] || []).join(' | ').slice(0, 120)} → ${(rt.lists[1] || []).join(' | ')}`);
+      await shoot('03-what-changed');
+      ok('Compare closes, and the address bar is unchanged', await closeCompare() && (await evaluate('location.pathname + location.search')) === addr);
+
+      // Fresh visitor on the homepage (lane C1): her page is the Before; a stranger's decided set, same region,
+      // no event, is the Now; then her page and address come back from state.
+      console.log('   · Fresh visitor, on the homepage');
+      const her0 = await evaluate('window.__l5.mine()');
+      press = 'fresh-home';
+      await evaluate(`document.querySelector('#compareTools button[data-tool="fresh"]').click()`);
+      const fresh = await waitFor(toolDone, 30000);
+      await sleep(400);
+      C = (await evaluate('window.__l5.snapshot()')).compare;
+      const fpx = await evaluate('window.__l5.framePixels()');
+      ok('Fresh visitor on the homepage opens the overlay on two frames of non-zero size', fresh && C.ok && C.mode === 'seam' && C.frames.before && C.frames.now
+        && fpx.before && fpx.now && fpx.before.w > 0 && fpx.before.h > 0 && fpx.now.w > 0 && fpx.now.h > 0, `${C.title} · pixels ${fmtBox(fpx.before)} · ${fmtBox(fpx.now)}`);
+      ok('tagged “Her page” and “A fresh visitor, same region”', /^Her page · \d\d:\d\d · homepage · Shopper A$/i.test(C.tags.before)
+        && /^A fresh visitor, same region · \d\d:\d\d · homepage · Fresh visitor$/i.test(C.tags.now), `${C.tags.before} | ${C.tags.now}`);
+      await shoot('04-fresh-visitor-home');
+      await evaluate("document.getElementById('cmp-mode-details').click()");
+      await sleep(300);
+      C = (await evaluate('window.__l5.snapshot()')).compare;
+      ok('What changed shows her four beside the fresh visitor’s, in two columns', C.cols.length === 2 && has(C.cols[0].head, 'Shopper A · homepage') && has(C.cols[1].head, 'Fresh visitor · homepage')
+        && C.cols.every((c) => (c.lists[1] || []).length === 4), C.cols.map((c) => `${c.head}: ${(c.lists[1] || []).join(' | ')}`).join(' ~ ').slice(0, 260));
+      const sent = [...requests.values()].filter((q) => q.press === 'fresh-home');
+      ok('the fresh visitor sent no event: no call to /realtime/action, one snapshot for her page', sent.every((q) => !/^\/realtime\/action/.test(q.path))
+        && sent.filter((q) => /\/decisions\/snapshot/.test(q.path)).length === 1, sent.map((q) => `${q.method} ${q.path}`).join(' · '));
+      ok('the Compare panel closes', await closeCompare());
+      await sleep(300);
+      const her1 = await evaluate('window.__l5.mine()');
+      const moved = ['view', 'hero', 'order', 'deals', 'rail', 'dealsRow'].filter((k) => !sameJSON(her0[k], her1[k]));
+      ok('after it closes her homepage is hers: the hero, the module order, the four in order, the rail, the before/now row', moved.length === 0,
+        moved.length ? moved.map((k) => `${k}: ${JSON.stringify(her0[k]).slice(0, 80)} → ${JSON.stringify(her1[k]).slice(0, 80)}`).join(' ~ ') : `${her1.order.join(' > ')} · ${her1.deals.join(' | ')}`);
+      ok('her visitor is unchanged', her1.who === her0.who && has(her1.who, 'Shopper A'), her1.who);
+      ok('and the address bar is unchanged', her1.url === her0.url, her1.url);
+      press = i;
+    }
+
     if (i === 5 || i === 7) {
       // The Compare tool, where the script uses it: a fresh visitor beside her at beat 6, the streaming shopper at beat 8.
+      // Each opens on its two frames (lane C1); the decided-state columns are its What changed view.
       const tool = i === 5 ? 'fresh' : 'streaming';
+      const her0 = await evaluate('window.__l5.mine()');
       await evaluate(`document.querySelector('#compareTools button[data-tool="${tool}"]').click()`);
-      await waitFor("window.__l5.vis('#cmpBack').ok && /done/.test(document.getElementById('status').textContent)", 30000);
+      const up = await waitFor(toolDone, 40000);
       await sleep(400);
+      const P = (await evaluate('window.__l5.snapshot()')).compare;
+      const ppx = await evaluate('window.__l5.framePixels()');
+      const nowTag = tool === 'fresh' ? 'A fresh visitor, same region · \\d\\d:\\d\\d · .+ page · Fresh visitor' : 'The streaming shopper · \\d\\d:\\d\\d · .+ page · Shopper B';
+      ok(`Compare → ${tool === 'fresh' ? 'Fresh visitor' : 'Streaming shopper'} on the phone page opens on two frames of non-zero size, tagged`, up && P.mode === 'seam' && ppx.before && ppx.now
+        && ppx.before.h > 0 && ppx.now.h > 0 && /^Her page · \d\d:\d\d · .+ page · Shopper A$/i.test(P.tags.before) && new RegExp(`^${nowTag}$`, 'i').test(P.tags.now), `${P.tags.before} | ${P.tags.now}`);
+      await evaluate("document.getElementById('cmp-mode-details').click()");
+      await sleep(300);
       const C = await evaluate('window.__l5.snapshot()');
       const [left, right] = C.compare.cols;
       if (tool === 'fresh') {
@@ -521,17 +742,53 @@ try {
         ok('Unlimited More leads for her; Unlimited Max for the streaming shopper', left && right && (left.lists[1] || [])[0] === 'Unlimited More' && (right.lists[1] || [])[0] === 'Unlimited Max',
           `${left ? (left.lists[1] || [])[0] : '?'} · ${right ? (right.lists[1] || [])[0] : '?'}`);
       }
-      await evaluate("document.getElementById('cmpClose').click()");
+      ok('the Compare panel closes', await closeCompare());
       await sleep(300);
-      ok('the Compare panel closes', !(await evaluate("window.__l5.vis('#cmpBack').ok")));
+      const her1 = await evaluate('window.__l5.mine()');
+      const moved = ['view', 'modules', 'plans', 'pdpRow', 'who', 'url'].filter((k) => !sameJSON(her0[k], her1[k]));
+      ok('after it closes her phone page is hers: the modules, the plans, the before/now row, her visitor and the address bar', moved.length === 0,
+        moved.length ? moved.map((k) => `${k}: ${JSON.stringify(her0[k]).slice(0, 80)} → ${JSON.stringify(her1[k]).slice(0, 80)}`).join(' ~ ') : her1.url);
       const address = await evaluate("location.pathname + (new URLSearchParams(location.search).get('id') ? `?id=${new URLSearchParams(location.search).get('id')}` : '')");
       info(`the address bar after Compare: ${address}${tool === 'streaming' && !/galaxy-s26$/.test(address) ? ' (the second shopper’s page, not hers)' : ''}`);
+    }
+    if (i === 7) {
+      // Capture (lane C1): the press itself starts the frame (the kit's armed press), and it replaces the Before.
+      const b0 = await kitBefore();
+      const tPress = Date.now();
+      await evaluate(`document.querySelector('#compareTools button[data-tool="capture"]').click()`);
+      const busy = await evaluate("document.getElementById('captureBtn').classList.contains('cmp-busy')");
+      await waitFor("!document.getElementById('captureBtn').classList.contains('cmp-busy')", 15000);
+      await sleep(300);
+      const b1 = await kitBefore();
+      const noteText = await evaluate("window.__l5.txt('#captureNote')");
+      const T = await compareTitles();
+      ok('Capture: the press itself is the capture, and it replaces the Before', busy && b0 && b1 && b1.at > b0.at && b1.at >= tPress - 100, b1 ? `${b1.label} · cloned ${b1.at - tPress} ms after the press` : 'no Before');
+      ok('Capture’s note says what it captured, and Compare’s title names the new Before', /^Captured Shopper A on the .+ page at /.test(noteText)
+        && /^Before: .+ page at \d\d:\d\d, Shopper A$/.test(T.main) && T.tool === T.main, `${noteText.slice(0, 70)} · ${T.main}`);
     }
     if (i === 8 && snaps[7]) {
       // After the streaming shopper, her own before row must still be hers, not the second shopper's.
       const hers = snaps[7].modules.map((m) => m.title);
       known('↳ 9a’s before row is her own beat-8 page, not the streaming shopper’s', JSON.stringify(S.pdpChanges.before) === JSON.stringify(hers),
         `before ${S.pdpChanges.before.join(' | ')} · hers ${hers.join(' | ')}`, 'lane L2 (vantage.js streamingShopper)');
+    }
+  }
+
+  console.log(`\n── The Before captures (lane C1), measured at ${WIDTH}×${HEIGHT}`);
+  {
+    // From the press to the clone is what a beat waits for; from the press to the frame is when Compare can show it.
+    const caps = [...firstPaintCaptures, ...(await evaluate('window.__vantage.compare().then((k) => k.timings())'))].filter((x) => x.kind === 'baseline');
+    const median = (a) => { const s = [...a].sort((p, q) => p - q); return s.length ? s[Math.floor(s.length / 2)] : null; };
+    const phones = (phonesDoc.phones || []).map((p) => `${p.name} page · `);
+    const onHome = (x) => /^homepage · /.test(x.label), onPhone = (x) => phones.some((p) => x.label.startsWith(p));
+    const groups = [['the homepage', onHome], ['a phone page', onPhone], ['the phones grid and content pages', (x) => !onHome(x) && !onPhone(x)]];
+    for (const [name, test] of groups) {
+      const list = caps.filter(test);
+      if (!list.length) continue;
+      const work = list.map((x) => x.render + x.encode);
+      info(`${name}: ${list.length} Before frame(s), ${list[0].w}×${median(list.map((x) => x.h))} px · cloned a median ${median(list.map((x) => x.wait))} ms after it started (max ${Math.max(...list.map((x) => x.wait))}), all a press waits for`
+        + ` · then rendered and encoded in a median ${median(work)} ms (max ${Math.max(...work)}; render ${median(list.map((x) => x.render))}, encode ${median(list.map((x) => x.encode))}),`
+        + ` ${list.filter((x) => x.held > 0).length} of them after their beat landed`);
     }
   }
 
