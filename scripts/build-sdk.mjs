@@ -4,6 +4,7 @@
 // packages/sdk (its bundles, its type declarations and its manifest's version).
 // `--check` rebuilds all of it in memory and fails on the first difference.
 import { build as esbuild } from 'esbuild';
+import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { dirname, posix, relative, resolve, sep } from 'node:path';
@@ -196,14 +197,14 @@ export async function writePackage({ root = ROOT } = {}) {
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const args = process.argv.slice(2);
   if (args.length && (args.length !== 1 || args[0] !== '--check')) throw new Error('Use build-sdk.mjs [--check]');
-  const check = args.length === 1, exact = check ? 'exact nonwriting match; ' : '';
+  const check = args.length === 1, exact = check ? 'exact nonwriting match; ' : '', { log, error } = console;
   const results = check ? await verifySDK() : await buildSDK({ write: true });
-  for (const [i, result] of results.entries()) console.log(`${SDK_TARGETS[i].output}: ${exact}${Object.values(result.metafile.outputs)[0].bytes} bytes`);
+  for (const [i, result] of results.entries()) log(`${SDK_TARGETS[i].output}: ${exact}${Object.values(result.metafile.outputs)[0].bytes} bytes`);
   const { declarations, report } = check ? await verifyPackage() : await writePackage();
-  console.log(`public/sdk/${sdkVersion()}: ${exact}the same ${results.length} bundles under the version's path`);
-  console.log(`${SDK_TYPES}: ${exact}${declarations} declaration files`);
+  log(`public/sdk/${sdkVersion()}: ${exact}the same ${results.length} bundles under the version's path`);
+  log(`${SDK_TYPES}: ${exact}${declarations} declaration files`);
   for (const row of report) {
-    console.log(`${row.file}: ${exact}${row.bytes} bytes of a ${row.budget}-byte budget`);
-    if (row.bytes > row.budget) console.error(overBudget(row));
+    log(`${row.file}: ${exact}${row.bytes} bytes of a ${row.budget}-byte budget`);
+    if (row.bytes > row.budget) error(overBudget(row));
   }
 }
