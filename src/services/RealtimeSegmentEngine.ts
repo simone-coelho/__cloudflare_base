@@ -23,7 +23,7 @@ import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { ReflexConfig } from '@/reflex/core';
-import { projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
+import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
 import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { externalRetentionBirths, retentionBirth } from '@/retention';
@@ -562,13 +562,14 @@ export class RealtimeSegmentEngine {
           : placed!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
         const touches = contentEventTouches ?? placed!.touches;
-        // W41: a recognized shopper whose interest state is empty is re-seeded
-        // from her tenant's ODP profile at this, the first event of her
-        // session, BEFORE the event is applied, exactly as her own object does
-        // (ShopperReflex.ingest). Null when that does not apply: the event is
-        // then applied to her stored state as it always was.
+        // W41: once per sign-in, a recognized shopper's interests are restored
+        // from her tenant's ODP profile at her first event after it, merged
+        // into what she holds and BEFORE the event is applied, exactly as her
+        // own object does (ShopperReflex.ingest). Null when no attempt is due:
+        // the event is then applied to her stored state as it always was.
         const prior = await restoreOdpInterests(this.env, this.tenant, {
           principal: this.principal, consent, prior: sessionData.reflex, config: reflexConfig, now: nowMs,
+          visit: liveVisit(sessionData.metadata, stored?.metadata.lastSeen, now).lastVisitAt ?? now,
           vocabulary: () => tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null),
         }) ?? sessionData.reflex;
         reflex = applyReflex(

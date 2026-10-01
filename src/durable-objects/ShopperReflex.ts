@@ -1314,13 +1314,15 @@ export class ShopperReflex {
     if (reflexOn) {
       const action = actionOf(event);
       const touches = contentEventTouches ?? (product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches);
-      // W41: a recognized shopper whose interest state is empty is re-seeded
-      // from her tenant's ODP profile at this, the first event of her session,
-      // BEFORE the event is applied — the one shared rule the session host
-      // runs (RealtimeSegmentEngine.processAction). Null when it does not
-      // apply: the event is then applied to her stored state as it always was.
+      // W41: once per sign-in, a recognized shopper's interests are restored
+      // from her tenant's ODP profile at her first event after it, merged into
+      // what she holds and BEFORE the event is applied — the one shared rule
+      // the session host runs (RealtimeSegmentEngine.processAction). Null when
+      // no attempt is due: the event is then applied to her stored state as it
+      // always was.
       const prior = await restoreOdpInterests(this.env, tenant, {
         principal, consent, prior: aff.reflex, config: cfg, now,
+        visit: liveVisit(pipe, this.affinity?.lastSeen, now, event.entry).lastVisitAt ?? now,
         vocabulary: () => tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null),
       }) ?? aff.reflex;
       reflex = applyReflex(
@@ -3097,6 +3099,8 @@ export class ShopperReflex {
     pinProfileRetention(this.env, { retention, externalRetention }, tenant);
     const profileEnrichment = mergeEnrichment(this.pipeline?.profileEnrichment, fromPipe?.profileEnrichment);
     const previousExternal = new Set([...enrichmentInputs(this.pipeline?.profileEnrichment).audiences, ...enrichmentInputs(fromPipe?.profileEnrichment).audiences]);
+    // W41: the merged state is built afresh and carries no ODP restoration
+    // record, so her first event after this sign-in makes its one attempt.
     const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
 
     const odp = await mergeOdpState(this.env, tenant, this.affinity, from);
