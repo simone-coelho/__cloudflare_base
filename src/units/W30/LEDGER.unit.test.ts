@@ -112,7 +112,7 @@ function runOnTheScreenTestClock(): void {
   onTestFinished(() => { vi.useRealTimers(); });
 }
 
-const piece =(id: string, over: Partial<ContentPiece>): ContentPiece => ({
+const piece = (id: string, over: Partial<ContentPiece>): ContentPiece => ({
   id, customerContentId: `CMS-${id.replace(/^cnt-/, '').toUpperCase()}`, type: 'editorial',
   title: id, tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' }, ...over,
 });
