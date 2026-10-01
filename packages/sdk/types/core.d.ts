@@ -1,0 +1,111 @@
+import type { ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, DomLike, ElementLike, EngineUpdate, EntrySignals, Host, Paths, SdkEventType, SocketStatus, RenderAcknowledgment } from './types.js';
+export declare const DEFAULT_PATHS: Paths;
+/** Only explicit default sets (including editorial pins) and empty absence
+ * are public. Unknown/exploration arms need consent even with zero scores. */
+export declare function decisionRequiresConsent(set: Pick<DecisionSet, 'arm' | 'decisions'>): boolean;
+export interface ResolvedConfig {
+    tenant: string;
+    brand?: string;
+    endpoint: string;
+    sdkKey?: string;
+    source: string;
+    surface?: string;
+    listenOnly: boolean;
+    heartbeatMs: number;
+    reconnectMs: number;
+    hydrateTimeoutMs: number;
+    visitorIdKey: string;
+    paths: Paths;
+    sessionBroker?: string;
+}
+export declare function resolveConfig(c: ClientConfig, host: Host): ResolvedConfig;
+export interface SendOptions {
+    /** Fire-and-forget through the beacon API, for page-hide moments. */
+    beacon?: boolean;
+    keepalive?: boolean;
+}
+export declare function contentInteraction(type: SdkEventType, data: Record<string, unknown>): SdkEventType | undefined;
+/**
+ * What one client owns on the page it was given, so it can hand all of it
+ * back. Every DOM listener the SDK adds is recorded with its element, type and
+ * handler and removed with a real `removeEventListener` on release; an element
+ * is observed once per client however many capture paths name it, so a
+ * declarative scan and a `rendered()` call over the same node produce one
+ * observation and one dwell rather than two (document 35 §5 W17; F34 §2A/§2B/§3).
+ * It is bookkeeping over whatever nodes the page hands the SDK: nothing here
+ * is tenant-, customer- or taxonomy-specific.
+ */
+export interface PageBindings {
+    /** Register a listener this client owns. The release removes it from the element. */
+    addListener(el: ElementLike, type: string, handler: (ev: unknown) => void): () => void;
+    /** Observe an element once per client. Null when this client already observes it. */
+    addObserver(dom: DomLike, el: ElementLike, cb: (visible: boolean) => void): (() => void) | null;
+    /** Whether this client already holds an observation of the element. */
+    observes(el: ElementLike): boolean;
+    /** Hand back every listener and observation this client still holds. */
+    release(): void;
+}
+export interface Core {
+    readonly generation: number;
+    /** Only a current explicit server choice permits collection or personalization. */
+    readonly consent: {
+        tracking: boolean;
+        personalization: boolean;
+    };
+    readonly trackingAllowed: boolean;
+    onConsentChange(fn: () => void): () => void;
+    /** Collect only after owned readiness, dropping work crossed by withdrawal or identity change. */
+    capture(fn: () => void): void;
+    ready(transition?: boolean): Promise<boolean>;
+    beginTransition(): number;
+    finishTransition(generation: number): void;
+    forgetSession(generation: number): void;
+    isCurrent(generation: number): boolean;
+    adoptSession(session: unknown, generation: number, reason: 'identified' | 'logout'): boolean;
+    readonly config: ResolvedConfig;
+    readonly host: Host;
+    /** The page listeners and observations this client owns, and their release. */
+    readonly bindings: PageBindings;
+    readonly visitorId: string;
+    readonly anonId: string;
+    readonly sessionId: string;
+    readonly profileSessionId: string;
+    readonly entry: EntrySignals;
+    /**
+     * R18: the browsing session that produced the CACHED `entry` signals, empty
+     * while tracking is not allowed. It is deliberately not the current browsing
+     * session: after an idle rollover it still names the session the cached entry
+     * belongs to until the next entry read recomputes from the current document.
+     */
+    readonly entrySessionId: string;
+    readonly socketStatus: SocketStatus;
+    on<K extends keyof CoreEvents>(event: K, fn: CoreEvents[K]): () => void;
+    emit<K extends keyof CoreEvents>(event: K, ...args: Parameters<CoreEvents[K]>): void;
+    /** Builds one event identity/time pair; reuse the envelope to retain that identity. */
+    envelope(type: SdkEventType, data?: Record<string, unknown>): ActionEnvelope;
+    send(type: SdkEventType, data?: Record<string, unknown> | (() => Record<string, unknown>), opts?: SendOptions): Promise<EngineUpdate | null>;
+    /** Internal listen wiring: legacy core.send content paths use the same ACK gate. */
+    bindContent(handler: (type: SdkEventType, data: Record<string, unknown>) => Promise<EngineUpdate | null>): {
+        send: Core['send'];
+        release(): void;
+    };
+    /** Retry this exact consent-approved render envelope; success is not an engine update. */
+    sendRender(envelope: ActionEnvelope): Promise<RenderAcknowledgment | null>;
+    matchesSessionWitness(witness: string): Promise<boolean>;
+    url(path: string, query?: Record<string, string | undefined>): string;
+    headers(extra?: Record<string, string>): Record<string, string>;
+    getJson(path: string, query?: Record<string, string | undefined>): Promise<unknown | null>;
+    /** POST JSON with the site key and credentials; never throws. */
+    postJson(path: string, body: unknown): Promise<{
+        ok: boolean;
+        status: number;
+        json: unknown;
+    }>;
+    /** CW25: the browser now carries this id. Writes both stores, announces the change, reconnects the socket if it was open. */
+    setVisitorId(id: string, reason: 'identified' | 'logout'): void;
+    connect(): void;
+    disconnect(): void;
+    /** Apply an engine update from either door, once. */
+    applyIncoming(update: EngineUpdate, fromPush: boolean, rttMs: number | null): void;
+}
+export declare function createCore(config: ClientConfig, host: Host): Core;
