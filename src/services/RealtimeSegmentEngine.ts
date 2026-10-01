@@ -63,7 +63,7 @@ import {
   generateAffinityAudiences,
   regenerateCatalogAudiences,
 } from '@/reflex/audienceGenerator';
-import { projectOdpState, projectedOdpSegments, odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
+import { carryOdpRestoration, projectOdpState, projectedOdpSegments, odpEnabled, refreshOdpSeedIfDue, restoreOdpInterests, updateOdpRing } from '@/services/odpLoop';
 import {
   DEFAULT_SURFACE,
   audgenMarkerFor,
@@ -562,8 +562,17 @@ export class RealtimeSegmentEngine {
           : placed!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
         const touches = contentEventTouches ?? placed!.touches;
+        // W41: a recognized shopper whose interest state is empty is re-seeded
+        // from her tenant's ODP profile at this, the first event of her
+        // session, BEFORE the event is applied, exactly as her own object does
+        // (ShopperReflex.ingest). Null when that does not apply: the event is
+        // then applied to her stored state as it always was.
+        const prior = await restoreOdpInterests(this.env, this.tenant, {
+          principal: this.principal, consent, prior: sessionData.reflex, config: reflexConfig, now: nowMs,
+          vocabulary: () => tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null),
+        }) ?? sessionData.reflex;
         reflex = applyReflex(
-          sessionData.reflex,
+          prior,
           {
             action,
             // A held product's attributes, or, where the scope allows it, the
@@ -573,6 +582,8 @@ export class RealtimeSegmentEngine {
           nowMs,
           reflexConfig
         );
+        // The restoration's provenance stays with the state it produced.
+        reflex = { ...reflex, state: carryOdpRestoration(reflex.state, prior) };
         // CW6: the same touches, fanned into the shopper's region as a population count.
         // Unsigned legacy traffic and the default tenant's BrightHour demo have
         // no tenant population reader. A real BrightHour tenant owns its counts.
@@ -1043,8 +1054,9 @@ export class RealtimeSegmentEngine {
         journeyStage: current.metadata.journeyStage },
       this.connectors.segments, now);
     if (!interest.applied) return answer(current, false, undefined, interest.signals);
-    await this.sessionManager.writeBufferedSession(current, { preferences, reflex: interest.reflex, segments: interest.segments });
-    return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true, undefined, interest.signals);
+    const reflex = interest.reflex && carryOdpRestoration(interest.reflex, current.reflex);
+    await this.sessionManager.writeBufferedSession(current, { preferences, reflex, segments: interest.segments });
+    return answer({ ...current, reflex, segments: interest.segments }, true, undefined, interest.signals);
   }
 
   /** Read-time qualification avoids stale derived membership after replacement. */

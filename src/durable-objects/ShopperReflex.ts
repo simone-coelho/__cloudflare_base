@@ -106,13 +106,16 @@ import {
   type ActionEvent,
 } from '@/services/RealtimeSegmentEngine';
 import {
+  carryOdpRestoration,
   forwardEventToOdp,
   mapActionToOdp,
+  odpRestorationOf,
   projectOdpState,
   projectedOdpSegments,
   mergeOdpState,
   odpEnabled,
   refreshOdpSeedIfDue,
+  restoreOdpInterests,
   stageOnlyOdpProjection,
   updateOdpRing,
   upsertOdpProfile,
@@ -295,6 +298,12 @@ async function identityDigest(value: unknown): Promise<string> {
 async function transferFingerprint(transfer: Omit<IdentityTransfer, 'fingerprint' | 'affinity' | 'pipeline'>): Promise<string> {
   return identityDigest([transfer.version, transfer.id, transfer.tenant, transfer.visitorId, transfer.sourceSessionId,
     transfer.shopperId, transfer.sourceEpoch, transfer.targetEpoch, transfer.targetSequence, transfer.at, transfer.assurance, transfer.source, transfer.salted, transfer.profileDigest]);
+}
+
+/** W41: `affinity.restoration` when the state carries one, nothing otherwise. */
+function restorationMember(state: unknown): { restoration?: ReturnType<typeof odpRestorationOf> } {
+  const restoration = odpRestorationOf(state);
+  return restoration ? { restoration } : {};
 }
 
 interface IngestOutcome {
@@ -1143,7 +1152,7 @@ export class ShopperReflex {
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
       if (!interest.applied) return answer(false, undefined, interest.signals);
-      const nextAffinity = { ...affinity, reflex: interest.reflex!, configVersion: interest.reflex!.configVersion };
+      const nextAffinity = { ...affinity, reflex: carryOdpRestoration(interest.reflex!, affinity.reflex), configVersion: interest.reflex!.configVersion };
       const nextPipeline = { ...pipeline, segments: interest.segments };
       // Do not write/bless audienceOwner or extend the retained lifetime.
       await this.persistAudienceState(nextAffinity, nextPipeline, this.audienceOwner, false);
@@ -1305,8 +1314,17 @@ export class ShopperReflex {
     if (reflexOn) {
       const action = actionOf(event);
       const touches = contentEventTouches ?? (product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches);
+      // W41: a recognized shopper whose interest state is empty is re-seeded
+      // from her tenant's ODP profile at this, the first event of her session,
+      // BEFORE the event is applied — the one shared rule the session host
+      // runs (RealtimeSegmentEngine.processAction). Null when it does not
+      // apply: the event is then applied to her stored state as it always was.
+      const prior = await restoreOdpInterests(this.env, tenant, {
+        principal, consent, prior: aff.reflex, config: cfg, now,
+        vocabulary: () => tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null),
+      }) ?? aff.reflex;
       reflex = applyReflex(
-        aff.reflex,
+        prior,
         {
           action,
           touches,
@@ -1314,6 +1332,8 @@ export class ShopperReflex {
         now,
         cfg
       );
+      // The restoration's provenance stays with the state it produced.
+      reflex = { ...reflex, state: carryOdpRestoration(reflex.state, prior) };
       // CW6: the same touches, fanned into the shopper's region as a population count.
       // Registered with the object's own waitUntil so the call survives the reply.
       const keepAlive = retainOwnerWork;
@@ -1745,7 +1765,7 @@ export class ShopperReflex {
         throw error;
       }
       const res = tickReflex(this.affinity.reflex, now, cfg);
-      let affinity = { ...this.affinity, reflex: res.state, configVersion: cfg.version };
+      let affinity = { ...this.affinity, reflex: carryOdpRestoration(res.state, this.affinity.reflex), configVersion: cfg.version };
       let pipeline = this.pipeline;
       let update: PersonalizationUpdate | null = null;
 
@@ -1882,6 +1902,9 @@ export class ShopperReflex {
         ? {
             ...reflexSnapshot(this.affinity.reflex, now, cfg),
             odpConfirmed: (await projectOdpState(this.env, tenant, this.affinity)).odpSeed,
+            // W41: the provenance of this session's ODP restoration, when one
+            // was attempted — the member the session host answers too.
+            ...restorationMember(this.affinity.reflex),
           }
         : null,
       // W16 C4 / R29: the journey stage in the shared vocabulary, derived from
