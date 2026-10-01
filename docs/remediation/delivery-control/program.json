@@ -4386,13 +4386,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "5e57c08918cbaec11346f354ec437b0a2d1c65a1 on rem/spec-w40-w41: src/units/W41",
+        "reviewedRevision": "611afc6c470e6e6e9763a0d96d6ca7dcaeeb26b3 on rem/spec-w40-w41 (fix 1, one commit on 5e57c08): src/units/W41 (LEDGER and FIX1)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/red-90e458b.log",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/acceptance-611afc6.log",
           "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/W41-negative-control.log",
           "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/logs/W41-units.log"
         ]
