@@ -563,17 +563,23 @@ export async function fetchOdpAudiences(
 // The loop above writes the edge's live affinity onto the tenant's ODP profile
 // through the tenant's own `odp.profile` mapping (`upsertOdpProfile`). This is
 // the read back. Once per sign-in, at a RECOGNIZED shopper's first event after
-// it, her mapped profile attributes are read from her tenant's ODP and merged
-// into her current interests before that event is applied: "If edge state is
-// ever absent, it is re-seeded from ODP on the first event of the session".
+// it under personalization, her mapped profile attributes are read from her
+// tenant's ODP and merged into her current interests before that event is
+// applied: "If edge state is ever absent, it is re-seeded from ODP on the first
+// event of the session".
 //
-//   • Once per sign-in. A sign-in folds her browser into her person's state
-//     afresh (mergeReflexStates), and that state carries no restoration record,
-//     so her first event after it makes one attempt and records it. Whatever she
-//     built before signing in is kept: a restored pair is added where she has
-//     none and replaces hers only where it is the stronger at that moment. An
-//     attempt that could not read (`unavailable`) is retried once in each later
-//     visit; every other answer stands until her next sign-in.
+//   • Once per sign-in, whatever her choice at the sign-in. The attempt's
+//     record names the sign-in it was made under: a digest of the recognized
+//     grant her capability carries, which only the identity link mints (a
+//     retried link replays the same grant; rotation, return continuity and the
+//     socket relay mint anonymous grants or re-sign the same one). A record of
+//     an earlier sign-in never answers for a later one, also when that later
+//     sign-in kept her state as it was (tracking only). A consent choice is not
+//     a sign-in and re-arms nothing. Whatever she built before is kept: a
+//     restored pair is added where she has none and replaces hers only where it
+//     is the stronger at that moment. An attempt that could not read
+//     (`unavailable`) is retried once in each later visit of the same sign-in;
+//     every other answer stands until her next sign-in.
 //
 //   • Tenant-scoped. Only a tenant's own connector configuration — its host, key,
 //     identity namespace and attribute mapping — is read. The default tenant's
@@ -605,8 +611,12 @@ export type OdpColdReason = 'cold' | 'missing' | 'malformed' | 'unavailable' | '
 export type OdpRestoration =
   | { source: 'odp'; status: 'restored'; observedAt: number }
   | { source: 'odp'; status: 'cold'; reason: OdpColdReason };
-/** Stored on the reflex state it produced, with the start of the visit it was attempted in (never answered). */
-type OdpRestorationRecord = OdpRestoration & { visit?: number };
+/**
+ * Stored on the reflex state it produced, with the sign-in it was made under (a
+ * digest of the recognized grant, never the grant id itself) and the start of the
+ * visit it was attempted in. Neither is ever answered.
+ */
+type OdpRestorationRecord = OdpRestoration & { signIn?: string; visit?: number };
 
 /** The cap every ODP read on the serving path shares: ODP slowness never holds the shopper. */
 export const ODP_READ_TIMEOUT_MS = 1500;
@@ -617,7 +627,8 @@ const plainObject = (value: unknown): Record<string, unknown> | null =>
 
 function storedRestoration(state: unknown): OdpRestorationRecord | undefined {
   const r = plainObject(plainObject(state)?.restoration);
-  if (!r || r.source !== 'odp' || (r.visit !== undefined && !Number.isSafeInteger(r.visit))) return undefined;
+  if (!r || r.source !== 'odp' || (r.visit !== undefined && !Number.isSafeInteger(r.visit))
+    || (r.signIn !== undefined && typeof r.signIn !== 'string')) return undefined;
   if (r.status === 'restored' && Number.isSafeInteger(r.observedAt)) return r as unknown as OdpRestorationRecord;
   if (r.status === 'cold' && typeof r.reason === 'string' && COLD_REASONS.has(r.reason)) return r as unknown as OdpRestorationRecord;
   return undefined;
@@ -695,9 +706,20 @@ async function readOdpProfile(
   }
 }
 
+/**
+ * The sign-in a recognized capability was issued by. The identity link is the
+ * only minter of a recognized grant and a retried link replays the same one, so
+ * the grant identifies the sign-in; a recognized bearer without one (never
+ * minted today) is identified by its issue time. Stored as a digest.
+ */
+async function signInOf(principal: Pick<SessionCapability, 'subject' | 'iat' | 'grantId'>): Promise<string> {
+  const grant = typeof principal.grantId === 'string' && principal.grantId ? ['grant', principal.grantId] : ['issued', principal.iat];
+  return (await connectorDigest(['w41-sign-in-v1', principal.subject, ...grant])).slice(0, 32);
+}
+
 export interface OdpRestorationInput {
   /** The caller's shopper authority; only a recognized (signed-in) shopper is restored. */
-  principal: Pick<SessionCapability, 'kind' | 'subject'> | null | undefined;
+  principal: Pick<SessionCapability, 'kind' | 'subject' | 'iat' | 'grantId'> | null | undefined;
   /** Her choice current at this event. */
   consent: Consent;
   /** Her stored interest state before this event. */
@@ -719,10 +741,13 @@ export interface OdpRestorationInput {
 export async function restoreOdpInterests(env: Env, tenant: TenantId, input: OdpRestorationInput): Promise<ReflexState | null> {
   const { principal, prior, config, now } = input;
   if (principal?.kind !== 'recognized' || !personalizes(input.consent)) return null;
-  // Once per sign-in: her state since that sign-in carries the attempt's record.
-  // Only an attempt that could not read is made again, once in a later visit.
+  // Once per sign-in: a record made under THIS sign-in answers for it; a record
+  // of an earlier one never does. Only an attempt of this sign-in that could not
+  // read is made again, once in a later visit.
+  const signIn = await signInOf(principal);
   const previous = storedRestoration(prior);
-  if (previous && !(previous.status === 'cold' && previous.reason === 'unavailable' && previous.visit !== input.visit)) return null;
+  if (previous && previous.signIn === signIn
+    && !(previous.status === 'cold' && previous.reason === 'unavailable' && previous.visit !== input.visit)) return null;
   let resolved: ReturnType<typeof resolveOdp>;
   try { resolved = resolveOdp(env, tenant); } catch { return null; }
   if (!resolved?.config) return null;
@@ -730,7 +755,7 @@ export async function restoreOdpInterests(env: Env, tenant: TenantId, input: Odp
 
   const base = prior ?? emptyState(config);
   const answer = (outcome: OdpRestoration, dims: ReflexState['dims'] = base.dims): ReflexState =>
-    ({ ...base, dims, restoration: { ...outcome, visit: input.visit } }) as ReflexState;
+    ({ ...base, dims, restoration: { ...outcome, signIn, visit: input.visit } }) as ReflexState;
   const cold = (reason: OdpColdReason) => answer({ source: 'odp', status: 'cold', reason });
 
   // Only a numeric {dimension, value} attribute on a dimension the registry

@@ -3099,8 +3099,9 @@ export class ShopperReflex {
     pinProfileRetention(this.env, { retention, externalRetention }, tenant);
     const profileEnrichment = mergeEnrichment(this.pipeline?.profileEnrichment, fromPipe?.profileEnrichment);
     const previousExternal = new Set([...enrichmentInputs(this.pipeline?.profileEnrichment).audiences, ...enrichmentInputs(fromPipe?.profileEnrichment).audiences]);
-    // W41: the merged state is built afresh and carries no ODP restoration
-    // record, so her first event after this sign-in makes its one attempt.
+    // W41: the merged state is built afresh, without an ODP restoration record;
+    // either way the grant this sign-in mints arms its one attempt (odpLoop
+    // restoreOdpInterests), also on the retained tracking-only path below.
     const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
 
     const odp = await mergeOdpState(this.env, tenant, this.affinity, from);
