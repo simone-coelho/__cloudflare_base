@@ -34,6 +34,14 @@
 // about 41 s after that touch; 50 leaves a margin. No token argument,
 // deliberately: if this needs one, the page is broken. It ends with
 // POST /vantage/api/reset, so the tenant is left at its opening state.
+//
+// The page's source (lane C2). The source checks read the code that sends: the
+// module that defines api() and demoRoute() (public/demo-kit/transport.js), and
+// the tenant it names is followed to the value the page configures. The token
+// checks cover every module the page imports and every stylesheet and script its
+// two shells link. A beat request's body is checked to be its kind, name and
+// note alone; the "How it works" footer link is checked on both shells; and the
+// demo kit is checked to hold no Vantage literal outside tokens.css.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
@@ -112,6 +120,14 @@ for (const path of ['', 'phone?id=galaxy-s26', 'phone/galaxy-s26', 'vantage.js',
 }
 ok('the home shell is the Vantage page', /<title>Vantage/.test(shells['']) && /data-entry="home"/.test(shells['']));
 ok('the phone shell boots into the phone view', /data-entry="phone"/.test(shells['phone?id=galaxy-s26']));
+{
+  // The footer's "How it works" link, on both shells, to the explainer (lane C2; R3 follow-up 3d).
+  const footerOf = (html) => (/<footer\b[\s\S]*?<\/footer>/i.exec(String(html)) || [''])[0];
+  const links = (html) => /<a\b[^>]*\bhref=["']\/vantage\/how-it-works["'][^>]*>\s*How it works\s*<\/a>/.test(footerOf(html));
+  const how = await navigate('/vantage/how-it-works');
+  ok('both shells link “How it works” to /vantage/how-it-works in the footer, and it is served', links(shells['']) && links(shells['phone?id=galaxy-s26']) && how.ok,
+    `home ${links(shells['']) ? 'links it' : 'does not'} · phone ${links(shells['phone?id=galaxy-s26']) ? 'links it' : 'does not'} · /vantage/how-it-works → ${how.status}`);
+}
 
 const BEAT_FILES = ['anchor', 'open-catalog', 'open-slots', '01-arrival', '02-another-region', '03-browse-galaxy-pixel',
   '04-the-hinge', '05-stop-touching', '06-open-the-galaxy', '07-compare-storage', '08-hotspot-perk', '09-four-lines',
@@ -152,6 +168,54 @@ const TOKENISH = [
   [/ss1\.[A-Za-z0-9._-]{30,}/, 'a shopper capability literal'],
 ];
 const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]) => what);
+/**
+ * A file's code without its comments, line for line (lane C2's kit-boundary guard): each comment becomes spaces and
+ * keeps its newlines. Strings, template literals (with their ${} nesting) and regular expressions stay as code: a
+ * literal in any of them is a literal. A "/" starts a regular expression where an operand is expected.
+ */
+function codeOnly(src, kind) {
+  const blank = (s) => s.replace(/[^\n]/g, ' ');
+  if (kind === 'css') return src.replace(/\/\*[\s\S]*?\*\//g, blank);
+  const KEYWORDS = new Set(['return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await']);
+  const n = src.length;
+  const stack = [];             // inside template literals: '`', and '{' for each brace opened within a ${ }
+  let out = '', i = 0;
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (stack[stack.length - 1] === '`') {
+      if (c === '\\') { out += src.slice(i, i + 2); i += 2; continue; }
+      if (c === '`') { stack.pop(); out += c; i += 1; continue; }
+      if (c === '$' && d === '{') { stack.push('{'); out += '${'; i += 2; continue; }
+      out += c; i += 1; continue;
+    }
+    if (c === '/' && d === '/') { const e = src.indexOf('\n', i); const end = e < 0 ? n : e; out += blank(src.slice(i, end)); i = end; continue; }
+    if (c === '/' && d === '*') { const e = src.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += blank(src.slice(i, end)); i = end; continue; }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n && src[j] !== c && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
+      out += src.slice(i, j + 1); i = j + 1; continue;
+    }
+    if (c === '`') { stack.push('`'); out += c; i += 1; continue; }
+    if (c === '{' && stack.length) { stack.push('{'); out += c; i += 1; continue; }
+    if (c === '}' && stack[stack.length - 1] === '{') { stack.pop(); out += c; i += 1; continue; }
+    if (c === '/') {
+      const before = out.replace(/\s+$/, '');
+      const last = before.slice(-1), w = (/[A-Za-z_$][\w$]*$/.exec(before) || [''])[0];
+      if (!last || '(,=:[!&|?{};+-*%<>~^'.includes(last) || KEYWORDS.has(w)) {
+        let j = i + 1, cls = false;
+        while (j < n && src[j] !== '\n') {
+          const ch = src[j];
+          if (ch === '\\') { j += 2; continue; }
+          if (ch === '[') cls = true; else if (ch === ']') cls = false; else if (ch === '/' && !cls) break;
+          j += 1;
+        }
+        out += src.slice(i, j + 1); i = j + 1; continue;
+      }
+    }
+    out += c; i += 1;
+  }
+  return out;
+}
 {
   // Not served is what matters, not which refusal: a hosted worker answers 403 for an absent asset where the dev server answers 404.
   for (const leak of ['beats/operator.local.json', 'operator.local.json', 'beats/token.json']) {
@@ -169,10 +233,24 @@ const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]
   }
   const served = ['', 'phone?id=galaxy-s26', 'vantage.js', 'vantage.css', 'phones.json', 'plans.json', 'catalog.json', 'seeds.json', 'beats.json',
     'img/MANIFEST.json', ...BEAT_FILES.map((b) => `beats/${b}.json`)];
+  // And every stylesheet and script the two shells link from this origin (lane C2): the kit's tokens.css, kit.css and
+  // compare.css ride every page as surely as its modules do.
+  const linked = new Map();
+  const origin = new URL(base).origin;
+  for (const shell of [shells[''], shells['phone?id=galaxy-s26']]) {
+    for (const [tag] of String(shell).matchAll(/<(?:link|script)\b[^>]*>/gi)) {
+      const ref = /^<link/i.test(tag) ? (/\brel=["']?stylesheet\b/i.test(tag) ? (/\bhref=["']([^"']+)["']/i.exec(tag) || [])[1] : null) : (/\bsrc=["']([^"']+)["']/i.exec(tag) || [])[1];
+      if (!ref) continue;
+      const u = new URL(ref, `${base}/vantage/`);
+      if (u.origin !== origin || pageModules.has(u.pathname) || u.pathname === '/vantage/vantage.css' || linked.has(u.pathname)) continue;
+      linked.set(u.pathname, await (await fetch(u, { cache: 'no-store' })).text());
+    }
+  }
   const hits = [];
   for (const path of served) { const text = await (await asset(path)).text(); for (const w of tokenIn(text)) hits.push(`${path}: ${w}`); }
-  for (const [path, text] of pageModules) if (path !== '/vantage/vantage.js') for (const w of tokenIn(text)) hits.push(`${path}: ${w}`);
-  ok(`no served page or document carries a token (${served.length + pageModules.size - 1} checked)`, hits.length === 0, hits.join(' ~ '));
+  for (const [path, text] of [...pageModules, ...linked]) if (path !== '/vantage/vantage.js') for (const w of tokenIn(text)) hits.push(`${path}: ${w}`);
+  info(`the shells also link: ${[...linked.keys()].join(', ') || 'nothing else from this origin'}`);
+  ok(`no served page or document carries a token (${served.length + pageModules.size - 1 + linked.size} checked)`, hits.length === 0, hits.join(' ~ '));
 
   // The committed side: every file this demo ships, read from the checkout.
   const walk = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
@@ -197,12 +275,56 @@ const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]
   // Every request leaves through one of three doors: api() and demoRoute() for the API, tryJson() for static documents.
   const fetches = [...source.matchAll(/\bfetch\(/g)].length;
   ok(`every fetch in the page goes through api(), demoRoute() or tryJson() (${fetches} call sites)`, fetches === 3, `${fetches} found`);
-  const apiDoor = /async function api\([\s\S]{0,400}?'X-Tenant': TENANT/.test(source);
-  const routeDoor = /async function demoRoute\([\s\S]{0,400}?'X-Tenant': TENANT/.test(source);
-  ok('api() and demoRoute() send X-Tenant on every API call', apiDoor && routeDoor);
-  ok("and the tenant they name is 'vantage'", /const TENANT = 'vantage'/.test(source));
+  // Read in the code that sends (lane C2; R3 follow-up 3b): the one module that defines both doors, and the tenant its
+  // TENANT is bound to, followed to the value the page configures (createDemo({ tenant })), not a constant elsewhere.
+  const doors = [...pageModules].filter(([, t]) => /async function api\(/.test(t) && /async function demoRoute\(/.test(t));
+  const [doorPath, doorText] = doors.length === 1 ? doors[0] : [null, ''];
+  const apiDoor = /async function api\([\s\S]{0,400}?'X-Tenant': TENANT/.test(doorText);
+  const routeDoor = /async function demoRoute\([\s\S]{0,400}?'X-Tenant': TENANT/.test(doorText);
+  ok('api() and demoRoute() send X-Tenant on every API call', apiDoor && routeDoor, doorPath || `${doors.length} modules define both doors`);
+  const literal = (s) => { const m = /^(['"`])([^'"`$]*)\1$/.exec(String(s).trim()); return m ? m[2] : null; };
+  const bound = ((/\bconst TENANT = ([^;\n]+);/.exec(doorText) || [])[1] || '').trim();
+  let tenant = literal(bound), via = `${doorPath}: TENANT = ${bound || 'unbound'}`;
+  if (tenant === null && /^(?:cfg|config|k\.config)\.tenant$/.test(bound)) {
+    for (const [path, text] of pageModules) {
+      const m = /\bcreateDemo\(\{[\s\S]*?\btenant:\s*([^,}\n]+)/.exec(text);
+      if (!m) continue;
+      const v = m[1].trim();
+      tenant = literal(v) ?? ((new RegExp(`\\bconst ${v.replace(/[^\w$]/g, '')} = (['"\`])([^'"\`$]*)\\1`).exec(text) || [])[2] ?? null);
+      via += ` → ${path}: createDemo({ tenant: ${v} })`;
+      break;
+    }
+  }
+  ok("and the tenant they name is 'vantage'", tenant === 'vantage', `${via} → ${JSON.stringify(tenant)}`);
+  // A beat goes by name (lane C2; R3 follow-up 3a): every call to the beat route sends its kind, name and note, no document.
+  const beatCalls = [...source.matchAll(/\bdemoRoute\(\s*([^,()]*\bbeat\b[^,()]*),\s*([^)]*)\)/g)].map((m) => `${m[1].trim()} ← ${m[2].trim()}`);
+  ok('every call to the beat route sends { kind, name, note } and nothing else: no document crosses from the page', beatCalls.length > 0
+    && beatCalls.every((c) => /← \{\s*kind,\s*name,\s*note\s*\}$/.test(c)), beatCalls.join(' ~ ') || 'no call to the beat route found');
   const statics = [...source.matchAll(/tryJson\(([^)]*)\)/g)].map((m) => m[1].trim()).filter((a) => a !== 'url');
   ok('tryJson() only ever reads /vantage/ documents', statics.every((a) => /^[`'"]\/vantage\//.test(a)), statics.filter((a) => !/^[`'"]\/vantage\//.test(a)).join(' ~ '));
+
+  // The kit is a kit (lane C2; R3 item 3 and follow-up 3c): no Vantage literal in the code of public/demo-kit/*.js or
+  // its stylesheets, read from the checkout, outside tokens.css, whose Vantage palette is the documented default. A
+  // comment may name Vantage; code, a string, a template, a selector or a pattern may not. The names are Vantage's own
+  // data: every phone's name and id, every plan tier's piece id and its name where that is more than one word (a bare
+  // "Simple" is ordinary English), "Vantage" (its routes, its debug hook, its source) and "carrier".
+  {
+    const kitDir = join(ROOT, 'public/demo-kit');
+    const phonesData = JSON.parse(readFileSync(join(ROOT, 'public/vantage/phones.json'), 'utf8'));
+    const plansData = JSON.parse(readFileSync(join(ROOT, 'public/vantage/plans.json'), 'utf8'));
+    const word = (s) => new RegExp(`(?<![\\w])${String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'i');
+    const names = [['Vantage', /vantage/i], ['carrier', /\bcarrier/i],
+      ...(phonesData.phones || []).flatMap((p) => [[p.name, word(p.name)], [p.id, word(p.id)]]),
+      ...(plansData.tiers || []).flatMap((t) => [...(/\s/.test(String(t.name).trim()) ? [[t.name, word(t.name)]] : []), ...(t.pieceId ? [[t.pieceId, word(t.pieceId)]] : [])])];
+    const files = readdirSync(kitDir).filter((n) => /\.(js|mjs|css)$/.test(n) && n !== 'tokens.css').sort();
+    const kitLeaks = [];
+    for (const f of files) {
+      const code = codeOnly(readFileSync(join(kitDir, f), 'utf8'), /\.css$/.test(f) ? 'css' : 'js');
+      code.split('\n').forEach((line, n) => { for (const [w, re] of names) if (re.test(line)) kitLeaks.push(`${f}:${n + 1} “${w}”`); });
+    }
+    ok(`the demo kit holds no Vantage literal outside tokens.css: no “Vantage”, “carrier”, phone, plan or Vantage route in the code of ${files.length} kit files (${names.length} names)`,
+      files.length > 0 && kitLeaks.length === 0, kitLeaks.slice(0, 8).join(' ~ '));
+  }
 }
 
 // ── Everything below uses only what the page has ──────────────────────────────

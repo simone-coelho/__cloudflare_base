@@ -187,6 +187,11 @@
 .cmp-hint.warn{
   font:600 14px/1.45 var(--cmp-sans);color:var(--cmp-warn-ink);background:var(--cmp-warn-bg);border-top:1px solid var(--cmp-warn-line);
 }
+/* A notice (compare.js notice()): a press that was refused, and why ("Compare does not replace this comparison").
+   Read from the back of the room like a diagnostic, but it is about the press, not the frames. */
+.cmp-hint.notice{
+  font:600 14px/1.45 var(--cmp-sans);color:var(--cmp-ink);background:var(--cmp-ground);border-top:1px solid var(--cmp-line);
+}
 
 /* ── keyboard focus, visible on every control ───────────────────────────── */
 .cmp-btn:focus-visible{outline:2px solid var(--cmp-accent);outline-offset:2px}

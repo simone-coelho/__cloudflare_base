@@ -48,10 +48,16 @@
 //   captureBaseline(rootEl, { label, meta, quiet, fresh, renderAfter })  → Promise<{ at, ok, label, meta }>, with .cloned
 //   captureFrame(rootEl, { label, meta })            → Promise<frame | null>, with .cloned
 //   captureInFlight(), hasBaseline(), baselineInfo()
-//   openCompare(rootEl, { title, details, foot, tags, nowLabel, nowMeta, now, sameNote, nearNote, noFrame, waiting, focusY })
-//   showWaiting({ title, heading, text }), showMessage({ title, heading, text, hint })
+//   openCompare(rootEl, { title, details, foot, tags, nowLabel, nowMeta, now, sameNote, nearNote, noFrame, waiting, focusY, owner })
+//   showWaiting({ title, heading, text, owner }), showMessage({ title, heading, text, hint, owner })   → the request they opened
+//   notice(text)
 //   armPress(target, { root, label, meta, when })
-//   isOpen(), closeCompare(), clearBaseline(), timings()
+//   isOpen(owner?), closeCompare(), clearBaseline(), timings()
+//
+// Who holds the screen. Every call that opens the overlay may name its owner (any string; a host's own Compare
+// press, say). isOpen(owner) is true only while the overlay shows that owner's request, so a host can tell its own
+// comparison from one another part of the page is taking, and leave that one alone: notice(text) says why on the
+// hint line without taking the screen.
 
 const LIB_URL = '/html2canvas.min.js';
 
@@ -112,6 +118,8 @@ const view = {
   frameW: 0, frameH: 0, scale: 1, note: '', zoom: null,   // zoom null = fit the envelope
   mode: 'seam',        // 'seam' · 'split' (side by side) · 'details' (what changed)
   tags: { before: 'Before', now: 'Now' }, shown: null, compact: false,
+  owner: null,         // who opened what the overlay shows (the owner its call named), or null
+  notice: '',          // notice(): a refused press's sentence, on the hint line until the overlay closes
 };
 
 // ── Settings ────────────────────────────────────────────────────────────────
@@ -533,6 +541,15 @@ const seamHint = () => `Drag the seam · ${view.tags.before} to its left, ${view
 const SPLIT_HINT = 'Both pages, whole · they scroll together · ± to zoom · Seam goes back to the draggable reveal';
 const DETAILS_HINT = 'What changed: the decided state behind the two frames · Seam and Side by side are one press away';
 const hintFor = (mode) => (mode === 'split' ? SPLIT_HINT : mode === 'details' ? DETAILS_HINT : seamHint());
+/** The hint line: a diagnostic about the frames first (it is why the two sides look alike), then a notice (a press
+    that was refused, and why), then the instructions `text`. */
+function paintHint(text) {
+  const t = view.note || view.notice || text || '';
+  ui.hint.textContent = t;
+  ui.hint.classList.toggle('warn', !!view.note);
+  ui.hint.classList.toggle('notice', !view.note && !!view.notice);
+  ui.hint.hidden = !t;
+}
 
 /** The height the views may take: the window, less the box's margin, its bar, its sentence and its hint. */
 function availH() {
@@ -618,8 +635,7 @@ function setMode(mode) {
   ui.stage.hidden = view.mode !== 'seam';
   ui.split.hidden = view.mode !== 'split';
   ui.details.hidden = view.mode !== 'details';
-  ui.hint.textContent = view.note || hintFor(view.mode);
-  ui.hint.classList.toggle('warn', !!view.note);
+  paintHint(hintFor(view.mode));
   fit();
   ({ seam: ui.stage, split: ui.paneNow, details: ui.details })[view.mode].focus?.({ preventScroll: true });
 }
@@ -693,6 +709,7 @@ function showFrames(before, now, o) {
   const u = ensureOverlay();
   view.zoom = null;                    // every comparison opens fitted
   view.note = o.note || '';
+  view.owner = o.owner || null;
   view.compact = false;
   view.tags = { before: (o.tags && o.tags.before) || 'Before', now: (o.tags && o.tags.now) || 'Now' };
   // Full-page frames legitimately differ in height (a rearrangement makes the
@@ -717,9 +734,7 @@ function showFrames(before, now, o) {
   u.caption.textContent = o.foot || '';
   u.caption.hidden = !o.foot;
   // The foot is laid out before the views are sized: they take the height that is left.
-  u.hint.textContent = view.note || seamHint();
-  u.hint.classList.toggle('warn', !!view.note);
-  u.hint.hidden = false;
+  paintHint(seamHint());
   u.stage.tabIndex = 0;
   view.mode = 'seam';                  // and on the seam, the mode the comparison is built around
   u.stage.hidden = false; u.split.hidden = true; u.details.hidden = true;
@@ -735,19 +750,20 @@ function showFrames(before, now, o) {
     const y = o.changeY * view.scale, h = u.stage.clientHeight;
     if (h > 0 && y > h * 0.6) { scrolled = Math.round(Math.max(0, y - h * 0.3)); u.stage.scrollTop = scrolled; }
   }
-  if (scrolled && !view.note) {
+  if (scrolled && !view.note && !view.notice) {
     u.hint.textContent = `Scrolled to the first change, ${Math.round(o.changeY)}px down the page · ${seamHint()}`;
     fit();                             // a longer hint takes height from the stage, not from the box's margin
   }
 }
 
 /** The overlay on a message instead of frames: nothing to drag, nothing else. */
-function showNote({ title, heading, text, hint, wait }) {
+function showNote({ title, heading, text, hint, wait, owner }) {
   const u = ensureOverlay();
   if (title) setTitle(title);
   view.note = ''; view.frameW = 0; view.frameH = 0; view.zoom = null;
   view.disabled = true; view.compact = true; view.shown = null;
   view.mode = 'seam';
+  view.owner = owner || null;
   u.stage.hidden = false; u.split.hidden = true; u.details.hidden = true;
   u.canvas.hidden = true;
   u.before.style.backgroundImage = ''; u.after.style.backgroundImage = '';
@@ -757,29 +773,41 @@ function showNote({ title, heading, text, hint, wait }) {
   u.msg.innerHTML = `<b>${esc(heading || '')}</b>${text ? ` ${esc(text)}` : ''}`;
   u.msg.hidden = false;
   u.stage.tabIndex = -1;
-  u.hint.textContent = hint || '';
-  u.hint.hidden = !hint;
-  u.hint.classList.remove('warn');
+  paintHint(hint);
   open(u.close);
 }
 
 /** Never a blank stage: when html2canvas is missing or a render fails, the
     overlay opens on a message that says exactly that. */
-function showFailure(title, detail) {
-  showNote({ heading: title, text: detail, hint: 'Nothing to drag: see the message above.' });
+function showFailure(title, detail, owner) {
+  showNote({ heading: title, text: detail, hint: 'Nothing to drag: see the message above.', owner });
 }
 
 /** Open the overlay on a message while something is being prepared (a second
-    shopper's page, a press still landing). openCompare replaces it. */
-export function showWaiting({ title, heading, text } = {}) {
+    shopper's page, a press still landing). openCompare replaces it. Returns the
+    request it opened; owner names who holds the screen (isOpen(owner)). */
+export function showWaiting({ title, heading, text, owner } = {}) {
   req += 1;
-  showNote({ title, heading: heading || 'One moment', text: text || '', hint: 'One moment.', wait: true });
+  showNote({ title, heading: heading || 'One moment', text: text || '', hint: 'One moment.', wait: true, owner });
+  return req;
 }
 
-/** Open the overlay on a message, and nothing else. */
-export function showMessage({ title, heading, text, hint } = {}) {
+/** Open the overlay on a message, and nothing else. Returns the request it opened. */
+export function showMessage({ title, heading, text, hint, owner } = {}) {
   req += 1;
-  showNote({ title, heading, text, hint });
+  showNote({ title, heading, text, hint, owner });
+  return req;
+}
+
+/** One sentence on the hint line of whatever the overlay shows, without taking the screen: a press that was refused
+    says why there (Compare pressed while another comparison is being taken). It stays until the overlay closes; a
+    diagnostic about the frames still comes first. Returns false when the overlay is not open. */
+export function notice(text) {
+  if (!ui || !view.open) return false;
+  view.notice = String(text || '');
+  paintHint(ui.hint.textContent);
+  fit();                               // the line may be taller: the views take the height that is left
+  return true;
 }
 
 // ── The press is the capture (armPress) ─────────────────────────────────────
@@ -900,9 +928,11 @@ export function baselineInfo() {
 }
 
 /** Open the comparison of the Before with Now, on the Seam (at 50%).
-    Without a Before it opens on opts.noFrame (default: "No earlier frame yet:
-    the first page is still being captured. Act, then Compare.") and nothing
-    else. A Before still being taken is waited for. Now is captured from rootEl
+    A Before still being taken is waited for, on screen, even when it is the
+    first: a capture that has cloned but not yet rendered is a Before. Only when
+    no Before is captured AND none is being captured does it open on
+    opts.noFrame (default: "No earlier frame yet: the first page is still being
+    captured. Act, then Compare.") and nothing else. Now is captured from rootEl
     unless opts.now supplies it (a frame from captureFrame, or a promise of one).
       opts.title     the bar's title
       opts.tags      { before, now }: the words on the two tags ("Before", "Now")
@@ -910,10 +940,13 @@ export function baselineInfo() {
       opts.nowMeta   what to keep with the Now frame (or a function, called at its clone)
       opts.details   HTML, or a function (before, now) returning HTML, each
                      { at, label, meta } of its frame: the What changed view
-      opts.foot      a sentence under the views
+      opts.foot      a sentence under the views, or a function (before, now) returning
+                     one, each { at, label, meta } of its frame (so the sentence can be
+                     true of the two frames it sits under: one page, or two)
       opts.sameNote  what to say when the two frames are the same page, pixel for pixel
       opts.nearNote  what to say when they differ only in small print (a score, a time)
       opts.waiting   what the box says while Now is being taken
+      opts.owner     who holds the screen while this comparison is up (isOpen(owner))
     Resolves { before, now, beforeAt, nowAt } with the two frame URLs, or
     { ..., error } after opening the overlay on the message; never rejects. */
 export async function openCompare(rootEl, opts = {}) {
@@ -921,12 +954,26 @@ export async function openCompare(rootEl, opts = {}) {
   lastRoot = rootEl;
   ensureOverlay();
   const title = opts.title || 'Before and now';
+  const owner = opts.owner;
+  if (!baseline && pending) {
+    // The first Before has cloned and is still rendering (a tool that took it an instant ago, or the first
+    // decided paint's): join it, on screen, rather than say there is no earlier frame.
+    showWaiting({ title, heading: 'Taking the Before frame', text: '', owner });
+    const w = req;
+    let landed = null;
+    while (!baseline && pending) landed = await pending;   // a newer capture may have started meanwhile
+    if (w !== req) return { stale: true };
+    if (!baseline && landed && !landed.ok && landed.error !== 'cleared while capturing') {
+      showFailure('Nothing to compare', `Compare could not take the Before: ${landed.error}`, owner);
+      return { before: null, now: null, beforeAt: null, nowAt: null, error: landed.error };
+    }
+  }
   if (!baseline) {
     const nf = opts.noFrame || NO_FRAME;
-    showMessage({ title, heading: nf.heading, text: nf.text });
+    showMessage({ title, heading: nf.heading, text: nf.text, owner });
     return { before: null, now: null, beforeAt: null, nowAt: null, error: 'no earlier frame' };
   }
-  showWaiting({ title, heading: opts.waiting || 'Taking the Now frame', text: '' });
+  showWaiting({ title, heading: opts.waiting || 'Taking the Now frame', text: '', owner });
   const my = req;
   try {
     if (pending) await pending;
@@ -952,15 +999,18 @@ export async function openCompare(rootEl, opts = {}) {
     if (typeof opts.details === 'function') {
       try { details = String(opts.details(info(before), info(now)) ?? ''); } catch (err) { details = `<p>${esc(`What changed could not be read: ${reason(err)}`)}</p>`; }
     } else if (typeof opts.details === 'string') details = opts.details;
-    showFrames(before, now, { note, near, changeY, details, foot: opts.foot, tags: opts.tags });
+    let foot = opts.foot;
+    if (typeof foot === 'function') { try { foot = String(foot(info(before), info(now)) ?? ''); } catch { foot = ''; } }
+    showFrames(before, now, { note, near, changeY, details, foot, tags: opts.tags, owner });
     return { before: before.url, now: now.url, beforeAt: before.at, nowAt: now.at };
   } catch (err) {
-    if (my === req) showFailure('Nothing to compare', `Compare could not capture the page: ${reason(err)}`);
+    if (my === req) showFailure('Nothing to compare', `Compare could not capture the page: ${reason(err)}`, owner);
     return { before: baseline ? baseline.url : null, now: null, beforeAt: baseline ? baseline.at : null, nowAt: null, error: reason(err) };
   }
 }
 
-export function isOpen() { return view.open; }
+/** Is the overlay up? With an owner: is it up on that owner's request (nobody else has taken the screen since)? */
+export function isOpen(owner) { return owner === undefined ? view.open : view.open && view.owner === owner; }
 
 /** Drop the Before frame (and close the overlay if it is up). A capture still in
     flight lands on the floor, not on the next visitor. */
@@ -976,6 +1026,7 @@ export function closeCompare() {
   if (!ui || !view.open) return;
   view.open = false;
   view.shown = null;
+  view.owner = null; view.notice = '';
   ui.back.classList.remove('open');
   document.removeEventListener('keydown', onDocKey, true);
   window.removeEventListener('resize', fit);

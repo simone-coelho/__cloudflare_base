@@ -168,22 +168,37 @@ function createCompareGlue(k) {
   let compareReq = 0;
   /** A tool's comparison takes the screen: a Compare still waiting for a press gives way to it. */
   const supersede = () => { compareReq += 1; };
-  /** Compare: the Before against the page now. Never nothing: with no Before yet it says so; a press still landing is waited for, on screen. */
+  /**
+   * Compare: the Before against the page now. Never nothing: "no earlier frame" only when no Before is captured AND
+   * none is being captured (a Before still rendering is waited for by the module, on screen); a press still landing is
+   * waited for, on screen. A comparison a compare tool is taking holds the screen: Compare does not replace it, and
+   * says so on it. The sentence under the frames is config.compare.foot ("the same page …") only when both frames are
+   * of the same page; across two pages it names both.
+   */
   async function compareNow() {
     const my = ++compareReq;
     let m;
     try { m = await load(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
     if (my !== compareReq) return;
-    if (!m.hasBaseline()) { void m.openCompare(root(), { title: 'Before and now' }); return; }   // the module says there is no earlier frame, and nothing else
+    const own = 'compare', title = 'Before and now';
+    const refused = 'Compare does not replace this comparison: close it, then press Compare.';
+    // A press is running and the screen is not Compare's own: a tool is taking its comparison, and it stays.
+    if (state.busy && m.isOpen() && !m.isOpen(own)) { m.notice(refused); return; }
+    // Nothing captured and nothing being captured: the module says there is no earlier frame, and nothing else.
+    if (!state.busy && !m.hasBaseline() && !m.captureInFlight()) { void m.openCompare(root(), { title, owner: own }); return; }
     if (state.busy) {
-      m.showWaiting({ title: 'Before and now', heading: 'A press is still landing.', text: 'Compare opens when it has.' });
+      m.showWaiting({ title, heading: 'A press is still landing.', text: 'Compare opens when it has.', owner: own });
       while (state.busy) {
         await sleep(150);
-        if (my !== compareReq || !m.isOpen()) return;   // closed, or another comparison took the screen
+        if (my !== compareReq || !m.isOpen()) return;          // closed, or another Compare press took over
+        if (!m.isOpen(own)) { m.notice(refused); return; }     // a tool's comparison took the screen: it stays
       }
     }
+    const where = (f) => (f && f.meta ? f.meta.where : null);
     await m.openCompare(root(), {
-      title: 'Before and now', nowLabel: frameLabel, nowMeta: frameMeta, foot: C.foot,
+      title, owner: own, nowLabel: frameLabel, nowMeta: frameMeta,
+      foot: (b, n) => (where(b) && where(b) === where(n) ? C.foot
+        : `Two pages, not one: the Before is the ${where(b) || 'earlier page'}, Now is the ${where(n) || 'page on screen'}, so the frames differ in layout as well as in what each moment knew about the shopper. What changed sets the decisions behind them side by side.`),
       details: (b, n) => columns(b.meta && b.meta.snap, n.meta && n.meta.snap, ['Before', 'Now']),
     });
   }

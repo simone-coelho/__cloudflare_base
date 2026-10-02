@@ -34,6 +34,19 @@
 // It prints how long each Before took to capture. --shots <dir> saves the Seam,
 // Side by side, What changed and Fresh visitor (homepage) views there as PNGs.
 //
+// Lane C2 made those checks fail for what they name. A frame "of real pixels" is
+// its image loaded and sampled at 1/8 scale: not one colour, and, where the two
+// pages differ, the two frames differ. A message "closes" only after it was seen
+// open. Fresh visitor on the homepage is run again at 10d, where her four and a
+// stranger's differ, and her visitor is read where the restore writes it (the
+// page's current visitor, then the capability her next press carries), not off a
+// chip the restore never redraws. It also presses Fresh visitor 0.3 s after a
+// direct landing's first decided paint (two frames, never "No earlier frame
+// yet"), presses Compare while Fresh visitor runs (the tool's comparison stays,
+// and the overlay says why), opens Compare across two pages (the sentence under
+// it names both, never "Same page"), checks the "How it works" footer link on
+// both pages, and checks every beat request's body on the wire.
+//
 // A defect in another lane's file that this suite cannot repair is printed with
 // "!" on every run and named on the last line (docs/verizon/lanes/L5.md has the
 // fix); --strict makes it a failure.
@@ -175,7 +188,9 @@ const API = (url) => { try { const p = new URL(url).pathname; return /^\/(v1|rea
 on('Network.requestWillBeSent', (e) => {
   const path = API(e.request.url);
   if (!path) return;
-  requests.set(e.requestId, { press, path, url: e.request.url, method: e.request.method, headers: e.request.headers || {}, status: null, failed: null });
+  // The body is kept for the demo's own merchandiser routes only (a beat by name, the reset): what the page sends there is checked.
+  const body = /^\/vantage\/api\/(beat|reset)$/.test(path) ? (e.request.postData ?? null) : undefined;
+  requests.set(e.requestId, { press, path, url: e.request.url, method: e.request.method, headers: e.request.headers || {}, status: null, failed: null, body, at: Date.now() });
 });
 on('Network.responseReceived', (e) => { const r = requests.get(e.requestId); if (r) r.status = e.response.status; });
 on('Network.loadingFailed', (e) => { const r = requests.get(e.requestId); if (r && !e.canceled) r.failed = e.errorText; });
@@ -271,12 +286,43 @@ function pageHelpers() {
     modules: shown('#modules > .pmod').map((m) => own(m.querySelector('.pmod-head h2'))), plans: shown('#modules .plan').map((p) => txt(p.querySelector('h3'))),
     pdpRow: [...shown('#pdpBefore li').map(txt), '|', ...shown('#pdpDeltas li').map(txt)],
     who: txt('#whoChip'), url: location.pathname + location.search,
+    // The page's current visitor, where Fresh visitor's restore writes it back (the chip above is never redrawn by
+    // it): the kit's state under ?debug, the one place this is held. Her session subject only as a short hash.
+    current: (() => { const s = (window.__vantage || {}).state; const v = s && s.who ? s.visitors[s.who] : null;
+      const hash = (t) => { let h = 5381; for (const ch of String(t || '')) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h.toString(36); };
+      return v ? { key: s.who, label: v.label, id: hash(v.session && v.session.subject) } : null; })(),
   });
-  /** The two frames' own pixels: each frame's image, loaded, at its natural size. */
-  const framePixels = async () => {
+  /**
+   * The two frames' own pixels: each frame's image (the seam's, or Side by side's with ids), loaded at its natural
+   * size and sampled at 1/8 scale. ink: the share of samples that are not the frame's own commonest colour (0 for a
+   * blank frame, about 0.3 to 0.4 for a page). differ: the share of samples, over the part both frames cover, where
+   * the two differ by more than 24 in a channel. same: both views show the one image.
+   */
+  const framePixels = async (ids = ['cmp-before', 'cmp-after']) => {
     const urlOf = (id) => { const m = /url\("?(.*?)"?\)$/.exec(getComputedStyle(document.getElementById(id)).backgroundImage || ''); return m ? m[1] : null; };
-    const size = (u) => new Promise((r) => { if (!u) { r(null); return; } const im = new Image(); im.onload = () => r({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => r(null); im.src = u; });
-    return { before: await size(urlOf('cmp-before')), now: await size(urlOf('cmp-after')) };
+    const load = (u) => new Promise((r) => { if (!u) { r(null); return; } const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = u; });
+    const sample = (im) => {
+      const w = Math.max(1, Math.ceil(im.naturalWidth / 8)), h = Math.max(1, Math.ceil(im.naturalHeight / 8));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, w, h);
+      const d = g.getImageData(0, 0, w, h).data, count = new Map();
+      for (let i = 0; i < d.length; i += 4) { const key = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4); count.set(key, (count.get(key) || 0) + 1); }
+      return { w: im.naturalWidth, h: im.naturalHeight, sw: w, sh: h, d, ink: 1 - Math.max(...count.values()) / (d.length / 4) };
+    };
+    const urls = ids.map(urlOf);
+    const [a, b] = (await Promise.all(urls.map(load))).map((im) => (im ? sample(im) : null));
+    let differ = null;
+    if (a && b) {
+      const w = Math.min(a.sw, b.sw), h = Math.min(a.sh, b.sh);
+      let n = 0;
+      for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
+        const i = (y * a.sw + x) * 4, j = (y * b.sw + x) * 4;
+        if (Math.abs(a.d[i] - b.d[j]) > 24 || Math.abs(a.d[i + 1] - b.d[j + 1]) > 24 || Math.abs(a.d[i + 2] - b.d[j + 2]) > 24) n += 1;
+      }
+      differ = w * h ? n / (w * h) : 0;
+    }
+    const out = (s) => (s ? { w: s.w, h: s.h, ink: Number(s.ink.toFixed(4)) } : null);
+    return { before: out(a), now: out(b), differ: differ === null ? null : Number(differ.toFixed(4)), urls };
   };
   window.__l5 = { vis, txt, snapshot, mine, framePixels };
   return true;
@@ -463,6 +509,7 @@ function legible(i, S) {
 const NO_FRAME = 'No earlier frame yet: the first page is still being captured. Act, then Compare.';
 const fmtBox = (b) => (b ? `${b.w}×${b.h}` : 'none');
 const sameJSON = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const framesUp = "window.__l5.vis('#cmp-canvas').ok";
 const toolDone = `${framesUp} && /done/.test(document.getElementById('status').textContent)`;
 /** Installed before a direct phone-page load: Compare is pressed the instant the page says ready, while its
@@ -482,6 +529,27 @@ const FIRST_PAINT_PRESS = `(() => {
   };
   if (!arm()) document.addEventListener('DOMContentLoaded', arm, { once: true });
 })();`;
+/** Installed before a direct phone-page load (lane C2): Fresh visitor is pressed 0.3 s after the first decided paint,
+    the instant the page's modules carry decision ids, while her first Before has not yet been taken (R3's race). */
+const RACE_PRESS = `(() => {
+  const decided = () => document.querySelectorAll('#modules > .pmod[data-op-decision-id]:not([data-op-decision-id=""])').length;
+  let at = 0;
+  const obs = new MutationObserver(() => {
+    if (at || !decided()) return;
+    at = performance.now(); obs.disconnect();
+    setTimeout(() => {
+      const b = document.querySelector('#compareTools button[data-tool="fresh"]');
+      if (!b) return;
+      window.__c2race = { after: Math.round(performance.now() - at) };
+      b.click();
+    }, 300);
+  });
+  const arm = () => obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-op-decision-id'] });
+  if (document.documentElement) arm(); else document.addEventListener('DOMContentLoaded', arm, { once: true });
+})();`;
+/** The footer's "How it works" link, as it is on screen (lane C2; R3 follow-up 3d): visible, and where it goes. */
+const FOOTER_LINK = `(() => { const a = [...document.querySelectorAll('footer a')].find((x) => x.textContent.trim() === 'How it works');
+  const v = a ? window.__l5.vis(a) : { ok: false, why: 'no such link' }; return { ok: v.ok, why: v.why || '', path: a ? new URL(a.href).pathname : null }; })()`;
 /** --shots <dir>: the view on screen, as a PNG. */
 async function shoot(name) {
   if (!SHOTS) return;
@@ -495,6 +563,36 @@ async function closeCompare() {
   await evaluate("document.getElementById('cmp-close').click()");
   await sleep(300);
   return !(await evaluate("window.__l5.vis('#cmp-back').ok"));
+}
+/** A close is a close only when something was open to close (lane C2): true when the overlay was on screen just
+    before its Close button was pressed, and was gone after. */
+async function closeOpen() {
+  const was = await evaluate("window.__l5.vis('#cmp-back').ok");
+  const closed = await closeCompare();
+  return was && closed;
+}
+/** Real pixels (lane C2): each frame is not one colour; the two differ where the page differs (minDiffer). */
+const INK_MIN = 0.05, DIFFER_MIN = 0.01;
+const pct = (x) => (x == null ? '?' : `${Math.round(x * 1000) / 10}%`);
+const inked = (px, minDiffer = 0) => Boolean(px && px.before && px.now && px.before.ink >= INK_MIN && px.now.ink >= INK_MIN
+  && (!minDiffer || (px.differ !== null && px.differ >= minDiffer)));
+const fmtPx = (px) => (px ? `pixels ${fmtBox(px.before)} · ${fmtBox(px.now)}, ink ${pct(px.before && px.before.ink)} · ${pct(px.now && px.now.ink)}, differ ${pct(px.differ)}` : 'no frames');
+/** Her visitor as the page holds it (lane C2): the same visitor, by key, session and label, before and after a tool. */
+const sameVisitor = (a, b) => Boolean(a.current && b.current && a.current.key === b.current.key && a.current.id === b.current.id && a.current.label === b.current.label);
+const visitorLine = (m) => `${m.who} · the page’s current visitor: ${m.current ? m.current.label : 'none'}`;
+/** Her capability, off the wire: the one X-Shopper-Session her press's shopper calls carried (compared, never printed). */
+const capsIn = (p) => [...new Set([...requests.values()].filter((r) => r.press === p).map((r) => header(r, 'X-Shopper-Session')).filter(Boolean))];
+let askedAsHer = null;   // { cap, after }: the next press must ask as her (lane C2)
+/** Her receipts have stopped arriving (lane C2): no receipt read in flight and none started for 2.5 s. The page
+    redraws her before/now row when they land, so "her page before a tool" is read once they have. */
+async function receiptsQuiet(ms = 30000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    const reads = [...requests.values()].filter((r) => r.path === '/vantage/api/receipt');
+    if (!reads.some((r) => (r.status === null && !r.failed) || Date.now() - r.at < 2500)) return true;
+    await sleep(300);
+  }
+  return false;
 }
 /** The Before the kit holds now: when it was cloned, and its label. */
 const kitBefore = () => evaluate("window.__vantage.compare().then((k) => k.baselineInfo() && { at: k.baselineInfo().at, label: k.baselineInfo().label })");
@@ -554,13 +652,41 @@ try {
     ok('Compare pressed during the first paint opens the overlay on the message, not nothing', up && F.pressed && F.pressed.decided === 0 && F.compare.msg === NO_FRAME,
       `${F.compare.msg || 'no overlay'}${F.pressed ? ` · ${F.pressed.decided} decided module(s) on the page at the press` : ''}`);
     ok('and nothing else: no frame, no tag, no view to switch to', F.compare.ok && !F.compare.frames.before && !F.compare.frames.now && !F.compare.tags.before && !F.compare.tags.now && F.compare.mode === null);
-    ok('the message closes', await closeCompare());
+    // Closed only if it was open on the message just before (lane C2: a press that opened nothing must not pass here).
+    ok('the message closes', F.compare.ok && F.compare.msg === NO_FRAME && await closeOpen());
     const before = await waitFor("window.__vantage.compare().then((k) => k.hasBaseline())", 20000);
     const T = await evaluate("window.__vantage.compare().then((k) => ({ title: document.getElementById('compareBtn').title, caps: k.timings().filter((x) => x.kind === 'baseline') }))");
     ok('once the phone page’s first decided paint settles, a Before exists, and Compare’s title names it', before
       && new RegExp(`^Before: ${phoneName(focus)} page at \\d\\d:\\d\\d, Shopper A$`).test(T.title), T.title);
     firstPaintCaptures.push(...T.caps);
     if (T.caps[0]) info(`that Before: ${T.caps[0].w}×${T.caps[0].h}, cloned ${T.caps[0].wait} ms after it started, the frame ready in ${T.caps[0].total} ms`);
+    const foot = await evaluate(FOOTER_LINK);
+    ok('the phone page’s footer links “How it works” to /vantage/how-it-works, on screen', foot.ok && foot.path === '/vantage/how-it-works', JSON.stringify(foot));
+  }
+
+  {
+    // Fresh visitor during the first paint's Before (lane C2; R2 C1 finding 2, R3 follow-up 1). On a direct landing,
+    // Fresh visitor pressed 0.3 s after the first decided paint takes its Before as the press lands; that Before has
+    // cloned but not rendered when the stranger's frame is ready. The comparison must wait for it and open on two
+    // frames, never on "No earlier frame yet".
+    const focus = anchor.focusPhone || 'galaxy-s26';
+    const direct = `${base}/vantage/phone?id=${encodeURIComponent(focus)}&debug=1&region=${OVERRIDE}`;
+    console.log(`\n── Fresh visitor 0.3 s after the first decided paint: ${direct}`);
+    press = 'race';
+    const { identifier } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: RACE_PRESS });
+    await cdp('Page.navigate', { url: direct });
+    await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    await booted();
+    await evaluate(`(${pageHelpers.toString()})()`);
+    const pressed = await waitFor('Boolean(window.__c2race)', 20000);
+    await waitFor(`${toolDone} || (/^No earlier frame yet/.test(window.__l5.snapshot().compare.msg) && /done/.test(document.getElementById('status').textContent))`, 30000);
+    await sleep(400);
+    const R = await evaluate('({ pressed: window.__c2race || null, compare: window.__l5.snapshot().compare })');
+    const rpx = await evaluate('window.__l5.framePixels()');
+    ok('Fresh visitor pressed 0.3 s after a direct landing’s first decided paint opens on two frames, never on “No earlier frame yet”', pressed && R.compare.mode === 'seam'
+      && R.compare.msg === '' && /^Her page · /i.test(R.compare.tags.before) && /^A fresh visitor, same region · /i.test(R.compare.tags.now) && inked(rpx),
+      `${R.pressed ? `pressed ${R.pressed.after} ms after the decided paint` : 'not pressed'} · ${R.compare.msg || `${R.compare.tags.before} | ${R.compare.tags.now}`} · ${fmtPx(rpx)}`);
+    await closeCompare();
   }
 
   const url = `${base}/vantage/?debug=1&wait=${WAIT}&region=${OVERRIDE}`;
@@ -581,6 +707,8 @@ try {
   ok('the director’s opening sentence is on screen', boot.director.lineOk && boot.director.line.length > 20, boot.director.line.slice(0, 90));
   ok('no horizontal overflow', boot.overflow <= 1, `${boot.overflow}px`);
   ok('the page can scroll clear of the director bar', await evaluate(`(() => { const d = document.querySelector('.director'); return d && parseFloat(getComputedStyle(document.body).paddingBottom) >= d.getBoundingClientRect().height - 1; })()`));
+  const homeFoot = await evaluate(FOOTER_LINK);
+  ok('the homepage’s footer links “How it works” to /vantage/how-it-works, on screen', homeFoot.ok && homeFoot.path === '/vantage/how-it-works', JSON.stringify(homeFoot));
   // Compare (lane C1): always enabled, its title naming the Before it would show; with none yet, it says so.
   const compareTitles = () => evaluate(`(() => { const t = document.querySelector('#compareTools button[data-tool="compare"]'), m = document.getElementById('compareBtn');
     return { main: m.title, tool: t ? t.title : '', disabled: m.disabled || !t || t.disabled }; })()`);
@@ -590,7 +718,7 @@ try {
   await waitFor("window.__l5.vis('#cmp-back').ok", 10000);
   const M0 = (await evaluate('window.__l5.snapshot()')).compare;
   ok('Compare before any frame exists opens the overlay on the message, not nothing', M0.ok && M0.msg === NO_FRAME && !M0.frames.before && !M0.frames.now, M0.msg);
-  ok('and that message closes', await closeCompare());
+  ok('and that message closes', M0.ok && M0.msg === NO_FRAME && await closeOpen());
 
   for (let i = 0; i < NO.length; i += 1) {
     press = i;
@@ -620,11 +748,23 @@ try {
     // Every performed beat starts with a Before (lane C1), cloned as the press lands, before the beat acts;
     // it renders once the beat has landed.
     await waitFor(`window.__vantage.compare().then((k) => { const b = k.baselineInfo(); return Boolean(b && b.at >= ${t0 - 500}); })`, 8000);
-    const bf = await kitBefore();
-    ok(`↳ ${NO[i]}: a Before was taken as the press landed`, bf && bf.at >= t0 - 500 && bf.at <= t0 + 5000, bf ? `${bf.label} · cloned ${bf.at - t0} ms after the press` : 'no Before');
+    // The instant of the clone exists only in the kit's state (baselineInfo().at); what the Before is, the page also
+    // says on both Compare buttons (lane C2: read there too, in the same instant).
+    const bf = await evaluate(`window.__vantage.compare().then((k) => { const b = k.baselineInfo(), t = document.querySelector('#compareTools button[data-tool="compare"]');
+      return b && { at: b.at, label: b.label, where: (b.meta || {}).where || '', who: (b.meta || {}).who || '', main: document.getElementById('compareBtn').title, tool: t ? t.title : '' }; })`);
+    const named = Boolean(bf && bf.where && bf.who && bf.tool === bf.main && new RegExp(`^Before: ${reEsc(bf.where)} at \\d\\d:\\d\\d, ${reEsc(bf.who)}$`).test(bf.main));
+    ok(`↳ ${NO[i]}: a Before was taken as the press landed`, bf && bf.at >= t0 - 500 && bf.at <= t0 + 5000 && named,
+      bf ? `${bf.label} · cloned ${bf.at - t0} ms after the press · Compare’s title “${bf.main}”` : 'no Before');
     const refused = refusedIn(i);
     ok(`↳ ${NO[i]}: the decision service answered`, !S.down.deals && !S.down.modules && refused.length === 0,
       [S.down.text, ...refused].filter(Boolean).join(' ~ ').slice(0, 220));
+    if (askedAsHer && askedAsHer.press === i) {
+      // After Fresh visitor (lane C2): the press after it asks as her, with her own capability, read off the wire.
+      const caps = capsIn(i);
+      ok(`↳ ${NO[i]}: the press asked as her: every shopper call carried her own capability, none the fresh visitor’s`, Boolean(askedAsHer.cap) && caps.length === 1 && caps[0] === askedAsHer.cap,
+        `${caps.length} capabilit${caps.length === 1 ? 'y' : 'ies'} on this press’s shopper calls${caps.length === 1 ? (caps[0] === askedAsHer.cap ? ', hers' : ', not hers') : ''}`);
+      askedAsHer = null;
+    }
     ok(`↳ ${NO[i]}: the director’s sentence is on screen`, S.director.lineOk && has(S.director.line, LINE[i]) && has(S.director.beatNo, `Beat ${NO[i]} / 15`),
       `${S.director.beatNo} · ${S.director.line.slice(0, 90)}`);
     legible(i, S);
@@ -645,9 +785,10 @@ try {
       let C = (await evaluate('window.__l5.snapshot()')).compare;
       const px = await evaluate('window.__l5.framePixels()');
       ok('Compare on the homepage opens the overlay on the Seam', up && C.ok && C.mode === 'seam', C.title);
+      // Real pixels (lane C2): each frame sampled, not one colour, and the two differ (the site's own page, then hers).
       ok('with two frames of non-zero size, each a whole page of real pixels', C.frames.before && C.frames.now && C.frames.before.w > 0 && C.frames.before.h > 0 && C.frames.now.w > 0 && C.frames.now.h > 0
-        && px.before && px.now && px.before.w > 0 && px.before.h > 0 && px.now.w > 0 && px.now.h > 0,
-        `on screen ${fmtBox(C.frames.before)} · ${fmtBox(C.frames.now)}; pixels ${fmtBox(px.before)} · ${fmtBox(px.now)}`);
+        && px.before && px.now && px.before.w > 0 && px.before.h > 0 && px.now.w > 0 && px.now.h > 0 && inked(px, DIFFER_MIN),
+        `on screen ${fmtBox(C.frames.before)} · ${fmtBox(C.frames.now)}; ${fmtPx(px)}`);
       ok('tagged Before and Now, each with its time, where and who', /^Before · \d\d:\d\d · homepage · nobody yet$/i.test(C.tags.before) && /^Now · \d\d:\d\d · homepage · Shopper A$/i.test(C.tags.now),
         `${C.tags.before} | ${C.tags.now}`);
       ok('the footer sentence stays: same page, same catalog, same buy box, same public prices', has(C.caption, 'Same page, same catalog, same buy box and the same public prices'), C.caption.slice(0, 90));
@@ -668,8 +809,11 @@ try {
       await evaluate("document.getElementById('cmp-mode-split').click()");
       await sleep(400);
       C = (await evaluate('window.__l5.snapshot()')).compare;
-      ok('Side by side shows two panes, each a whole page, and no seam', C.mode === 'split' && C.panes.length === 2 && C.panes.every((p) => p.w > 100 && p.h > 100) && !C.frames.before && !C.frames.now,
-        C.panes.map((p) => `${fmtBox(p)} ${p.tag}`).join(' | '));
+      // Each pane holds the same two frames as the seam, of real pixels (lane C2).
+      const spx = await evaluate("window.__l5.framePixels(['cmp-shot-before', 'cmp-shot-now'])");
+      ok('Side by side shows two panes, each a whole page, and no seam', C.mode === 'split' && C.panes.length === 2 && C.panes.every((p) => p.w > 100 && p.h > 100) && !C.frames.before && !C.frames.now
+        && inked(spx, DIFFER_MIN) && sameJSON(spx.urls, px.urls),
+        `${C.panes.map((p) => `${fmtBox(p)} ${p.tag}`).join(' | ')} · ${fmtPx(spx)}${sameJSON(spx.urls, px.urls) ? ', the seam’s two frames' : ', not the seam’s frames'}`);
       await shoot('02-side-by-side');
       await evaluate("document.getElementById('cmp-mode-details').click()");
       await sleep(400);
@@ -680,12 +824,13 @@ try {
       ok('the site’s own four on the left, her opening four on the right, as the page shows them', l && rt && (l.lists[1] || []).length === 4 && (l.lists[1] || []).every((t) => has(t, '(the site’s own)'))
         && sameJSON(rt.lists[1], titles(S)), `${(l.lists[1] || []).join(' | ').slice(0, 120)} → ${(rt.lists[1] || []).join(' | ')}`);
       await shoot('03-what-changed');
-      ok('Compare closes, and the address bar is unchanged', await closeCompare() && (await evaluate('location.pathname + location.search')) === addr);
+      ok('Compare closes, and the address bar is unchanged', await closeOpen() && (await evaluate('location.pathname + location.search')) === addr);
 
       // Fresh visitor on the homepage (lane C1): her page is the Before; a stranger's decided set, same region,
       // no event, is the Now; then her page and address come back from state.
       console.log('   · Fresh visitor, on the homepage');
       const her0 = await evaluate('window.__l5.mine()');
+      const herCaps = capsIn(i);                   // her capability, as this press's shopper calls carried it
       press = 'fresh-home';
       await evaluate(`document.querySelector('#compareTools button[data-tool="fresh"]').click()`);
       const fresh = await waitFor(toolDone, 30000);
@@ -693,7 +838,7 @@ try {
       C = (await evaluate('window.__l5.snapshot()')).compare;
       const fpx = await evaluate('window.__l5.framePixels()');
       ok('Fresh visitor on the homepage opens the overlay on two frames of non-zero size', fresh && C.ok && C.mode === 'seam' && C.frames.before && C.frames.now
-        && fpx.before && fpx.now && fpx.before.w > 0 && fpx.before.h > 0 && fpx.now.w > 0 && fpx.now.h > 0, `${C.title} · pixels ${fmtBox(fpx.before)} · ${fmtBox(fpx.now)}`);
+        && fpx.before && fpx.now && fpx.before.w > 0 && fpx.before.h > 0 && fpx.now.w > 0 && fpx.now.h > 0 && inked(fpx), `${C.title} · ${fmtPx(fpx)}`);
       ok('tagged “Her page” and “A fresh visitor, same region”', /^Her page · \d\d:\d\d · homepage · Shopper A$/i.test(C.tags.before)
         && /^A fresh visitor, same region · \d\d:\d\d · homepage · Fresh visitor$/i.test(C.tags.now), `${C.tags.before} | ${C.tags.now}`);
       await shoot('04-fresh-visitor-home');
@@ -705,14 +850,70 @@ try {
       const sent = [...requests.values()].filter((q) => q.press === 'fresh-home');
       ok('the fresh visitor sent no event: no call to /realtime/action, one snapshot for her page', sent.every((q) => !/^\/realtime\/action/.test(q.path))
         && sent.filter((q) => /\/decisions\/snapshot/.test(q.path)).length === 1, sent.map((q) => `${q.method} ${q.path}`).join(' · '));
-      ok('the Compare panel closes', await closeCompare());
+      ok('the Compare panel closes', await closeOpen());
       await sleep(300);
       const her1 = await evaluate('window.__l5.mine()');
       const moved = ['view', 'hero', 'order', 'deals', 'rail', 'dealsRow'].filter((k) => !sameJSON(her0[k], her1[k]));
       ok('after it closes her homepage is hers: the hero, the module order, the four in order, the rail, the before/now row', moved.length === 0,
         moved.length ? moved.map((k) => `${k}: ${JSON.stringify(her0[k]).slice(0, 80)} → ${JSON.stringify(her1[k]).slice(0, 80)}`).join(' ~ ') : `${her1.order.join(' > ')} · ${her1.deals.join(' | ')}`);
-      ok('her visitor is unchanged', her1.who === her0.who && has(her1.who, 'Shopper A'), her1.who);
+      // Read where the restore writes it (lane C2): the page's current visitor, not only the chip the restore never redraws.
+      ok('her visitor is unchanged', her1.who === her0.who && has(her1.who, 'Shopper A') && sameVisitor(her0, her1), visitorLine(her1));
       ok('and the address bar is unchanged', her1.url === her0.url, her1.url);
+      askedAsHer = { press: i + 1, cap: herCaps.length === 1 ? herCaps[0] : null };
+      press = i;
+    }
+
+    if (i === 13) {
+      // Lane C2, at 10d. Compare across two pages: 10d's Before was taken on her phone page, its Now is her homepage,
+      // so the sentence under them must name both and never say "Same page" (R3 follow-up 5).
+      console.log('   · Compare across two pages');
+      await evaluate("window.scrollTo(0, 0); document.getElementById('compareBtn').click()");
+      await waitFor(framesUp, 20000);
+      await sleep(400);
+      const X = (await evaluate('window.__l5.snapshot()')).compare;
+      const whereOf = (tag) => (String(tag).split(' · ')[2] || '').trim();
+      const wb = whereOf(X.tags.before), wn = whereOf(X.tags.now);
+      ok('Compare across two pages says so: the sentence under it names both pages, never “Same page”', Boolean(wb && wn) && wb.toLowerCase() !== wn.toLowerCase()
+        && X.caption.length > 0 && !/same page/i.test(X.caption) && has(X.caption, wb) && has(X.caption, wn), `${X.tags.before} | ${X.tags.now} · “${X.caption.slice(0, 150)}”`);
+      await closeCompare();
+
+      // Fresh visitor on the homepage again, here, where her four and a stranger's differ (R2 used beat 4; 10d keeps
+      // beat 5's minute clear of the suite's own time). Compare is pressed while it runs: the tool's comparison stays.
+      console.log('   · Fresh visitor at 10d, with Compare pressed while it runs');
+      await receiptsQuiet();                       // her row as it stands once her receipts are in, not half-way
+      await sleep(300);
+      const her0 = await evaluate('window.__l5.mine()');
+      const herCaps = capsIn(i);
+      press = 'fresh-10d';
+      await evaluate(`document.querySelector('#compareTools button[data-tool="fresh"]').click()`);
+      await sleep(150);
+      await evaluate("document.getElementById('compareBtn').click()");
+      await sleep(200);
+      const during = await evaluate("({ open: window.__l5.vis('#cmp-back').ok, hint: window.__l5.vis('#cmp-hint').ok ? window.__l5.txt('#cmp-hint') : '' })");
+      const fresh = await waitFor(toolDone, 30000);
+      await sleep(400);
+      let C = (await evaluate('window.__l5.snapshot()')).compare;
+      const fpx = await evaluate('window.__l5.framePixels()');
+      const REFUSED = 'Compare does not replace this comparison';
+      ok('Compare pressed while Fresh visitor runs does not take its comparison: the overlay says so, and stays Fresh visitor’s', during.open && has(during.hint, REFUSED)
+        && fresh && C.mode === 'seam' && /^Her page · \d\d:\d\d · homepage · Shopper A$/i.test(C.tags.before)
+        && /^A fresh visitor, same region · \d\d:\d\d · homepage · Fresh visitor$/i.test(C.tags.now) && has(C.hint, REFUSED),
+        `as it ran: “${during.hint.slice(0, 80)}” · then ${C.tags.before} | ${C.tags.now} · “${C.hint.slice(0, 60)}”`);
+      ok('her page and the fresh visitor’s are two frames of real pixels, and they differ', inked(fpx, DIFFER_MIN), fmtPx(fpx));
+      await evaluate("document.getElementById('cmp-mode-details').click()");
+      await sleep(300);
+      C = (await evaluate('window.__l5.snapshot()')).compare;
+      const hersListed = (C.cols[0] && C.cols[0].lists[1]) || [], theirs = (C.cols[1] && C.cols[1].lists[1]) || [];
+      ok('at 10d her four and the fresh visitor’s differ: What changed lists two fours, hers as her page showed them', hersListed.length === 4 && theirs.length === 4
+        && !sameJSON(hersListed, theirs) && sameJSON(hersListed, her0.deals), `hers ${hersListed.join(' | ')} ~ the fresh visitor’s ${theirs.join(' | ')}`);
+      ok('at 10d the Compare panel closes', await closeOpen());
+      await sleep(300);
+      const her1 = await evaluate('window.__l5.mine()');
+      const moved = ['view', 'hero', 'order', 'deals', 'rail', 'dealsRow', 'url'].filter((k) => !sameJSON(her0[k], her1[k]));
+      ok('after it closes her four are back, in order, and the rest of her homepage: the hero, the module order, the rail, the before/now row, the address', moved.length === 0,
+        moved.length ? moved.map((k) => `${k}: ${JSON.stringify(her0[k]).slice(0, 80)} → ${JSON.stringify(her1[k]).slice(0, 80)}`).join(' ~ ') : her1.deals.join(' | '));
+      ok('at 10d her visitor is unchanged: the page’s current visitor is still her', her1.who === her0.who && has(her1.who, 'Shopper A') && sameVisitor(her0, her1), visitorLine(her1));
+      askedAsHer = { press: i + 1, cap: herCaps.length === 1 ? herCaps[0] : null };
       press = i;
     }
 
@@ -728,7 +929,8 @@ try {
       const ppx = await evaluate('window.__l5.framePixels()');
       const nowTag = tool === 'fresh' ? 'A fresh visitor, same region · \\d\\d:\\d\\d · .+ page · Fresh visitor' : 'The streaming shopper · \\d\\d:\\d\\d · .+ page · Shopper B';
       ok(`Compare → ${tool === 'fresh' ? 'Fresh visitor' : 'Streaming shopper'} on the phone page opens on two frames of non-zero size, tagged`, up && P.mode === 'seam' && ppx.before && ppx.now
-        && ppx.before.h > 0 && ppx.now.h > 0 && /^Her page · \d\d:\d\d · .+ page · Shopper A$/i.test(P.tags.before) && new RegExp(`^${nowTag}$`, 'i').test(P.tags.now), `${P.tags.before} | ${P.tags.now}`);
+        && ppx.before.h > 0 && ppx.now.h > 0 && inked(ppx) && /^Her page · \d\d:\d\d · .+ page · Shopper A$/i.test(P.tags.before) && new RegExp(`^${nowTag}$`, 'i').test(P.tags.now),
+        `${P.tags.before} | ${P.tags.now} · ${fmtPx(ppx)}`);
       await evaluate("document.getElementById('cmp-mode-details').click()");
       await sleep(300);
       const C = await evaluate('window.__l5.snapshot()');
@@ -742,10 +944,11 @@ try {
         ok('Unlimited More leads for her; Unlimited Max for the streaming shopper', left && right && (left.lists[1] || [])[0] === 'Unlimited More' && (right.lists[1] || [])[0] === 'Unlimited Max',
           `${left ? (left.lists[1] || [])[0] : '?'} · ${right ? (right.lists[1] || [])[0] : '?'}`);
       }
-      ok('the Compare panel closes', await closeCompare());
+      ok('the Compare panel closes', await closeOpen());
       await sleep(300);
       const her1 = await evaluate('window.__l5.mine()');
-      const moved = ['view', 'modules', 'plans', 'pdpRow', 'who', 'url'].filter((k) => !sameJSON(her0[k], her1[k]));
+      // Her visitor is the chip and, where the restore writes it, the page's current visitor (lane C2).
+      const moved = ['view', 'modules', 'plans', 'pdpRow', 'who', 'current', 'url'].filter((k) => !sameJSON(her0[k], her1[k]));
       ok('after it closes her phone page is hers: the modules, the plans, the before/now row, her visitor and the address bar', moved.length === 0,
         moved.length ? moved.map((k) => `${k}: ${JSON.stringify(her0[k]).slice(0, 80)} → ${JSON.stringify(her1[k]).slice(0, 80)}`).join(' ~ ') : her1.url);
       const address = await evaluate("location.pathname + (new URLSearchParams(location.search).get('id') ? `?id=${new URLSearchParams(location.search).get('id')}` : '')");
@@ -800,6 +1003,19 @@ try {
   ok('the page made no /content, /config or /ops call of its own', all.every((r) => !/^\/(content|config|ops)\//.test(r.path)),
     all.filter((r) => /^\/(content|config|ops)\//.test(r.path)).map((r) => r.path).join(' ~ '));
   ok('no request carried an Authorization header', all.every((r) => !header(r, 'Authorization')));
+  {
+    // What the page sends to its merchandiser routes (lane C2; R3 follow-up 3a): a beat goes by name, so its body is
+    // a kind, a name and a note, and nothing else; a reset sends nothing. No document crosses from the page.
+    const parse = (b) => { try { return b == null ? null : JSON.parse(b); } catch { return null; } };
+    const beatsSent = all.filter((r) => r.path === '/vantage/api/beat'), resets = all.filter((r) => r.path === '/vantage/api/reset');
+    const badBeat = beatsSent.filter((r) => { const b = parse(r.body); return !b || typeof b !== 'object' || Array.isArray(b) || Object.keys(b).some((k) => !['kind', 'name', 'note'].includes(k))
+      || !['catalog', 'slots'].includes(b.kind) || typeof b.name !== 'string' || !b.name || (b.note !== undefined && typeof b.note !== 'string'); });
+    const badReset = resets.filter((r) => { const b = parse(r.body); return !b || typeof b !== 'object' || Object.keys(b).length > 0; });
+    ok(`every beat the page applied sent only its kind, its name and a note, and every reset nothing: no document crosses from the page (${beatsSent.length} beat(s), ${resets.length} reset(s))`,
+      beatsSent.length > 0 && badBeat.length === 0 && badReset.length === 0,
+      [...badBeat, ...badReset].map((r) => `${r.path} ${r.body == null ? '(no body readable on the wire)' : `keys ${Object.keys(parse(r.body) || {}).join(',') || 'none'} · ${String(r.body).length} bytes`}`).join(' ~ ').slice(0, 220)
+        || beatsSent.map((r) => (parse(r.body) || {}).name).join(', '));
+  }
   const byPath = {};
   for (const r of api) { const k = r.path.replace(/\/v1\/vantage\/decisions\/snapshot.*/, '/v1/vantage/decisions/snapshot'); byPath[k] = (byPath[k] || 0) + 1; }
   info(Object.entries(byPath).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ×${n}`).join(' · '));
