@@ -158,17 +158,28 @@ const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]
     const res = await asset(leak);
     ok(`/vantage/${leak} → ${res.status} (must not be served)`, res.status !== 200);
   }
-  const served = ['', 'phone?id=galaxy-s26', 'vantage.js', 'vantage.css', 'phones.json', 'plans.json', 'catalog.json', 'seeds.json',
+  // The page's own source is vantage.js and every demo-kit module it loads (lane K2, 2026-10-01: the transport, with
+  // its three doors, moved to public/demo-kit/transport.js), found by following its imports through the served files.
+  const pageModules = new Map([['/vantage/vantage.js', shells['vantage.js']]]);
+  for (const [path, text] of pageModules) {
+    for (const m of text.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)['"]([^'"]+\.js)['"]/g)) {
+      const next = new URL(m[1], `${base}${path}`).pathname;
+      if (!pageModules.has(next)) pageModules.set(next, await (await fetch(`${base}${next}`, { cache: 'no-store' })).text());
+    }
+  }
+  const served = ['', 'phone?id=galaxy-s26', 'vantage.js', 'vantage.css', 'phones.json', 'plans.json', 'catalog.json', 'seeds.json', 'beats.json',
     'img/MANIFEST.json', ...BEAT_FILES.map((b) => `beats/${b}.json`)];
   const hits = [];
   for (const path of served) { const text = await (await asset(path)).text(); for (const w of tokenIn(text)) hits.push(`${path}: ${w}`); }
-  ok(`no served page or document carries a token (${served.length} checked)`, hits.length === 0, hits.join(' ~ '));
+  for (const [path, text] of pageModules) if (path !== '/vantage/vantage.js') for (const w of tokenIn(text)) hits.push(`${path}: ${w}`);
+  ok(`no served page or document carries a token (${served.length + pageModules.size - 1} checked)`, hits.length === 0, hits.join(' ~ '));
 
   // The committed side: every file this demo ships, read from the checkout.
   const walk = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
   const TEXT = /\.(html|js|mjs|ts|css|json|svg|md|toml|txt)$/i;
   const committed = [
     ...walk(join(ROOT, 'public/vantage')).filter((f) => TEXT.test(f)),
+    ...walk(join(ROOT, 'public/demo-kit')).filter((f) => TEXT.test(f)),
     ...['scripts/seed-vantage.mjs', 'scripts/seed-vantage-region.mjs', 'scripts/build-demo-worker-config.mjs', 'scripts/rehearse-vantage-page.mjs',
       'scripts/rehearse-vantage-dom.mjs', 'wrangler.vantage.toml', 'src/routes/vantage.ts', 'src/routes/vantageColdStart.ts'].map((f) => join(ROOT, f)),
     ...walk(join(ROOT, 'docs/verizon')).filter((f) => /\.md$/i.test(f)),
@@ -177,7 +188,8 @@ const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]
   for (const f of committed) for (const w of tokenIn(readFileSync(f, 'utf8'))) leaks.push(`${relative(ROOT, f)}: ${w}`);
   ok(`no file this demo ships carries a token (${committed.length} read from the checkout)`, leaks.length === 0, leaks.join(' ~ '));
 
-  const source = shells['vantage.js'];
+  const source = [...pageModules.values()].join('\n');   // vantage.js and the demo-kit modules it loads
+  info(`the page's source: ${[...pageModules.keys()].join(', ')}`);
   ok('the page source makes no /content, /config or /ops call of its own',
     !/['"`]\/(?:content|config|ops)\//.test(source), 'the merchandiser half must go through /vantage/api/beat');
   ok('the page applies beats by name', /\/vantage\/api\/beat/.test(source) && /\/vantage\/api\/reset/.test(source));

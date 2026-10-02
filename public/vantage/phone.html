@@ -10,8 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<!-- The demo kit (public/demo-kit/): the token sheet, whose documented defaults are Vantage's palette, and the
+     chrome drawn from it (the machine, the director bar, the before/now rows, the sheets, predict-then-prove). -->
+<link rel="stylesheet" href="/demo-kit/tokens.css" />
+<link rel="stylesheet" href="/demo-kit/kit.css" />
 <link rel="stylesheet" href="/vantage/vantage.css" />
-<!-- The demo kit's Before / Now compare (public/demo-kit/): its tokens are set for Vantage in vantage.css. -->
+<!-- The demo kit's Before / Now compare: its tokens are drawn from the token sheet in kit.css. -->
 <link rel="stylesheet" href="/demo-kit/compare.css" />
 </head>
 <!-- index.html and phone.html carry the same shell. phone.html only boots
@@ -280,7 +284,7 @@
       <div class="foot-cols">
         <div><b>Shop</b><span>Phones</span><span>Plans</span><span>Deals</span><span>Home Internet</span></div>
         <div><b>Support</b><span>Contact us</span><span>Coverage map</span><span>Stores</span></div>
-        <div><b>Vantage</b><span>About</span><span>Careers</span><span>Accessibility</span></div>
+        <div><b>Vantage</b><span>About</span><span>Careers</span><span>Accessibility</span><a href="/vantage/how-it-works">How it works</a></div>
       </div>
       <p class="foot-legal" id="footLegal">Vantage is a fictional carrier built for a demonstration. Devices, their names and their prices are real as listed publicly on 30 September 2026; plans, promotions and regional sales are representative. We never vary price, discount, financing or credit by where someone lives. The only geography rule is availability: an offer for a service appears only where that service exists.</p>
     </div>
@@ -420,7 +424,8 @@
 <!-- The page calls the engine routes directly, as Top Offers does, so every
      call can be driven and asserted headlessly. The SDK wraps these same routes
      and is what a customer integrates; the data-op-* attributes on the controls
-     show where its declarative capture would bind. -->
-<script src="/vantage/vantage.js"></script>
+     show where its declarative capture would bind. vantage.js is a module: it
+     builds the page on the demo kit (public/demo-kit/kit.js). -->
+<script type="module" src="/vantage/vantage.js"></script>
 </body>
 </html>

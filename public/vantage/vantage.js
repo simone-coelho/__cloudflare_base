@@ -1,5 +1,5 @@
 /* public/vantage/vantage.js
- * Vantage: a carrier's homepage and phone page, driven by the engine.
+ * Vantage: a carrier's homepage and phone page, driven by the engine, on the demo kit.
  *
  * THE RULES THIS FILE EXISTS TO KEEP (docs/demos/BOOTSTRAP.md section 0).
  *
@@ -18,9 +18,20 @@
  * 4. NO CREDENTIAL IN THE PAGE. Merchandiser beats are applied BY NAME by the
  *    worker (src/routes/vantage.ts); the page holds no operator token.
  *
+ * The chassis is the demo kit's (public/demo-kit/, wired by createDemo below): the
+ * transport (X-Tenant on every call, the visitor and her consent, the events, the
+ * snapshot, the receipts), the director (the beats as data and their runner, the
+ * performed presses with the visible cursor, the keyboard, ?debug ?wait ?region
+ * ?fixtures), the machine's panels (meters, the cold start, Why these, the day's
+ * report), the before/now rows and their chips, predict-then-prove, the sheets
+ * and Compare. This file is Vantage's vertical layer: the renderers (the hero,
+ * the deal cards, the rail, the pool, the buy box and the module bodies), the
+ * facts its beats speak about, the few verbs the kit lacks, and its data.
+ *
  * Where each thing comes from:
  *   public/vantage/phones.json, plans.json, catalog.json   lane L1 (content)
  *   public/vantage/beats/*.json, beats/anchor.json          lane L1 (engine documents, page facts)
+ *   public/vantage/beats.json                               the director's script: the beats as data (lane K2)
  *   public/vantage/img/MANIFEST.json                        lane L3 (every image, by file)
  *   GET /vantage/api/coldstart                              lane L4 (the arrival panel)
  *   public/vantage/fixtures/*                               lane L2 (labelled build fixtures)
@@ -36,29 +47,149 @@
  *   GET  /vantage/api/coldstart
  *   WS   /realtime/ws?tenant=vantage            the exit beat, behind a flag
  */
+import { createDemo, util } from '/demo-kit/kit.js';
+
 (() => {
   'use strict';
 
+  const { esc, num, money, money0, trunc2, sleep, fmt3, fmt2, hhmm, uid, arr, stripTags, idle, focusOn, scrollTop } = util;
+
   const BRAND = { name: 'Vantage', tagline: 'See further.' };
   const TENANT = 'vantage';
-  let SOURCE = 'vantage-demo';            // lane L1's anchor names it (events.source); read again at boot
   const API = {
     reset: '/vantage/api/reset', beat: '/vantage/api/beat', report: '/vantage/api/report',
     receipt: '/vantage/api/receipt', coldstart: '/vantage/api/coldstart',
   };
-  const QS = new URLSearchParams(location.search);
-  const FIXTURE = QS.has('fixtures');
-  // ?region=US-NY is a REHEARSAL OVERRIDE, never the default: the suites pass it so their figures stay
-  // reproducible, and the panel labels it. Without it the arrival asserts no region and the edge locates the
-  // request (lane F2, 2026-10-01: the real location always leads).
-  const regionParam = (s) => { const k = String(s || '').trim().toUpperCase(); return /^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$/.test(k) ? k : null; };
-  const OVERRIDE = { region: regionParam(QS.get('region')), metro: QS.get('metro'),
-    ignored: QS.has('region') && !regionParam(QS.get('region')) ? String(QS.get('region')).slice(0, 16) : null };
-  /** Under local wrangler dev, request.cf is the runtime's stand-in, not an edge's reading of the request; the panel says so. */
-  const LOCAL_RUNTIME = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /\.localhost$/.test(location.hostname);
+  // The engine's page and slot names; lane L1's anchor may rename them at boot (merged in place, so the kit sees them too).
+  const PAGES = { home: 'home', phone: 'phone' };
+  const SLOTS = { hero: 'hero', deals: 'deals', rail: 'phones-rail', modules: 'pdp-modules', plans: 'plan-pairing', offer: null };
+  const DIM_LABEL = { category: 'category', brand: 'brand', ecosystem: 'ecosystem', os: 'ecosystem', priceBand: 'price band', intent: 'intent', perk: 'perk', lines: 'lines', contentType: 'content' };
+  const INTENTS = [['new', 'New line'], ['add-line', 'Add a line'], ['upgrade', 'Upgrade'], ['byod', 'Bring your own']];
+  const INTENT_WORD = Object.fromEntries(INTENTS);
+  /** In a frame the sticky price bar sits where the page puts it: a full-page frame has no viewport to stick it to. */
+  const FREEZE_EXTRA = '.stickybar{position:relative!important;bottom:auto!important}';
+  /**
+   * Left out of every clone: the chrome outside the site, and the site's views that are not on screen. None of it
+   * shapes what is (the machine sits in a grid column its template fixes, or below the site on a narrow screen; the
+   * rest is fixed or closed; a hidden view has no box, and no rule selects a view by its position among them), and
+   * the clone of the whole document is the only thing a beat waits for when it takes its Before.
+   */
+  const CLONE_IGNORE = '.machine, .director, .pd-back, .sheet-back, .pd-pill, #demo-cursor, .back-chip, .fixture-flag, .skip, #site > .stage > .view[hidden]';
+  /** The sentence under every comparison: what is the same on both sides, and the one thing that is not. */
+  const FOOT = {
+    moment: 'Same page, same catalog, same buy box and the same public prices. Only what each moment knew about the shopper is different.',
+    // The streaming shopper on her own phone page; when he opens another phone, twoShoppersFoot names the two pages.
+    streaming: 'Same page, same catalog, same buy box, same public prices. Only what each of them did is different.',
+    phone: 'Same phone, same moment, same region, same buy box and the same public prices. The fresh visitor has sent nothing: the template order, with the region’s prior. Hers, on the left, is what her browsing earned.',
+    home: 'Same homepage, same moment, same region, same catalog and the same public prices. The fresh visitor has sent nothing: the region’s prior alone. Hers, on the left, is what her visit earned.',
+  };
+  /** The machine's Roadmap tab: what is built and what is designed. */
+  const ROADMAP = [
+    ['built', 'eligibleWhen { regions, context }', 'The home bundle only where 5G Home is available, and offers that need an answer to “new line, add a line, upgrade or bring your own”. A condition the request does not carry fails closed.'],
+    ['built', 'slot seeds', 'The campaign lifts the promotion its utm_term names, as context, never as evidence about her; the receipt itemises it.'],
+    ['built', 'learn.regional', 'The carrier’s own regional sales blended by λ = K / (K + Σa), giving way as her evidence grows.'],
+    ['built', 'one slot, many modules', 'The phone page’s modules are pieces of one slot; the order the engine returns is the order on the page.'],
+    ['built', 'POST /sort', 'The phones rail; at an affinity weight of zero the engine returns the site’s own order exactly.'],
+    ['designed', 'the sign-in hand-off', 'At sign-in the session’s signals travel to their own decisioning as context; nothing personal is used before it.'],
+    ['designed', 'census as explanation only', 'Shown on the arrival panel, never scored: no neighbourhood figure reaches a price, a plan or financing.'],
+  ];
 
-  let PAGES = { home: 'home', phone: 'phone' };
-  let SLOTS = { hero: 'hero', deals: 'deals', rail: 'phones-rail', modules: 'pdp-modules', plans: 'plan-pairing', offer: null };
+  // ════════════════════════════════════════════════════════════════════════
+  // THE KIT. Every hook below is Vantage's answer to a question the chassis
+  // asks; the module headers in public/demo-kit/ name each one.
+  // ════════════════════════════════════════════════════════════════════════
+  const demo = createDemo({
+    tenant: TENANT, api: API, pageNames: PAGES, slots: SLOTS, dimLabels: DIM_LABEL, source: 'vantage-demo', docBase: '/vantage/',
+    debugName: '__vantage', intents: INTENTS, roadmap: ROADMAP,
+    state: {
+      phones: [], phoneById: new Map(), phonesDoc: null, details: {}, plans: null, plansFx: null,
+      display: new Map(), engine: null, catalogName: null,
+      anchor: {}, manifest: null, engineFx: null,
+      view: 'home', phoneId: null, pageKey: null, pageFrom: null, phonesBrand: null,
+      home: { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null },
+      phone: { previous: null, current: null, set: null },
+      rail: { status: 'site', order: null, items: null, off: false },
+      socket: null, exitArmedAt: 0, exitNote: null,
+    },
+    // The transport: her own fields on a new visitor, the answer always asserted, the opening documents, the fixtures.
+    visitor: () => ({ lines: 1, plan: null, config: null, lastHomeLead: null, homeSet: null, phoneSet: null, cart: 0 }),
+    defaultIntent: () => defaultIntent(),
+    beatName: (key, kind) => beatName(key, kind),
+    fixtures: { api: (path, payload, opts) => fixtureApi(path, payload, opts), receipts: (ids) => fixtureReceipts(ids) },
+    // The director: the one dispatcher, the router, the facts the beats read, the pages and verbs they drive.
+    control: (t) => handleControl(t),
+    controls: { skip: '.terms' },
+    restore: () => restoreFromUrl(),
+    view: () => state.view,
+    facts: () => facts(),
+    pages: {
+      home: { open: (o) => openHome(o), refresh: () => refreshHome(), place: (slots, label) => placeDeals(slots, label) },
+      phone: { refresh: () => refreshPhone() },
+    },
+    verbs: { arrive: () => arrive(), readMetersBefore: () => readMetersBefore(), askAgainAfterTheMinute: () => askAgainAfterTheMinute() },
+    publishing: async (kind, name) => { if (kind === 'catalog') await useCatalog(name); },
+    published: async (kind) => { if (kind === 'reset') await useCatalog(beatName('open', 'catalog')); },
+    beforeBeat: (b) => { if (!b.data.engineNote) { state.exitNote = null; const rd = $('railDeltas'); if (rd) rd.hidden = true; } },
+    beatFailed: (m) => engineDown(state.view === 'phone' ? el.modulesDown : el.dealsDown, m),
+    assertRegions: () => assertableRegions(),
+    intentAsserted: async () => { if (state.view === 'phone') { renderBuyBox(); await refreshPhone(); } else if (state.view === 'home') await refreshHome(); },
+    compareTools: [['fresh', 'Fresh visitor', () => freshVisitor()], ['streaming', 'Streaming shopper', () => streamingShopper()]],
+    // Predict, then prove: what the last press decided, where a target stands, what is on screen.
+    proofBefore: () => ({ home: state.home.current, phone: state.phone.current }),
+    proof: (before) => proofOf(before),
+    standing: (target) => standingLine(target),
+    nowMap: () => nowMap(),
+    // The panels: the set on screen, the regional driver, the registry's memory, names, fixtures, Why these, the report.
+    currentSet: () => (state.view === 'phone' ? state.phone.set : state.home.set),
+    regionalDriver: () => state.home.set && bySlot(state.home.set, SLOTS.deals).map((d) => ((d.explain && d.explain.drivers) || []).find((x) => x.dim === 'regional')).find(Boolean),
+    memoryDims: () => (((state.anchor.registry || {}).memory || {}).dimensions || []),
+    regionName: (key) => regionName(key),
+    coldStartFixture: async (region) => (await tryJson(`/vantage/fixtures/coldstart-${region || 'none'}.json`)) || tryJson('/vantage/fixtures/coldstart-none.json'),
+    coldStart: { seeded: 'brand, ecosystem, price band and category', salesOf: 'the carrier’s', fixture: { why: 'lane L2’s labelled fixture is shown', label: 'lane L2 fixture', tag: 'L2 fixture' } },
+    why: () => whyGroups(),
+    titleOf: (d) => titleOf(d),
+    report: {
+      slots: () => [SLOTS.deals, SLOTS.modules, SLOTS.plans, SLOTS.hero],
+      labels: () => ({ [SLOTS.deals]: 'Attribution per promotion · the deals four', [SLOTS.modules]: 'Module engagement · the phone page', [SLOTS.plans]: 'Plan mix · clicks per plan in Pair with a plan', [SLOTS.hero]: 'The hero' }),
+      row: (slot, id) => reportRow(slot, id),
+      attach: { get slot() { return SLOTS.modules; }, rows: [['protection', 'Protection attach'], ['accessories', 'Accessory attach'], ['home-bundle', 'Bundle mix: home internet'], ['connected-devices', 'Connected-device lines']] },
+      holdout: () => ((state.anchor.learn || {}).holdout || {}).share,
+      theirs: 'Lines per order, the share of switchers, conversion, revenue per account and churn are read in your warehouse from orders, against a holdout assigned by account so one account’s lines never split. The rows above are what we hand you to run it on.',
+    },
+    // The before/now rows, keyed by slot; the sheets; Compare.
+    rows: () => deltaRows(),
+    sheetClosed: async (was) => { if (was && was.from === 'phone' && state.view === 'phone') await refreshPhone(); },
+    compare: { root: '#site', freezeCss: FREEZE_EXTRA, ignore: CLONE_IGNORE, foot: FOOT.moment, where: () => whereNow(), snapshot: () => snapshotOfPage() },
+  });
+  const { state, flags, transport, panels, deltas, director, sheets } = demo;
+
+  // The kit's functions under the names this file has always used, so its renderers read as they did.
+  const QS = flags.qs;
+  const FIXTURE = flags.fixtures;
+  // ?region=US-NY is a REHEARSAL OVERRIDE, never the default (the director reads it): the suites pass it so their
+  // figures stay reproducible, and the panel labels it. Without it the arrival asserts no region and the edge
+  // locates the request (lane F2, 2026-10-01: the real location always leads).
+  const OVERRIDE = { region: flags.region, metro: flags.metro, ignored: flags.regionIgnored };
+  const LOCAL_RUNTIME = transport.localRuntime;
+  const { api, cur, send, sendCustom, ask, bySlot, mintVisitor, useVisitor, ensureVisitor, landingEntry, directEntry, describeEntry,
+    tryJson, firstJson, unwrap, creditDecided, prefetchReceipts, connectSocket } = transport;
+  const { note, renderWho, renderVectors, loadColdStart, coldLabel, roomOf, thetaIn, thetaOut, setRegion, ownRegion, ownSource, ownName,
+    regionShown, seedLabel, driverSummary, renderWhy, renderRoadmap } = panels;
+  const { say, performClick, renderAsserts, renderPresses, renderNext } = director;
+  const openSheet = (kind, html) => sheets.open(kind, html);
+  const closeSheet = () => sheets.close();
+  const kit = () => demo.compare.load();
+  const takeBaseline = (reason, renderAfter) => demo.compare.takeBaseline(reason, renderAfter);
+  const afterDecidedPaint = (viewKey) => demo.compare.afterDecidedPaint(viewKey);
+  const { frameLabel, whoNow } = demo.compare;
+  const compareCols = (a, b, keys) => demo.compare.columns(a, b, keys);
+  const renderDealsChanges = () => deltas.render(SLOTS.deals);
+  const renderBeforeRow = () => deltas.renderBeforeRow(SLOTS.deals);
+  const renderPdpChanges = () => deltas.render(SLOTS.modules);
+  /** Off the homepage the four have not been asked again, and the strip says so rather than keep a stale line. */
+  const renderPending = (where) => deltas.pending(SLOTS.deals, where);
+  /** The hinge, read off the receipts: the deals strip's line, or null. */
+  const hingeLine = () => deltas.superseded(SLOTS.deals);
 
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -81,72 +212,11 @@
     pdpBefore: $('pdpBefore'), pdpDeltas: $('pdpDeltas'), pdpCompareTable: $('pdpCompareTable'), pdpSpecs: $('pdpSpecs'),
     sbWhat: $('sbWhat'), sbPrice: $('sbPrice'),
     pageCrumbs: $('pageCrumbs'), pageBody: $('pageBody'),
-    whoChip: $('whoChip'), armChip: $('armChip'), ctxChips: $('ctxChips'),
-    vectors: $('vectors'), priorLine: $('priorLine'),
-    coldStart: $('coldStart'), journey: $('journey'), whyBody: $('whyBody'),
-    reportBody: $('reportBody'), buildReport: $('buildReport'), roadmap: $('roadmap'),
-    captureBtn: $('captureBtn'), compareBtn: $('compareBtn'), captureNote: $('captureNote'),
-    sheetBack: $('sheetBack'), sheetBody: $('sheetBody'), sheetClose: $('sheetClose'),
-    pdBack: $('pdBack'), pdMode: $('pdMode'), pdDone: $('pdDone'), pdAct: $('pdAct'), pdArith: $('pdArith'), pdArithK: $('pdArithK'),
-    pdWill: $('pdWill'), pdNow: $('pdNow'), pdNowK: $('pdNowK'), pdWhyWrap: $('pdWhyWrap'), pdWhy: $('pdWhy'), pdWhyHead: $('pdWhyHead'),
-    pdMapNow: $('pdMapNow'), pdMapAfter: $('pdMapAfter'), pdGo: $('pdGo'), pdPill: $('pdPill'), pdNote: $('pdNote'),
-    beatNo: $('beatNo'), engineLine: $('engineLine'), nextBeat: $('nextBeat'), nextLabel: $('nextLabel'),
-    explainBtn: $('explainBtn'), directorHandle: $('directorHandle'), presses: $('presses'), status: $('status'),
-    assertRegion: $('assertRegion'), assertIntent: $('assertIntent'), compareTools: $('compareTools'),
   };
-
-  const state = {
-    phones: [], phoneById: new Map(), phonesDoc: null, details: {}, plans: null, plansFx: null,
-    display: new Map(), engine: null, catalogName: null,
-    anchor: {}, registry: null, manifest: null, engineFx: null, sources: {},
-    visitors: {}, who: null,
-    view: 'home', phoneId: null, pageKey: null, pageFrom: null, phonesBrand: null,
-    ctx: { region: null }, regionSource: 'edge',
-    own: null,                            // her own region, as the arrival read it: { key, label, source: edge | override | none }
-    home: { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null },
-    phone: { previous: null, current: null, set: null },
-    rail: { status: 'site', order: null, items: null, off: false },
-    beat: null, busy: false, fixtureStep: null, fixtureDone: new Set(), showBefore: false,
-    receipts: new Map(), coldstart: null, lastVector: {}, fresh: new Set(),
-    socket: null, exitArmedAt: 0, exitNote: null, pdProof: null, sheet: null,
-  };
-
-  const say = (t, tone) => { el.status.textContent = t; el.status.dataset.tone = tone || ''; };
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const num = (n) => (typeof n === 'number' ? n : Number(n));
-  const money = (n) => (n == null || !Number.isFinite(num(n)) ? '' : `$${num(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-  const money0 = (n) => (n == null || !Number.isFinite(num(n)) ? '' : (num(n) % 1 ? money(n) : `$${num(n).toLocaleString('en-US')}`));
-  const trunc2 = (n) => Math.floor(n * 100 + 1e-6) / 100;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const fmt3 = (n) => (Number.isFinite(num(n)) ? num(n).toFixed(3) : '—');
-  const fmt2 = (n) => (Number.isFinite(num(n)) ? num(n).toFixed(2) : '—');
-  const hhmm = (t) => new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const sdkKey = ((document.querySelector('meta[name="edge-sdk-key"]') || {}).content) || 'demo-site';
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Date.now()) + Math.random().toString(16).slice(2));
-  const arr = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
   // ════════════════════════════════════════════════════════════════════════
   // CONTENT. Lane L1's files first; the page names what it fell back to.
   // ════════════════════════════════════════════════════════════════════════
-  async function tryJson(url) {
-    try {
-      const r = await fetch(url, { cache: 'no-store' });
-      if (!r.ok) return null;
-      const type = r.headers.get('content-type') || '';
-      if (type && !/json/.test(type)) return null;          // a static host's HTML fallback is not a document
-      return await r.json();
-    } catch { return null; }
-  }
-  async function firstJson(label, urls) {
-    for (const url of urls) {
-      const doc = await tryJson(url);
-      if (doc) { state.sources[label] = url.replace('/vantage/', ''); return doc; }
-    }
-    state.sources[label] = 'missing';
-    return null;
-  }
-  /** A beat file wraps the engine document it publishes: { name, kind: 'publish', publish: { kind, document } }. */
-  const unwrap = (doc) => (doc && doc.publish && doc.publish.document ? doc.publish.document : doc);
 
   /** The engine's own catalog document for the current beat: windows and rules; the pool view reads these. */
   async function useCatalog(name) {
@@ -322,179 +392,9 @@
     if (holder.firstElementChild) node.replaceWith(holder.firstElementChild); else node.remove();
   }, true);
 
-  // ════════════════════════════════════════════════════════════════════════
-  // TRANSPORT. Exactly the Top Offers pattern: direct routes, X-SDK-Key,
-  // X-Tenant, and the shopper capability on every shopper call.
-  // ════════════════════════════════════════════════════════════════════════
-  const cur = () => (state.who ? state.visitors[state.who] : null);
-  async function api(path, payload, opts = {}) {
-    if (FIXTURE) return fixtureApi(path, payload, opts);
-    const v = Object.prototype.hasOwnProperty.call(opts, 'visitor') ? opts.visitor : cur();
-    const headers = { 'X-SDK-Key': sdkKey, 'Content-Type': 'application/json', 'X-Tenant': TENANT };
-    if (v && v.session) headers['X-Shopper-Session'] = v.session.capability;
-    try {
-      const res = await fetch(path, { method: payload === undefined ? 'GET' : 'POST', headers,
-        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }) });
-      return { status: res.status, ok: res.ok, body: await res.json().catch(() => ({})) };
-    } catch (error) {
-      return { status: 0, ok: false, body: { error: String((error && error.message) || error) } };
-    }
-  }
-  /** The demo route: a named beat, applied by the worker. No document crosses from the page. */
-  async function demoRoute(path, body) {
-    if (FIXTURE) { await sleep(120); return { ok: true }; }
-    const res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT }, body: JSON.stringify(body || {}) })
-      .catch((e) => ({ ok: false, status: 0, json: async () => ({ error: e.message }) }));
-    const out = await res.json().catch(() => null);
-    if (!res.ok || !out || out.ok !== true) {
-      // The route's own answer rides on the error, so a named refusal (the report's 413) can be shown as itself.
-      const error = new Error((out && out.error) || `${path} failed (${res.status})`);
-      error.status = res.status; error.body = out;
-      throw error;
-    }
-    return out;
-  }
-  const applyBeat = (kind, name, note) => {
-    if (!name) throw new Error(`no ${kind} document is named for this beat`);
-    return demoRoute(API.beat, { kind, name, note });
-  };
-  async function resetTenant() {
-    try { return await demoRoute(API.reset, {}); } catch (error) {
-      if (!/404|Not Found/i.test(String(error.message))) throw error;
-      await applyBeat('slots', beatName('open', 'slots'), 'the opening slots');
-      return applyBeat('catalog', beatName('open', 'catalog'), 'the opening pool');
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // VISITORS. Session first, then her explicit consent, as Top Offers.
-  // ════════════════════════════════════════════════════════════════════════
-  /** The landing's arrival signals: exactly the fields the engine's entry contract names. */
-  function landingEntry(params) {
-    const q = params || new URLSearchParams(location.search);
-    const entry = {};
-    const source = q.get('utm_source'), medium = q.get('utm_medium'), term = q.get('utm_term');
-    if (source) entry.utmSource = source.slice(0, 256);
-    if (medium) entry.utmMedium = medium.slice(0, 128);
-    if (term) entry.utmTerm = term.slice(0, 256);
-    const referrer = (params && params.get('referrer')) || document.referrer || '';
-    if (referrer) { entry.referrer = referrer; entry.siteHost = location.host; }
-    return entry;
-  }
-  const directEntry = () => ({});
-  /** Snapshot URLs carry a host-only referrer, never a path or query (src/services/visit.ts snapshotEntry). */
-  function snapshotEntry(entry) {
-    if (!entry || !Object.keys(entry).length) return null;
-    const out = { ...entry };
-    if (out.referrer) { try { out.referrer = new URL(out.referrer).hostname; } catch { out.referrer = ''; } }
-    return JSON.stringify(out);
-  }
+  /** Her answer when she has given none: lane L1's anchor names it (a signed-out visitor is a new line). */
   const defaultIntent = () => ((state.anchor.ctx && state.anchor.ctx.intent && state.anchor.ctx.intent.default) || 'new');
-
-  async function mintVisitor(key, entry, label) {
-    const { status, body } = await api(`/v1/${TENANT}/identity/session`, {}, { visitor: null });
-    if (!body || !body.session) throw new Error(`the engine did not mint a shopper session (${status}${body && body.error ? `: ${body.error}` : ''})`);
-    const s = body.session;
-    const v = { key, label: label || `Shopper ${key}`, session: s, entry, journey: [], lines: 1, plan: null, intent: defaultIntent(),
-      config: null, lastHomeLead: null, homeSet: null, phoneSet: null, vector: {}, cart: 0 };
-    const { body: pref } = await api('/realtime/session/preferences', {
-      userId: s.subject, trackingConsent: true, personalizationEnabled: true,
-      choice: { id: uid(), expectedRevision: null, grantId: s.grantId, iat: s.iat, exp: s.exp },
-    }, { visitor: v });
-    if (!pref || !pref.consent || !pref.consent.personalization) throw new Error('the visitor did not grant consent');
-    state.visitors[key] = v;
-    return v;
-  }
-  function useVisitor(key) {
-    state.who = key;
-    const v = cur();
-    state.lastVector = (v && v.vector) || {};
-    renderWho();
-    renderJourney();
-  }
-  /** Any press or any hand on the page mints a visitor if none exists: nothing waits on beat 1. */
-  async function ensureVisitor() {
-    if (cur()) return cur();
-    const v = await mintVisitor('A', landingEntry());
-    useVisitor('A');
-    note('arrived', 'A new visitor', `anonymous · consent granted · ${describeEntry(v.entry)}`);
-    return v;
-  }
-  function describeEntry(entry) {
-    if (!entry || (!entry.utmMedium && !entry.utmSource && !entry.utmTerm && !entry.referrer)) return 'arrived direct';
-    return [entry.utmMedium, entry.utmSource, entry.utmTerm && `term “${entry.utmTerm}”`].filter(Boolean).join(' · ');
-  }
-
-  // ── The events. Sent BECAUSE a real control ran. ─────────────────────────
-  function send(type, data, v = cur()) {
-    if (!v) return Promise.resolve(null);
-    return api('/realtime/action', { userId: v.session.subject, sessionId: v.session.sessionId, source: SOURCE, type, data,
-      ...(v.entry && Object.keys(v.entry).length ? { entry: v.entry } : {}) }, { visitor: v });
-  }
-  /**
-   * A selector, a compare, a filter or a start: a custom event, named by its
-   * event field (the engine reads it to weigh the touch) with the control that
-   * sent it. The shapes are lane L1's beat documents, as measured.
-   */
-  const sendCustom = (event, data, v) => send('custom', { event, ...data }, v);
   const linesWord = (n) => (n >= 3 ? 'family' : n === 2 ? 'duo' : 'solo');
-
-  // ── This session, written down as it happens ─────────────────────────────
-  function note(verb, what, detail, v = cur()) {
-    if (!v) return;
-    v.journey.push({ verb, what, detail, at: Date.now() });
-    if (v === cur()) renderJourney();
-  }
-  function renderJourney() {
-    const v = cur();
-    if (!v || !v.journey.length) { el.journey.innerHTML = '<li class="journey-empty">Nobody has arrived yet.</li>'; return; }
-    const cls = (verb) => (['published', 'tuned', 'asserted'].includes(verb) ? ' verb--merch' : verb === 'engine' ? ' verb--engine' : verb === 'opened' ? ' verb--open' : '');
-    el.journey.innerHTML = v.journey.map((j, i) => `<li${i === v.journey.length - 1 ? ' class="fresh"' : ''}>
-      <span class="verb${cls(j.verb)}">${esc(j.verb)}</span>
-      <span class="what">${esc(j.what)}${j.detail ? `<em>${esc(j.detail)}</em>` : ''}</span></li>`).join('');
-    const panels = el.journey.closest('.mpanels');
-    if (panels && !el.journey.parentElement.hidden) panels.scrollTop = panels.scrollHeight;
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // THE QUESTION. One snapshot per page view; the page renders what it says.
-  // ════════════════════════════════════════════════════════════════════════
-  async function ask(pageKey, v = cur()) {
-    const q = new URLSearchParams({ page: PAGES[pageKey] || pageKey });
-    const entry = snapshotEntry(v && v.entry);
-    if (entry) q.set('entry', entry);
-    if (state.ctx.region) q.set('ctx.region', state.ctx.region);
-    q.set('ctx.intent', (v && v.intent) || defaultIntent());   // always asserted: gated offers fail closed without it
-    const r = await api(`/v1/${TENANT}/decisions/snapshot?${q}`, undefined, { visitor: v });
-    if (!r.ok || !r.body || !Array.isArray(r.body.decisions)) {
-      return { ok: false, status: r.status, error: (r.body && r.body.error) || `the decision service answered ${r.status || 'nothing'}` };
-    }
-    return { ok: true, set: { ...r.body, asked: { intent: q.get('ctx.intent'), region: q.get('ctx.region') } } };
-  }
-  const bySlot = (set, slot) => ((set && set.decisions) || []).filter((d) => d.slot === slot).sort((a, b) => a.order - b.order);
-
-  function renderWho() {
-    const v = cur();
-    el.whoChip.textContent = v ? `${v.label} · anonymous · consent on` : 'No visitor yet';
-    el.whoChip.classList.toggle('who--b', Boolean(v && v.key !== 'A'));
-    const set = state.view === 'phone' ? state.phone.set : state.home.set;
-    if (set && set.arm) {
-      el.armChip.hidden = false;
-      el.armChip.textContent = `arm ${set.arm}`;
-      el.armChip.classList.toggle('arm--default', set.arm !== 'personalized');
-      el.armChip.title = set.arm === 'personalized' ? 'Served decisions.' : 'The holdout: the site default for this shopper.';
-    } else el.armChip.hidden = true;
-    const own = state.own;
-    const chips = [state.ctx.region
-      ? `<span title="${state.regionSource === 'rehearsal override' ? 'A rehearsal override (?region=): asserted on the request, labelled' : 'Asserted on the request, labelled: not observed'}">region <b>${esc(state.ctx.region)}</b> · ${esc(state.regionSource)}</span>`
-      : own && own.key
-        ? `<span title="${LOCAL_RUNTIME ? 'From the request, as the local runtime fills request.cf' : 'From the request: the edge located her, nothing asserted'}">region <b>${esc(own.key)}</b> · from the request</span>`
-        : `<span title="Nothing asserted: the region comes from the request when it carries one">region <b>${own ? 'none on this request' : 'from the request'}</b></span>`];
-    if (v && v.intent) chips.push(`<span title="Asserted, as her account would; it gates offers and never prices">intent <b>${esc(v.intent)}</b> · asserted</span>`);
-    if (v && v.stage) chips.push(`<span title="The journey stage the engine reads from her profile">stage <b>${esc(v.stage)}</b></span>`);
-    el.ctxChips.innerHTML = chips.join('');
-    renderAsserts();
-  }
 
   // ════════════════════════════════════════════════════════════════════════
   // VIEWS AND ROUTES
@@ -521,11 +421,6 @@
       // A Compare shopper's pages replace the entry rather than add one: her history stays hers (L5 finding 1).
       if (url !== location.pathname + location.search) history[state.quietRoute ? 'replaceState' : 'pushState']({ vantage: true }, '', url);
     } catch { /* a sandboxed document has no history */ }
-  }
-  const scrollTop = () => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* optional */ } };
-  function focusOn(node, block) {
-    if (!node) return;
-    try { node.scrollIntoView({ behavior: 'smooth', block: block || 'start' }); } catch { /* optional */ }
   }
 
   /** Content pages: landing on one IS the event, with that page's own attributes. */
@@ -571,7 +466,7 @@
     renderWho();
     // The beat's sentence about this answer: once with the answer (10d names its leader from the decision alone),
     // and again once the receipts are read (the hinge needs the campaign seed's record). Null keeps the line.
-    const sayAfter = () => { const b = state.lineBeat; const said = b && b.after ? b.after() : null; if (said) el.engineLine.innerHTML = said; };
+    const sayAfter = () => director.sayAfter();
     sayAfter();
     await Promise.all([sortRail(), renderVectors()]);
     renderPool();
@@ -667,13 +562,6 @@
     renderPending(`On ${pageTitle(key)}`);
   }
 
-  /** Off the homepage the four have not been asked again, and the strip says so rather than keep a stale line. */
-  function renderPending(where) {
-    const top = topSignal();
-    el.dealsDeltas.innerHTML = `<li class="delta-none">${esc(where)}: the homepage has not been asked again yet.${top
-      ? ` Her strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= thetaIn()
-        ? `past the ${fmt2(thetaIn())} entry threshold.` : `under the ${fmt2(thetaIn())} entry threshold.`}` : ''}</li>`;
-  }
 
   // ════════════════════════════════════════════════════════════════════════
   // THE HERO. Slot hero, take 1. Whichever hero piece the decision returns.
@@ -703,27 +591,6 @@
     el.hero.className = `hero-card${prevKey && prevKey !== cid ? ' hero-card--entered' : ''}${isContinue ? ' hero-card--continue' : ''}`;
     el.hero.innerHTML = `<div class="hero-copy"${decided}>${copy}</div><div class="hero-art">${art}</div>
       <span class="hero-slotlabel">slot ${esc(SLOTS.hero)}</span><span class="hero-receipt">${esc(d ? heroReceipt(d) : 'the site’s own hero · no visitor yet, nothing decided')}</span>`;
-  }
-  /**
-   * The arrival seeds a receipt records (`explain.contextual`), named for what
-   * fired. `applied` is what they moved the score together, measured where it
-   * lands. On a phone the platform seed fires beside the campaign, so a single
-   * name carries that total only when that seed alone contributed; otherwise the
-   * total is "seeds" and each one is listed (R1 N6).
-   */
-  const SEED_NAME = { campaign_term: 'campaign', platform: 'platform', entry_channel: 'channel', referrer_network: 'referrer' };
-  function seedsFired(c) {
-    const by = new Map();
-    for (const x of arr(c && c.drivers)) {
-      const k = SEED_NAME[x.signal] || String(x.signal || 'seed').replace(/_/g, ' ');
-      by.set(k, (by.get(k) || 0) + num(x.contribution));
-    }
-    return [...by].filter(([, v]) => v > 0);
-  }
-  /** `campaign +0.066` on a desktop; `seeds +0.231 (campaign · platform)` when both fired. Plain text; `bold` wraps the figure. */
-  function seedLabel(c, bold) {
-    const fired = seedsFired(c), figure = bold ? `<b>+${fmt3(c.applied)}</b>` : `+${fmt3(c.applied)}`;
-    return fired.length === 1 ? `${fired[0][0]} ${figure}` : `seeds ${figure}${fired.length ? ` (${fired.map(([k]) => k).join(' · ')})` : ''}`;
   }
   function heroReceipt(d) {
     const parts = [d.strategy === 'tenant-pinned' ? 'pinned' : d.strategy === 'default' ? 'the catalog’s order' : `decided · score ${fmt3(d.score)}`];
@@ -813,16 +680,6 @@
     const c = rec && rec.explain && rec.explain.contextual;
     return `${head}${drv ? `<br>${drv}` : ''}${c && num(c.applied) > 0 ? ` · ${seedLabel(c, true)}` : ''}`;
   }
-  const OWN = (x) => !['regional', 'merchandising', 'stage', 'freshness', 'fatigue', 'external'].includes(x.dim);
-  /** An intent she gave with the buy-box toggle is declared, not observed: the receipt line says so. */
-  const declaredMark = (x) => (x && x.dim === 'intent' && cur() && cur().declared && cur().declared.has(x.value) ? ' (declared)' : '');
-  function driverSummary(d, n) {
-    const drivers = (d.explain && d.explain.drivers) || [];
-    const own = drivers.filter(OWN).sort((a, b) => num(b.a) * num(b.weight) - num(a.a) * num(a.weight)).slice(0, n).map((x) => `${esc(DIM_LABEL[x.dim] || x.dim)} ${esc(x.value)}${declaredMark(x)}`);
-    const r = drivers.find((x) => x.dim === 'regional');
-    const merch = drivers.find((x) => x.dim === 'merchandising');
-    return [...own, ...(r ? [`region ${esc(r.value)}`] : []), ...(merch ? ['promotion weight'] : [])].join(' · ');
-  }
   function refreshReceiptLines() {
     const deals = bySlot(state.home.set, SLOTS.deals);
     el.deals.querySelectorAll('.receipt[data-receipt]').forEach((node) => {
@@ -847,125 +704,15 @@
     const rotate = !site && opts.rotate !== false;
     const previousOrder = (state.home.current || []).map((c) => c.id);
     const after = decisions.map(dealView);
-    if (rotate) {
-      state.home.previous = state.home.current; state.home.current = after;
-      state.home.prevDecisions = state.home.curDecisions; state.home.curDecisions = decisions;
-    }
-    const moves = {};
-    const prev = state.home.previous;
-    if (prev && !site) {
-      const ids = prev.map((b) => b.id);
-      after.forEach((a, i) => {
-        const was = ids.indexOf(a.id);
-        if (decisions[i].strategy === 'tenant-pinned' && was !== i) moves[a.id] = { cls: 'pin', text: 'pinned' };
-        else if (was === -1) moves[a.id] = { cls: 'in', text: 'new' };
-        else if (prev[was].title !== a.title || prev[was].art !== a.art) moves[a.id] = { cls: 'swap', text: 'new creative' };
-        else if (was > i) moves[a.id] = { cls: 'up', text: `↑${was - i}` };
-        else if (was < i) moves[a.id] = { cls: 'down', text: `↓${i - was}` };
-      });
-    }
+    if (rotate) deltas.rotate(SLOTS.deals, after, decisions);
+    // The chip on each card that moved: the kit's, keyed by this slot (pinned and new creative included).
+    const moves = site ? {} : deltas.moves(SLOTS.deals, state.home.previous, after, decisions);
     el.deals.setAttribute('aria-busy', 'false');
     el.deals.dataset.take = String(decisions.length || 4);
     el.deals.innerHTML = decisions.map((d, i) => dealCardHtml(d, i, { moves, entered: (j, x) => rotate && previousOrder[j] !== x.customerContentId })).join('')
       || '<p class="fine">The slot returned nothing, and the page shows nothing rather than invent a module.</p>';
     if (!site) renderDealsChanges();
     renderBeforeRow();
-  }
-  function dealsDiff(before, after) {
-    if (!before) return [{ sign: '·', cls: 'in', what: 'The opening four', why: 'the first decision this visitor was served' }];
-    const out = [];
-    const beforeIds = before.map((b) => b.id), afterIds = after.map((a) => a.id);
-    const now = Date.now();
-    // Why a piece left, read off the engine: its window, or the receipt's own candidate list. The page tests no rule.
-    const cands = dealCandidates();
-    const wentWhy = (id) => {
-      const p = pieceOf(id);
-      if (!p) return 'left the pool entirely';
-      if (p.window && p.window.to && Date.parse(p.window.to) <= now) return 'its window closed';
-      if (!cands) return 'out of the four';
-      if (cands.has(p.id)) return 'still a candidate, outranked';
-      return p.eligibleWhen ? 'not a candidate for this request: it has a rule' : 'not a candidate for this request';
-    };
-    before.forEach((b, i) => { if (!afterIds.includes(b.id)) out.push({ sign: '−', cls: 'out', what: b.title, why: `left container ${i + 1} · ${wentWhy(b.id)}` }); });
-    after.forEach((a, i) => {
-      const was = beforeIds.indexOf(a.id);
-      if (was === -1) { out.push({ sign: '+', cls: 'in', what: a.title, why: `entered at container ${i + 1}` }); return; }
-      if (before[was].title !== a.title || before[was].art !== a.art) out.push({ sign: '⟳', cls: 'swap', what: a.title, why: 'same content id, new creative' });
-      if (was > i) out.push({ sign: '↑', cls: 'up', what: a.title, why: `container ${was + 1} → ${i + 1}` });
-      else if (was < i) out.push({ sign: '↓', cls: 'down', what: a.title, why: `container ${was + 1} → ${i + 1}` });
-    });
-    return out;
-  }
-  /**
-   * The hinge, read off the receipts rather than asserted: a piece the campaign
-   * lifted was overtaken by pieces her own behaviour carries. The words appear
-   * only when the receipts say so.
-   */
-  function hingeLine() {
-    const set = state.home.set;
-    const before = state.home.previous, after = state.home.current;
-    if (!set || !before || !after) return null;
-    const decisions = bySlot(set, SLOTS.deals);
-    const seeded = [...(state.home.prevDecisions || []), ...decisions].find((d) => {
-      const rec = d.decisionId && state.receipts.get(d.decisionId);
-      return rec && rec.explain && rec.explain.contextual && num(rec.explain.contextual.applied) > 0;
-    });
-    if (!seeded) return null;
-    const was = before.findIndex((b) => b.id === seeded.customerContentId);
-    const now = after.findIndex((a) => a.id === seeded.customerContentId);
-    if (was === -1 || (now !== -1 && now <= was)) return null;
-    const leader = decisions[0];
-    if (!leader || leader.customerContentId === seeded.customerContentId) return null;
-    const own = ((leader.explain && leader.explain.drivers) || []).filter(OWN);
-    if (!own.length) return null;
-    const c = state.receipts.get(seeded.decisionId).explain.contextual;
-    const sig = arr(c.drivers).find((x) => x.signal === 'campaign_term') || arr(c.drivers)[0];
-    const dampedDriver = arr(c.drivers).find((x) => x.dampened);
-    const damp = dampedDriver ? arr(dampedDriver.dampened)[0] : null;   // the engine lists each applied dampen
-    const fired = seedsFired(c);
-    const sp = pieceOf(seeded.customerContentId), lp = pieceOfDecision(leader);
-    // "the campaign (+x)" only when the campaign alone contributed; with the platform seed too, the total is the seeds'.
-    const led = fired.length > 1 ? `its arrival seeds (+${fmt3(c.applied)}: ${fired.map(([k, v]) => `${esc(k)} +${fmt3(v)} at entry`).join(', ')}`
-      : `the campaign (+${fmt3(c.applied)}${sig ? ` from ${esc(String(sig.signal).replace(/_/g, ' '))} “${esc(sig.value)}”` : ''}`;
-    return `<li class="delta-hinge"><span class="hk">Campaign context superseded by observed behaviour</span>
-      <b>${esc(sp ? sp.title : seeded.customerContentId)}</b> led on ${led}${damp ? `, dampened ×${fmt2(damp.factor)} once she held ${esc(damp.dimension)} ${esc(damp.value)}` : ''}).
-      <b>${esc(lp ? lp.title : leader.customerContentId)}</b> now leads on her own browsing: ${own.slice(0, 3).map((x) => `${esc(DIM_LABEL[x.dim] || x.dim)} ${esc(x.value)} ${fmt2(x.a)} × ${x.weight}`).join(', ')}.</li>`;
-  }
-  function renderDealsChanges() {
-    const before = state.home.previous, after = state.home.current || [];
-    el.dealsGhosts.innerHTML = before && before.length
-      ? before.map((b, i) => `<span class="ghost"><span class="gart">${b.art ? `<img src="${esc(b.art)}" alt="" data-ph="">` : ''}</span><span class="gn">${i + 1}</span></span>`).join('')
-        + `<span class="ghost-hint">${state.showBefore ? 'Hide the before row' : 'Show it full size, above'}</span>`
-      : '<span class="ghost-empty">The visitor had not seen the module yet.</span>';
-    const rows = dealsDiff(before, after);
-    const hinge = hingeLine();
-    const exit = state.exitNote ? `<li class="delta-engine"><span class="hk">The engine, on its own</span>${state.exitNote}</li>` : '';
-    if (!rows.length) {
-      // The order held: say what the answer did to each score, so a withdrawal that moves nothing is still read off the engine.
-      const was = new Map((state.home.prevDecisions || []).map((d) => [d.customerContentId, num(d.score)]));
-      const held = (state.home.curDecisions || []).filter((d) => was.has(d.customerContentId) && Math.abs(num(d.score) - was.get(d.customerContentId)) >= 0.01)
-        .map((d, i) => `<li><span class="sign sign--${num(d.score) < was.get(d.customerContentId) ? 'down' : 'up'}">${num(d.score) < was.get(d.customerContentId) ? '↘' : '↗'}</span>
-          <span><b>${esc((pieceOfDecision(d) || {}).title || d.customerContentId)}</b> <em>held container ${bySlot(state.home.set, SLOTS.deals).indexOf(d) + 1} · score ${fmt3(was.get(d.customerContentId))} → ${fmt3(d.score)}${(() => {
-            const d0 = (state.home.prevDecisions || []).find((x) => x.customerContentId === d.customerContentId);
-            const shift = d0 ? driverShift(d0, d) : '';
-            return shift ? ` · ${shift}` : '';
-          })()}</em></span></li>`);
-      if (held.length) { el.dealsDeltas.innerHTML = exit + (hinge || '') + '<li class="delta-none">The order held; the scores moved.</li>' + held.join(''); return; }
-      const top = topSignal();
-      el.dealsDeltas.innerHTML = exit + (hinge || '') + `<li class="delta-none">Nothing moved in the four.${top
-        ? ` Her strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= thetaIn()
-          ? 'past the entry threshold: what she has earned is already being served.' : `under the ${fmt2(thetaIn())} entry threshold.`}`
-        : ' She has sent no signal yet.'}</li>`;
-      return;
-    }
-    el.dealsDeltas.innerHTML = exit + (hinge || '') + rows.map((r) => `<li><span class="sign sign--${r.cls}">${r.sign}</span>
-      <span><b>${esc(r.what)}</b> <em>${esc(r.why)}</em></span></li>`).join('');
-  }
-  function renderBeforeRow() {
-    const on = Boolean(state.showBefore && state.home.prevDecisions && state.home.prevDecisions.length);
-    el.dealsBeforeRow.hidden = !on;
-    el.dealsNowLabel.hidden = !on;
-    el.dealsBeforeFour.innerHTML = on ? state.home.prevDecisions.map((d, i) => dealCardHtml(d, i, { before: true })).join('') : '';
   }
   /** Where the deals module sits on today's homepage template. Its decision does not know or care. */
   /**
@@ -1121,8 +868,6 @@
   // ════════════════════════════════════════════════════════════════════════
   // THE PHONE PAGE: the buy box (off limits) and the decided modules below it.
   // ════════════════════════════════════════════════════════════════════════
-  const INTENTS = [['new', 'New line'], ['add-line', 'Add a line'], ['upgrade', 'Upgrade'], ['byod', 'Bring your own']];
-  const INTENT_WORD = Object.fromEntries(INTENTS);
   function renderBuyBox() {
     const v = cur(), p = phone(state.phoneId);
     if (!p || !v) return;
@@ -1209,50 +954,15 @@
     const after = mods.map((d) => ({ id: d.customerContentId, title: moduleTitle(d) }));
     const planOrder = plans.map((d) => (tierOfDecision(d) || {}).name || d.customerContentId);
     const rotate = opts.rotate !== false;
-    if (rotate) { state.phone.previous = state.phone.current; state.phone.current = { modules: after, plans: planOrder }; }
+    if (rotate) deltas.rotate(SLOTS.modules, { modules: after, plans: planOrder });
     const prev = state.phone.previous;
-    if (rotate) {
-      const moves = {};
-      if (prev) {
-        const ids = prev.modules.map((m) => m.id);
-        after.forEach((a, i) => {
-          const was = ids.indexOf(a.id);
-          if (was === -1) moves[a.id] = { cls: 'in', text: 'new' };
-          else if (was > i) moves[a.id] = { cls: 'up', text: `↑${was - i}` };
-          else if (was < i) moves[a.id] = { cls: 'down', text: `↓${i - was}` };
-        });
-      }
-      state.phone.moves = moves;
-    }
+    if (rotate) state.phone.moves = deltas.moves(SLOTS.modules, prev ? prev.modules : null, after);
     const mv = state.phone.moves || {};
     const total = piecesFor(SLOTS.modules).length || 7;
     el.modulesWhere.innerHTML = `Below the buy box &middot; slot <b>${esc(SLOTS.modules)}</b> &middot; ${mods.length} of ${total}, in the order the engine returned`;
     el.modules.innerHTML = mods.map((d, i) => moduleHtml(d, i, plans, offers, mv[d.customerContentId], rotate && prev && !prev.modules.some((m) => m.id === d.customerContentId))).join('')
       || '<p class="fine">The slot returned no modules, and the page shows none rather than invent an order.</p>';
     if (rotate) renderPdpChanges();
-  }
-  function renderPdpChanges() {
-    const prev = state.phone.previous, now = state.phone.current;
-    el.pdpBefore.innerHTML = prev && prev.modules.length ? prev.modules.map((m) => `<li>${esc(m.title)}</li>`).join('')
-      : '<li class="ghost-empty">She had not seen this page’s modules yet.</li>';
-    if (!prev) {
-      const fresh = Boolean(cur() && cur().fresh);   // Compare's fresh visitor: nothing sent, so nothing of hers to credit
-      el.pdpDeltas.innerHTML = `<li class="delta-none">The first decision for this page: <b>${esc(now.modules.map((m) => m.title).join(' → '))}</b>. Plans lead with <b>${esc(now.plans[0] || '—')}</b>. ${fresh ? 'A fresh visitor has sent nothing: the template order, with the region’s prior.'
-        : isTemplate(now.modules) ? 'Nothing she has done weighs on a module yet, so this is the template order.' : 'The order her browsing already earns; <b>Why these</b> explains each one, and <b>Compare → Fresh visitor</b> shows the template order beside it.'}</li>`;
-      return;
-    }
-    const rows = [];
-    const ids = prev.modules.map((m) => m.id);
-    now.modules.forEach((m, i) => {
-      const was = ids.indexOf(m.id);
-      if (was === -1) rows.push({ sign: '+', cls: 'in', what: m.title, why: `entered at position ${i + 1}` });
-      else if (was > i) rows.push({ sign: '↑', cls: 'up', what: m.title, why: `position ${was + 1} → ${i + 1}` });
-      else if (was < i) rows.push({ sign: '↓', cls: 'down', what: m.title, why: `position ${was + 1} → ${i + 1}` });
-    });
-    prev.modules.forEach((m) => { if (!now.modules.some((x) => x.id === m.id)) rows.push({ sign: '−', cls: 'out', what: m.title, why: 'left the page · outranked, or its rule stopped holding' }); });
-    if (prev.plans[0] !== now.plans[0] && now.plans[0]) rows.push({ sign: '↑', cls: 'up', what: now.plans[0], why: `now leads Pair with a plan (was ${prev.plans[0] || '—'})` });
-    el.pdpDeltas.innerHTML = rows.length ? rows.map((r) => `<li><span class="sign sign--${r.cls}">${r.sign}</span><span><b>${esc(r.what)}</b> <em>${esc(r.why)}</em></span></li>`).join('')
-      : '<li class="delta-none">Nothing moved on this page: the same modules in the same order, the same plan leading.</li>';
   }
   const isTemplate = (mods) => {
     const t = (state.anchor.templates && state.anchor.templates.modules) || [];
@@ -1445,19 +1155,6 @@
   // ════════════════════════════════════════════════════════════════════════
   // SHEETS: quick look, a plan's starter or perk, compare storage and camera.
   // ════════════════════════════════════════════════════════════════════════
-  function openSheet(kind, html) {
-    state.sheet = { kind, from: state.view };
-    el.sheetBody.innerHTML = html;
-    el.sheetBack.hidden = false;
-  }
-  /** Back on the phone page after an interaction, the page asks again, as the SDK refreshes after an acknowledged interaction. */
-  async function closeSheet() {
-    if (el.sheetBack.hidden) return;
-    const was = state.sheet;
-    el.sheetBack.hidden = true;
-    state.sheet = null;
-    if (was && was.from === 'phone' && state.view === 'phone') await refreshPhone();
-  }
   async function quickLook(id) {
     const p = phone(id);
     if (!p) return;
@@ -1525,19 +1222,6 @@
   // ════════════════════════════════════════════════════════════════════════
   // ONE DISPATCHER. The cursor and a human hand run the same handler.
   // ════════════════════════════════════════════════════════════════════════
-  /** A click inside a decided container is the reward it is judged on; nested containers credit each level, as nested data-op-content would. */
-  async function creditDecided(target) {
-    if (!cur() || !target || !target.closest) return 0;
-    let node = target.closest('[data-op-content]');
-    const sends = [];
-    while (node) {
-      const decisionId = node.getAttribute('data-op-decision-id');
-      if (decisionId) sends.push(send('content_click', { contentId: node.getAttribute('data-op-content'), slot: node.getAttribute('data-op-slot'), decisionId, customerContentId: node.getAttribute('data-cid') }));
-      node = node.parentElement ? node.parentElement.closest('[data-op-content]') : null;
-    }
-    if (sends.length) await Promise.all(sends);
-    return sends.length;
-  }
   async function handleControl(t) {
     if (!t || !t.dataset) return;
     const actName = t.dataset.act;
@@ -1554,13 +1238,13 @@
     const v = cur();
     const p = phone(state.phoneId);
     if (t.dataset.open && actName !== 'deal-cta' && actName !== 'hero-cta') {
-      if (state.sheet) { el.sheetBack.hidden = true; state.sheet = null; }
+      sheets.dismiss();
       await openPhone(t.dataset.open, { event: !t.dataset.back });   // a back link restores the page; it is not a new view
       return;
     }
     if (t.dataset.quick) { await quickLook(t.dataset.quick); return; }
     if (t.dataset.nav) {
-      if (state.sheet) { el.sheetBack.hidden = true; state.sheet = null; }
+      sheets.dismiss();
       const nav = t.dataset.nav;
       if (nav === 'home') await openHome({ focus: state.busy ? 'deals' : false });
       else if (nav === 'phones') await openPhones();
@@ -1646,16 +1330,6 @@
     node.classList.remove('clicked'); void node.offsetWidth; node.classList.add('clicked');
     setTimeout(() => node.classList.remove('clicked'), 1200);
   }
-  document.addEventListener('click', (e) => {
-    const t = e.target && e.target.closest ? e.target.closest('[data-act],[data-nav],[data-open],[data-quick],[data-jump]') : null;
-    if (!t) return;
-    if (t.closest('.director') || t.closest('.machine') || t.closest('.pd-back') || t.closest('.cmp-back') || t.closest('.terms')) return;
-    e.preventDefault();
-    if (state.busy) { say('a beat is running; the page is frozen until it lands', 'bad'); return; }
-    void handleControl(t).catch((error) => say(String(error.message || error), 'bad'));
-  });
-  el.sheetBack.addEventListener('click', (e) => { if (e.target === el.sheetBack && !state.busy) void closeSheet(); });
-  el.sheetClose.addEventListener('click', () => { if (!state.busy) void closeSheet(); });
   // The sticky summary: shown only once the buy box's own Add to cart has scrolled up out of view, on the phone page.
   function syncSticky() {
     const bar = $('stickyBar'), add = $('bbAdd');
@@ -1670,389 +1344,19 @@
   }, { passive: true });
   el.railForYou.addEventListener('click', () => { if (!state.busy) void handleControl({ dataset: { act: 'rail', off: '0' } }); });
   el.railSite.addEventListener('click', () => { if (!state.busy) void handleControl({ dataset: { act: 'rail', off: '1' } }); });
-  el.dealsGhosts.addEventListener('click', () => { state.showBefore = !state.showBefore; renderBeforeRow(); renderDealsChanges(); });
+  el.dealsGhosts.addEventListener('click', () => deltas.toggleBefore(SLOTS.deals));
 
   // ════════════════════════════════════════════════════════════════════════
-  // THE MACHINE: meters, cold start, why these, what it learned, roadmap.
+  // COMPARE: the demo kit's widget, wired by the kit (a Before always exists:
+  // one after each view's first decided paint, one as every performed beat
+  // starts, and Capture's own). Here: where a frame is taken, the decided state
+  // a frame keeps for What changed, and Vantage's two compare tools, the fresh
+  // visitor and the streaming shopper. Nothing here ranks, asserts or asks the
+  // engine anything new: the frames are the page.
   // ════════════════════════════════════════════════════════════════════════
-  const reg = () => state.registry || {};
-  const thetaIn = () => num(reg().thetaIn != null ? reg().thetaIn : 0.6);
-  const thetaOut = () => num(reg().thetaOut != null ? reg().thetaOut : 0.45);
-  const K = () => num(reg().K != null ? reg().K : 1.8);
-  const DIM_LABEL = { category: 'category', brand: 'brand', ecosystem: 'ecosystem', os: 'ecosystem', priceBand: 'price band', intent: 'intent', perk: 'perk', lines: 'lines', contentType: 'content' };
-  const leanShare = () => { const l = state.coldstart && state.coldstart.lean; return (l && (l.share || l.shares)) || {}; };
-
-  async function renderVectors() {
-    const v = cur();
-    if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; return; }
-    const { body } = await api('/realtime/reflex', undefined, { visitor: v });
-    const dims = (body && body.affinity && body.affinity.dims) || {};
-    if (body && body.journeyStage && body.journeyStage !== v.stage) { v.stage = body.journeyStage; if (v === cur()) renderWho(); }
-    const prev = v.vector || {};
-    const rows = [];
-    for (const [dim, values] of Object.entries(dims)) for (const [value, a] of Object.entries(values || {})) rows.push({ dim, value, a: num(a) || 0 });
-    state.fresh = new Set(rows.filter((r) => Math.abs(r.a - num(((prev[r.dim] || {})[r.value]) || 0)) > 0.004).map((r) => `${r.dim}\u0000${r.value}`));
-    v.vector = dims;
-    if (v === cur()) state.lastVector = dims;
-    rows.sort((x, y) => y.a - x.a);
-    const lean = leanShare();
-    const leanOf = (dim, value) => { const d = lean[dim] || {}; return typeof d[value] === 'number' ? d[value] : null; };
-    const th = thetaIn();
-    el.vectors.innerHTML = rows.length ? rows.slice(0, 8).map((r) => {
-      const l = leanOf(r.dim, r.value);
-      return `<div class="vecrow${state.fresh.has(`${r.dim}\u0000${r.value}`) ? ' vecrow--fresh' : ''}">
-        <div class="vectop"><span>${esc(r.value)}<em>${esc(DIM_LABEL[r.dim] || r.dim)}${roomOf(r.dim) ? ` · ${esc(roomOf(r.dim))} memory` : ''}</em></span><b class="${r.a >= th ? 'over' : ''}">${r.a.toFixed(2)}</b></div>
-        <div class="track"><span class="fill${r.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, r.a * 100)}%"></span>
-          <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
-    }).join('') : '<p class="m-empty">No evidence of her own yet. The first paint is the region and the campaign, not her.</p>';
-    const reg0 = state.home.set && bySlot(state.home.set, SLOTS.deals).map((d) => ((d.explain && d.explain.drivers) || []).find((x) => x.dim === 'regional')).find(Boolean);
-    el.priorLine.innerHTML = reg0
-      ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as her own evidence grows. Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
-      : `a = R / (R + K) with K = ${K()}, from the published registry. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`;
-    const mem = memoryLine();
-    if (mem) el.priorLine.insertAdjacentHTML('beforeend', `<span class="memline">${mem}</span>`);
-  }
-  /** The registry's per-dimension memory, as lane L1 labels it: compressed for this room, days in production. */
-  const memoryDims = () => (((state.anchor.registry || {}).memory || {}).dimensions || []).filter((d) => d.compressed);
-  const roomOf = (dim) => { const d = memoryDims().find((x) => x.key === dim); return d ? d.room : null; };
-  function memoryLine() {
-    const dims = memoryDims();
-    if (!dims.length) return '';
-    const byRoom = new Map();
-    dims.forEach((d) => byRoom.set(d.room, [...(byRoom.get(d.room) || []), DIM_LABEL[d.key] || d.key]));
-    const parts = [...byRoom.entries()].map(([room, names]) => `${names.join(', ')} ${room}`);
-    return ` Memory is <b>compressed for this room</b> (${esc(parts.join('; '))}); production runs days.`;
-  }
-  function topSignal() {
-    let best = null;
-    for (const [dim, values] of Object.entries(state.lastVector || {})) for (const [value, a] of Object.entries(values || {})) {
-      if (!best || num(a) > best.a) best = { dim, value, a: num(a) };
-    }
-    return best;
-  }
-
-  /** The label the region wears on the page: the census row's own name when the grain is a state. */
-  function coldLabel() {
-    const c = state.coldstart;
-    if (!c) return null;
-    const cen = c.census || {};
-    if (cen.label && cen.grain !== 'national') return cen.label;
-    const r = c.region || {};
-    return r.label || r.city || regionName(r.key) || r.key || null;
-  }
-  /** A region key's name as lane L1's anchor gives it (rehearsed and uncovered regions), else the key itself. */
-  function regionName(key) {
-    const R = state.anchor.regions || {};
-    const hit = [...arr(R.rehearsed), R.uncoveredRegion].find((x) => x && x.key === key);
-    return hit ? hit.label : null;
-  }
-  /**
-   * The Arrival panel's read. A region goes on the query only when one is asserted (beat 2's contrast,
-   * 14a/14b, the hand's assert buttons, or the ?region= rehearsal override); otherwise the route reads the
-   * region the edge put on the request, and the page records that as her own.
-   */
-  async function loadColdStart() {
-    const q = new URLSearchParams();
-    if (state.ctx.region) q.set('region', state.ctx.region);
-    if (OVERRIDE.metro) q.set('metro', OVERRIDE.metro);
-    let doc = null, why = null;
-    if (!FIXTURE) {
-      const r = await api(`${API.coldstart}${q.toString() ? `?${q}` : ''}`, undefined, { visitor: cur() });
-      doc = r.ok && r.body && r.body.ok !== false ? r.body : null;
-      if (!doc) why = `The cold-start read did not answer (${r.status}); lane L2’s labelled fixture is shown.`;
-    }
-    if (!doc) {
-      // A fixture never names a place nobody asked for: with nothing asserted it is the no-region fixture.
-      const fx = await tryJson(`/vantage/fixtures/coldstart-${state.ctx.region || 'none'}.json`) || await tryJson('/vantage/fixtures/coldstart-none.json');
-      if (fx) doc = { ...fx, fixture: why || fx.fixture || 'lane L2 fixture' };
-    }
-    state.coldstart = doc;
-    const r = (doc && doc.region) || {};
-    if (doc && !state.ctx.region) state.own = { key: r.source === 'edge' && r.key ? r.key : null, label: r.source === 'edge' && r.key ? coldLabel() : null, source: r.source === 'edge' && r.key ? 'edge' : 'none' };
-    else if (doc && OVERRIDE.region && state.ctx.region === OVERRIDE.region) state.own = { key: OVERRIDE.region, label: coldLabel(), source: 'override' };
-    renderColdStart();
-    renderWho();
-    return doc;
-  }
-  function renderColdStart() {
-    const c = state.coldstart;
-    if (!c) { el.coldStart.innerHTML = '<p class="m-empty">The cold-start read did not answer, and nothing is shown in its place.</p>'; return; }
-    const r = c.region || {}, cen = c.census || {}, lean = c.lean || {};
-    const leanInForce = Boolean(c.lean && Object.keys(c.lean.share || c.lean.shares || {}).length);
-    const grain = typeof c.grain === 'string' ? c.grain : (c.grain && (c.grain.label || c.grain.used)) || cen.grain || '—';
-    // How the region is known: a rehearsal override, asserted, from the request, or not at all.
-    const override = Boolean(OVERRIDE.region) && state.ctx.region === OVERRIDE.region;
-    const asserted = override || r.source === 'asserted' || Boolean(state.ctx.region);
-    const located = !asserted && r.source === 'edge' && Boolean(r.key);
-    const src = override ? 'a rehearsal override (?region=), asserted and labelled'
-      : asserted ? 'asserted on the request, labelled'
-        : located ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills it' : 'from the request: the edge located her')
-          : 'no region on this request';
-    // "geo real" only when the edge located her; an asserted region is labelled as asserted, never as real (R1 N8),
-    // and under local wrangler dev request.cf is the runtime's stand-in, so it is not called real either.
-    const geoTag = asserted ? '<span class="tg tg--rep">region asserted, not observed</span>'
-      : located ? (LOCAL_RUNTIME ? '<span class="tg tg--rep">region from the local runtime, not an edge</span>' : '<span class="tg tg--real">geo real</span>')
-        : '<span class="tg tg--rep">no region on this request</span>';
-    const shares = [];
-    for (const [dim, values] of Object.entries(lean.share || lean.shares || {})) for (const [value, s] of Object.entries(values || {})) shares.push({ dim, value, s: num(s) });
-    shares.sort((a, b) => b.s - a.s);
-    const income = cen.medianHouseholdIncomeUsd != null ? cen.medianHouseholdIncomeUsd : cen.medianHhIncomeUsd;
-    const synthetic = /synthetic/i.test(`${lean.dataSource || ''} ${lean.label || ''}`);
-    // What the lean counts (seeded sales, plus this worker's own visits from the region) and the grain that
-    // answered: doc 13 §4, the roll-up ladder names its grain.
-    const seeded = lean.seeded && Number(lean.seeded.units) > 0 ? Number(lean.seeded.units) : 0;
-    const live = Number(lean.liveEvents) || 0;
-    const counted = !leanInForce || !lean.events ? '' : seeded
-      ? `${seeded.toLocaleString('en-US')} synthetic sales${live ? ` + ${live.toLocaleString('en-US')} live events from the region` : ''}`
-      : `${Number(lean.events).toLocaleString('en-US')} events`;
-    const answered = lean.level === 'region' ? `answered at ${lean.answered}` : lean.level === 'country' ? `rolled up to ${lean.answered}` : lean.level === 'global' ? 'rolled up to everyone' : '';
-    el.coldStart.innerHTML = `<div class="cold">
-      <div class="cold-row"><span>Region</span><b>${esc([coldLabel(), r.key].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' · ') || 'none on this request')}</b></div>
-      <div class="cold-row"><span>How it is known</span><b>${esc(src)}</b></div>
-      <div class="cold-row"><span>Grain used</span><b>${esc(grain)}${r.metro ? ` · metro ${esc(r.metro)}` : ''}</b></div>
-      ${income != null ? `<div class="cold-row"><span>Median household income</span><b>${money0(income)}</b></div>` : ''}
-      ${cen.medianHomeValueUsd != null ? `<div class="cold-row"><span>Median home value</span><b>${money0(cen.medianHomeValueUsd)}</b></div>` : ''}
-      <div class="cold-row"><span>Census</span><b>${esc([cen.grain === 'national' ? cen.label : null, cen.estimate || cen.source, cen.vintage && `vintage ${cen.vintage}`].filter(Boolean).join(' · ') || '—')}</b></div>
-      ${lean.lambdaForStranger != null ? `<div class="cold-row"><span>The prior’s share for a stranger</span><b>λ = ${fmt2(lean.lambdaForStranger)}</b></div>` : ''}
-    </div>
-    <p class="cold-h">Regional lean${leanInForce ? ` · relative to each leader · ${esc(lean.label || lean.dataSource || 'representative')}${counted ? ` · ${esc(counted)}` : ''}${answered ? ` · ${esc(answered)}` : ''}` : ''}</p>
-    <div class="cold-lean" title="Each value relative to its dimension's leader in the region's sales">${shares.slice(0, 6).map((x) => `<div><span>${esc(x.value)} <em>${esc(DIM_LABEL[x.dim] || x.dim)}</em></span><i><s style="width:${Math.round(Math.min(1, x.s) * 100)}%"></s></i><b>${fmt2(x.s)}</b></div>`).join('') || '<p class="m-empty">No regional lean is in force for this region yet: the prior waits for the carrier’s regional sales, and the page shows none rather than invent one.</p>'}</div>
-    ${leanInForce && lean.seeded && lean.seeded.label ? `<p class="m-note" style="margin-top:8px">${esc(lean.seeded.label)}${lean.swapTo ? ` · swaps to the ${esc(lean.swapTo)}` : ''}</p>` : ''}
-    ${live && seeded ? `<p class="m-note">Also counted: this worker’s own visits from the region (${live.toLocaleString('en-US')}), on every dimension; the seed writes only brand, ecosystem, price band and category.</p>` : ''}
-    ${cen.fellBack ? `<p class="m-note" style="margin-top:8px">${esc(cen.fellBack)}</p>` : ''}
-    ${located && LOCAL_RUNTIME ? '<p class="m-note">Local wrangler dev: request.cf is the runtime’s stand-in, not an edge’s reading of this request: Miniflare’s cached copy of Cloudflare’s location for this machine, or a fixed Austin, Texas placeholder when it cannot fetch one. Hosted, the edge locates every request.</p>' : ''}
-    ${c.scored && c.scored.sentence ? `<p class="m-note">${esc(c.scored.sentence)}</p>` : ''}
-    ${arr(r.notes).map((n) => `<p class="m-note">${esc(n)}</p>`).join('')}
-    <p class="cold-sentence">${esc((c.sentence || 'aggregate, never the individual; we curate, never price.').replace(/^./, (x) => x.toUpperCase()))}</p>
-    <div class="tags">${geoTag}<span class="tg tg--real">census real · shown, never scored</span><span class="tg tg--rep">${!leanInForce ? 'regional sales: none in force yet' : synthetic ? 'regional sales synthetic → warehouse' : 'regional sales: this worker’s own'}</span>${c.fixture ? '<span class="tg tg--fx">L2 fixture</span>' : ''}</div>
-    ${c.fixture ? `<p class="m-note" style="margin-top:8px">${esc(typeof c.fixture === 'string' ? c.fixture : 'lane L2 fixture')}</p>` : ''}`;
-  }
-
-  // ── Receipts: the full record behind a decision, from lane L1's receipt action ──
-  /**
-   * The ledger consumer writes a record a few seconds after the answer, so the
-   * route answers 202 and pending until then, and the page asks again. It tells
-   * the route what it asserted on that snapshot (intent, region), so the record
-   * can say which of its inputs were asserted rather than observed.
-   */
-  async function prefetchReceipts(decisions, asked) {
-    const ids = [...new Set(decisions.map((d) => d.decisionId).filter((id) => id && !state.receipts.has(id)))];
-    const context = asked && asked.intent ? { intent: asked.intent, ...(asked.region ? { region: asked.region } : {}) } : undefined;
-    const owner = cur();          // the receipts are hers: asked with her capability even if the page has moved on to another shopper
-    for (let attempt = 0; attempt < 10 && ids.length; attempt += 1) {
-      const batch = ids.slice(0, 12);
-      const r = FIXTURE ? fixtureReceipts(batch) : await api(API.receipt, { decisionIds: batch, ...(context ? { context } : {}) }, { visitor: owner });
-      const list = (r.body && (r.body.records || r.body.receipts || (r.body.record ? [r.body.record] : r.body.receipt ? [r.body.receipt] : []))) || [];
-      list.forEach((rec) => { if (rec && rec.decision_id) state.receipts.set(rec.decision_id, rec); });
-      for (let i = ids.length - 1; i >= 0; i -= 1) if (state.receipts.has(ids[i])) ids.splice(i, 1);
-      if (!ids.length) break;
-      if (!(r.status === 202 || r.status === 200)) break;       // refused or unprovisioned: ask no more
-      await sleep(2000);
-    }
-  }
-  function whyRows(decisions) {
-    return decisions.map((d, i) => {
-      const piece = pieceOfDecision(d);
-      const title = d.slot === SLOTS.plans ? ((tierOfDecision(d) || {}).name || d.customerContentId) : d.slot === SLOTS.modules ? moduleTitle(d) : (piece ? piece.title : d.customerContentId);
-      const lines = ((d.explain && d.explain.drivers) || []).map((x) => `<span${x.dim === 'regional' ? ' class="reg"' : ''}>${esc(DIM_LABEL[x.dim] || x.dim)} ${esc(x.value)}${declaredMark(x)} <b>${fmt3(num(x.a) * num(x.weight))}</b></span>`);
-      const rec = d.decisionId && state.receipts.get(d.decisionId);
-      const ex = (rec && rec.explain) || {};
-      if (ex.contextual && num(ex.contextual.applied) > 0) {
-        lines.push(`<span class="ctx">${esc(seedLabel(ex.contextual))} applied: ${arr(ex.contextual.drivers).map((x) => `${esc(String(x.signal).replace(/_/g, ' '))} “${esc(x.value)}” → ${esc(x.dimension)} ${esc(x.tag)} +${fmt3(x.contribution)} at entry${arr(x.dampened).length ? ` (dampened ${arr(x.dampened).map((m) => `×${fmt2(m.factor)}: she holds ${esc(m.dimension)} ${esc(m.value)}`).join(', ')})` : ''}`).join('; ')}</span>`);
-      }
-      if (ex.regional) lines.push(`<span class="reg">regional prior ${esc(ex.regional.region)} (${esc(ex.regional.level)}) λ ${fmt2(ex.regional.lambda)} +${fmt3(ex.regional.contribution)}</span>`);
-      for (const k of ['merchandising', 'stage', 'freshness', 'fatigue']) if (ex[k] && ex[k].sentence) lines.push(`<span>${esc(ex[k].sentence)}</span>`);
-      const div = (ex.diversity && ex.diversity.sentence) || (d.explain && d.explain.diversity && d.explain.diversity.sentence);
-      if (div) lines.push(`<span>${esc(div)}</span>`);
-      if (d.explain && d.explain.note) lines.push(`<span>${esc(d.explain.note)}</span>`);
-      if (ex.score_base != null) lines.push(`<span>base ${fmt3(ex.score_base)} → final ${fmt3(ex.score_final)}${ex.lift && ex.lift.gamma != null ? ` · γ ${ex.lift.gamma}` : ''}${rec.authority ? ` · authority ${esc(rec.authority)}` : ''}</span>`);
-      if (rec && rec.asserted) lines.push(`<span class="asr">asserted, not observed: ${Object.entries(rec.asserted).map(([k, x]) => `${esc(k)} = ${esc(x.value)} (${x.from === 'record' ? 'on the record' : 'as the page asked'})`).join(' · ')}</span>`);
-      if (!lines.length) lines.push(d.strategy === 'tenant-pinned' ? 'pinned: ranking never ran for it' : d.strategy === 'site' ? 'the site’s own default: no visitor, no decision' : 'no dimension has evidence yet: the catalog’s order, the same for everyone');
-      return `<div class="drv"><div class="drvtop"><span class="pos${d.strategy === 'tenant-pinned' ? ' pos--pin' : ''}">${i + 1}</span><span class="drvname">${esc(title)}</span></div>
-        <div class="drvline">${lines.join('<br>')}</div></div>`;
-    }).join('');
-  }
-  function renderWhy() {
-    const parts = [];
-    const onPhone = state.view === 'phone' && state.phone.set;
-    if (onPhone) {
-      parts.push(`<p class="why-h">Phone page · slot ${esc(SLOTS.modules)}</p>${whyRows(bySlot(state.phone.set, SLOTS.modules))}`);
-      parts.push(`<p class="why-h">Inside Pair with a plan · slot ${esc(SLOTS.plans)}</p>${whyRows(bySlot(state.phone.set, SLOTS.plans))}`);
-    } else if (state.home.set) {
-      const hinge = hingeLine();
-      if (hinge) parts.push(`<div class="hinge">${hinge.replace(/<\/?li[^>]*>/g, '')}</div>`);
-      parts.push(`<p class="why-h">Homepage · slot ${esc(SLOTS.hero)}</p>${whyRows(bySlot(state.home.set, SLOTS.hero))}`);
-      parts.push(`<p class="why-h">Homepage · slot ${esc(SLOTS.deals)}</p>${whyRows(bySlot(state.home.set, SLOTS.deals))}`);
-    }
-    el.whyBody.innerHTML = parts.join('') || '<p class="m-empty">Press a beat to begin.</p>';
-    const set = onPhone ? state.phone.set : state.home.set;
-    const missing = set ? set.decisions.filter((d) => d.decisionId && !state.receipts.has(d.decisionId)).length : 0;
-    if (missing) el.whyBody.insertAdjacentHTML('beforeend', `<p class="m-note" style="margin-top:10px">${missing} full receipt${missing === 1 ? ' is' : 's are'} still being written to the ledger (it records just after the answer). Above is the thin receipt the snapshot itself carries.</p>`);
-  }
-
-  // ── What it learned: the day report, labelled what it is ─────────────────
-  /**
-   * The ledger is partitioned by UTC day, and one whole day is the narrowest
-   * window the engine builds a report for (it has no slot or hour filter), so the
-   * window is the UTC day of the clicks. The build is asked once, with the deals
-   * slot; the other slots are read from the day it built, never rebuilt, and only
-   * when that answered. A refusal is shown once, as itself (R1 7b-iii).
-   */
-  async function loadReport(build) {
-    const date = new Date().toISOString().slice(0, 10);
-    el.reportBody.innerHTML = '<p class="m-empty">Reading the ledger&hellip;</p>';
-    const slots = [SLOTS.deals, SLOTS.modules, SLOTS.plans, SLOTS.hero];
-    if (FIXTURE) { renderReport(slots.map((slot) => ({ slot, error: 'fixture mode: the report is read from a live ledger only' })), date); return; }
-    let lead;
-    try { lead = await demoRoute(API.report, { date, slot: SLOTS.deals, build: Boolean(build) }); }
-    catch (error) { renderReportRefused(error, date); return; }
-    const reports = [{ slot: SLOTS.deals, report: lead.report }];
-    for (const slot of slots.slice(1)) {
-      try { reports.push({ slot, report: (await demoRoute(API.report, { date, slot })).report }); }
-      catch (error) { reports.push({ slot, error: String(error.message || error) }); }
-    }
-    renderReport(reports, date);
-  }
-  /** The report's own window, as the report states it: its UTC day, what it was read from, when it was built, what it holds. */
-  function reportWindowLine(rep, date) {
-    if (!rep) return `<p class="rep-window"><b>Window</b>the UTC day ${esc(date)}</p>`;
-    const h = rep.hours || {}, c = rep.counts || {};
-    const two = (n) => String(n).padStart(2, '0');
-    const built = arr(h.built), missing = arr(h.missing);
-    const from = h.source === 'aggregates'
-      ? `summed from the folded hours${built.length ? ` ${two(Math.min(...built))}:00–${two(Math.max(...built) + 1)}:00 UTC` : ''}; the hour in progress is not in it until it closes${missing.length ? `, and ${missing.map(two).join(', ')} UTC ${missing.length === 1 ? 'is' : 'are'} not folded yet` : ''}`
-      : 'read from the ledger itself: everything recorded until it was built';
-    const counts = [c.decisions, c.outcomes, c.visitors].every((n) => typeof n === 'number')
-      ? ` · ${c.decisions.toLocaleString('en-US')} decisions, ${c.outcomes.toLocaleString('en-US')} outcomes, ${c.visitors.toLocaleString('en-US')} visitors` : '';
-    return `<p class="rep-window"><b>Window</b>the UTC day ${esc(rep.date || date)} · ${from}${rep.builtAt ? ` · built ${esc(hhmm(rep.builtAt))}` : ''}${counts}</p>`;
-  }
-  /** The build or read was refused: the engine's reason, once, where the report would be. No older count stands in for it. */
-  function renderReportRefused(error, date) {
-    const b = (error && error.body) || {};
-    const head = `<p class="rep-k">Attribution per promotion · the deals four · ${esc(date)}</p>`;
-    if (b.code !== 'report_too_large') { el.reportBody.innerHTML = `${head}<p class="m-empty">${esc(String((error && error.message) || error))}</p>`; return; }
-    const w = b.window || {};
-    const unit = /bytes$/i.test(String(b.budget || '')) ? ' bytes' : '';
-    const amount = (n) => (typeof n === 'number' ? `${n.toLocaleString('en-US')}${unit}` : '—');
-    el.reportBody.innerHTML = `${reportWindowLine(null, w.date || date)}${head}
-      <p class="m-empty rep-refused"><b>Report too large for the window (413).</b> The engine builds a report for one whole ${esc(w.unit || 'UTC day')}, ${esc(w.date || date)}: the narrowest window it accepts. This day’s ledger is past its report budget (${esc(b.budget || 'a budget')}: ${amount(b.observed)} against ${amount(b.limit)}), so it cannot be built on demand, and the page shows no older count in its place.</p>`;
-  }
-  function reportRows(rep, slot) {
-    const grid = (rep && rep.grids && rep.grids[slot] && rep.grids[slot].learning) || null;
-    return Object.entries((grid && grid.items) || {}).map(([id, cells]) => {
-      const c = cells['*'] || Object.values(cells)[0] || {};
-      const piece = pieceOf(id);
-      const title = slot === SLOTS.plans ? ((tierById((piece && piece.tier) || String((piece && piece.customerContentId) || id).replace(/^plan[-_]/, '')) || {}).name || (piece && piece.title) || id)
-        : slot === SLOTS.modules ? (piece && piece.title) || MODULE_TITLE[String(id).replace(/_/g, '-')] || id : piece ? piece.title : id;
-      return { key: String((piece && piece.customerContentId) || id), title, n: num(c.n) || 0, s: num(c.s) || 0, rate: typeof c.p_hat === 'number' ? c.p_hat : null };
-    }).sort((a, b) => b.n - a.n);
-  }
-  function renderReport(reports, date) {
-    const label = { [SLOTS.deals]: 'Attribution per promotion · the deals four', [SLOTS.modules]: 'Module engagement · the phone page', [SLOTS.plans]: 'Plan mix · clicks per plan in Pair with a plan', [SLOTS.hero]: 'The hero' };
-    let contract = null, measurement = null;
-    const blocks = reports.map(({ slot, report, error }) => {
-      if (error) return `<p class="rep-k">${esc(label[slot] || slot)}</p><p class="m-empty">${esc(error)}</p>`;
-      contract = contract || report.attributionContract || null;
-      measurement = measurement || report.measurement || null;
-      const rows = reportRows(report, slot);
-      const table = rows.length ? `<div class="rep-row rep-head"><span>Item</span><span class="n">shown</span><span class="s">clicks</span><span class="r">est. rate</span></div>`
-        + rows.map((r) => `<div class="rep-row"><span class="nm" title="${esc(r.title)}">${esc(r.title)}</span><span class="n">${r.n.toFixed(0)}</span><span class="s">${r.s.toFixed(0)}</span><span class="r">${r.rate === null ? '&mdash;' : `${(r.rate * 100).toFixed(1)}%`}</span></div>`).join('')
-        : '<p class="m-empty">Nothing recorded for this slot yet today.</p>';
-      let attach = '';
-      if (slot === SLOTS.modules && rows.length) {
-        const row = (k, name) => { const r = rows.find((x) => x.key.toLowerCase().includes(k)); return r ? `<div class="rep-row"><span class="nm">${esc(name)}</span><span class="n">${r.n.toFixed(0)}</span><span class="s">${r.s.toFixed(0)}</span><span class="r">${r.n ? `${((r.s / r.n) * 100).toFixed(1)}%` : '&mdash;'}</span></div>` : ''; };
-        attach = row('protection', 'Protection attach') + row('accessories', 'Accessory attach') + row('home-bundle', 'Bundle mix: home internet') + row('connected-devices', 'Connected-device lines');
-        if (attach) attach = `<p class="rep-k">Attach and mix · clicks per exposure</p>${attach}`;
-      }
-      return `<p class="rep-k">${esc(label[slot] || slot)} · ${esc(report.date || date)}</p>${table}${attach}`;
-    }).join('');
-    const h = (contract && contract.history) || {};
-    const holdout = ((state.anchor.learn || {}).holdout || {}).share;
-    const first = (reports.find((r) => r.report) || {}).report || null;
-    el.reportBody.innerHTML = `${reportWindowLine(first, date)}${blocks}
-      <div class="rep-contract">credit <b>${esc(h.credit || 'last')}</b> touch · match <b>${esc(h.match || 'direct')}</b> · scope <b>${esc(h.scope || 'session')}</b>${holdout != null ? ` · holdout on stage <b>${Math.round(num(holdout) * 100)}%</b>, a setting` : ''}</div>
-      <div class="rep-flag"><b>Attribution, not incrementality.</b> The engine labels its own report <code>${esc((measurement && measurement.kind) || 'attribution_diagnostic')}</code> with inference <code>${esc((measurement && measurement.inference) || 'unavailable')}</code>: credited clicks per promotion and per module, never a lift number.</div>
-      <p class="rep-theirs">Lines per order, the share of switchers, conversion, revenue per account and churn are read in your warehouse from orders, against a holdout assigned by account so one account’s lines never split. The rows above are what we hand you to run it on.</p>`;
-  }
-  function renderRoadmap() {
-    const items = [
-      ['built', 'eligibleWhen { regions, context }', 'The home bundle only where 5G Home is available, and offers that need an answer to “new line, add a line, upgrade or bring your own”. A condition the request does not carry fails closed.'],
-      ['built', 'slot seeds', 'The campaign lifts the promotion its utm_term names, as context, never as evidence about her; the receipt itemises it.'],
-      ['built', 'learn.regional', 'The carrier’s own regional sales blended by λ = K / (K + Σa), giving way as her evidence grows.'],
-      ['built', 'one slot, many modules', 'The phone page’s modules are pieces of one slot; the order the engine returns is the order on the page.'],
-      ['built', 'POST /sort', 'The phones rail; at an affinity weight of zero the engine returns the site’s own order exactly.'],
-      ['designed', 'the sign-in hand-off', 'At sign-in the session’s signals travel to their own decisioning as context; nothing personal is used before it.'],
-      ['designed', 'census as explanation only', 'Shown on the arrival panel, never scored: no neighbourhood figure reaches a price, a plan or financing.'],
-    ];
-    el.roadmap.innerHTML = items.map(([s, b, t]) => `<li class="${s === 'built' ? 'built' : ''}"><span class="dialflag${s === 'built' ? ' dialflag--built' : ''}">${s}</span><b>${esc(b)}</b><span>${esc(t)}</span></li>`).join('');
-  }
-
-  const tabs = Array.from(document.querySelectorAll('.mtabs button'));
-  function selectTab(id) {
-    tabs.forEach((t) => {
-      const on = t.id === id;
-      t.setAttribute('aria-selected', String(on));
-      const panel = document.getElementById(t.getAttribute('aria-controls'));
-      if (panel) panel.hidden = !on;
-    });
-    if (id === 'tab-why') { renderWhy(); const set = state.view === 'phone' ? state.phone.set : state.home.set; if (set) void prefetchReceipts(set.decisions, set.asked).then(renderWhy); }
-  }
-  tabs.forEach((t) => t.addEventListener('click', () => selectTab(t.id)));
-  el.buildReport.addEventListener('click', () => { void loadReport(true); });
-
-  // ════════════════════════════════════════════════════════════════════════
-  // COMPARE: the demo kit's widget (public/demo-kit/compare.js). Before and Now
-  // as the room saw them (Seam, Side by side) and as the decided state behind
-  // them (What changed: the lists each answer returned, in order).
-  // A Before always exists: one after each view's first decided paint, in idle
-  // time, outside a performed beat; one at the start of every performed beat,
-  // before it acts; and Capture's own, which replaces either. Nothing here
-  // ranks, asserts or asks the engine anything new: the frames are the page,
-  // and What changed is the page's own record of the answers it painted.
-  // ════════════════════════════════════════════════════════════════════════
-  /** In a frame the sticky price bar sits where the page puts it: a full-page frame has no viewport to stick it to. */
-  const FREEZE_EXTRA = '.stickybar{position:relative!important;bottom:auto!important}';
-  /**
-   * Left out of every clone: the chrome outside the site, and the site's views that are not on screen. None of it
-   * shapes what is (the machine sits in a grid column its template fixes, or below the site on a narrow screen; the
-   * rest is fixed or closed; a hidden view has no box, and no rule selects a view by its position among them), and
-   * the clone of the whole document is the only thing a beat waits for when it takes its Before.
-   */
-  const CLONE_IGNORE = '.machine, .director, .pd-back, .sheet-back, .pd-pill, #demo-cursor, .back-chip, .fixture-flag, .skip, #site > .stage > .view[hidden]';
-  let kitMod = null, kitLoad = null;
-  /** The kit, loaded on first use (it touches nothing at import); the page runs without it. */
-  function kit() {
-    if (kitMod) return Promise.resolve(kitMod);
-    if (!kitLoad) {
-      kitLoad = import('/demo-kit/compare.js').then((m) => {
-        m.configure({ freezeCss: FREEZE_EXTRA, ignore: CLONE_IGNORE });
-        // The press is the capture: the main bar's Capture starts its frame in the press itself (the director's Capture presses it).
-        m.armPress(el.captureBtn, { root: () => el.site, label: frameLabel, meta: frameMeta, when: () => !state.busy });
-        kitMod = m;
-        return m;
-      }).catch((error) => { kitLoad = null; throw error; });
-    }
-    return kitLoad;
-  }
-  const clock = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   /** Where a frame was taken, as its tag and the Compare buttons name it. */
   const whereNow = () => (state.view === 'phone' ? `${(phone(state.phoneId) || {}).name || 'phone'} page`
     : state.view === 'phones' ? 'phones grid' : state.view === 'page' ? `${pageTitle(state.pageKey)} page` : 'homepage');
-  const whoNow = () => (cur() ? cur().label : 'nobody yet');
-  /** What a frame keeps: where, who, and the decided state on screen at its clone, for What changed. */
-  const frameMeta = () => ({ where: whereNow(), who: whoNow(), snap: snapshotOfPage() });
-  const frameLabel = (m) => `${m.where} · ${m.who}`;
-  /** "Before: homepage at 14:02, Shopper A": the title on every Compare button. */
-  function compareTitle() {
-    const b = kitMod && kitMod.baselineInfo();
-    return b && b.meta ? `Before: ${b.meta.where} at ${clock(b.at)}, ${b.meta.who}` : 'Before: none yet. Act, then Compare.';
-  }
-  function syncCompareTitles() {
-    const t = compareTitle();
-    el.compareBtn.title = t;
-    const tool = el.compareTools.querySelector('[data-tool="compare"]');
-    if (tool) tool.title = t;
-  }
   /** The decided state on screen: what each list returned, in order, and her strongest signals. */
   function snapshotOfPage() {
     const v = cur();
@@ -2076,78 +1380,6 @@
           : siteDefaultDeals().map((d) => own(d.customerContentId))],
         ['Phones for you', (state.rail.order || state.phones.map((p) => p.id)).slice(0, railTake()).map((id) => ({ id, t: (phone(id) || {}).name || id, s: null }))]] };
   }
-  /** What changed: the two frames' decided state in two columns. A row in red differs from the other column at the same position. */
-  function compareCols(a, b, keys) {
-    if (!a || !b) return '<p class="cmp-cols-sub">The decided state behind one of the two frames was not recorded, so there are no columns to set side by side.</p>';
-    const col = (s, other, k) => `<div class="cmp-col"><p class="ck">${esc(k)}</p><h3>${esc(s.who)} · ${esc(s.where)}</h3>
-      <p class="cwhen">${esc(hhmm(s.at))}${s.intent ? ` · intent ${esc(s.intent)} (asserted)` : ''}${s.region ? ` · region ${esc(s.region)}` : ''}</p>
-      ${s.lists.length ? s.lists.map(([name, rows], li) => {
-        const o = (other.lists[li] || [null, []])[1];
-        return `<p class="cmp-sec">${esc(name)}</p><ol class="cmp-list">${rows.map((r, i) => `<li class="${o[i] && o[i].id === r.id ? '' : 'diff'}"><span class="cn">${i + 1}</span><span>${esc(r.t)}</span><span class="cs">${r.s == null ? '' : fmt3(r.s)}</span></li>`).join('') || '<li><span></span><span>nothing returned</span><span></span></li>'}</ol>`;
-      }).join('') : `<p class="cmp-sec">Nothing on the ${esc(s.where)} is decided</p>`}
-      <p class="cmp-sec">Strongest signals</p><div class="cmp-sig">${s.vector.map((x) => `<div><span>${esc(x.value)} · ${esc(DIM_LABEL[x.dim] || x.dim)}</span><b>${x.a.toFixed(2)}</b></div>`).join('') || '<div><span>none yet</span><b></b></div>'}</div></div>`;
-    return `<p class="cmp-cols-sub">${esc(keys[0])} at ${esc(hhmm(a.at))}, against ${esc(keys[1].replace(/^(Now|The|A)\b/, (w) => w.toLowerCase()))} at ${esc(hhmm(b.at))}. A row in red differs from the other column at the same position.</p>
-      <div class="cmp-cols" id="cmpCols">${col(a, b, keys[0])}${col(b, a, keys[1])}</div>`;
-  }
-  /** The sentence under every comparison: what is the same on both sides, and the one thing that is not. */
-  const FOOT = {
-    moment: 'Same page, same catalog, same buy box and the same public prices. Only what each moment knew about the shopper is different.',
-    streaming: 'Same page, same catalog, same buy box, same public prices. Only what each of them did is different.',
-    phone: 'Same phone, same moment, same region, same buy box and the same public prices. The fresh visitor has sent nothing: the template order, with the region’s prior. Hers, on the left, is what her browsing earned.',
-    home: 'Same homepage, same moment, same region, same catalog and the same public prices. The fresh visitor has sent nothing: the region’s prior alone. Hers, on the left, is what her visit earned.',
-  };
-  /**
-   * A Before of the site as it is now: the kit keeps its pixels and, with them, the decided state on screen.
-   * reason: 'manual' (Capture), 'beat', 'first-paint' or 'tool'. Resolves at the clone, when the page may change
-   * again, with { cloned, done } (the frame lands once it has rendered, and Compare waits for it), or null
-   * when the kit could not load.
-   */
-  async function takeBaseline(reason, renderAfter) {
-    let m;
-    try { m = await kit(); } catch { return null; }
-    const done = m.captureBaseline(el.site, { label: frameLabel, meta: frameMeta, quiet: reason !== 'manual', fresh: reason !== 'manual', renderAfter });
-    void done.then(syncCompareTitles);
-    const cloned = await done.cloned;
-    return { cloned, done };
-  }
-  /** Capture: the Before is the page at the press, replacing any automatic one. */
-  async function capture() {
-    if (state.busy) { el.captureNote.textContent = 'A press is still landing: Capture once it has.'; return; }
-    const t = await takeBaseline('manual');
-    if (!t) { el.captureNote.textContent = 'Capture could not load the compare kit (public/demo-kit/compare.js).'; return; }
-    const c = t.cloned;
-    if (c && c.meta) {
-      el.captureNote.textContent = c.meta.who === 'nobody yet'
-        ? `Captured the ${c.meta.where} before anyone arrived, at ${hhmm(c.at)}. Change something, or bring in another shopper, then Compare.`
-        : `Captured ${c.meta.who} on the ${c.meta.where} at ${hhmm(c.at)}. Change something, or bring in another shopper, then Compare.`;
-      note('captured', `The ${c.meta.where}`, `for Compare · ${hhmm(c.at)}`);
-    }
-    const r = await t.done;
-    if (!r.ok) el.captureNote.textContent = `Capture did not land: ${r.error}.`;
-    syncCompareTitles();
-  }
-  let compareReq = 0;
-  /** Compare: the Before against the page now. Never nothing: with no Before yet it says so; a press still landing is waited for, on screen. */
-  async function compareNow() {
-    const my = ++compareReq;
-    let m;
-    try { m = await kit(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
-    if (my !== compareReq) return;
-    if (!m.hasBaseline()) { void m.openCompare(el.site, { title: 'Before and now' }); return; }   // the kit says there is no earlier frame, and nothing else
-    if (state.busy) {
-      m.showWaiting({ title: 'Before and now', heading: 'A press is still landing.', text: 'Compare opens when it has.' });
-      while (state.busy) {
-        await sleep(150);
-        if (my !== compareReq || !m.isOpen()) return;   // closed, or another comparison took the screen
-      }
-    }
-    await m.openCompare(el.site, {
-      title: 'Before and now', nowLabel: frameLabel, nowMeta: frameMeta, foot: FOOT.moment,
-      details: (b, n) => compareCols(b.meta && b.meta.snap, n.meta && n.meta.snap, ['Before', 'Now']),
-    });
-  }
-  el.captureBtn.addEventListener('click', () => { void capture(); });
-  el.compareBtn.addEventListener('click', () => { void compareNow(); });
 
   /**
    * A second shopper's decided set on the live page, for one clone: drawn by the page's own renderers, as the
@@ -2205,9 +1437,8 @@
     let m;
     try { m = await kit(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
     state.busy = true;
-    compareReq += 1;                               // a Compare still waiting for a press gives way to this one
+    demo.compare.supersede();                      // a Compare still waiting for a press gives way to this one
     say('the streaming shopper is browsing…');
-    const title = 'Two shoppers, one phone page, one engine';
     const keys = ['Her page', 'The streaming shopper'];
     let restore = null;
     try {
@@ -2235,6 +1466,8 @@
       state.quietRoute = true;                     // his pages take her history entry for the moment; it is handed back below
       const cfg = state.anchor.streamingShopper || {};
       const pid = cfg.phone && phone(cfg.phone) ? cfg.phone : (state.phoneId || focusPhone());
+      const title = twoShoppersTitle(back, pid);   // true to the two phones: hers, and the one he opens
+      const foot = twoShoppersFoot(back, pid);     // and so is the sentence under the comparison
       const plan = String(cfg.plan || 'max').replace(/^plan[-_]/, '');
       const perk = cfg.perk || 'streaming';
       const b = await mintVisitor('B', directEntry(), 'Shopper B');
@@ -2250,7 +1483,7 @@
       m.showWaiting({ title, heading: 'Back to her page', text: 'His frame is taken; hers comes back as she left it.' });
       restore(); restore = null;
       await renderVectors();
-      await m.openCompare(el.site, { now: theirs, title, tags: { before: keys[0], now: keys[1] }, foot: FOOT.streaming,
+      await m.openCompare(el.site, { now: theirs, title, tags: { before: keys[0], now: keys[1] }, foot,
         details: (bf, nf) => compareCols(bf.meta && bf.meta.snap, nf.meta && nf.meta.snap, keys),
         sameNote: 'Her page and his are the same: nothing either of them did weighs on it yet.',
         nearNote: 'Her page and his differ only in small print: What changed has the answers behind both.' });
@@ -2282,7 +1515,7 @@
       return;
     }
     state.busy = true;
-    compareReq += 1;                               // a Compare still waiting for a press gives way to this one
+    demo.compare.supersede();                      // a Compare still waiting for a press gives way to this one
     say('a fresh visitor is asking…');
     const keys = ['Her page', 'A fresh visitor, same region'];
     m.showWaiting({ title, heading: 'Her page, then a fresh visitor’s', text: 'Same region, nothing sent.' });
@@ -2316,44 +1549,10 @@
     }
   }
 
-  /** (a) A Before always exists: after a view's first decided paint for this visitor, outside a performed beat, in idle time. */
-  let idleGen = 0;
-  const idle = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
-  function afterDecidedPaint(viewKey) {
-    const v = cur();
-    if (!v || v.fresh) return;
-    v.painted = v.painted || new Set();
-    if (v.painted.has(viewKey)) return;
-    v.painted.add(viewKey);
-    if (state.busy) return;                        // a performed beat, or a compare tool, took its own Before
-    const my = ++idleGen;
-    setTimeout(() => idle(() => {
-      if (my !== idleGen || state.busy || cur() !== v) return;
-      void takeBaseline('first-paint');
-    }), 600);
-  }
-
   // ════════════════════════════════════════════════════════════════════════
   // THE EXIT. Behind a flag: the object host's alarm, pushed over the socket.
   // ════════════════════════════════════════════════════════════════════════
   const exitOn = () => (QS.get('exit') === '1') || (QS.get('exit') !== '0' && state.anchor.exitBeat === true);
-  function connectSocket(v) {
-    if (!exitOn() || FIXTURE || !v || typeof WebSocket === 'undefined') return;
-    try { if (state.socket) state.socket.close(); } catch { /* closing */ }
-    const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/realtime/ws?tenant=${TENANT}`;
-    const key = btoa(unescape(encodeURIComponent(sdkKey))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-    let ws;
-    try { ws = new WebSocket(url, ['shopper-session-v1', v.session.capability, `sdk-key-v1.${key}`]); } catch { return; }
-    state.socket = ws;
-    ws.onmessage = (ev) => {
-      let msg; try { msg = JSON.parse(ev.data); } catch { return; }
-      const data = (msg && msg.data) || {};
-      const exits = arr(data.affinity && data.affinity.changed).filter((c) => c && c.direction === 'exit');
-      if (msg.type === 'personalization_update' && (data.source === 'reflex_alarm' || exits.length)) void onEngineExit(exits, v);
-    };
-    ws.onclose = () => { if (state.heartbeat) clearInterval(state.heartbeat); };
-    ws.onopen = () => { state.heartbeat = setInterval(() => { try { if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'heartbeat' })); } catch { /* dying */ } }, 25000); };
-  }
   async function onEngineExit(exits, v) {
     if (v !== cur()) return;
     const waited = state.exitArmedAt ? Math.round((Date.now() - state.exitArmedAt) / 1000) : null;
@@ -2367,69 +1566,8 @@
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // THE DIRECTOR'S HAND
+  // THE ADDRESS BAR: what it names, restored, as the browser's Back and Forward do.
   // ════════════════════════════════════════════════════════════════════════
-  async function performClick(selector) {
-    const target = typeof selector === 'string' ? document.querySelector(selector) : selector;
-    if (!target) throw new Error(`nothing on the page matches ${selector}`);
-    try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { /* optional */ }
-    await sleep(320);
-    const r = target.getBoundingClientRect();
-    el.cursor.classList.add('show');
-    el.cursor.style.left = `${r.left + r.width / 2}px`;
-    el.cursor.style.top = `${r.top + Math.min(r.height / 2, 30)}px`;
-    await sleep(680);
-    el.cursor.classList.remove('click'); void el.cursor.offsetWidth; el.cursor.classList.add('click');
-    target.classList.remove('clicked'); void target.offsetWidth; target.classList.add('clicked');
-    await sleep(260);
-    await handleControl(target);
-    await sleep(340);
-    target.classList.remove('clicked');
-  }
-  const ctl = (container, name) => `#${container} [data-ctl="${name}"]`;
-  async function clickIf(selector) { if (document.querySelector(selector)) { await performClick(selector); return true; } return false; }
-  /** Open a phone the way she would: its card on the rail if it is there, otherwise the grid. */
-  async function openPhoneVia(id) {
-    if (state.view === 'home' && await clickIf(ctl('rail', `rail-${id}`))) return;
-    if (state.view !== 'phones') { await performClick(ctl('mainnav', 'nav-phones')); await sleep(300); }
-    await performClick(ctl('phoneGrid', `open-${id}`));
-  }
-  const goHome = () => performClick('.mast a[data-ctl="home"]');
-  /** The cursor goes to a control without running anything: the browser's own Back is not the page's. */
-  async function pointAt(node) {
-    const r = node.getBoundingClientRect();
-    el.cursor.classList.add('show');
-    el.cursor.style.left = `${r.left + r.width / 2}px`;
-    el.cursor.style.top = `${r.top + Math.min(r.height / 2, 30)}px`;
-    await sleep(680);
-    el.cursor.classList.remove('click'); void el.cursor.offsetWidth; el.cursor.classList.add('click');
-    await sleep(260);
-  }
-  /**
-   * The browser's Back, as she would press it. The page restores the page she
-   * left and asks again; a restore from history is not a new view, so it sends
-   * no event (a bfcache restore runs no page script either). The chip at the
-   * corner stands for the browser's own button while the hand presses it.
-   */
-  async function browserBack() {
-    let chip = $('backChip');
-    if (!chip) {
-      chip = document.createElement('div');
-      chip.id = 'backChip'; chip.className = 'back-chip';
-      chip.innerHTML = '<b>&lsaquo; Back</b><em>the browser’s own button</em>';
-      document.body.appendChild(chip);
-    }
-    chip.hidden = false;
-    await pointAt(chip);
-    await new Promise((resolve) => {
-      const done = () => { window.removeEventListener('popstate', done); resolve(); };
-      window.addEventListener('popstate', done);
-      setTimeout(done, 1500);
-      history.back();
-    });
-    chip.hidden = true;
-    await restoreFromUrl();
-  }
   /** What the address bar names, restored: a phone page without a new view; anything else as the page would open it. */
   async function restoreFromUrl() {
     const q = new URLSearchParams(location.search);
@@ -2440,19 +1578,14 @@
     if (q.get('view')) return openPage(q.get('view'));
     return openHome({ event: false });
   }
-  /** Back to a phone as she would get there: the browser's Back when that is the page she came from, else its card. */
+  /** Whether the browser's Back returns to this phone: she is on the homepage, reached from that phone's page. */
   const canBackTo = (id) => Boolean(state.view === 'home' && state.backTarget && state.backTarget.id === id);
-  async function backToPhone(id) {
-    if (canBackTo(id)) { await browserBack(); return; }
-    await openPhoneVia(id);
-  }
 
   // ════════════════════════════════════════════════════════════════════════
-  // THE BEATS. Lane L1's beat index (beats/anchor.json), one visible change per
-  // press: where a design beat touches two surfaces it is two presses (9a/9b,
-  // 10a/b/c, 14a/b, 15a/b/c). Shopper beats are performed through the cursor.
+  // THE BEATS' FOOTING. The beats themselves are data (public/vantage/beats.json),
+  // run by the kit's director; these are the readings of Vantage's documents they
+  // rest on, and the two sentences the exit beat writes.
   // ════════════════════════════════════════════════════════════════════════
-  const ACTS = { 1: 'The arrival', 2: 'The visitor earns it', 3: 'The phone page follows intent', 4: 'The merchandiser’s day', 5: 'Order and metric' };
   const focusPhone = () => (state.anchor.focusPhone && phone(state.anchor.focusPhone) ? state.anchor.focusPhone : (state.phones.find((p) => p.brand === 'samsung') || state.phones[0] || {}).id);
   const focusName = () => { const p = phone(focusPhone()); return p ? p.name : 'the phone'; };
   /**
@@ -2465,22 +1598,8 @@
   /** Beat 4's phone: a Pixel page, then home (the hinge). */
   const hingePhone = () => (state.anchor.hingePhone && phone(state.anchor.hingePhone) ? state.anchor.hingePhone
     : (state.phones.find((p) => p.id === 'pixel-11') || state.phones.find((p) => p.brand === 'google') || {}).id);
-  const stripTags = (s) => String(s || '').replace(/<[^>]+>/g, '');
   /** Content notes carry their sources for the build; the site shows the sentence, never the citation. */
   const customerCopy = (s) => String(s || '').replace(/\s*\([^)]*(?:seen on|\.com\b|brief)[^)]*\)/gi, '').replace(/\s+;/g, ';').trim();
-  /** Beat 5's minute, on screen: the page waits, then asks again. It counts nothing for the engine. */
-  async function exitTimer(seconds) {
-    const end = Date.now() + seconds * 1000;
-    focusOn(el.dealsModule);
-    while (Date.now() < end) {
-      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-      const html = `<li class="delta-timer"><span class="hk">Nobody touches the page</span><span><b class="tmr">${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</b> The page asks again after a minute; the engine’s answer, not the page’s.</span></li>`;
-      const node = el.dealsDeltas.querySelector('.delta-timer');
-      if (node) node.outerHTML = html; else el.dealsDeltas.insertAdjacentHTML('afterbegin', html);
-      say(`the page asks again in ${left} s`);
-      await sleep(250);
-    }
-  }
   /**
    * What the minute did to her meters, named, read off the reflex before and
    * after: the claim that fell under the exit threshold, and the lean that held.
@@ -2533,17 +1652,6 @@
     node.hidden = !rows.length;
     return rows.length > 0;
   }
-  /** How one decision's own drivers moved between two answers: the largest fall, and what carries it now. */
-  function driverShift(d0, d1) {
-    const key = (x) => `${x.dim}\u0000${x.value}`;
-    const m1 = new Map(((d1.explain && d1.explain.drivers) || []).filter(OWN).map((x) => [key(x), x]));
-    const drops = ((d0.explain && d0.explain.drivers) || []).filter(OWN)
-      .map((x) => ({ x, b: num(x.a), a: m1.has(key(x)) ? num(m1.get(key(x)).a) : 0 }))
-      .filter((r) => r.b - r.a > 0.1).sort((p, q) => (q.b - q.a) - (p.b - p.a));
-    const carry = [...m1.values()].sort((p, q) => num(q.a) * num(q.weight) - num(p.a) * num(p.weight))[0];
-    return [drops[0] && `${DIM_LABEL[drops[0].x.dim] || drops[0].x.dim} ${drops[0].x.value} ${fmt2(drops[0].b)} → ${fmt2(drops[0].a)}`,
-      carry && `${DIM_LABEL[carry.dim] || carry.dim} ${carry.value} carries it`].filter(Boolean).map((s) => esc(s)).join(' · ');
-  }
   const regionKey = (x) => (x && typeof x === 'object' ? x.key : x) || null;
   /**
    * Regions (lane F2, 2026-10-01). Her own region leads: the edge locates the request and the page asserts
@@ -2558,10 +1666,6 @@
     const first = regionKey(r.first) || 'US-NY', second = regionKey(r.second) || 'US-TX';
     return { first, second, covered: regionKey(r.covered) || first, uncovered: regionKey(r.uncoveredRegion) || regionKey(r.uncovered) || 'US-MT' };
   };
-  /** Her own region: the rehearsal override when the address bar carries one, else null (nothing asserted: the request's own). */
-  const ownRegion = () => OVERRIDE.region || null;
-  const ownSource = () => (OVERRIDE.region ? 'rehearsal override' : 'edge');
-  const ownName = () => (state.own && (state.own.label || state.own.key)) || (OVERRIDE.region ? regionName(OVERRIDE.region) || OVERRIDE.region : 'her own region');
   /** Beat 2's asserted contrast: the anchor's second rehearsed region (Texas), unless that is her own, then its first (New York). */
   const contrast = () => { const r = regions(); const own = OVERRIDE.region || (state.own && state.own.key) || null; return own === r.second ? r.first : r.second; };
   /**
@@ -2581,396 +1685,12 @@
   const homeName = () => { const h = homeRegion(); return h.own ? ownName() : regionName(h.key) || h.key; };
   /** Why 14a asserts the covered region: her own region has no 5G Home, or her request carried no region. */
   const notHomeWhy = () => (state.own && state.own.key ? `5G Home is not available in ${ownName()}` : 'her request carried no region');
-  /** The region a frame was decided in, with how it is known, for Compare's columns. */
-  const regionShown = () => (state.ctx.region ? `${state.ctx.region} (${state.regionSource === 'rehearsal override' ? 'rehearsal override' : 'asserted'})`
-    : state.own && state.own.key ? `${state.own.key} (from the request)` : null);
-  const act = (type, attrs, action) => ({ type, attrs: attrs || {}, ...(action ? { action } : {}) });
-  function setRegion(region, source) { state.ctx.region = region || null; state.regionSource = source || (region ? 'asserted' : 'edge'); renderWho(); }
-  /** Back in her own region (from the request, or the rehearsal override), and said so on screen. */
-  async function restoreRegion() {
-    const own = ownRegion();
-    if ((state.ctx.region || null) === own) return;
-    setRegion(own, ownSource());
-    if (own) note('asserted', `region = ${own}`, 'back in the rehearsal override’s region (?region=), labelled');
-    else note('located', `back in ${ownName()}`, 'her own region: from the request, nothing asserted');
-    await loadColdStart();
-  }
   function storageStep(id) {
     const p = phone(id);
     const opts = p ? optionsOf(p) : [];
     const o = opts[1] || opts[0] || { storage: '', label: 'storage' };
     return { ...o, label: optLabel(o) };
   }
-
-  const BEATS = [
-    { key: 'arrive', no: '1', act: 1, who: 'shopper', label: 'A stranger arrives from the ad',
-      declare: () => [`<b>Taps</b> a paid-social ad and lands on the homepage (${esc(describeEntry(landingEntry(adParams())))})`,
-        OVERRIDE.region ? `<b>Rehearsal override</b>: region = ${esc(OVERRIDE.region)} from the address bar (?region=), asserted and labelled`
-          : 'Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted'],
-      acts: () => [act('page_view', {})],
-      will: () => ['The hero and the four answer <b>the ad and her region</b>: the campaign lifts its promotion, her region’s own sales lean the rest',
-        `The Arrival panel names ${OVERRIDE.region ? 'the override’s region, labelled as asserted' : 'the region <b>the edge located, from the request</b>'}, the grain, the census figure and the regional lean, each labelled`,
-        'Her own meters are empty: nothing about <b>her</b> is known yet'],
-      line: () => `A stranger taps a paid-social ad. The first paint answers <b>the ad and where she is</b>: ${OVERRIDE.region ? 'her region is a rehearsal override, labelled' : 'her region comes from the request'}, the campaign lifts its promotion and the carrier’s own regional sales lean the rest. Aggregate, never the individual; we curate, never price.`,
-      async run() {
-        await resetTenant();
-        await useCatalog(beatName('open', 'catalog'));
-        // The Before taken as this press landed (the page before she arrives) stays: it is beat 1's own comparison.
-        state.visitors = {}; state.who = null; state.receipts.clear();
-        state.home = { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null };
-        state.phone = { previous: null, current: null, set: null };
-        state.rail = { status: 'site', order: null, items: null, off: false };
-        el.cartCount.hidden = true; placeDeals((state.anchor.templates || {}).home, 'today’s');
-        const params = adParams();
-        try { history.replaceState({ vantage: true }, '', `/vantage/?${params}`); } catch { /* sandboxed */ }
-        const v = await mintVisitor('A', landingEntry(params));
-        useVisitor('A');
-        note('arrived', 'A stranger, from a paid-social ad', `${describeEntry(v.entry)} · anonymous · consent granted`);
-        // Her own region leads: nothing is asserted unless the address bar carries the ?region= rehearsal override.
-        state.own = null;
-        setRegion(ownRegion(), ownSource());
-        if (OVERRIDE.region) note('asserted', `region = ${OVERRIDE.region}`, 'a rehearsal override (?region=), labelled · never the default');
-        else if (OVERRIDE.ignored) note('ignored', `?region=${OVERRIDE.ignored}`, 'not a region key, so nothing is asserted');
-        note('asserted', `ctx.intent = ${v.intent}`, 'a signed-out visitor is a new line until she says otherwise');
-        await loadColdStart();
-        if (!OVERRIDE.region) {
-          const o = state.own || {};
-          note('located', o.key ? `region ${o.key}${o.label && o.label !== o.key ? ` (${o.label})` : ''}` : 'no region on this request',
-            o.key ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills request.cf · nothing asserted' : 'from the request: the edge located her · nothing asserted')
-              : 'the national figure is shown · nothing invented');
-        }
-        connectSocket(v);
-        selectTab('tab-arrival');
-        await openHome({ quiet: true, focus: 'hero' });
-      } },
-
-    { key: 'region', no: '2', act: 1, who: 'merch', label: 'The same visitor, another region',
-      declare: () => [`<b>Asserts</b> region = ${esc(contrast())}${regionName(contrast()) ? ` (${esc(regionName(contrast()))})` : ''} on the request: asserted, not observed; nothing about her changes`],
-      acts: () => [],
-      will: () => ['A <b>different opening four</b>: only the region changed', 'The Arrival panel shows the asserted region’s grain, census figure and lean, labelled <b>asserted, not observed</b>', 'Her meters do not move: a region is context, never evidence about her'],
-      line: () => `Same visitor, same ad. Only the region changes, to <b>${esc(regionName(contrast()) || contrast())}</b>, asserted, not observed, and the page opens differently: the prior is that region’s own sales. The census figure explains the lean and is never scored.`,
-      async run() {
-        const to = contrast();
-        setRegion(to, 'asserted');
-        note('asserted', `region = ${to}`, 'asserted, not observed · context on the request · never evidence about her');
-        await loadColdStart();
-        selectTab('tab-arrival');
-        await refreshHome();
-        focusOn(el.dealsModule);
-      } },
-
-    { key: 'browse', no: '3', act: 2, who: 'shopper', label: 'She browses Samsung',
-      declare: () => [...((state.ctx.region || null) !== ownRegion() ? [`<b>Back</b> in ${esc(ownName())}, her own region (${OVERRIDE.region ? 'the rehearsal override, labelled' : 'from the request, nothing asserted'})`] : []),
-        '<b>Opens</b> Phones', ...browseTouches().map((t) => (t.view === 'page' ? `<b>Opens</b> the ${esc(phone(t.id).name)} page` : `<b>Quick look</b> on the ${esc(phone(t.id).name)}`))],
-      acts: () => {
-        const out = [act('page_view', {})];
-        let onGrid = true;
-        browseTouches().forEach((t) => {
-          if (t.view !== 'page' && !onGrid) { out.push(act('page_view', {})); onGrid = true; }
-          out.push(act('product_view', phoneAttrs(phone(t.id), { view: t.view })));
-          if (t.view === 'page') onGrid = false;
-        });
-        return out;
-      },
-      will: () => ['<b>brand samsung</b> crosses the entry threshold on three touches; ecosystem and price band accumulate over the regional prior', 'The homepage is not asked while she browses, so the four do not move yet'],
-      line: () => 'Back in her own region, she browses <b>Samsung</b>: the Galaxy S26 card, its page, then the S26 Ultra. Each is a real event, and <b>brand samsung</b> crosses the entry threshold on her own meters. The four are not asked again until she goes home.',
-      async run() {
-        await restoreRegion();
-        if (state.view !== 'phones') { await performClick(ctl('mainnav', 'nav-phones')); await sleep(300); }
-        for (const t of browseTouches()) {
-          if (t.view === 'page') {
-            if (!await clickIf(ctl('sheetBody', `sheet-open-${t.id}`))) {
-              if (state.view !== 'phones') { await performClick(ctl('mainnav', 'nav-phones')); await sleep(300); }
-              await performClick(ctl('phoneGrid', `open-${t.id}`));
-            }
-            await sleep(900);
-          } else {
-            if (state.sheet) { await performClick(ctl('sheetBody', 'sheet-done')); await sleep(250); }
-            if (state.view !== 'phones') { await performClick(ctl('pdpCrumbs', 'phones-crumb')); await sleep(300); }
-            await performClick(ctl('phoneGrid', `quick-${t.id}`));
-            await sleep(800);
-          }
-        }
-        if (state.sheet) await performClick(ctl('sheetBody', 'sheet-done'));
-      } },
-
-    { key: 'hinge', no: '4', act: 2, who: 'shopper', label: () => `The hinge: the ${phone(hingePhone()) ? phone(hingePhone()).name : 'Pixel'}, then home`,
-      declare: () => [`<b>Opens</b> the ${esc((phone(hingePhone()) || {}).name || 'Pixel')} page`, '<b>Returns</b> to the homepage'],
-      acts: () => [act('product_view', phoneAttrs(phone(hingePhone()), { view: 'page' })), act('page_view', {})],
-      will: () => ['Her <b>Android</b> interest now spans two makers; <b>brand samsung</b> is past the entry threshold', 'Android promotions overtake the lifted launch promotion; the receipts say what carried each one'],
-      line: () => 'The hinge. The ad said iPhone; she has been looking at Android. She opens a Pixel and comes back, and the four follow <b>her</b>. <b>Why these</b> shows what carried each one.',
-      // Said only once the receipts say it: a lifted promotion overtaken by pieces her own browsing carries.
-      after: () => (hingeLine() ? 'The hinge. The ad said iPhone; she has been looking at Android. The four follow <b>her</b>, and the receipt says why: <b>campaign context superseded by observed behaviour</b>.' : null),
-      async run() { await openPhoneVia(hingePhone()); await sleep(900); await goHome(); selectTab('tab-why'); } },
-
-    { key: 'exit', no: '5', act: 2, who: 'engine', label: 'She stops touching it',
-      declare: () => ['<b>Nothing.</b> Nobody touches the page for a minute; then the page asks again'],
-      acts: () => [],
-      will: () => [`Brand memory is ${esc(roomOf('brand') || 'short')} in this room: <b>brand samsung</b> decays below the <b>${fmt2(thetaOut())} exit threshold</b> on the meter`,
-        'The Galaxy receipts lose their Samsung driver; the <b>Phones for you</b> rail re-sorts on the same answer', 'The four can keep their order: ranking is continuous, and <b>ecosystem android</b> still carries them'],
-      line: () => 'Everyone shows joining an audience. Watch her <b>leave</b> one. Nobody touches the page for a minute; the page asks again, and <b>the engine’s answer</b> withdraws the Samsung claim while her Android lean holds.',
-      async run() {
-        if (state.view !== 'home') await goHome();
-        // Her meters read before the minute and after it (beat 5's document); a slow read shows as reading, not as a stalled page.
-        el.dealsDeltas.insertAdjacentHTML('afterbegin', '<li class="delta-timer"><span class="hk">Reading her meters</span><span><b class="tmr">…</b> Before the minute starts: the engine’s own read.</span></li>');
-        await renderVectors();
-        const before = JSON.parse(JSON.stringify(state.lastVector || {}));
-        const four = (state.home.current || []).map((c) => c.id).join('|');
-        note('waited', 'Nobody touches the page', 'a minute; the page asks again after it');
-        const doc = await tryJson('/vantage/beats/05-stop-touching.json');
-        await exitTimer(num(QS.get('wait')) || (doc && num(doc.waitSeconds)) || 60);
-        // A slow read shows as the page asking, never as a stalled clock; the page has no order of its own to fall back to.
-        const row = el.dealsDeltas.querySelector('.delta-timer');
-        if (row) row.innerHTML = '<span class="hk">Asking the engine</span><span><b class="tmr">…</b> The minute is up and the page is asking again: the engine’s answer, not the page’s.</span>';
-        say('asking the engine…');
-        await refreshHome();
-        const said = exitSentence(before, state.lastVector || {}, (state.home.current || []).map((c) => c.id).join('|') === four);
-        state.exitNote = said.four;
-        note('engine', 'The engine withdrew a claim', stripTags(said.four).slice(0, 160));
-        renderDealsChanges();
-        const railMoved = renderRailDeltas(said.rail);
-        focusOn(railMoved ? $('railModule') : el.dealsModule);
-      } },
-
-    { key: 'open', no: '6', act: 3, who: 'shopper', label: () => `She opens the ${focusName()}`,
-      declare: () => [`<b>Opens</b> the ${esc(focusName())} page`],
-      acts: () => [act('product_view', phoneAttrs(phone(focusPhone()), { view: 'page' }))],
-      will: () => ['Six modules below the buy box, in the order <b>her browsing already earns</b>; Why these explains each one', '<b>Compare → Fresh visitor</b> shows the template order beside hers', '<b>One decision on every surface</b>: the trade-in module explains the offer the homepage led with; the buy box is marked <b>off limits</b>'],
-      line: () => 'The phone page. The buy box is <b>off limits</b>: never decided, never personalised. Below it, six modules in the order her browsing already earns, and the trade-in module carries <b>the same offer the homepage chose</b>, explained, not decided again.',
-      async run() { await openPhoneVia(focusPhone()); } },
-
-    { key: 'compare', no: '7', act: 3, who: 'shopper', label: 'She steps storage and compares the camera',
-      declare: () => [`<b>Selects</b> ${esc(storageStep(focusPhone()).label)} in the buy box`, '<b>Compares</b> storage, then the camera'],
-      acts: () => {
-        const p = phone(focusPhone()); const o = storageStep(focusPhone()); const price = num(o.price_usd);
-        return [act('custom', { productId: p.id, storage: o.storage, price_usd: price }, 'select'),
-          act('custom', { productId: p.id, storage: o.storage, price_usd: price, contentType: 'compare' }, 'compare'),
-          act('custom', { productId: p.id, brand: p.brand, os: ecoOf(p), ecosystem: ecoOf(p), price_usd: price, contentType: 'compare' }, 'compare')];
-      },
-      will: () => ['<b>Price band</b> and <b>contentType compare</b> rise; a storage step that crosses $900 moves the band', `<b>Storage &amp; memory</b> rises, leading with ${esc(storageStep(focusPhone()).label)} at its real monthly delta`],
-      line: () => { const p = phone(focusPhone()); const o = storageStep(focusPhone()); return `She steps to <b>${esc(o.label)}</b> and compares the camera. The monthly figure rises by the real delta, <b>+${money(deltaOf(p, o))}</b>, and the page states the maths. <b>Storage &amp; memory</b> rises.`; },
-      async run() {
-        const o = storageStep(focusPhone());
-        await clickIf(ctl('bbStorage', `storage-${o.storage}`));
-        await sleep(500);
-        await performClick(ctl('modules', 'storage-compare'));
-        await sleep(700);
-        await performClick(ctl('sheetBody', 'cmp-camera'));
-        await sleep(700);
-        await performClick(ctl('sheetBody', 'sheet-done'));
-      } },
-
-    { key: 'perk', no: '8', act: 3, who: 'shopper', label: 'She opens the hotspot & travel starter',
-      declare: () => [`<b>Opens</b> the hotspot &amp; travel starter on ${esc(tierName('more'))}, in Pair with a plan`],
-      acts: () => [act('page_view', { page: 'perk', category: 'plans', perk: 'hotspot-travel' })],
-      will: () => ['<b>perk hotspot-travel</b> and <b>category plans</b> move', `<b>Pair with a plan</b> rises; ${esc(tierName('more'))} leads on the hotspot &amp; travel starter`, `Capture it, then Compare with the streaming shopper: ${esc(tierName('max'))} leads with the streaming bundle`],
-      line: () => `She opens the <b>hotspot &amp; travel</b> starter. Pair with a plan rises and <b>${esc(tierName('more'))}</b> leads. Capture it, and the Compare tool shows the streaming shopper beside her.`,
-      async run() {
-        const btn = el.modules.querySelector('[data-perk="hotspot-travel"][data-plan="more"]') || el.modules.querySelector('[data-perk="hotspot-travel"]');
-        if (!btn) throw new Error('no plan card on this page offers the hotspot & travel starter');
-        await performClick(`#modules [data-ctl="${btn.getAttribute('data-ctl')}"]`);
-        await sleep(800);
-        await performClick(ctl('sheetBody', 'sheet-done'));
-      } },
-
-    { key: 'lines', no: '9a', act: 3, who: 'shopper', label: 'Four lines, then the kids’ watch',
-      declare: () => ['<b>Sets</b> the line selector to four lines', '<b>Opens</b> the kids’ smartwatch', '<b>Goes back</b> to the phone page'],
-      acts: () => [act('custom', { lines: 'family', count: 4 }, 'select'), act('page_view', KIDS_WATCH)],
-      will: () => ['<b>lines family</b> moves on the selector, then with <b>intent add-line</b> and <b>category watches-tablets</b> on the watch page', 'Watch, tablet and more lines rises with the four-line per-line price; a household total appears', `The family starter (${esc(tierName('go'))}) leads in Pair with a plan`],
-      line: () => 'She sets the lines to <b>four</b> and looks at a kids’ watch. The connected-devices module rises with the four-line price, a household total appears, and the family starter leads.',
-      async run() {
-        await performClick(ctl('modules', 'lines-4'));
-        await sleep(500);
-        if (!await clickIf(ctl('modules', 'kids-watch'))) { await performClick(ctl('mainnav', 'nav-add-a-line')); await sleep(500); await performClick(ctl('pageBody', 'kids-watch')); }
-        await sleep(800);
-        await performClick(ctl('pageCrumbs', 'back-phone'));
-        focusOn($('modulesModule'));
-      } },
-
-    { key: 'home-family', no: '9b', act: 3, who: 'shopper', label: 'Home: the family hero and the four-line offer',
-      declare: () => ['<b>Returns</b> to the homepage'],
-      acts: () => [act('page_view', {})],
-      will: () => ['The <b>family hero</b> leads the page', 'The <b>four-line promotion enters the four</b>: what she did on the phone page reaches the homepage'],
-      line: () => 'Back on the homepage the hero and the four follow what she did on the phone page: the <b>family hero</b>, and the <b>four-line promotion</b> enters. One profile, every surface.',
-      async run() { await performClick(ctl('pdpCrumbs', 'home-crumb')); focusOn(el.heroModule); } },
-
-    { key: 'byod', no: '10a', act: 3, who: 'shopper', label: 'She will bring her own phone',
-      declare: () => [(canBackTo(focusPhone()) ? `<b>Goes back</b> to the ${esc(focusName())} page (the browser’s Back)` : `<b>Opens</b> the ${esc(focusName())} again`), '<b>Answers</b> “bring your own” in the buy box'],
-      acts: () => [...(canBackTo(focusPhone()) ? [] : [act('product_view', phoneAttrs(phone(focusPhone()), { view: 'page' }))]), act('custom', { intent: 'byod' }, 'select')],
-      will: () => ['<b>ctx.intent = byod</b> is asserted on every decision, labelled, as her account would', 'Offers that need another answer <b>fail closed</b>', '<b>Simple</b> leads Pair with a plan for the switcher; the public prices do not change'],
-      line: () => 'She says she will <b>bring her own phone</b>. The answer is asserted on the request, as her account would, and it routes the propositions: <b>Simple</b> leads for the switcher. Same public prices.',
-      async run() { await backToPhone(focusPhone()); await sleep(400); await performClick(ctl('bbIntent', 'intent-byod')); focusOn(el.modules.querySelector('[data-module="plan-pairing"]') || el.modules); } },
-
-    { key: 'home-byod', no: '10b', act: 3, who: 'shopper', label: 'Home: the switcher’s homepage',
-      declare: () => ['<b>Returns</b> to the homepage'],
-      acts: () => [act('page_view', {})],
-      will: () => ['The <b>switch hero</b> leads', '<b>Bring your phone</b> enters the four on her declared answer; the offers that need a new line fail closed, and the ungated pre-order can still rank above it'],
-      line: () => 'On the homepage her answer routes the offers too: the <b>switch hero</b>, and <b>bring your own phone</b> enters the four. The offers that need a new line fail closed.',
-      async run() { await performClick(ctl('pdpCrumbs', 'home-crumb')); focusOn(el.heroModule); } },
-
-    { key: 'upgrade', no: '10c', act: 3, who: 'shopper', label: 'Then she is upgrading',
-      declare: () => [(canBackTo(focusPhone()) ? `<b>Goes back</b> to the ${esc(focusName())} page (the browser’s Back)` : `<b>Opens</b> the ${esc(focusName())} again`), '<b>Answers</b> “upgrade”', '<b>Chooses</b> the plan that leads'],
-      acts: () => [...(canBackTo(focusPhone()) ? [] : [act('product_view', phoneAttrs(phone(focusPhone()), { view: 'page' }))]), act('custom', { intent: 'upgrade' }, 'select'), act('custom', { plan: 'more' }, 'select')],
-      // Protection's rise is timing-dependent (R1 7b-ii), so the beat claims only the flip, the plan and, on 10d, the offer.
-      will: () => ['Her answer flips from “bring your own” to <b>upgrade</b>: <b>ctx.intent = upgrade</b> is asserted on every decision, labelled', `<b>${esc(tierName('more'))}</b> leads Pair with a plan for the trade-in shopper`, 'Her plan choice is kept for the continue hero: her selections, nothing inferred', 'Watch protection; it rises when the premium band is strong'],
-      line: () => `She is <b>upgrading</b> instead: her answer flips from bring-your-own to upgrade, asserted on the request. <b>${esc(tierName('more'))}</b> leads Pair with a plan for the trade-in shopper. She picks the plan that leads; it is her selection, and the page keeps it. Watch protection; it rises when the premium band is strong.`,
-      async run() {
-        await backToPhone(focusPhone());
-        await sleep(400);
-        await performClick(ctl('bbIntent', 'intent-upgrade'));
-        await sleep(500);
-        const first = el.modules.querySelector('.plan [data-act="choose-plan"]');
-        if (first) await performClick(`#modules [data-ctl="${first.getAttribute('data-ctl')}"]`);
-      } },
-
-    { key: 'home-intent', no: '10d', act: 3, who: 'shopper', label: 'Home: the upgrade offer leads',
-      declare: () => ['<b>Returns</b> to the homepage'],
-      acts: () => [act('page_view', {})],
-      will: () => ['The <b>new-line offers leave</b>: their rule needs a new line', 'The <b>upgrade offer leads</b>, with its terms: what it requires and what ends the credit'],
-      line: () => 'On the homepage the new-line offers are gone, because their rule needs a new line, and the <b>upgrade offer leads</b> with its terms: what it requires, and what ends the credit.',
-      // Named only when the engine's leader really is an upgrade-only offer (the Galaxy S26 Ultra's, as measured); else the line above stands.
-      after: () => {
-        const lead = bySlot(state.home.set, SLOTS.deals)[0];
-        const p = lead && pieceOfDecision(lead);
-        const intents = arr(p && p.tags && p.tags.intent);
-        return p && intents.length === 1 && intents[0] === 'upgrade'
-          ? `On the homepage the new-line offers are gone, because their rule needs a new line, and the <b>upgrade offer leads</b>: <b>${esc(p.title)}</b>, with its terms: what it requires, and what ends the credit.`
-          : null;
-      },
-      async run() { await performClick(ctl('pdpCrumbs', 'home-crumb')); focusOn(el.dealsModule); } },
-
-    { key: 'two-weeks', no: '11', act: 4, who: 'merch', label: 'Merchandiser: two weeks pass',
-      target: () => anchorId('closesAtBeat11') || anchorId('launch'),
-      declare: () => [...(cur() && cur().intent !== defaultIntent() ? [`<b>Asserts</b> her answer back to “${esc(INTENT_WORD[defaultIntent()] || defaultIntent())}” for the merchandiser’s day`] : []), '<b>The CMS clock</b> moves two weeks on'],
-      acts: () => [],
-      will: () => ['A launch promotion’s window closes: it <b>leaves its container</b> and stops being a candidate', 'Its successor takes the container; nothing was switched off and no test ended'],
-      line: () => 'Two weeks pass. A launch promotion’s window closes and the next promotion takes the container. <b>No test ended, no winner was declared, nobody configured anything.</b>',
-      async run() {
-        // Act 4 is seen as a new line, as lane L1 measured beats 11 to 15; the change is asserted and labelled, never silent.
-        const v = cur();
-        if (v && v.intent !== defaultIntent()) {
-          v.intent = defaultIntent();
-          note('asserted', `ctx.intent = ${v.intent}`, 'the merchandiser’s day, seen as a new line');
-          renderWho();
-        }
-        await useCatalog(beatName('twoWeeks', 'catalog'));
-        await applyBeat('catalog', beatName('twoWeeks', 'catalog'), 'two weeks pass');
-        note('published', 'Two weeks pass', 'a launch window closes');
-        await refreshHome(); focusOn(el.dealsModule);
-      } },
-
-    { key: 'black-friday', no: '12', act: 4, who: 'merch', label: 'Merchandiser: Black Friday arrives',
-      target: () => anchorId('blackFriday'),
-      declare: () => ['<b>Publishes</b> the Black Friday switcher offer, live from this minute'],
-      acts: () => [],
-      will: () => ['A promotion <b>nobody has ever clicked</b> reaches the module on its metadata alone', 'It reaches the shopper whose behaviour says switch'],
-      line: () => 'Black Friday: the <b>switcher offer, no trade-in</b>, live this minute. Nobody has clicked it, so it is placed on its metadata alone.',
-      async run() {
-        state.fixtureDone.add('black-friday');
-        await useCatalog(beatName('blackFriday', 'catalog'));
-        await applyBeat('catalog', beatName('blackFriday', 'catalog'), 'Black Friday arrives');
-        note('published', 'Black Friday arrives', 'a new piece, no history');
-        await refreshHome(); focusOn(el.dealsModule);
-      } },
-
-    { key: 'pin', no: '13', act: 4, who: 'merch', label: 'Merchandiser: pin the iPhone Duo pre-order',
-      target: () => anchorId('duo'),
-      declare: () => ['<b>Pins</b> the iPhone Duo pre-order (16 October) for everyone'],
-      acts: () => [],
-      will: () => ['The pre-order takes <b>container one</b> for everyone (a pin is a required prefix); its receipt reads <b>ranking skipped</b>', 'The other three are still ranked for her'],
-      line: () => 'Launch week for the foldable: the <b>iPhone Duo pre-order is pinned to container one</b> for everyone. Ranking never ran for it; the other three are still hers.',
-      async run() {
-        await applyBeat('slots', beatName('pinDuo', 'slots'), 'iPhone Duo pre-order pinned');
-        note('tuned', 'iPhone Duo pinned', 'container one for everyone · ranking skipped');
-        await refreshHome(); focusOn(el.dealsModule);
-      } },
-
-    { key: 'covered', no: '14a', act: 4, who: 'shopper', label: '5G Home where it is available',
-      target: () => anchorId('homeBundle'),
-      declare: () => [homeRegion().own
-          ? `In ${esc(homeName())}, her own region, where 5G Home is available: ${OVERRIDE.region ? 'the rehearsal override (?region=), as before' : 'from the request, nothing asserted'}`
-          : `<b>Asserts</b> region = ${esc(homeRegion().key)}${regionName(homeRegion().key) ? ` (${esc(regionName(homeRegion().key))})` : ''}, where 5G Home is available: asserted, not observed, because ${esc(notHomeWhy())}`,
-        ...(state.view === 'phone' && state.phoneId === focusPhone() ? [] : [canBackTo(focusPhone()) ? `<b>Goes back</b> to the ${esc(focusName())} page (the browser’s Back)` : `<b>Opens</b> the ${esc(focusName())}`]),
-        '<b>Opens</b> Home Internet and <b>checks an address</b>', '<b>Goes back</b> to the phone page'],
-      acts: () => [...(state.view === 'phone' && state.phoneId === focusPhone() || canBackTo(focusPhone()) ? [] : [act('product_view', phoneAttrs(phone(focusPhone()), { view: 'page' }))]),
-        act('page_view', PAGE_EVENTS['home-internet']), act('custom', { category: 'home-internet', intent: 'home', contentType: 'tool' }, 'start_order')],
-      will: () => ['<b>intent home</b> and <b>category home-internet</b> move: the address check is a start order, the heaviest touch here', '<b>Add home internet</b> carries a rule (only where 5G Home is available): eligible here, it rises on her address check'],
-      line: () => `${homeRegion().own ? `In ${esc(homeName())}, her own region,` : `${esc(notHomeWhy().replace(/^./, (c) => c.toUpperCase()))}, so the page asserts <b>${esc(homeName())}</b>, where it is, labelled asserted, not observed; there`} she checks an address for 5G Home. The home-internet module carries a rule, <b>only where 5G Home is available</b>: here it is eligible, and her address check moves it up the page. A condition the request does not carry fails closed.`,
-      async run() {
-        // Her own region when 5G Home is available there (nothing asserted); otherwise the covered region, asserted.
-        const home = homeRegion();
-        if (home.own) await restoreRegion();
-        else if (state.ctx.region !== home.key) {
-          setRegion(home.key, 'asserted');
-          note('asserted', `region = ${home.key}`, `asserted, not observed · 5G Home is available there · ${notHomeWhy()}`);
-          await loadColdStart();
-        }
-        if (state.view !== 'phone' || state.phoneId !== focusPhone()) { await backToPhone(focusPhone()); await sleep(400); }
-        await performClick(ctl('mainnav', 'nav-home-internet'));
-        await sleep(600);
-        await performClick(ctl('pageBody', 'page-address-check'));
-        await sleep(600);
-        await performClick(ctl('pageCrumbs', 'back-phone'));
-        focusOn($('modulesModule'));
-      } },
-
-    { key: 'uncovered', no: '14b', act: 4, who: 'merch', label: 'The same shopper where it is not',
-      target: () => anchorId('homeBundle'),
-      declare: () => [`<b>Asserts</b> region = ${esc(regions().uncovered)}${regionName(regions().uncovered) ? ` (${esc(regionName(regions().uncovered))})` : ''}; nothing about her changes`],
-      acts: () => [],
-      will: () => ['<b>Add home internet</b> leaves the six: still published, still in its window, simply not eligible here'],
-      line: () => `The same shopper in ${esc(regionName(regions().uncovered) || regions().uncovered)}. Nothing about her changed; the module is gone because its rule does not hold here. A rule on the piece, not a preference.`,
-      async run() {
-        setRegion(regions().uncovered, 'asserted');
-        note('asserted', `region = ${regions().uncovered}`, 'asserted, not observed · not covered by 5G Home');
-        await loadColdStart();
-        if (state.view === 'phone') { await refreshPhone(); focusOn($('modulesModule')); } else { await refreshHome(); focusOn(el.dealsModule); }
-      } },
-
-    { key: 'cart', no: '15a', act: 5, who: 'shopper', label: 'She adds it to her cart and comes back',
-      declare: () => [...((state.ctx.region || null) !== ownRegion() ? [`<b>Back</b> in ${esc(ownName())}, her own region`] : []),
-        `<b>Adds</b> the ${esc(focusName())} to her cart`, '<b>Returns</b> to the homepage'],
-      acts: () => {
-        const p = phone(focusPhone()); const v = cur();
-        const o = p && v && v.config && v.config.phoneId === p.id ? optionOf(p, v.config.storage) : optionsOf(p)[0];
-        return [act('add_to_cart', phoneAttrs(p, { price_usd: num(o.price_usd), storage: o.storage })), act('page_view', {})];
-      },
-      will: () => ['Her first cart add makes her <b>deciding</b>, so the <b>continue hero</b> is in stage', 'The hero is now <b>her own priced configuration</b> with one next step: her selections, nothing inferred'],
-      line: () => 'She adds the phone to her cart and comes back. The hero is now <b>her priced configuration</b>, with one next step. Their homepage stayed static after the same journey.',
-      async run() {
-        await restoreRegion();
-        if (state.view !== 'phone' || state.phoneId !== focusPhone()) { await openPhoneVia(focusPhone()); await sleep(400); }
-        await performClick('#buyBox [data-ctl="add-to-cart"]');
-        await sleep(400);
-        await performClick(ctl('pdpCrumbs', 'home-crumb'));
-        focusOn(el.heroModule);
-      } },
-
-    { key: 'template', no: '15b', act: 5, who: 'merch', label: 'Tomorrow’s template puts deals first',
-      declare: () => ['<b>Tomorrow’s homepage template</b> moves the deals module to position one'],
-      acts: () => [],
-      will: () => ['The module renders <b>first</b>', '<b>The same four, in the same order</b>: a slot is addressed by name, not position'],
-      line: () => `Tomorrow’s template moves the deals module to <b>position one</b>, and the four do not change. <code>${esc(SLOTS.deals)}</code> is <code>${esc(SLOTS.deals)}</code> wherever their template puts it, and its evidence follows the name.`,
-      async run() {
-        const doc = await tryJson('/vantage/beats/15-continue-and-report.json');
-        placeDeals((doc && doc.template && doc.template.home) || [SLOTS.deals, SLOTS.hero, SLOTS.rail], 'tomorrow’s');
-        note('published', 'Tomorrow’s template', 'their CMS moves the deals module to position one');
-        await refreshHome(); focusOn(el.dealsModule);
-      } },
-
-    { key: 'clicks', no: '15c', act: 5, who: 'shopper', label: 'The clicks, and the day report',
-      declare: () => ['<b>Clicks</b> two of the four, as a shopper would'],
-      acts: () => [],
-      will: () => ['Each click is credited to the promotion that held the container', 'The report: attribution per promotion and per module, <b>not incrementality</b>'],
-      line: () => 'Two clicks, each credited to what held the container. <b>Learned</b> shows attribution per promotion and per module: module engagement, attach, plan mix. Never a lift number; lift is theirs to read against a holdout.',
-      async run() {
-        for (const n of [1, 2]) { await clickIf(ctl('deals', `deal-${n}`)); await sleep(300); }
-        selectTab('tab-report');
-        await loadReport(true);
-      } },
-  ];
-  const beats = () => BEATS.filter((b) => !b.flag);
-  const labelOf = (b) => (typeof b.label === 'function' ? b.label() : b.label);
   function adParams() {
     const a = state.anchor.arrival || {};
     const q = new URLSearchParams();
@@ -2981,241 +1701,255 @@
     return q;
   }
 
-  function renderPresses() {
-    el.presses.innerHTML = beats().map((b, i) => `<button class="press${b.who === 'merch' ? ' press--merch' : b.who === 'engine' ? ' press--engine' : ''}" type="button" aria-pressed="${state.beat === i}" data-i="${i}">`
-      + `<span class="n">${esc(b.no)}</span>${esc(labelOf(b))}</button>`).join('');
-  }
-  function renderNext() {
-    const list = beats();
-    const next = state.beat === null ? 0 : state.beat + 1;
-    if (next >= list.length) { el.nextBeat.disabled = true; el.nextLabel.textContent = 'the walkthrough is complete'; return; }
-    el.nextBeat.disabled = false;
-    el.nextLabel.textContent = `${list[next].no} · ${labelOf(list[next])}`;
-  }
-  function closeDirector() {
-    const bar = el.directorHandle.closest('.director');
-    bar.classList.remove('director--open');
-    el.directorHandle.setAttribute('aria-expanded', 'false');
-    el.directorHandle.textContent = 'All beats';
-  }
-  function go(i) {
-    if (state.busy) return undefined;
-    if (!el.pdBack.hidden) el.pdBack.hidden = true;
-    if (kitMod && kitMod.isOpen()) kitMod.closeCompare();
-    closeDirector();
-    return runBeat(i);
-  }
-  async function runBeat(i) {
-    const b = beats()[i];
-    if (!b || state.busy) return;
-    state.busy = true;
-    const before = { home: state.home.current, phone: state.phone.current };
-    el.presses.querySelectorAll('.press').forEach((node, j) => node.setAttribute('aria-pressed', String(j === i)));
-    el.beatNo.innerHTML = `<b class="act">Act ${b.act} &middot; ${esc(ACTS[b.act])}</b><span class="bn">Beat ${esc(b.no)} / 15</span>`;
-    el.engineLine.innerHTML = b.line();
-    state.lineBeat = b;
-    if (b.key !== 'exit') { state.exitNote = null; const rd = $('railDeltas'); if (rd) rd.hidden = true; }
-    state.fixtureStep = b.key;
-    if (FIXTURE) state.fixtureDone.add(b.key);
-    say('working…');
-    // (b) Every performed beat starts with a Before: the page as the room saw it when the press landed, cloned
-    // before the beat acts. Its render waits until the beat has landed, so the beat's own motion is not held.
-    idleGen += 1;                                  // a first-paint Before still waiting gives way to this one
-    let landedNow = () => {};
-    const landed = new Promise((r) => { landedNow = r; });
-    await takeBaseline('beat', () => landed).catch(() => null);
-    try {
-      if (!cur() && b.key !== 'arrive') await ensureVisitor();
-      await b.run();
-      say('done', 'good');
-    } catch (error) {
-      const m = String((error && error.message) || error);
-      say(m, 'bad');
-      engineDown(state.view === 'phone' ? el.modulesDown : el.dealsDown, m);
-    } finally {
-      el.cursor.classList.remove('show');
-      state.busy = false;
-      state.beat = i;
-      renderPresses();
-      renderNext();
-      captureProof(b, before);
-      landedNow();                                 // the Before taken as it started may render now
-    }
-  }
-  el.presses.addEventListener('click', (e) => { const btn = e.target.closest('.press'); if (btn) void go(Number(btn.dataset.i)); });
-  el.nextBeat.addEventListener('click', () => { if (!state.busy && !el.nextBeat.disabled) void go(state.beat === null ? 0 : state.beat + 1); });
-  el.directorHandle.addEventListener('click', () => {
-    const bar = el.directorHandle.closest('.director');
-    const open = bar.classList.toggle('director--open');
-    el.directorHandle.setAttribute('aria-expanded', String(open));
-    el.directorHandle.textContent = open ? 'Hide beats' : 'All beats';
-  });
-
-  /** What the presenter may assert by hand: the region and her answer, both labelled on screen. */
-  function renderAsserts() {
+  // ════════════════════════════════════════════════════════════════════════
+  // THE FACTS the beats speak about (public/vantage/beats.json). Read fresh at
+  // every step, so a guard sees the page as it is when the step runs. Each
+  // value is this page's own reading of its documents and its state.
+  // ════════════════════════════════════════════════════════════════════════
+  function facts() {
+    const v = cur();
     const r = regions();
-    const list = [null, ...new Set([OVERRIDE.region, r.first, r.second, r.covered, r.uncovered].filter(Boolean))];
-    el.assertRegion.innerHTML = '<span class="wlabel">region</span>' + list.map((x) => `<button type="button" data-region="${esc(x || '')}" aria-pressed="${(state.ctx.region || null) === x}"`
-      + ` title="${x ? (x === OVERRIDE.region ? 'The rehearsal override, asserted and labelled' : 'Assert this region on the request, labelled') : 'Assert nothing: the region comes from the request'}">${esc(x || 'from the request')}</button>`).join('');
-    const v = cur();
-    // Always one answer: without ctx.intent the gated offers fail closed and the four come back short.
-    el.assertIntent.innerHTML = '<span class="wlabel">intent</span>' + INTENTS.map(([k, l]) => `<button type="button" data-intent="${k}" aria-pressed="${((v && v.intent) || defaultIntent()) === k}">${esc(l)}</button>`).join('');
-    // Compare is always enabled, and its title names the Before it will show.
-    el.compareTools.innerHTML = '<span class="wlabel">compare</span><button type="button" data-tool="capture">Capture</button>'
-      + `<button type="button" data-tool="compare" title="${esc(compareTitle())}">Compare</button><button type="button" data-tool="fresh">Fresh visitor</button><button type="button" data-tool="streaming">Streaming shopper</button>`;
-  }
-  el.assertRegion.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || state.busy) return;
-    const to = btn.dataset.region || null;
-    setRegion(to, to ? (to === OVERRIDE.region ? 'rehearsal override' : 'asserted') : 'edge');
-    await loadColdStart();
-    if (state.view === 'home') await refreshHome(); else if (state.view === 'phone') await refreshPhone();
-  });
-  el.assertIntent.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || state.busy || !cur()) return;
-    cur().intent = btn.dataset.intent || defaultIntent();
-    cur().intentByHand = true;
-    renderWho();
-    if (state.view === 'phone') { renderBuyBox(); await refreshPhone(); } else if (state.view === 'home') await refreshHome();
-  });
-  el.compareTools.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    // The same presses as the main bar's: Capture clicks it, so the kit's armed press is the capture.
-    if (btn.dataset.tool === 'capture') el.captureBtn.click();
-    if (btn.dataset.tool === 'compare') void compareNow();
-    if (btn.dataset.tool === 'streaming') void streamingShopper();
-    if (btn.dataset.tool === 'fresh') void freshVisitor();
-  });
-
-  // ════════════════════════════════════════════════════════════════════════
-  // PREDICT, THEN PROVE. The arithmetic is published, so a touch's effect can
-  // be stated before it happens and checked by hand. The constants and the
-  // action weights are read from the published registry, never typed here.
-  // ════════════════════════════════════════════════════════════════════════
-  const rOf = (a) => (a >= 1 ? Infinity : (a * K()) / (1 - a));
-  const aOf = (r) => r / (r + K());
-  function touchesOf(attrs) {
-    const out = [];
-    for (const spec of (reg().dimensions || [])) {
-      const raw = attrs[spec.source];
-      if (raw === undefined || raw === null) continue;
-      if (spec.derive === 'band') {
-        const n = num(raw);
-        if (!Number.isFinite(n) || !spec.cuts || !spec.labels) continue;
-        let idx = spec.cuts.findIndex((c) => n < c); if (idx === -1) idx = spec.cuts.length;
-        if (spec.labels[idx]) out.push({ dim: spec.key, value: spec.labels[idx] });
-      } else if (Array.isArray(raw)) raw.forEach((x) => { if (typeof x === 'string' && x) out.push({ dim: spec.key, value: x }); });
-      else if (typeof raw === 'string' && raw) out.push({ dim: spec.key, value: raw });
-    }
-    return out;
-  }
-  function predictArithmetic(acts) {
-    const w = reg().weights || {};
-    const added = new Map();
-    acts.forEach((a) => {
-      const weight = num(w[a.action || a.type] != null ? w[a.action || a.type] : 0);
-      if (!weight) return;
-      touchesOf(a.attrs || {}).forEach((t) => { const k = `${t.dim}\u0000${t.value}`; added.set(k, (added.get(k) || 0) + weight); });
+    const to = contrast();
+    const fp = phone(focusPhone()), hp = phone(hingePhone());
+    const step = storageStep(focusPhone());
+    const home = homeRegion();
+    const here = state.view === 'phone' && state.phoneId === focusPhone();
+    const canBack = canBackTo(focusPhone());
+    const lead = bySlot(state.home.set, SLOTS.deals)[0];
+    const leadPiece = lead && pieceOfDecision(lead);
+    const leadIntents = arr(leadPiece && leadPiece.tags && leadPiece.tags.intent);
+    // Beat 3's touches as she makes them: a card looked at after a page is a return to the grid, which is a page view.
+    let onGrid = true;
+    const touches = browseTouches().map((t) => {
+      const page = t.view === 'page';
+      const returnsToGrid = !page && !onGrid;
+      if (returnsToGrid) onGrid = true;
+      if (page) onGrid = false;
+      return { id: t.id, name: phone(t.id).name, page, returnsToGrid, attrs: phoneAttrs(phone(t.id), { view: t.view }) };
     });
-    return [...added.entries()].map(([k, delta]) => {
-      const [dim, value] = k.split('\u0000');
-      const before = num(((state.lastVector[dim] || {})[value]) || 0);
-      const after = aOf(rOf(before) + delta);
-      return { dim, value, before, after, delta, crosses: before < thetaIn() && after >= thetaIn() };
-    }).sort((x, y) => y.after - x.after);
+    const o = fp ? (v && v.config && v.config.phoneId === fp.id ? optionOf(fp, v.config.storage) : optionsOf(fp)[0]) : null;
+    return {
+      view: { home: state.view === 'home', phones: state.view === 'phones', phone: state.view === 'phone', page: state.view === 'page' },
+      sheet: { open: Boolean(state.sheet) },
+      arrival: { entry: describeEntry(landingEntry(adParams())) },
+      region: { override: OVERRIDE.region, away: (state.ctx.region || null) !== ownRegion(), ownName: ownName(), contrast: to, contrastName: regionName(to) },
+      regions: { uncovered: r.uncovered, uncoveredName: regionName(r.uncovered) },
+      home: { own: home.own, key: home.key, keyName: regionName(home.key), name: homeName(), asserted: state.ctx.region === home.key,
+        notWhy: notHomeWhy(), notWhyCap: notHomeWhy().replace(/^./, (c) => c.toUpperCase()) },
+      focus: { id: focusPhone(), name: focusName(), brand: fp ? fp.brand : null, ecosystem: fp ? ecoOf(fp) : null, here, canBack, reached: here || canBack,
+        pageAttrs: phoneAttrs(fp, { view: 'page' }) },
+      hinge: { id: hingePhone(), name: hp ? hp.name : null, pageAttrs: phoneAttrs(hp, { view: 'page' }) },
+      browse: { touches },
+      storageStep: { label: step.label, storage: step.storage, price: num(step.price_usd), delta: fp ? money(deltaOf(fp, step)) : '' },
+      plans: { more: tierName('more'), max: tierName('max'), go: tierName('go') },
+      intent: { default: defaultIntent(), defaultWord: INTENT_WORD[defaultIntent()] || defaultIntent(), changed: Boolean(v && v.intent !== defaultIntent()) },
+      exit: { room: roomOf('brand') || 'short', thetaOut: fmt2(thetaOut()), seconds: state.exitSeconds ?? null },
+      deals: { superseded: Boolean(hingeLine()), leadUpgradeOnly: Boolean(leadPiece && leadIntents.length === 1 && leadIntents[0] === 'upgrade'), leadTitle: leadPiece ? leadPiece.title : '' },
+      // The anchor's ids the beats name: null when an anchor does not name one (the fixture anchor has no
+      // closesAtBeat11), so a fallback reads it as not set; a name the beats do not have is the director's error.
+      ids: { launch: null, closesAtBeat11: null, blackFriday: null, duo: null, homeBundle: null, ...(state.anchor.ids || {}) },
+      beatNames: { twoWeeks: beatName('twoWeeks', 'catalog'), blackFriday: beatName('blackFriday', 'catalog'), pinDuo: beatName('pinDuo', 'slots') },
+      events: { kidsWatch: KIDS_WATCH, homeInternet: PAGE_EVENTS['home-internet'] },
+      cart: { attrs: fp ? phoneAttrs(fp, { price_usd: num(o.price_usd), storage: o.storage }) : {} },
+      slots: SLOTS,
+      // Tomorrow's homepage template, as the published beat document names it (read at boot).
+      templates: { tomorrow: (state.templateDoc && state.templateDoc.template && state.templateDoc.template.home) || [SLOTS.deals, SLOTS.hero, SLOTS.rail] },
+    };
   }
-  const slotColour = (i) => ['#111111', '#B80000', '#0A7A3D', '#5B5B5B', '#0A6C86', '#6B4E00'][i % 6];
-  const mapHtml = (rows) => (rows && rows.length ? rows.map((r, i) => `<div class="pd-slot" style="background:${slotColour(i)}" title="${esc(r)}">${i + 1} · ${esc(r)}</div>`).join('') : '<p class="pd-empty" style="font-size:12.5px">nothing yet</p>');
 
-  function renderPredict(b) {
-    if (!b) {
-      el.pdMode.textContent = 'the walkthrough is complete';
-      el.pdAct.innerHTML = '<li class="pd-empty">No press remains.</li>';
-      el.pdArith.innerHTML = '';
-      el.pdWill.innerHTML = '<li class="pd-empty">&mdash;</li>';
-      renderDone(); return;
+  // ════════════════════════════════════════════════════════════════════════
+  // THE VERBS THE KIT LACKS (beats.json `call`): the arrival, and the minute.
+  // ════════════════════════════════════════════════════════════════════════
+  /**
+   * Beat 1's arrival, after the tenant's reset: the page's own state cleared, the address bar the ad's landing,
+   * the stranger minted from it, her region read from the request (or the rehearsal override, labelled), the
+   * socket behind its flag. The landing itself is the beat's next step.
+   */
+  async function arrive() {
+    // The Before taken as this press landed (the page before she arrives) stays: it is beat 1's own comparison.
+    state.visitors = {}; state.who = null; state.receipts.clear();
+    state.home = { previous: null, current: null, set: null, pos: 5, prevDecisions: null, curDecisions: null };
+    state.phone = { previous: null, current: null, set: null };
+    state.rail = { status: 'site', order: null, items: null, off: false };
+    el.cartCount.hidden = true; placeDeals((state.anchor.templates || {}).home, 'today’s');
+    const params = adParams();
+    try { history.replaceState({ vantage: true }, '', `/vantage/?${params}`); } catch { /* sandboxed */ }
+    const v = await mintVisitor('A', landingEntry(params));
+    useVisitor('A');
+    note('arrived', 'A stranger, from a paid-social ad', `${describeEntry(v.entry)} · anonymous · consent granted`);
+    // Her own region leads: nothing is asserted unless the address bar carries the ?region= rehearsal override.
+    state.own = null;
+    setRegion(ownRegion(), ownSource());
+    if (OVERRIDE.region) note('asserted', `region = ${OVERRIDE.region}`, 'a rehearsal override (?region=), labelled · never the default');
+    else if (OVERRIDE.ignored) note('ignored', `?region=${OVERRIDE.ignored}`, 'not a region key, so nothing is asserted');
+    note('asserted', `ctx.intent = ${v.intent}`, 'a signed-out visitor is a new line until she says otherwise');
+    await loadColdStart();
+    if (!OVERRIDE.region) {
+      const o = state.own || {};
+      note('located', o.key ? `region ${o.key}${o.label && o.label !== o.key ? ` (${o.label})` : ''}` : 'no region on this request',
+        o.key ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills request.cf · nothing asserted' : 'from the request: the edge located her · nothing asserted')
+          : 'the national figure is shown · nothing invented');
     }
-    const acts = b.acts ? b.acts() : [];
-    el.pdMode.textContent = `before beat ${b.no}: ${labelOf(b)}`;
-    renderDone();
-    el.pdAct.innerHTML = (b.declare ? b.declare() : [labelOf(b)]).map((l) => `<li>${l}</li>`).join('');
-    const rows = predictArithmetic(acts);
-    el.pdArithK.textContent = `The arithmetic · score before → after · entry threshold ${fmt2(thetaIn())} · K = ${K()} · from ${state.sources.registry || 'the shipped constants'}`;
-    el.pdArith.innerHTML = rows.length ? rows.map((r) => `<div class="pd-row${r.crosses ? ' crosses' : ''}"><span>${esc(DIM_LABEL[r.dim] || r.dim)} · ${esc(r.value)}</span>
-      <span class="from">${r.before.toFixed(3)} + ${r.delta} →</span><span class="to">${r.after.toFixed(3)}</span><span class="th">θ ${fmt2(thetaIn())}</span></div>`).join('')
-      : `<p class="pd-empty" style="font-size:12.5px">${b.who === 'merch' ? 'This press is the merchandiser or the request’s context, not the visitor: no meter moves.' : b.who === 'engine' ? 'Nothing is sent. The engine’s own clock does this one.' : 'A page view that carries no attribute, or a reward: no meter moves.'}</p>`;
-    const target = b.target && b.target();
-    const standing = target ? (() => {
-      const at = (state.home.current || []).findIndex((c) => c.id === target);
-      const p = pieceOf(target);
-      return `<li><b>${esc(p ? p.title : target)}</b> ${at > -1 ? `holds container <b>${at + 1}</b> right now.` : 'is not in the four right now.'}</li>`;
-    })() : '';
-    el.pdWill.innerHTML = standing + (b.will ? b.will() : []).map((w) => `<li>${w}</li>`).join('');
-    const onPhone = state.view === 'phone' && state.phone.current;
-    el.pdNowK.textContent = onPhone ? 'The modules right now' : 'The four right now';
-    el.pdNow.innerHTML = onPhone ? mapHtml(state.phone.current.modules.map((m) => m.title))
-      : (state.home.current && state.home.current.length ? mapHtml(state.home.current.map((c) => c.title)) : '<p class="pd-empty" style="font-size:12px">The homepage has not been asked yet.</p>');
+    if (exitOn()) connectSocket(v, onEngineExit);
   }
-  function renderDone() {
-    const v = cur();
-    el.pdDone.innerHTML = v && v.journey.length ? v.journey.map((j) => `<li><b>${esc(j.verb)}</b> ${esc(j.what)}${j.detail ? `<div class="pd-tags">${esc(j.detail)}</div>` : ''}</li>`).join('')
-      : '<li class="pd-empty">Nothing yet: the visitor has not arrived.</li>';
+  /** Beat 5, before the minute: her meters read (the engine's own read, which a slow answer shows as reading) and kept. */
+  let exitRun = { before: {}, four: '' };
+  async function readMetersBefore() {
+    // Her meters read before the minute and after it (beat 5's document); a slow read shows as reading, not as a stalled page.
+    el.dealsDeltas.insertAdjacentHTML('afterbegin', '<li class="delta-timer"><span class="hk">Reading her meters</span><span><b class="tmr">…</b> Before the minute starts: the engine’s own read.</span></li>');
+    await renderVectors();
+    exitRun = { before: JSON.parse(JSON.stringify(state.lastVector || {})), four: (state.home.current || []).map((c) => c.id).join('|') };
+    note('waited', 'Nobody touches the page', 'a minute; the page asks again after it');
+    const doc = await tryJson('/vantage/beats/05-stop-touching.json');
+    state.exitSeconds = doc ? num(doc.waitSeconds) : null;
   }
-  function captureProof(b, before) {
+  /** Beat 5, after the minute: the page asks again, and names what the engine's answer withdrew and what held. */
+  async function askAgainAfterTheMinute() {
+    // A slow read shows as the page asking, never as a stalled clock; the page has no order of its own to fall back to.
+    const row = el.dealsDeltas.querySelector('.delta-timer');
+    if (row) row.innerHTML = '<span class="hk">Asking the engine</span><span><b class="tmr">…</b> The minute is up and the page is asking again: the engine’s answer, not the page’s.</span>';
+    say('asking the engine…');
+    await refreshHome();
+    const said = exitSentence(exitRun.before, state.lastVector || {}, (state.home.current || []).map((c) => c.id).join('|') === exitRun.four);
+    state.exitNote = said.four;
+    note('engine', 'The engine withdrew a claim', stripTags(said.four).slice(0, 160));
+    renderDealsChanges();
+    const railMoved = renderRailDeltas(said.rail);
+    focusOn(railMoved ? $('railModule') : el.dealsModule);
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // THE KIT'S QUESTIONS, answered for Vantage's two pages.
+  // ════════════════════════════════════════════════════════════════════════
+  /** A decision's title as the page shows it: a plan by its tier, a module by its own title, anything else by its piece. */
+  const titleOf = (d) => (d.slot === SLOTS.plans ? ((tierOfDecision(d) || {}).name || d.customerContentId)
+    : d.slot === SLOTS.modules ? moduleTitle(d) : ((pieceOfDecision(d) || {}).title || d.customerContentId));
+  /** Why these: on the phone page its two slots; on the homepage the hinge, if the receipts say it, then its two slots. */
+  function whyGroups() {
+    const onPhone = state.view === 'phone' && state.phone.set;
+    if (onPhone) {
+      return { set: state.phone.set, groups: [[`Phone page · slot ${SLOTS.modules}`, bySlot(state.phone.set, SLOTS.modules)],
+        [`Inside Pair with a plan · slot ${SLOTS.plans}`, bySlot(state.phone.set, SLOTS.plans)]] };
+    }
+    if (state.home.set) {
+      return { set: state.home.set, lead: hingeLine(), groups: [[`Homepage · slot ${SLOTS.hero}`, bySlot(state.home.set, SLOTS.hero)],
+        [`Homepage · slot ${SLOTS.deals}`, bySlot(state.home.set, SLOTS.deals)]] };
+    }
+    return { set: state.home.set, groups: [] };
+  }
+  /** One row of the day's report: the item's key and its title, a plan by its tier and a module by its own name. */
+  function reportRow(slot, id) {
+    const piece = pieceOf(id);
+    const title = slot === SLOTS.plans ? ((tierById((piece && piece.tier) || String((piece && piece.customerContentId) || id).replace(/^plan[-_]/, '')) || {}).name || (piece && piece.title) || id)
+      : slot === SLOTS.modules ? (piece && piece.title) || MODULE_TITLE[String(id).replace(/_/g, '-')] || id : piece ? piece.title : id;
+    return { key: String((piece && piece.customerContentId) || id), title };
+  }
+  /** Predict-then-prove's proof: every decision the last press made on the page it landed on. */
+  function proofOf(before) {
     const onPhone = state.view === 'phone' && state.phone.set;
     const set = onPhone ? state.phone.set : state.home.set;
     const decisions = onPhone ? [...bySlot(set, SLOTS.modules), ...bySlot(set, SLOTS.plans)] : set ? [...bySlot(set, SLOTS.hero), ...bySlot(set, SLOTS.deals)] : [];
-    if (!decisions.length) { state.pdProof = null; return; }
-    const beforeRows = onPhone ? ((before.phone && before.phone.modules) || []) : (before.home || []);
-    const beforeIds = beforeRows.map((x) => x.id);
-    const authority = (d) => (FIXTURE ? { cls: 'fixture', text: 'fixture' } : d.strategy === 'tenant-pinned' ? { cls: 'pinned', text: 'merchandiser · pinned' }
-      : d.strategy === 'default' ? { cls: 'default', text: 'catalog order' }
-        : (pieceOfDecision(d) || {}).eligibleWhen ? { cls: 'rule', text: 'rule, then engine' } : { cls: 'engine', text: 'engine' });
-    const rows = decisions.map((d) => {
-      const i = bySlot(set, d.slot).indexOf(d);
-      const title = d.slot === SLOTS.plans ? ((tierOfDecision(d) || {}).name || d.customerContentId) : d.slot === SLOTS.modules ? moduleTitle(d) : ((pieceOfDecision(d) || {}).title || d.customerContentId);
-      const drivers = (d.explain && d.explain.drivers) || [];
-      const why = drivers.length ? drivers.map((x) => `${esc(DIM_LABEL[x.dim] || x.dim)}·${esc(x.value)} ${fmt3(x.a)} × ${x.weight}`).join('<br>') + `<br>score ${fmt3(d.score)}`
-        : d.strategy === 'tenant-pinned' ? 'ranking never ran for it' : 'no dimension has evidence · the catalog’s order';
-      const was = beforeIds.indexOf(d.customerContentId);
-      const against = d.slot === SLOTS.hero || d.slot === SLOTS.plans ? `slot ${d.slot}` : was === -1 ? 'entered this press' : was === i ? 'held its place' : was > i ? `up from ${was + 1}` : `down from ${was + 1}`;
-      const a = authority(d);
-      return `<tr><td class="what">${esc(title)} → ${d.slot === SLOTS.deals ? 'container' : 'position'} ${i + 1}</td><td class="num">${why}</td><td class="against">${esc(against)}</td><td><span class="pd-auth pd-auth--${a.cls}">${esc(a.text)}</span></td></tr>`;
-    }).join('');
-    const main = onPhone ? bySlot(set, SLOTS.modules).map(moduleTitle) : bySlot(set, SLOTS.deals).map((d) => (pieceOfDecision(d) || {}).title || d.customerContentId);
-    state.pdProof = { label: `${b.no} · ${labelOf(b)}`, why: rows, now: mapHtml(beforeRows.map((x) => x.title)), after: mapHtml(main) };
+    return {
+      set, decisions,
+      beforeRows: onPhone ? ((before.phone && before.phone.modules) || []) : (before.home || []),
+      main: onPhone ? bySlot(set, SLOTS.modules).map(moduleTitle) : bySlot(set, SLOTS.deals).map((d) => (pieceOfDecision(d) || {}).title || d.customerContentId),
+      context: [SLOTS.hero, SLOTS.plans],
+      unitOf: (d) => (d.slot === SLOTS.deals ? 'container' : 'position'),
+      titleOf,
+      ruleOf: (d) => (pieceOfDecision(d) || {}).eligibleWhen,
+    };
   }
-  function openExplain() {
-    const next = state.beat === null ? 0 : state.beat + 1;
-    renderPredict(beats()[next]);
-    if (state.pdProof) {
-      el.pdWhy.innerHTML = state.pdProof.why;
-      el.pdMapNow.innerHTML = state.pdProof.now;
-      el.pdMapAfter.innerHTML = state.pdProof.after;
-      el.pdWhyHead.textContent = `Why: every decision the last press made (${state.pdProof.label})`;
-      el.pdWhyWrap.hidden = false;
-    } else el.pdWhyWrap.hidden = true;
-    el.pdNote.textContent = `Above: computed from her real profile on the published registry: a = R / (R + K), K = ${K()}, checkable by hand. Below: what the engine actually did on the last press, read off its receipts. Nothing runs from this panel.`;
-    el.pdBack.hidden = false;
+  /** Where a merchandiser beat's target stands right now, in the four. */
+  function standingLine(target) {
+    const at = (state.home.current || []).findIndex((c) => c.id === target);
+    const p = pieceOf(target);
+    return `<li><b>${esc(p ? p.title : target)}</b> ${at > -1 ? `holds container <b>${at + 1}</b> right now.` : 'is not in the four right now.'}</li>`;
   }
-  const closeExplain = () => { el.pdBack.hidden = true; };
-  el.pdGo.addEventListener('click', closeExplain);
-  el.pdBack.addEventListener('click', (e) => { if (e.target === el.pdBack) closeExplain(); });
-  el.pdPill.addEventListener('click', openExplain);
-  el.explainBtn.addEventListener('click', openExplain);
-  document.addEventListener('keydown', (e) => {
-    // Compare's overlay takes its own keys (Escape closes it) and stops them there.
-    if (kitMod && kitMod.isOpen()) return;
-    if (e.key === 'Escape') { if (!el.pdBack.hidden) closeExplain(); else if (!el.sheetBack.hidden && !state.busy) void closeSheet(); }
-    else if ((e.key === 'e' || e.key === 'E') && el.pdBack.hidden && !state.busy && !/input|textarea/i.test((e.target && e.target.tagName) || '')) openExplain();
-  });
-  window.addEventListener('popstate', () => {
-    if (state.busy || !cur()) return;          // a beat's own Back restores the page itself (browserBack)
-    void restoreFromUrl().catch((e) => say(e.message, 'bad'));
-  });
+  /** What is on screen right now, for the Explain panel. */
+  function nowMap() {
+    if (state.view === 'phone' && state.phone.current) return { label: 'The modules right now', rows: state.phone.current.modules.map((m) => m.title) };
+    return state.home.current && state.home.current.length ? { label: 'The four right now', rows: state.home.current.map((c) => c.title) }
+      : { label: 'The four right now', empty: '<p class="pd-empty" style="font-size:12px">The homepage has not been asked yet.</p>' };
+  }
+  /** What the presenter may assert by hand: nothing (the request's own region), the override, and the anchor's regions. */
+  function assertableRegions() {
+    const r = regions();
+    return [null, ...new Set([OVERRIDE.region, r.first, r.second, r.covered, r.uncovered].filter(Boolean))];
+  }
+  /** Why a piece left the four, read off the engine: its window, or the receipt's own candidate list. The page tests no rule. */
+  function wentWhy(id) {
+    const now = Date.now();
+    const cands = dealCandidates();
+    const p = pieceOf(id);
+    if (!p) return 'left the pool entirely';
+    if (p.window && p.window.to && Date.parse(p.window.to) <= now) return 'its window closed';
+    if (!cands) return 'out of the four';
+    if (cands.has(p.id)) return 'still a candidate, outranked';
+    return p.eligibleWhen ? 'not a candidate for this request: it has a rule' : 'not a candidate for this request';
+  }
+  /** The before/now rows, keyed by slot: the four on the homepage, the modules on the phone page. */
+  function deltaRows() {
+    return {
+      [SLOTS.deals]: {
+        state: () => state.home,
+        get: () => ({ before: state.home.previous, after: state.home.current || [] }),
+        set: () => state.home.set,
+        mode: 'ghosts', before: el.dealsGhosts, deltas: el.dealsDeltas, unit: 'container', pins: true, swaps: true, leftFirst: true,
+        opening: { sign: '·', cls: 'in', what: 'The opening four', why: 'the first decision this visitor was served' },
+        emptyBefore: 'The visitor had not seen the module yet.',
+        left: (b, i) => `left container ${i + 1} · ${wentWhy(b.id)}`,
+        // The engine's own note (beat 5, or the alarm behind ?exit=1), then the hinge when the receipts say it.
+        lead: () => (state.exitNote ? `<li class="delta-engine"><span class="hk">The engine, on its own</span>${state.exitNote}</li>` : '') + (hingeLine() || ''),
+        held: { title: (d) => (pieceOfDecision(d) || {}).title || d.customerContentId, index: (d) => bySlot(state.home.set, SLOTS.deals).indexOf(d) },
+        nothing: { text: 'Nothing moved in the four.' },
+        pending: 'the homepage has not been asked again yet',
+        beforeRow: { row: el.dealsBeforeRow, label: el.dealsNowLabel, four: el.dealsBeforeFour, card: (d, i) => dealCardHtml(d, i, { before: true }) },
+        title: (d) => (pieceOfDecision(d) || {}).title || d.customerContentId,
+        titleOfId: (id) => (pieceOf(id) || {}).title || id,
+      },
+      [SLOTS.modules]: {
+        state: () => state.phone,
+        get: () => ({ before: state.phone.previous ? state.phone.previous.modules : null, after: state.phone.current ? state.phone.current.modules : [],
+          prev: state.phone.previous, now: state.phone.current }),
+        mode: 'list', before: el.pdpBefore, deltas: el.pdpDeltas, unit: 'position', tight: true,
+        emptyBefore: 'She had not seen this page’s modules yet.',
+        first: (g) => {
+          const now = g.now;
+          const fresh = Boolean(cur() && cur().fresh);   // Compare's fresh visitor: nothing sent, so nothing of hers to credit
+          return `<li class="delta-none">The first decision for this page: <b>${esc(now.modules.map((m) => m.title).join(' → '))}</b>. Plans lead with <b>${esc(now.plans[0] || '—')}</b>. ${fresh ? 'A fresh visitor has sent nothing: the template order, with the region’s prior.'
+            : isTemplate(now.modules) ? 'Nothing she has done weighs on a module yet, so this is the template order.' : 'The order her browsing already earns; <b>Why these</b> explains each one, and <b>Compare → Fresh visitor</b> shows the template order beside it.'}</li>`;
+        },
+        left: () => 'left the page · outranked, or its rule stopped holding',
+        extra: (g) => (g.prev.plans[0] !== g.now.plans[0] && g.now.plans[0] ? [{ sign: '↑', cls: 'up', what: g.now.plans[0], why: `now leads Pair with a plan (was ${g.prev.plans[0] || '—'})` }] : []),
+        nothing: '<li class="delta-none">Nothing moved on this page: the same modules in the same order, the same plan leading.</li>',
+      },
+    };
+  }
+  /** The streaming shopper's title, true to the two phones involved: one phone page only when he opens hers. */
+  function twoShoppersTitle(back, pid) {
+    const his = phone(pid);
+    const hers = back.view === 'phone' ? phone(back.phoneId) : null;
+    if (hers && his && hers.id === his.id) return `Two shoppers, one phone page, one engine: the ${his.name}`;
+    if (hers && his) return `Two shoppers, two phone pages, one engine: the ${hers.name} and the ${his.name}`;
+    return `Two shoppers, one engine: her ${whereNow()} and the ${his ? `${his.name} page` : 'phone page'}`;
+  }
+  /**
+   * The sentence under the streaming shopper's comparison, true to the same two phones: the same page, the same buy
+   * box (FOOT.streaming) only when he opens hers; two phone pages, named, when he opens another.
+   */
+  function twoShoppersFoot(back, pid) {
+    const his = phone(pid);
+    const hers = back.view === 'phone' ? phone(back.phoneId) : null;
+    if (hers && his && hers.id === his.id) return FOOT.streaming;
+    if (hers && his) return `Two phone pages, the ${hers.name} and the ${his.name}, from the same catalog; each buy box shows the public price anyone sees. Only what each of them did is different.`;
+    return `Two pages, her ${whereNow()} and the ${his ? `${his.name} page` : 'phone page'}; same catalog, same public prices. Only what each of them did is different.`;
+  }
+  /** A region key's name as lane L1's anchor gives it (rehearsed and uncovered regions), else null. */
+  function regionName(key) {
+    const R = state.anchor.regions || {};
+    const hit = [...arr(R.rehearsed), R.uncoveredRegion].find((x) => x && x.key === key);
+    return hit ? hit.label : null;
+  }
 
   // ════════════════════════════════════════════════════════════════════════
   // FIXTURE MODE (?fixtures=1). Canned answers in the engine's own shapes, for
@@ -3224,7 +1958,7 @@
   // ════════════════════════════════════════════════════════════════════════
   function fixtureState() {
     const steps = (state.engineFx && state.engineFx.steps) || {};
-    const order = BEATS.map((b) => b.key);
+    const order = director.keys();
     const upto = state.fixtureStep ? order.indexOf(state.fixtureStep) : -1;
     const acc = { vector: {} };
     order.slice(0, upto + 1).forEach((k) => { const s = steps[k]; if (s) Object.assign(acc, s, { vector: s.vector || acc.vector }); });
@@ -3309,7 +2043,7 @@
       el.wordmark.textContent = BRAND.name;
       el.tagline.textContent = BRAND.tagline;
       if (FIXTURE) el.fixtureFlag.hidden = false;
-      const [phonesDoc, details, plans, plansFx, anchor, reflex, display, manifest, engineFx] = await Promise.all([
+      const [phonesDoc, details, plans, plansFx, anchor, reflex, display, manifest, engineFx, beatsDoc, templateDoc] = await Promise.all([
         firstJson('phones', ['/vantage/phones.json']),
         firstJson('details', ['/vantage/fixtures/phone-details.json']),
         firstJson('plans', ['/vantage/plans.json', '/vantage/fixtures/plans.json']),
@@ -3319,8 +2053,13 @@
         firstJson('display', ['/vantage/catalog.json', '/vantage/fixtures/catalog.json']),
         tryJson('/vantage/img/MANIFEST.json'),
         FIXTURE ? tryJson('/vantage/fixtures/engine.json') : Promise.resolve(null),
+        firstJson('beats', ['/vantage/beats.json']),             // the director's script: the beats as data
+        tryJson('/vantage/beats/15-continue-and-report.json'),   // tomorrow's homepage template, which beat 15b places
       ]);
       if (!phonesDoc || !Array.isArray(phonesDoc.phones)) throw new Error('phones.json is missing: lane L1 writes public/vantage/phones.json');
+      if (!beatsDoc || !Array.isArray(beatsDoc.beats)) throw new Error('beats.json is missing: the director’s script is public/vantage/beats.json');
+      director.setBeats(beatsDoc);
+      state.templateDoc = templateDoc;
       state.phonesDoc = phonesDoc;
       state.phones = phonesDoc.phones;
       state.phones.forEach((p) => state.phoneById.set(p.id, p));
@@ -3342,13 +2081,16 @@
       (display && display.pieces ? display.pieces : []).forEach((p) => state.display.set(p.customerContentId, p));
       state.manifest = manifest ? readManifest(manifest) : null;
       state.engineFx = engineFx;
-      if (state.anchor.pages) PAGES = { ...PAGES, ...state.anchor.pages };
-      if (state.anchor.slots) SLOTS = { ...SLOTS, ...state.anchor.slots };
-      if (state.anchor.events && state.anchor.events.source) SOURCE = state.anchor.events.source;
+      if (state.anchor.pages) Object.assign(PAGES, state.anchor.pages);
+      if (state.anchor.slots) Object.assign(SLOTS, state.anchor.slots);
+      if (state.anchor.events && state.anchor.events.source) transport.configure({ source: state.anchor.events.source });
       if (state.anchor.brand && state.anchor.brand.name) { BRAND.name = state.anchor.brand.name; el.wordmark.textContent = BRAND.name; }
       await useCatalog(beatName('open', 'catalog'));
       // The rehearsal override applies from the first read, a direct phone-page load included; without it nothing is asserted.
       if (OVERRIDE.region) { state.ctx.region = OVERRIDE.region; state.regionSource = 'rehearsal override'; }
+      // Every template in beats.json resolves against the facts, or the page names what does not before anyone presses.
+      const unresolved = director.validate();
+      if (unresolved.length) throw new Error(`beats.json: ${unresolved.join(' · ')}`);
       renderRoadmap();
       renderAsserts();
       renderPresses();
@@ -3363,7 +2105,7 @@
       const directPhone = bootPhoneView();
       const loaded = ['phones', 'plans', 'anchor', 'display', 'catalog'].map((k) => `${k}: ${state.sources[k] || 'missing'}`).join(' · ');
       say(`ready · ${loaded} · registry: ${state.sources.registry} · images: ${state.manifest ? 'MANIFEST' : 'no manifest'}`, 'good');
-      if (QS.has('debug')) window.__vantage = { state, go, beats, handleControl, performClick, compare: () => kit() };
+      demo.debug({ handleControl });   // under ?debug, window.__vantage: the hook the DOM suite drives
       // The compare kit and html2canvas, fetched in idle time, so the first Before is quick to take.
       idle(() => { kit().then((m) => m.preload()).catch(() => { /* Compare says so when it is pressed */ }); });
       // A direct load of the phone page is a real arrival on it: a visitor, her view of the phone, and the live answer.
