@@ -302,6 +302,6 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 ## W
 
-**Worker.** A program that runs on Cloudflare's network, in the data center nearest each request. The engine is one Worker per deployment; the enablement site is a Worker with no program, only pages.
+**Worker.** A program that runs on Cloudflare's network, in the data center nearest each request. The engine is one Worker per deployment.
 
 **One word for each meaning, defined once, in plain words.**
