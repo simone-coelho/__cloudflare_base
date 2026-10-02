@@ -23,7 +23,29 @@
 // and a page footer.
 // Supports: # to ##### headings, paragraphs, - and 1. lists (2-space nesting),
 // | tables |, ``` fenced code, > callouts, --- rules, **bold**, *italic*,
-// `code`, [text](url).
+// `code`, [text](url), and the two below: [text](#anchor) links within the
+// document and ![caption](picture.png) figures.
+//
+// ── Links within the document ────────────────────────────────────────────────
+// [text](#anchor) jumps to a heading at any level, # to #####. The anchor is the
+// one GitHub gives that heading, so the same link also works on GitHub and in
+// VS Code's preview. To write it: take the heading text as it reads (without
+// its **, *, ` or link markup), lower-case it, delete every character that is
+// not a letter, digit, underscore, hyphen or space, then make each space a
+// hyphen. A repeated heading gets -1, then -2. "## 4. The walk — in brief" is
+// #4-the-walk--in-brief: the dash goes and both its spaces stay. A link renders
+// like any other, and Ctrl+Click follows it in Word, as in the contents. One to
+// an anchor no heading has fails the build (rule 11).
+//
+// ── Figures ──────────────────────────────────────────────────────────────────
+// ![caption](path) on a line of its own is a figure. The path is relative to the
+// markdown file (write a space as %20) and the file must be a PNG or a JPEG,
+// judged by its bytes, never its name. The picture is centred at the text width,
+// 9360 twips (12960 landscape), its aspect ratio kept; one that would then be
+// taller than 8in (5.5in landscape) is set that tall instead, so it never runs
+// off the page. The caption prints beneath it in 9pt grey and stays on its page.
+// A JPEG's EXIF rotation is ignored: save it upright. A missing or unreadable
+// file fails the build (rule 11).
 //
 // ── Rules learned by getting them wrong ──────────────────────────────────────
 // 1. NEVER put ASCII-art diagrams in markdown destined for Word. Anything over
@@ -53,7 +75,30 @@
 //    hanging indent is wide enough for "99." in bold. With one shared instance
 //    a later list began at 11; with a 260-twip hang the two-digit number pushed
 //    the first line to the next tab stop, so wrapped lines sat left of the text.
+// 10. A link names the heading, never its position. The contents links to secN
+//     bookmarks, and those renumber whenever a heading is added above, so a link
+//     written against secN would land on the wrong section with no error. The
+//     author writes the heading's anchor; the build maps it to the bookmark,
+//     from one pass over the markdown, so a link may point forward or back.
+// 11. A dead link is a failed build, never a document. A link to an anchor no
+//     heading has, a figure whose file is missing or is not PNG or JPEG, and a
+//     figure inside a line of text are each listed, with their text, and
+//     nothing is written.
+// 12. Every bookmark and every picture has its own id. docx's Bookmark writes
+//     w:id="1" on every bookmark, and docPr id="1" on every picture unless told,
+//     though ECMA-376 defines both as unique identifiers; the review of the built
+//     documents caught every heading bookmark at w:id="1". The converter numbers
+//     each bookmark's start and end pair itself, 1, 2, 3 ... in document order,
+//     and gives each figure its own picture id. A heading carries at most one
+//     bookmark: a link to a # or ## heading uses its secN, and a deeper heading
+//     gets secN_M only when a link names it.
+// 13. Two builds of one input differ in word/document.xml: docx names each
+//     external link's relationship with a random id. To prove a change leaves a
+//     document as it was, preload a seeded Math.random (node --import) for both
+//     builds and compare the XML parts; only docProps/core.xml, which carries
+//     the build time, still differs.
 import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 
@@ -66,8 +111,8 @@ function loadDocx() {
   process.exit(2);
 }
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle,
-  Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, Bookmark, TableOfContents,
-  Header, Footer, PageNumber, ExternalHyperlink, LevelFormat, convertInchesToTwip, TabStopType, PageOrientation } = loadDocx();
+  Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, BookmarkStart, BookmarkEnd, TableOfContents,
+  Header, Footer, PageNumber, ExternalHyperlink, InternalHyperlink, ImageRun, LevelFormat, convertInchesToTwip, TabStopType, PageOrientation } = loadDocx();
 
 const [, , IN, OUT, TITLE = 'Untitled', SUBTITLE = '', FOR = '', VERSION = '', DATED = '', CLASS = 'Confidential', ORIENT = ''] = process.argv;
 const LANDSCAPE = /^landscape$/i.test(ORIENT);
@@ -78,9 +123,57 @@ const NAVY = '11142A', BLUE = '0B5CAD', GREY = '5A6472', RULE = 'C9D1DC';
 const HEAD = 'E8EDF4', ZEBRA = 'F6F8FB', CODEBG = 'F3F5F8';
 const BODY = 'Calibri', MONO = 'Consolas';
 const W = LANDSCAPE ? 12960 : 9360;   // Letter minus 1in margins, in twips; 11in wide when landscape
+const FIG_H = (LANDSCAPE ? 9360 : 12960) - 1440;   // tallest figure: the text height less an inch for its caption
 
 const strip = (s) => s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')
   .replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+// Links within the document: a heading's anchor is the one GitHub gives it (see the header).
+const slugOf = (s) => s.trim().toLowerCase().replace(/[^\p{Alphabetic}\p{M}\p{Nd}\p{Pc} -]/gu, '').replace(/ /g, '-');
+const anchorOf = (a) => { try { return decodeURIComponent(a); } catch { return a; } };
+
+const lines = md.split('\n'), problems = [];   // rule 11: every broken link and figure, reported together
+const problem = (msg, where) => {
+  const at = typeof where === 'number' ? where : lines.findIndex((l) => l.includes(where)) + 1;
+  problems.push(`${at ? `line ${at}: ` : ''}${msg}`);
+  return [];
+};
+
+// Rule 10: one pass before any block is built gives every heading its anchor and
+// its bookmark, and collects every anchor a link names (rule 12: only a deeper
+// heading some link names gets a bookmark). It reads lines as the parser does:
+// nothing inside ``` fences, and a heading is #{1,5} and a space.
+function outline() {
+  const heads = [], named = new Set(), seen = new Map();
+  let fence = false, sec = 0, sub = 0;
+  for (const l of lines) {
+    if (/^```/.test(l)) { fence = !fence; continue; }
+    if (fence) continue;
+    const m = /^(#{1,5})\s+(.*)$/.exec(l);
+    if (!m) { for (const a of l.matchAll(/\]\(#([^)]*)\)/g)) named.add(anchorOf(a[1])); continue; }
+    const lvl = m[1].length, text = strip(m[2]), base = slugOf(text);
+    let slug = base;
+    while (seen.has(slug)) { seen.set(base, seen.get(base) + 1); slug = `${base}-${seen.get(base)}`; }   // GitHub: -1, -2, ...
+    seen.set(slug, 0);
+    if (lvl <= 2) { sec++; sub = 0; } else sub++;
+    heads.push({ lvl, text, slug, mark: lvl <= 2 ? `sec${sec}` : `sec${sec}_${sub}` });
+  }
+  return { heads, named, bySlug: new Map(heads.map((h) => [h.slug, h])) };
+}
+const outlined = outline();
+
+const linkRun = (text) => new TextRun({ text, font: BODY, size: 21, color: BLUE, underline: {} });
+
+// Rule 11: a link lands on the bookmark of the heading its anchor names, or the build fails.
+function jump(text, href) {
+  const a = anchorOf(href.slice(1)), h = outlined.bySlug.get(a);
+  if (!h) {
+    const bare = (s) => s.toLowerCase().replace(/[^\p{Alphabetic}\p{M}\p{Nd}]/gu, '');
+    const near = outlined.heads.find((x) => bare(x.slug) === bare(a));
+    problem(`link "${text}" points to ${href}, but no heading has that anchor${near ? `; did you mean #${near.slug}?` : ''}`, `](${href})`);
+  }
+  return new InternalHyperlink({ anchor: h ? h.mark : a, children: [linkRun(text)] });
+}
 
 function runs(text, opts = {}) {
   const out = [];
@@ -94,7 +187,8 @@ function runs(text, opts = {}) {
     else if (tok.startsWith('`')) out.push(new TextRun({ text: tok.slice(1, -1), font: MONO, size: 19, color: '0B3D63', ...opts }));
     else if (tok.startsWith('[')) {
       const q = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok);
-      out.push(new ExternalHyperlink({ link: q[2], children: [new TextRun({ text: q[1], font: BODY, size: 21, color: BLUE, underline: {} })] }));
+      if (text[m.index - 1] === '!') problem(`figure "${q[1]}" must stand on a line of its own, outside lists, tables and callouts`, `![${q[1]}](`);
+      out.push(q[2].startsWith('#') ? jump(q[1], q[2]) : new ExternalHyperlink({ link: q[2], children: [linkRun(q[1])] }));
     } else push(tok.slice(1, -1), { italics: true });
     last = m.index + tok.length;
   }
@@ -103,16 +197,21 @@ function runs(text, opts = {}) {
 }
 
 const toc = [];   // rule 8: { lvl, text, id } for every # and ## heading, in order
+let headAt = 0;   // rule 10: the outline's record of each heading, met in the same order
+let marks = 0;    // rule 12: bookmark ids, 1, 2, 3 ... in document order
 const heading = (lvl, txt) => {
+  const h = outlined.heads[headAt++];
+  if (!h || h.lvl !== lvl || h.text !== strip(txt)) throw new Error(`md2docx: the outline and the parser disagree at heading "${strip(txt)}"`);
   const run = new TextRun({ text: strip(txt), font: BODY, size: { 1: 30, 2: 25, 3: 22, 4: 21, 5: 20 }[lvl], bold: true, color: lvl === 2 ? BLUE : NAVY });
-  const id = lvl <= 2 ? `sec${toc.length + 1}` : null;
-  if (id) toc.push({ lvl, text: strip(txt), id });
+  const id = lvl <= 2 || outlined.named.has(h.slug) ? h.mark : null;   // rule 12: at most one bookmark per heading
+  const n = id ? ++marks : 0;
+  if (lvl <= 2) toc.push({ lvl, text: strip(txt), id });
   return new Paragraph({
     heading: [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5][lvl],
     pageBreakBefore: lvl === 1,
     spacing: { before: lvl === 1 ? 0 : lvl === 2 ? 320 : 240, after: lvl <= 2 ? 160 : 100 },
     border: lvl === 1 ? { bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE, space: 6 } } : undefined,
-    children: id ? [new Bookmark({ id, children: [run] })] : [run],
+    children: id ? [new BookmarkStart(id, n), run, new BookmarkEnd(n)] : [run],
   });
 };
 
@@ -174,8 +273,46 @@ function table(rows) {
   });
 }
 
+// Figures (see the header): the picture's size in pixels, read from its own header; PNG or JPEG only.
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+function pixels(b) {
+  if (b.length >= 24 && b.subarray(0, 8).equals(PNG) && b.toString('latin1', 12, 16) === 'IHDR') return { type: 'png', w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null;
+  for (let p = 2; p + 9 <= b.length;) {   // JPEG: walk the segments to the first frame header
+    if (b[p] !== 0xff) return null;
+    const m = b[p + 1];
+    if (m === 0xff) p += 1;                                            // fill byte
+    else if (m === 0x01 || (m >= 0xd0 && m <= 0xd8)) p += 2;           // a marker with no length
+    else if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { type: 'jpg', w: b.readUInt16BE(p + 7), h: b.readUInt16BE(p + 5) };
+    else p += 2 + b.readUInt16BE(p + 2);
+  }
+  return null;
+}
+
+let figures = 0;   // rule 12: each picture gets its own docPr id
+function figure(l, at) {
+  const [, alt, src] = /^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$/.exec(l);
+  const caption = strip(alt).trim(), rel = anchorOf(src.trim());
+  const fail = (msg) => problem(`figure "${caption || rel}": ${msg}`, at);
+  if (/^[a-z][a-z0-9+.-]*:/i.test(rel) || path.isAbsolute(rel)) return fail(`${rel} is not a path relative to the markdown file`);
+  const file = path.resolve(path.dirname(IN), rel);
+  let data;
+  try { data = fs.readFileSync(file); } catch (e) { return fail(`cannot read ${rel} (${e.code === 'ENOENT' ? 'no such file' : e.code}: ${file})`); }
+  const px = pixels(data);
+  if (!px || !px.w || !px.h) return fail(`${rel} is not a PNG or JPEG file`);
+  let tw = W, th = (W * px.h) / px.w;                             // twips: the text width, aspect ratio kept,
+  if (th > FIG_H) { tw = (FIG_H * px.w) / px.h; th = FIG_H; }     // unless that would run off the page
+  if (!caption) console.warn(`md2docx: WARNING figure ${rel} has no alt text, so it has no caption and nothing for a screen reader`);
+  const pic = new Paragraph({
+    alignment: AlignmentType.CENTER, keepNext: Boolean(caption), spacing: { before: 120, after: caption ? 60 : 160, line: 240 },
+    children: [new ImageRun({ type: px.type, data, transformation: { width: tw / 15, height: th / 15 }, altText: { id: ++figures, name: `Figure ${figures}`, description: caption || undefined } })],
+  });
+  if (!caption) return [pic];
+  return [pic, new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: caption, font: BODY, size: 18, color: GREY })] })];
+}
+
 // ── parse ────────────────────────────────────────────────────────────────────
-const lines = md.split('\n'), kids = [];
+const kids = [];
 let i = 0, wide = [], numberedLists = 0;
 while (i < lines.length) {
   const l = lines[i];
@@ -197,10 +334,16 @@ while (i < lines.length) {
     while (i < lines.length && /^(\s*)\d+\.\s+/.test(lines[i])) { const m = /^(\s*)\d+\.\s+(.*)$/.exec(lines[i]); kids.push(new Paragraph({ children: runs(m[2]), numbering: { reference: 'numbers', level: Math.min(2, Math.floor(m[1].length / 3)), instance }, spacing: { after: 60, line: 264 } })); i++; }
     kids.push(new Paragraph({ text: '', spacing: { after: 60 } })); continue;
   }
+  if (/^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(l)) { kids.push(...figure(l, i + 1)); i++; continue; }
   if (!l.trim()) { i++; continue; }
   kids.push(new Paragraph({ children: runs(l), spacing: { after: 120, line: 276 } })); i++;
 }
 if (wide.length) console.warn(`md2docx: WARNING rule 2 — ${wide.length} code line(s) over 76 chars will wrap: lines ${wide.slice(0, 8).join(', ')}`);
+if (problems.length) {   // rule 11: nothing is written while a link or a figure is broken
+  const list = [...new Set(problems)];
+  console.error(`md2docx: ${OUT} NOT written; ${IN} has ${list.length} problem(s):\n${list.map((p) => `  ${p}`).join('\n')}`);
+  process.exit(1);
+}
 
 const metaRow = (k, v) => new TableRow({
   children: [[2400, k], [W - 2400, v]].map(([w, t], j) => new TableCell({

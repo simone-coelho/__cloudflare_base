@@ -1,41 +1,93 @@
-# The signal system
+# Part A. The walk
 
-This note is for Verizon's engineers: "you" means Verizon, "we" means Optimizely, and Vantage is the demo's example carrier. Its one-page summary is *Why the unit of state is the dimension value, not the click*. The interactive page *How it works* puts the constants on sliders: [https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works).
+The next pages explain how the whole system works. Every section has a detailed counterpart in Part B, linked from it, with the formulas, the measured numbers and the published documents. "You" means the customer and "we" means Optimizely; Vantage is the demo's example carrier, and [B.8](#b8-glossary) defines the terms. The one-page summary is *Why the unit of state is the dimension value, not the click*; the interactive page *How it works* puts the constants on sliders: [https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works).
+
+## A.1 One idea
+
+On screen the demo can read as "view a Samsung, show Samsung". Underneath, nothing is keyed to that Samsung: the unit of state is the dimension value, such as brand samsung or ecosystem android. Products carry attributes in the same dimensions, and every offer, hero, module and plan carries tags in the same vocabulary, so nothing is configured per product.
+
+![From one event to the slot's answer: dimension values, her vector, and a score for every eligible piece under the slot's weights.](explainer/figures/signal-chain.png)
+
+Her values form a small vector of graded, fading interests; a decision scores every eligible candidate against it and records the terms that decided it. Systems that track individual events usually keep the events and derive interest per item; we wanted a graded, fading state across several dimensions at once. No model is called at decision time.
+
+The detail: [B.2 The arithmetic](#b2-the-arithmetic)
+
+## A.2 One shopper, from arrival to the hinge
+
+A stranger taps a paid-social ad for the iPhone 18 Pro. Before she acts, the page answers the ad and her region: the campaign lifts its own offer by a small published weight, and her state's sales, synthetic in the demo and labelled so, lean the rest. She views a Galaxy S26, its page and the S26 Ultra; each touch raises samsung, android, phones and a price band together, and by the third her Samsung interest is a membership. After a Pixel and a return home, a Galaxy offer leads the four deals, and the launch offer is fourth with the campaign's +0.066 still applied, outscored.
+
+The detail: [B.1 One shopper, worked through](#b1-one-shopper-worked-through)
+
+## A.3 How a product is chosen
+
+Every eligible candidate in a slot gets the same sum, the dot product in the figure in A.1: for each dimension, her interest in the piece's tagged values times the slot's weight for that dimension, added up.
+
+```
+score = Σ_d ω[slot, d] · Σ_{v ∈ tags_d(piece)} ã_d(v)
+```
+
+A few published terms follow (arrival seeds, a stage rule, a promotion multiplier and a learning dial that stands at zero); then the slot sorts, lets a piece yield when its brand holds two places, and takes its top four. Nothing in the sum is set per product; what a catalog must carry is in [B.7](#b7-what-optimizely-needs-from-the-customer-in-this-use-case).
+
+The detail: [B.2.2 Scoring](#b22-scoring)
+
+## A.4 The stranger and the regional prior
+
+A stranger has no interests of her own, so she is scored on her region's: each value's share of the region's sales, the leader at one. As she acts, a blend weight hands each coordinate over to her own evidence, falling with every touch:
+
+```
+λ = 0.5 / (0.5 + Σa),    ã = (1 − λ) · a + λ · share
+```
+
+Two arrival signals also count, the campaign term and, on a phone, the operating-system family; each adds a published weight to the pieces it names, and both are on the receipt. In production the regional sales are yours.
+
+The detail: [B.2.3 The regional prior](#b23-the-regional-prior)
+
+## A.5 Memory and forgetting
+
+Every value fades on a horizon set per dimension, and its interest has two lines: it becomes a membership above the entry line and ends only below a lower exit line, so it cannot flicker; time alone can end a membership, never start one. In the room brand fades within a minute while the Android lean holds for days; in production each horizon follows the buying cycle. At sign-in a signed link merges her session into the account and overrides nothing.
+
+The detail: [B.3 Memory](#b3-memory)
+
+## A.6 The knobs, and why they exist
+
+Every knob sits in one of three published, versioned documents, the registry, the slots and the learn document, and a publish needs no deployment and can be rolled back. We expose the knobs because the receipt can then prove every number back to one of them. The engine also learns what works in each context, but moves no score until the trust dial is turned up; in the demo it stands at zero.
+
+The detail: [B.4 The knobs, and why they exist](#b4-the-knobs-and-why-they-exist)
+
+## A.7 Rules over the engine
+
+Rules act before any score. A piece outside its window, out of stock or failing its eligibility rule is never a candidate; coverage is such a rule, so an offer for a service appears only where the service exists. Exclusions remove more, and pins take the first places as a prefix whose receipt says ranking never ran. The buy box is not a slot. If a pinned piece is ineligible, the whole slot serves nothing rather than ranking the rest.
+
+The detail: [B.5 Rules outrank the engine](#b5-rules-outrank-the-engine)
+
+## A.8 The receipt
+
+Every decision writes a record: the candidates, its context, the revisions in force, and the score's leading terms with their weights, with each seed and multiplier and what it added. For a stranger those terms are her region's shares, and the record says so; as she acts, the same fields fill with her own. A page can read it back to say why a card is there, and an engineer can recompute the score by hand.
+
+The detail: [B.6 The receipt](#b6-the-receipt)
+
+# Part B. The detail
 
 Numbers marked ∗ were measured on the hosted demo with a scripted visitor; the rest are published constants, catalog or census figures, or arithmetic from them. None is a timing or a lift.
 
-## 1. The one idea
+## B.1 One shopper, worked through
 
-On screen the demo can read as "view a Samsung, show Samsung". Underneath, no state is keyed to the Samsung she viewed.
-
-**The example.** One view of a Galaxy S26 card adds 1 to the raw score of four values at once: phones, samsung, android, and core, the price band its $899.99 falls in. Each now reads as an interest of 0.357 (§3.1), and every candidate is scored against them: an offer tagged samsung and android gains on both, a Pixel offer tagged android on one. No rule names the Galaxy S26.
-
-**The idea.**
-
-- **The unit of state is the dimension value.** A dimension is an axis such as brand, with values such as samsung; her state is one graded coordinate per value she has touched, not a list of products.
-- **Products carry attributes in the same dimensions,** and offers, heroes, modules and plans carry tags in the same vocabulary, so a piece never shown is placed on its tags from its first minute.
-- **Nothing is configured per product.** The slot, one decided container such as the homepage's four deals, holds the weights, cap, pins and other slot-control rules; each piece's record holds its window and eligibility rule.
-- **The shopper is a small vector of graded, fading interests,** each from 0 toward 1, rising by each action's published weight and fading on a horizon set per dimension. Its size is bounded by the vocabulary, eight dimensions and 32 values in Vantage, never by the catalog.
-- **A decision scores every eligible candidate against the vector and explains itself.** One weighted sum per candidate, a cap of two per brand, the top four: that is how three actions pick four deals from 17 candidates or 10,000 (§3.2), every term on the receipt (§7).
-
-**Why we went this way.** Systems that track individual events usually keep the events and derive interest per item; we wanted a graded, fading state across several dimensions at once. One Samsung view should move every Android offer a little; the brand of the moment should fade while the ecosystem lean holds; every number should trace to a published constant. No model is called at decision time.
-
-## 2. One shopper, worked through
+Back to the walk: [A.2 One shopper, from arrival to the hinge](#a2-one-shopper-from-arrival-to-the-hinge)
 
 A stranger in North Carolina taps a paid-social ad for the iPhone 18 Pro, on a laptop.
 
-**Before any action** the engine knows the region the edge located (US-NC), the campaign on the landing URL (`utm_term=iphone-18-pro`) and her OS family, if the request carries one. A laptop yields neither ios nor android, so that seed stays silent; on an iPhone it would add 0.15 to every deal tagged ios (§3.4).
+**Before any action** the engine knows the region the edge located (US-NC), the campaign on the landing URL (`utm_term=iphone-18-pro`) and her OS family, if the request carries one. A laptop yields neither ios nor android, so that seed stays silent; on an iPhone it would add 0.15 to every deal tagged ios (B.2.4).
 
-- **The state's own sales.** With no behaviour yet, each coordinate is North Carolina's share, at a blend weight λ = 1 (§3.3). In the demo the sales are synthetic and labelled so, modelled from census income; in production the seed would be your own sales. The panel shows the state's median household income, $73,958 (ACS 2024), to explain the lean; census is never scored.
+- **The state's own sales.** With no behaviour yet, each coordinate is North Carolina's share, at a blend weight λ = 1 (B.2.3). In the demo the sales are synthetic and labelled so, modelled from census income; in production the seed would be your own sales. The panel shows the state's median household income, $73,958 (ACS 2024), to explain the lean; census is never scored.
 - **The campaign.** The seed's weight 0.2, times the slot's campaign weight 0.3, times the launch offer's promotion multiplier 1.1, adds 0.066. The hero gains 0.060.
 
 | The four deals | First | Second | Third | Fourth |
 |---|---|---|---|---|
 | Arrival, North Carolina: a first visitor, no override | iPhone 18 Pro launch 0.651∗ | iPhone Duo 0.532∗ | Galaxy Z Fold8 0.497∗ | Galaxy S26 0.485∗ |
-| Arrival, New York asserted, a second visitor (§7) | launch 0.671∗ | Duo 0.550∗ | Fold8 0.388∗ | S26 0.338∗ |
+| Arrival, New York asserted, a second visitor (B.6) | launch 0.671∗ | Duo 0.550∗ | Fold8 0.388∗ | S26 0.338∗ |
 | The hinge, four touches later: New York asserted, a second visitor | S26 0.353∗ | Fold8 0.336∗ | Pixel 11 0.302∗ | launch 0.245∗ |
 
-**One view.** From here the figures are the second visitor's, minted by the same hosted rehearsal run with New York asserted through the demo's labelled override. Her own coordinates do not depend on the region; the region enters her scores through its sales shares, which λ weights, and through coverage rules such as the home bundle's (§6).
+**One view.** From here the figures are the second visitor's, minted by the same hosted rehearsal run with New York asserted through the demo's labelled override. Her own coordinates do not depend on the region; the region enters her scores through its sales shares, which λ weights, and through coverage rules such as the home bundle's (B.5).
 
 | Dimension | Value | R | a = R/(R + 1.8) |
 |---|---|---|---|
@@ -50,7 +102,7 @@ The event's `os` and `view` fields are not registry sources. Her interests now s
 
 **The hinge.** A Pixel view, then home: the table's third row. The launch offer is fourth, its +0.066 still applied: it rested on New York's shares, which gave way to her own interests, and she has touched nothing Apple or iOS. "Campaign context superseded by observed behaviour" is the page's sentence, written from the record; in the engine it is arithmetic.
 
-**The minute.** Nobody touches anything; the page asks again 52 s after her last Samsung touch. Brand samsung has fallen from 0.601∗ at the hinge to 0.398∗, under the exit line at 0.45, while ecosystem android holds at 0.690∗. Ranking reads the decayed score at once; the membership flag updates at her next event. The four kept their order, as the Galaxy offers rest on Android too; we never promise a reorder at an exit. Room memory is compressed so the exit lands while someone is talking; production horizons are days (§4).
+**The minute.** Nobody touches anything; the page asks again 52 s after her last Samsung touch. Brand samsung has fallen from 0.601∗ at the hinge to 0.398∗, under the exit line at 0.45, while ecosystem android holds at 0.690∗. Ranking reads the decayed score at once; the membership flag updates at her next event. The four kept their order, as the Galaxy offers rest on Android too; we never promise a reorder at an exit. Room memory is compressed so the exit lands while someone is talking; production horizons are days (B.3).
 
 **The phone page.** The buy box is not a slot: the engine is never asked about colour, storage price, term, financing or trade-in maths. Below it, `pdp-modules` orders six of seven modules and `plan-pairing` the plans:
 
@@ -63,11 +115,13 @@ The event's `os` and `view` fields are not registry sources. Her interests now s
 
 Storage is not a dimension: the configured price, $1,099.99, rides the event and lands in premium. After the lines, the homepage follows her: the family hero leads, at 0.205∗.
 
-## 3. The arithmetic
+## B.2 The arithmetic
 
-### 3.1 Interest
+Back to the walk: [A.1 One idea](#a1-one-idea)
 
-**Example.** In §2 one view took four values from R = 0 to R = 1, an interest of 0.357; three touches crossed the entry line, and a quiet minute crossed back.
+### B.2.1 Interest
+
+**Example.** In B.1 one view took four values from R = 0 to R = 1, an interest of 0.357; three touches crossed the entry line, and a quiet minute crossed back.
 
 **In words.** Each value holds a raw score R and its last touch, stored undecayed. An event decays R to now and adds the action's weight; a read decays lazily and saturates, interest being R over R plus K. Entry is at 0.60 and exit only below 0.45, so a value cannot flap at a line. Decay only lowers R, so time alone can end a membership, never start one, and the exit has a closed form.
 
@@ -80,7 +134,7 @@ exit:   t_exit = t_last + τ · ln( R(1 − θ_out) / (K · θ_out) )
                = t_last + τ · ln( R / 1.4727 )
 ```
 
-τ is the dimension's horizon and w the action's weight. Three touches exit 0.7115 τ after the last one (§4).
+τ is the dimension's horizon and w the action's weight. Three touches exit 0.7115 τ after the last one (B.3).
 
 **Weights,** as published:
 
@@ -98,11 +152,13 @@ Page view, search, select, filter, compare and start order are Vantage's additio
 
 **One event, several coordinates.** An event touches every registry dimension whose source field it carries: a band buckets a number by its cuts, and a multi-valued dimension touches each entry. With no product catalog held, the event's own attributes count when the catalog's tags name them. Each crossing is recorded with its score, lines, trigger and version, as a membership such as `brand_samsung_affinity`.
 
-### 3.2 Scoring
+### B.2.2 Scoring
 
-**Example.** The Fold8 offer, third for a New York stranger (A.5). At λ = 1 each interest is New York's share, so android 0.667∗ × 0.15 + phones 1 × 0.1 + premium 1 × 0.1 + samsung 0.438∗ × 0.2 = 0.388. The iPhone 17 offer tied the Duo at 0.55∗ and yielded to the cap of two per brand.
+Back to the walk: [A.3 How a product is chosen](#a3-how-a-product-is-chosen)
 
-**In words.** For each dimension, sum her blended interests over the values the piece is tagged with and multiply by the slot's weight ω, from 0 to 1; then add the dimensions. Two values on one dimension both count, with no per-tag weight or normalisation.
+**Example.** The Fold8 offer, third for a New York stranger (Appendix 5). At λ = 1 each interest is New York's share, so android 0.667∗ × 0.15 + phones 1 × 0.1 + premium 1 × 0.1 + samsung 0.438∗ × 0.2 = 0.388. The iPhone 17 offer tied the Duo at 0.55∗ and yielded to the cap of two per brand.
+
+**In words.** For each dimension, sum her blended interests over the values the piece is tagged with and multiply by the slot's weight ω, from 0 to 1; then add the dimensions, as in the figure in A.1. Two values on one dimension both count, with no per-tag weight or normalisation.
 
 ```
 B0 = Σ_d ω[S,d] · m_d(p),      m_d(p) = Σ_{v ∈ tags_d(p)} ã_d(v)
@@ -110,17 +166,19 @@ B0 = Σ_d ω[S,d] · m_d(p),      m_d(p) = Σ_{v ∈ tags_d(p)} ã_d(v)
 
 Then, in order:
 
-1. **Seeds** add weight × dampen × ω per fired tag (§3.4).
+1. **Seeds** add weight × dampen × ω per fired tag (B.2.4).
 2. **Stage** adds a bonus inside a stage fit and multiplies by a factor outside it; only Vantage's hero uses it.
 3. **Freshness and fatigue** are built and unused by Vantage.
 4. **Merchandising** multiplies a positive score by the clamped product of (1 + weight × signal): ×1.1 for the launch offer.
-5. **Learning** multiplies by lift^γ, with γ = 0 (§3.5).
+5. **Learning** multiplies by lift^γ, with γ = 0 (B.2.5).
 
-Then sort by score, catalog order and id; a piece over the diversity cap yields and refills only an empty position; take. If every score is zero, the slot serves catalog order, labelled the default. Eligibility, exclusions and pins act first (§6).
+Then sort by score, catalog order and id; a piece over the diversity cap yields and refills only an empty position; take. If every score is zero, the slot serves catalog order, labelled the default. Eligibility, exclusions and pins act first (B.5).
 
 **The count, not the time.** Per candidate: a lookup and multiply-add per tag value on a weighted dimension (two to seven for a promotion on Vantage's deals slot), a check per seed tag, up to three merchandising factors and one power. For 10,000 candidates at seven values, that is about 70,000 multiply-adds and a sort of about 133,000 comparisons; the blend runs once per shopper. A deployed Worker's clock advances only with I/O, so this cannot be timed from inside it, and it has not been timed another way.
 
-### 3.3 The regional prior
+### B.2.3 The regional prior
+
+Back to the walk: [A.4 The stranger and the regional prior](#a4-the-stranger-and-the-regional-prior)
 
 **Example.** New York's brand shares are apple 1, samsung 0.438∗, google 0.167∗ and motorola 0.063∗: raw scores over the leader's, not probabilities. A stranger has λ = 1, so her samsung coordinate is New York's 0.438∗.
 
@@ -143,9 +201,9 @@ share(v) = R_region(v) / max R_region       within one dimension
 - **The counts** are synthetic in the demo, labelled so (New York 425 sales, Texas 490, the others modelled from census income), and live touches add to them; in production, your own sales.
 - **An asserted region** selects the prior only on the demo profile, with tracking consent, and the record says `asserted: true`.
 
-### 3.4 Seeds
+### B.2.4 Seeds
 
-**Example.** §2's +0.066 on the launch offer is 0.2 × 1 × 0.3 × 1.1: rule weight, dampen factor, the slot's campaign weight, promotion.
+**Example.** B.1's +0.066 on the launch offer is 0.2 × 1 × 0.3 × 1.1: rule weight, dampen factor, the slot's campaign weight, promotion.
 
 **In words.** A seed fires on an arrival signal (entry channel, campaign term, referrer network or platform) and adds its weight, times any dampening, times the slot's weight on the tag's dimension, before merchandising.
 
@@ -158,7 +216,7 @@ contribution = weight · Π dampen · ω[S, d(tag)]      before merchandising
 - **Dampening** reads only her own memberships: the iOS rule halves while she holds intent switch and drops to zero once she holds android, and the Android rule mirrors it. Every dampen is on the receipt.
 - **A seed never switches off;** it is outscored.
 
-### 3.5 Learning what works
+### B.2.5 Learning what works
 
 **Example.** A piece never shown in a cell has n = s = 0, so p̂ = p0 and its multiplier is exactly 1: no penalty and no bonus. The Black Friday offer, never clicked, reached the first container at 0.836∗ on its tags alone.
 
@@ -175,7 +233,9 @@ score_final = score · lift^γ,         0 ≤ γ ≤ 1 per slot
 - **Exploration is off,** and Thompson sampling is refused at publish.
 - **Position-bias correction is a build item:** no position-discount term exists yet, and an exposure counts when served (`served-v1`).
 
-## 4. Memory
+## B.3 Memory
+
+Back to the walk: [A.5 Memory and forgetting](#a5-memory-and-forgetting)
 
 **Example.** In the room, three brand touches fall below the exit line 42.7 seconds after the last one; on the 90-day horizon the design names for ecosystem and lines, they would last 64 days.
 
@@ -197,9 +257,11 @@ The demo labels it "memory compressed for this room; production runs days". Prod
 - **Thirty days.** A session ends at the earlier of 30 days and the tenant's retention.
 - **Erasure is bounded:** local steps, resumable by hand, which the code says are not proof of physical or external erasure.
 
-## 5. The knobs, and why they exist
+## B.4 The knobs, and why they exist
 
-**Example.** The receipt's first driver (§7) reads brand apple, a = 1, weight 0.2: the 0.2 is the deals slot's brand weight (A.3), the 1 New York's share under the learn document's prior (A.4). A new weight, once published, is on every receipt within 30 s.
+Back to the walk: [A.6 The knobs, and why they exist](#a6-the-knobs-and-why-they-exist)
+
+**Example.** The receipt's first driver (B.6) reads brand apple, a = 1, weight 0.2: the 0.2 is the deals slot's brand weight (Appendix 3), the 1 New York's share under the learn document's prior (Appendix 4). A new weight, once published, is on every receipt within 30 s.
 
 **In words.** Every publish is versioned, takes effect without a deployment, keeps its history and can be rolled back, and every receipt names the revisions in force. We expose the knobs because the receipt can then prove every number back to one.
 
@@ -220,22 +282,26 @@ The demo labels it "memory compressed for this room; production runs days". Prod
 | `policy`, `stats` | learn | Attribution scope and windows; phantom exposures, horizon, clamp |
 | `gamma`, `reward`, `exploration` | learn, per slot | Trust dial; outcome learned from; exploration |
 
-## 6. Rules outrank the engine
+## B.5 Rules outrank the engine
+
+Back to the walk: [A.7 Rules over the engine](#a7-rules-over-the-engine)
 
 **Example.** The home-internet bundle is eligible only where the service exists: second of six modules with New York asserted (0.349∗), absent in Montana, where no score can bring it back.
 
 **The declared precedence.**
 
-1. **Eligibility.** A piece must be live, inside its window [from, to), not `inStock: false`, with its `eligibleWhen` holding. Regions match exactly or by country and fail closed without one; context must equal a listed value. Asserted context (`ctx.*`, at most eight values) gates these checks, an asserted region beating the edge's; its only other use is on the demo profile, where an asserted region selects the regional prior (§3.3). The receipt marks the page's asserted region and intent, and no asserted value is written to her memory.
+1. **Eligibility.** A piece must be live, inside its window [from, to), not `inStock: false`, with its `eligibleWhen` holding. Regions match exactly or by country and fail closed without one; context must equal a listed value. Asserted context (`ctx.*`, at most eight values) gates these checks, an asserted region beating the edge's; its only other use is on the demo profile, where an asserted region selects the regional prior (B.2.3). The receipt marks the page's asserted region and intent, and no asserted value is written to her memory.
 2. **Exclusions** remove pieces, tags or types before ranking; Vantage publishes none.
 3. **Pins** are a required prefix, served first at score 0 and marked tenant-pinned; the receipt says ranking never ran for that piece.
-4. **Ranking** (§3.2), then the diversity cap, then take.
+4. **Ranking** (B.2.2), then the diversity cap, then take.
 
 **When a pinned piece is ineligible,** the whole slot serves nothing and records a pin diagnostic, rather than dropping the pin and ranking the rest. The demo's pinned iPhone Duo is gated to device-purchase intents, so the walk asserts a new line first; a bring-your-own shopper would get an empty deals slot.
 
-## 7. The receipt
+## B.6 The receipt
 
-A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new session with consent, then the home snapshot with the ad's landing entry, New York and intent new asserted, no OS family. Below are its first five drivers and the prior's block; A.1 has the full record, redacted, with every field explained, and A.5 two more explains.
+Back to the walk: [A.8 The receipt](#a8-the-receipt)
+
+A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new session with consent, then the home snapshot with the ad's landing entry, New York and intent new asserted, no OS family. Below are its first five drivers and the prior's block; Appendix 1 has the full record, redacted, with every field explained, and Appendix 5 two more explains.
 
 ```json
 {"explain": {
@@ -252,11 +318,13 @@ A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new sess
   "lift": null, "score_final": 0.671}}
 ```
 
-**The arithmetic.** 0.2 + 0.15 + 0.1 + 0.1 = 0.55, all regional at λ = 1. The seed's 0.06 makes the `score_base` 0.61, and the promotion's 1.1 makes the `score_final` 0.671; A.1 itemises both. Without the ad it would be 0.55 × 1.1 = 0.605.
+**The arithmetic.** 0.2 + 0.15 + 0.1 + 0.1 = 0.55, all regional at λ = 1. The seed's 0.06 makes the `score_base` 0.61, and the promotion's 1.1 makes the `score_final` 0.671; Appendix 1 itemises both. Without the ad it would be 0.55 × 1.1 = 0.605.
 
 **A stranger's drivers are the region's shares.** Every `a` here is New York's: apple at 1 says Apple leads New York's counts, nothing about her, and the regional block says so (λ 1, contribution 0.55, the whole tag sum). As she acts, λ falls and the same fields fill with her own interests. The learning cell keeps the edge's region, US-NC, and an asserted region never feeds a region's counts: the assertion changes which prior is read and writes nothing under New York.
 
-## 8. What Optimizely needs from Verizon's catalog
+## B.7 What Optimizely needs from the customer in this use case
+
+Back to the walk: [A.3 How a product is chosen](#a3-how-a-product-is-chosen)
 
 **Example.** For a 512 GB Galaxy S26, one event with the product id, category, brand, ecosystem and configured price ($1,099.99, premium at the $900 cut) is all the engine needs.
 
@@ -315,7 +383,9 @@ A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new sess
 | Coverage | `eligibleWhen.regions` | Eligibility |
 | Maximum flag, monthly price | Buy-box content | Never decided |
 
-## 9. Glossary
+## B.8 Glossary
+
+Back to the walk: [Part A](#part-a-the-walk)
 
 | Term | Meaning |
 |---|---|
@@ -325,7 +395,7 @@ A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new sess
 | Slot | The unit the engine decides: one container, asked for by name |
 | Piece | One item a slot can return, with a content id |
 | Context | The situation of a decision: channel, visit, region, leading affinity, stage. Asserted facts gate eligibility, are marked asserted and never enter her memory; on the demo profile an asserted region also selects the prior |
-| Receipt | The record of why: every term and its contribution |
+| Receipt | The record of why: the leading terms, and every seed and multiplier with its contribution |
 | Prior | The region's lean, blended in with weight λ until her evidence takes over |
 | Seed | An arrival rule: when its signal fires, each tagged piece gains weight × dampen × the slot's weight on the tag's dimension |
 | Cell | The context in which learning counts exposures and outcomes |
@@ -333,11 +403,11 @@ A real record from the hosted worker, 1 October 2026 at 22:29:44 UTC: a new sess
 
 # Appendix. The receipt and the published documents
 
-A.1 is the receipt from §7 in full, with every field explained. A.2 to A.4 are the three published documents as served by the hosted worker on 1 October 2026, the same text the demo's seed script publishes, at the revisions that receipt names; A.5 holds two more explains. All are reflowed for print, and the holdout salt is redacted.
+Appendix 1 is the receipt from B.6 in full, with every field explained. Appendices 2 to 4 are the three published documents as served by the hosted worker on 1 October 2026, the same text the demo's seed script publishes, at the revisions that receipt names; Appendix 5 holds two more explains. All are reflowed for print, and the holdout salt is redacted.
 
-## A.1 The receipt, field by field
+## Appendix 1. The receipt, field by field
 
-The record from §7 in full. The visitor id and nonce are redacted; the route itself omits the session and the replay inputs.
+The record from B.6 in full. The visitor id and nonce are redacted; the route itself omits the session and the replay inputs.
 
 ```json
 {
@@ -421,7 +491,7 @@ The record from §7 in full. The visitor id and nonce are redacted; the route it
 | `featured_product_ids` | Phones whose outcomes credit it |
 | `asserted` | Added by the route: region from the record, intent from the request |
 
-## A.2 The registry
+## Appendix 2. The registry
 
 ```json
 {
@@ -459,7 +529,7 @@ The record from §7 in full. The visitor id and nonce are redacted; the route it
 }
 ```
 
-## A.3 The slots
+## Appendix 3. The slots
 
 The opening state. Beat 13 adds `"pinnedPieceIds": ["promo_iphone_duo_preorder"]` to `deals`.
 
@@ -518,7 +588,7 @@ The opening state. Beat 13 adds `"pinnedPieceIds": ["promo_iphone_duo_preorder"]
 }
 ```
 
-## A.4 The learn document
+## Appendix 4. The learn document
 
 **objective** `unit` counts each credited outcome as one. `revenue` would weigh it by the outcome's value and `margin` by its margin, and either needs a reward that carries a value, `purchase` or `add_to_bag`.
 
@@ -555,9 +625,9 @@ The opening state. Beat 13 adds `"pinnedPieceIds": ["promo_iphone_duo_preorder"]
 }
 ```
 
-## A.5 Two more explains
+## Appendix 5. Two more explains
 
-The hero's record for the snapshot in §7: brand apple 1 × 0.1 plus ecosystem ios 1 × 0.1 is 0.2, all regional, and the seed's 0.06 makes 0.26. The other heroes score 0: for a stranger nothing they are tagged with carries a regional share, and the continue hero is multiplied by 0 outside its stage fit.
+The hero's record for the snapshot in B.6: brand apple 1 × 0.1 plus ecosystem ios 1 × 0.1 is 0.2, all regional, and the seed's 0.06 makes 0.26. The other heroes score 0: for a stranger nothing they are tagged with carries a regional share, and the continue hero is multiplied by 0 outside its stage fit.
 
 ```json
 {"candidates": [
@@ -580,7 +650,7 @@ The hero's record for the snapshot in §7: brand apple 1 × 0.1 plus ecosystem i
       "weight": 0.2, "contribution": 0.06}]}}}
 ```
 
-The third deal's explain as the snapshot answer carries it: drivers and the diversity line only, the full record being read through the receipt action. It is the worked example of §3.2.
+The third deal's explain as the snapshot answer carries it: drivers and the diversity line only, the full record being read through the receipt action. It is the worked example of B.2.2.
 
 ```json
 {"contentId": "promo_galaxy_z_fold8_trade_in", "score": 0.388,
