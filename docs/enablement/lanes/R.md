@@ -330,3 +330,146 @@ No git command that changes anything, no install, no delete, no deploy, no kill.
 ## 13. For round two
 
 Each required edit above verified in its source before P1 renders; the pages reviewed as built files against their sources (the render check, the preflight, the four widths in light and dark, and the session switcher on (b)'s page); each Word copy rebuilt from the edited sources and named as the design's §1 table names it; and round one for (a), (e) and (g), with (e)'s credit tags checked against the one-legend ruling.
+
+---
+
+# Round two, 2026-10-02
+
+**Scope, from the coordinator:** (1) the four pieces and the glossary against round one's edits and the lead's rulings; (2) the rendered pages in `enablement/site/`; (3) the credits page against `content/credits-source.html` and `content/credits.md`; (4) the demo map against design §3.8, and the glossary page against `GLOSSARY.md`; (5) no credential and no form on any page. The gate is out of scope.
+
+**Commit.** Reviewed at `8a4252c`, the commit after `39e7ec9`. Three commits landed while the round ran: `a412113` and `b32f360` (Word copies) and `748f976`, which replaces a person's name with "the demo owner" in §3.8, `demos.md` and `demos.html`. Every page I audited is byte-identical to its copy at `b32f360`, so the verdicts hold there. The next commit, `2aefcf7`, touches only the OH demo's files and nothing under `docs/enablement`, `enablement` or BOOTSTRAP, so they hold at that HEAD too. The working tree also carries uncommitted edits to `enablement/render-check.mjs` and `lanes/C3.md`; I ran the committed check as well (R2.2).
+
+## R2.1 Verdicts
+
+| Piece or page | Verdict | Required | Recommended |
+|---|---|---|---|
+| (b) What it is | **Ready.** Every round-one edit landed; R-b1 is replaced by the lead's contrast ruling, whose conditions it meets | 0 | 0 |
+| (c) Selling it, rebuilt | **Ready after one edit** | 1 | 1 |
+| (d) How it works and where it runs | **Ready.** R-d1 to R-d9 landed; L-d1 to L-d5 as ruled; C3's full trace restored | 0 | 0 |
+| (h) What is built, designed and open | **Ready** | 0 | 0 |
+| Glossary, source and page | **Ready** | 0 | 1 |
+| Figures | **Ready.** R-F1 and R-F2 landed, with both recommendations | 0 | 2 |
+| (e) The credits page | **Ready after two edits** | 2 | 3 |
+| (g) The demo map | **Ready after one edit** | 1 | 1 |
+| The site: chrome, links, figures, keyboard, console, requests, contrast, no script | **Ready** | 0 | 3 |
+| Credentials and forms | **None on any page** | 0 | 0 |
+
+**Deploy verdict: deploy after the four required edits in R2.8.** Each is one phrase, in a source, so the order is: edit the source, run `node enablement/render-pages.mjs`, then `node enablement/render-check.mjs` and `node enablement/check-site.mjs`. Rebuild the Word copies of (c), (e) and (g), which carry the same four phrases. Nothing else blocks the deploy. **4 required edits, 11 recommendations, 6 items for the lead's record** (R2.10).
+
+## R2.2 What I ran
+
+- **The text check:** `node enablement/render-check.mjs` passes on every page, 0 missing and 0 unexplained sentences. It also passes in its committed form on HEAD's own tree, which I extracted read-only with `git archive` into the scratchpad.
+- **The preflight:** `node enablement/check-site.mjs` passes 116 of 116, the gate's 33 unit tests and the text check included.
+- **The pages are what the sources make.** A dry run of the builder (`render-pages.mjs --out`, into the scratchpad) is byte-identical to the working tree's `enablement/site/`. From HEAD's sources it gives all 15 committed files exactly, once line endings are ignored. The only difference anywhere is CRLF in the Windows working copies of the three figure files, which the checkout's `core.autocrlf` adds; the committed files are LF. It is harmless to rendering, and a deploy from a clean WSL worktree carries LF.
+- **Headless Chrome over CDP.** A copy of the site was served from the scratchpad on port 9431 the way the assets binding serves it: `/x` gives `x.html`, an unknown address gives `404.html` with status 404, and `_headers` is applied to every answer. The server exited by itself, and Chrome ran headless on its own profile and was closed with `Browser.close`. The runs:
+  - 54 loads: the eight addresses and an unknown one, at 1440×800, 1366×768 and 390×844, light and dark;
+  - 16 keyboard runs, every page at 1366 and 390;
+  - 18 loads with JavaScript off;
+  - captures of every page's top, figures and end, and of its tables and cards at 390 and 1440, light and dark, all of which I viewed.
+
+## R2.3 Round one's edits, landed or ruled
+
+| Piece | Status |
+|---|---|
+| (b) | R-b2 to R-b21 landed as written. R-b1 gave way to the lead's ruling (design §5, §12; brief, last section). Its conditions hold: each contrast says what the engine does instead, none names a product or vendor, none judges, and "segments" appears once. S-b1 to S-b6 are waived on the record (§12) |
+| (c) | Rebuilt to §3.4, and every R-c edit is absorbed or landed. The rule, the sections, P1, P2, P3, P4, P6, P7, P9 and P10, the twelve answers and "Who sets what" are in place. The session tables carry exactly §3.4's 35 rows, verbatim and with their verdicts. There are 11 asks, the demo table moved to the demo map, and no `###` heading is left. C2's five adjustments are sound, including windows placed under the API (R2.10) |
+| (d) | R-d1 to R-d9 landed: the per-dimension override; the pins reserved before scoring; the vocabulary clause; "the two profiles merge"; the runbook row gone; add to cart; product re-ranking; the Opal line; the technical note sentence. L-d1 to L-d5 are as ruled: samsung kept; GA4 kept with its trace (C3.md, the B.5 row); the column headed "Where in the code (for engineers)"; no latency link; folder paths and file names that carry no customer name, with "never forward one to a customer". P-d1 is closed: C3.md now traces (d) section by section |
+| (h) | R-h1 and R-h2 landed. Rows B7 and A1 and the P5 sentence take the lead's new wording verbatim |
+| Glossary | R-f1 and R-f2 landed; the Recording entry takes the served-basis clause; samsung stays by ruling (L-f1) |
+| Figures | R-F1 landed: the bands became bold words, the "Verdict:" key is gone, the note was reworded, "tags for content", "would", "three parts". R-F2 landed: "Pinned pieces first, unscored". The recommended "Worker" capitals in `architecture.svg` were not taken (still optional) |
+| Design and brief | D-2 to D-5 and D-7 fixed; D-6 fixed in full, since the brief now has the new address, "personalized" and "learning dial" |
+| S2 | All nine corrections made (its third revision). The pin stays at `8b4f74c`, so every page's stamp stays true |
+
+## R2.4 The pages (scope 2)
+
+Every check passed at every size, in both themes:
+
+- **Text:** each page equals its sources, by the text check and by my reading of the credits page in full and of spot passages elsewhere.
+- **Chrome:**
+  - the skip link is first in the body and the first Tab stop on every page;
+  - the eyebrow and the eight navigation labels are on every page, the current page marked;
+  - every piece names its reader at the top;
+  - the rule stands first and last, identical, on (b), (c), (d), (h), the glossary and the demo map, and paragraph C opens and closes the landing page. The credits page keeps the original's rule block first and its colophon repeating the rule last;
+  - the legend appears exactly on the pages that show a label, and on no other (the landing page and the demo map carry none);
+  - the package name appears once per page, in `#package-name` inside the `h1`, and nowhere else in the visible text; the 404 page carries none;
+  - the stamp "Updated October 2, 2026 · engine facts as of commit 8b4f74c" is on every piece;
+  - the footer lists every piece and ends "Internal · Optimizely · do not forward outside Optimizely".
+- **Links:** every link resolves to one of the eight addresses, an anchor that exists, or one of the three demo workers.
+- **Figures:** five inline figures on four pages, each caption equal to its SVG's title. At 390 each frame scrolls sideways under its hint, becomes a labeled region with tab index 0, and scrolls with the arrow key.
+- **Keyboard:**
+  - the credits tabs are reached by Tab, which lands on the selected tab and then its panel;
+  - at 1366 the right and left arrows, Home and End move between the tabs, and at 390, where the list stacks, the up and down arrows do;
+  - the switcher's three buttons on (b) are each reached by Tab; Enter brings a part forward, Space shows all three again, and the arrows move between the buttons.
+- **Console and requests:** no console message, apart from the browser's own log of the intended 404. Only same-origin requests, two or three per page, the icon being a data URI. No CSP violation.
+- **Layout:** no horizontal scroll at any size.
+- **Contrast:** every text passes WCAG AA, at least 5.12:1 in light and 7.72:1 in dark. Figures sit on their white panel in both themes.
+- **Without JavaScript:** every page reads in full; the credits panels all show, with no horizontal scroll.
+
+Recommended, none blocking:
+
+- **RR-1.** `enablement/site/site.css`: the reader tags and the landing cards' number badges reuse the label fills. "For marketing" is LF green like Built, and "For solutions engineers" is light blue like Designed, beside the legend that defines those fills. Give the reader tags and badges a neutral fill, so the three fills mean only Built, Designed and Open.
+- **RR-2.** `enablement/site/site.js`, `initTabs`: when the list stacks (`flex-direction: column`, as on the phone), set `aria-orientation="vertical"` on the tablist, so assistive technology announces the up and down arrows the code already honors.
+- **RR-3.** `enablement/site/site.css`: on the phone, the formula block in (d)'s B.1 wraps mid-formula ("ã" ends one line and "= (1 − λ) · a + λ · share" starts the next). Let preformatted blocks keep their lines and scroll sideways.
+
+## R2.5 The credits page (scope 3)
+
+- **Structure kept.** The page has the original's six numbered sections in order, each heading as written. Its devices are kept: the boxed rule in two halves; the timeline with its three tabs; the scaling cards; three meters; three sentences; the FAQ; the order form; the colophon. The corrected source keeps the original's classes, adding only the label classes and a note. The marked additions are the package name, the title, the line after the rule, the legend, the session figure with its lead line, and the FAQ's lead line.
+- **The corrections.** P1.md §5 lists 55: the coordinator's 54, plus change 55, which drops the sentence about a color language. I checked each against S2 and the never-say list, and each is justified. 51 cite an S2 section, a never-say row, a deprecated word or the voice rule. Change 48 adds the order form's column headings, by the owner's instruction to reformat anything unclear. Changes 7 and 35 rest on "the coordinator's illustration ruling", which is not recorded in the design or the brief, and they cite design §3.6 item 5, which no longer exists (R2.10).
+- **Credit verdicts are words.** I compared computed styles across the 15 timeline rows by their credit kind (credit, free, warn, open, off), the rule's halves, the tab meters, the four category words, the meters, the scaling verdicts and the order tags. No background, border, shadow or color varies with a credit verdict. All 36 verdict phrases are bold, in the body's ink color, with no fill, in both themes. The figure gives its verdicts as bold words, with one legend (RF-1 notes one remnant).
+- **"Opal is not connected to the engine today."** is under the rule, and repeated where the rows need it.
+- **False statements left: two, both required** (R2.8: R2-2, R2-3).
+  - The Opal half of the rule says generative AI creates "an audience, a test, a label, an image, an analysis" and is "credit-metered". The page's own tagging row says labels come from the brand's own model, with "Credits not decided" (change 14). S2 §6.1 and §6.3 agree with the row: tagging uses the tenant's own key, and whether it is billed as credits is Open.
+  - The FAQ asks "Is the content auto-tagging a recurring cost?". Every tag is proposed and then approved by a person (S2 §6.1), and change 14 renamed the touchpoint "design-time tagging".
+- **Kept on purpose by P1, and I agree:** "No AI · no credits · ever" and "deterministic" (S2 §6.1); "credit-consuming exception" (S2 §6.3 leaves the unit open); "Never blend lines 1 and 2" (true, though narrower than the guardrail); "shopper" (a retail framing the glossary allows); "&" in labels (the original's voice).
+- **Recommended:**
+  - **RE-1.** The row name "ODP event ingest, seed, profile updates" uses "seed" for ODP's audience seeding, while the glossary keeps the word for an arrival rule. Make it "ODP event ingest, audience seeding, profile updates" (`credits-source.html:523`, `credits.md:48`).
+  - **RE-2.** Meter 3, "Optional add-on line: metered per invocation …", carries no label, while meter 1 says "Designed, a recommendation". Begin it "Optional add-on line, as designed:" (`credits-source.html:380`, `credits.md:102`).
+  - **RE-3.** "Tap through them." asks for tabs, which the Word copy does not have. Make it "Read each part in turn." in both sources.
+
+## R2.6 The demo map and the glossary page (scope 4)
+
+- **The demo map.**
+  - It follows §3.8 section by section, with its three marked additions: Meridian's never-claims, The Bright Hour's never-claims, and the never-say heading. Each addition is true to its source in (c) and BOOTSTRAP.
+  - The text check holds the page to `demos.md` and to §3.8's verbatim items. Since `748f976` it names the role, not a person.
+  - **One false statement, required** (R2-1): "OH, a home-appliances demo, is scaffolded and not yet hosted." OH has been hosted since `6484544` at 14:37 today. BOOTSTRAP, the demo map's sanctioned source, now lists it as the home demo for one prospect, at `edge-platform-oh.expedge.workers.dev`.
+  - **Recommended, RG-1:** "a retailer's four-container promotions module" uses "container", which the glossary retires in favor of slot. Make it "four-place" in §3.8 (line 375) and `demos.md:12` together.
+- **The glossary page.** 127 entries under 21 letters, each with the anchor id the design's rule gives (`learning-dial`, `memory`, `raw-score`, `regional-prior`, `slot-weight`). The text check finds 411 sentences each way, and the page carries the legend for its three label entries.
+  - **Recommended, RF-2:** its reader tag reads "For everyone", while its reader line and the design (§1, §3.7) name a marketer. Consider "For marketing" (the lead's call).
+
+## R2.7 Credentials and forms (scope 5)
+
+- No page holds a form, an input, a text area, a select or editable content. The only buttons are the tabs and the figure's three, which `site.js` adds.
+- In the markup, "passphrase" (the landing page's access note), "secret" ("it is not a secret"; the identity secret a customer provides) and "password" (the first operator's temporary password, on the status page) are mentions only.
+- The preflight's own scans find no credential in anything served or configured, and nothing from the local `.dev.vars` in any file.
+
+## R2.8 Required edits
+
+Each is one phrase. Both copies of the credits text and of the demo map must change together, because the text check holds each page to both.
+
+- **R2-1, the demo map.** `docs/enablement/content/demos.md:33`, "- OH, a home-appliances demo, is scaffolded and not yet hosted." → "- OH, a home-appliances demo built for one prospect, is hosted; ask the demo owner before showing it." And the same clause in `docs/enablement/BTI-Enablement-Design.md:382` (§3.8 item 5): "OH, a home-appliances demo, is scaffolded and not yet hosted" → "OH, a home-appliances demo built for one prospect, is hosted; ask the demo owner before showing it". The wording is a suggestion; the fact is BOOTSTRAP's. Whether OH still belongs under "not for showing as the engine" is the lead's call, since it runs today's engine.
+- **R2-2, the credits page.** `docs/enablement/content/credits-source.html:271` and `docs/enablement/content/credits.md:12`, "an audience, a test, a label, an image, an analysis" → "an audience, a test, an image, an analysis".
+- **R2-3, the credits page.** `docs/enablement/content/credits-source.html:421` and `docs/enablement/content/credits.md:134`, "Is the content auto-tagging a recurring cost?" → "Is design-time tagging a recurring cost?"
+- **R2-4, the sales piece.** `docs/enablement/content/selling-it.md:173`, '"Real-time interest", "sub-second decisions", "instant", or any timing or throughput figure' → '"Real-time interest", "instant", or any timing or throughput figure'. "Sub-second" is a timing figure, which §4.3 bars "anywhere, for any reason", never-say columns included; (b) describes such figures rather than printing one.
+
+Then re-render, run the text check and the preflight, and rebuild the Word copies `Enablement-Selling-It`, `Enablement-Where-Opal-and-AI-Credits-Fit` and `Enablement-Which-Demo-to-Show-to-Whom`. All three carry the phrases today.
+
+## R2.9 Recommended edits, none blocking
+
+RR-1 to RR-3 (site), RE-1 to RE-3 (credits), RG-1 (demo map) and RF-2 (glossary tag) are above. Three more:
+
+- **RF-1, `before-during-after.svg`.** The rule's two halves keep their fills: dark fir under "The engine decides … no credits", light fir under "Opal creates and explains. Credits apply". Those were the old credit bands' colors. No key ties a fill to a credit verdict now, so I pass it. A white or dark fill for the Opal half would remove the last trace.
+- **RC-1, `selling-it.md:197`.** The never-say row "Any line that describes another kind of system → Our own reasoning only: what the engine does" omits the allowance the lead made. Use §4.9's updated wording, so (c) does not contradict (b)'s contrasts.
+- **RF-3, `architecture.svg`.** "worker" → "Worker" in the box titles and zones, as in round one; optional.
+
+## R2.10 For the lead's record
+
+- **The illustration ruling.** Credits changes 7 and 35 keep the session counts as "one million sessions or ten million". P1 cites a coordinator's ruling that neither the design's §12 nor the brief records, and a design item (§3.6 item 5) that the rewritten §3.6 no longer has. Record the ruling, or use the old item's words: "However much a customer's traffic grows, its credit use does not move with it."
+- **The length of (c):** 3,265 words, 1,519 of prose and 1,673 in tables, against §3.0's 1,800 to 2,400. The design's own required content is most of it; C2's note gives the cheapest cuts. Restate the budget or cut.
+- **P8:** the design's P table lists (c) for P8, but §3.4's sentences to say omit it, and (c) does not carry it. Align one or the other.
+- **Design §3.4 item 6** still puts "windows" in the console row. S2 §4.5 says catalog fields have no console screen. (c) has it right; fix the design.
+- **Two uncommitted edits** in the working tree: `enablement/render-check.mjs` (a ruled phrase read as a pattern) and `lanes/C3.md`. The committed check passes at HEAD without them; commit or drop them before the deploy.
+- **The Word copies** were outside this round's scope. A spot check shows round one's fixes in them. They are named `Enablement-…-v1.0.docx`, which is not how the design's §1 table names them, and three need the rebuild in R2.8.
+
+## R2.11 Conduct
+
+No git command that changes anything; `git archive`, which only reads, extracted HEAD's tree into the scratchpad. No install, deploy or kill. Every server exited by itself, and every Chrome run was headless on its own profile and closed with `Browser.close`. One slip: before copying the site into my scratchpad, I ran `rm -rf` on the copy's target folder, `scratchpad/r2/site`, out of habit. The folder did not exist yet, so nothing was removed, and no other delete was run. Scratch work is in `scratchpad/r2/`: the audit scripts, `out/` and `out2/` (captures and `results.json`), `build/` and `headbuild/` (dry runs) and `head/` (HEAD's tree).
