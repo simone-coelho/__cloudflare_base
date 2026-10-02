@@ -2,7 +2,7 @@
 
 **Internal. Lane E1, 2026-10-01.** The writers' only source; anything missing goes to the lead.
 
-**Revised 2026-10-01 by lane W3, at review R2's request:** §2's order of terms is corrected. The external term comes before stage (`decide.ts:291-294`, then `:295-304`). At the coordinator's request, §12's hosted-suite provenance now cites the transcript in the repo, and notes that the suite asserts New York from beat 3 onward. In a third round, §2's per-promotion count of multiply-adds is corrected for the deals slot, and §10 gains two definitions, objective and governanceVersion, for the technical note's appendix. In a fourth round, at the owner's direction, the sheet names no customer: the two mentions read "the customer", and the three repo paths that named the customer's folder are now relative to this sheet; no fact changed.
+**Revised 2026-10-01 by lane W3, at review R2's request:** §2's order of terms is corrected. The external term comes before stage (`decide.ts:291-294`, then `:295-304`). At the coordinator's request, §12's hosted-suite provenance now cites the transcript in the repo, and notes that the suite asserts New York from beat 3 onward. In a third round, §2's per-promotion count of multiply-adds is corrected for the deals slot, and §10 gains two definitions, objective and governanceVersion, for the technical note's appendix. In a fourth round, at the owner's direction, the sheet names no customer: the two mentions read "the customer", and the three repo paths that named the customer's folder are now relative to this sheet; no fact changed. In a fifth round, §4 cites the seeds where the slots documents carry them, since `public/vantage/seeds.json` is retired; the rules there are identical to §4 and §10, field for field.
 
 **References.** `path:line` is code at commit `5ddc64d`; every engine path cited is identical at HEAD (`c720907`). Three files have changed since and are cited as at `5ddc64d`: `src/routes/vantage.ts` (its code now in `src/demos/kit/helpers.ts`), `src/routes/vantageColdStart.ts` (now `src/demos/kit/coldStartRoutes.ts`) and `public/vantage/vantage.js`. `L1 §5` is `../lanes/L1.md` §5 (a path starting `../` is relative to this sheet's folder). **E1 hosted** means read by this lane from `edge-platform-vantage`, 2026-10-01, 22:25–22:39 UTC: snapshots only (no event moved a prior), documents read with a five-minute read-only operator token, tenant reset at the end (open-slots r52, open-catalog r62).
 
@@ -156,7 +156,7 @@ On the receipt, `score_base` is the score after step 4 and `score_final` after s
 
 **Grammar:** signals entry_channel, campaign_term, referrer_network, platform; weight 0–1; ≤ 4 dampen entries; tags only on weighted dimensions.
 
-**Vantage's seeds** (`public/vantage/seeds.json`).
+**Vantage's seeds** (the slots documents `public/vantage/beats/open-slots.json` and, for beat 13, `public/vantage/beats/13-pin-duo-preorder.json`, each at `publish.document.pages.home[0].seeds` for the hero and `publish.document.pages.home[1].seeds` for deals).
 
 - **Hero and deals:** `campaign_term iphone-18-pro → campaign: iphone-18-pro` at weight **0.2**.
   - It fires when `entry.utmTerm` matches, case-insensitively (`decide.ts:250-254`).

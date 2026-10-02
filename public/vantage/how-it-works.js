@@ -4,8 +4,9 @@
  * published arithmetic, recomputed in the browser so a reader can move the
  * constants. Every formula below carries the file:line it mirrors, and the
  * constants are the ones the demo publishes (scripts/seed-vantage.mjs at c720907, the
- * opening slots document public/vantage/beats/open-slots.json, the arrival seeds
- * public/vantage/seeds.json). Measured numbers come from the demo's facts sheet
+ * opening slots document public/vantage/beats/open-slots.json, whose arrival seeds sit at
+ * publish.document.pages.home[0].seeds and .home[1].seeds, as in beat 13's
+ * public/vantage/beats/13-pin-duo-preorder.json). Measured numbers come from the demo's facts sheet
  * (FACTS.md, kept with the explainer notes) and are marked as measured where they show.
  *
  * What this file is not: it decides nothing for the demo. The demo's decisions
@@ -88,7 +89,9 @@
   // ══════════════════════════════════════════════════════════════════════════
   // 1 · The published documents, as served on the demo worker on 2026-10-01
   //     (the facts sheet, FACTS.md §10: reflex r3, slots r51, learn r3),
-  //     identical to scripts/seed-vantage.mjs at c720907 and public/vantage/seeds.json.
+  //     identical to scripts/seed-vantage.mjs at c720907 and to the slots documents
+  //     public/vantage/beats/open-slots.json and 13-pin-duo-preorder.json, whose seeds sit at
+  //     publish.document.pages.home[0].seeds (the hero) and .home[1].seeds (deals).
   //     The page's arithmetic reads these objects; section 8 displays them.
   // ══════════════════════════════════════════════════════════════════════════
 
