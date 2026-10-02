@@ -275,6 +275,84 @@ export function anchorCopyProblems({ anchorDoc, anchorFile = 'the anchor file', 
 }
 
 /**
+ * The product facts a demo's beat documents state, held to its products file (lane K4; K3b's build item in the
+ * design's decisions log): the documents carry literal copies of product facts (the ids a piece features, the
+ * attributes an event sends, a price), so a product change no longer reaches them and nothing else checks them.
+ *
+ *   • every `featuredProductIds` entry names a product in the file;
+ *   • every object that names a product by `spec.eventId` (default productId: an event's data, a snapshot's
+ *     subject) names one the file has, and states only facts it agrees with: each attribute in `spec.attributes`
+ *     equals the product's field (one of its values when the field is a list); where `spec.variants` maps an
+ *     attribute and the object names a variant by `variants.key` (a storage step), that variant's field; where it
+ *     names none, a value one of the product's configurations has (the price of the step she chose).
+ *
+ * `documents` maps a document's name to its JSON; `products` is the parsed file. Returns errors, by document and
+ * path, so a seed refuses before anything is written.
+ */
+/**
+ * A products file with an overlay merged over it (spec.overlay: another lane's rows, OH's specs.json): each overlay
+ * row's top-level fields replace the product's own, matched by the product's id. The overlay is a list of rows each
+ * naming its product (`overlay.by`, default the id field), under the products' list key, `specs` or `rows`, or an
+ * object keyed by the product's id under `specs` or `bySku`. Returns a new products document; neither input changes.
+ */
+export function mergeOverlay(products, overlay, spec) {
+  const listKey = spec.list ?? 'products';
+  if (!isObject(products) || !Array.isArray(products[listKey]) || !overlay) return products;
+  const by = spec.overlay?.by ?? spec.id;
+  const rows = Array.isArray(overlay) ? overlay : [overlay[listKey], overlay.specs, overlay.rows].find(Array.isArray) ?? null;
+  const keyed = rows ? Object.fromEntries(rows.filter(isObject).map((r) => [String(r[by]), r])) : [overlay.specs, overlay.bySku].find(isObject) ?? {};
+  return { ...products, [listKey]: products[listKey].map((p) => (isObject(p) && keyed[String(p[spec.id])] ? { ...p, ...keyed[String(p[spec.id])] } : p)) };
+}
+
+export function productFactProblems({ documents, products, spec }) {
+  const listKey = spec.list ?? 'products';
+  const list = Array.isArray(products?.[listKey]) ? products[listKey] : null;
+  if (!list) return [`the products file has no "${listKey}" list`];
+  const get = (o, path) => String(path).split('.').reduce((v, k) => (v == null ? undefined : v[k]), o);
+  const byId = new Map(list.filter(isObject).map((p) => [String(get(p, spec.id)), p]));
+  const eventId = spec.eventId ?? 'productId';
+  const variants = spec.variants ?? null;
+  const same = (a, b) => (typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 0.005 : String(a) === String(b));
+  /** The value an object states agrees with the product's field: equal, or (a list on either side) contained. */
+  const agrees = (stated, field) => {
+    const want = Array.isArray(field) ? field : [field];
+    return (Array.isArray(stated) ? stated : [stated]).every((x) => want.some((y) => same(x, y)));
+  };
+  const show = (v) => (typeof v === 'string' ? `"${v}"` : JSON.stringify(v));
+  const errors = [];
+  const check = (obj, where) => {
+    const id = String(obj[eventId]);
+    const p = byId.get(id);
+    if (!p) { errors.push(`${where}: names product ${id}, which the products file does not have`); return; }
+    const configs = variants && Array.isArray(get(p, variants.list)) ? get(p, variants.list).filter(isObject) : [];
+    const named = variants && obj[variants.key] !== undefined ? configs.find((c) => same(get(c, variants.key), obj[variants.key])) : null;
+    if (variants && obj[variants.key] !== undefined && !named) errors.push(`${where}: names ${id} ${variants.key} ${show(obj[variants.key])}, which the products file does not list for it`);
+    for (const [attr, field] of Object.entries(spec.attributes)) {
+      if (obj[attr] === undefined || attr === eventId) continue;
+      const vField = variants?.attributes?.[attr];
+      if (vField && named) {
+        if (!agrees(obj[attr], get(named, vField))) errors.push(`${where}: ${attr} ${show(obj[attr])} for ${id} ${variants.key} ${show(obj[variants.key])}; the products file says ${show(get(named, vField))}`);
+        continue;
+      }
+      const allowed = [get(p, field), ...(vField ? configs.map((c) => get(c, vField)) : [])].filter((v) => v !== undefined && v !== null);
+      if (!allowed.length) { errors.push(`${where}: states ${attr} for ${id}, which the products file does not record (${field})`); continue; }
+      if (!allowed.some((v) => agrees(obj[attr], v))) errors.push(`${where}: ${attr} ${show(obj[attr])} for ${id}; the products file says ${show(get(p, field))}${vField && configs.length ? ` (or a configuration's ${vField}: ${configs.map((c) => show(get(c, vField))).join(', ')})` : ''}`);
+    }
+  };
+  const walk = (v, path) => {
+    if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${path}[${i}]`)); return; }
+    if (!isObject(v)) return;
+    if (typeof v[eventId] === 'string' || typeof v[eventId] === 'number') check(v, path);
+    if (Array.isArray(v.featuredProductIds)) {
+      v.featuredProductIds.forEach((pid, i) => { if (!byId.has(String(pid))) errors.push(`${path}.featuredProductIds[${i}]: ${pid} is not in the products file`); });
+    }
+    for (const [k, x] of Object.entries(v)) if (k !== 'featuredProductIds') walk(x, `${path}.${k}`);
+  };
+  for (const [name, doc] of Object.entries(documents)) walk(doc, name);
+  return errors;
+}
+
+/**
  * Each piece's art is a file the worker serves (public/ is served at the site root), so a card paints its
  * image or, with no renderUrl, the placeholder; never a broken tag. `served(url)` says whether a site path
  * names a served file. Returns warnings.
@@ -319,6 +397,16 @@ export function prepareSeed({ config, path, nowMs }) {
   const raw = readBeats(dir, seed.beats.files, seed.beats.anchor.file);
   for (const [name, e] of Object.entries(raw.envelopes)) errors.push(...envelopeProblems(name, e));
   if (errors.length) return { errors, warnings };
+  // The products file, when the config names one: a beat document's product facts must agree with it (lane K4).
+  if (seed.products) {
+    let products = null;
+    try { products = readJson(path(seed.products.file)); } catch (error) { errors.push(`seed.products.file: ${seed.products.file} could not be read (${error.message})`); }
+    const overlayFile = seed.products.overlay?.file ? path(seed.products.overlay.file) : null;
+    if (products && overlayFile && existsSync(overlayFile)) {
+      try { products = mergeOverlay(products, readJson(overlayFile), seed.products); } catch (error) { errors.push(`seed.products.overlay.file: ${seed.products.overlay.file} could not be read (${error.message})`); }
+    } else if (overlayFile) warnings.push(`seed.products.overlay.file: ${seed.products.overlay.file} does not exist yet; the product facts are checked against ${seed.products.file} alone`);
+    if (products) errors.push(...productFactProblems({ documents: { ...raw.envelopes, [seed.beats.anchor.file.replace(/\.json$/, '')]: raw.anchorDoc }, products, spec: seed.products }));
+  }
 
   const { envelopes, anchorDoc, fromMs, toMs, deltaMs } = reanchorBeats({ envelopes: raw.envelopes, anchorDoc: raw.anchorDoc, anchorField: seed.beats.anchor.field, toMs: nowMs });
 

@@ -1,0 +1,114 @@
+/* public/oh/oh.css
+ * OH: the site, on the demo kit. Scaffolded by scripts/demo-kit/new-demo.mjs from public/oh/demo.config.json.
+ *
+ *   THE SITE (light)   this file: the token overrides (the palette), then a plain site the page lanes restyle.
+ *   THE ENGINE (dark)  the machine panel, the director bar, the before/now strips, the sheets and predict-then-prove:
+ *                      the demo kit's chrome (public/demo-kit/kit.css), drawn from the tokens, never edited here.
+ *
+ * Two kinds of region on the site, and the difference is the point:
+ *   .decided  a slot the engine answers per visitor; a rule in the brand colour on its left.
+ *   .static   everything else, marked "not personalised" on its face.
+ * The buy box is a third kind: off limits, never decided, and it says so.
+ *
+ * Loaded after public/demo-kit/tokens.css and kit.css, before compare.css.
+ */
+
+/* ══ Token overrides: the palette from demo.config.json ═══════════════════ */
+:root {
+  --brand: #A50034;
+  --brand-deep: #7D0027;
+  --accent: #A50034;
+  --black: #1D1D1B;
+  --ink: #1D1D1B;
+  --text: #1D1D1B;
+  --muted: #6B6B6B;
+  --paper: #FFFFFF;
+  --on-dark: #FFFFFF;
+  --line: #E4E4E4;
+  --line-2: #D0D0D0;
+  --soft: #F5F5F5;
+  --soft-2: #EDEDED;
+  --brand-glow: rgba(165,0,52,.7);
+  --brand-glow-2: rgba(165,0,52,.45);
+  --brand-glow-0: rgba(165,0,52,0);
+  --brand-wash: #F9EDF1;
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.skip { position: absolute; left: -9999px; top: 0; background: var(--black); color: var(--on-dark); padding: 10px 16px; z-index: 1000; }
+.skip:focus { left: 0; }
+
+/* ══ Site header ═════════════════════════════════════════════════════════ */
+.utility { background: var(--soft); color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; gap: 16px; padding: 7px 28px; border-bottom: 1px solid var(--line); }
+.u-right { display: flex; gap: 18px; }
+.u-sign { color: var(--ink); font-weight: 600; }
+.mast { display: flex; align-items: center; gap: 34px; padding: 0 28px; height: 66px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.wordmark { display: flex; align-items: baseline; gap: 10px; text-decoration: none; cursor: pointer; flex: none; }
+.wm { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; color: var(--brand); }
+.wm-tag { font-size: 13px; color: var(--muted); }
+.mainnav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mainnav button { border: 0; background: none; font-size: 15px; font-weight: 600; color: var(--ink); padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; }
+.mainnav button:hover { background: var(--soft); }
+
+/* ══ Not personalised, decided, off limits ═══════════════════════════════ */
+.nper { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.nper::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }
+.stage { padding: 0 28px 40px; }
+.view { display: flex; flex-direction: column; gap: 28px; padding-top: 24px; }
+.module { border-left: 3px solid transparent; padding-left: 16px; }
+.module.decided { border-left-color: var(--brand); }
+.module-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+.module-head h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+.module-where { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.module-where b { color: var(--brand-deep); font-weight: 600; }
+.offlimits-note, .offlimits { font-size: 12.5px; color: var(--muted); background: var(--soft); border-radius: var(--radius-sm); padding: 7px 12px; }
+.offlimits-note b, .offlimits b { color: var(--ink); text-transform: uppercase; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; margin-right: 6px; }
+.engine-down { margin-top: 10px; font-size: 13px; color: var(--brand-deep); background: var(--brand-wash); border-radius: var(--radius-sm); padding: 8px 12px; }
+.slot-wait, .slot-empty { font-size: 13.5px; color: var(--muted); font-style: italic; }
+
+/* ══ The scaffold's renderers: plain cards in the order the engine returned ═ */
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.cards--one { grid-template-columns: minmax(0, 1fr); }
+.card { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+.cards--one .card { padding: 28px; background: var(--soft); min-height: 160px; justify-content: flex-end; }
+.cards--one .card h3 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.card h3 { font-size: 17px; font-weight: 700; padding-right: 22px; }
+.card p { font-size: 13.5px; color: var(--muted); }
+.card .pos { position: absolute; top: 10px; right: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.card .receipt { font-family: var(--mono); font-size: 10.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 4px; }
+.card.clicked, .pcard.clicked { box-shadow: 0 0 0 3px var(--brand-glow-2); }
+.rail { display: grid; gap: 12px; grid-auto-flow: column; grid-auto-columns: minmax(190px, 1fr); overflow-x: auto; padding-bottom: 6px; }
+.rail-chip { font-family: var(--mono); font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 3px 9px; white-space: nowrap; }
+.pcard { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; background: var(--paper); }
+.pcard img { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--soft); border-radius: var(--radius-sm); }
+.pcard .pname { font-size: 14px; font-weight: 600; color: var(--ink); }
+.pcard .pprice { font-size: 14px; font-weight: 700; color: var(--ink); }
+
+/* ══ The grid and the product page ═══════════════════════════════════════ */
+.crumbs { display: flex; gap: 8px; font-size: 13px; color: var(--muted); }
+.crumbs a { cursor: pointer; text-decoration: underline; }
+.view-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.view-title { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
+.buybox { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.bb-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .bb-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.bb-image { aspect-ratio: 1; background: var(--soft); border-radius: var(--radius); display: grid; place-items: center; overflow: hidden; }
+.bb-image img { width: 90%; height: 90%; object-fit: contain; }
+.bb-title { font-size: 26px; font-weight: 800; }
+.bb-meta { font-size: 13.5px; color: var(--muted); }
+.bb-price { font-size: 24px; font-weight: 800; color: var(--ink); }
+.bb-actions { display: flex; gap: 10px; margin-top: 8px; }
+.btn { border: 0; border-radius: var(--radius-pill); font-weight: 700; font-size: 15px; padding: 12px 22px; cursor: pointer; }
+.btn--brand { background: var(--brand); color: var(--on-dark); }
+
+/* ══ Footer ═══════════════════════════════════════════════════════════════ */
+.site-footer { background: var(--soft); border-top: 1px solid var(--line); padding: 24px 28px 32px; display: grid; gap: 10px; }
+.foot-legal { font-size: 12.5px; color: var(--muted); max-width: 900px; }
+
+/* ══ The phone (m.html): the homepage's slots at phone width ════════════ */
+body.shell--phone .site { max-width: 400px; margin: 18px auto; border: 10px solid var(--black); border-radius: 34px; overflow: hidden; }
+body.shell--phone .stage { padding: 0 14px 28px; }
+body.shell--phone .mast { gap: 12px; padding: 0 14px; height: auto; min-height: 56px; flex-wrap: wrap; }
+body.shell--phone .utility { padding: 6px 14px; }
+body.shell--phone .cards { grid-template-columns: minmax(0, 1fr); }

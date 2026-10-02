@@ -24,7 +24,7 @@
 // copy of the beats directory, which this rewrites.
 import { relative, resolve } from 'node:path';
 import { isEntry } from './lib/cli.mjs';
-import { argOf, configArg, loadValidConfig } from './lib/config.mjs';
+import { argOf, configArg, configFileFor, loadValidConfig } from './lib/config.mjs';
 import { iso, prepareSeed, publishOpening, writeBeatFiles } from './lib/seed.mjs';
 import { isLoopbackTarget, resolveToolToken, tokenFromArgs } from '../lib/tool-token.mjs';
 
@@ -34,7 +34,8 @@ export const USAGE = 'usage: node scripts/demo-kit/seed.mjs --config <file> [--b
 export async function main(argv = process.argv.slice(2)) {
   const file = configArg(argv, ['--config', '--base', '--token', '--out']);
   if (!file) { console.error(USAGE); return 2; }
-  const { config, path } = loadValidConfig(file, { sections: ['seed'] });
+  // A demo's slug names scripts/demo-kit/configs/<slug>.json, as check-demo.mjs and rehearse.mjs read it (lane K4).
+  const { config, path } = loadValidConfig(configFileFor(file) ?? file, { sections: ['seed'] });
   const base = argOf(argv, '--base', `http://localhost:${config.worker.devPort}`).replace(/\/+$/, '');
   const scope = config.tenant;
   const show = (p) => { const r = relative(process.cwd(), p); return r && !r.startsWith('..') ? r : p; };

@@ -1,8 +1,12 @@
-// scripts/demo-kit/lib/config.mjs — the demo kit's config: load it, resolve its paths, validate it.
+// scripts/demo-kit/lib/config.mjs — the demo kit's configs: load them, resolve their paths, validate them.
 //
-// A demo config is one JSON file (scripts/demo-kit/configs/<slug>.json today; public/<slug>/demo.config.json
-// in the design, docs/demo-kit/Demo-Kit-Design.md §2.4). Every path in it is relative to the repository
-// root. A section may be written inline or as the path of a JSON file that holds it ("region": "…/region.json").
+// Two files per demo. The DEMO config, public/<slug>/demo.config.json (docs/demo-kit/Demo-Kit-Design.md §2.4), is
+// the one a solutions engineer edits first: validateDemoConfig checks it, and scripts/demo-kit/new-demo.mjs
+// scaffolds the demo from it. The KIT config, scripts/demo-kit/configs/<slug>.json, is what the kit's command lines
+// read (seed, region seed, imagery, check-demo, rehearse); new-demo.mjs derives it, and validateConfig checks it.
+// Every path in either is relative to the repository root. A kit config's section may be written inline or as
+// the path of a JSON file that holds it ("region": "…/region.json"), and a section the command does not need
+// may not exist yet (another lane is writing it).
 //
 // The rules a config must keep, checked before any script reads a document or touches the network:
 //   • names are slugs; the worker is never the shared one nor a customer stamp (staging, production), its
@@ -90,23 +94,30 @@ const readJson = (abs) => JSON.parse(readFileSync(abs, 'utf8'));
  * Read a config file and inline every section given as a path. Throws on unreadable JSON; returns the
  * config as written otherwise. Validation is separate (`validateConfig`), so a caller can report every
  * problem at once.
+ *
+ * `sections` names what the caller needs (lane K4): a section it needs must be a file, as before; a section it
+ * does not need whose file does not exist YET is left as its path and listed in `pending`, so a new demo's seed
+ * and check run while another lane is still writing its region or imagery section. A path outside the
+ * repository is refused whichever section it is. Without `sections`, every section is needed.
  */
-export function loadConfig(file, { root = REPO_ROOT } = {}) {
+export function loadConfig(file, { root = REPO_ROOT, sections = SECTIONS } = {}) {
   const abs = isAbsolute(file) ? file : resolve(process.cwd(), file);
   if (!existsSync(abs)) throw new Error(`config ${file}: no such file`);
   const config = readJson(abs);
   if (!isObject(config)) throw new Error(`config ${file}: not a JSON object`);
   const sources = { config: abs };
+  const pending = {};
   for (const section of SECTIONS) {
     if (typeof config[section] !== 'string') continue;
     const sectionFile = resolveInside(root, config[section]);
+    if (sectionFile && !existsSync(sectionFile) && !sections.includes(section)) { pending[section] = config[section]; continue; }
     if (!sectionFile || !existsSync(sectionFile)) throw new Error(`config ${file}: section "${section}" names ${config[section]}, which is not a file inside the repository`);
     const value = readJson(sectionFile);
     if (!isObject(value)) throw new Error(`config ${file}: section "${section}" (${config[section]}) is not a JSON object`);
     config[section] = value;
     sources[section] = sectionFile;
   }
-  return { config, root, file: abs, sources };
+  return { config, root, file: abs, sources, pending };
 }
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -200,6 +211,7 @@ function seedRules(errors, root, seed, publicDir) {
     }
   }
   vocabularyRule(errors, 'seed.vocabulary', seed.vocabulary);
+  if (seed.products !== undefined) productsRule(errors, root, 'seed.products', seed.products, publicDir);
   if (seed.seedOnlyDimensions !== undefined) {
     if (!Array.isArray(seed.seedOnlyDimensions)) errors.push('seed.seedOnlyDimensions: a list of dimension names');
     else for (const d of seed.seedOnlyDimensions) {
@@ -362,6 +374,15 @@ export function validateConfig(config, { root = REPO_ROOT, sections = SECTIONS }
     if (!isString(w.queue, 63) || !SLUG.test(w.queue)) errors.push('worker.queue: a queue name such as events-vantage');
     else if (Object.hasOwn(FORBIDDEN_QUEUES, w.queue)) errors.push(`worker.queue: ${FORBIDDEN_QUEUES[w.queue]}`);
     if (!isInt(w.devPort, 1024, 65535)) errors.push('worker.devPort: the local wrangler dev port');
+    // A demo's worker is edge-platform-<slug> and its queue events-<slug> (the design's ruling on H1's question,
+    // 2026-10-01): derived by the scaffolder, enforced here, so two demos can never share a worker or a queue.
+    const slug = isString(config.slug, 63) && SLUG.test(config.slug) ? config.slug : null;
+    if (slug && isString(w.name, 63) && SLUG.test(w.name) && !Object.hasOwn(FORBIDDEN_WORKERS, w.name) && w.name !== `edge-platform-${slug}`) {
+      errors.push(`worker.name: "${w.name}" must be "edge-platform-${slug}", the worker of this demo's own slug`);
+    }
+    if (slug && isString(w.queue, 63) && SLUG.test(w.queue) && !Object.hasOwn(FORBIDDEN_QUEUES, w.queue) && w.queue !== `events-${slug}`) {
+      errors.push(`worker.queue: "${w.queue}" must be "events-${slug}", the queue of this demo's own slug`);
+    }
     if (w.config !== undefined) {
       const abs = pathRule(errors, root, 'worker.config', w.config, { kind: 'file', mustExist: false, ext: '.toml' });
       // Compared case-insensitively, since a Windows checkout opens WRANGLER.TOML as the same file.
@@ -381,7 +402,7 @@ export function validateConfig(config, { root = REPO_ROOT, sections = SECTIONS }
 /** Load and validate in one step, exiting with every problem named. For the command lines. */
 export function loadValidConfig(file, { sections, root = REPO_ROOT, exit = (code) => process.exit(code), log = console.error } = {}) {
   let loaded;
-  try { loaded = loadConfig(file, { root }); } catch (error) { log(`✗ ${error.message}`); return exit(2); }
+  try { loaded = loadConfig(file, { root, ...(sections ? { sections } : {}) }); } catch (error) { log(`✗ ${error.message}`); return exit(2); }
   const { ok, errors } = validateConfig(loaded.config, { root, sections });
   if (!ok) { log(`✗ ${relative(process.cwd(), loaded.file) || loaded.file}: ${errors.length} problem(s)\n  - ${errors.join('\n  - ')}`); return exit(2); }
   return { ...loaded, path: (rel) => resolveInside(root, rel) };
@@ -410,4 +431,322 @@ export function configArg(argv, valued = []) {
     return argv[i];
   }
   return null;
+}
+
+// ── The products file (lane K4) ─────────────────────────────────────────────
+
+/**
+ * The products file a demo's beats speak about, and how its facts are read: `file` (inside the demo's public
+ * directory), `list` (the array of products in it, default "products"), `id` (each product's id field),
+ * `eventId` (the key an event or a piece names a product by, default "productId"), `attributes` (an event's
+ * attribute → the product field it must equal) and, optionally, `variants` ({ list, key, attributes }: a
+ * product's configurations, such as storage steps, each with its own facts). lib/seed.mjs productFactProblems
+ * reads beat documents through it, and a seed refuses when they disagree.
+ */
+const FIELD = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+/** A product field, which may sit inside an object of the row (attributes.category). */
+const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]{0,63}(?:\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,3}$/;
+function productsRule(errors, root, where, p, publicDir, { mustExist = true } = {}) {
+  if (!isObject(p)) { errors.push(`${where}: { file, list, id, eventId?, attributes, variants? }`); return; }
+  pathRule(errors, root, `${where}.file`, p.file, { kind: 'file', ext: '.json', inside: publicDir, mustExist });
+  for (const k of ['list', 'eventId']) if (p[k] !== undefined && !(isString(p[k], 64) && FIELD.test(p[k]))) errors.push(`${where}.${k}: a field name`);
+  if (!(isString(p.id, 64) && FIELD_PATH.test(p.id))) errors.push(`${where}.id: the field that holds each product's id`);
+  const map = (m, at) => {
+    if (!isObject(m) || !Object.keys(m).length) { errors.push(`${at}: an object of event attribute → product field`); return; }
+    for (const [k, v] of Object.entries(m)) if (!FIELD.test(k) || !(isString(v, 200) && FIELD_PATH.test(v))) errors.push(`${at}.${k}: "${v}" is not a field name (or a dotted path into the row)`);
+  };
+  map(p.attributes, `${where}.attributes`);
+  // An overlay another lane writes (OH: Lane D2's specs.json), merged over each row by id before anything reads it.
+  if (p.overlay !== undefined) {
+    if (!isObject(p.overlay)) errors.push(`${where}.overlay: { file, by? }, rows merged over the products by id`);
+    else {
+      pathRule(errors, root, `${where}.overlay.file`, p.overlay.file, { ext: '.json', inside: publicDir, mustExist: false });
+      if (p.overlay.by !== undefined && !(isString(p.overlay.by, 64) && FIELD.test(p.overlay.by))) errors.push(`${where}.overlay.by: the field each overlay row names its product by`);
+    }
+  }
+  if (p.variants !== undefined) {
+    const v = p.variants;
+    if (!isObject(v) || !(isString(v.list, 64) && FIELD.test(v.list)) || !(isString(v.key, 64) && FIELD.test(v.key))) errors.push(`${where}.variants: { list, key, attributes }, a product's configurations`);
+    else map(v.attributes, `${where}.variants.attributes`);
+  }
+}
+
+// ── The demo config: public/<slug>/demo.config.json (lane K4) ───────────────
+
+/** The kit's design tokens, read from public/demo-kit/tokens.css: a palette may set only these. */
+export function kitTokens(root = REPO_ROOT) {
+  const file = resolve(root, 'public', 'demo-kit', 'tokens.css');
+  if (!existsSync(file)) return new Set();
+  return new Set([...readFileSync(file, 'utf8').matchAll(/^\s*--([a-z0-9-]+)\s*:/gm)].map((m) => m[1]));
+}
+
+/** A duration as the design writes it: 60s, 10m, 2h, 14d (or a number of milliseconds). Null when it is not one. */
+export function durationMs(value) {
+  if (Number.isSafeInteger(value) && value > 0) return value;
+  const m = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/.exec(String(value ?? '').trim());
+  if (!m) return null;
+  const ms = Number(m[1]) * { ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2]];
+  return Number.isSafeInteger(ms) && ms > 0 ? ms : null;
+}
+
+const COLOUR = /^(?:#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d+)\s*)?\))$/;
+const FONT_FAMILY = /^[A-Za-z0-9 ]{1,60}$/;
+const CTX_NAME = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
+/** The views a page shell boots into (the shell's data-entry). */
+export const DEMO_ENTRIES = Object.freeze(['home', 'grid', 'product', 'phone']);
+export const DEMO_SHELLS = Object.freeze(['index.html', 'product.html', 'm.html']);
+export const BEAT_WHO = Object.freeze(['shopper', 'merch', 'engine']);
+export const BEAT_KINDS = Object.freeze(['context', 'catalog', 'slots']);
+export const SEED_SIGNALS = Object.freeze(['entry_channel', 'campaign_term', 'referrer_network', 'platform']);
+/** The changes a scaffolded publish beat may make to the document before it, in beat order (lib/scaffold.mjs). */
+export const BEAT_CHANGES = Object.freeze(['shiftDays', 'close', 'outOfStock', 'pin']);
+/** The only fields a sign-in demo account carries: a fictional name and what it is for. Its secret lives on the worker. */
+const ACCOUNT_FIELDS = Object.freeze(['name', 'about']);
+
+/** The snapshot slots of a demo config's pages, in page order, each with its page key and engine page name. */
+export function demoSlots(demo) {
+  const out = [];
+  for (const p of Array.isArray(demo?.pages) ? demo.pages : []) for (const s of Array.isArray(p?.slots) ? p.slots : []) if (isObject(s)) out.push({ page: p.key, engine: p.page, ...s });
+  return out;
+}
+
+/**
+ * Every problem with a demo config (docs/demo-kit/Demo-Kit-Design.md §2.4), as sentences naming the field:
+ * the one file a solutions engineer edits first, from which scripts/demo-kit/new-demo.mjs scaffolds the demo.
+ * It holds no credential (a sign-in demo account is a fictional name; its secret exists only on the worker), and
+ * what it derives keeps the kit's rules: the worker is edge-platform-<slug>, the queue events-<slug>, the
+ * public directory public/<slug>, every path inside the repository.
+ */
+export function validateDemoConfig(demo, { root = REPO_ROOT, tokens = kitTokens(root) } = {}) {
+  const errors = [];
+  if (!isObject(demo)) return { ok: false, errors: ['the demo config must be a JSON object'] };
+  const at = (field, problem) => errors.push(`${field}: ${problem}`);
+  if (!isString(demo.name, 80)) at('name', 'the demo’s name, 1..80 characters');
+  const slugOk = isString(demo.slug, 40) && SLUG.test(demo.slug);
+  if (!slugOk) at('slug', 'lower-case letters, digits and hyphens, at most 40');
+  const slug = slugOk ? demo.slug : '<slug>';
+  if (!isString(demo.tenant, 63) || !SLUG.test(demo.tenant)) at('tenant', 'the demo’s tenant id, a slug');
+  if (demo.customer !== undefined && !isString(demo.customer, 80)) at('customer', 'whose demo this is, 1..80 characters');
+  const publicDir = slugOk ? { abs: resolve(root, 'public', slug), rel: `public/${slug}` } : null;
+
+  const w = demo.worker;
+  if (!isObject(w)) at('worker', '{ name, queue, devPort }');
+  else {
+    if (w.name !== `edge-platform-${slug}`) at('worker.name', `"${w.name}" must be "edge-platform-${slug}": a demo’s worker is edge-platform-<slug>`);
+    if (Object.hasOwn(FORBIDDEN_WORKERS, w.name)) at('worker.name', FORBIDDEN_WORKERS[w.name]);
+    if (w.queue !== `events-${slug}`) at('worker.queue', `"${w.queue}" must be "events-${slug}": a demo’s queue is events-<slug>`);
+    if (Object.hasOwn(FORBIDDEN_QUEUES, w.queue)) at('worker.queue', FORBIDDEN_QUEUES[w.queue]);
+    if (!isInt(w.devPort, 1024, 65535)) at('worker.devPort', 'the local wrangler dev port, 1024..65535');
+  }
+  if (demo.design !== undefined) pathRule(errors, root, 'design', demo.design, { kind: 'file', ext: '.md' });
+
+  const b = demo.brand;
+  if (!isObject(b) || !isString(b.wordmark, 24) || !isString(b.title, 80)) at('brand', '{ wordmark (1..24), tagline?, title (the page title, 1..80), legal? }');
+  else {
+    if (b.tagline !== undefined && !isString(b.tagline, 80)) at('brand.tagline', '1..80 characters');
+    if (b.legal !== undefined && !isString(b.legal, 800)) at('brand.legal', 'the footer’s sentence about what is real, 1..800 characters');
+  }
+  const pal = demo.palette;
+  if (!isObject(pal)) at('palette', 'an object of kit token → colour (public/demo-kit/tokens.css names the tokens)');
+  else {
+    for (const need of ['brand', 'ink', 'paper']) if (!Object.hasOwn(pal, need)) at(`palette.${need}`, 'required');
+    for (const [k, v] of Object.entries(pal)) {
+      if (['font', 'mono'].includes(k)) at(`palette.${k}`, 'the families are fonts.font and fonts.mono');
+      else if (tokens.size && !tokens.has(k)) at(`palette.${k}`, 'not a token of public/demo-kit/tokens.css');
+      else if (!(typeof v === 'string' && COLOUR.test(v.trim()))) at(`palette.${k}`, `"${v}" is not a colour (#rrggbb, #rgb or rgb[a](…))`);
+    }
+  }
+  const f = demo.fonts;
+  if (f !== undefined) {
+    if (!isObject(f)) at('fonts', '{ font, mono }: the families, from Google Fonts');
+    else for (const k of ['font', 'mono']) if (f[k] !== undefined && !(isString(f[k], 60) && FONT_FAMILY.test(f[k]))) at(`fonts.${k}`, 'a font family name');
+  }
+
+  // Dimensions with their memory.
+  const dims = new Map();
+  if (!Array.isArray(demo.dimensions) || !demo.dimensions.length || demo.dimensions.length > 32) at('dimensions', 'a list of 1..32 dimensions, each { key, tau?, source?, multi?, values? }');
+  else demo.dimensions.forEach((d, i) => {
+    const where = `dimensions[${i}]`;
+    if (!isObject(d) || !isString(d.key, 64) || !DIM.test(d.key)) { at(`${where}.key`, 'a dimension name'); return; }
+    if (dims.has(d.key)) at(`${where}.key`, `"${d.key}" is listed twice`);
+    if (d.tau !== undefined && durationMs(d.tau) === null) at(`${where}.tau`, `"${d.tau}" is not a duration such as 60s, 10m, 2h or 14d`);
+    if (d.source !== undefined && !(isString(d.source, 64) && FIELD.test(d.source))) at(`${where}.source`, 'the event attribute it reads');
+    if (d.multi !== undefined && typeof d.multi !== 'boolean') at(`${where}.multi`, 'true when an event may carry several values');
+    if (d.values !== undefined) vocabularyRule(errors, `dimensions[${i}].values`, { [d.key]: d.values });
+    dims.set(d.key, d);
+  });
+  const seedOnly = new Set(Array.isArray(demo.seedOnlyDimensions) ? demo.seedOnlyDimensions : []);
+  if (demo.seedOnlyDimensions !== undefined && !(Array.isArray(demo.seedOnlyDimensions) && demo.seedOnlyDimensions.every((d) => DIM.test(d) && !dims.has(d)))) at('seedOnlyDimensions', 'dimension names that are not registry dimensions');
+  const known = (d) => dims.has(d) || seedOnly.has(d);
+  if (!isObject(demo.regional) || !Array.isArray(demo.regional.dimensions)) at('regional', '{ dimensions: [the regional allowlist] }');
+  else for (const d of demo.regional.dimensions) if (!dims.has(d)) at('regional.dimensions', `"${d}" is not a dimension`);
+
+  // Pages and their slots.
+  const slotNames = new Set();
+  const pageKeys = new Set();
+  if (!Array.isArray(demo.pages) || !demo.pages.length) at('pages', 'a list of { key, page, entry, url, shell, slots, sorted?, offLimits? }');
+  else demo.pages.forEach((p, i) => {
+    const where = `pages[${i}]`;
+    if (!isObject(p) || !isString(p.key, 40) || !NAME.test(p.key)) { at(`${where}.key`, 'a page key'); return; }
+    if (pageKeys.has(p.key)) at(`${where}.key`, `"${p.key}" is listed twice`);
+    pageKeys.add(p.key);
+    if (!isString(p.page, 40) || !NAME.test(p.page)) at(`${where}.page`, 'the engine’s page name for the snapshot');
+    if (!DEMO_ENTRIES.includes(p.entry)) at(`${where}.entry`, DEMO_ENTRIES.join(' | '));
+    if (!DEMO_SHELLS.includes(p.shell)) at(`${where}.shell`, DEMO_SHELLS.join(', '));
+    if (!isString(p.url, 200) || !p.url.startsWith(`/${slug}`)) at(`${where}.url`, `the page’s address, under /${slug}`);
+    if (p.slotsOf !== undefined && !demo.pages.some((q) => q && q.key === p.slotsOf && q !== p)) at(`${where}.slotsOf`, `"${p.slotsOf}" is not another page`);
+    if (p.slots !== undefined && !Array.isArray(p.slots)) at(`${where}.slots`, 'a list of slots');
+    (Array.isArray(p.slots) ? p.slots : []).forEach((s, j) => {
+      const sw = `${where}.slots[${j}]`;
+      if (!isObject(s) || !isString(s.slot, 40) || !NAME.test(s.slot)) { at(`${sw}.slot`, 'a slot name'); return; }
+      if (slotNames.has(s.slot)) at(`${sw}.slot`, `"${s.slot}" is named on another page too`);
+      slotNames.add(s.slot);
+      if (!isInt(s.take, 1, 24)) at(`${sw}.take`, 'how many pieces it holds, 1..24');
+      if (!isObject(s.weights) || !Object.keys(s.weights).length) at(`${sw}.weights`, 'an object of dimension → weight');
+      else for (const [d, x] of Object.entries(s.weights)) {
+        if (!known(d)) at(`${sw}.weights.${d}`, 'not a dimension');
+        if (!(typeof x === 'number' && x >= 0 && x <= 10)) at(`${sw}.weights.${d}`, 'a weight in 0..10');
+      }
+      if (s.diversity !== undefined && !(isObject(s.diversity) && dims.has(s.diversity.dimension) && isInt(s.diversity.max, 1, 24))) at(`${sw}.diversity`, '{ dimension, max }');
+      if (s.pieceType !== undefined && !(isString(s.pieceType, 40) && NAME.test(s.pieceType))) at(`${sw}.pieceType`, 'the type of piece the slot holds');
+      if (s.complements !== undefined && !(isObject(s.complements) && typeof s.complements.weight === 'number' && s.complements.weight >= 0 && s.complements.weight <= 1)) at(`${sw}.complements`, '{ weight 0..1 }: prefer the pieces that complete the anchor product the request names');
+      if (s.gate !== undefined && !(isObject(s.gate) && Object.entries(s.gate).every(([n, v]) => CTX_NAME.test(n) && Array.isArray(v) && v.length && v.every((x) => isString(x, 64))))) at(`${sw}.gate`, 'an object of ctx name → the values that admit its starter pieces');
+    });
+    if (p.sorted !== undefined && !Array.isArray(p.sorted)) at(`${where}.sorted`, 'a list of /sort rails');
+    (Array.isArray(p.sorted) ? p.sorted : []).forEach((s, j) => {
+      const sw = `${where}.sorted[${j}]`;
+      if (!isObject(s) || !isString(s.slot, 40) || !NAME.test(s.slot)) { at(`${sw}.slot`, 'a rail name'); return; }
+      if (slotNames.has(s.slot)) at(`${sw}.slot`, `"${s.slot}" is named twice`);
+      slotNames.add(s.slot);
+      if (!isObject(s.weights) || !Object.keys(s.weights).length || !Object.keys(s.weights).every(known)) at(`${sw}.weights`, 'an object of dimension → weight, over the products');
+    });
+    if (p.offLimits !== undefined && !(Array.isArray(p.offLimits) && p.offLimits.every((x) => isString(x, 200)))) at(`${where}.offLimits`, 'what on the page is never decided, in words');
+  });
+  const slotList = demoSlots(demo);
+  const snapshotSlots = new Set(slotList.map((s) => s.slot));
+
+  // Seeds: the arrival as context, never evidence.
+  if (demo.seeds !== undefined) {
+    if (!Array.isArray(demo.seeds)) at('seeds', 'a list of { slots, signal, value, tags, weight }');
+    else demo.seeds.forEach((r, i) => {
+      const where = `seeds[${i}]`;
+      if (!isObject(r)) { at(where, 'an object'); return; }
+      if (!SEED_SIGNALS.includes(r.signal)) at(`${where}.signal`, SEED_SIGNALS.join(' | '));
+      if (!isString(r.value, 256)) at(`${where}.value`, 'the signal value it fires on');
+      if (!(typeof r.weight === 'number' && r.weight >= 0 && r.weight <= 1)) at(`${where}.weight`, 'a rule weight in 0..1');
+      if (!Array.isArray(r.slots) || !r.slots.length) at(`${where}.slots`, 'the slots it applies to');
+      if (!Array.isArray(r.tags) || !r.tags.length) at(`${where}.tags`, 'a list of { dimension, value }');
+      for (const name of Array.isArray(r.slots) ? r.slots : []) {
+        const s = slotList.find((x) => x.slot === name);
+        if (!s) { at(`${where}.slots`, `"${name}" is not a snapshot slot`); continue; }
+        for (const t of Array.isArray(r.tags) ? r.tags : []) if (!Object.hasOwn(s.weights ?? {}, t?.dimension)) at(`${where}.tags`, `"${t?.dimension}" is not a dimension the ${name} slot weights`);
+      }
+    });
+  }
+
+  // The beats, as data.
+  const beats = demo.beats;
+  const beatKeys = new Set();
+  if (!isObject(beats) || !Array.isArray(beats.list) || !beats.list.length || beats.list.length > 40) at('beats', '{ file, acts, list: [1..40 beats] }');
+  else {
+    pathRule(errors, root, 'beats.file', beats.file, { ext: '.json', inside: publicDir, mustExist: false });
+    if (!isObject(beats.acts) || !Object.keys(beats.acts).length) at('beats.acts', 'an object of act number → name');
+    const nos = new Set();
+    beats.list.forEach((x, i) => {
+      const where = `beats.list[${i}]`;
+      if (!isObject(x)) { at(where, 'an object'); return; }
+      if (!isString(x.key, 40) || !NAME.test(x.key)) at(`${where}.key`, 'a beat key, lower-case');
+      else if (beatKeys.has(x.key)) at(`${where}.key`, `"${x.key}" is listed twice`);
+      beatKeys.add(x.key);
+      const no = String(x.no ?? '');
+      if (!/^[0-9]{1,2}[a-z]?$/.test(no) || nos.has(no)) at(`${where}.no`, 'its number on the director bar (3, or 9a), once');
+      nos.add(no);
+      if (!isObject(beats.acts) || !Object.hasOwn(beats.acts, String(x.act))) at(`${where}.act`, 'one of beats.acts');
+      if (!BEAT_WHO.includes(x.who)) at(`${where}.who`, BEAT_WHO.join(' | '));
+      for (const k of ['label', 'press', 'line']) if (!isString(x[k], k === 'label' ? 80 : 1200)) at(`${where}.${k}`, k === 'label' ? '1..80 characters' : 'required');
+      for (const k of ['declare', 'will']) if (!Array.isArray(x[k]) || !x[k].length) at(`${where}.${k}`, 'a list of sentences');
+      if (!BEAT_KINDS.includes(x.kind)) at(`${where}.kind`, `${BEAT_KINDS.join(' | ')}: what its beat document is`);
+      if (x.kind && x.kind !== 'context') {
+        if (!Array.isArray(x.change) || !x.change.length) at(`${where}.change`, `what the ${x.kind} publish changes: a list of { ${BEAT_CHANGES.join(' | ')} }`);
+        else x.change.forEach((c, j) => {
+          const verbs = isObject(c) ? Object.keys(c).filter((k) => BEAT_CHANGES.includes(k)) : [];
+          if (verbs.length !== 1) { at(`${where}.change[${j}]`, `exactly one of ${BEAT_CHANGES.join(', ')}`); return; }
+          if ((verbs[0] === 'pin') !== (x.kind === 'slots')) at(`${where}.change[${j}]`, verbs[0] === 'pin' ? 'a pin changes a slots document' : `${verbs[0]} changes a catalog document`);
+          if (verbs[0] === 'shiftDays' && !(typeof c.shiftDays === 'number' && c.shiftDays > 0 && c.shiftDays <= 365)) at(`${where}.change[${j}].shiftDays`, 'days, 1..365');
+          if (verbs[0] === 'pin' && !(isObject(c.pin) && snapshotSlots.has(c.pin.slot) && isObject(c.pin.piece))) at(`${where}.change[${j}].pin`, '{ slot: a snapshot slot, piece: a selector }');
+          if (['close', 'outOfStock'].includes(verbs[0]) && !isObject(c[verbs[0]])) at(`${where}.change[${j}].${verbs[0]}`, 'a selector: { slotType?, type?, hasTag?, pick: first | last | <content id> }');
+          if (c.as !== undefined && !(isString(c.as, 40) && FIELD.test(c.as))) at(`${where}.change[${j}].as`, 'the anchor id it is recorded under');
+        });
+      } else if (x.change !== undefined) at(`${where}.change`, 'a context beat publishes nothing');
+      if (x.run !== undefined && !Array.isArray(x.run)) at(`${where}.run`, 'a list of the kit’s verbs (public/demo-kit/director.js)');
+      if (x.lane !== undefined && !isString(x.lane, 60)) at(`${where}.lane`, 'the lane that writes its presses');
+    });
+  }
+
+  // Data: products, the catalog, imagery, the regional vocabulary.
+  if (demo.products === undefined) at('products', 'the products file and its attribute map');
+  else {
+    productsRule(errors, root, 'products', demo.products, publicDir, { mustExist: false });
+    const pc = demo.products.pageContext;
+    if (pc !== undefined) {
+      if (!isObject(pc)) at('products.pageContext', 'an object of ctx name → the product field a product page asserts it from');
+      else for (const [n, field] of Object.entries(pc)) {
+        if (!CTX_NAME.test(n) || !(isString(field, 200) && FIELD_PATH.test(field))) at(`products.pageContext.${n}`, 'a ctx name and the product field it is read from');
+        else if (!Array.isArray(demo.asserted?.context) || !demo.asserted.context.includes(n)) at(`products.pageContext.${n}`, `"${n}" is not one of asserted.context, the names the page may assert`);
+      }
+    }
+  }
+  if (demo.catalog !== undefined) pathRule(errors, root, 'catalog.file', demo.catalog?.file, { ext: '.json', inside: publicDir, mustExist: false });
+  if (demo.imagery !== undefined) {
+    pathRule(errors, root, 'imagery.manifest', demo.imagery?.manifest, { ext: '.json', inside: publicDir, mustExist: false });
+    if (demo.imagery?.config !== undefined) pathRule(errors, root, 'imagery.config', demo.imagery.config, { ext: '.json', mustExist: false });
+  }
+  const region = demo.region;
+  if (!isObject(region)) at('region', '{ dimensions, vocabulary, config?, contrast? }: the regional seed by name');
+  else {
+    if (!Array.isArray(region.dimensions) || !region.dimensions.length || !region.dimensions.every((d) => dims.has(d))) at('region.dimensions', 'the dimensions a seeded regional sale touches, each a dimension');
+    if (isObject(region.vocabulary)) {
+      vocabularyRule(errors, 'region.vocabulary', region.vocabulary);
+      for (const d of Object.keys(region.vocabulary)) if (!Array.isArray(region.dimensions) || !region.dimensions.includes(d)) at(`region.vocabulary.${d}`, 'not one of region.dimensions');
+    } else at('region.vocabulary', 'an object of dimension → the exact values a seeded sale may carry');
+    if (region.config !== undefined) pathRule(errors, root, 'region.config', region.config, { ext: '.json', mustExist: false });
+    if (region.contrast !== undefined && !(Array.isArray(region.contrast) && region.contrast.length && region.contrast.every((k) => REGION_KEY.test(k)))) at('region.contrast', 'region keys such as US-CA, in order of preference');
+  }
+
+  // What the page may assert, the report, the flags, the arrival, the copy, the documents.
+  const as = demo.asserted;
+  if (!isObject(as)) at('asserted', '{ intents: [the values the page may assert as ctx.intent], context?: [other ctx names] }');
+  else {
+    if (!Array.isArray(as.intents) || !as.intents.every((v) => isString(v, 40) && NAME.test(v))) at('asserted.intents', 'a list of intent values');
+    if (as.context !== undefined && !(Array.isArray(as.context) && as.context.length <= 8 && as.context.every((n) => CTX_NAME.test(n)))) at('asserted.context', 'at most 8 context names (ctx.<name>)');
+  }
+  if (!Array.isArray(demo.reportSlots) || !demo.reportSlots.length) at('reportSlots', 'the snapshot slots a day report may be read for');
+  else for (const s of demo.reportSlots) if (!snapshotSlots.has(s)) at('reportSlots', `"${s}" is not a snapshot slot`);
+  const fl = demo.flags;
+  if (fl !== undefined) {
+    if (!isObject(fl)) at('flags', 'an object');
+    else {
+      if (fl.exitBeat !== undefined && typeof fl.exitBeat !== 'boolean') at('flags.exitBeat', 'true or false');
+      if (fl.clockJump !== undefined && !(isObject(fl.clockJump) && beatKeys.has(fl.clockJump.beat) && typeof fl.clockJump.days === 'number' && fl.clockJump.days > 0)) at('flags.clockJump', '{ beat: a beat key, days }');
+      const si = fl.signIn;
+      if (si !== undefined) {
+        if (!isObject(si) || !Array.isArray(si.accounts) || !si.accounts.length) at('flags.signIn', '{ live, beat?, accounts: [{ name, about? }] }');
+        else {
+          if (si.beat !== undefined && !beatKeys.has(si.beat)) at('flags.signIn.beat', 'a beat key');
+          si.accounts.forEach((a, i) => {
+            if (!isObject(a) || !isString(a.name, 80)) at(`flags.signIn.accounts[${i}].name`, 'a fictional name');
+            const extra = isObject(a) ? Object.keys(a).filter((k) => !ACCOUNT_FIELDS.includes(k)) : [];
+            if (extra.length) at(`flags.signIn.accounts[${i}]`, `carries ${extra.join(', ')}: a demo account is a fictional name only, and its secret exists only on the worker`);
+          });
+        }
+      }
+    }
+  }
+  const ar = demo.arrival;
+  if (!isObject(ar) || !isString(ar.utm_term, 256)) at('arrival', '{ utm_source, utm_medium, utm_term, utm_campaign? }: the landing beat 1 opens on');
+  const copy = demo.copy;
+  if (!isObject(copy) || !isString(copy.coldStartSentence, 200) || !isString(copy.scoredSentence, 400)) at('copy', '{ coldStartSentence, scoredSentence, salesOf? }');
+  if (!isObject(demo.docs) || demo.docs.dir !== `docs/${slug}`) at('docs.dir', `"docs/${slug}", where the design pointer, presenter script and resume live`);
+  noCredentials(errors, demo, 'demo');
+  return { ok: errors.length === 0, errors };
 }

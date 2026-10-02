@@ -1,0 +1,364 @@
+{
+  "about": "OH's demo config: the one file a solutions engineer edits first (docs/demo-kit/Demo-Kit-Design.md §2.4), written from the governing design, docs/lg/OH-Demo-Design.md (§1 the name and palette, §2 the surfaces and slots, §3 the dimensions with their memory, §4 the sixteen beats, §5 the data, §7 the lanes). scripts/demo-kit/new-demo.mjs scaffolds the demo from it. It holds no credential: the sign-in demo account is a fictional name, and its secret exists only on the worker. Served with the page (public/ is served wholesale), so nothing here is private.",
+  "name": "OH",
+  "customer": "LG",
+  "slug": "oh",
+  "tenant": "oh",
+  "worker": { "name": "edge-platform-oh", "queue": "events-oh", "devPort": 9120 },
+  "design": "docs/lg/OH-Demo-Design.md",
+  "brand": {
+    "wordmark": "OH.",
+    "tagline": "Optimized Home",
+    "title": "OH. | TVs, laundry and the kitchen",
+    "legal": "OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 1 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income."
+  },
+  "palette": {
+    "brand": "#A50034",
+    "brand-deep": "#7D0027",
+    "accent": "#A50034",
+    "black": "#1D1D1B",
+    "ink": "#1D1D1B",
+    "text": "#1D1D1B",
+    "muted": "#6B6B6B",
+    "paper": "#FFFFFF",
+    "on-dark": "#FFFFFF",
+    "line": "#E4E4E4",
+    "line-2": "#D0D0D0",
+    "soft": "#F5F5F5",
+    "soft-2": "#EDEDED"
+  },
+  "fonts": { "font": "Inter", "mono": "JetBrains Mono" },
+  "dimensions": [
+    { "key": "category", "values": ["dishwashers", "dryers", "kitchen-packages", "laundry-accessories", "laundry-sets", "microwaves", "pedestals", "ranges", "refrigerators", "soundbars", "styler", "tv-mounts", "tvs", "washer-dryer-combos", "washers", "washtowers"] },
+    { "key": "subcategory", "values": ["4k-uhd-tvs", "dual-fuel-ranges", "electric-dryers", "electric-ranges", "french-door-refrigerators", "front-control-dishwashers", "front-load-washers", "gas-dryers", "gas-ranges", "hd-tvs", "home-theater-soundbars", "induction-ranges", "kitchen-packages", "laundry-sets", "lifestyle-screens", "oled-evo-tvs", "oled-tvs", "over-the-range-microwaves", "pedestal-washers", "pedestals", "qned-evo-tvs", "qned-tvs", "sound-suite", "soundbars", "stacking-kits", "styler-steam-closets", "top-control-dishwashers", "top-load-washers", "wall-mounts", "washer-dryer-combos", "washtowers"] },
+    { "key": "type", "tau": "60d", "values": ["3-piece", "4-piece", "all-in-one", "freestanding", "french-door", "front-control", "front-load", "hd", "home-theater", "lifestyle", "micro-rgb", "oled", "over-the-range", "pedestal-drawer", "pedestal-riser", "pedestal-washer", "qned", "rear-control", "slide-in", "sound-suite", "soundbar", "stacking-kit", "steam-closet", "top-control", "top-load", "uhd", "wall-mount", "washtower"] },
+    { "key": "series", "tau": "60d", "values": ["0888-series", "1455-series", "3400-series", "3420-series", "3470-series", "3600-series", "3900-series", "4000-series", "4080-series", "4200-series", "4500-series", "5500-series", "5700-series", "5800-series", "6100-series", "6105-series", "6480-series", "6485-series", "6500-series", "6700-series", "7000-series", "7005-series", "7010-series", "7100-series", "7150-series", "7155-series", "7300-series", "7400-series", "7405-series", "7480-series", "7800-series", "7900-series", "8100-series", "8200-series", "8205-series", "8400-series", "8405-series", "8480-series", "8600-series", "8900-series", "8980-series", "9000-series", "9700-series", "b3", "b4", "b5", "b6", "c3", "c4", "c5", "c6", "g3", "g4", "g5", "g6", "lb65", "lb70", "lg", "lg-signature", "lg-studio", "lj45", "lr65", "lx3", "lx5", "lx6", "lx7", "m3", "m5", "mrgb95", "nu70", "nu85", "qned70", "qned74", "qned75", "qned7s", "qned80", "qned82", "qned83", "qned84", "qned85", "qned89", "qned8m", "qned90", "qned91", "qned92", "qned99", "qned9m", "s20a", "s30a", "s35a", "s40t", "s40tr", "s55tr", "s60t", "s60tr", "s6ftr", "s70tr", "s70ty", "s7ftrs", "s80tr", "s80ty", "s90tr", "s90ty", "s95ar", "s95tr", "sc9s", "sound-suite", "t4", "t6", "ua70", "ua71", "ua75", "ua77", "ua90", "uq70", "uq75", "ur90", "ut70", "ut75", "ut80", "ut90", "w6"] },
+    { "key": "panel", "values": ["led", "micro-rgb", "mini-led", "nano", "oled", "oled-evo", "qned"] },
+    { "key": "sizeBand", "tau": "60d", "values": ["24-inch", "30-inch", "42-54", "55-64", "65-74", "75-82", "83-and-up", "up-to-41"] },
+    { "key": "capacityTier", "tau": "60d", "values": ["compact", "extra-large", "large", "standard"] },
+    { "key": "fuel", "tau": "60d", "values": ["dual-fuel", "electric", "gas", "induction"] },
+    { "key": "finish", "tau": "60d", "values": ["alpine-white", "black", "black-stainless", "black-steel", "essence-white", "graphite-steel", "platinum-black", "printproof-black-stainless", "printproof-stainless", "stainless", "white"] },
+    { "key": "priceTier", "tau": "10m", "values": ["best", "better", "flagship", "good"] },
+    { "key": "room", "tau": "60d", "values": ["kitchen", "laundry-room", "living-room"] },
+    { "key": "feature", "tau": "10m", "multi": true, "values": ["agitator", "ai-camera", "ai-dd", "air-fry", "air-sous-vide", "allergiene", "autovent-dry", "bright-room", "brightness-booster", "center-control", "compact", "convection", "counter-depth", "craft-ice", "designed-for-qned", "dolby-atmos", "dolby-audio", "dolby-vision", "door-in-door", "double-oven", "dynamic-dry", "easyclean", "easyload-door", "easyunload", "energy-star", "extendavent", "ezdispense", "filmmaker-mode", "flexconnect", "flushfit", "g-sync", "gallery-frame", "gaming-165hz", "heat-pump", "impeller", "instaview", "mini-led", "mount-included", "one-hour-wash", "panel-ready", "probake-convection", "quadwash", "quadwash-pro", "quiet", "rear-speakers", "sensor-dry", "slim", "smart-thinq", "steam", "third-rack", "truesteam", "turbodrum", "turbowash", "ventless", "wireless-av", "wireless-subwoofer"] },
+    { "key": "intent", "tau": "10m", "multi": true, "values": ["replace", "remodel", "new-home", "upgrade"] },
+    { "key": "contentType", "tau": "60s", "values": ["deal", "compare", "explainer", "tool"] },
+    { "key": "retailer", "tau": "60s", "multi": true, "values": ["best-buy-pickup", "find-a-retailer", "lg-com"] },
+    { "key": "package", "multi": true, "values": ["kitchen-3-piece", "kitchen-4-piece", "laundry-4-piece"] }
+  ],
+  "regional": { "dimensions": ["category", "type", "sizeBand", "priceTier", "fuel"] },
+  "pages": [
+    {
+      "key": "home", "page": "home", "entry": "home", "url": "/oh/", "shell": "index.html", "label": "Home",
+      "slots": [
+        { "slot": "hero", "take": 1, "label": "The hero", "pieceType": "hero", "weights": { "room": 0.4, "category": 0.3, "type": 0.2, "priceTier": 0.1, "intent": 0.3 } },
+        { "slot": "category-rail", "take": 3, "label": "Shop by room", "pieceType": "tile", "weights": { "room": 0.6, "category": 0.3 } },
+        { "slot": "deals", "take": 4, "label": "Deals for you", "pieceType": "promotion", "weights": { "category": 0.3, "type": 0.3, "sizeBand": 0.15, "priceTier": 0.15, "room": 0.4, "intent": 0.5, "fuel": 0.15, "contentType": 0.1 }, "diversity": { "dimension": "room", "max": 2 } },
+        { "slot": "continue", "take": 1, "label": "Pick up where you left off", "pieceType": "hero", "weights": { "room": 0.4, "series": 0.3, "type": 0.3 }, "stage": { "outOfStage": 0, "inStage": 0.5 }, "gate": { "visit": ["return"] } }
+      ],
+      "sorted": [
+        { "slot": "for-you", "take": 8, "label": "Recommended for you", "weights": { "room": 0.4, "category": 0.3, "type": 0.3, "sizeBand": 0.2, "priceTier": 0.2 } }
+      ],
+      "offLimits": ["the header", "the service strip", "the footer"]
+    },
+    {
+      "key": "tvs", "page": "tvs", "entry": "grid", "url": "/oh/?view=tvs", "shell": "index.html", "label": "TVs",
+      "slots": [
+        { "slot": "grid-promo", "take": 1, "label": "In the TV grid", "pieceType": "promotion", "weights": { "type": 0.4, "sizeBand": 0.3, "priceTier": 0.2, "contentType": 0.1 } }
+      ],
+      "sorted": [
+        { "slot": "tv-grid", "take": 24, "label": "TVs", "category": "tvs", "weights": { "type": 0.4, "sizeBand": 0.3, "priceTier": 0.2, "series": 0.2 } }
+      ],
+      "offLimits": ["the filters", "the sort control"]
+    },
+    {
+      "key": "product", "page": "product", "entry": "product", "url": "/oh/product?id=<sku>", "shell": "product.html", "label": "Product",
+      "slots": [
+        { "slot": "pdp-modules", "take": 6, "label": "Goes with it", "pieceType": "module", "weights": { "room": 0.3, "type": 0.3, "fuel": 0.3, "series": 0.2, "package": 0.3, "contentType": 0.2, "retailer": 0.2, "intent": 0.2 }, "complements": { "weight": 0.6 } },
+        { "slot": "pdp-offers", "take": 2, "label": "Offers on this product", "pieceType": "promotion", "weights": { "category": 0.3, "priceTier": 0.2, "intent": 0.3, "package": 0.2 }, "complements": { "weight": 0.3 } }
+      ],
+      "offLimits": ["the buy box: price, sizes, Add to Cart and the financing line"]
+    },
+    { "key": "phone", "page": "home", "entry": "phone", "url": "/oh/m", "shell": "m.html", "label": "Phone", "slotsOf": "home" }
+  ],
+  "seeds": [
+    { "slots": ["hero", "deals"], "signal": "campaign_term", "value": "lg tvs", "tags": [{ "dimension": "category", "value": "tvs" }], "weight": 0.2 }
+  ],
+  "arrival": { "utm_source": "google", "utm_medium": "cpc", "utm_term": "lg tvs", "utm_campaign": "oh-tvs" },
+  "beats": {
+    "file": "public/oh/beats.json",
+    "acts": { "1": "Arrival", "2": "Two rooms", "3": "The room completes", "4": "Curation", "5": "Windows", "6": "Three weeks later", "7": "One person", "8": "Best Buy counts" },
+    "list": [
+      {
+        "key": "arrive", "no": "1", "act": 1, "who": "shopper", "kind": "context", "arrives": true, "lane": "K4 (built in the scaffold)",
+        "label": "A stranger arrives from search",
+        "press": "a stranger lands from the search “lg tvs” (utm_term) in her real state",
+        "declare": [
+          "<b>Searches</b> “{{arrival.term}}” and lands on the homepage ({{arrival.entry}})",
+          "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted{{/region.override}}"
+        ],
+        "acts": [{ "type": "page_view" }],
+        "will": [
+          "The hero and the deals answer <b>the search and her region</b>: the campaign term seeds TV, her state’s sales lean the rest",
+          "The Arrival panel names {{#region.override}}the override’s region, labelled as asserted{{/region.override}}{{^region.override}}the region <b>the edge located, from the request</b>{{/region.override}}, the census (shown, never scored) and the regional lean, labelled synthetic → warehouse",
+          "Her own meters are empty: nothing about <b>her</b> is known yet"
+        ],
+        "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where she is</b>: {{#region.override}}her region is a rehearsal override, labelled{{/region.override}}{{^region.override}}her region comes from the request{{/region.override}}{{#region.lean}}, and her state’s sales lean {{region.lean}}{{/region.lean}}. The census is shown, never scored; Compare sets the site’s own page beside it.",
+        "moves": "the regional prior leads the TV rail and the deals; the campaign term seeds TV",
+        "sees": "“North Carolina, from the request; your sales here lean OLED 65-inch; census shown, not scored”; Compare: the site’s own page beside it",
+        "run": [
+          { "publish": "reset" },
+          { "call": "arrive" },
+          { "focus": { "panel": "arrival" } },
+          { "open": "home", "land": true, "args": { "quiet": true, "focus": "hero" } }
+        ]
+      },
+      {
+        "key": "contrast", "no": "2", "act": 1, "who": "shopper", "kind": "context", "lane": "K4 (built in the scaffold)",
+        "label": "The same page, another state",
+        "press": "the region contrast (asserted, labelled)",
+        "declare": ["<b>Asserts</b> {{region.contrastName}} on the request, labelled: not observed"],
+        "will": [
+          "A different state’s lean on the same stranger: the hero and the deals answer {{region.contrastName}}’s sales",
+          "The Arrival panel says the region is asserted, not observed"
+        ],
+        "line": "The same stranger and the same page, in <b>{{region.contrastName}}</b>: asserted and labelled, never the opening default. Another state’s sales lean the page another way; the price is the same for everyone.",
+        "moves": "a different lean",
+        "sees": "the same page, a different state’s sales",
+        "run": [
+          { "assert": { "region": "{{region.contrast}}" }, "note": ["asserted", "region = {{region.contrast}}", "the contrast: asserted on the request, labelled · not observed"] },
+          { "ask": "home" }
+        ]
+      },
+      {
+        "key": "two-rooms", "no": "3", "act": 2, "who": "shopper", "kind": "context", "lane": "P1",
+        "label": "Two TVs, then a washer",
+        "press": "she opens two TVs, then a front-load washer",
+        "declare": ["<b>Opens</b> two TV pages, then a front-load washer’s"],
+        "will": ["<b>room</b> and <b>type</b> rise on her own meters; the room tiles reorder; the rail across rooms balances them"],
+        "line": "She opens two TVs, then a front-load washer, and the homepage changes with her, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
+        "moves": "room and type rise; the category rail reorders; for-you balances rooms",
+        "sees": "the homepage that lg.com never changes, changing, with receipts"
+      },
+      {
+        "key": "fresh-visitor", "no": "4", "act": 2, "who": "shopper", "kind": "context", "lane": "P1",
+        "label": "The fresh visitor beside her",
+        "press": "the fresh visitor beside her",
+        "declare": ["<b>Compare</b>: her page against a stranger’s, in the same region"],
+        "will": ["Her page and a fresh visitor’s, side by side: the same region’s prior, and what her visit earned"],
+        "line": "Compare: her page against a stranger’s in the same region. The same catalog and the same public prices; only what she did is different.",
+        "moves": "Compare",
+        "sees": "her page against a stranger’s, same region"
+      },
+      {
+        "key": "washer-page", "no": "5", "act": 3, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "The washer page",
+        "press": "the washer page",
+        "declare": ["<b>Opens</b> the front-load washer’s page"],
+        "will": ["Below the buy box: the dryer in her fuel, the pedestal, the stacking kit, the pair price", "“Goes with” is shown as a merchandiser’s rule, on the receipt"],
+        "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer in her fuel</b>, the pedestal, the stacking kit and the pair price, each a merchandiser’s rule with its receipt.",
+        "moves": "companions: the dryer in her fuel, the pedestal, the stacking kit, the pair price",
+        "sees": "“goes with” shown as a merchandiser’s rule"
+      },
+      {
+        "key": "top-loader", "no": "6", "act": 3, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "She switches to a top-loader",
+        "press": "she switches to a top-loader",
+        "declare": ["<b>Switches</b> to a top-load washer"],
+        "will": ["The pedestal leaves, and its card says why: a top-loader takes none"],
+        "line": "She switches to a top-loader and the pedestal leaves: <b>a rule withdrawing itself</b>, with its reason on the card.",
+        "moves": "the pedestal leaves, the card says why",
+        "sees": "a rule withdrawing itself"
+      },
+      {
+        "key": "tv-page", "no": "7", "act": 3, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "The TV page",
+        "press": "the TV page",
+        "declare": ["<b>Opens</b> a TV’s page"],
+        "will": ["The soundbar for the series and the mount for the VESA pattern"],
+        "line": "The TV page: the soundbar matched to its series and the mount for its VESA pattern. <b>The same engine, a different room.</b>",
+        "moves": "the soundbar for the series, the mount for the VESA pattern",
+        "sees": "the same engine, a different room"
+      },
+      {
+        "key": "range-page", "no": "8", "act": 3, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "The range page",
+        "press": "the range page",
+        "declare": ["<b>Opens</b> a range’s page"],
+        "will": ["The over-the-range microwave, the dishwasher, and the package price when it is lower"],
+        "line": "The kitchen path: the range, the microwave above it, the dishwasher beside it, and <b>the package</b> when it costs less than the three.",
+        "moves": "microwave, dishwasher, the package price when lower",
+        "sees": "the kitchen path"
+      },
+      {
+        "key": "qned-oled", "no": "9", "act": 4, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "QNED beside OLED, a size up",
+        "press": "a QNED page, with the OLED beside it; a size up from her viewing distance",
+        "declare": ["<b>Opens</b> a QNED page with the OLED beside it, and a size up from her viewing distance"],
+        "will": ["Tier and size band move on her meters; the price is the same for everyone"],
+        "line": "A QNED page with the OLED beside it, and a size up from her viewing distance: <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
+        "moves": "tier and size-band",
+        "sees": "“price is the same for everyone”; nothing near financing"
+      },
+      {
+        "key": "closet-width", "no": "10", "act": 4, "who": "shopper", "kind": "context", "lane": "P2",
+        "label": "She enters a closet width",
+        "press": "she enters a closet width",
+        "declare": ["<b>Enters</b> the width of her laundry closet"],
+        "will": ["Models that do not fit drop out, and the page counts them: hidden, wider than your space"],
+        "line": "She enters her closet’s width, and the models that would not fit drop out, counted on the page: <b>hidden, wider than your space</b>.",
+        "moves": "models that do not fit drop out",
+        "sees": "“hidden: 3 wider than your space”"
+      },
+      {
+        "key": "window-closes", "no": "11", "act": 5, "who": "merch", "kind": "catalog", "lane": "P1",
+        "label": "An offer’s window closes",
+        "press": "an offer’s window closes (a beat publish); a package with an out-of-stock member",
+        "change": [
+          { "close": { "pick": "deal-nfl-gift-card" }, "as": "closesAtBeat11" },
+          { "close": { "pick": "hero-nfl-gift-card" } },
+          { "close": { "pick": "deal-matching-soundbar" } },
+          { "close": { "pick": "deal-sound-suite-bundle" } },
+          { "close": { "pick": "deal-free-wall-mounting" } }
+        ],
+        "declare": ["<b>Publishes</b> the catalog: the gift-card offer’s window has closed, with the offers that close with it"],
+        "will": ["The closed offer and the out-of-stock package leave every surface on the next decision"],
+        "line": "The merchandiser’s day: an offer’s window closes, and a package loses a member to stock. Both leave <b>every surface</b> on the next decision, by the catalog’s own rules.",
+        "moves": "the piece leaves every surface on the next decision",
+        "sees": "the defects lg.com shows today, fixed",
+        "run": [
+          { "publish": "catalog", "name": "{{beatNames.windowCloses}}", "reason": "an offer’s window closes; a package member is out of stock" },
+          { "ask": "home" }
+        ]
+      },
+      {
+        "key": "pin-launch", "no": "12", "act": 5, "who": "merch", "kind": "slots", "lane": "P1",
+        "label": "The merchandiser pins a launch",
+        "press": "a merchandiser pin on a launch series",
+        "change": [{ "pin": { "slot": "deals", "piece": { "slotType": "deals", "pick": "pin-micro-rgb-evo" } }, "as": "pinned" }],
+        "declare": ["<b>Pins</b> a launch-series offer into the deals, for everyone"],
+        "will": ["The pin leads the deals; its receipt shows what the engine would have chosen"],
+        "line": "The merchandiser pins a launch series. The pin leads, and its receipt says so: <b>the merchandiser outranks the engine, visibly</b>.",
+        "moves": "the pin leads; the receipt shows what the engine would have chosen",
+        "sees": "the merchandiser outranks the engine, visibly",
+        "run": [
+          { "publish": "slots", "name": "{{beatNames.pinLaunch}}", "reason": "pin a launch series into the deals" },
+          { "ask": "home" }
+        ]
+      },
+      {
+        "key": "three-weeks", "no": "13", "act": 6, "who": "engine", "kind": "catalog", "lane": "P1",
+        "label": "Three weeks later",
+        "press": "the clock jump (labelled)",
+        "change": [{ "shiftDays": 21 }],
+        "declare": ["<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish, and her dials are read three weeks on"],
+        "will": ["Laundry interest faded faster than TV, by the dials; the continue hero answers her return"],
+        "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and her dials are read three weeks on. <b>Laundry faded faster than TV</b>, by the published memory, and the homepage picks up where she left off.",
+        "moves": "laundry interest faded faster than TV, by the dials; the continue hero",
+        "sees": "“pick up where you left off”",
+        "run": [
+          { "publish": "catalog", "name": "{{beatNames.threeWeeks}}", "reason": "three weeks pass: every window moves back 21 days" },
+          { "call": "notBuilt", "lane": "P1", "what": "the labelled clock jump on her dials, and the continue hero" }
+        ]
+      },
+      {
+        "key": "what-changed", "no": "14", "act": 6, "who": "shopper", "kind": "context", "lane": "P1",
+        "label": "What changed while she was away",
+        "press": "the price that changed, the model that arrived",
+        "declare": ["<b>Returns</b> to her shortlist"],
+        "will": ["The shortlist’s deltas: a price that changed, a model that arrived"],
+        "line": "What changed while she was away: the price that moved on her shortlist and the model that arrived since. The page says what changed; the price itself is the catalog’s.",
+        "moves": "the shortlist’s deltas",
+        "sees": "what changed while she was away"
+      },
+      {
+        "key": "phone-sign-in", "no": "15", "act": 7, "who": "shopper", "kind": "context", "lane": "P3",
+        "label": "The phone, then sign-in",
+        "press": "the phone: a stranger, then sign-in (live, a fictional account; the worker mints the signed link)",
+        "declare": ["<b>Opens</b> the site on her phone: a stranger", "<b>Signs in</b> as {{signIn.account}}, a fictional account; the worker mints the signed link"],
+        "will": ["The phone becomes the laptop’s taste in one request: linked at sign-in, consented, no device matching"],
+        "line": "On her phone she is a stranger until she signs in as <b>{{signIn.account}}</b>: then the phone becomes the laptop’s taste in one request. Linked at sign-in and consented; no device matching.",
+        "moves": "the phone becomes the laptop’s taste in one request",
+        "sees": "“linked at sign-in · consented · no device matching”"
+      },
+      {
+        "key": "best-buy-counts", "no": "16", "act": 8, "who": "shopper", "kind": "context", "lane": "P3",
+        "label": "Best Buy counts",
+        "press": "she presses Best Buy pickup on one page and Find a Retailer on another; the day report",
+        "declare": ["<b>Chooses</b> Best Buy pickup on one page and Find a Retailer on another"],
+        "will": ["Two named outcomes in the day report, with attach and attribution, and “not yet significant”"],
+        "line": "Best Buy pickup on one page, Find a Retailer on another, and the day report counts both as <b>named outcomes</b>, with attach and attribution. Not yet significant, and it says so: attribution, not incrementality.",
+        "moves": "two named outcomes, attach, attribution; “not yet significant”",
+        "sees": "the report LG does not have today"
+      }
+    ]
+  },
+  "products": {
+    "file": "public/oh/products.json",
+    "list": "products",
+    "id": "sku",
+    "eventId": "productId",
+    "nameField": "name",
+    "categoryField": "attributes.category",
+    "imageField": "image",
+    "familyField": "family",
+    "modelFamilyField": "modelFamily",
+    "pageContext": { "anchor": "sku", "family": "family" },
+    "overlay": { "file": "public/oh/specs.json", "by": "sku" },
+    "attributes": {
+      "category": "attributes.category",
+      "subcategory": "attributes.subcategory",
+      "type": "attributes.type",
+      "series": "attributes.series",
+      "panel": "attributes.panel",
+      "sizeBand": "attributes.sizeBand",
+      "capacityTier": "attributes.capacityTier",
+      "fuel": "attributes.fuel",
+      "finish": "attributes.finish",
+      "priceTier": "attributes.priceTier",
+      "room": "attributes.room",
+      "feature": "attributes.feature",
+      "retailer": "attributes.retailer",
+      "package": "attributes.package",
+      "price_usd": "salePrice"
+    },
+    "categories": ["tvs", "soundbars", "tv-mounts", "washers", "dryers", "washtowers", "washer-dryer-combos", "pedestals", "laundry-accessories", "styler", "laundry-sets", "ranges", "microwaves", "dishwashers", "kitchen-packages", "refrigerators"]
+  },
+  "catalog": { "file": "public/oh/catalog.json" },
+  "imagery": { "manifest": "public/oh/img/MANIFEST.json", "config": "scripts/demo-kit/configs/oh/imagery.json" },
+  "region": {
+    "config": "scripts/demo-kit/configs/oh/region.json",
+    "dimensions": ["category", "type", "sizeBand", "priceTier", "fuel"],
+    "vocabulary": {
+      "category": ["dishwashers", "dryers", "kitchen-packages", "laundry-accessories", "laundry-sets", "microwaves", "pedestals", "ranges", "refrigerators", "soundbars", "styler", "tv-mounts", "tvs", "washer-dryer-combos", "washers", "washtowers"],
+      "type": ["3-piece", "4-piece", "all-in-one", "freestanding", "french-door", "front-control", "front-load", "hd", "home-theater", "lifestyle", "micro-rgb", "oled", "over-the-range", "pedestal-drawer", "pedestal-riser", "pedestal-washer", "qned", "rear-control", "slide-in", "sound-suite", "soundbar", "stacking-kit", "steam-closet", "top-control", "top-load", "uhd", "wall-mount", "washtower"],
+      "sizeBand": ["24-inch", "30-inch", "42-54", "55-64", "65-74", "75-82", "83-and-up", "up-to-41"],
+      "priceTier": ["best", "better", "flagship", "good"],
+      "fuel": ["dual-fuel", "electric", "gas", "induction"]
+    },
+    "contrast": ["US-NJ", "US-TX"],
+    "about": "Synthetic sales for every state over the five allowlisted dimensions, with the real regional fuel skew (gas cooking about 38% nationally, about 70% in California and New Jersey; dryers 80% electric): Lane D1's scripts/demo-kit/configs/oh/region.json is the source; this vocabulary is the seed door's closed list and must equal it"
+  },
+  "asserted": { "intents": ["replace", "remodel", "new-home", "upgrade"], "context": ["region", "intent", "anchor", "family", "visit", "fit"] },
+  "reportSlots": ["hero", "category-rail", "deals", "continue", "grid-promo", "pdp-modules", "pdp-offers"],
+  "flags": {
+    "exitBeat": false,
+    "clockJump": { "beat": "three-weeks", "days": 21 },
+    "signIn": { "live": true, "beat": "phone-sign-in", "accounts": [{ "name": "Dana Whitfield", "about": "the shopper the walk follows, signed in on her phone at beat 15" }] }
+  },
+  "copy": {
+    "coldStartSentence": "aggregate, never the individual; we curate, never price.",
+    "scoredSentence": "No census term enters any score. The census figure explains the lean; the lean is the brand’s own sales, seeded here as synthetic data.",
+    "salesOf": "the brand’s"
+  },
+  "roadmap": [
+    ["built", "eligibleWhen { regions, context }", "A piece only where its rule admits it: companions on the product page gate on ctx.anchor until complements lands; a condition the request does not carry fails closed."],
+    ["built", "slot seeds", "The search term lifts the category it names, as context, never as evidence about her; the receipt itemises it."],
+    ["built", "learn.regional", "The brand’s own regional sales blended by λ = K / (K + Σa), giving way as her evidence grows."],
+    ["built", "POST /sort", "The rails over the products file; at an affinity weight of zero the site’s own order exactly."],
+    ["designed", "complements", "A piece names the products it completes, and a slot rule prefers it, itemised on the receipt (engine lane E1)."],
+    ["designed", "partner_pickup and retailer_referral", "Two named outcomes credited to the decision that earned them, counted in the day report (engine lane E1)."],
+    ["designed", "the regional prior on /sort", "The TV grid leans with the state, as the homepage already does (engine lane E1)."]
+  ],
+  "docs": { "dir": "docs/oh" }
+}

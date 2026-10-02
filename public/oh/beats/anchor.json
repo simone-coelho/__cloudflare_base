@@ -1,0 +1,903 @@
+{
+ "anchor": "2026-10-01T12:00:00.000Z",
+ "tenant": "oh",
+ "scope": "oh",
+ "brand": {
+  "name": "OH",
+  "wordmark": "OH.",
+  "tagline": "Optimized Home"
+ },
+ "pages": {
+  "home": "home",
+  "tvs": "tvs",
+  "product": "product",
+  "phone": "home"
+ },
+ "pageSlots": {
+  "home": [
+   "hero",
+   "category-rail",
+   "deals",
+   "continue"
+  ],
+  "tvs": [
+   "grid-promo"
+  ],
+  "product": [
+   "pdp-modules",
+   "pdp-offers"
+  ]
+ },
+ "decidedBy": {
+  "hero": "snapshot",
+  "category-rail": "snapshot",
+  "deals": "snapshot",
+  "continue": "snapshot",
+  "grid-promo": "snapshot",
+  "pdp-modules": "snapshot",
+  "pdp-offers": "snapshot",
+  "for-you": "POST /sort (products.json)",
+  "tv-grid": "POST /sort (products.json)"
+ },
+ "ids": {
+  "closesAtBeat11": "deal-nfl-gift-card",
+  "pinned": "pin-micro-rgb-evo"
+ },
+ "arrival": {
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_term": "lg tvs",
+  "utm_campaign": "oh-tvs"
+ },
+ "landing": {
+  "url": "/oh/?utm_source=google&utm_medium=cpc&utm_term=lg+tvs&utm_campaign=oh-tvs",
+  "entry": {
+   "utmSource": "google",
+   "utmMedium": "cpc",
+   "utmTerm": "lg tvs"
+  },
+  "campaignTerm": "lg tvs"
+ },
+ "regions": {
+  "contrast": [
+   "US-NJ",
+   "US-TX"
+  ]
+ },
+ "ctx": {
+  "intent": {
+   "values": [
+    "replace",
+    "remodel",
+    "new-home",
+    "upgrade"
+   ],
+   "default": null
+  },
+  "region": "US-XX, asserted by the page for rehearsal and labelled",
+  "names": [
+   "region",
+   "intent",
+   "anchor",
+   "family",
+   "visit",
+   "fit"
+  ]
+ },
+ "registry": {
+  "version": "reflex-oh",
+  "dimensions": [
+   {
+    "key": "category",
+    "source": "category"
+   },
+   {
+    "key": "subcategory",
+    "source": "subcategory"
+   },
+   {
+    "key": "type",
+    "source": "type",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "series",
+    "source": "series",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "panel",
+    "source": "panel"
+   },
+   {
+    "key": "sizeBand",
+    "source": "sizeBand",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "capacityTier",
+    "source": "capacityTier",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "fuel",
+    "source": "fuel",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "finish",
+    "source": "finish",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "priceTier",
+    "source": "priceTier",
+    "tauMs": 600000
+   },
+   {
+    "key": "room",
+    "source": "room",
+    "tauMs": 5184000000
+   },
+   {
+    "key": "feature",
+    "source": "feature",
+    "multi": true,
+    "tauMs": 600000
+   },
+   {
+    "key": "intent",
+    "source": "intent",
+    "multi": true,
+    "tauMs": 600000
+   },
+   {
+    "key": "contentType",
+    "source": "contentType",
+    "tauMs": 60000
+   },
+   {
+    "key": "retailer",
+    "source": "retailer",
+    "multi": true,
+    "tauMs": 60000
+   },
+   {
+    "key": "package",
+    "source": "package",
+    "multi": true
+   }
+  ],
+  "weights": {
+   "product_view": 1,
+   "pdp_view": 1,
+   "view_product": 1,
+   "wishlist": 2,
+   "wishlist_add": 2,
+   "add_to_wishlist": 2,
+   "save_for_later": 2,
+   "add_to_cart": 3,
+   "cart_add": 3,
+   "purchase": 5,
+   "checkout": 5,
+   "order_complete": 5,
+   "content_impression": 0,
+   "content_dwell": 0.5,
+   "content_click": 1,
+   "video_complete": 2,
+   "tick": 0,
+   "page_view": 1,
+   "search": 1.5,
+   "select": 2,
+   "filter": 2,
+   "compare": 2,
+   "start_order": 3
+  },
+  "tauMs": 1209600000,
+  "K": 1.8,
+  "thetaIn": 0.6,
+  "thetaOut": 0.45,
+  "epsilon": 0.01,
+  "maxValuesPerDim": 64,
+  "eventAttributes": "event-when-unknown",
+  "journey": {
+   "stages": [
+    {
+     "stage": "thinking",
+     "anyOf": {
+      "product_views": 6
+     }
+    },
+    {
+     "stage": "deciding",
+     "anyOf": {
+      "cart_adds": 1,
+      "purchases": 1
+     }
+    }
+   ]
+  },
+  "vocabulary": {
+   "category": [
+    "dishwashers",
+    "dryers",
+    "kitchen-packages",
+    "laundry-accessories",
+    "laundry-sets",
+    "microwaves",
+    "pedestals",
+    "ranges",
+    "refrigerators",
+    "soundbars",
+    "styler",
+    "tv-mounts",
+    "tvs",
+    "washer-dryer-combos",
+    "washers",
+    "washtowers"
+   ],
+   "subcategory": [
+    "4k-uhd-tvs",
+    "dual-fuel-ranges",
+    "electric-dryers",
+    "electric-ranges",
+    "french-door-refrigerators",
+    "front-control-dishwashers",
+    "front-load-washers",
+    "gas-dryers",
+    "gas-ranges",
+    "hd-tvs",
+    "home-theater-soundbars",
+    "induction-ranges",
+    "kitchen-packages",
+    "laundry-sets",
+    "lifestyle-screens",
+    "oled-evo-tvs",
+    "oled-tvs",
+    "over-the-range-microwaves",
+    "pedestal-washers",
+    "pedestals",
+    "qned-evo-tvs",
+    "qned-tvs",
+    "sound-suite",
+    "soundbars",
+    "stacking-kits",
+    "styler-steam-closets",
+    "top-control-dishwashers",
+    "top-load-washers",
+    "wall-mounts",
+    "washer-dryer-combos",
+    "washtowers"
+   ],
+   "type": [
+    "3-piece",
+    "4-piece",
+    "all-in-one",
+    "freestanding",
+    "french-door",
+    "front-control",
+    "front-load",
+    "hd",
+    "home-theater",
+    "lifestyle",
+    "micro-rgb",
+    "oled",
+    "over-the-range",
+    "pedestal-drawer",
+    "pedestal-riser",
+    "pedestal-washer",
+    "qned",
+    "rear-control",
+    "slide-in",
+    "sound-suite",
+    "soundbar",
+    "stacking-kit",
+    "steam-closet",
+    "top-control",
+    "top-load",
+    "uhd",
+    "wall-mount",
+    "washtower"
+   ],
+   "series": [
+    "0888-series",
+    "1455-series",
+    "3400-series",
+    "3420-series",
+    "3470-series",
+    "3600-series",
+    "3900-series",
+    "4000-series",
+    "4080-series",
+    "4200-series",
+    "4500-series",
+    "5500-series",
+    "5700-series",
+    "5800-series",
+    "6100-series",
+    "6105-series",
+    "6480-series",
+    "6485-series",
+    "6500-series",
+    "6700-series",
+    "7000-series",
+    "7005-series",
+    "7010-series",
+    "7100-series",
+    "7150-series",
+    "7155-series",
+    "7300-series",
+    "7400-series",
+    "7405-series",
+    "7480-series",
+    "7800-series",
+    "7900-series",
+    "8100-series",
+    "8200-series",
+    "8205-series",
+    "8400-series",
+    "8405-series",
+    "8480-series",
+    "8600-series",
+    "8900-series",
+    "8980-series",
+    "9000-series",
+    "9700-series",
+    "b3",
+    "b4",
+    "b5",
+    "b6",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "g3",
+    "g4",
+    "g5",
+    "g6",
+    "lb65",
+    "lb70",
+    "lg",
+    "lg-signature",
+    "lg-studio",
+    "lj45",
+    "lr65",
+    "lx3",
+    "lx5",
+    "lx6",
+    "lx7",
+    "m3",
+    "m5",
+    "mrgb95",
+    "nu70",
+    "nu85",
+    "qned70",
+    "qned74",
+    "qned75",
+    "qned7s",
+    "qned80",
+    "qned82",
+    "qned83",
+    "qned84",
+    "qned85",
+    "qned89",
+    "qned8m",
+    "qned90",
+    "qned91",
+    "qned92",
+    "qned99",
+    "qned9m",
+    "s20a",
+    "s30a",
+    "s35a",
+    "s40t",
+    "s40tr",
+    "s55tr",
+    "s60t",
+    "s60tr",
+    "s6ftr",
+    "s70tr",
+    "s70ty",
+    "s7ftrs",
+    "s80tr",
+    "s80ty",
+    "s90tr",
+    "s90ty",
+    "s95ar",
+    "s95tr",
+    "sc9s",
+    "sound-suite",
+    "t4",
+    "t6",
+    "ua70",
+    "ua71",
+    "ua75",
+    "ua77",
+    "ua90",
+    "uq70",
+    "uq75",
+    "ur90",
+    "ut70",
+    "ut75",
+    "ut80",
+    "ut90",
+    "w6"
+   ],
+   "panel": [
+    "led",
+    "micro-rgb",
+    "mini-led",
+    "nano",
+    "oled",
+    "oled-evo",
+    "qned"
+   ],
+   "sizeBand": [
+    "24-inch",
+    "30-inch",
+    "42-54",
+    "55-64",
+    "65-74",
+    "75-82",
+    "83-and-up",
+    "up-to-41"
+   ],
+   "capacityTier": [
+    "compact",
+    "extra-large",
+    "large",
+    "standard"
+   ],
+   "fuel": [
+    "dual-fuel",
+    "electric",
+    "gas",
+    "induction"
+   ],
+   "finish": [
+    "alpine-white",
+    "black",
+    "black-stainless",
+    "black-steel",
+    "essence-white",
+    "graphite-steel",
+    "platinum-black",
+    "printproof-black-stainless",
+    "printproof-stainless",
+    "stainless",
+    "white"
+   ],
+   "priceTier": [
+    "best",
+    "better",
+    "flagship",
+    "good"
+   ],
+   "room": [
+    "kitchen",
+    "laundry-room",
+    "living-room"
+   ],
+   "feature": [
+    "agitator",
+    "ai-camera",
+    "ai-dd",
+    "air-fry",
+    "air-sous-vide",
+    "allergiene",
+    "autovent-dry",
+    "bright-room",
+    "brightness-booster",
+    "center-control",
+    "compact",
+    "convection",
+    "counter-depth",
+    "craft-ice",
+    "designed-for-qned",
+    "dolby-atmos",
+    "dolby-audio",
+    "dolby-vision",
+    "door-in-door",
+    "double-oven",
+    "dynamic-dry",
+    "easyclean",
+    "easyload-door",
+    "easyunload",
+    "energy-star",
+    "extendavent",
+    "ezdispense",
+    "filmmaker-mode",
+    "flexconnect",
+    "flushfit",
+    "g-sync",
+    "gallery-frame",
+    "gaming-165hz",
+    "heat-pump",
+    "impeller",
+    "instaview",
+    "mini-led",
+    "mount-included",
+    "one-hour-wash",
+    "panel-ready",
+    "probake-convection",
+    "quadwash",
+    "quadwash-pro",
+    "quiet",
+    "rear-speakers",
+    "sensor-dry",
+    "slim",
+    "smart-thinq",
+    "steam",
+    "third-rack",
+    "truesteam",
+    "turbodrum",
+    "turbowash",
+    "ventless",
+    "wireless-av",
+    "wireless-subwoofer"
+   ],
+   "intent": [
+    "replace",
+    "remodel",
+    "new-home",
+    "upgrade"
+   ],
+   "contentType": [
+    "deal",
+    "compare",
+    "explainer",
+    "tool"
+   ],
+   "retailer": [
+    "best-buy-pickup",
+    "find-a-retailer",
+    "lg-com"
+   ],
+   "package": [
+    "kitchen-3-piece",
+    "kitchen-4-piece",
+    "laundry-4-piece"
+   ]
+  },
+  "memory": {
+   "label": "memory compressed for this room; production runs days",
+   "dimensions": [
+    {
+     "key": "category",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "subcategory",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "type",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "series",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "panel",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "sizeBand",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "capacityTier",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "fuel",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "finish",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "priceTier",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
+    },
+    {
+     "key": "room",
+     "tauMs": 5184000000,
+     "room": "60 days",
+     "compressed": false
+    },
+    {
+     "key": "feature",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
+    },
+    {
+     "key": "intent",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
+    },
+    {
+     "key": "contentType",
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
+    },
+    {
+     "key": "retailer",
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
+    },
+    {
+     "key": "package",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    }
+   ]
+  }
+ },
+ "learn": {
+  "holdout": {
+   "share": 0,
+   "salt": "oh",
+   "arms": [
+    "default"
+   ]
+  },
+  "regional": {
+   "enabled": true,
+   "kBlend": 0.5,
+   "minEvents": 30,
+   "dimensions": [
+    "category",
+    "type",
+    "sizeBand",
+    "priceTier",
+    "fuel"
+   ]
+  },
+  "gamma": 0,
+  "exploration": "off"
+ },
+ "events": {
+  "endpoint": "POST /realtime/action",
+  "source": "oh-demo",
+  "body": "{ userId, sessionId, source, type, data }",
+  "customActions": [
+   "select",
+   "filter",
+   "compare",
+   "search",
+   "start_order"
+  ]
+ },
+ "routes": {
+  "beat": "POST /oh/api/beat { kind, name, note? }",
+  "reset": "POST /oh/api/reset",
+  "receipt": "POST /oh/api/receipt { decisionIds, context? }",
+  "report": "POST /oh/api/report { date, slot, build? }",
+  "coldstart": "GET /oh/api/coldstart",
+  "headers": "Every call sends X-Tenant: oh"
+ },
+ "beats": {
+  "open": {
+   "slots": "open-slots",
+   "catalog": "open-catalog"
+  },
+  "windowCloses": {
+   "catalog": "11-window-closes"
+  },
+  "pinLaunch": {
+   "slots": "12-pin-launch"
+  },
+  "threeWeeks": {
+   "catalog": "13-three-weeks"
+  }
+ },
+ "beatIndex": [
+  {
+   "beat": 1,
+   "act": 1,
+   "actName": "Arrival",
+   "name": "01-arrive",
+   "kind": "context",
+   "press": "a stranger lands from the search “lg tvs” (utm_term) in her real state"
+  },
+  {
+   "beat": 2,
+   "act": 1,
+   "actName": "Arrival",
+   "name": "02-contrast",
+   "kind": "context",
+   "press": "the region contrast (asserted, labelled)"
+  },
+  {
+   "beat": 3,
+   "act": 2,
+   "actName": "Two rooms",
+   "name": "03-two-rooms",
+   "kind": "context",
+   "press": "she opens two TVs, then a front-load washer"
+  },
+  {
+   "beat": 4,
+   "act": 2,
+   "actName": "Two rooms",
+   "name": "04-fresh-visitor",
+   "kind": "context",
+   "press": "the fresh visitor beside her"
+  },
+  {
+   "beat": 5,
+   "act": 3,
+   "actName": "The room completes",
+   "name": "05-washer-page",
+   "kind": "context",
+   "press": "the washer page"
+  },
+  {
+   "beat": 6,
+   "act": 3,
+   "actName": "The room completes",
+   "name": "06-top-loader",
+   "kind": "context",
+   "press": "she switches to a top-loader"
+  },
+  {
+   "beat": 7,
+   "act": 3,
+   "actName": "The room completes",
+   "name": "07-tv-page",
+   "kind": "context",
+   "press": "the TV page"
+  },
+  {
+   "beat": 8,
+   "act": 3,
+   "actName": "The room completes",
+   "name": "08-range-page",
+   "kind": "context",
+   "press": "the range page"
+  },
+  {
+   "beat": 9,
+   "act": 4,
+   "actName": "Curation",
+   "name": "09-qned-oled",
+   "kind": "context",
+   "press": "a QNED page, with the OLED beside it; a size up from her viewing distance"
+  },
+  {
+   "beat": 10,
+   "act": 4,
+   "actName": "Curation",
+   "name": "10-closet-width",
+   "kind": "context",
+   "press": "she enters a closet width"
+  },
+  {
+   "beat": 11,
+   "act": 5,
+   "actName": "Windows",
+   "name": "11-window-closes",
+   "kind": "publish",
+   "press": "an offer’s window closes (a beat publish); a package with an out-of-stock member"
+  },
+  {
+   "beat": 12,
+   "act": 5,
+   "actName": "Windows",
+   "name": "12-pin-launch",
+   "kind": "publish",
+   "press": "a merchandiser pin on a launch series"
+  },
+  {
+   "beat": 13,
+   "act": 6,
+   "actName": "Three weeks later",
+   "name": "13-three-weeks",
+   "kind": "publish",
+   "press": "the clock jump (labelled)"
+  },
+  {
+   "beat": 14,
+   "act": 6,
+   "actName": "Three weeks later",
+   "name": "14-what-changed",
+   "kind": "context",
+   "press": "the price that changed, the model that arrived"
+  },
+  {
+   "beat": 15,
+   "act": 7,
+   "actName": "One person",
+   "name": "15-phone-sign-in",
+   "kind": "context",
+   "press": "the phone: a stranger, then sign-in (live, a fictional account; the worker mints the signed link)"
+  },
+  {
+   "beat": 16,
+   "act": 8,
+   "actName": "Best Buy counts",
+   "name": "16-best-buy-counts",
+   "kind": "context",
+   "press": "she presses Best Buy pickup on one page and Find a Retailer on another; the day report"
+  }
+ ],
+ "acts": [
+  {
+   "n": 1,
+   "through": 2,
+   "name": "Arrival"
+  },
+  {
+   "n": 2,
+   "through": 4,
+   "name": "Two rooms"
+  },
+  {
+   "n": 3,
+   "through": 8,
+   "name": "The room completes"
+  },
+  {
+   "n": 4,
+   "through": 10,
+   "name": "Curation"
+  },
+  {
+   "n": 5,
+   "through": 12,
+   "name": "Windows"
+  },
+  {
+   "n": 6,
+   "through": 14,
+   "name": "Three weeks later"
+  },
+  {
+   "n": 7,
+   "through": 15,
+   "name": "One person"
+  },
+  {
+   "n": 8,
+   "through": 16,
+   "name": "Best Buy counts"
+  }
+ ],
+ "reset": [
+  "open-slots",
+  "open-catalog"
+ ]
+}

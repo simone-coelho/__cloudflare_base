@@ -1,0 +1,13 @@
+{
+ "name": "10-closet-width",
+ "beat": 10,
+ "act": 4,
+ "actName": "Curation",
+ "press": "she enters a closet width",
+ "kind": "context",
+ "label": "She enters a closet width",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "models that do not fit drop out",
+ "sees": "“hidden: 3 wider than your space”"
+}

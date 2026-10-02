@@ -20,12 +20,12 @@ A fictional home brand in LG's palette, selling LG's real products by their real
 
 | Surface | Decided slots | Off limits |
 |---|---|---|
-| Homepage `/oh/` | `hero` (take 1), `category-rail` (the order of the room tiles), `deals` (take 4), `for-you` (a product rail across rooms, through `/sort`), `continue` (the return hero, stage-gated) | header, service strip, footer |
-| TV grid `/oh/tvs` | the product order through `/sort` with the regional prior; `grid-promo` (take 1) | filters, sort control |
-| TV product page `/oh/p/<sku>` | `pdp-modules`: companions (soundbar matched to the series, a mount for the VESA pattern), protection, installation, the series comparison, where-to-buy; `pdp-offers` (take 2) | the buy box: price, sizes, Add to Cart, the financing line |
-| Washer product page `/oh/p/<sku>` | `pdp-modules`: companions (the dryer in her fuel, the pedestal unless top-load, the stacking kit, the pair price), haul-away and installation, protection, where-to-buy; `pdp-offers` | the buy box |
+| Homepage `/oh/` (the TV grid at `/oh/?view=tvs` until P1 adds `grid.html`) | `hero` (take 1), `category-rail` (the order of the room tiles), `deals` (take 4), `for-you` (a product rail across rooms, through `/sort`), `continue` (the return hero, stage-gated) | header, service strip, footer |
+| TV grid `/oh/?view=tvs` | the product order through `/sort` with the regional prior; `grid-promo` (take 1) | filters, sort control |
+| TV product page `/oh/product?id=<sku>` | `pdp-modules`: companions (soundbar matched to the series, a mount for the VESA pattern), protection, installation, the series comparison, where-to-buy; `pdp-offers` (take 2) | the buy box: price, sizes, Add to Cart, the financing line |
+| Washer product page `/oh/product?id=<sku>` | `pdp-modules`: companions (the dryer in her fuel, the pedestal unless top-load, the stacking kit, the pair price), haul-away and installation, protection, where-to-buy; `pdp-offers` | the buy box |
 | Range page (kitchen path) | `pdp-modules`: microwave, dishwasher, the package when cheaper | the buy box |
-| Phone `/oh/m/` | the homepage's slots at phone width, plus the sign-in sheet | |
+| Phone `/oh/m` | the homepage's slots at phone width, plus the sign-in sheet | |
 
 Where-to-buy carries two outcomes: **Best Buy pickup** (an OH order fulfilled by a partner) and **Find a Retailer** (a referral through a PriceSpider-shaped list), each recorded against the decision that earned it.
 
@@ -39,7 +39,7 @@ Decay for the walk, as Vantage compresses it: `contentType` and `retailer` 60 se
 
 ---
 
-## 4. The walk: five acts, sixteen beats
+## 4. The walk: eight acts, sixteen beats
 
 | # | Act | The press | What moves | What the room sees |
 |---|---|---|---|---|
@@ -115,4 +115,5 @@ Sequencing: K4, D1, D2 and E1 start now in parallel. P1, P2 and P3 start when K4
 | 2026-10-02 | Beats as data on the kit's verbs; the clock jump is a labelled beat as Vantage's exit re-ask is | lead |
 | 2026-10-02 | D1 landed: `products.json` 602 rows (TVs 146 with variant sizes, soundbars 30, mounts 11, laundry 195, laundry sets 23, ranges 85, OTR microwaves 26, dishwashers 50, kitchen packages 26, 10 refrigerators as package members, 19 name-only parts so every companion resolves), 2,578 companion links all resolving; `catalog.json` 76 pieces, 53.7 KiB, accepted by the engine's own validator, copy checked against the honesty lines; `configs/oh/region.json` for all 51 regions with the fuel skew. Rulings on its gaps: D2's product-page pass also captures title, prices, call to action, dimensions and VESA into `public/oh/specs.json`, merged over the feed by sku on the page, so beat 10's fit and the mount companion work; K4 takes D1's four integration notes (vocabulary equality, all categories, slot piece types, the anchor instant) | lead |
 | 2026-10-02 | E1 landed: `complements` on a piece with a slot rule through the composer's `prefer` hook, anchored on `ctx.anchor=<product id>`, fail closed, receipt "Completes what she committed to"; `partner_pickup` and `retailer_referral` as `REWARD_OF` rows on the `custom` reward, credited like a click, reported as named outcomes, never a purchase; the regional prior on `/sort` under the allowlist with a `regional` label; `gclid` without a UTM source classified as paid search, stopping at the classification because W16's entry contract still refuses `gclid`. 30 new tests; the full run adds no failure beyond the remediation baseline; Vantage's suites 115 and 292 on E1's rig. Rulings: the edits in `src/ledger/records.ts`, `src/routes/sort.ts` and `src/services/visit.ts` are accepted; the anchor family moves to `ctx.family` (D1 changes the gates, the pages send both); **Vantage's phones rail now leans by region on its next deploy, so Vantage's page must label it before that deploy (lane V1)**; for the remediation track: widen W16's entry contract to carry `gclid` (and whether `gbraid`/`wbraid` count), settle `gclid` with a declared medium and no source, and kit 03's piece field list needs `eligibleWhen` and `complements` | lead |
+| 2026-10-02 | K4 landed: `new-demo.mjs` with `lib/scaffold.mjs` and 11 templates (never overwrites, refuses a taken slug, worker and queue bound to the slug), the whole-config validator, the products-file check in the seed, `rig.mjs` (a local rig provisioned through `--var`, running a copy of `src/index.ts` with the mount lines until they are applied), `check-demo` and the seeds by slug, the HOWTO and the `/new-demo` skill; OH scaffolded: config, server config and thin route, three shells, `oh.css` tokens, `oh.js` skeleton with lane markers, sixteen beats as data, the opening documents with `complements` 0.6 and 0.3, the two suites with arrival checks (46 and 29, green on a local rig), `docs/oh/`. 129 tests; Vantage's `check-demo` 5 of 5 on K4's rig. Rulings: **eight acts**, as the table; the continue hero gated on `ctx.visit=return`; beat 11's package half goes to P1; paths are `/oh/?view=tvs`, `/oh/product?id=<sku>`, `/oh/m`; the kit's `transport.ask` gains a `context` hook (P2, with Vantage's request-level suite as the gate); P3 applies the two mount lines in `src/index.ts` | lead |
 

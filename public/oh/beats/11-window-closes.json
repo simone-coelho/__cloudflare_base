@@ -1,0 +1,4918 @@
+{
+ "name": "11-window-closes",
+ "beat": 11,
+ "act": 5,
+ "actName": "Windows",
+ "press": "an offer’s window closes (a beat publish); a package with an out-of-stock member",
+ "kind": "publish",
+ "publish": {
+  "kind": "catalog",
+  "document": {
+   "version": "catalog-oh-window-closes",
+   "pieces": [
+    {
+     "id": "hero_nfl_gift_card",
+     "customerContentId": "hero-nfl-gift-card",
+     "type": "hero",
+     "title": "Score a $200 NFL Shop eGift Card with select TVs.",
+     "subtitle": "On eligible OLED and QNED TVs; claim it within 30 days of purchase. Valid through 10/4/26.",
+     "tags": {
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-14T13:30:12.000Z",
+      "to": "2026-10-01T11:59:00.000Z"
+     },
+     "merchandising": {
+      "promotion": 1
+     },
+     "inStock": true
+    },
+    {
+     "id": "hero_living_room",
+     "customerContentId": "hero-living-room",
+     "type": "hero",
+     "title": "The right screen for the room you have.",
+     "subtitle": "OLED evo, QNED Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches, sized by how far you sit from it.",
+     "tags": {
+      "category": [
+       "tvs",
+       "soundbars"
+      ],
+      "type": [
+       "oled",
+       "qned",
+       "micro-rgb",
+       "uhd"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "intent": [
+       "upgrade"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "hero_laundry_room",
+     "customerContentId": "hero-laundry-room",
+     "type": "hero",
+     "title": "Finish the laundry room.",
+     "subtitle": "The washer, the dryer in your fuel, the pedestal and the stacking kit, matched by our merchandiser's rules and shown as rules.",
+     "tags": {
+      "category": [
+       "washers",
+       "dryers",
+       "pedestals",
+       "laundry-accessories",
+       "laundry-sets"
+      ],
+      "type": [
+       "front-load",
+       "top-load"
+      ],
+      "fuel": [
+       "gas",
+       "electric"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "replace",
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "hero_kitchen",
+     "customerContentId": "hero-kitchen",
+     "type": "hero",
+     "title": "One kitchen, one finish.",
+     "subtitle": "A range, the over-the-range microwave and the dishwasher in the same finish, and the package price only when it costs less than the pieces.",
+     "tags": {
+      "category": [
+       "ranges",
+       "microwaves",
+       "dishwashers",
+       "kitchen-packages"
+      ],
+      "fuel": [
+       "gas",
+       "electric",
+       "induction",
+       "dual-fuel"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "pin_micro_rgb_evo",
+     "customerContentId": "pin-micro-rgb-evo",
+     "type": "hero",
+     "title": "New for 2026: Micro RGB evo.",
+     "subtitle": "LG's MRGB95 at 75 and 100 inches, from $3,599.99.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "micro-rgb"
+      ],
+      "series": [
+       "mrgb95"
+      ],
+      "panel": [
+       "micro-rgb"
+      ],
+      "sizeBand": [
+       "75-82",
+       "83-and-up"
+      ],
+      "priceTier": [
+       "flagship"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "hero",
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "featuredProductIds": [
+      "100MRGB95BU",
+      "75MRGB95BUA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "hero_continue",
+     "customerContentId": "hero-continue",
+     "type": "hero",
+     "title": "Pick up where you left off.",
+     "subtitle": "Your shortlist, and what changed while you were away: a price, a model that arrived. Remembered on this device for the window we publish, with your consent.",
+     "tags": {
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "continue"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "visit": [
+        "return"
+       ]
+      }
+     }
+    },
+    {
+     "id": "tile_tvs",
+     "customerContentId": "tile-tvs",
+     "type": "tile",
+     "title": "TVs",
+     "subtitle": "OLED evo, OLED, QNED Mini LED, Micro RGB and 4K UHD, 24 to 115 inches.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "subcategory": [
+       "4k-uhd-tvs",
+       "hd-tvs",
+       "lifestyle-screens",
+       "oled-evo-tvs",
+       "oled-tvs",
+       "qned-evo-tvs",
+       "qned-tvs"
+      ],
+      "type": [
+       "hd",
+       "lifestyle",
+       "micro-rgb",
+       "oled",
+       "qned",
+       "uhd"
+      ],
+      "series": [
+       "b3",
+       "b4",
+       "b5",
+       "b6",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "g3",
+       "g4",
+       "g5",
+       "g6",
+       "lb65",
+       "lb70",
+       "lj45",
+       "lr65",
+       "lx3",
+       "lx5",
+       "lx6",
+       "lx7",
+       "m3",
+       "m5",
+       "mrgb95",
+       "nu70",
+       "nu85",
+       "qned70",
+       "qned74",
+       "qned75",
+       "qned7s",
+       "qned80",
+       "qned82",
+       "qned83",
+       "qned84",
+       "qned85",
+       "qned89",
+       "qned8m",
+       "qned90",
+       "qned91",
+       "qned92",
+       "qned99",
+       "qned9m",
+       "t4",
+       "t6",
+       "ua70",
+       "ua71",
+       "ua75",
+       "ua77",
+       "ua90",
+       "uq70",
+       "uq75",
+       "ur90",
+       "ut70",
+       "ut75",
+       "ut80",
+       "ut90",
+       "w6"
+      ],
+      "panel": [
+       "led",
+       "micro-rgb",
+       "mini-led",
+       "nano",
+       "oled",
+       "oled-evo",
+       "qned"
+      ],
+      "sizeBand": [
+       "42-54",
+       "55-64",
+       "65-74",
+       "75-82",
+       "83-and-up",
+       "up-to-41"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "feature": [
+       "bright-room",
+       "brightness-booster",
+       "dolby-atmos",
+       "dolby-vision",
+       "filmmaker-mode",
+       "g-sync",
+       "gallery-frame",
+       "gaming-165hz",
+       "mini-led",
+       "mount-included",
+       "smart-thinq",
+       "wireless-av"
+      ],
+      "contentType": [
+       "explainer"
+      ],
+      "intent": [
+       "upgrade"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_audio",
+     "customerContentId": "tile-audio",
+     "type": "tile",
+     "title": "Soundbars & Sound Suite",
+     "subtitle": "From a two-channel soundbar to Dolby Atmos home theater, the Sound Suite speakers, and wall mounts.",
+     "tags": {
+      "category": [
+       "soundbars",
+       "tv-mounts"
+      ],
+      "subcategory": [
+       "home-theater-soundbars",
+       "sound-suite",
+       "soundbars",
+       "wall-mounts"
+      ],
+      "type": [
+       "home-theater",
+       "sound-suite",
+       "soundbar",
+       "wall-mount"
+      ],
+      "series": [
+       "s20a",
+       "s30a",
+       "s35a",
+       "s40t",
+       "s40tr",
+       "s55tr",
+       "s60t",
+       "s60tr",
+       "s6ftr",
+       "s70tr",
+       "s70ty",
+       "s7ftrs",
+       "s80tr",
+       "s80ty",
+       "s90tr",
+       "s90ty",
+       "s95ar",
+       "s95tr",
+       "sc9s",
+       "sound-suite"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "feature": [
+       "designed-for-qned",
+       "dolby-atmos",
+       "dolby-audio",
+       "flexconnect",
+       "rear-speakers",
+       "slim",
+       "wireless-subwoofer"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_laundry",
+     "customerContentId": "tile-laundry",
+     "type": "tile",
+     "title": "Washers & dryers",
+     "subtitle": "Front-load and top-load; gas, electric and heat-pump dryers; pedestals and stacking kits.",
+     "tags": {
+      "category": [
+       "dryers",
+       "laundry-accessories",
+       "pedestals",
+       "styler",
+       "washers"
+      ],
+      "subcategory": [
+       "electric-dryers",
+       "front-load-washers",
+       "gas-dryers",
+       "pedestal-washers",
+       "pedestals",
+       "stacking-kits",
+       "styler-steam-closets",
+       "top-load-washers"
+      ],
+      "type": [
+       "front-load",
+       "pedestal-drawer",
+       "pedestal-riser",
+       "pedestal-washer",
+       "rear-control",
+       "stacking-kit",
+       "steam-closet",
+       "top-load"
+      ],
+      "series": [
+       "0888-series",
+       "1455-series",
+       "3400-series",
+       "3420-series",
+       "3470-series",
+       "3600-series",
+       "3900-series",
+       "4000-series",
+       "4080-series",
+       "4200-series",
+       "4500-series",
+       "5500-series",
+       "5700-series",
+       "5800-series",
+       "6100-series",
+       "6105-series",
+       "6480-series",
+       "6485-series",
+       "6500-series",
+       "6700-series",
+       "7000-series",
+       "7005-series",
+       "7010-series",
+       "7100-series",
+       "7150-series",
+       "7155-series",
+       "7300-series",
+       "7400-series",
+       "7405-series",
+       "7480-series",
+       "7800-series",
+       "7900-series",
+       "8100-series",
+       "8200-series",
+       "8205-series",
+       "8400-series",
+       "8405-series",
+       "8480-series",
+       "8600-series",
+       "8900-series",
+       "8980-series",
+       "9000-series",
+       "9700-series",
+       "lg-signature"
+      ],
+      "capacityTier": [
+       "compact",
+       "extra-large",
+       "large",
+       "standard"
+      ],
+      "fuel": [
+       "electric",
+       "gas"
+      ],
+      "finish": [
+       "alpine-white",
+       "black-steel",
+       "graphite-steel",
+       "platinum-black",
+       "white"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "feature": [
+       "agitator",
+       "ai-dd",
+       "allergiene",
+       "compact",
+       "easyload-door",
+       "easyunload",
+       "energy-star",
+       "ezdispense",
+       "heat-pump",
+       "impeller",
+       "sensor-dry",
+       "smart-thinq",
+       "steam",
+       "turbodrum",
+       "turbowash",
+       "ventless"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "contentType": [
+       "explainer"
+      ],
+      "intent": [
+       "replace"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_washtower",
+     "customerContentId": "tile-washtower",
+     "type": "tile",
+     "title": "WashTower & all-in-one",
+     "subtitle": "A washer and dryer in one column, or one drum that does both.",
+     "tags": {
+      "category": [
+       "washer-dryer-combos",
+       "washtowers"
+      ],
+      "subcategory": [
+       "washer-dryer-combos",
+       "washtowers"
+      ],
+      "type": [
+       "all-in-one",
+       "washtower"
+      ],
+      "series": [
+       "lg-signature",
+       "lg-studio"
+      ],
+      "capacityTier": [
+       "compact",
+       "large",
+       "standard"
+      ],
+      "fuel": [
+       "electric",
+       "gas"
+      ],
+      "finish": [
+       "black-steel",
+       "essence-white",
+       "graphite-steel",
+       "white"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "feature": [
+       "center-control",
+       "compact",
+       "heat-pump",
+       "smart-thinq",
+       "ventless"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_cooking",
+     "customerContentId": "tile-cooking",
+     "type": "tile",
+     "title": "Ranges & microwaves",
+     "subtitle": "Gas, electric, induction and dual fuel ranges, and the over-the-range microwave above them.",
+     "tags": {
+      "category": [
+       "microwaves",
+       "ranges"
+      ],
+      "subcategory": [
+       "dual-fuel-ranges",
+       "electric-ranges",
+       "gas-ranges",
+       "induction-ranges",
+       "over-the-range-microwaves"
+      ],
+      "type": [
+       "freestanding",
+       "over-the-range",
+       "slide-in"
+      ],
+      "series": [
+       "lg",
+       "lg-signature",
+       "lg-studio"
+      ],
+      "sizeBand": [
+       "30-inch"
+      ],
+      "capacityTier": [
+       "compact",
+       "extra-large",
+       "large",
+       "standard"
+      ],
+      "fuel": [
+       "dual-fuel",
+       "electric",
+       "gas",
+       "induction"
+      ],
+      "finish": [
+       "black-stainless",
+       "printproof-black-stainless",
+       "printproof-stainless",
+       "stainless"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "feature": [
+       "ai-camera",
+       "air-fry",
+       "air-sous-vide",
+       "convection",
+       "double-oven",
+       "easyclean",
+       "extendavent",
+       "instaview",
+       "probake-convection",
+       "smart-thinq"
+      ],
+      "package": [
+       "kitchen-3-piece",
+       "kitchen-4-piece"
+      ],
+      "contentType": [
+       "explainer"
+      ],
+      "intent": [
+       "remodel"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_dishwashers",
+     "customerContentId": "tile-dishwashers",
+     "type": "tile",
+     "title": "Dishwashers",
+     "subtitle": "Top-control and front-control, with QuadWash and TrueSteam.",
+     "tags": {
+      "category": [
+       "dishwashers"
+      ],
+      "subcategory": [
+       "front-control-dishwashers",
+       "top-control-dishwashers"
+      ],
+      "type": [
+       "front-control",
+       "top-control"
+      ],
+      "series": [
+       "lg",
+       "lg-signature",
+       "lg-studio"
+      ],
+      "sizeBand": [
+       "24-inch"
+      ],
+      "finish": [
+       "black",
+       "black-stainless",
+       "stainless",
+       "white"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "feature": [
+       "autovent-dry",
+       "dynamic-dry",
+       "flushfit",
+       "one-hour-wash",
+       "panel-ready",
+       "quadwash",
+       "quadwash-pro",
+       "quiet",
+       "smart-thinq",
+       "steam",
+       "third-rack",
+       "truesteam"
+      ],
+      "package": [
+       "kitchen-3-piece",
+       "kitchen-4-piece"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "tile_packages",
+     "customerContentId": "tile-packages",
+     "type": "tile",
+     "title": "Kitchen packages & laundry sets",
+     "subtitle": "Three or four pieces in one finish, priced together, and shown only when every piece is in stock.",
+     "tags": {
+      "category": [
+       "kitchen-packages",
+       "laundry-sets",
+       "refrigerators"
+      ],
+      "subcategory": [
+       "french-door-refrigerators",
+       "kitchen-packages",
+       "laundry-sets"
+      ],
+      "type": [
+       "3-piece",
+       "4-piece",
+       "french-door"
+      ],
+      "series": [
+       "4000-series",
+       "5500-series",
+       "5800-series",
+       "6500-series",
+       "6700-series",
+       "lg",
+       "lg-signature"
+      ],
+      "fuel": [
+       "electric",
+       "gas",
+       "induction"
+      ],
+      "finish": [
+       "alpine-white",
+       "black-stainless",
+       "black-steel",
+       "graphite-steel",
+       "printproof-stainless",
+       "stainless",
+       "white"
+      ],
+      "room": [
+       "kitchen",
+       "laundry-room"
+      ],
+      "feature": [
+       "counter-depth",
+       "craft-ice",
+       "door-in-door",
+       "flushfit",
+       "heat-pump",
+       "instaview",
+       "smart-thinq"
+      ],
+      "package": [
+       "kitchen-3-piece",
+       "kitchen-4-piece",
+       "laundry-4-piece"
+      ],
+      "contentType": [
+       "explainer"
+      ],
+      "intent": [
+       "new-home"
+      ]
+     },
+     "slotTypes": [
+      "category-rail"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "inStock": true
+    },
+    {
+     "id": "deal_nfl_gift_card",
+     "customerContentId": "deal-nfl-gift-card",
+     "type": "promotion",
+     "title": "Up to $200 NFL Shop eGift Card with select TVs",
+     "subtitle": "Claim it within 30 days of purchase. Valid through 10/4/26.",
+     "tags": {
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals",
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-13T02:52:31.000Z",
+      "to": "2026-10-01T11:59:00.000Z"
+     },
+     "merchandising": {
+      "promotion": 1
+     },
+     "inStock": true
+    },
+    {
+     "id": "deal_matching_soundbar",
+     "customerContentId": "deal-matching-soundbar",
+     "type": "promotion",
+     "title": "Up to $200 off a matching soundbar with your TV",
+     "subtitle": "With an eligible LG TV in the same order. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "tvs",
+       "soundbars"
+      ],
+      "type": [
+       "home-theater",
+       "soundbar"
+      ],
+      "series": [
+       "s70ty",
+       "s80tr",
+       "s80ty",
+       "s90tr",
+       "s95ar",
+       "s95tr",
+       "sc9s"
+      ],
+      "priceTier": [
+       "best",
+       "better"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T14:16:18.000Z",
+      "to": "2026-10-01T11:59:00.000Z"
+     },
+     "featuredProductIds": [
+      "S70TY",
+      "S80TR",
+      "S80TY",
+      "S90TR",
+      "S95AR",
+      "S95TR",
+      "SC9S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_sound_suite_bundle",
+     "customerContentId": "deal-sound-suite-bundle",
+     "type": "promotion",
+     "title": "Up to $400 off an LG TV and Sound Suite together",
+     "subtitle": "On eligible TV and Sound Suite bundles. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "tvs",
+       "soundbars"
+      ],
+      "type": [
+       "sound-suite"
+      ],
+      "series": [
+       "sound-suite"
+      ],
+      "priceTier": [
+       "best",
+       "flagship"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals",
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T23:35:05.000Z",
+      "to": "2026-10-01T11:59:00.000Z"
+     },
+     "featuredProductIds": [
+      "H7",
+      "H7_W7",
+      "M5-P2_H7_W7",
+      "M5-P2_W7",
+      "M5-P4_H7",
+      "M5-P4_H7_W7",
+      "M7-P2_H7",
+      "M7-P2_H7_W7",
+      "M7-P4_H7",
+      "M7-P4_H7_W7"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_free_wall_mounting",
+     "customerContentId": "deal-free-wall-mounting",
+     "type": "promotion",
+     "title": "Free wall mounting with select TVs",
+     "subtitle": "Professional wall mounting by Angi (listed at $164.99), or stand set-up, at no charge. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "oled"
+      ],
+      "series": [
+       "c6"
+      ],
+      "sizeBand": [
+       "42-54",
+       "55-64",
+       "65-74",
+       "75-82",
+       "83-and-up"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-10-01T00:00:00.000Z",
+      "to": "2026-10-01T11:59:00.000Z"
+     },
+     "featuredProductIds": [
+      "OLED42C6PUA",
+      "OLED48C6PUA",
+      "OLED55C6PUA",
+      "OLED65C6PUA",
+      "OLED77C6HUP",
+      "OLED83C6HUP"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_big_screens",
+     "customerContentId": "deal-big-screens",
+     "type": "promotion",
+     "title": "Up to $1,000 off big screens",
+     "subtitle": "On select 75-inch and larger TVs, at the price on each card.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "micro-rgb",
+       "oled",
+       "qned"
+      ],
+      "series": [
+       "c6",
+       "g6",
+       "mrgb95",
+       "qned84",
+       "qned92",
+       "w6"
+      ],
+      "sizeBand": [
+       "75-82",
+       "83-and-up"
+      ],
+      "priceTier": [
+       "best",
+       "flagship"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals",
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "featuredProductIds": [
+      "75MRGB95BUA",
+      "OLED77W6PUA",
+      "100QNED84BU",
+      "115QNED92BU",
+      "OLED77C6HUP",
+      "100MRGB95BU",
+      "OLED83C6HUP",
+      "OLED83G6WUA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_xbox_controller",
+     "customerContentId": "deal-xbox-controller",
+     "type": "promotion",
+     "title": "A free Xbox controller with select TVs",
+     "subtitle": "Look for the controller tag on eligible TVs.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "lifestyle",
+       "oled",
+       "qned"
+      ],
+      "series": [
+       "c6",
+       "lx6",
+       "qned7s"
+      ],
+      "sizeBand": [
+       "42-54",
+       "65-74",
+       "up-to-41"
+      ],
+      "priceTier": [
+       "better",
+       "good"
+      ],
+      "feature": [
+       "gaming-165hz"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals",
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "featuredProductIds": [
+      "27LX6TYGA",
+      "32LX6BWGA",
+      "65QNED7SBUA",
+      "OLED48C6PUA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_laundry_pair",
+     "customerContentId": "deal-laundry-pair",
+     "type": "promotion",
+     "title": "Save $200 on a washer and an eligible dryer",
+     "subtitle": "Online only, when you bundle a washer with an eligible dryer. Valid through 11/3/26.",
+     "tags": {
+      "category": [
+       "washers",
+       "dryers"
+      ],
+      "type": [
+       "front-load"
+      ],
+      "series": [
+       "3400-series",
+       "3420-series",
+       "4000-series",
+       "5500-series",
+       "6500-series",
+       "6700-series",
+       "8900-series"
+      ],
+      "capacityTier": [
+       "large",
+       "standard"
+      ],
+      "finish": [
+       "black-steel",
+       "white"
+      ],
+      "priceTier": [
+       "best",
+       "better",
+       "flagship",
+       "good"
+      ],
+      "fuel": [
+       "gas",
+       "electric"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-19T09:00:00.000Z",
+      "to": "2026-11-04T04:59:59.000Z"
+     },
+     "featuredProductIds": [
+      "WM3400CW",
+      "WM3420CW",
+      "WM4000HWA",
+      "WM5500HWA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HWA",
+      "WM8900HBA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_laundry_sets",
+     "customerContentId": "deal-laundry-sets",
+     "type": "promotion",
+     "title": "An extra $150 to $250 off select laundry sets",
+     "subtitle": "Washer, dryer, SideKick pedestal washer and drawer as one set. Valid through 11/3/26.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "series": [
+       "4000-series",
+       "5500-series",
+       "5800-series",
+       "6500-series",
+       "6700-series"
+      ],
+      "fuel": [
+       "electric",
+       "gas"
+      ],
+      "finish": [
+       "alpine-white",
+       "black-steel",
+       "graphite-steel",
+       "white"
+      ],
+      "priceTier": [
+       "best",
+       "better",
+       "flagship",
+       "good"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "intent": [
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-16T23:35:05.000Z",
+      "to": "2026-11-04T04:59:59.000Z"
+     },
+     "featuredProductIds": [
+      "WM4000HBA_DLGX4001B_WD300CB_WDP6B",
+      "WM4000HBA_DLHC4002B_WD300CB_WDP6B",
+      "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "WM4000HWA_DLGX4001W_WD300CW_WDP6W",
+      "WM5500HVA_DLGX5501V_WD300CV_WDP6V",
+      "WM5500HWA_DLEX5500W_WD300CW_WDP6W",
+      "WM5500HWA_DLHC5502W_WD300CW_WDP6W",
+      "WM5800HAA_DLEX5800A_WD300CA_WDP6A",
+      "WM5800HAA_DLGX5801A_WD300CA_WDP6A",
+      "WM5800HVA_DLGX5801V_WD300CV_WDP6V",
+      "WM6500HBA_DLEX6500B_WD300CB_WDP6B",
+      "WM6500HBA_DLGX6501B_WD300CB_WDP6B",
+      "WM6500HWA_DLGX6501W_WD300CW_WDP6W",
+      "WM6500HWA_DLHC5502W_WD300CW_WDP6W",
+      "WM6700HBA_DLGX6701B_WD300CB_WDP6B",
+      "WM6700HWA_DLEX6700W_WD300CW_WDP6W",
+      "WM6700HWA_DLGX6701W_WD300CW_WDP6W",
+      "WM6700HWA_DLHC5502W_WD300CW_WDP6W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_range_microwave",
+     "customerContentId": "deal-range-microwave",
+     "type": "promotion",
+     "title": "Save $200 on a range and microwave together",
+     "subtitle": "Online only, when you bundle a range with an over-the-range microwave. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "ranges",
+       "microwaves"
+      ],
+      "type": [
+       "freestanding",
+       "over-the-range",
+       "slide-in"
+      ],
+      "fuel": [
+       "electric",
+       "gas",
+       "induction"
+      ],
+      "finish": [
+       "printproof-stainless",
+       "stainless"
+      ],
+      "priceTier": [
+       "best",
+       "better",
+       "flagship",
+       "good"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-23T09:05:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "featuredProductIds": [
+      "LSEL6335XE",
+      "MVEM1825F",
+      "LSGL5833X",
+      "LSIL6332FE",
+      "LREN6323YE",
+      "MVEM1621Y",
+      "LRGN6323Y",
+      "LRIN6323YE",
+      "MVEL2137F",
+      "LSGL6335X",
+      "LSIL6334XE",
+      "LSGU6339X",
+      "MHEU1738X"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_kitchen_packages",
+     "customerContentId": "deal-kitchen-packages",
+     "type": "promotion",
+     "title": "Save up to $500 on select kitchen packages",
+     "subtitle": "Online only. Three or four pieces in one finish, shown only when every piece is in stock. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "3-piece",
+       "4-piece"
+      ],
+      "fuel": [
+       "electric",
+       "gas"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "best",
+       "better"
+      ],
+      "package": [
+       "kitchen-3-piece",
+       "kitchen-4-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-17T23:35:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "featuredProductIds": [
+      "LF24Z6530S_LSEL6335XE_MVEM1825F_ADFD5448AT",
+      "LF24Z6530S_LSGL5833X_ADFD5448AT",
+      "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "LF29H8330S_LSEL6335XE_LDNPM654S",
+      "LF29H8330S_LSGL6335X_LDNPM654S",
+      "LF29S8365S_LSEL6335XE_LDNPM654S",
+      "LF29S8365S_LSGL6335X_LDNPM654S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_fridge_dishwasher",
+     "customerContentId": "deal-fridge-dishwasher",
+     "type": "promotion",
+     "title": "Up to $200 off an eligible refrigerator and dishwasher",
+     "subtitle": "Online only, bought together. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "dishwashers",
+       "refrigerators"
+      ],
+      "type": [
+       "french-door",
+       "front-control",
+       "top-control"
+      ],
+      "finish": [
+       "black-stainless",
+       "stainless"
+      ],
+      "priceTier": [
+       "best",
+       "better",
+       "flagship",
+       "good"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-17T09:05:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "featuredProductIds": [
+      "LF24Z6530S",
+      "ADFD5448AT",
+      "LF29H8330S",
+      "LDNPM654S",
+      "LF29S8365S",
+      "LMWS29626S",
+      "LDFC2423V",
+      "LRMDS3006D",
+      "LDNTM545D",
+      "LRMVC2306D",
+      "LRMXS3006S",
+      "LDNTH753S",
+      "LRYKC2606S",
+      "LRYXC2606S",
+      "UM22WZH98S",
+      "SDNTH981S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "deal_thinq_warranty",
+     "customerContentId": "deal-thinq-warranty",
+     "type": "promotion",
+     "title": "A two-year limited warranty on select appliances",
+     "subtitle": "Register the appliance in the LG ThinQ app; purchases from participating retailers count too. Valid through 12/31/26.",
+     "tags": {
+      "category": [
+       "washers",
+       "dryers",
+       "washtowers",
+       "ranges",
+       "dishwashers",
+       "microwaves"
+      ],
+      "room": [
+       "laundry-room",
+       "kitchen"
+      ],
+      "intent": [
+       "replace"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-18T09:05:05.000Z",
+      "to": "2027-01-01T03:59:59.000Z"
+     },
+     "inStock": true
+    },
+    {
+     "id": "deal_wash1000",
+     "customerContentId": "deal-wash1000",
+     "type": "promotion",
+     "title": "An extra $100 off the WM6700HWA with code WASH1000",
+     "subtitle": "On top of its sale price of $1,249.",
+     "tags": {
+      "category": [
+       "washers"
+      ],
+      "type": [
+       "front-load"
+      ],
+      "series": [
+       "6700-series"
+      ],
+      "capacityTier": [
+       "large"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "best"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "retailer": [
+       "lg-com"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "featuredProductIds": [
+      "WM6700HWA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "grid_size_by_distance",
+     "customerContentId": "grid-size-by-distance",
+     "type": "module",
+     "title": "Size it to the room",
+     "subtitle": "From 6′6″ to 8′10″ away, a 65-inch fills 30 to 40 degrees of your view; from 7′8″ to 10′5″, a 77-inch does (RTINGS). The price is the same for everyone.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "sizeBand": [
+       "42-54",
+       "55-64",
+       "65-74",
+       "75-82",
+       "83-and-up",
+       "up-to-41"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "journeyStageFit": [
+      "exploring",
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "grid_series_chart",
+     "customerContentId": "grid-series-chart",
+     "type": "module",
+     "title": "Every series, side by side",
+     "subtitle": "The 77- and 83-inch C6 are the C6H, a different panel; the 42-inch has no Brightness Booster. The chart says what each name means at each size.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "oled",
+       "qned",
+       "micro-rgb",
+       "uhd"
+      ],
+      "panel": [
+       "led",
+       "micro-rgb",
+       "mini-led",
+       "nano",
+       "oled",
+       "oled-evo",
+       "qned"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "compare"
+      ]
+     },
+     "slotTypes": [
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "journeyStageFit": [
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "grid_best_buy_pickup",
+     "customerContentId": "grid-best-buy-pickup",
+     "type": "module",
+     "title": "Order here, pick up at Best Buy",
+     "subtitle": "On eligible TVs, often ready in about two hours: an OH order, handed over by a partner.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "retailer": [
+       "best-buy-pickup"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "grid-promo"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_soundbar",
+     "customerContentId": "mod-tv-soundbar",
+     "type": "module",
+     "title": "The soundbar that goes with it",
+     "subtitle": "Our merchandiser's rule: a TV gets a soundbar from its own tier, and a QNED leads with the S70TY, designed for QNED. The rule is ours, and it is shown.",
+     "tags": {
+      "category": [
+       "soundbars"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "100MRGB95BU",
+      "100QNED84BU",
+      "100QNED85AU",
+      "115QNED92BU",
+      "24LJ4540-WU",
+      "27LB7000PUA",
+      "27LX5QKNA",
+      "27LX6TYGA",
+      "32LB650BPUA",
+      "32LR655BPUA",
+      "32LX6BWGA",
+      "42LX3QPUA",
+      "43UT7550AUA",
+      "43UT8000AUA",
+      "50NU700BPUA",
+      "50QNED70AUA",
+      "50QNED74BUA",
+      "50QNED75BUA",
+      "50QNED75URA",
+      "50UA7500ZUA",
+      "50UA7700AUA",
+      "50UQ7570PUJ",
+      "55LX7BPUA",
+      "55QNED75BUA",
+      "55QNED75URA",
+      "55QNED7SBAA",
+      "55QNED7SBUA",
+      "55QNED80TUC",
+      "55QNED82AAA",
+      "55QNED82AUA",
+      "55QNED85AUA",
+      "55QNED85TUA",
+      "55UA7100AUB",
+      "55UA7700PUB",
+      "55UQ7070ZUE",
+      "55UT7570PUB",
+      "55UT8000AUA",
+      "58NU700BPUD",
+      "65LX7BPUA",
+      "65QNED75BAA",
+      "65QNED7SBUA",
+      "65QNED80TUC",
+      "65QNED80UQA",
+      "65QNED80URA",
+      "65QNED82AUA",
+      "65QNED83UPA",
+      "65QNED84BAA",
+      "65QNED85AAA",
+      "65QNED85BUA",
+      "65QNED85TAA",
+      "65QNED85TUA",
+      "65QNED8MBAA",
+      "65QNED90TAA",
+      "65QNED90TUA",
+      "65QNED91AAA",
+      "65QNED92AUA",
+      "65QNED9MAUA",
+      "65UA7050PUB",
+      "65UR9000PUA",
+      "65UT7570PUB",
+      "70NU850BAUD",
+      "70UA7500ZUD",
+      "70UQ7590PUB",
+      "75MRGB95BUA",
+      "75NU710BAUA",
+      "75QNED80TUC",
+      "75QNED80URA",
+      "75QNED85TAA",
+      "75QNED8MBAA",
+      "75QNED90TUA",
+      "75QNED99TUA",
+      "75QNED9MAUA",
+      "75UA7000PUB",
+      "75UT7000PUA",
+      "75UT7590PUA",
+      "75UT8000AUA",
+      "85NU870BAUA",
+      "85QNED74BAA",
+      "85QNED92AUA",
+      "86QNED70AUA",
+      "86QNED80TUC",
+      "86QNED85TUA",
+      "86QNED90TAA",
+      "86UA7500ZUA",
+      "86UA9000AUA",
+      "86UA9000AUC",
+      "86UQ7590PUD",
+      "86UT7590PUA",
+      "98NU850BAUB",
+      "98NU850BPUB",
+      "98QNED89TUA",
+      "98UT9000PUA",
+      "OLED42C6PUA",
+      "OLED48B6GUA",
+      "OLED48C3PUA",
+      "OLED48C4PUA",
+      "OLED48C5AUA",
+      "OLED48C6AUA",
+      "OLED48C6PUA",
+      "OLED48G5SUA",
+      "OLED55B3PUA",
+      "OLED55B4PUA",
+      "OLED55C4AUA",
+      "OLED55C4PUA",
+      "OLED55C5PUA",
+      "OLED55C6PUA",
+      "OLED55G5WUA",
+      "OLED55G6WUA",
+      "OLED65B5AUA",
+      "OLED65B5PUA",
+      "OLED65B6GUA",
+      "OLED65C5PUA",
+      "OLED65C6PUA",
+      "OLED65G4SUB",
+      "OLED65G5WUA",
+      "OLED65G6WUA",
+      "OLED77B5PUA",
+      "OLED77B6EUA",
+      "OLED77B6GUA",
+      "OLED77C3AUA",
+      "OLED77C4AUA",
+      "OLED77C5PUA",
+      "OLED77C6HUA",
+      "OLED77C6HUP",
+      "OLED77G3PUA",
+      "OLED77G5WUA",
+      "OLED77G6WUA",
+      "OLED77M3YUA",
+      "OLED77M5PUA",
+      "OLED77T4PUA",
+      "OLED77T6PUA",
+      "OLED77W6PUA",
+      "OLED83B4AUA",
+      "OLED83B4PUA",
+      "OLED83B5AUA",
+      "OLED83B5PUA",
+      "OLED83B6AUA",
+      "OLED83C4PUA",
+      "OLED83C5PUA",
+      "OLED83C6HUP",
+      "OLED83G4WUA",
+      "OLED83G6WUA",
+      "OLED83M3PUA",
+      "OLED97G5WUA",
+      "OLED97G6WUA",
+      "OLED97M3PUA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_mount",
+     "customerContentId": "mod-tv-mount",
+     "type": "module",
+     "title": "A wall mount that fits",
+     "subtitle": "Matched to the TV's VESA pattern where we know it; where we do not, we say so rather than guess.",
+     "tags": {
+      "category": [
+       "tv-mounts"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "OLED65C6PUA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_setup",
+     "customerContentId": "mod-tv-setup",
+     "type": "module",
+     "title": "Set-up and wall mounting",
+     "subtitle": "Stand set-up is free. Professional wall mounting by Angi is listed at $164.99, and free with select TVs while that offer runs.",
+     "tags": {
+      "category": [
+       "tvs",
+       "tv-mounts"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_series_oled",
+     "customerContentId": "mod-tv-series-oled",
+     "type": "module",
+     "title": "G6, C6 or B6: which OLED",
+     "subtitle": "G6 is the brightest, fit for a bright room; C6 is the all-rounder, with 165Hz for games; B6 is the way into OLED. The price is the same for everyone.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "oled"
+      ],
+      "series": [
+       "g6",
+       "c6",
+       "b6"
+      ],
+      "panel": [
+       "oled-evo",
+       "oled"
+      ],
+      "feature": [
+       "bright-room",
+       "gaming-165hz"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "compare"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "oled-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_qned_vs_oled",
+     "customerContentId": "mod-tv-qned-vs-oled",
+     "type": "module",
+     "title": "For a bright room, QNED. For a dark room, OLED.",
+     "subtitle": "A QNED Mini LED holds up in daylight; an OLED's perfect black wins at night. We show both and let your room decide. The price is the same for everyone.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "type": [
+       "qned",
+       "oled"
+      ],
+      "panel": [
+       "mini-led",
+       "oled-evo"
+      ],
+      "feature": [
+       "bright-room"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "compare"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "qned-tv",
+        "oled-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_tv_size_up",
+     "customerContentId": "mod-tv-size-up",
+     "type": "module",
+     "title": "One size up, from where you sit",
+     "subtitle": "Enter your viewing distance: from 6′6″ to 8′10″ a 65-inch fills 30 to 40 degrees of your view; from 7′8″ to 10′5″, a 77-inch does (RTINGS). The price is the same for everyone.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "sizeBand": [
+       "65-74",
+       "75-82",
+       "83-and-up"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_where_to_buy_pickup",
+     "customerContentId": "mod-where-to-buy-pickup",
+     "type": "module",
+     "title": "Pick up at Best Buy",
+     "subtitle": "Order here and collect it at Best Buy, often within about two hours. An OH order, handed over by a partner.",
+     "tags": {
+      "retailer": [
+       "best-buy-pickup"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "pedestal-washer",
+        "qned-tv",
+        "rear-control-dryer",
+        "soundbar",
+        "top-load-washer",
+        "uhd-tv",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_where_to_buy_retailer",
+     "customerContentId": "mod-where-to-buy-retailer",
+     "type": "module",
+     "title": "Find a Retailer",
+     "subtitle": "Buy it here, or from the stores that carry it, online and nearby. If you buy it elsewhere, we count a referral, not a sale.",
+     "tags": {
+      "retailer": [
+       "find-a-retailer"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "hd-tv",
+        "induction-range",
+        "kitchen-package",
+        "laundry-set",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "otr-microwave",
+        "pedestal",
+        "pedestal-washer",
+        "qned-tv",
+        "rear-control-dryer",
+        "refrigerator",
+        "soundbar",
+        "stacking-kit",
+        "styler",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "tv-mount",
+        "uhd-tv",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_protection",
+     "customerContentId": "mod-protection",
+     "type": "module",
+     "title": "LG Premium Care by Asurion",
+     "subtitle": "One, two or three years of cover, no deductible, priced per model at checkout.",
+     "tags": {
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "hd-tv",
+        "induction-range",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "otr-microwave",
+        "pedestal-washer",
+        "qned-tv",
+        "rear-control-dryer",
+        "soundbar",
+        "styler",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "uhd-tv",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_dryer",
+     "customerContentId": "mod-laundry-dryer",
+     "type": "module",
+     "title": "The dryer that goes with it, in your fuel",
+     "subtitle": "The same series in gas or electric (gas runs about $100 more), or a ventless heat pump. Our merchandiser's rule, shown as one.",
+     "tags": {
+      "category": [
+       "dryers"
+      ],
+      "fuel": [
+       "gas",
+       "electric"
+      ],
+      "feature": [
+       "heat-pump"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "top-load-washer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "WM1455HWA",
+      "WM3400CW",
+      "WM3420CW",
+      "WM3470CW",
+      "WM3600HWA",
+      "WM3900HBA",
+      "WM4000HBA",
+      "WM4000HWA",
+      "WM4080HBA",
+      "WM4200HBA",
+      "WM4500HBA",
+      "WM5500HVA",
+      "WM5500HWA",
+      "WM5800HAA",
+      "WM5800HVA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HBA",
+      "WM6700HWA",
+      "WM8900HBA",
+      "WM9000HVA",
+      "WM9500HKA",
+      "WM9700HPA",
+      "WM9900HSA",
+      "WT6100CW",
+      "WT7000CW",
+      "WT7010CW",
+      "WT7100CW",
+      "WT7150CM",
+      "WT7150CW",
+      "WT7300CW",
+      "WT7400CV",
+      "WT7480CL",
+      "WT7800CW",
+      "WT7900HWA",
+      "WT8200CL",
+      "WT8200CW",
+      "WT8400CB",
+      "WT8400CW",
+      "WT8480CL",
+      "WT8600CW"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_washer",
+     "customerContentId": "mod-laundry-washer",
+     "type": "module",
+     "title": "The washer that goes with it",
+     "subtitle": "The washer of the same series, in the same color first. Our merchandiser's rule, shown as one.",
+     "tags": {
+      "category": [
+       "washers"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "rear-control-dryer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "DLE3400W",
+      "DLE3420W",
+      "DLE3470M",
+      "DLE3470W",
+      "DLE3600V",
+      "DLE3600W",
+      "DLE6100M",
+      "DLE6100W",
+      "DLE7000W",
+      "DLE7010W",
+      "DLE7100W",
+      "DLE7150M",
+      "DLE7150W",
+      "DLE7400VE",
+      "DLE8200L",
+      "DLE8200W",
+      "DLE8400BE",
+      "DLE8400WE",
+      "DLEX3900W",
+      "DLEX4000B",
+      "DLEX4000W",
+      "DLEX4200B",
+      "DLEX5500V",
+      "DLEX5500W",
+      "DLEX5800A",
+      "DLEX5800V",
+      "DLEX6500B",
+      "DLEX6500W",
+      "DLEX6700B",
+      "DLEX6700W",
+      "DLEX7800WE",
+      "DLEX7900BE",
+      "DLEX7900WE",
+      "DLEX8600BE",
+      "DLEX8600WE",
+      "DLEX8900B",
+      "DLEX9000V",
+      "DLEX9500K",
+      "DLEX9700P",
+      "DLEX9900B",
+      "DLEX9900S",
+      "DLG3401W",
+      "DLG3421W",
+      "DLG3471W",
+      "DLG3601V",
+      "DLG6101W",
+      "DLG7001W",
+      "DLG7151M",
+      "DLG7151X",
+      "DLG7301VE",
+      "DLG7401WE",
+      "DLG8201W",
+      "DLG8401WE",
+      "DLG8481LE",
+      "DLGX3901B",
+      "DLGX4001B",
+      "DLGX4001W",
+      "DLGX4081W",
+      "DLGX4201W",
+      "DLGX4501B",
+      "DLGX5501V",
+      "DLGX5501W",
+      "DLGX5801A",
+      "DLGX5801V",
+      "DLGX6501B",
+      "DLGX6501W",
+      "DLGX6701B",
+      "DLGX6701W",
+      "DLGX7481LE",
+      "DLGX7901BE",
+      "DLGX7901WE",
+      "DLGX8601WE",
+      "DLGX8901B",
+      "DLGX9001V",
+      "DLGX9501K",
+      "DLGX9701P",
+      "DLGX9901S",
+      "DLHC1455W",
+      "DLHC4002B",
+      "DLHC4002W",
+      "DLHC5502B",
+      "DLHC5502V",
+      "DLHC5502W",
+      "DLHC8402B",
+      "DLHC8402W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_pedestal",
+     "customerContentId": "mod-laundry-pedestal",
+     "type": "module",
+     "title": "Raise it on a pedestal",
+     "subtitle": "A storage drawer or a SideKick pedestal washer in the same color, for front-load pairs only: a top-loader has no pedestal.",
+     "tags": {
+      "category": [
+       "pedestals",
+       "washers"
+      ],
+      "type": [
+       "pedestal-drawer",
+       "pedestal-washer"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "front-load-dryer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "DLE3400W",
+      "DLE3420W",
+      "DLE3470W",
+      "DLE3600V",
+      "DLE3600W",
+      "DLEC888W",
+      "DLEX3900W",
+      "DLEX4000B",
+      "DLEX4000W",
+      "DLEX4200B",
+      "DLEX5500V",
+      "DLEX5500W",
+      "DLEX5800A",
+      "DLEX5800V",
+      "DLEX6500B",
+      "DLEX6500W",
+      "DLEX6700B",
+      "DLEX6700W",
+      "DLEX8900B",
+      "DLEX9000V",
+      "DLEX9500K",
+      "DLEX9700P",
+      "DLEX9900B",
+      "DLEX9900S",
+      "DLG3401W",
+      "DLG3421W",
+      "DLG3471W",
+      "DLG3601V",
+      "DLG8401WE",
+      "DLGX3901B",
+      "DLGX4001B",
+      "DLGX4001W",
+      "DLGX4081W",
+      "DLGX4201W",
+      "DLGX4501B",
+      "DLGX5501V",
+      "DLGX5501W",
+      "DLGX5801A",
+      "DLGX5801V",
+      "DLGX6501B",
+      "DLGX6501W",
+      "DLGX6701B",
+      "DLGX6701W",
+      "DLGX8901B",
+      "DLGX8981V",
+      "DLGX9001V",
+      "DLGX9501K",
+      "DLGX9701P",
+      "DLGX9901S",
+      "DLHC1455W",
+      "DLHC4002B",
+      "DLHC4002W",
+      "DLHC5502B",
+      "DLHC5502V",
+      "DLHC5502W",
+      "DLHC8402B",
+      "WM1455HWA",
+      "WM3400CW",
+      "WM3420CW",
+      "WM3470CW",
+      "WM3600HWA",
+      "WM3900HBA",
+      "WM4000HBA",
+      "WM4000HWA",
+      "WM4080HBA",
+      "WM4200HBA",
+      "WM4500HBA",
+      "WM5500HVA",
+      "WM5500HWA",
+      "WM5700HVA",
+      "WM5800HAA",
+      "WM5800HVA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HBA",
+      "WM6700HWA",
+      "WM8100HVA",
+      "WM8900HBA",
+      "WM9000HVA",
+      "WM9500HKA",
+      "WM9700HPA",
+      "WM9900HSA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_stacking",
+     "customerContentId": "mod-laundry-stacking",
+     "type": "module",
+     "title": "Stack the pair",
+     "subtitle": "The stacking kit puts the dryer on top of a front-load washer. Front-load pairs only.",
+     "tags": {
+      "category": [
+       "laundry-accessories"
+      ],
+      "type": [
+       "stacking-kit"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "front-load-dryer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "DLE3400W",
+      "DLE3420W",
+      "DLE3470M",
+      "DLE3470W",
+      "DLE3600V",
+      "DLE3600W",
+      "DLEX3900W",
+      "DLEX4000B",
+      "DLEX4000W",
+      "DLEX4200B",
+      "DLEX5500V",
+      "DLEX5500W",
+      "DLEX5800A",
+      "DLEX5800V",
+      "DLEX6500B",
+      "DLEX6500W",
+      "DLEX6700B",
+      "DLEX6700W",
+      "DLEX8900B",
+      "DLEX9000V",
+      "DLEX9700P",
+      "DLG3401W",
+      "DLG3421W",
+      "DLG3471W",
+      "DLG3601V",
+      "DLG8401WE",
+      "DLGX3901B",
+      "DLGX4001B",
+      "DLGX4001W",
+      "DLGX4081W",
+      "DLGX4201W",
+      "DLGX4501B",
+      "DLGX5501V",
+      "DLGX5501W",
+      "DLGX5801A",
+      "DLGX5801V",
+      "DLGX6501B",
+      "DLGX6501W",
+      "DLGX6701B",
+      "DLGX6701W",
+      "DLGX8901B",
+      "DLGX8981V",
+      "DLGX9001V",
+      "DLGX9701P",
+      "DLHC1455W",
+      "DLHC4002B",
+      "DLHC4002W",
+      "DLHC5502B",
+      "DLHC5502V",
+      "DLHC5502W",
+      "DLHC8402B",
+      "WM1455HWA",
+      "WM3400CW",
+      "WM3420CW",
+      "WM3470CW",
+      "WM3600HWA",
+      "WM3900HBA",
+      "WM4000HBA",
+      "WM4000HWA",
+      "WM4080HBA",
+      "WM4200HBA",
+      "WM4500HBA",
+      "WM5500HVA",
+      "WM5500HWA",
+      "WM5700HVA",
+      "WM5800HAA",
+      "WM5800HVA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HBA",
+      "WM6700HWA",
+      "WM8100HVA",
+      "WM8900HBA",
+      "WM9000HVA",
+      "WM9700HPA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_pair_price",
+     "customerContentId": "mod-laundry-pair-price",
+     "type": "module",
+     "title": "The set price, when it is lower",
+     "subtitle": "The set price beside the sum of its pieces, shown only when the set costs less.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "front-load-dryer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "complements": [
+      "DLEX4000W",
+      "DLEX5500W",
+      "DLEX5800A",
+      "DLEX6500B",
+      "DLEX6700W",
+      "DLGX4001B",
+      "DLGX4001W",
+      "DLGX5501V",
+      "DLGX5501W",
+      "DLGX5801A",
+      "DLGX5801V",
+      "DLGX6501B",
+      "DLGX6501W",
+      "DLGX6701B",
+      "DLGX6701W",
+      "DLHC4002B",
+      "DLHC4002W",
+      "DLHC5502B",
+      "DLHC5502V",
+      "DLHC5502W",
+      "WM4000HBA",
+      "WM4000HWA",
+      "WM5500HVA",
+      "WM5500HWA",
+      "WM5800HAA",
+      "WM5800HVA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HBA",
+      "WM6700HWA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_front_vs_top",
+     "customerContentId": "mod-laundry-front-vs-top",
+     "type": "module",
+     "title": "Front load or top load",
+     "subtitle": "Front-load pairs stack and take a pedestal; top-loaders open from above and need neither.",
+     "tags": {
+      "category": [
+       "washers"
+      ],
+      "type": [
+       "front-load",
+       "top-load"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "compare"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "top-load-washer"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_haul_away",
+     "customerContentId": "mod-haul-away",
+     "type": "module",
+     "title": "Haul-away, $25",
+     "subtitle": "We take the old one away for $25 (listed at $50), or move it to another room for the same.",
+     "tags": {
+      "room": [
+       "laundry-room",
+       "kitchen"
+      ],
+      "intent": [
+       "replace"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "induction-range",
+        "otr-microwave",
+        "pedestal-washer",
+        "rear-control-dryer",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_laundry_installation",
+     "customerContentId": "mod-laundry-installation",
+     "type": "module",
+     "title": "Professional installation, $29.99",
+     "subtitle": "Hook-up and leveling by a professional installer; we contact you to schedule it.",
+     "tags": {
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "pedestal-washer",
+        "rear-control-dryer",
+        "top-load-washer",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_kitchen_installation",
+     "customerContentId": "mod-kitchen-installation",
+     "type": "module",
+     "title": "Professional installation",
+     "subtitle": "Priced per model at checkout. Hard-wiring, water-line extensions and propane conversion are not included.",
+     "tags": {
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "gas-range",
+        "induction-range",
+        "otr-microwave",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_fit_check",
+     "customerContentId": "mod-fit-check",
+     "type": "module",
+     "title": "Will it fit? Tell us your space.",
+     "subtitle": "Enter the width of your closet or cut-out: models wider than it drop out, and we say how many. Your measurements are yours, labeled declared, never inferred.",
+     "tags": {
+      "room": [
+       "laundry-room",
+       "kitchen"
+      ],
+      "intent": [
+       "replace",
+       "remodel"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "induction-range",
+        "otr-microwave",
+        "pedestal-washer",
+        "rear-control-dryer",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_range_microwave",
+     "customerContentId": "mod-range-microwave",
+     "type": "module",
+     "title": "The microwave that goes above it",
+     "subtitle": "The over-the-range microwave LG packages with this range first, then the same finish. Our merchandiser's rule, shown as one.",
+     "tags": {
+      "category": [
+       "microwaves"
+      ],
+      "type": [
+       "over-the-range"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "gas-range",
+        "induction-range"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "LDE4413ST",
+      "LDE4415ST",
+      "LDEL7324YE",
+      "LDG4313ST",
+      "LDG4315ST",
+      "LDGL6924S",
+      "LDGL6924Y",
+      "LPGU6319Y",
+      "LRE3194ST",
+      "LREL6321S",
+      "LREL6323S",
+      "LREL6325F",
+      "LREN6321YE",
+      "LREN6323YE",
+      "LREN6325XE",
+      "LREN6325ZE",
+      "LRG3060ST",
+      "LRG3194BD",
+      "LRG3194ST",
+      "LRGL5821S",
+      "LRGL5823D",
+      "LRGL5823S",
+      "LRGL5825F",
+      "LRGN6321Y",
+      "LRGN6323Y",
+      "LRGN6323Z",
+      "LRGN6325X",
+      "LRGN6325Z",
+      "LRIN6323YE",
+      "LSDL6336F",
+      "LSDS6338F",
+      "LSE4611ST",
+      "LSE4613BD",
+      "LSE4616ST",
+      "LSE4617ST",
+      "LSEL6330S",
+      "LSEL6330SE",
+      "LSEL6331F",
+      "LSEL6333F",
+      "LSEL6333XE",
+      "LSEL6333ZE",
+      "LSEL6335D",
+      "LSEL6335FE",
+      "LSEL6335XE",
+      "LSEL6335ZE",
+      "LSEL6337F",
+      "LSEL6337XE",
+      "LSES6338N",
+      "LSGL5830S",
+      "LSGL5831F",
+      "LSGL5833F",
+      "LSGL5833X",
+      "LSGL5833Z",
+      "LSGL6335D",
+      "LSGL6335X",
+      "LSGL6335Z",
+      "LSGL6337F",
+      "LSGL6337X",
+      "LSGS6338N",
+      "LSGU6338N",
+      "LSGU6338X",
+      "LSGU6339X",
+      "LSIL6332FE",
+      "LSIL6334FE",
+      "LSIL6334XE",
+      "LSIL6336F",
+      "LSIL6336FE",
+      "LSIL6336XE",
+      "LSIS6338FE",
+      "LSIU6339XE",
+      "LTEL7337F",
+      "LTG4715BD",
+      "LTGL6937D",
+      "LTGL6937F",
+      "LTIS7338XE",
+      "LUTD4919SN"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_range_dishwasher",
+     "customerContentId": "mod-range-dishwasher",
+     "type": "module",
+     "title": "The dishwasher in the same finish",
+     "subtitle": "The dishwasher LG packages with it first, then the same finish family. Our merchandiser's rule, shown as one.",
+     "tags": {
+      "category": [
+       "dishwashers"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "gas-range",
+        "induction-range",
+        "otr-microwave"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "LDE4413ST",
+      "LDE4415ST",
+      "LDEL7324YE",
+      "LDG4313ST",
+      "LDG4315ST",
+      "LDGL6924S",
+      "LDGL6924Y",
+      "LMH2235ST",
+      "LMHM2237ST",
+      "LMV1760ST",
+      "LMV1764ST",
+      "LMV1831SS",
+      "LMV2031SS",
+      "LMVM2033ST",
+      "LPGU6319Y",
+      "LRE3194ST",
+      "LRE3194SW",
+      "LREL6321S",
+      "LREL6323S",
+      "LREL6325F",
+      "LREN6321VE",
+      "LREN6321YE",
+      "LREN6323YE",
+      "LREN6325XE",
+      "LREN6325ZE",
+      "LRG3060ST",
+      "LRG3194BD",
+      "LRG3194ST",
+      "LRGL5821S",
+      "LRGL5823D",
+      "LRGL5823S",
+      "LRGL5825F",
+      "LRGN6321Y",
+      "LRGN6323Y",
+      "LRGN6323Z",
+      "LRGN6325X",
+      "LRGN6325Z",
+      "LRIN6323YE",
+      "LSDL6336F",
+      "LSDS6338F",
+      "LSE4611ST",
+      "LSE4613BD",
+      "LSE4616ST",
+      "LSE4617ST",
+      "LSEL6330S",
+      "LSEL6330SE",
+      "LSEL6331F",
+      "LSEL6333F",
+      "LSEL6333XE",
+      "LSEL6333ZE",
+      "LSEL6335D",
+      "LSEL6335FE",
+      "LSEL6335LE",
+      "LSEL6335XE",
+      "LSEL6335ZE",
+      "LSEL6337F",
+      "LSEL6337XE",
+      "LSEL633CF",
+      "LSES6338F",
+      "LSES6338N",
+      "LSGL5830S",
+      "LSGL5831F",
+      "LSGL5833F",
+      "LSGL5833X",
+      "LSGL5833Z",
+      "LSGL583CF",
+      "LSGL6335D",
+      "LSGL6335L",
+      "LSGL6335X",
+      "LSGL6335Z",
+      "LSGL6337F",
+      "LSGL6337X",
+      "LSGS6338N",
+      "LSGU6338N",
+      "LSGU6338X",
+      "LSGU6339X",
+      "LSIL6332FE",
+      "LSIL6334FE",
+      "LSIL6334XE",
+      "LSIL6336F",
+      "LSIL6336FE",
+      "LSIL6336XE",
+      "LSIL633TFE",
+      "LSIS6338FE",
+      "LSIU6339XE",
+      "LSSE3027ST",
+      "LTEL7337F",
+      "LTG4715BD",
+      "LTGL6937D",
+      "LTGL6937F",
+      "LTIS7338XE",
+      "LUTD4919SN",
+      "MHEC1737F",
+      "MHES1738N",
+      "MHEU1738N",
+      "MHEU1738X",
+      "MVEF1323F",
+      "MVEF1337F",
+      "MVEL2033D",
+      "MVEL2033F",
+      "MVEL2034X",
+      "MVEL2035X",
+      "MVEL2035Z",
+      "MVEL2125F",
+      "MVEL2125X",
+      "MVEL2137F",
+      "MVEM1621Y",
+      "MVEM1721F",
+      "MVEM1825F",
+      "MVEM1825X",
+      "MVEM1825Z"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_kitchen_range",
+     "customerContentId": "mod-kitchen-range",
+     "type": "module",
+     "title": "The range that goes with it",
+     "subtitle": "The range LG packages with it first, then the same finish family. Our merchandiser's rule, shown as one.",
+     "tags": {
+      "category": [
+       "ranges"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "otr-microwave",
+        "front-control-dishwasher",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "complements": [
+      "ADFD5448AT",
+      "LDB4548ST",
+      "LDF5545BD",
+      "LDF5545SS",
+      "LDFC2423V",
+      "LDFN3432T",
+      "LDFN343LS",
+      "LDFN4542D",
+      "LDNPC44CS",
+      "LDNPH654S",
+      "LDNPH753D",
+      "LDNPH753S",
+      "LDNPH85CS",
+      "LDNPM545S",
+      "LDNPM654S",
+      "LDNPQ445S",
+      "LDNPQ44HS",
+      "LDNPQ555S",
+      "LDNTH753D",
+      "LDNTH753S",
+      "LDNTH862S",
+      "LDNTM545D",
+      "LDNTM545S",
+      "LDP6797ST",
+      "LDP6809SS",
+      "LDP6810BD",
+      "LDP7808SS",
+      "LDPH5554S",
+      "LDPH7972D",
+      "LDPN454HT",
+      "LDPN6761T",
+      "LDPS6762D",
+      "LDT6809SS",
+      "LDT7808BD",
+      "LDTH5554D",
+      "LDTH555NS",
+      "LDTH7972D",
+      "LDTH7972S",
+      "LDTS5552D",
+      "LDTS5552S",
+      "LMH2235ST",
+      "LMHM2237ST",
+      "LMV1760ST",
+      "LMV1764ST",
+      "LMV1831SS",
+      "LMV2031SS",
+      "LMVM2033ST",
+      "LUDP8908SN",
+      "LUDP8997SN",
+      "MHEC1737F",
+      "MHES1738N",
+      "MHEU1738N",
+      "MHEU1738X",
+      "MVEF1323F",
+      "MVEF1337F",
+      "MVEL2033D",
+      "MVEL2033F",
+      "MVEL2034X",
+      "MVEL2035X",
+      "MVEL2035Z",
+      "MVEL2125F",
+      "MVEL2125X",
+      "MVEL2137F",
+      "MVEM1621Y",
+      "MVEM1721F",
+      "MVEM1825F",
+      "MVEM1825X",
+      "MVEM1825Z",
+      "SDNTH981E",
+      "SDNTH981S",
+      "SDNTHS72S",
+      "SDWB24S3",
+      "SDWB24W3",
+      "SDWD24P3"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "mod_cooking_fuel",
+     "customerContentId": "mod-cooking-fuel",
+     "type": "module",
+     "title": "Gas, electric or induction",
+     "subtitle": "Induction heats the pan, not the glass. Energy rebates for it are state-run and income-qualified: check your own eligibility with your state. We never pre-qualify anyone.",
+     "tags": {
+      "category": [
+       "ranges"
+      ],
+      "fuel": [
+       "gas",
+       "electric",
+       "induction",
+       "dual-fuel"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "gas-range",
+        "induction-range"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "exploring",
+      "considering"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_tv_gift_card",
+     "customerContentId": "offer-tv-gift-card",
+     "type": "promotion",
+     "title": "Up to $200 NFL Shop eGift Card",
+     "subtitle": "With this TV where eligible; claim it within 30 days. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "tvs"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-13T02:52:31.000Z",
+      "to": "2026-10-05T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "inStock": true
+    },
+    {
+     "id": "offer_tv_matching_soundbar",
+     "customerContentId": "offer-tv-matching-soundbar",
+     "type": "promotion",
+     "title": "Up to $200 off a matching soundbar",
+     "subtitle": "Add it in the same order. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "soundbars"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T14:16:18.000Z",
+      "to": "2026-10-05T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "S70TY",
+      "S80TR",
+      "S80TY",
+      "S90TR",
+      "S95AR",
+      "S95TR",
+      "SC9S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_tv_sound_suite",
+     "customerContentId": "offer-tv-sound-suite",
+     "type": "promotion",
+     "title": "Up to $400 off with Sound Suite",
+     "subtitle": "On eligible TV and Sound Suite bundles. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "soundbars"
+      ],
+      "type": [
+       "sound-suite"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T23:35:05.000Z",
+      "to": "2026-10-05T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "H7",
+      "H7_W7",
+      "M5-P2_H7_W7",
+      "M5-P2_W7",
+      "M5-P4_H7",
+      "M5-P4_H7_W7",
+      "M7-P2_H7",
+      "M7-P2_H7_W7",
+      "M7-P4_H7",
+      "M7-P4_H7_W7"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_tv_free_mounting",
+     "customerContentId": "offer-tv-free-mounting",
+     "type": "promotion",
+     "title": "Free wall mounting",
+     "subtitle": "Mounting by Angi (listed at $164.99) or stand set-up, at no charge on select TVs. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "tvs",
+       "tv-mounts"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-10-01T00:00:00.000Z",
+      "to": "2026-10-05T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "OLED42C6PUA",
+      "OLED48C6PUA",
+      "OLED55C6PUA",
+      "OLED65C6PUA",
+      "OLED77C6HUP",
+      "OLED83C6HUP"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_soundbar_with_tv",
+     "customerContentId": "offer-soundbar-with-tv",
+     "type": "promotion",
+     "title": "Up to $200 off with select TVs",
+     "subtitle": "When this soundbar is in the same order as an eligible LG TV. Valid through 10/4/26.",
+     "tags": {
+      "category": [
+       "soundbars",
+       "tvs"
+      ],
+      "room": [
+       "living-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T14:16:18.000Z",
+      "to": "2026-10-05T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "soundbar"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "S70TY",
+      "S80TR",
+      "S80TY",
+      "S90TR",
+      "S95AR",
+      "S95TR",
+      "SC9S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_washer_dryer_pair",
+     "customerContentId": "offer-washer-dryer-pair",
+     "type": "promotion",
+     "title": "Save $200 with an eligible dryer",
+     "subtitle": "Online only. Valid through 11/3/26.",
+     "tags": {
+      "category": [
+       "washers",
+       "dryers"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-19T09:00:00.000Z",
+      "to": "2026-11-04T04:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "top-load-washer"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "WM3400CW",
+      "WM3420CW",
+      "WM4000HWA",
+      "WM5500HWA",
+      "WM6500HBA",
+      "WM6500HWA",
+      "WM6700HWA",
+      "WM8900HBA"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_dryer_washer_pair",
+     "customerContentId": "offer-dryer-washer-pair",
+     "type": "promotion",
+     "title": "Save an extra $100 with an eligible washer",
+     "subtitle": "Online only. Valid through 11/3/26.",
+     "tags": {
+      "category": [
+       "dryers",
+       "washers"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-16T23:35:05.000Z",
+      "to": "2026-11-04T04:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "rear-control-dryer"
+       ]
+      }
+     },
+     "inStock": true
+    },
+    {
+     "id": "offer_laundry_sets",
+     "customerContentId": "offer-laundry-sets",
+     "type": "promotion",
+     "title": "An extra $150 to $250 on select laundry sets",
+     "subtitle": "Valid through 11/3/26.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-16T23:35:05.000Z",
+      "to": "2026-11-04T04:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-washer",
+        "front-load-dryer",
+        "laundry-set"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "WM4000HBA_DLGX4001B_WD300CB_WDP6B",
+      "WM4000HBA_DLHC4002B_WD300CB_WDP6B",
+      "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "WM4000HWA_DLGX4001W_WD300CW_WDP6W",
+      "WM5500HVA_DLGX5501V_WD300CV_WDP6V",
+      "WM5500HWA_DLEX5500W_WD300CW_WDP6W",
+      "WM5500HWA_DLHC5502W_WD300CW_WDP6W",
+      "WM5800HAA_DLEX5800A_WD300CA_WDP6A",
+      "WM5800HAA_DLGX5801A_WD300CA_WDP6A",
+      "WM5800HVA_DLGX5801V_WD300CV_WDP6V",
+      "WM6500HBA_DLEX6500B_WD300CB_WDP6B",
+      "WM6500HBA_DLGX6501B_WD300CB_WDP6B",
+      "WM6500HWA_DLGX6501W_WD300CW_WDP6W",
+      "WM6500HWA_DLHC5502W_WD300CW_WDP6W",
+      "WM6700HBA_DLGX6701B_WD300CB_WDP6B",
+      "WM6700HWA_DLEX6700W_WD300CW_WDP6W",
+      "WM6700HWA_DLGX6701W_WD300CW_WDP6W",
+      "WM6700HWA_DLHC5502W_WD300CW_WDP6W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_range_microwave",
+     "customerContentId": "offer-range-microwave",
+     "type": "promotion",
+     "title": "Save $200 with a microwave",
+     "subtitle": "Online only, with an eligible over-the-range microwave. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "ranges",
+       "microwaves"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-23T09:05:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "gas-range",
+        "induction-range",
+        "otr-microwave"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "LSEL6335XE",
+      "MVEM1825F",
+      "LSGL5833X",
+      "LSIL6332FE",
+      "LREN6323YE",
+      "MVEM1621Y",
+      "LRGN6323Y",
+      "LRIN6323YE",
+      "MVEL2137F",
+      "LSGL6335X",
+      "LSIL6334XE",
+      "LSGU6339X",
+      "MHEU1738X"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_kitchen_packages",
+     "customerContentId": "offer-kitchen-packages",
+     "type": "promotion",
+     "title": "Up to $500 off as a kitchen package",
+     "subtitle": "Online only. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-17T23:35:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "gas-range",
+        "induction-range",
+        "otr-microwave",
+        "top-control-dishwasher",
+        "kitchen-package"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "LF24Z6530S_LSEL6335XE_MVEM1825F_ADFD5448AT",
+      "LF24Z6530S_LSGL5833X_ADFD5448AT",
+      "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "LF29H8330S_LSEL6335XE_LDNPM654S",
+      "LF29H8330S_LSGL6335X_LDNPM654S",
+      "LF29S8365S_LSEL6335XE_LDNPM654S",
+      "LF29S8365S_LSGL6335X_LDNPM654S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_fridge_dishwasher",
+     "customerContentId": "offer-fridge-dishwasher",
+     "type": "promotion",
+     "title": "Up to $200 off with an eligible refrigerator",
+     "subtitle": "Online only. Valid through 10/21/26.",
+     "tags": {
+      "category": [
+       "dishwashers",
+       "refrigerators"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-17T09:05:05.000Z",
+      "to": "2026-10-22T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-control-dishwasher",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "LF24Z6530S",
+      "ADFD5448AT",
+      "LF29H8330S",
+      "LDNPM654S",
+      "LF29S8365S",
+      "LMWS29626S",
+      "LDFC2423V",
+      "LRMDS3006D",
+      "LDNTM545D",
+      "LRMVC2306D",
+      "LRMXS3006S",
+      "LDNTH753S",
+      "LRYKC2606S",
+      "LRYXC2606S",
+      "UM22WZH98S",
+      "SDNTH981S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "offer_thinq_warranty",
+     "customerContentId": "offer-thinq-warranty",
+     "type": "promotion",
+     "title": "Two-year limited warranty",
+     "subtitle": "Register it in the LG ThinQ app; retailer purchases count too. Valid through 12/31/26.",
+     "tags": {
+      "room": [
+       "laundry-room",
+       "kitchen"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-offers"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-18T09:05:05.000Z",
+      "to": "2027-01-01T03:59:59.000Z"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "induction-range",
+        "otr-microwave",
+        "pedestal-washer",
+        "rear-control-dryer",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "washer-dryer-combo",
+        "washtower"
+       ]
+      }
+     },
+     "inStock": true
+    },
+    {
+     "id": "pkg_select_4_gas",
+     "customerContentId": "pkg-select-4-gas",
+     "type": "package",
+     "title": "Select 4-piece kitchen package, gas",
+     "subtitle": "24 cu. ft. refrigerator, slide-in gas range, over-the-range microwave and front-control dishwasher in stainless steel: $4,196 together, $500 less than the four apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "kitchen-4-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-control-dishwasher",
+        "gas-range",
+        "kitchen-package",
+        "otr-microwave"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "LF24Z6530S",
+      "LSGL5833X",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "complements": [
+      "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "LSGL5833X",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_select_4_electric",
+     "customerContentId": "pkg-select-4-electric",
+     "type": "package",
+     "title": "Select 4-piece kitchen package, electric",
+     "subtitle": "24 cu. ft. refrigerator, slide-in electric range, over-the-range microwave and front-control dishwasher in stainless steel: $4,196 together, $500 less than the four apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "electric"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "kitchen-4-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "electric-range",
+        "front-control-dishwasher",
+        "kitchen-package",
+        "otr-microwave"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF24Z6530S_LSEL6335XE_MVEM1825F_ADFD5448AT",
+      "LF24Z6530S",
+      "LSEL6335XE",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "complements": [
+      "LF24Z6530S_LSEL6335XE_MVEM1825F_ADFD5448AT",
+      "LSEL6335XE",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_select_4_induction",
+     "customerContentId": "pkg-select-4-induction",
+     "type": "package",
+     "title": "Select 4-piece kitchen package, induction",
+     "subtitle": "24 cu. ft. refrigerator, slide-in induction range, over-the-range microwave and front-control dishwasher in stainless steel: $4,096 together, $500 less than the four apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "induction"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "kitchen-4-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-control-dishwasher",
+        "induction-range",
+        "kitchen-package",
+        "otr-microwave"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF24Z6530S_LSIL6332FE_MVEM1825F_ADFD5448AT",
+      "LF24Z6530S",
+      "LSIL6332FE",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "complements": [
+      "LF24Z6530S_LSIL6332FE_MVEM1825F_ADFD5448AT",
+      "LSIL6332FE",
+      "MVEM1825F",
+      "ADFD5448AT"
+     ],
+     "inStock": false
+    },
+    {
+     "id": "pkg_select_3_gas",
+     "customerContentId": "pkg-select-3-gas",
+     "type": "package",
+     "title": "Select 3-piece kitchen package, gas",
+     "subtitle": "24 cu. ft. refrigerator, slide-in gas range and front-control dishwasher in stainless steel: $4,097 together, $300 less than the three apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "3-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "kitchen-3-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-control-dishwasher",
+        "gas-range",
+        "kitchen-package"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF24Z6530S_LSGL5833X_ADFD5448AT",
+      "LF24Z6530S",
+      "LSGL5833X",
+      "ADFD5448AT"
+     ],
+     "complements": [
+      "LF24Z6530S_LSGL5833X_ADFD5448AT",
+      "LSGL5833X",
+      "ADFD5448AT"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_max_3_gas",
+     "customerContentId": "pkg-max-3-gas",
+     "type": "package",
+     "title": "Standard-depth MAX 3-piece kitchen package, gas",
+     "subtitle": "29 cu. ft. refrigerator, slide-in gas range and top-control dishwasher in stainless steel: $4,397 together, $400 less than the three apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "3-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "best"
+      ],
+      "package": [
+       "kitchen-3-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "gas-range",
+        "kitchen-package",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF29H8330S_LSGL6335X_LDNPM654S",
+      "LF29H8330S",
+      "LSGL6335X",
+      "LDNPM654S"
+     ],
+     "complements": [
+      "LF29H8330S_LSGL6335X_LDNPM654S",
+      "LSGL6335X",
+      "LDNPM654S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_max_3_electric",
+     "customerContentId": "pkg-max-3-electric",
+     "type": "package",
+     "title": "Standard-depth MAX 3-piece kitchen package, electric",
+     "subtitle": "29 cu. ft. refrigerator, slide-in electric range and top-control dishwasher in stainless steel: $4,197 together, $400 less than the three apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "3-piece"
+      ],
+      "fuel": [
+       "electric"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "kitchen-3-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "electric-range",
+        "kitchen-package",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LF29H8330S_LSEL6335XE_LDNPM654S",
+      "LF29H8330S",
+      "LSEL6335XE",
+      "LDNPM654S"
+     ],
+     "complements": [
+      "LF29H8330S_LSEL6335XE_LDNPM654S",
+      "LSEL6335XE",
+      "LDNPM654S"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_deluxe_4_gas",
+     "customerContentId": "pkg-deluxe-4-gas",
+     "type": "package",
+     "title": "Deluxe 4-piece kitchen package, gas",
+     "subtitle": "30 cu. ft. refrigerator, slide-in gas range, over-the-range microwave and top-control dishwasher in stainless steel: $4,496 together, $500 less than the four apart.",
+     "tags": {
+      "category": [
+       "kitchen-packages"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "stainless"
+      ],
+      "priceTier": [
+       "best"
+      ],
+      "package": [
+       "kitchen-4-piece"
+      ],
+      "room": [
+       "kitchen"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "gas-range",
+        "kitchen-package",
+        "otr-microwave",
+        "top-control-dishwasher"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "LRMXS3006S_LSGL6335X_MVEL2137F_LDNTH753S",
+      "LRMXS3006S",
+      "LSGL6335X",
+      "MVEL2137F",
+      "LDNTH753S"
+     ],
+     "complements": [
+      "LRMXS3006S_LSGL6335X_MVEL2137F_LDNTH753S",
+      "LSGL6335X",
+      "MVEL2137F",
+      "LDNTH753S"
+     ],
+     "inStock": false
+    },
+    {
+     "id": "pkg_laundry_4000_electric",
+     "customerContentId": "pkg-laundry-4000-electric",
+     "type": "package",
+     "title": "The 4000 laundry set, electric",
+     "subtitle": "4.5 cu. ft. front-load washer, 7.4 cu. ft. electric dryer, SideKick pedestal washer and pedestal drawer in white: $2,766 as a set.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "electric"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "good"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "series": [
+       "4000-series"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "laundry-set"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLEX4000W",
+      "WD300CW",
+      "WDP6W"
+     ],
+     "complements": [
+      "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLEX4000W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_laundry_4000_gas",
+     "customerContentId": "pkg-laundry-4000-gas",
+     "type": "package",
+     "title": "The 4000 laundry set, gas",
+     "subtitle": "4.5 cu. ft. front-load washer, 7.4 cu. ft. gas dryer, SideKick pedestal washer and pedestal drawer in white: $2,866 as a set.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "good"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "series": [
+       "4000-series"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "laundry-set"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "WM4000HWA_DLGX4001W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLGX4001W",
+      "WD300CW",
+      "WDP6W"
+     ],
+     "complements": [
+      "WM4000HWA_DLGX4001W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLGX4001W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_laundry_4000_heat_pump",
+     "customerContentId": "pkg-laundry-4000-heat-pump",
+     "type": "package",
+     "title": "The 4000 laundry set, heat pump",
+     "subtitle": "4.5 cu. ft. front-load washer, 7.8 cu. ft. heat-pump dryer, SideKick pedestal washer and pedestal drawer in white: $3,086 as a set.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "electric"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "better"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "series": [
+       "4000-series"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "laundry-set"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "WM4000HWA_DLHC4002W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLHC4002W",
+      "WD300CW",
+      "WDP6W"
+     ],
+     "complements": [
+      "WM4000HWA_DLHC4002W_WD300CW_WDP6W",
+      "WM4000HWA",
+      "DLHC4002W"
+     ],
+     "inStock": false
+    },
+    {
+     "id": "pkg_laundry_6700_electric",
+     "customerContentId": "pkg-laundry-6700-electric",
+     "type": "package",
+     "title": "The 6700 laundry set, electric",
+     "subtitle": "5.0 cu. ft. front-load washer, 7.4 cu. ft. electric dryer, SideKick pedestal washer and pedestal drawer in white: $3,456 as a set.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "electric"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "best"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "series": [
+       "6700-series"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "laundry-set"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "WM6700HWA_DLEX6700W_WD300CW_WDP6W",
+      "WM6700HWA",
+      "DLEX6700W",
+      "WD300CW",
+      "WDP6W"
+     ],
+     "complements": [
+      "WM6700HWA_DLEX6700W_WD300CW_WDP6W",
+      "WM6700HWA",
+      "DLEX6700W"
+     ],
+     "inStock": true
+    },
+    {
+     "id": "pkg_laundry_6700_gas",
+     "customerContentId": "pkg-laundry-6700-gas",
+     "type": "package",
+     "title": "The 6700 laundry set, gas",
+     "subtitle": "5.0 cu. ft. front-load washer, 7.4 cu. ft. gas dryer, SideKick pedestal washer and pedestal drawer in white: $3,556 as a set.",
+     "tags": {
+      "category": [
+       "laundry-sets"
+      ],
+      "type": [
+       "4-piece"
+      ],
+      "fuel": [
+       "gas"
+      ],
+      "finish": [
+       "white"
+      ],
+      "priceTier": [
+       "flagship"
+      ],
+      "package": [
+       "laundry-4-piece"
+      ],
+      "series": [
+       "6700-series"
+      ],
+      "room": [
+       "laundry-room"
+      ],
+      "intent": [
+       "remodel",
+       "new-home"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "eligibleWhen": {
+      "context": {
+       "family": [
+        "front-load-dryer",
+        "front-load-washer",
+        "laundry-set"
+       ]
+      }
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ],
+     "featuredProductIds": [
+      "WM6700HWA_DLGX6701W_WD300CW_WDP6W",
+      "WM6700HWA",
+      "DLGX6701W",
+      "WD300CW",
+      "WDP6W"
+     ],
+     "complements": [
+      "WM6700HWA_DLGX6701W_WD300CW_WDP6W",
+      "WM6700HWA",
+      "DLGX6701W"
+     ],
+     "inStock": true
+    }
+   ]
+  }
+ },
+ "label": "An offer’s window closes",
+ "who": "merch",
+ "lane": "P1",
+ "engine": "the piece leaves every surface on the next decision",
+ "sees": "the defects lg.com shows today, fixed"
+}

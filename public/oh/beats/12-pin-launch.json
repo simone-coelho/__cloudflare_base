@@ -1,0 +1,146 @@
+{
+ "name": "12-pin-launch",
+ "beat": 12,
+ "act": 5,
+ "actName": "Windows",
+ "press": "a merchandiser pin on a launch series",
+ "kind": "publish",
+ "publish": {
+  "kind": "slots",
+  "document": {
+   "version": "slots-oh-pin-launch",
+   "pages": {
+    "home": [
+     {
+      "slot": "hero",
+      "take": 1,
+      "weights": {
+       "room": 0.4,
+       "category": 0.3,
+       "type": 0.2,
+       "priceTier": 0.1,
+       "intent": 0.3
+      },
+      "seeds": [
+       {
+        "signal": "campaign_term",
+        "value": "lg tvs",
+        "tags": [
+         {
+          "dimension": "category",
+          "value": "tvs"
+         }
+        ],
+        "weight": 0.2
+       }
+      ]
+     },
+     {
+      "slot": "category-rail",
+      "take": 3,
+      "weights": {
+       "room": 0.6,
+       "category": 0.3
+      }
+     },
+     {
+      "slot": "deals",
+      "take": 4,
+      "weights": {
+       "category": 0.3,
+       "type": 0.3,
+       "sizeBand": 0.15,
+       "priceTier": 0.15,
+       "room": 0.4,
+       "intent": 0.5,
+       "fuel": 0.15,
+       "contentType": 0.1
+      },
+      "diversity": {
+       "dimension": "room",
+       "max": 2
+      },
+      "seeds": [
+       {
+        "signal": "campaign_term",
+        "value": "lg tvs",
+        "tags": [
+         {
+          "dimension": "category",
+          "value": "tvs"
+         }
+        ],
+        "weight": 0.2
+       }
+      ],
+      "pinnedPieceIds": [
+       "pin_micro_rgb_evo"
+      ]
+     },
+     {
+      "slot": "continue",
+      "take": 1,
+      "weights": {
+       "room": 0.4,
+       "series": 0.3,
+       "type": 0.3
+      },
+      "stage": {
+       "outOfStage": 0,
+       "inStage": 0.5
+      }
+     }
+    ],
+    "tvs": [
+     {
+      "slot": "grid-promo",
+      "take": 1,
+      "weights": {
+       "type": 0.4,
+       "sizeBand": 0.3,
+       "priceTier": 0.2,
+       "contentType": 0.1
+      }
+     }
+    ],
+    "product": [
+     {
+      "slot": "pdp-modules",
+      "take": 6,
+      "weights": {
+       "room": 0.3,
+       "type": 0.3,
+       "fuel": 0.3,
+       "series": 0.2,
+       "package": 0.3,
+       "contentType": 0.2,
+       "retailer": 0.2,
+       "intent": 0.2
+      },
+      "complements": {
+       "weight": 0.6
+      }
+     },
+     {
+      "slot": "pdp-offers",
+      "take": 2,
+      "weights": {
+       "category": 0.3,
+       "priceTier": 0.2,
+       "intent": 0.3,
+       "package": 0.2
+      },
+      "complements": {
+       "weight": 0.3
+      }
+     }
+    ]
+   }
+  }
+ },
+ "label": "The merchandiser pins a launch",
+ "who": "merch",
+ "lane": "P1",
+ "engine": "the pin leads; the receipt shows what the engine would have chosen",
+ "sees": "the merchandiser outranks the engine, visibly"
+}

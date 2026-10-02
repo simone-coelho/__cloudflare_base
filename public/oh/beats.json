@@ -1,0 +1,398 @@
+{
+ "about": "OH's director script: the 16 beats as data the demo kit's director runs (public/demo-kit/director.js), scaffolded by scripts/demo-kit/new-demo.mjs from demo.config.json. Not a published beat document: those are beats/*.json, which scripts/demo-kit/seed.mjs re-anchors and the worker applies by name. Strings are templates over the facts oh.js computes (facts()); run lists are the kit's verbs; call is the one escape hatch into oh.js. A beat whose run is notBuilt says so on the status line and stops: its presses are its lane's to write.",
+ "total": 16,
+ "acts": {
+  "1": "Arrival",
+  "2": "Two rooms",
+  "3": "The room completes",
+  "4": "Curation",
+  "5": "Windows",
+  "6": "Three weeks later",
+  "7": "One person",
+  "8": "Best Buy counts"
+ },
+ "places": {},
+ "beats": [
+  {
+   "key": "arrive",
+   "no": "1",
+   "act": 1,
+   "who": "shopper",
+   "arrives": true,
+   "label": "A stranger arrives from search",
+   "declare": [
+    "<b>Searches</b> “{{arrival.term}}” and lands on the homepage ({{arrival.entry}})",
+    "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted{{/region.override}}"
+   ],
+   "acts": [
+    {
+     "type": "page_view"
+    }
+   ],
+   "will": [
+    "The hero and the deals answer <b>the search and her region</b>: the campaign term seeds TV, her state’s sales lean the rest",
+    "The Arrival panel names {{#region.override}}the override’s region, labelled as asserted{{/region.override}}{{^region.override}}the region <b>the edge located, from the request</b>{{/region.override}}, the census (shown, never scored) and the regional lean, labelled synthetic → warehouse",
+    "Her own meters are empty: nothing about <b>her</b> is known yet"
+   ],
+   "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where she is</b>: {{#region.override}}her region is a rehearsal override, labelled{{/region.override}}{{^region.override}}her region comes from the request{{/region.override}}{{#region.lean}}, and her state’s sales lean {{region.lean}}{{/region.lean}}. The census is shown, never scored; Compare sets the site’s own page beside it.",
+   "run": [
+    {
+     "publish": "reset"
+    },
+    {
+     "call": "arrive"
+    },
+    {
+     "focus": {
+      "panel": "arrival"
+     }
+    },
+    {
+     "open": "home",
+     "land": true,
+     "args": {
+      "quiet": true,
+      "focus": "hero"
+     }
+    }
+   ]
+  },
+  {
+   "key": "contrast",
+   "no": "2",
+   "act": 1,
+   "who": "shopper",
+   "label": "The same page, another state",
+   "declare": [
+    "<b>Asserts</b> {{region.contrastName}} on the request, labelled: not observed"
+   ],
+   "will": [
+    "A different state’s lean on the same stranger: the hero and the deals answer {{region.contrastName}}’s sales",
+    "The Arrival panel says the region is asserted, not observed"
+   ],
+   "line": "The same stranger and the same page, in <b>{{region.contrastName}}</b>: asserted and labelled, never the opening default. Another state’s sales lean the page another way; the price is the same for everyone.",
+   "run": [
+    {
+     "assert": {
+      "region": "{{region.contrast}}"
+     },
+     "note": [
+      "asserted",
+      "region = {{region.contrast}}",
+      "the contrast: asserted on the request, labelled · not observed"
+     ]
+    },
+    {
+     "ask": "home"
+    }
+   ]
+  },
+  {
+   "key": "two-rooms",
+   "no": "3",
+   "act": 2,
+   "who": "shopper",
+   "label": "Two TVs, then a washer",
+   "declare": [
+    "<b>Opens</b> two TV pages, then a front-load washer’s"
+   ],
+   "will": [
+    "<b>room</b> and <b>type</b> rise on her own meters; the room tiles reorder; the rail across rooms balances them"
+   ],
+   "line": "She opens two TVs, then a front-load washer, and the homepage changes with her, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P1",
+     "what": "she opens two TVs, then a front-load washer"
+    }
+   ]
+  },
+  {
+   "key": "fresh-visitor",
+   "no": "4",
+   "act": 2,
+   "who": "shopper",
+   "label": "The fresh visitor beside her",
+   "declare": [
+    "<b>Compare</b>: her page against a stranger’s, in the same region"
+   ],
+   "will": [
+    "Her page and a fresh visitor’s, side by side: the same region’s prior, and what her visit earned"
+   ],
+   "line": "Compare: her page against a stranger’s in the same region. The same catalog and the same public prices; only what she did is different.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P1",
+     "what": "the fresh visitor beside her"
+    }
+   ]
+  },
+  {
+   "key": "washer-page",
+   "no": "5",
+   "act": 3,
+   "who": "shopper",
+   "label": "The washer page",
+   "declare": [
+    "<b>Opens</b> the front-load washer’s page"
+   ],
+   "will": [
+    "Below the buy box: the dryer in her fuel, the pedestal, the stacking kit, the pair price",
+    "“Goes with” is shown as a merchandiser’s rule, on the receipt"
+   ],
+   "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer in her fuel</b>, the pedestal, the stacking kit and the pair price, each a merchandiser’s rule with its receipt.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "the washer page"
+    }
+   ]
+  },
+  {
+   "key": "top-loader",
+   "no": "6",
+   "act": 3,
+   "who": "shopper",
+   "label": "She switches to a top-loader",
+   "declare": [
+    "<b>Switches</b> to a top-load washer"
+   ],
+   "will": [
+    "The pedestal leaves, and its card says why: a top-loader takes none"
+   ],
+   "line": "She switches to a top-loader and the pedestal leaves: <b>a rule withdrawing itself</b>, with its reason on the card.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "she switches to a top-loader"
+    }
+   ]
+  },
+  {
+   "key": "tv-page",
+   "no": "7",
+   "act": 3,
+   "who": "shopper",
+   "label": "The TV page",
+   "declare": [
+    "<b>Opens</b> a TV’s page"
+   ],
+   "will": [
+    "The soundbar for the series and the mount for the VESA pattern"
+   ],
+   "line": "The TV page: the soundbar matched to its series and the mount for its VESA pattern. <b>The same engine, a different room.</b>",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "the TV page"
+    }
+   ]
+  },
+  {
+   "key": "range-page",
+   "no": "8",
+   "act": 3,
+   "who": "shopper",
+   "label": "The range page",
+   "declare": [
+    "<b>Opens</b> a range’s page"
+   ],
+   "will": [
+    "The over-the-range microwave, the dishwasher, and the package price when it is lower"
+   ],
+   "line": "The kitchen path: the range, the microwave above it, the dishwasher beside it, and <b>the package</b> when it costs less than the three.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "the range page"
+    }
+   ]
+  },
+  {
+   "key": "qned-oled",
+   "no": "9",
+   "act": 4,
+   "who": "shopper",
+   "label": "QNED beside OLED, a size up",
+   "declare": [
+    "<b>Opens</b> a QNED page with the OLED beside it, and a size up from her viewing distance"
+   ],
+   "will": [
+    "Tier and size band move on her meters; the price is the same for everyone"
+   ],
+   "line": "A QNED page with the OLED beside it, and a size up from her viewing distance: <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "a QNED page, with the OLED beside it; a size up from her viewing distance"
+    }
+   ]
+  },
+  {
+   "key": "closet-width",
+   "no": "10",
+   "act": 4,
+   "who": "shopper",
+   "label": "She enters a closet width",
+   "declare": [
+    "<b>Enters</b> the width of her laundry closet"
+   ],
+   "will": [
+    "Models that do not fit drop out, and the page counts them: hidden, wider than your space"
+   ],
+   "line": "She enters her closet’s width, and the models that would not fit drop out, counted on the page: <b>hidden, wider than your space</b>.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P2",
+     "what": "she enters a closet width"
+    }
+   ]
+  },
+  {
+   "key": "window-closes",
+   "no": "11",
+   "act": 5,
+   "who": "merch",
+   "label": "An offer’s window closes",
+   "declare": [
+    "<b>Publishes</b> the catalog: the gift-card offer’s window has closed, with the offers that close with it"
+   ],
+   "will": [
+    "The closed offer and the out-of-stock package leave every surface on the next decision"
+   ],
+   "line": "The merchandiser’s day: an offer’s window closes, and a package loses a member to stock. Both leave <b>every surface</b> on the next decision, by the catalog’s own rules.",
+   "run": [
+    {
+     "publish": "catalog",
+     "name": "{{beatNames.windowCloses}}",
+     "reason": "an offer’s window closes; a package member is out of stock"
+    },
+    {
+     "ask": "home"
+    }
+   ]
+  },
+  {
+   "key": "pin-launch",
+   "no": "12",
+   "act": 5,
+   "who": "merch",
+   "label": "The merchandiser pins a launch",
+   "declare": [
+    "<b>Pins</b> a launch-series offer into the deals, for everyone"
+   ],
+   "will": [
+    "The pin leads the deals; its receipt shows what the engine would have chosen"
+   ],
+   "line": "The merchandiser pins a launch series. The pin leads, and its receipt says so: <b>the merchandiser outranks the engine, visibly</b>.",
+   "run": [
+    {
+     "publish": "slots",
+     "name": "{{beatNames.pinLaunch}}",
+     "reason": "pin a launch series into the deals"
+    },
+    {
+     "ask": "home"
+    }
+   ]
+  },
+  {
+   "key": "three-weeks",
+   "no": "13",
+   "act": 6,
+   "who": "engine",
+   "label": "Three weeks later",
+   "declare": [
+    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish, and her dials are read three weeks on"
+   ],
+   "will": [
+    "Laundry interest faded faster than TV, by the dials; the continue hero answers her return"
+   ],
+   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and her dials are read three weeks on. <b>Laundry faded faster than TV</b>, by the published memory, and the homepage picks up where she left off.",
+   "run": [
+    {
+     "publish": "catalog",
+     "name": "{{beatNames.threeWeeks}}",
+     "reason": "three weeks pass: every window moves back 21 days"
+    },
+    {
+     "call": "notBuilt",
+     "lane": "P1",
+     "what": "the labelled clock jump on her dials, and the continue hero"
+    }
+   ]
+  },
+  {
+   "key": "what-changed",
+   "no": "14",
+   "act": 6,
+   "who": "shopper",
+   "label": "What changed while she was away",
+   "declare": [
+    "<b>Returns</b> to her shortlist"
+   ],
+   "will": [
+    "The shortlist’s deltas: a price that changed, a model that arrived"
+   ],
+   "line": "What changed while she was away: the price that moved on her shortlist and the model that arrived since. The page says what changed; the price itself is the catalog’s.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P1",
+     "what": "the price that changed, the model that arrived"
+    }
+   ]
+  },
+  {
+   "key": "phone-sign-in",
+   "no": "15",
+   "act": 7,
+   "who": "shopper",
+   "label": "The phone, then sign-in",
+   "declare": [
+    "<b>Opens</b> the site on her phone: a stranger",
+    "<b>Signs in</b> as {{signIn.account}}, a fictional account; the worker mints the signed link"
+   ],
+   "will": [
+    "The phone becomes the laptop’s taste in one request: linked at sign-in, consented, no device matching"
+   ],
+   "line": "On her phone she is a stranger until she signs in as <b>{{signIn.account}}</b>: then the phone becomes the laptop’s taste in one request. Linked at sign-in and consented; no device matching.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P3",
+     "what": "the phone: a stranger, then sign-in (live, a fictional account; the worker mints the signed link)"
+    }
+   ]
+  },
+  {
+   "key": "best-buy-counts",
+   "no": "16",
+   "act": 8,
+   "who": "shopper",
+   "label": "Best Buy counts",
+   "declare": [
+    "<b>Chooses</b> Best Buy pickup on one page and Find a Retailer on another"
+   ],
+   "will": [
+    "Two named outcomes in the day report, with attach and attribution, and “not yet significant”"
+   ],
+   "line": "Best Buy pickup on one page, Find a Retailer on another, and the day report counts both as <b>named outcomes</b>, with attach and attribution. Not yet significant, and it says so: attribution, not incrementality.",
+   "run": [
+    {
+     "call": "notBuilt",
+     "lane": "P3",
+     "what": "she presses Best Buy pickup on one page and Find a Retailer on another; the day report"
+    }
+   ]
+  }
+ ]
+}

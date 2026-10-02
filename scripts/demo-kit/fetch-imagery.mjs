@@ -22,7 +22,7 @@
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { isEntry } from './lib/cli.mjs';
-import { argOf, configArg, loadValidConfig } from './lib/config.mjs';
+import { argOf, configArg, configFileFor, loadValidConfig } from './lib/config.mjs';
 import { contactSheet, fetchImagery, loadSharp } from './lib/imagery.mjs';
 
 export const USAGE = 'usage: node scripts/demo-kit/fetch-imagery.mjs --config <file> [--only id,id] [--force] [--refetch] [--out <dir>] [--cache <dir>] [--date YYYY-MM-DD] [--gate-from <manifest>] [--sheet <png>]';
@@ -31,7 +31,8 @@ export const USAGE = 'usage: node scripts/demo-kit/fetch-imagery.mjs --config <f
 export async function main(argv = process.argv.slice(2)) {
   const file = configArg(argv, ['--config', '--only', '--out', '--cache', '--date', '--gate-from', '--sheet']);
   if (!file) { console.error(USAGE); return 2; }
-  const { config, path } = loadValidConfig(file, { sections: ['imagery'] });
+  // A demo's slug names scripts/demo-kit/configs/<slug>.json, as check-demo.mjs and rehearse.mjs read it (lane K4).
+  const { config, path } = loadValidConfig(configFileFor(file) ?? file, { sections: ['imagery'] });
   const imagery = config.imagery;
   const only = (argOf(argv, '--only', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
   const unknown = only.filter((id) => !imagery.sources.some((s) => s.id === id));

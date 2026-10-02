@@ -44,9 +44,13 @@ test('never a customer stamp: the staging and production workers and their queue
   for (const file of ['wrangler.toml', './wrangler.toml', 'scripts/../wrangler.toml', 'WRANGLER.TOML']) {
     assert.match(errorsOf((c) => { c.worker.config = file; }), /^worker\.config: ".*" is the shared worker's config, which also deploys the customer stamps/m, file);
   }
-  // The controls: another demo's own worker config and a demo-shaped worker pass these rules.
+  // The controls: another demo's own worker config passes these rules, and so does the demo's own worker and queue.
   assert.equal(errorsOf((c) => { c.worker.config = 'wrangler.top-offers.toml'; }), '');
-  assert.equal(errorsOf((c) => { c.worker.name = 'edge-platform-vantage-2'; c.worker.queue = 'events-vantage-2'; }), '');
+  assert.equal(errorsOf((c) => { c.worker.name = 'edge-platform-vantage'; c.worker.queue = 'events-vantage'; }), '');
+  // A demo-shaped worker of another name is refused since lane K4 (the design's ruling on H1's question: a demo's
+  // worker is edge-platform-<slug> and its queue events-<slug>, derived by the scaffolder, enforced by the validator).
+  assert.match(errorsOf((c) => { c.worker.name = 'edge-platform-vantage-2'; }), /^worker\.name: "edge-platform-vantage-2" must be "edge-platform-vantage", the worker of this demo's own slug/m);
+  assert.match(errorsOf((c) => { c.worker.queue = 'events-vantage-2'; }), /^worker\.queue: "events-vantage-2" must be "events-vantage", the queue of this demo's own slug/m);
 });
 
 test('the public directory is public/<slug>: a copied config left unedited cannot write into another demo (R2)', () => {

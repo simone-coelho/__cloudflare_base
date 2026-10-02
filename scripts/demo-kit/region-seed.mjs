@@ -17,7 +17,7 @@
 // DEPLOYMENT_PROFILE=demo and explicit JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, and TENANTS must grant the
 // config's region.operator the tenant.
 import { isEntry } from './lib/cli.mjs';
-import { argOf, configArg, loadValidConfig } from './lib/config.mjs';
+import { argOf, configArg, configFileFor, loadValidConfig } from './lib/config.mjs';
 import { buildRegions, hereRegion, modelLine, regionLine, rowsLine, rowsProblems, runRegionSeed } from './lib/region.mjs';
 import { isLoopbackTarget, resolveToolToken, tokenFromArgs } from '../lib/tool-token.mjs';
 
@@ -27,7 +27,8 @@ export const USAGE = 'usage: node scripts/demo-kit/region-seed.mjs --config <fil
 export async function main(argv = process.argv.slice(2)) {
   const file = configArg(argv, ['--config', '--base', '--token', '--regions']);
   if (!file) { console.error(USAGE); return 2; }
-  const { config, path } = loadValidConfig(file, { sections: ['region'] });
+  // A demo's slug names scripts/demo-kit/configs/<slug>.json, as check-demo.mjs and rehearse.mjs read it (lane K4).
+  const { config, path } = loadValidConfig(configFileFor(file) ?? file, { sections: ['region'] });
   const region = config.region;
   const tenant = config.tenant;
   const base = argOf(argv, '--base', `http://localhost:${config.worker.devPort}`).replace(/\/+$/, '');
