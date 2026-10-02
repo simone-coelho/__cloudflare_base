@@ -53,7 +53,7 @@ The customer keeps its pages and its front end; the engine answers their questio
 4. Your team's published documents define every rule and weight the engine follows.
 5. Every decision has a receipt, the record of what was served and why, kept wherever recording is on.
 
-![The engine runs on Cloudflare at the edge: workers, durable objects, storage](../figures/architecture.png)
+![Where the engine runs on Cloudflare](../figures/architecture.png)
 
 **Say it like this.** Your pages send events. The engine returns decisions, addressed by your own content ids. Your front end renders, always.
 
