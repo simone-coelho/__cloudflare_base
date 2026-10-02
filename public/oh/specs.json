@@ -1,5 +1,5 @@
 {
- "about": "OH product specs (Lane D2, 2026-10-02), one record per sku, merged over public/oh/products.json by sku on the page. Read once per product from the lg.com/us product page's server data (pageProps.productData.product, productPriceData.price, productData.allInfo), as an anonymous visitor, on 2026-10-02. title: the page's product title. salePrice: the page's final price. listPrice: the page's MSRP, only when it is above the final price (a struck price). cta: cart for Add to Cart (CART) and Notify Me (NOTIFY: sold here, out of stock that day), retailer for Find a Retailer (RETAIL) and an external seller (EXTERNAL); absent where the page hides its button (HIDE). width, depth, height: inches, the product's own outside dimensions (for TVs without the stand; for ranges the overall width, height with backguard and depth with handle; for laundry, dishwashers and the rest the page's Product (W x H x D)). vesa: for TVs, the VESA mounting pattern, W x H in millimetres. image: the OH image (public/oh/img/index.json's accepted WebP). A field the page did not give is absent, never null, so a merge never erases the feed's value. Prices change daily; these are 2026-10-02's.",
+ "about": "OH product specs (Lane D2, 2026-10-02), one record per sku, merged over public/oh/products.json by sku on the page. Read once per product from the lg.com/us product page's server data (pageProps.productData.product, productPriceData.price, productData.allInfo), as an anonymous visitor, on 2026-10-02. title: the page's product title. salePrice: the page's final price (absent where the page shows none: Find a Retailer products). listPrice: the page's MSRP, only when it is above the final price (a struck price). cta: cart for Add to Cart (CART) and Notify Me (NOTIFY: sold here, out of stock that day), retailer for Find a Retailer (RETAIL) and an external seller (EXTERNAL); absent where the page hides its button (HIDE). width, depth, height: inches, the product's own outside dimensions, read in the order the spec term names them, except LG's TV-mount pages, which label \"Product (W x D x H)\" but list width, height and thickness off the wall (checked by hand on all ten); LSW240B's width is left out because its page gives 116 inches (for TVs without the stand; for microwaves the Exterior; for soundbars the bar itself; for ranges the overall width, height and depth; for laundry, dishwashers and the rest the page's Product (W x H x D)). vesa: for TVs, the VESA mounting pattern, W x H in millimetres. image: the OH image (public/oh/img/index.json's accepted WebP). A field the page did not give is absent, never null, so a merge never erases the feed's value. Prices change daily; these are 2026-10-02's.",
  "asOf": "2026-10-02",
  "counts": {
   "records": 591,
@@ -7,9 +7,9 @@
   "salePrice": 378,
   "listPrice": 318,
   "cta": 561,
-  "width": 475,
-  "depth": 469,
-  "height": 470,
+  "width": 520,
+  "depth": 515,
+  "height": 516,
   "vesa": 132,
   "image": 591
  },
@@ -1460,6 +1460,9 @@
    "sku": "OLED83M3PUA",
    "title": "LG OLED evo M Series 83 Inch Class 4K Smart TV with Wireless Video & Audio Transfer",
    "cta": "retailer",
+   "width": 72.7,
+   "depth": 1.1,
+   "height": 42,
    "vesa": "400x400",
    "image": "/oh/img/products/oled83m3pua.webp"
   },
@@ -1500,6 +1503,9 @@
    "title": "Sound Suite H7 | Wireless Soundbar 9.1.6 Spatial Audio | Dolby Atmos FlexConnect Soundbar for TV",
    "salePrice": 999.99,
    "cta": "cart",
+   "width": 47.2,
+   "depth": 5.6,
+   "height": 2.5,
    "image": "/oh/img/products/h7.webp"
   },
   {
@@ -1579,12 +1585,18 @@
    "salePrice": 99.99,
    "listPrice": 119.99,
    "cta": "cart",
+   "width": 25.6,
+   "depth": 3.9,
+   "height": 2.5,
    "image": "/oh/img/products/s20a.webp"
   },
   {
    "sku": "S30A",
    "title": "S30A LG Soundbar for TV with Dolby Audio™ 2.1 channel",
    "cta": "retailer",
+   "width": 28.4,
+   "depth": 3.2,
+   "height": 2.5,
    "image": "/oh/img/products/s30a.webp"
   },
   {
@@ -1593,6 +1605,9 @@
    "salePrice": 149.99,
    "listPrice": 219.99,
    "cta": "cart",
+   "width": 28.4,
+   "depth": 3.2,
+   "height": 2.5,
    "image": "/oh/img/products/s35a.webp"
   },
   {
@@ -1600,6 +1615,9 @@
    "title": "S40T LG Soundbar for TV with Dolby Audio™ 2.1 channel",
    "salePrice": 229.99,
    "cta": "cart",
+   "width": 28.4,
+   "depth": 3.4,
+   "height": 2.5,
    "image": "/oh/img/products/s40t.webp"
   },
   {
@@ -1608,12 +1626,18 @@
    "salePrice": 199.99,
    "listPrice": 279.99,
    "cta": "cart",
+   "width": 28.4,
+   "depth": 3.4,
+   "height": 2.5,
    "image": "/oh/img/products/s40tr.webp"
   },
   {
    "sku": "S55TR",
    "title": "S55TR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1. channel",
    "cta": "retailer",
+   "width": 33.5,
+   "depth": 3.4,
+   "height": 2.5,
    "image": "/oh/img/products/s55tr.webp"
   },
   {
@@ -1622,12 +1646,18 @@
    "salePrice": 199.99,
    "listPrice": 249.99,
    "cta": "cart",
+   "width": 33.5,
+   "depth": 3.5,
+   "height": 2.5,
    "image": "/oh/img/products/s60t.webp"
   },
   {
    "sku": "S60TR",
    "title": "S60TR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1 channel",
    "cta": "retailer",
+   "width": 33.5,
+   "depth": 3.5,
+   "height": 2.5,
    "image": "/oh/img/products/s60tr.webp"
   },
   {
@@ -1635,6 +1665,9 @@
    "title": "S6FTR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1 channel",
    "salePrice": 399.99,
    "cta": "cart",
+   "width": 33.5,
+   "depth": 3.5,
+   "height": 2.5,
    "image": "/oh/img/products/s6ftr.webp"
   },
   {
@@ -1642,6 +1675,9 @@
    "title": "S70TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.1 channel, Best QNED matching",
    "salePrice": 349.99,
    "cta": "cart",
+   "width": 37.4,
+   "depth": 4.5,
+   "height": 2.5,
    "image": "/oh/img/products/s70tr.webp"
   },
   {
@@ -1650,12 +1686,18 @@
    "salePrice": 349.99,
    "listPrice": 399.99,
    "cta": "cart",
+   "width": 37.4,
+   "depth": 4.5,
+   "height": 2.5,
    "image": "/oh/img/products/s70ty.webp"
   },
   {
    "sku": "S7FTRS",
    "title": "S7FTRS LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.1 channel",
    "cta": "retailer",
+   "width": 37.4,
+   "depth": 4.5,
+   "height": 2.5,
    "image": "/oh/img/products/s7ftrs.webp"
   },
   {
@@ -1663,6 +1705,9 @@
    "title": "S80TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.3 channel, Best OLED matching",
    "salePrice": 849.99,
    "cta": "cart",
+   "width": 39.3,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s80tr.webp"
   },
   {
@@ -1670,6 +1715,9 @@
    "title": "S80TY LG Soundbar for TV with Dolby Atmos 3.1.3 channel, Best LG OLED matching",
    "salePrice": 599.99,
    "cta": "cart",
+   "width": 39.3,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s80ty.webp"
   },
   {
@@ -1677,6 +1725,9 @@
    "title": "S90TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 7.1.3 channel, Best OLED matching",
    "salePrice": 1199.99,
    "cta": "cart",
+   "width": 49.2,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s90tr.webp"
   },
   {
@@ -1684,6 +1735,9 @@
    "title": "S90TY LG Soundbar for TV with Dolby Atmos® 5.1.3 channel, Best LG OLED matching",
    "salePrice": 999.99,
    "cta": "cart",
+   "width": 49.2,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s90ty.webp"
   },
   {
@@ -1692,6 +1746,9 @@
    "salePrice": 1499.99,
    "listPrice": 1699.99,
    "cta": "cart",
+   "width": 49.2,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s95ar.webp"
   },
   {
@@ -1699,6 +1756,9 @@
    "title": "S95TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 9.1.5 channel, Best OLED matching",
    "salePrice": 1599.99,
    "cta": "cart",
+   "width": 49.2,
+   "depth": 5.3,
+   "height": 2.5,
    "image": "/oh/img/products/s95tr.webp"
   },
   {
@@ -1707,6 +1767,9 @@
    "salePrice": 699.99,
    "listPrice": 799.99,
    "cta": "cart",
+   "width": 38.4,
+   "depth": 4.9,
+   "height": 2.5,
    "image": "/oh/img/products/sc9s.webp"
   },
   {
@@ -1714,7 +1777,6 @@
    "title": "EZ Slim Wall Mount for LG TV's (VESA - 200 x 200)",
    "salePrice": 49.99,
    "cta": "cart",
-   "width": 116,
    "depth": 0.55,
    "height": 9.21,
    "image": "/oh/img/products/lsw240b.webp"
@@ -1784,6 +1846,9 @@
    "title": "Slim Wall Mount",
    "salePrice": 69.99,
    "cta": "cart",
+   "width": 17.8,
+   "depth": 0.51,
+   "height": 5.08,
    "image": "/oh/img/products/wb22egb.webp"
   },
   {
@@ -4836,7 +4901,7 @@
    "title": "2.2 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
    "salePrice": 519,
    "cta": "cart",
-   "width": 29.87,
+   "width": 29.88,
    "depth": 15.81,
    "height": 17.72,
    "image": "/oh/img/products/lmh2235st.webp"
@@ -4847,12 +4912,18 @@
    "salePrice": 449,
    "listPrice": 549,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.81,
+   "height": 17.72,
    "image": "/oh/img/products/lmhm2237st.webp"
   },
   {
    "sku": "LMV1760ST",
    "title": "1.7 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
    "cta": "retailer",
+   "width": 29.88,
+   "depth": 15.69,
+   "height": 16.44,
    "image": "/oh/img/products/lmv1760st.webp"
   },
   {
@@ -4861,18 +4932,27 @@
    "salePrice": 299,
    "listPrice": 349,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.69,
+   "height": 16.44,
    "image": "/oh/img/products/lmv1764st.webp"
   },
   {
    "sku": "LMV1831SS",
    "title": "1.8 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
    "cta": "retailer",
+   "width": 29.88,
+   "depth": 15.38,
+   "height": 16.44,
    "image": "/oh/img/products/lmv1831ss.webp"
   },
   {
    "sku": "LMV2031SS",
    "title": "2.0 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
    "cta": "retailer",
+   "width": 29.88,
+   "depth": 15.81,
+   "height": 16.44,
    "image": "/oh/img/products/lmv2031ss.webp"
   },
   {
@@ -4880,7 +4960,7 @@
    "title": "2.0 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
    "salePrice": 499,
    "cta": "cart",
-   "width": 29.87,
+   "width": 29.88,
    "depth": 15.81,
    "height": 16.44,
    "image": "/oh/img/products/lmvm2033st.webp"
@@ -4891,6 +4971,9 @@
    "salePrice": 599,
    "listPrice": 899,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.69,
+   "height": 16.44,
    "image": "/oh/img/products/mhec1737f.webp"
   },
   {
@@ -4899,6 +4982,9 @@
    "salePrice": 949,
    "listPrice": 1399,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 16.38,
+   "height": 16.5,
    "image": "/oh/img/products/mhes1738n.webp"
   },
   {
@@ -4907,6 +4993,9 @@
    "salePrice": 1099,
    "listPrice": 1249,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 16.38,
+   "height": 16.5,
    "image": "/oh/img/products/mheu1738n.webp"
   },
   {
@@ -4915,6 +5004,9 @@
    "salePrice": 1049,
    "listPrice": 1199,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 16.38,
+   "height": 16.5,
    "image": "/oh/img/products/mheu1738x.webp"
   },
   {
@@ -4923,6 +5015,9 @@
    "salePrice": 399,
    "listPrice": 649,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 19.13,
+   "height": 11.94,
    "image": "/oh/img/products/mvef1323f.webp"
   },
   {
@@ -4931,6 +5026,9 @@
    "salePrice": 499,
    "listPrice": 749,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 19.13,
+   "height": 11.94,
    "image": "/oh/img/products/mvef1337f.webp"
   },
   {
@@ -4939,6 +5037,9 @@
    "salePrice": 449,
    "listPrice": 649,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvel2033d.webp"
   },
   {
@@ -4947,12 +5048,18 @@
    "salePrice": 399,
    "listPrice": 599,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvel2033f.webp"
   },
   {
    "sku": "MVEL2034X",
    "title": "2.0 cu. ft. Wi-Fi Enabled Over-the-Range Microwave Oven with EasyClean®",
    "cta": "retailer",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvel2034x.webp"
   },
   {
@@ -4961,6 +5068,9 @@
    "salePrice": 399,
    "listPrice": 599,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvel2035x.webp"
   },
   {
@@ -4969,6 +5079,9 @@
    "salePrice": 449,
    "listPrice": 649,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvel2035z.webp"
   },
   {
@@ -4976,6 +5089,9 @@
    "title": "2.1 cu. ft. Smart Over-the-Range Microwave with ExtendaVent® 2.0",
    "salePrice": 699,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 17.94,
    "image": "/oh/img/products/mvel2125f.webp"
   },
   {
@@ -4984,6 +5100,9 @@
    "salePrice": 469,
    "listPrice": 699,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 17.94,
    "image": "/oh/img/products/mvel2125x.webp"
   },
   {
@@ -4992,6 +5111,9 @@
    "salePrice": 549,
    "listPrice": 799,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 17.94,
    "image": "/oh/img/products/mvel2137f.webp"
   },
   {
@@ -5000,6 +5122,9 @@
    "salePrice": 229,
    "listPrice": 299,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvem1621y.webp"
   },
   {
@@ -5008,6 +5133,9 @@
    "salePrice": 249,
    "listPrice": 399,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvem1721f.webp"
   },
   {
@@ -5016,6 +5144,9 @@
    "salePrice": 299,
    "listPrice": 499,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvem1825f.webp"
   },
   {
@@ -5024,6 +5155,9 @@
    "salePrice": 299,
    "listPrice": 499,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvem1825x.webp"
   },
   {
@@ -5032,6 +5166,9 @@
    "salePrice": 349,
    "listPrice": 549,
    "cta": "cart",
+   "width": 29.88,
+   "depth": 15.88,
+   "height": 16.44,
    "image": "/oh/img/products/mvem1825z.webp"
   },
   {
