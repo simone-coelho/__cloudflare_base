@@ -37,7 +37,7 @@ Where this document and the common brief differ, the common brief governs and th
 |---|---|---|---|---|
 | Marketer | Writes about and positions the product; not technical | What the engine is and why it matters, in words to reuse | The rule, one visitor's story, the words to use and to avoid | Formulas, the stack, commands |
 | Account executive | Sells and qualifies; promises only what is true | What is built, designed and open; the questions customers ask; which demo to show | Sentences to say and never to say, the customer's asks, when to bring an SE | The arithmetic, binding names |
-| Solutions engineer | Semi-technical; explains concepts and brings an engineer when it gets deep | How a decision is made, where it runs, what a customer provides | The walk, the arithmetic at published constants, the stack, the honest open items | Code paths, deploy commands |
+| Solutions engineer | Semi-technical; explains concepts and brings an engineer when it gets deep | How a decision is made, where it runs, what a customer provides | The walk, the arithmetic at published constants, the stack, the honest open items | Deploy commands; code paths appear only in (d)'s column headed "Where in the code (for engineers)", for the engineer an SE brings (§3.5) |
 
 **One reader per piece.**
 
@@ -47,9 +47,9 @@ Where this document and the common brief differ, the common brief governs and th
 | (b) What it is | A marketer | `content/what-it-is.md` | `/what-it-is` | `word/What-It-Is-v1.0.docx` |
 | (c) Selling it | An account executive | `content/selling-it.md` | `/selling-it` | `word/Selling-It-v1.0.docx` |
 | (d) How it works and where it runs | A pre-sales solutions engineer | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | `word/How-It-Works-v1.0.docx` |
-| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits-source.html` | `/credits` | `word/Where-AI-Credits-Fit-v1.0.docx` |
+| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits-source.html` for the page; `content/credits.md`, the same text, for Word | `/credits` | `word/Where-AI-Credits-Fit-v1.0.docx` |
 | (f) The glossary | A marketer; every entry holds for the other two | `GLOSSARY.md` | `/glossary` | `word/Glossary-v1.0.docx` |
-| (g) The demo map | An account executive | §3.8 of this design, until `content/demo-map.md` exists | `/demos` | `word/Demo-Map-v1.0.docx` |
+| (g) The demo map | An account executive | `content/demos.md` | `/demos` | `word/Demo-Map-v1.0.docx` |
 | (h) What is built, designed and open | Anyone at Optimizely who must know what may be claimed today (§12) | `content/status.md` | `/status` | `word/Status-v1.0.docx` |
 
 Paths in this table are relative to `docs/enablement/`; pages are addresses on the enablement site.
@@ -98,7 +98,7 @@ Paths in this table are relative to `docs/enablement/`; pages are addresses on t
 
 ### 3.0 What every piece shares
 
-Every piece except the glossary and the status page follows this shape; their exceptions are in §3.7 and §3.10. Piece (d) as accepted departs in the ways §3.5 records, and the credits page keeps the shared page's own shape (§3.6).
+Every piece except the glossary and the status page follows this shape; their exceptions are in §3.7 and §3.10. Pieces (b) and (d) as accepted depart in the ways §3.3 and §3.5 record, and the credits page keeps the shared page's own shape (§3.6).
 
 1. **Title line:** `# Behavioral Targeting and Intelligence: <title>`, the only place the name is written.
 2. **Reader line:** the first paragraph names the one reader, for example "For account executives."
@@ -114,16 +114,16 @@ Every piece except the glossary and the status page follows this shape; their ex
 
 | Id | Paragraph | Used in | Basis in S2 |
 |---|---|---|---|
-| C | A visitor's behavior sets their interests. The brand's team sets the rules. The engine ranks what is left, and gives its reasons. | (a), (b) as the rule | §3.3 to §3.4, §3.9 to §3.12, §3.14 |
-| P1 | The engine decides which of the brand's own content each visitor sees, and in what order. For every visitor who has agreed to it, it keeps a graded, fading interest in each value of each dimension the brand chooses to score on, built from what they do on the site. When a page asks, it ranks the brand's own published content for each slot on the page against that interest, leaning, where the brand turns it on, on what their region is interested in until they have shown interests of their own. It answers with the brand's own content ids in order, each with the reasons that placed it there. It runs on Cloudflare's network, calls no AI model to decide, and every setting that can change an answer lives in published, versioned documents that the brand's team changes without a software release. | (b), (c), (d) | §1, edited as §4.7 item 1 records |
+| C | A visitor's behavior sets their interests. The brand's team sets the rules. The engine ranks what is left, and gives its reasons. | (a), as the lede and the last line; (b) as accepted has its own rule (§3.3) | §3.3 to §3.4, §3.9 to §3.12, §3.14 |
+| P1 | The engine decides which of the brand's own content each visitor sees, and in what order. For every visitor who has agreed to it, it keeps a graded, fading interest in each value of each dimension the brand chooses to score on, built from what they do on the site. When a page asks, it ranks the brand's own published content for each slot on the page against that interest, leaning, where the brand turns it on, on what their region is interested in until they have shown interests of their own. It answers with the brand's own content ids in order, each with the reasons that placed it there. It runs on Cloudflare's network, calls no AI model to decide, and every setting that can change an answer lives in published, versioned documents that the brand's team changes without a software release. | (c) | §1, edited as §4.7 item 1 records |
 | P2 | The engine decides, and it calls no AI model to decide, so serving a page never spends an AI credit, however much traffic grows. AI work that people do, such as writing content, explaining results or analyzing them, is where credits belong, and Opal is that product; it is not connected to the engine today. The engine's own reasons for each decision are arithmetic it produces itself. How each line is metered and priced is monetization's decision and is still open. | (b), (c), (d), (h); (e) as its summary | §6.1 to §6.3 |
-| P3 | Nothing is personalized or recorded until the site passes the visitor's explicit consent choice. Without it, the visitor sees the site's own defaults. | (b), (c), (d) | §3.2 |
-| P4 | Learning is built, and it changes nothing until a person raises the learning dial. | (b), (c), (d) | §5.2 |
-| P5 | Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | (c), (d) | §3.15, §5.1 |
-| P6 | The site sends events and asks for decisions. The engine answers with the brand's own content ids in order, each with its reasons. The site renders them, and renders its own defaults whenever the engine is silent. | (b), (c), (d) | §1, §7.1, §7.7 |
-| P7 | It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons. | (b), (c), (d) | §1, §6.1, §3.14 |
-| P8 | Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open. | (c), (d) | §0 Stamp, §10.2, §10.3 |
-| P9 | ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today. | (b), (c), (d) | §6.2, §7.3, §7.4 |
+| P3 | Nothing is personalized or recorded until the site passes the visitor's explicit consent choice. Without it, the visitor sees the site's own defaults. | (c); (b) and (d) in their own words | §3.2 |
+| P4 | Learning is built, and it changes nothing until a person raises the learning dial. | (c); (b) and (d) in their own words | §5.2 |
+| P5 | Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | (c); (d) in its own words | §3.15, §5.1 |
+| P6 | The site sends events and asks for decisions. The engine answers with the brand's own content ids in order, each with its reasons. The site renders them, and renders its own defaults whenever the engine is silent. | (c); (d) in its own words | §1, §7.1, §7.7 |
+| P7 | It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons. | (c); (b) and (d) in their own words | §1, §6.1, §3.14 |
+| P8 | Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open. | (c); (d) in its own words | §0 Stamp, §10.2, §10.3 |
+| P9 | ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today. | (c); (b) and (d) in their own words | §6.2, §7.3, §7.4 |
 | P10 | For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. | (b), (c), (d), (g), (h) | §10.4 item 4 |
 
 **Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) about 290 as built, with the three card rules. (b) 1,200 to 1,800. (c) 1,800 to 2,400. (d), as accepted, a walk of about 1,250 words and a detail of about 2,200 words of prose, plus tables. (e) up to 1,600. (f) as needed. (g) up to 1,100. (h) as its tables need, with little prose around them.
@@ -223,35 +223,28 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 
 ### 3.3 (b) What it is, for marketing
 
-- **Reader:** a marketer. **Owner:** C1. **Source:** `content/what-it-is.md`. **Address:** `/what-it-is`. **Word copy:** `word/What-It-Is-v1.0.docx`.
+This section describes the piece as lane C1 built it and the lead accepted it, with review R's round-one edits applied (`lanes/R.md` §4; the lead's ruling, option 1, §12). Where it departs from §3.0, the departure is recorded here.
+
+- **Reader:** a marketer; the reader line is "For marketing, writing about the engine for customers and the market." **Owner:** C1. **Source:** `content/what-it-is.md`. **Address:** `/what-it-is`. **Word copy:** `word/What-It-Is-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: what it is`
-- **Rule:** paragraph C.
-- **Sections, in order** (headings verbatim):
-  1. No heading: the reader line ("For marketing.") and the rule.
-  2. `## One visitor shows what it does`: the example. A stranger arrives from an ad for one product; the page answers how they arrived and where they are; they look at something else; the page follows them; they leave, and their session is counted. No numbers and no customer. It may close by naming Vantage as the hosted demo where this can be seen, with its address.
-  3. `## The engine in one paragraph`: P1 verbatim.
-  4. `## Before the visitor arrives, the brand sets the rules`: rows B1, B2 (without its last clause), B3, B4, B5, B7.
-  5. `## While the visitor browses, the engine ranks what is left`: rows D1, D2, D3, D4, D5 (first sentence), D8, D19, D14.
-  6. `## After the visitor leaves, the engine counts what worked`: rows A1 (first sentence, ending "once recording is switched on"), A2, A4, A5. Then: "The one exception to keep straight: learning is built, and it changes nothing until a person raises the learning dial."
-  7. `## The name has two halves`: behavioral targeting is the rules and weights the brand's team writes, in force without a software release; intelligence is counted learning behind a dial, never AI; and the name is not the behavioral targeting in other Optimizely products. The full name is not repeated here.
-  8. `## Where AI and credits fit`: P2, and the credits page's address.
-  9. `## What it does not do`: these sentences, verbatim. "It calls no AI model to decide." "It does not paint the page; the site renders what it is sent." "It does not need to know who the visitor is." "It reads no device detail beyond the operating system family of the visitor's phone." "It never stores the visitor's account id." P9.
-  10. `## Words to use, and words to avoid`: the lists below.
-  11. The rule again.
+- **Rule:** C1's, first and last, in bold: "With consent, the engine remembers what each visitor is interested in, not who they are, and ranks your content by the rules your team publishes." Paragraph C stays the landing page's.
+- **Sections, in order, as built:**
+  1. No heading: the reader line and the rule.
+  2. `## What it is not`: three contrasts, each with a class of system, phrased as what the engine does instead, under the lead's allowance (§5) in place of R-b1's deletion. "Segments" appears once, as the other class's own word. The receipt clause in its third contrast follows R's receipt edits ("every answer carries its reasons"), and its link follows the renamed heading of item 4.
+  3. `## How it works, in five steps`: one visitor's session as the example, five bold-led steps, then R-b7's four-column table (`Step`, `When`, `What happens`, `Verdict`, one word per verdict), then "The one exception to keep straight:", which is recording (R-b8).
+  4. `## Where AI and credits fit` (R-b9): P2 verbatim, the two sentences R-b10 gives on visitor-facing AI and on tags proposed by the brand's own model, and a link to the credits page by its title.
+  5. `## What is true today`: the hosted demos with their addresses, P10 verbatim, and a three-row table of Built, Designed and Open, with R-b12 to R-b14 applied, so module order sits under Built (row D19) and per-context layout under Designed (row D16).
+  6. `## Sentences to say`, then `## Sentences never to say, and what to say instead`.
+  7. `## Questions marketing will be asked`: eight answers, with R-b15 and R-b16 applied.
+  8. `## See also`: real links to the other pieces (R-b17) and to the status page (R-b21).
+  9. The rule again.
 - **Figures:** the session figure, D1's `before-during-after`, added on the page as a Before / During / After switcher, marked as an addition; without JavaScript it is the plain figure (§3.9).
-- **Sentences to say:** C; "It works for visitors nobody has identified, from their first event, once they have consented."; "The brand's rules come first; the engine ranks what is left."; "Every answer carries its reasons."; P7's first clause; "Interest builds with what the visitor does and fades with time."; P4; P10; "Every setting is published and versioned, and changes without a software release."
-- **Never say, beyond §4.9:**
-
-| Never say | Say instead |
-|---|---|
-| "AI-powered personalization" | "Personalization that calls no AI model to decide." |
-| "It reads their mind", "it knows what they want" | "It counts what the visitor does." |
-| "One-to-one in real time" | "In the visitor's session, from their first event." |
-| "A recommendations engine" | "It ranks the brand's own content for each decided place on a page." |
-
-- **Built, designed and open content:** all Built except as the rows say; the exception is A5.
+- **Accepted departures from §3.0:** C1's rule, not paragraph C; C1's sections and noun-phrase headings, not statements; the five-step table in place of the session tables, so the rows are carried in its own words; the one exception is recording (A1), not A5; P2 and P10 verbatim, and P3, P4, P7 and P9 in its own words; C1's own sentences to say and never to say.
+- **Built, designed and open content:** as its table says, with D19 Built and D16 Designed; the exception is A1.
 
 ### 3.4 (c) Selling it, for account executives
+
+Piece (c) is rebuilt to this section, with review R's round-one edits applied where they still apply after the rebuild (`lanes/R.md` §5; the lead's ruling, option 2, §12). Its demo table moves to the demo map, and (c) links to it.
 
 - **Reader:** an account executive. **Owner:** C2. **Source:** `content/selling-it.md`. **Address:** `/selling-it`. **Word copy:** `word/Selling-It-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: selling it`
@@ -338,17 +331,24 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 | "The receipt itemizes every term" | "The receipt lists the four strongest tag terms and every adjustment; weaker tag terms are inside the base score." |
 | "The census drives the cold start" | "Census figures are shown in one demo, never scored; the cold start reads the arrival and the region's own counts." |
 
+- **The lead's rulings after review round one** (`lanes/R.md` §6, L-d1 to L-d5; §12):
+  - B.6's code-path column stays, headed "Where in the code (for engineers)" (§1).
+  - The latency documents are not linked.
+  - Engineering documents are named only by their paths, and only by paths that carry no customer name.
+  - "GA4" stays only with its trace to S2 (§7.1).
+  - "brand = samsung" stays: a real product brand may be an example dimension value (§5).
+  - References to the other pieces are real links (§6).
 - **Built, designed and open content:** as the rows say; the exception is A1, recording, flagged in A.8.
 
 ### 3.6 (e) The credits page, standalone and restyled
 
-- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** C2. **Address:** `/credits`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
-- **Source:** `content/credits-source.html`, the page that was shared, kept whole with its corrections. The original stays filed, untouched, at `docs/enablement/research/opal-ai-credits-placement.source.html`. This is the one piece whose source is HTML, not markdown (§6).
+- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** P1, which wrote both sources below. **Address:** `/credits`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
+- **Sources:** `content/credits-source.html`, the page that was shared, kept whole with its corrections, from which the page is built; and `content/credits.md`, the same text in order as markdown, from which lane W builds the Word copy. The render check compares the page with both. The original stays filed, untouched, at `docs/enablement/research/opal-ai-credits-placement.source.html`. This is the one piece whose page is built from HTML, not markdown (§6).
 - **The corrections rule** (the lead's ruling, §12): corrections make false statements true, with the design's labels (Built, Designed, Open; "demo only"; "switched off by policy and not offered"). The structure, order, devices and voice stay. Every candidate P1 found on the page as built (`lanes/P1.md` §5) is checked against S2: a statement S2 shows false is corrected; anything that is only the original's voice stays.
 - **Rule:** the original's, "The engine decides. Opal creates and explains." It is followed at once by "Opal is not connected to the engine today." (S2 §6.2), marked on the page as an addition.
 - **As built** (lane P1): the page carries the source whole and in its order: the masthead, the rule, the timeline's three phases with every row, the scaling cards, the three meters, the three sentences, the five questions, the order form and the closing lines. The original script's data became static HTML. Without JavaScript, the three phases read one after another. With it, `site.js` turns them into tabs, Before first, with the original's behavior, plus the arrow keys, Home and End.
 - **Marked additions on the page:** the package name in `#package-name`; the title "Where Opal and AI Credits Fit, and Where They Never Do", which replaces the original's; the sentence after the rule; the legend; the session figure; and the lead line "Each question opens to its answer." above the questions.
-- **Credit verdicts:** in D1's figure language, every tag keeping its word: fir for no credits, light fir for credits apply, neutral for the exception, an outline for the products under their own licenses. The package legend (Built, Designed, Open) stays the only label legend; R checks that the two cannot be confused (§3.9).
+- **Credit verdicts are words, never colors.** Each is a bold word or phrase, with no fill and no color of its own, in the session figure as on the page: "No AI · no credits", "Credits apply", "Metered per use", "Credits not decided", and "Own licensing" for the products under their own licenses. The package legend (Built, Designed, Open) is the only legend on the page and in the figure. P1 aligns the page's credit chips to words on the next render.
 - **Summary carried into (b), (c), (d) and (h):** P2.
 - **Figures:** D1's `before-during-after`, static in section 01 with a lead line, because the timeline above it is already a before, during and after switcher; captioned with its SVG title (§3.9).
 
@@ -363,11 +363,11 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 
 ### 3.8 (g) The demo map
 
-- **Reader:** an account executive. **Owner:** C2. **Source:** `content/demo-map.md`. **Address:** `/demos`. **Word copy:** `word/Demo-Map-v1.0.docx`.
-- **Title:** `# Behavioral Targeting and Intelligence: which demo to show, and to whom`
+- **Reader:** an account executive. **Owner:** P1, which wrote the source from this section. **Source:** `content/demos.md`, the page's and the Word copy's. **Address:** `/demos`. **Word copy:** `word/Demo-Map-v1.0.docx`.
+- **Title:** `# Behavioral Targeting and Intelligence: which demo to show to whom`
 - **Rule:** "Choose the demo by the question your customer is asking, and show today's engine on Vantage or Top Offers."
 - **Facts:** the demos' addresses, rooms and beats come from `docs/demos/BOOTSTRAP.md` §2, §3, §5 and §6 and S1 tables F and I, by the lead's ruling; every statement about the engine inside it still traces to S2. No demo is described by the customer it was built for; a vertical ("a carrier's online shop", "a retailer's promotions module") is enough.
-- **As built** (lane P1): the page renders this section word for word, because `content/demo-map.md` does not exist yet. Three items on the page are not this section's words; each is marked on the page as an addition, and each is marked "Addition, as built" below.
+- **As built** (lane P1): `content/demos.md` holds this section as revised at 14:08 on 2026-10-02, as markdown, and the page and the Word copy are built from it. Three items in it are not this section's original words: each is marked on the page as an addition, and each is marked "Addition, as built" below.
 - **Sections, in order:**
   1. No heading: "For account executives." and the rule.
   2. `## Two demos run today's engine`: a table with columns `Demo`, `Address`, `The question it answers`, `What the room sees`, `What it never claims`.
@@ -399,9 +399,9 @@ The figures as lane D1 drew them (`lanes/D1.md`). Each caption is the figure's S
 
 | File, under `docs/enablement/figures/` | What it shows | Caption | Used in |
 |---|---|---|---|
-| `architecture.svg`, `architecture.png` | The customer's site and the operator each talking to one worker on Cloudflare's network, the engine's storage behind it, and the optional outside services, all off by default (D1 §2.1, from S2 §2.2 to §2.7) | "Where the engine runs on Cloudflare" | (d), A.3; (c) |
+| `architecture.svg`, `architecture.png` | The customer's site and the operator each talking to one worker on Cloudflare's network, with the stores it keeps, those it shares with the demo workers, and those a customer's deployment holds of its own; two points are open. The customer's backend and the optional outside services are left out on purpose (D1 §2.1, from S2 §2.2 to §2.7) | "Where the engine runs on Cloudflare" | (d), A.3; (c) |
 | `decision-path.svg`, `decision-path.png` | The path from a visitor's event to a decision, step by step, with the published document that governs each step (D1 §2.2, from S2 §3) | "From an event to a decision" | (d), A.1 |
-| `before-during-after.svg`, `before-during-after.png` | The credits page's device: the rule in two halves, the three parts of one session, a verdict band and a status chip on every card, the one exception flagged once, a takeaway per part (D1 §2.3, from S2 §6 and the pricing guide under S2's corrections) | "One visitor's session: what happens before, during and after" | (e), static in section 01; (b), as a Before / During / After switcher at the end of a section, marked as an addition |
+| `before-during-after.svg`, `before-during-after.png` | The credits page's device: the rule in two halves, the three parts of one session, the credit verdict as bold words at the top of every card and a status chip from the one legend, the one exception flagged once, a takeaway per part (D1 §2.3, from S2 §6 and the pricing guide under S2's corrections) | "One visitor's session: what happens before, during and after" | (e), static in section 01; (b), as a Before / During / After switcher at the end of a section, marked as an addition |
 
 **Not drawn in this release:** the session strip planned for (b) and (c), the seam between site and engine, and the credits page's two scaling lines. Piece (b) carries the session figure instead, as a switcher; (c) carries `architecture` only; the credits page keeps its own scaling cards.
 
@@ -409,7 +409,7 @@ The figures as lane D1 drew them (`lanes/D1.md`). Each caption is the figure's S
 
 **Rules for every figure.** Drawn once by D1 as SVG, with presentation attributes only: no `style` attribute, no `<style>` element, no script, no external reference, no embedded font or image, so each is safe to inline as it is. Ids are prefixed per figure, and each has a `<title>` and a `<desc>` through `aria-labelledby`. Text is real `<text>` in the pages' system font stack. Labels use the glossary's words and are gender neutral; no customer name, no timing figure, and no number beyond the product names R2 and D1. The legend's pills are the package's one legend (Built, Designed, Open), each with its word. A PNG at twice the drawn size sits beside each SVG for Word.
 
-**For review lane R:** the credits figure colors its credit-verdict bands (D1 §6), and the credits page colors its credit tags in the same language (§3.6). The figure's "Credits not decided" band is white with a dashed border, like the Open pill. R checks that neither can be read as a second label legend (§12).
+**One legend, and credit verdicts as words.** The session figure has one legend only, Built, Designed and Open. It gives each card's credit verdict as bold words at the top of the card, with no fill and no second legend. The credits page's credit tags follow the same rule (§3.6). Review lane R checks, in round two, that no color or fill carries a credit verdict anywhere (§12).
 
 ### 3.10 (h) What is built, designed and open
 
@@ -537,7 +537,7 @@ Not used until the lead adds them to S2 or rules them out.
 | "Live in two weeks", any delivery date | "This material gives no date; the step that gives a deployment its first configuration is open." | S2 §10.2, §10.3 |
 | "Census targeting", "income targeting" | "Census figures are shown in one demo, never scored." | S2 §10.1 |
 | "The engine rearranges the page", "the engine decides the layout" | P10 | S2 §10.4 |
-| "They score people; we decide pages", or any line about another system | Our own reasoning only | common brief |
+| "They score people; we decide pages", or any line that describes or judges another system | Our own reasoning. A "what it is not" contrast with a class of system is allowed, phrased as what the engine does instead (§5) | common brief; the lead's ruling |
 | A customer, prospect or competitor name; a case study | No name; a vertical for a demo | common brief |
 | A deprecated word | The glossary's word | `GLOSSARY.md` |
 
@@ -566,15 +566,27 @@ The common brief adopts S3 Part 2's first five rules as binding. Rules 6 to 10 a
 - **Gender neutral, everywhere** (owner's ruling, 2026-10-02). The visitor is "the visitor", or "they", "them" and "their", with the verb that "they" takes ("they arrive"). No piece, page, figure or Word copy matches the pattern `\b(she|her|hers|he|him|his)\b`, in any case, quoted lines and never-say tables included; lane R scans for it and fails a piece on any match (§9).
 - Plain words; every term defined the first time; the glossary's words only.
 - No customer, prospect or competitor name; demos by their fictional brands and their addresses.
+- **"What it is not" is allowed** (the lead's ruling, 2026-10-02). A piece may contrast the engine with a class of system, under these conditions:
+  - each contrast is phrased as what the engine does instead, for example "It is not a tool that sorts visitors into segments by rule. For each visitor, it keeps a graded interest…";
+  - it never names a product or a vendor, and never judges the other class;
+  - it may use the other class's own word once, even a word the glossary deprecates for the engine, such as "segments".
+  Review lane R does not fail a contrast that meets these conditions.
+- **A real product brand may be an example dimension value** (the lead's ruling), as in "brand = samsung". It is an example of a value, not a customer or a vendor of ours.
+- **A third-party product name stays only with its trace to S2**, as "GA4" does in (d) (S2 §7.1).
 - Honesty inline: one label on the row it qualifies; "synthetic" where data is synthetic; "designed, not built" where so.
 - American English.
-- Short sentences, one idea each; no em-dashes; headings are statements, except the glossary's letter headings.
+- Short sentences, one idea each; no em-dashes; headings are statements, except the glossary's letter headings and the noun-phrase headings accepted in (b) (§3.3).
 
 ---
 
 ## 6. Formats and the single-source rule
 
-**One source per piece.** Each piece's source is one markdown file: `docs/enablement/content/<piece>.md`, and the glossary at `docs/enablement/GLOSSARY.md`. Three exceptions, as built: the credits page's source is the corrected HTML `docs/enablement/content/credits-source.html` (§3.6); the landing page renders §3.2's text; the demo map renders §3.8's text until `content/demo-map.md` exists. The page and the Word copy are renderings of the source. A change is made in the source first; the page is then re-rendered and the Word copy rebuilt. A Word file is never edited by hand.
+**One source per piece.** Each piece's source is one markdown file: `docs/enablement/content/<piece>.md`, and the glossary at `docs/enablement/GLOSSARY.md`. Three exceptions, as built:
+- The credits page has two sources: its page is built from the corrected HTML `docs/enablement/content/credits-source.html`, and its Word copy from `docs/enablement/content/credits.md`, the same text in markdown (§3.6). The render check holds the page to both.
+- The landing page renders §3.2's text.
+- The demo map's source is `docs/enablement/content/demos.md`, which P1 wrote from §3.8 (§3.8).
+
+The page and the Word copy are renderings of the source. A change is made in the source first; the page is then re-rendered and the Word copy rebuilt. A Word file is never edited by hand.
 
 **The markdown, written for both renderings.**
 
@@ -582,7 +594,7 @@ The common brief adopts S3 Part 2's first five rules as binding. Rules 6 to 10 a
 - Tables in pipe syntax with short cells; no ASCII diagrams; code fences only where a reader must see literal text, with lines of 76 characters or fewer (converter rules 1 to 3).
 - Figures as `![caption](../figures/<name>.png)`, alone on a line; the page shows the SVG of the same name.
 - Links within a piece as `[text](#heading-anchor)`, with GitHub's anchor rule: the heading's text without markup, lower-case, every character that is not a letter, digit, underscore, hyphen or space removed, each space a hyphen. A link to a missing anchor fails the Word build, by design.
-- Links to another piece or to the site show the page's title as their visible text and carry the full address as their target, for example `[Selling it](https://edge-platform-bti.expedge.workers.dev/selling-it)`, with no trailing slash. They work in Word for anyone past the gate, and the address, whose host name carries the abbreviation §2 keeps out of visible text, is never shown. On the page, P1 may make same-site targets relative without changing their text. Links to a demo may show the demo's address, which carries no such abbreviation.
+- Every reference to another piece is a real link, never an italic title alone (the lead's ruling). Links to another piece or to the site show the page's title as their visible text and carry the full address as their target, for example `[Selling it](https://edge-platform-bti.expedge.workers.dev/selling-it)`, with no trailing slash. They work in Word for anyone past the gate, and the address, whose host name carries the abbreviation §2 keeps out of visible text, is never shown. On the page, P1 may make same-site targets relative without changing their text. Links to a demo may show the demo's address, which carries no such abbreviation.
 - No HTML in the markdown, no em-dash, American English.
 
 **The Word copy.** Lane W builds each with the repository's converter, unchanged:
@@ -725,10 +737,10 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 |---|---|---|---|
 | **E1** design | `docs/enablement/BTI-Enablement-Design.md`, `docs/enablement/GLOSSARY.md`, `docs/enablement/README.md`, `docs/enablement/lanes/E1.md` | The glossary, this design, the folder map | Now; the glossary first |
 | **C1** marketing | `docs/enablement/content/what-it-is.md`, `docs/enablement/lanes/C1.md` | (b) | The glossary lands |
-| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/content/credits-source.html`, `docs/enablement/content/demo-map.md` (not yet written; §3.8 is the source until it is), `docs/enablement/lanes/C2.md` | (c), (e)'s corrected source, (g) | The glossary lands; for (e), the original shared page is filed at `docs/enablement/research/opal-ai-credits-placement.source.html` |
+| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/lanes/C2.md` | (c), rebuilt to §3.4 | The glossary lands; the rebuild follows the lead's ruling after review round one |
 | **C3** solutions engineers | `docs/enablement/content/how-it-works-and-where-it-runs.md`, `docs/enablement/content/status.md`, `docs/enablement/lanes/C3.md` | (d), (h) | The glossary lands |
 | **D1** diagrams | `docs/enablement/figures/**`, `docs/enablement/lanes/D1.md` | Three figures, SVG and PNG (§3.9) | This design lands |
-| **P1** pages and site | `enablement/site/**` (the pages, `site.css`, `site.js`, the figures' copies), `enablement/render-pages.mjs`, `enablement/render-check.mjs`, `docs/enablement/lanes/P1.md` | (a); the chrome; the pages for (b) to (h); the page builder and the render check | This design lands (chrome, checks and landing page first); each content page once its source has passed review round 1 |
+| **P1** pages and site | `enablement/site/**` (the pages, `site.css`, `site.js`, the figures' copies), `enablement/render-pages.mjs`, `enablement/render-check.mjs`, `docs/enablement/content/credits-source.html`, `docs/enablement/content/credits.md`, `docs/enablement/content/demos.md`, `docs/enablement/lanes/P1.md` | (a); the chrome; the pages for (b) to (h); the sources of (e) and (g); the page builder and the render check | This design lands (chrome, checks and landing page first); each content page once its source has passed review round 1 |
 | **E2** the site's worker and gate | `enablement/worker.mjs`, `enablement/worker.test.mjs`, `wrangler.enablement.toml`, `enablement/check-site.mjs`, `docs/enablement/lanes/E2.md` | The worker `edge-platform-bti`, the passphrase gate, the preflight, the deploy command | The owner's instruction of 2026-10-02 |
 | **W** Word builds | `docs/enablement/word/**`, `docs/enablement/lanes/W.md` | Seven Word copies, one for each piece but the landing page | Each source has passed review round 1 and the lead's read |
 | **R** independent review | `docs/enablement/lanes/R.md` (rounds appended) | A verdict per piece, page and Word copy | Round 1 when every source and figure has a draft; round 2 when the pages and Word copies exist |
@@ -797,7 +809,7 @@ No other owner decision is known that the package needs. The questions in §4.8 
 | 2026-10-02 | **Cloudflare Access is on** for `edge-platform-enablement`: "Protect this Worker behind Access", all traffic, policy "Email domain" `optimizely.com`, signing in by a one-time code emailed to the address. Verified from outside: every address, unknown ones included, answers 302 to the Zero Trust team's login page on `black-shape-7747.cloudflareaccess.com`, and no page content is served without a session. Temporary, until the material moves inside Optimizely | owner |
 | 2026-10-02 | Because no script passes the sign-in, pages are proven as built files before a deploy (the preflight, the text check, the headless Chrome checks), and after a deploy an outside check proves the redirect on every address; a Cloudflare Access service token for scripted checks is an owner decision (§11) | lead |
 | 2026-10-02 | Three labels only. S2's Withdrawn becomes "switched off by policy and not offered" on the never-say list; Demo only becomes words in a row; Unverified is never stated (§4.2) | E1, on the lead's brief |
-| 2026-10-02 | One color legend per page. The credits page's credit verdicts become words in their own column ("Credits apply", "No credits", "Per use"), because a second color legend would break the common brief's one legend on every page | E1, on the lead's brief |
+| 2026-10-02 | One color legend per page. The credits page's credit verdicts become words in their own column, because a second color legend would break the common brief's one legend on every page. (The words were first given as "Credits apply", "No credits" and "Per use"; they are now the figure's: "No AI · no credits", "Credits apply", "Metered per use", "Credits not decided" and "Own licensing", in bold and without color, §3.6.) | E1, on the lead's brief |
 | 2026-10-02 | The glossary's source is `docs/enablement/GLOSSARY.md`, the one piece source outside `content/`, as the lead assigned; it names the marketer as its reader and every entry holds for all three; it has no session tables, and its letter headings are labels (§3.7) | E1, on the lead's brief |
 | 2026-10-02 | The landing page is navigation and has no Word copy; its text is fixed in §3.2 and transcribed by P1 to `content/landing.md` | E1, on the lead's brief |
 | 2026-10-02 | S2 §1's corrected paragraph is carried as P1 with three edits, each from S2 itself (§4.7 item 1) | E1, on the lead's brief |
@@ -824,3 +836,12 @@ No other owner decision is known that the package needs. The questions in §4.8 
 | 2026-10-02 | **The pages as built** (lane P1), described in §3, §5, §6 and §7. Eight pages, built by `enablement/render-pages.mjs` and checked by `enablement/render-check.mjs`, which replaces the planned `check-text.mjs`. They share one stylesheet `/site.css` and one script `/site.js`, progressive enhancement only, under `style-src 'self'; script-src 'self'; img-src data:`, so each page makes a few same-origin requests instead of one. The footer line is "Internal · Optimizely · do not forward outside Optimizely". The landing page runs to about 290 words, with each card's piece rule. The session figure is a Before / During / After switcher on (b) and static on (e). The demo map renders §3.8, with its three additions marked. Every word not in a source is marked as an addition | lead |
 | 2026-10-02 | **The credits page's corrected source** is kept as `docs/enablement/content/credits-source.html`. Corrections make false statements true, with the design's labels; the structure, order, devices and voice stay. The original stays filed in `research/` (§3.6) | lead (ruling) |
 | 2026-10-02 | **Deployed and verified:** `edge-platform-bti` version `8388fa81` from commit `8086cb1`. Outside checks: 302 to `/auth` with no session, 401 for a wrong passphrase, 303 with the session cookie for the right one, 200 with it, 404 for an unknown address, 302 for a forged cookie (§7) | lead |
+| 2026-10-02 | **After review round one** (`lanes/R.md`): **piece (b) is accepted as built**, with the review's edits applied (option 1). Its rule, sections and noun-phrase headings are C1's. §3.3 describes it, and the review's structural items S-b1 to S-b6 are waived on this record | lead |
+| 2026-10-02 | **Piece (c) is rebuilt to §3.4,** with the review's edits applied where they still apply (option 2); its demo table moves to the demo map | lead |
+| 2026-10-02 | **"What it is not" is allowed:** a piece may contrast classes of system, phrased as what the engine does instead, never naming a product or vendor, with the other class's own word allowed once (§5). In (b) this replaces R-b1's deletion | lead |
+| 2026-10-02 | **A real product brand may be an example dimension value,** as in "brand = samsung" (review L-d1 and L-f1); the glossary keeps its examples | lead |
+| 2026-10-02 | **In (d):** the code-path column stays, headed "Where in the code (for engineers)"; the latency documents are not linked; engineering documents are named only by their paths, and only by paths without customer names; "GA4" stays only with its trace (review L-d2 to L-d5, §3.5) | lead |
+| 2026-10-02 | **Cross-piece references are real links,** never italic titles alone (§6) | lead |
+| 2026-10-02 | From review round one: the glossary's Outcome entry names the two fixed partner outcomes, a pickup at a partner store and a referral to a partner retailer, instead of "an outcome the brand names" (R-f1, S2 §3.15); Designed takes the legend's words (R-f2). The design's defects are fixed: D-2 in §3.9, D-3 in §3.0, D-4 in the color-legend entry above, D-5 in §1, D-7 by the two entries on (b) and (c). D-1 was fixed earlier. D-6 is the common brief's, the lead's file: its address is fixed, and "personalised" and "trust dial" remain | E1, from review R |
+| 2026-10-02 | **The demo map** is titled "which demo to show to whom", and its source is `content/demos.md`, which P1 wrote from §3.8 as revised at 14:08, with its three additions marked. **The credits page's Word copy** is built from `content/credits.md`, the same text as `credits-source.html` in markdown (§3.6, §3.8, §6) | lead |
+| 2026-10-02 | **Credit verdicts are words.** The session figure keeps one legend, Built, Designed and Open, and gives each card's credit verdict as bold words at its top, with no fill and no second legend. The credits page's credit tags follow the same rule, and P1 aligns the page's chips on the next render (§3.6, §3.9) | lead |

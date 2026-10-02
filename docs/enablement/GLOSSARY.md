@@ -76,7 +76,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Design-time tagging.** Proposing tags for the brand's content with the brand's own AI model while content is authored; a person approves, rejects or edits every tag before anything is published. It is built, off by default and outside the decision.
 
-**Designed.** Written in an architecture or planning document, not in the code. It is one of the package's three labels.
+**Designed.** In an architecture document, not in the code. It is one of the package's three labels.
 
 **Dimension.** An axis the brand scores on, such as brand, category or price band, named in its registry with the attribute it reads. A brand can publish up to 32.
 
@@ -188,7 +188,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Operator.** A person on the brand's team with an account and a grant for the brand, who signs in to the console to change settings. Sign-in can go through the brand's own single sign-on.
 
-**Outcome.** A visitor action that counts as success for learning: a click, a dwell, a completed video, a wishlist add, an add to cart, a purchase, or an outcome the brand names. A named partner outcome, such as a referral, is credited like a click and never reported as a sale.
+**Outcome.** A visitor action that counts as success for learning: a click, a dwell, a completed video, a wishlist add, an add to cart, a purchase, or one of two named partner outcomes, a pickup at a partner store or a referral to a partner retailer. A named partner outcome is credited like a click and never reported as a sale.
 
 ## P
 

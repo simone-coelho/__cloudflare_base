@@ -31,10 +31,10 @@ why none may be quoted. Say "calls no AI model to decide"; never "we don't use a
 
 Facts the sheet establishes that every piece must respect:
 
-- Nothing is personalised or recorded until the site passes an explicit consent choice.
+- Nothing is personalized or recorded until the site passes an explicit consent choice.
 - A customer tenant holds no product catalog unless its registry reads attributes from events and the
   events carry them.
-- Learning counts outcomes and moves nothing until the trust dial (γ) is raised; with the shipped SDK nothing
+- Learning counts outcomes and moves nothing until the learning dial (γ) is raised; with the shipped SDK nothing
   is recorded yet, because recording needs the slot set to count rendered pieces plus durable recovery, which
   is off in every configuration in the repository.
 - ODP, Feature Experimentation and Opal are not in the decision path and are not wired to it today.
