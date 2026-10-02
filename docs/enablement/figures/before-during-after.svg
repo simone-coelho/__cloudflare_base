@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1012" viewBox="0 0 1100 1012" role="img" aria-labelledby="bda-t bda-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
-  <title id="bda-t">One shopper's session: what happens before, during and after</title>
-  <desc id="bda-d">The rule: the engine decides, calling no AI model to decide and using no credits, which is Built; Opal creates and explains, and credits apply as documented, which is Open because Opal is not wired today. Before, the team's preparation: the team publishes the documents the engine follows, with no AI and no credits, Built; Opal drafts an audience, a test or a setting from plain words and a person approves, credits apply, Open and not wired today; a model on the customer's own key suggests content labels and a person approves each one, credits not decided, Built and off by default. Credits follow the team's requests, not the traffic. During, the shopper's visit: the engine decides at the edge from the published rules, no AI and no credits, Built; interest, ranking and receipts are arithmetic, written as data, no AI and no credits, Built; the one exception is the optional AI features the shopper uses, typed search, an advisor and generated imagery, metered per use, with typed search Built and off by default and the advisor and imagery demo only. No page view uses a credit. After, the results: the engine credits and counts outcomes, and nothing moves until a person raises the learning dial, no AI and no credits, Built, and Open because nothing is recorded yet from the engine's browser script; the team reads the receipts and the day report in the console, no AI and no credits, Built; asking Opal to explain results or find patterns in them, credits apply, Open and not wired today. The learning costs no credits; asking Opal about it does. Verdicts follow the documented credit rule, which is Designed; the billing meter is Open.</desc>
+  <title id="bda-t">One visitor's session: what happens before, during and after</title>
+  <desc id="bda-d">The rule: the engine decides, calling no AI model to decide and using no credits, which is Built; Opal creates and explains, and credits apply as documented, which is Open because Opal is not wired today. Before, the team's preparation: the team publishes the documents the engine follows, with no AI and no credits, Built; Opal drafts an audience, a test or a setting from plain words and a person approves, credits apply, Open and not wired today; a model on the customer's own key suggests content labels and a person approves each one, credits not decided, Built and off by default. Credits follow the team's requests, not the traffic. During, the visit: the engine decides at the edge from the published rules, no AI and no credits, Built; interest, ranking and receipts are arithmetic, written as data, no AI and no credits, Built; the one exception is the optional AI features the visitor uses, typed search, an advisor and generated imagery, metered per use, with typed search Built and off by default and the advisor and imagery demo only. No page view uses a credit. After, the results: the engine credits and counts outcomes, and nothing moves until a person raises the learning dial, no AI and no credits, Built, and Open because nothing is recorded yet from the engine's browser script; the team reads the receipts and the day report in the console, no AI and no credits, Built; asking Opal to explain results or find patterns in them, credits apply, Open and not wired today. The learning costs no credits; asking Opal about it does. Verdicts follow the documented credit rule, which is Designed; the billing meter is Open.</desc>
   <!-- Lane D1, drawn by hand, in the device of the Opal credits page (docs/enablement/research/S3-naming-and-narrative.md 2.3):
-       three phases of the shopper's session, a verdict on every card in one legend, the one exception flagged once.
+       three phases of the visitor's session, a verdict on every card in one legend, the one exception flagged once.
        Facts: S2-engine-facts.md 3.15, 4.1-4.6, 5.1-5.2, 6.1-6.3, 10.1, with docs/Opal-Credit-Boundary-Pricing-Guide.md 1-4 for the
        credit rule, under S2's corrections (6.2: no Opal integration is wired; the guide's line on where Opal files audiences is not repeated).
        Verdict bands: fir = no AI, no credits; light fir = credits apply; neutral 5 = metered per use; dashed = not decided.
        Status chips as in the other two figures: LF green = Built, light blue = Designed, dashed white = Open. -->
   <rect x="0" y="0" width="1100" height="1012" fill="#FFFFFF"/>
 
-  <text x="16" y="46" font-size="32" font-weight="700">One shopper's session: what happens before, during and after</text>
+  <text x="16" y="46" font-size="32" font-weight="700">One visitor's session: what happens before, during and after</text>
 
   <!-- The rule, in two halves (S2 6.1, 6.2; pricing guide 1) -->
   <g data-box="rule engine">
@@ -73,11 +73,11 @@
     <text x="34" y="852" font-size="20" font-weight="700">requests, not the traffic.</text>
   </g>
 
-  <!-- DURING: the shopper's visit -->
+  <!-- DURING: the visit -->
   <g data-box="column during">
     <rect x="377" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
     <text x="395" y="196" font-size="28" font-weight="700">During</text>
-    <text x="395" y="224" font-size="20" fill="#197050">The shopper's visit</text>
+    <text x="395" y="224" font-size="20" fill="#197050">The visit</text>
 
     <!-- S2 1; 6.1 -->
     <g data-box="decides">
@@ -105,7 +105,7 @@
     <g data-box="ai features">
       <rect x="385" y="586" width="330" height="186" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
       <g data-box="verdict"><rect x="391" y="592" width="318" height="30" rx="8" fill="#C3CEAF"/><text x="405" y="613" font-size="18" font-weight="700">Metered per use</text></g>
-      <text x="399" y="648" font-size="20">Optional AI features the shopper</text>
+      <text x="399" y="648" font-size="20">Optional AI features the visitor</text>
       <text x="399" y="673" font-size="20">uses: typed search, an advisor,</text>
       <text x="399" y="698" font-size="20">generated imagery.</text>
       <g data-box="chip"><rect x="399" y="712" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="732" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
