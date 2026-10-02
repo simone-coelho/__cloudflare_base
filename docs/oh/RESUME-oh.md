@@ -1,5 +1,8 @@
 # OH: resume state
 
+> **Status 2026-10-02, 14:30 EDT. Live: version `58c61e9a` from `dcd37e5` at https://edge-platform-oh.expedge.workers.dev/oh/ (TV grid `/oh/?view=tvs`, product `/oh/product?id=<sku>`, phone `/oh/m`).** Hosted by `node scripts/demo-kit/host.mjs --config oh --from secrets --confirm edge-platform-oh` from WSL; verified hosted: request level 189 of 189, DOM 329 of 329; 51 of 51 regions seeded. Independent review R4 (`docs/lg/lanes/R4.md`) is on the same commit; its findings ride the next deploy. **Morning routine:** `host.mjs --config oh --step seed --confirm edge-platform-oh` (the hosted seed, the redeploy it requires, the region seed), then `--step verify`; the regional prior's horizon is 24 hours, so the region seed runs on the morning of every rehearsal. The design and its decisions log: `docs/lg/OH-Demo-Design.md`.
+
+
 > **Status 2026-10-02: scaffolded, not built, not deployed.** `scripts/demo-kit/new-demo.mjs` wrote the scaffold from `public/oh/demo.config.json`. The worker `edge-platform-oh`, its queues, its tenant and its secrets do not exist until the owner approves creating them. Keep this status line current: what is deployed (version and commit), what was verified hosted, what is open.
 
 **Assume the reader has none of the prior context.** Start from the design ([docs/lg/OH-Demo-Design.md](../../docs/lg/OH-Demo-Design.md)), then [the design pointer](OH-Demo-Design.md) for where everything lives, then this file for how to run it.
