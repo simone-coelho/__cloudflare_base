@@ -7,7 +7,7 @@ Read this before your own brief. It is the law for the package; your lane brief 
 An internal enablement package about the engine for three Optimizely audiences who are not engineers:
 marketing, account executives (AEs) and pre-sales solutions engineers (SEs, semi-technical: they explain
 concepts and bring an engineer when it gets deep). The package is hosted on the internal site
-`https://edge-platform-enablement.expedge.workers.dev` (sign-in for @optimizely.com emails) and each piece
+`https://edge-platform-bti.expedge.workers.dev` (a passphrase shared with Optimizely staff opens it; temporary until the material moves inside Optimizely) and each piece
 also exists as a Word document for sharing in Teams. We provide the content; the receiving teams decide how
 they present it. No slide decks.
 
@@ -91,3 +91,15 @@ One writer per path; your brief names your paths. Read anything; write only your
 change anything (the lead commits), no installs, no deletes, no `rm -rf`, no process kills, no deploys (the
 lead deploys). Save files whole. Record what you did and why in `docs/enablement/lanes/<lane>.md`. Report with
 what you built, what you checked, and anything in this brief you could not honour and why.
+
+## Rulings added after review round one (lead, 2026-10-02)
+
+- "What it is not" may contrast the engine with *classes* of system (a recommendations engine scoring products
+  from purchase history; a tool that places visitors into segments by rule; an AI model deciding in the
+  moment), phrased as what we do instead and never judging; no product, vendor or customer is named. The other
+  class's own word ("segments") may appear once there, as its term.
+- A real product brand used as an example dimension value ("brand = samsung") is allowed: it is neither a
+  customer nor a competitor, and the demos' catalogs are real products.
+- Pieces (b) and (c) are reconciled with the design as the lead rules in the design's log: (b) accepted as
+  built with the review's edits applied; (c) rebuilt to the design's §3.4 with the review's edits applied.
+- Links between pieces are real links to the page addresses, never an italic title alone.
