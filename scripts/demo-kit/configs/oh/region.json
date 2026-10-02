@@ -1,0 +1,1860 @@
+{
+  "about": "OH's regional seed (Lane D1, 2026-10-02), the kit's region section (scripts/demo-kit/lib/region.mjs, validated by lib/config.mjs) over the five dimensions the regional allowlist names (design §3: category, type, sizeBand, priceTier, fuel), with the exact values of public/oh/products.json. Synthetic and representative: not a claim about any state's market and never LG's sales; labelled synthetic → warehouse wherever it shows, until LG's regional rows replace it. Every state and DC is seeded: Texas and New Jersey verbatim (rehearsal regions A and B), the other 49 from the kit's income-tilt model, which blends only the TV rows (category tvs, keyed by type, size band and price tier) between the two; the appliance rows are the same national mix in every modelled state (extras), except cooking fuel: gas cooking about 38% nationally and about 70% in California and New Jersey (lg-buying-journeys.md §2, EIA RECS via NPGA), dryers 80% electric everywhere. The census shapes only this stand-in, never a score; price never varies by place or by person. The cold-start route's own vocabulary (the OH config's SEED_VOCABULARY) must equal `vocabulary` here.",
+  "operator": "seed-oh-region",
+  "route": "/oh/api/coldstart/prior",
+  "panel": "/oh/api/coldstart",
+  "vocabulary": {
+    "category": [
+      "dishwashers",
+      "dryers",
+      "kitchen-packages",
+      "laundry-accessories",
+      "laundry-sets",
+      "microwaves",
+      "pedestals",
+      "ranges",
+      "refrigerators",
+      "soundbars",
+      "styler",
+      "tv-mounts",
+      "tvs",
+      "washer-dryer-combos",
+      "washers",
+      "washtowers"
+    ],
+    "type": [
+      "3-piece",
+      "4-piece",
+      "all-in-one",
+      "freestanding",
+      "french-door",
+      "front-control",
+      "front-load",
+      "hd",
+      "home-theater",
+      "lifestyle",
+      "micro-rgb",
+      "oled",
+      "over-the-range",
+      "pedestal-drawer",
+      "pedestal-riser",
+      "pedestal-washer",
+      "qned",
+      "rear-control",
+      "slide-in",
+      "sound-suite",
+      "soundbar",
+      "stacking-kit",
+      "steam-closet",
+      "top-control",
+      "top-load",
+      "uhd",
+      "wall-mount",
+      "washtower"
+    ],
+    "sizeBand": [
+      "24-inch",
+      "30-inch",
+      "42-54",
+      "55-64",
+      "65-74",
+      "75-82",
+      "83-and-up",
+      "up-to-41"
+    ],
+    "priceTier": [
+      "best",
+      "better",
+      "flagship",
+      "good"
+    ],
+    "fuel": [
+      "dual-fuel",
+      "electric",
+      "gas",
+      "induction"
+    ]
+  },
+  "limits": {
+    "rows": 64,
+    "unitsPerRow": 400,
+    "units": 800
+  },
+  "census": "migrations/seed/seed_011_geo.sql",
+  "expectRegions": 51,
+  "rehearsed": {
+    "US-TX": {
+      "label": "Texas: synthetic home sales, rehearsal region A",
+      "rows": [
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "qned",
+            "sizeBand": "75-82",
+            "priceTier": "better"
+          },
+          "units": 72
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "qned",
+            "sizeBand": "65-74",
+            "priceTier": "good"
+          },
+          "units": 40
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "qned",
+            "sizeBand": "83-and-up",
+            "priceTier": "best"
+          },
+          "units": 22
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "65-74",
+            "priceTier": "best"
+          },
+          "units": 56
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "55-64",
+            "priceTier": "better"
+          },
+          "units": 18
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "75-82",
+            "priceTier": "best"
+          },
+          "units": 26
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "uhd",
+            "sizeBand": "65-74",
+            "priceTier": "good"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "uhd",
+            "sizeBand": "75-82",
+            "priceTier": "good"
+          },
+          "units": 32
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "uhd",
+            "sizeBand": "55-64",
+            "priceTier": "good"
+          },
+          "units": 18
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "micro-rgb",
+            "sizeBand": "75-82",
+            "priceTier": "flagship"
+          },
+          "units": 5
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "83-and-up",
+            "priceTier": "flagship"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "soundbars",
+            "type": "soundbar",
+            "priceTier": "better"
+          },
+          "units": 26
+        },
+        {
+          "touches": {
+            "category": "soundbars",
+            "type": "sound-suite",
+            "priceTier": "flagship"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "washers",
+            "type": "front-load",
+            "priceTier": "better"
+          },
+          "units": 40
+        },
+        {
+          "touches": {
+            "category": "washers",
+            "type": "top-load",
+            "priceTier": "good"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "front-load",
+            "fuel": "electric",
+            "priceTier": "better"
+          },
+          "units": 32
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "rear-control",
+            "fuel": "electric",
+            "priceTier": "good"
+          },
+          "units": 24
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "front-load",
+            "fuel": "gas",
+            "priceTier": "better"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "rear-control",
+            "fuel": "gas",
+            "priceTier": "good"
+          },
+          "units": 6
+        },
+        {
+          "touches": {
+            "category": "washtowers",
+            "type": "washtower",
+            "fuel": "electric"
+          },
+          "units": 10
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "electric",
+            "priceTier": "better"
+          },
+          "units": 30
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "freestanding",
+            "fuel": "electric",
+            "priceTier": "good"
+          },
+          "units": 25
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "induction",
+            "priceTier": "best"
+          },
+          "units": 12
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "gas",
+            "priceTier": "better"
+          },
+          "units": 22
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "freestanding",
+            "fuel": "gas",
+            "priceTier": "good"
+          },
+          "units": 14
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "dual-fuel",
+            "priceTier": "flagship"
+          },
+          "units": 5
+        },
+        {
+          "touches": {
+            "category": "microwaves",
+            "type": "over-the-range",
+            "priceTier": "better"
+          },
+          "units": 30
+        },
+        {
+          "touches": {
+            "category": "dishwashers",
+            "type": "top-control",
+            "priceTier": "better"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "dishwashers",
+            "type": "front-control",
+            "priceTier": "good"
+          },
+          "units": 12
+        },
+        {
+          "touches": {
+            "category": "kitchen-packages",
+            "type": "4-piece"
+          },
+          "units": 8
+        }
+      ]
+    },
+    "US-NJ": {
+      "label": "New Jersey: synthetic home sales, rehearsal region B",
+      "rows": [
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "65-74",
+            "priceTier": "best"
+          },
+          "units": 110
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "55-64",
+            "priceTier": "better"
+          },
+          "units": 44
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "75-82",
+            "priceTier": "flagship"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "65-74",
+            "priceTier": "flagship"
+          },
+          "units": 18
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "qned",
+            "sizeBand": "65-74",
+            "priceTier": "better"
+          },
+          "units": 28
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "qned",
+            "sizeBand": "75-82",
+            "priceTier": "better"
+          },
+          "units": 20
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "uhd",
+            "sizeBand": "55-64",
+            "priceTier": "good"
+          },
+          "units": 14
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "uhd",
+            "sizeBand": "65-74",
+            "priceTier": "good"
+          },
+          "units": 14
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "micro-rgb",
+            "sizeBand": "75-82",
+            "priceTier": "flagship"
+          },
+          "units": 10
+        },
+        {
+          "touches": {
+            "category": "tvs",
+            "type": "oled",
+            "sizeBand": "42-54",
+            "priceTier": "better"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "soundbars",
+            "type": "soundbar",
+            "priceTier": "better"
+          },
+          "units": 26
+        },
+        {
+          "touches": {
+            "category": "soundbars",
+            "type": "sound-suite",
+            "priceTier": "flagship"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "washers",
+            "type": "front-load",
+            "priceTier": "better"
+          },
+          "units": 40
+        },
+        {
+          "touches": {
+            "category": "washers",
+            "type": "top-load",
+            "priceTier": "good"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "front-load",
+            "fuel": "electric",
+            "priceTier": "better"
+          },
+          "units": 32
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "rear-control",
+            "fuel": "electric",
+            "priceTier": "good"
+          },
+          "units": 24
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "front-load",
+            "fuel": "gas",
+            "priceTier": "better"
+          },
+          "units": 8
+        },
+        {
+          "touches": {
+            "category": "dryers",
+            "type": "rear-control",
+            "fuel": "gas",
+            "priceTier": "good"
+          },
+          "units": 6
+        },
+        {
+          "touches": {
+            "category": "washtowers",
+            "type": "washtower",
+            "fuel": "electric"
+          },
+          "units": 10
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "gas",
+            "priceTier": "better"
+          },
+          "units": 55
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "freestanding",
+            "fuel": "gas",
+            "priceTier": "good"
+          },
+          "units": 35
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "electric",
+            "priceTier": "better"
+          },
+          "units": 14
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "freestanding",
+            "fuel": "electric",
+            "priceTier": "good"
+          },
+          "units": 10
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "induction",
+            "priceTier": "best"
+          },
+          "units": 9
+        },
+        {
+          "touches": {
+            "category": "ranges",
+            "type": "slide-in",
+            "fuel": "dual-fuel",
+            "priceTier": "flagship"
+          },
+          "units": 5
+        },
+        {
+          "touches": {
+            "category": "microwaves",
+            "type": "over-the-range",
+            "priceTier": "better"
+          },
+          "units": 30
+        },
+        {
+          "touches": {
+            "category": "dishwashers",
+            "type": "top-control",
+            "priceTier": "better"
+          },
+          "units": 34
+        },
+        {
+          "touches": {
+            "category": "dishwashers",
+            "type": "front-control",
+            "priceTier": "good"
+          },
+          "units": 12
+        },
+        {
+          "touches": {
+            "category": "kitchen-packages",
+            "type": "4-piece"
+          },
+          "units": 8
+        }
+      ]
+    }
+  },
+  "model": {
+    "kind": "income-tilt",
+    "spreadUsd": 25000,
+    "tSpan": 0.3,
+    "low": "US-TX",
+    "high": "US-NJ",
+    "blend": {
+      "dimension": "category",
+      "value": "tvs",
+      "key": [
+        "type",
+        "sizeBand",
+        "priceTier"
+      ]
+    },
+    "extras": [
+      {
+        "name": "national mix: soundbars soundbar better",
+        "touches": {
+          "category": "soundbars",
+          "type": "soundbar",
+          "priceTier": "better"
+        },
+        "units": 26,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: soundbars sound-suite flagship",
+        "touches": {
+          "category": "soundbars",
+          "type": "sound-suite",
+          "priceTier": "flagship"
+        },
+        "units": 8,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: washers front-load better",
+        "touches": {
+          "category": "washers",
+          "type": "front-load",
+          "priceTier": "better"
+        },
+        "units": 40,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: washers top-load good",
+        "touches": {
+          "category": "washers",
+          "type": "top-load",
+          "priceTier": "good"
+        },
+        "units": 34,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dryers front-load electric better",
+        "touches": {
+          "category": "dryers",
+          "type": "front-load",
+          "fuel": "electric",
+          "priceTier": "better"
+        },
+        "units": 32,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dryers rear-control electric good",
+        "touches": {
+          "category": "dryers",
+          "type": "rear-control",
+          "fuel": "electric",
+          "priceTier": "good"
+        },
+        "units": 24,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dryers front-load gas better",
+        "touches": {
+          "category": "dryers",
+          "type": "front-load",
+          "fuel": "gas",
+          "priceTier": "better"
+        },
+        "units": 8,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dryers rear-control gas good",
+        "touches": {
+          "category": "dryers",
+          "type": "rear-control",
+          "fuel": "gas",
+          "priceTier": "good"
+        },
+        "units": 6,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: washtowers washtower electric",
+        "touches": {
+          "category": "washtowers",
+          "type": "washtower",
+          "fuel": "electric"
+        },
+        "units": 10,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: microwaves over-the-range better",
+        "touches": {
+          "category": "microwaves",
+          "type": "over-the-range",
+          "priceTier": "better"
+        },
+        "units": 30,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dishwashers top-control better",
+        "touches": {
+          "category": "dishwashers",
+          "type": "top-control",
+          "priceTier": "better"
+        },
+        "units": 34,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: dishwashers front-control good",
+        "touches": {
+          "category": "dishwashers",
+          "type": "front-control",
+          "priceTier": "good"
+        },
+        "units": 12,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "national mix: kitchen-packages 4-piece",
+        "touches": {
+          "category": "kitchen-packages",
+          "type": "4-piece"
+        },
+        "units": 8,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CA",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges slide-in electric better",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "electric",
+          "priceTier": "better"
+        },
+        "units": 30,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges freestanding electric good",
+        "touches": {
+          "category": "ranges",
+          "type": "freestanding",
+          "fuel": "electric",
+          "priceTier": "good"
+        },
+        "units": 25,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges slide-in induction best",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "induction",
+          "priceTier": "best"
+        },
+        "units": 12,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges slide-in gas better",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "gas",
+          "priceTier": "better"
+        },
+        "units": 22,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges freestanding gas good",
+        "touches": {
+          "category": "ranges",
+          "type": "freestanding",
+          "fuel": "gas",
+          "priceTier": "good"
+        },
+        "units": 14,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, national fuel mix: ranges slide-in dual-fuel flagship",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "dual-fuel",
+          "priceTier": "flagship"
+        },
+        "units": 5,
+        "regions": [
+          "US-AL",
+          "US-AK",
+          "US-AZ",
+          "US-AR",
+          "US-CO",
+          "US-CT",
+          "US-DE",
+          "US-DC",
+          "US-FL",
+          "US-GA",
+          "US-HI",
+          "US-ID",
+          "US-IL",
+          "US-IN",
+          "US-IA",
+          "US-KS",
+          "US-KY",
+          "US-LA",
+          "US-ME",
+          "US-MD",
+          "US-MA",
+          "US-MI",
+          "US-MN",
+          "US-MS",
+          "US-MO",
+          "US-MT",
+          "US-NE",
+          "US-NV",
+          "US-NH",
+          "US-NM",
+          "US-NY",
+          "US-NC",
+          "US-ND",
+          "US-OH",
+          "US-OK",
+          "US-OR",
+          "US-PA",
+          "US-RI",
+          "US-SC",
+          "US-SD",
+          "US-TN",
+          "US-UT",
+          "US-VT",
+          "US-VA",
+          "US-WA",
+          "US-WV",
+          "US-WI",
+          "US-WY"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges slide-in gas better",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "gas",
+          "priceTier": "better"
+        },
+        "units": 55,
+        "regions": [
+          "US-CA"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges freestanding gas good",
+        "touches": {
+          "category": "ranges",
+          "type": "freestanding",
+          "fuel": "gas",
+          "priceTier": "good"
+        },
+        "units": 35,
+        "regions": [
+          "US-CA"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges slide-in electric better",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "electric",
+          "priceTier": "better"
+        },
+        "units": 14,
+        "regions": [
+          "US-CA"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges freestanding electric good",
+        "touches": {
+          "category": "ranges",
+          "type": "freestanding",
+          "fuel": "electric",
+          "priceTier": "good"
+        },
+        "units": 10,
+        "regions": [
+          "US-CA"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges slide-in induction best",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "induction",
+          "priceTier": "best"
+        },
+        "units": 9,
+        "regions": [
+          "US-CA"
+        ]
+      },
+      {
+        "name": "cooking, gas-heavy (about 70% gas): ranges slide-in dual-fuel flagship",
+        "touches": {
+          "category": "ranges",
+          "type": "slide-in",
+          "fuel": "dual-fuel",
+          "priceTier": "flagship"
+        },
+        "units": 5,
+        "regions": [
+          "US-CA"
+        ]
+      }
+    ],
+    "label": "{{census.label}}: synthetic home sales, national mix tilted by census income"
+  },
+  "text": {
+    "rehearsedNote": "rehearsed, written by D1",
+    "shareOrder": [
+      "category",
+      "type",
+      "sizeBand",
+      "priceTier",
+      "fuel"
+    ],
+    "blendWord": "TVs",
+    "extraWord": "home"
+  }
+}
