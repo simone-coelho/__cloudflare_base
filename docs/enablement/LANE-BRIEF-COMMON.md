@@ -1,5 +1,12 @@
 # Common brief for every enablement lane
 
+> **Superseded in part, 2026-10-02.** `LANE-BRIEF-V2.md` is the law for what the material says: the finished
+> product as capabilities, the story in order, the fixed sentences, quotations by industry, no build state,
+> stages or labels. Where this file conflicts with it (the "only source of facts" section's labels and
+> legend, the consent sentence as a must-respect fact of the material, the "designed, not built" voice rule,
+> the status piece), V2 wins. This file still governs conduct, ownership, formats, gender-neutral language,
+> the glossary's terms and the design rules.
+
 Read this before your own brief. It is the law for the package; your lane brief adds only what is yours.
 
 ## What we are making
