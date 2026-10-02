@@ -130,7 +130,9 @@ function pageHelpers({ vis, txt, own, shown }) {
     deals: shown('#deals .deal').map((c) => ({ title: txt(c.querySelector('.dtitle')), receipt: txt(c.querySelector('.receipt')),
       pin: vis(c.querySelector('.rc-pin')).ok ? txt(c.querySelector('.rc-pin')) : '', terms: vis(c.querySelector('details.terms summary')).ok, covered: txt(c.querySelector('.covered-chip')) })),
     dealsChanges: { ok: vis('#dealsChanges').ok, ghosts: shown('#dealsGhosts .ghost').length, before: txt('#dealsGhosts'), deltas: shown('#dealsDeltas li').map(txt) },
-    rail: { ok: vis('#railModule').ok, chip: txt('#railChip'), deltasOk: vis('#railDeltas').ok, deltas: shown('#railDeltas li').map(txt), cards: shown('#rail .pcard').map((c) => txt(c.querySelector('.pname'))) },
+    rail: { ok: vis('#railModule').ok, chip: txt('#railChip'), deltasOk: vis('#railDeltas').ok, deltas: shown('#railDeltas li').map(txt), cards: shown('#rail .pcard').map((c) => txt(c.querySelector('.pname'))),
+      // The rail's regional line beside its chip (lane V1), on screen or empty, and each card's receipt line.
+      lean: vis('#railLean').ok ? txt('#railLean') : '', ranks: shown('#rail .pcard').map((c) => txt(c.querySelector('.prank'))) },
     modules: shown('#modules > .pmod').map((m) => ({ title: own(m.querySelector('.pmod-head h2')), receipt: txt(m.querySelector('.rchip')),
       cite: vis(m.querySelector('.cite')).ok ? txt(m.querySelector('.cite')) : '', covered: txt(m.querySelector('.covered-chip')) })),
     pdpChanges: { ok: vis('#pdpChanges').ok, before: shown('#pdpBefore li').map(txt), deltas: shown('#pdpDeltas li').map(txt) },
@@ -252,6 +254,9 @@ const OUTCOMES = {
     ok('an asserted region is labelled "region asserted, not observed", never "geo real"', has(S.cold.text, 'region asserted, not observed') && !has(S.cold.text, 'geo real'));
     ok('and the panel names it the rehearsal override, never the default', has(S.cold.text, 'rehearsal override') && has(S.ctx, 'rehearsal override'), S.ctx);
     ok('her own meters are empty: nothing about her is known yet', S.meters.length === 0 && has(S.vectorsText, 'No evidence of her own yet'));
+    // Lane V1: /sort leans with the region the four lean with, and the rail says so; the override is labelled asserted.
+    ok('the rail says it leans with the override’s region, labelled: “leans with New York’s sales (asserted) · synthetic → warehouse”',
+      S.rail.lean === 'leans with New York’s sales (asserted) · synthetic → warehouse', S.rail.lean || `no regional line · chip “${S.rail.chip}”`);
   },
   1: (S) => {
     const was = snaps[0];
@@ -260,6 +265,10 @@ const OUTCOMES = {
     ok('the Galaxy S26 offer second on the Texas lean', S.deals[1] && S.deals[1].title === TITLE['promo-galaxy-s26-new-line']);
     ok('the arrival panel names Texas and its census figure', S.cold.ok && has(S.cold.text, 'Texas') && has(S.cold.text, '$79,721'), S.cold.text.slice(0, 120));
     ok('the region is labelled as asserted', has(S.ctx, 'US-TX') && has(S.ctx, 'asserted'), S.ctx);
+    ok('the rail leans with the asserted region and says so: “leans with Texas’s sales (asserted) · synthetic → warehouse”',
+      S.rail.lean === 'leans with Texas’s sales (asserted) · synthetic → warehouse', S.rail.lean || `no regional line · chip “${S.rail.chip}”`);
+    ok('and each card’s receipt line names the region it leans with, as the four’s receipts do', S.rail.ranks.length > 0 && S.rail.ranks.some((r) => has(r, 'region US-TX'))
+      && S.rail.ranks.every((r) => !/region (?!US-TX)/i.test(r)), S.rail.ranks.slice(0, 3).join(' | '));
   },
   2: (S) => {
     ok('she is on the phones grid', S.view === 'viewPhones');
@@ -516,7 +525,16 @@ try {
       S.cold.ok && (fromRequest || none) && !has(S.cold.text, 'asserted, not observed') && !has(S.cold.text, 'rehearsal override'), S.cold.text.slice(0, 220));
     ok('no snapshot and no panel read asserted a region', asked.length > 0 && panelReads.length > 0
       && asked.every((r) => !/[?&]ctx\.region=/.test(r.url)) && panelReads.every((r) => !/[?&]region=/.test(r.url)), `${asked.length} snapshot(s), ${panelReads.length} panel read(s)`);
+    // Lane V1: the rail leans with the request's own region, named as the panel names it, and asserts nothing.
+    const own = await evaluate('(() => { const s = (window.__vantage || {}).state; return s && s.own ? { key: s.own.key || null, label: s.own.label || null } : null; })()');
+    if (own && own.key) {
+      ok(`the rail says it leans with the request’s region, as the panel names it: “leans with ${own.label}’s sales · synthetic → warehouse”, nothing asserted`,
+        has(S.cold.text, own.label) && S.rail.lean === `leans with ${own.label}’s sales · synthetic → warehouse`, S.rail.lean || `no regional line · chip “${S.rail.chip}”`);
+    } else {
+      ok('with no region on the request, the rail asserts none', !has(S.rail.lean, 'asserted'), S.rail.lean || 'no regional line');
+    }
     info(`hero “${S.hero.title}” · deals ${titles(S).join(' | ')} · ${S.ctx}`);
+    info(`the rail: ${S.rail.cards.join(' | ')} · ${S.rail.lean || 'no regional line'}`);
   }
 
   {
@@ -657,6 +675,26 @@ try {
       : S.view === 'viewPhone' ? (S.focus.modules.inView || S.focus.buybox.inView) : true);
     ok(`↳ ${NO[i]}: no horizontal overflow, no broken image`, S.overflow <= 1 && S.broken.length === 0, `${S.overflow}px · ${S.broken.join(', ')}`);
     OUTCOMES[i](S);
+
+    if (i === 1) {
+      // Lane V1: the rail's receipt in Why these, read where a person reads it: the tab pressed, the rail's group on
+      // screen, each phone's lines; then the tab she had is pressed back, so the walk goes on as it was.
+      const was = await evaluate("(document.querySelector('.machine [role=tab][aria-selected=true]') || {}).id || ''");
+      await evaluate("document.getElementById('tab-why').click()");
+      await waitFor("window.__l5.vis('#whyBody').ok", 5000);
+      const W = await evaluate(`(() => { const { vis, txt } = window.__l5; const h = [...document.querySelectorAll('#whyBody .why-h')].find((x) => /phones-rail/.test(x.textContent));
+        const rows = [];
+        if (h && vis(h).ok) for (let n = h.nextElementSibling; n && !n.matches('.why-h'); n = n.nextElementSibling) {
+          if (n.matches('.drv')) rows.push({ name: txt(n.querySelector('.drvname')), reg: [...n.querySelectorAll('.drvline .reg')].filter((x) => vis(x).ok).map(txt) });
+        }
+        return { head: h && vis(h).ok ? txt(h) : '', rows }; })()`);
+      if (was) await evaluate(`document.getElementById(${JSON.stringify(was)}).click()`);
+      const withRegion = W.rows.filter((r) => r.reg.length);
+      ok('Why these lists the rail, each phone with its one regional driver for the asserted region, as the four’s receipts do',
+        has(W.head, 'leans with Texas’s sales (asserted)') && W.rows.length > 0 && withRegion.length > 0
+          && withRegion.every((r) => r.reg.length === 1 && /^regional US-TX \d/.test(r.reg[0])),
+        `${W.head || 'no rail group on screen'} · ${withRegion.slice(0, 2).map((r) => `${r.name}: ${r.reg.join(', ')}`).join(' | ')}`);
+    }
 
     if (i === 0) {
       // Compare with no Capture pressed (lane C1): the Before is the frame taken as beat 1 landed, the page before she arrived.

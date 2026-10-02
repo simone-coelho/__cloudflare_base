@@ -740,16 +740,60 @@ import { createDemo, util } from '/demo-kit/kit.js';
     const w = railDoc().weights || { affinity: 1 };
     return state.rail.off ? { ...w, affinity: 0 } : w;
   }
-  /** POST /sort for one visitor: the rail as the engine answers it for her, on top of `base` (default: the rail on screen). */
+  /**
+   * POST /sort for one visitor: the rail as the engine answers it for her, on top of `base` (default: the rail on screen).
+   * A region the page asserts (beat 2's contrast, 14a's coverage, the hand's buttons, the ?region= rehearsal override)
+   * goes on the body as `context.region`, exactly as it goes on every snapshot, so the rail leans with the same region
+   * as the four; the engine reads it on the demo profile only and labels its answer asserted. Nothing asserted, nothing
+   * sent: the engine reads the request's own region.
+   */
   async function askRail(v, base) {
     const candidates = state.phones.map((p) => ({ id: p.id, brand: p.brand, ecosystem: ecoOf(p), os: ecoOf(p), price_usd: num(p.price_usd) }));
-    const r = await api('/sort', { userId: v.session.subject, sessionId: v.session.sessionId, candidates, weights: railWeights() }, { visitor: v });
+    const asserted = state.ctx.region || null;
+    const r = await api('/sort', { userId: v.session.subject, sessionId: v.session.sessionId, candidates, weights: railWeights(),
+      ...(asserted ? { context: { region: asserted } } : {}) }, { visitor: v });
     const from = base || state.rail;
     const prevOrder = from.order;
     if (!r.ok || !r.body || !Array.isArray(r.body.order)) {
-      return { ...from, status: r.status === 503 ? 'no-capture' : 'down', order: null, items: null, prevOrder, error: (r.body && r.body.error) || String(r.status) };
+      return { ...from, status: r.status === 503 ? 'no-capture' : 'down', order: null, items: null, regional: null, prevOrder, error: (r.body && r.body.error) || String(r.status) };
     }
-    return { ...from, status: 'sorted', order: r.body.order, items: r.body.items || [], prevOrder, affinityWeight: r.body.affinityWeight };
+    return { ...from, status: 'sorted', order: r.body.order, items: r.body.items || [], regional: r.body.regional || null, prevOrder, affinityWeight: r.body.affinityWeight };
+  }
+  /**
+   * The rail's regional line, from the /sort answer's own label: whose sales it leans with, "(asserted)" when the answer
+   * says the region was asserted, and the data's provenance, as the homepage's regional lines say them. Empty when the
+   * answer carries no regional label, and at affinity 0, where the engine returns the site's order and nothing leans.
+   */
+  function railLean(rail) {
+    const reg = rail && rail.status === 'sorted' && !rail.off ? rail.regional : null;
+    if (!reg || !reg.region) return '';
+    const key = reg.region;
+    const cold = state.coldstart && state.coldstart.region && state.coldstart.region.key === key ? state.coldstart : null;
+    const name = reg.level === 'global' ? 'every region'
+      : (state.own && state.own.key === key && state.own.label) || (cold && coldLabel()) || regionName(key) || (key === 'US' ? 'the US' : key);
+    // The cold-start panel's own rule for the same region's lean: synthetic unless that read says it is this worker's own.
+    const lean = cold && cold.lean;
+    const own = lean && (lean.dataSource || lean.label) && !/synthetic/i.test(`${lean.dataSource || ''} ${lean.label || ''}`);
+    return `leans with ${name}’s sales${reg.asserted ? ' (asserted)' : ''} · ${own ? 'this worker’s own' : 'synthetic → warehouse'}`;
+  }
+  /** The rail's regional line sits beside its status chip, in the homepage's regional chip; the markup has no slot for it. */
+  function railLeanNode() {
+    let node = $('railLean');
+    if (!node && el.railChip && el.railChip.parentNode) {
+      node = document.createElement('span');
+      node.id = 'railLean';
+      node.className = 'covered-chip rail-lean';
+      node.hidden = true;
+      el.railChip.parentNode.insertBefore(node, el.railChip);
+    }
+    return node;
+  }
+  /** One regional driver per phone, as a homepage decision carries one: the region's part of every touch it moved, summed. */
+  function railRegional(it) {
+    const parts = arr(it && it.drivers).filter((x) => x.dim === 'regional');
+    if (!parts.length) return null;
+    const w = parts.reduce((s, x) => s + num(x.w), 0);
+    return { dim: 'regional', value: parts[0].value, a: num(parts[0].a), weight: Math.round(w * 1e4) / 1e4, contribution: parts.reduce((s, x) => s + num(x.contribution), 0) };
   }
   async function sortRail() {
     const v = cur();
@@ -767,6 +811,12 @@ import { createDemo, util } from '/demo-kit/kit.js';
       : state.rail.status === 'no-capture' ? 'the site’s own order · /sort answers once she has a captured event'
         : state.rail.status === 'down' ? `the site’s own order · /sort did not answer (${state.rail.error})` : 'the site’s own order · no visitor yet';
     el.railChip.classList.toggle('rail-chip--live', state.rail.status === 'sorted' && !state.rail.off);
+    const lean = railLean(state.rail), leanNode = railLeanNode();
+    if (leanNode) {
+      leanNode.textContent = lean;
+      leanNode.hidden = !lean;
+      leanNode.title = lean ? `The regional prior on POST /sort: ${state.rail.regional.region} at ${state.rail.regional.level} level, λ = ${fmt2(num(state.rail.regional.lambda))} of the blend; ${state.rail.regional.asserted ? 'the region asserted on the request, not observed' : 'the region read from the request'}` : '';
+    }
     el.railForYou.setAttribute('aria-pressed', String(!state.rail.off));
     el.railSite.setAttribute('aria-pressed', String(state.rail.off));
     el.rail.innerHTML = order.slice(0, take).map((id, i) => {
@@ -775,9 +825,10 @@ import { createDemo, util } from '/demo-kit/kit.js';
       const it = byId.get(id);
       const was = prev ? prev.indexOf(id) : -1;
       const moved = prev ? (was === -1 || was >= take ? 'new' : was > i ? `↑${was - i}` : was < i ? `↓${i - was}` : '') : '';
-      const top = it && (it.drivers || []).slice().sort((a, b) => num(b.contribution) - num(a.contribution))[0];
+      const top = it && (it.drivers || []).filter((x) => x.dim !== 'regional').sort((a, b) => num(b.contribution) - num(a.contribution))[0];
+      const reg = !state.rail.off && railRegional(it);
       const rank = state.rail.status === 'sorted'
-        ? `rank <b>${i + 1}</b> · site ${Number.isFinite(num(it && it.feedRank)) ? num(it.feedRank) + 1 : '—'}${it && num(it.score) > 0 ? ` · ${fmt3(it.score)}` : ''}${top ? ` · ${esc(DIM_LABEL[top.dim] || top.dim)} ${esc(top.value)}` : ''}`
+        ? `rank <b>${i + 1}</b> · site ${Number.isFinite(num(it && it.feedRank)) ? num(it.feedRank) + 1 : '—'}${it && num(it.score) > 0 ? ` · ${fmt3(it.score)}` : ''}${top ? ` · ${esc(DIM_LABEL[top.dim] || top.dim)} ${esc(top.value)}` : ''}${reg ? ` · region ${esc(reg.value)}` : ''}`
         : `site position <b>${i + 1}</b>`;
       return phoneCardHtml(p, { ctl: `rail-${p.id}`, rank, moved, entered: prev && was !== i });
     }).join('');
@@ -1230,6 +1281,7 @@ import { createDemo, util } from '/demo-kit/kit.js';
       await ensureVisitor();
       state.rail.off = t.dataset.off === '1';
       await sortRail();
+      renderWhy();
       note('asserted', state.rail.off ? 'The rail at affinity 0' : 'The rail at her affinity', state.rail.off ? 'the parity check: the engine returns the site’s order exactly' : 'the rail follows her again');
       return;
     }
@@ -1823,8 +1875,9 @@ import { createDemo, util } from '/demo-kit/kit.js';
   // ════════════════════════════════════════════════════════════════════════
   /** A decision's title as the page shows it: a plan by its tier, a module by its own title, anything else by its piece. */
   const titleOf = (d) => (d.slot === SLOTS.plans ? ((tierOfDecision(d) || {}).name || d.customerContentId)
-    : d.slot === SLOTS.modules ? moduleTitle(d) : ((pieceOfDecision(d) || {}).title || d.customerContentId));
-  /** Why these: on the phone page its two slots; on the homepage the hinge, if the receipts say it, then its two slots. */
+    : d.slot === SLOTS.modules ? moduleTitle(d) : d.slot === SLOTS.rail ? ((phone(d.customerContentId) || {}).name || d.customerContentId)
+      : ((pieceOfDecision(d) || {}).title || d.customerContentId));
+  /** Why these: on the phone page its two slots; on the homepage the hinge, if the receipts say it, then its two slots and the rail. */
   function whyGroups() {
     const onPhone = state.view === 'phone' && state.phone.set;
     if (onPhone) {
@@ -1833,9 +1886,29 @@ import { createDemo, util } from '/demo-kit/kit.js';
     }
     if (state.home.set) {
       return { set: state.home.set, lead: hingeLine(), groups: [[`Homepage · slot ${SLOTS.hero}`, bySlot(state.home.set, SLOTS.hero)],
-        [`Homepage · slot ${SLOTS.deals}`, bySlot(state.home.set, SLOTS.deals)]] };
+        [`Homepage · slot ${SLOTS.deals}`, bySlot(state.home.set, SLOTS.deals)], ...railWhy()] };
     }
     return { set: state.home.set, groups: [] };
+  }
+  /**
+   * Why these for the rail: the six on screen as POST /sort itemised them, in the rows the homepage's receipts use.
+   * Her touches carry the blended affinity; the region's part of them is one regional driver per phone, as on a
+   * homepage decision, and it is not added to the score a second time. At affinity 0 nothing is ranked, so no driver is listed.
+   */
+  function railWhy() {
+    if (state.rail.status !== 'sorted' || !state.rail.order) return [];
+    const byId = new Map(arr(state.rail.items).map((x) => [x.id, x]));
+    const lean = railLean(state.rail);
+    const head = `Homepage · slot ${SLOTS.rail} · POST /sort${state.rail.off ? ' at affinity 0, the site’s order' : ''}${lean ? ` · ${lean} · λ ${fmt2(num(state.rail.regional.lambda))} of the blend` : ''}`;
+    const rows = state.rail.order.slice(0, railTake()).map((id, i) => {
+      const it = byId.get(id) || {};
+      const site = Number.isFinite(num(it.feedRank)) ? num(it.feedRank) + 1 : null;
+      const reg = railRegional(it);
+      const drivers = state.rail.off ? [] : [...arr(it.drivers).filter((x) => x.dim !== 'regional').map((x) => ({ dim: x.dim, value: x.value, a: x.a, weight: x.w })), ...(reg ? [reg] : [])];
+      const note = `rank ${i + 1}${site ? ` · site ${site}` : ''}${num(it.score) > 0 ? ` · score ${fmt3(it.score)}` : ''}${drivers.length ? '' : ' · nothing weighs on it: the site’s position'}`;
+      return { customerContentId: id, slot: SLOTS.rail, order: i, score: num(it.score), strategy: 'sort', explain: { drivers, note } };
+    });
+    return [[head, rows]];
   }
   /** One row of the day's report: the item's key and its title, a plan by its tier and a module by its own name. */
   function reportRow(slot, id) {
