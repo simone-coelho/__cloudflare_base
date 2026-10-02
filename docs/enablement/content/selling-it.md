@@ -170,7 +170,7 @@ Bring one for architecture and the stack; the arithmetic; integration and the ev
 | Never say | Say instead |
 |---|---|
 | "It's AI", "AI-powered decisions", "we don't use a model" | "It calls no AI model to decide." |
-| "Real-time interest", "sub-second decisions", "instant", or any timing or throughput figure | "In the visitor's session, from their first event. We quote no timing figure; timing is measured on the customer's own deployment." |
+| "Real-time interest", "instant", or any timing or throughput figure | "In the visitor's session, from their first event. We quote no timing figure; timing is measured on the customer's own deployment." |
 | "Changes go live in seconds" | "A save is in force without a software release." |
 | "Learning that counts from day one", "it learns from day one", "it records from day one" | "Learning is built, and it changes nothing until a person raises the learning dial." Then what recording needs, as the one exception above says |
 | "A receipt for every decision", "every decision is recorded" | "Every answer carries its reasons; receipts are kept with the visitor's consent once recording is on." |
