@@ -4,13 +4,13 @@
 #
 # The Content-Security-Policy lets a page load its stylesheet and its script from this site only
 # (/site.css and /site.js, as 'self'), images only as inline data: URIs (the tab icon), and nothing else:
-# no inline script, no other address, and no inline style unless named here by its SHA-256 (never
-# unsafe-inline). One page still carries an inline style: E0's 404.html, allowed by the single hash beside
-# 'self'. When that style moves to /site.css, delete the hash; the preflight fails until you do, and
+# no inline script, no inline style and no other address. Every style is in /site.css, so the policy
+# lists no hash. Should a page ever need an inline style, add its SHA-256 beside 'self' (never
+# unsafe-inline):
 #   node enablement/check-site.mjs --hashes
-# prints the style-src value the pages need.
+# prints the style-src value the pages need, and the preflight fails until the policy matches it.
 /*
-  Content-Security-Policy: default-src 'none'; style-src 'self' 'sha256-F6R0q2n/1TfqeKlCaZDEnovWp0bG3RcZ1R/kKNwiKRU='; script-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
