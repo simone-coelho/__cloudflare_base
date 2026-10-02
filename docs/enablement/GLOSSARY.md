@@ -224,7 +224,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Receipt.** The record of one served decision: what was served, in what position, and the arithmetic behind it, with the revisions of the published documents in force. It is written after the answer and only with tracking consent; with the SDK as shipped, only for slots set to count rendered pieces with durable recovery on, which no configuration has yet. Say receipt, never explain record; the page's own answer carries the shorter drivers.
 
-**Recording.** Writing receipts, outcomes and learning counts after an answer, which happens only with tracking consent. A page that asks the engine directly, without the SDK, is recorded, which is how the demos record; with the SDK as shipped, decisions are recorded only for slots set to count rendered pieces with durable recovery switched on, and no configuration has it on yet.
+**Recording.** Writing receipts, outcomes and learning counts after an answer, which happens only with tracking consent. A page that asks the engine directly, without the SDK, is recorded when its slots use the default served basis, which is how the demos record; with the SDK as shipped, decisions are recorded only for slots set to count rendered pieces with durable recovery switched on, and no configuration has it on yet.
 
 **Reflex.** Deprecated: older material uses it for the engine, for a program kept per visitor and for the registry. Say the engine, or the registry.
 
