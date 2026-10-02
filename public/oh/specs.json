@@ -1,0 +1,5750 @@
+{
+ "about": "OH product specs (Lane D2, 2026-10-02), one record per sku, merged over public/oh/products.json by sku on the page. Read once per product from the lg.com/us product page's server data (pageProps.productData.product, productPriceData.price, productData.allInfo), as an anonymous visitor, on 2026-10-02. title: the page's product title. salePrice: the page's final price. listPrice: the page's MSRP, only when it is above the final price (a struck price). cta: cart for Add to Cart (CART) and Notify Me (NOTIFY: sold here, out of stock that day), retailer for Find a Retailer (RETAIL) and an external seller (EXTERNAL); absent where the page hides its button (HIDE). width, depth, height: inches, the product's own outside dimensions (for TVs without the stand; for ranges the overall width, height with backguard and depth with handle; for laundry, dishwashers and the rest the page's Product (W x H x D)). vesa: for TVs, the VESA mounting pattern, W x H in millimetres. image: the OH image (public/oh/img/index.json's accepted WebP). A field the page did not give is absent, never null, so a merge never erases the feed's value. Prices change daily; these are 2026-10-02's.",
+ "asOf": "2026-10-02",
+ "counts": {
+  "records": 591,
+  "title": 565,
+  "salePrice": 378,
+  "listPrice": 318,
+  "cta": 561,
+  "width": 475,
+  "depth": 469,
+  "height": 470,
+  "vesa": 132,
+  "image": 591
+ },
+ "specs": [
+  {
+   "sku": "100MRGB95BU",
+   "title": "100 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
+   "salePrice": 6999.99,
+   "listPrice": 7999.99,
+   "cta": "cart",
+   "width": 87.8,
+   "depth": 2,
+   "height": 50.3,
+   "vesa": "600x400",
+   "image": "/oh/img/products/100mrgb95bu.webp"
+  },
+  {
+   "sku": "100QNED84BU",
+   "title": "100 Inch Class LG QNED evo AI Mini LED QNED84B 4K Smart TV 2026",
+   "salePrice": 3299.99,
+   "listPrice": 4499.9,
+   "cta": "cart",
+   "width": 87.8,
+   "depth": 2,
+   "height": 50.3,
+   "vesa": "600x400",
+   "image": "/oh/img/products/100qned84bu.webp"
+  },
+  {
+   "sku": "100QNED85AU",
+   "title": "100 Inch Class LG QNED evo AI QNED85A Mini LED 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 87.8,
+   "depth": 2,
+   "height": 50.3,
+   "vesa": "600x400",
+   "image": "/oh/img/products/100qned85au.webp"
+  },
+  {
+   "sku": "115QNED92BU",
+   "title": "115 Inch Class LG QNED evo AI QNED92B Mini LED 4K Smart TV 2026",
+   "salePrice": 12999.99,
+   "cta": "retailer",
+   "width": 101,
+   "depth": 2.3,
+   "height": 57.8,
+   "vesa": "1000x700",
+   "image": "/oh/img/products/115qned92bu.webp"
+  },
+  {
+   "sku": "24LJ4540-WU",
+   "title": "HD 720p LED TV - 24 Inch Class (23.6 Inch Diag)",
+   "cta": "retailer",
+   "vesa": "75x75",
+   "image": "/oh/img/products/24lj4540-wu.webp"
+  },
+  {
+   "sku": "27LB7000PUA",
+   "title": "27 Inch Class LG FHD LB70 Smart TV 2026",
+   "salePrice": 199.99,
+   "cta": "cart",
+   "width": 24.1,
+   "depth": 1.6,
+   "height": 14.2,
+   "vesa": "100x100",
+   "image": "/oh/img/products/27lb7000pua.webp"
+  },
+  {
+   "sku": "27LX5QKNA",
+   "title": "LG StanbyME Go 27 Inch Briefcase Design Touch Screen",
+   "cta": "retailer",
+   "width": 24.4,
+   "depth": 1.2,
+   "height": 14.2,
+   "image": "/oh/img/products/27lx5qkna.webp"
+  },
+  {
+   "sku": "27LX6TYGA",
+   "title": "StanbyME 2 27 Inch Portable Smart Touch Screen with 4hr Battery",
+   "salePrice": 899.99,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 24.5,
+   "depth": 1.1,
+   "height": 14.3,
+   "image": "/oh/img/products/27lx6tyga.webp"
+  },
+  {
+   "sku": "32LB650BPUA",
+   "title": "32 Inch Class LG HD TV AI LB65 Smart TV 2026",
+   "salePrice": 149.99,
+   "cta": "cart",
+   "width": 28.3,
+   "depth": 2.8,
+   "height": 16.9,
+   "vesa": "100x100",
+   "image": "/oh/img/products/32lb650bpua.webp"
+  },
+  {
+   "sku": "32LR655BPUA",
+   "title": "LG 32 Inch Class Series with webOS23",
+   "salePrice": 179.99,
+   "cta": "cart",
+   "width": 29,
+   "depth": 3.3,
+   "height": 17.2,
+   "vesa": "200x200",
+   "image": "/oh/img/products/32lr655bpua.webp"
+  },
+  {
+   "sku": "32LX6BWGA",
+   "title": "StanbyME 2 Max 32 Inch Portable Smart Touch Screen with 4.5hr Battery",
+   "salePrice": 1299.99,
+   "cta": "cart",
+   "width": 28.5,
+   "depth": 1.1,
+   "height": 16.6,
+   "image": "/oh/img/products/32lx6bwga.webp"
+  },
+  {
+   "sku": "42LX3QPUA",
+   "title": "LG 42 Inch Class OLED Flex Smart TV with Bendable Screen 42LX3QPUA",
+   "cta": "retailer",
+   "image": "/oh/img/products/42lx3qpua.webp"
+  },
+  {
+   "sku": "43UT7550AUA",
+   "title": "LG 43 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "image": "/oh/img/products/43ut7550aua.webp"
+  },
+  {
+   "sku": "43UT8000AUA",
+   "title": "43 Inch Class UT8000 4K TV with webOS 24",
+   "cta": "retailer",
+   "width": 38.1,
+   "depth": 2.2,
+   "height": 22.2,
+   "vesa": "200x200",
+   "image": "/oh/img/products/43ut8000aua.webp"
+  },
+  {
+   "sku": "50NU700BPUA",
+   "title": "50 Inch Class LG Nano 4K UHD TV AI NU70 Smart TV 2026",
+   "salePrice": 249.99,
+   "listPrice": 329.99,
+   "cta": "cart",
+   "width": 43.8,
+   "depth": 2.8,
+   "height": 25.6,
+   "vesa": "300x200",
+   "image": "/oh/img/products/50nu700bpua.webp"
+  },
+  {
+   "sku": "50QNED70AUA",
+   "title": "50 Inch Class LG QNED AI QNED70A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 44.2,
+   "depth": 2.7,
+   "height": 25.7,
+   "vesa": "200x200",
+   "image": "/oh/img/products/50qned70aua.webp"
+  },
+  {
+   "sku": "50QNED74BUA",
+   "title": "50 Inch Class LG QNED AI QNED74B Mini LED 4K Smart TV 2026",
+   "salePrice": 299.99,
+   "listPrice": 349.99,
+   "cta": "cart",
+   "width": 43.8,
+   "depth": 2.8,
+   "height": 25.6,
+   "vesa": "300x200",
+   "image": "/oh/img/products/50qned74bua.webp"
+  },
+  {
+   "sku": "50QNED75BUA",
+   "title": "50 Inch Class LG QNED AI Mini LED QNED75B 4K Smart TV 2026",
+   "salePrice": 329.99,
+   "listPrice": 399.99,
+   "cta": "cart",
+   "width": 43.8,
+   "depth": 2.8,
+   "height": 25.6,
+   "vesa": "300x200",
+   "image": "/oh/img/products/50qned75bua.webp"
+  },
+  {
+   "sku": "50QNED75URA",
+   "title": "LG 50 Inch Class QNED75 series LED 4K UHD Smart webOS 23 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 44.1,
+   "depth": 1.9,
+   "height": 25.7,
+   "vesa": "200x200",
+   "image": "/oh/img/products/50qned75ura.webp"
+  },
+  {
+   "sku": "50UA7500ZUA",
+   "title": "50 Inch Class LG UHD AI UA75 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 44.2,
+   "depth": 2.7,
+   "height": 25.7,
+   "vesa": "300x300",
+   "image": "/oh/img/products/50ua7500zua.webp"
+  },
+  {
+   "sku": "50UA7700AUA",
+   "title": "50 Inch Class LG UHD AI UA77A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 44.2,
+   "depth": 2.7,
+   "height": 28.3,
+   "vesa": "200x200",
+   "image": "/oh/img/products/50ua7700aua.webp"
+  },
+  {
+   "sku": "50UQ7570PUJ",
+   "title": "LG 50 Inch Class UQ7570 PUJ series LED 4K UHD Smart webOS 22 TV",
+   "cta": "retailer",
+   "width": 44,
+   "depth": 2.9,
+   "height": 25.6,
+   "vesa": "200x200",
+   "image": "/oh/img/products/50uq7570puj.webp"
+  },
+  {
+   "sku": "55LX7BPUA",
+   "title": "55 Inch Class LG Gallery TV with Frame LX7B Mini LED 4K Smart TV 2026",
+   "salePrice": 899.99,
+   "listPrice": 1299.99,
+   "cta": "cart",
+   "width": 49,
+   "depth": 1.59,
+   "height": 28.5,
+   "vesa": "400x300",
+   "image": "/oh/img/products/55lx7bpua.webp"
+  },
+  {
+   "sku": "55QNED75BUA",
+   "title": "55 Inch Class LG QNED AI Mini LED QNED75B 4K Smart TV 2026",
+   "salePrice": 349.99,
+   "listPrice": 449.99,
+   "cta": "cart",
+   "width": 48.3,
+   "depth": 2.8,
+   "height": 28.1,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55qned75bua.webp"
+  },
+  {
+   "sku": "55QNED75URA",
+   "title": "LG 55 Inch Class QNED75 series LED 4K UHD Smart webOS 23 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 48.5,
+   "depth": 1.7,
+   "height": 28.2,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55qned75ura.webp"
+  },
+  {
+   "sku": "55QNED7SBAA",
+   "title": "55 Inch Class LG QNED AI QNED7SB Mini LED 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 48.3,
+   "depth": 2.8,
+   "height": 28.1,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55qned7sbaa.webp"
+  },
+  {
+   "sku": "55QNED7SBUA",
+   "title": "55 Inch Class LG QNED AI QNED7SB Mini LED 4K Smart TV 2026",
+   "salePrice": 329.99,
+   "listPrice": 399.99,
+   "cta": "cart",
+   "width": 48.3,
+   "depth": 9.1,
+   "height": 30.6,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55qned7sbua.webp"
+  },
+  {
+   "sku": "55QNED80TUC",
+   "title": "LG 55 Inch Class QNED80T Series 4K QNED TV with webOS 24",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 1.2,
+   "height": 28.2,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55qned80tuc.webp"
+  },
+  {
+   "sku": "55QNED82AAA",
+   "title": "55 Inch Class LG QNED AI QNED82A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 2,
+   "height": 28.2,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55qned82aaa.webp"
+  },
+  {
+   "sku": "55QNED82AUA",
+   "title": "55 Inch Class LG QNED AI QNED82A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 2,
+   "height": 28.2,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55qned82aua.webp"
+  },
+  {
+   "sku": "55QNED85AUA",
+   "title": "55 Inch Class LG QNED evo AI QNED85A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 1.2,
+   "height": 28.2,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55qned85aua.webp"
+  },
+  {
+   "sku": "55QNED85TUA",
+   "title": "55 Inch Class QNED 4K LED QNED85T series TV with webOS 24",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 1.2,
+   "height": 28.2,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55qned85tua.webp"
+  },
+  {
+   "sku": "55UA7100AUB",
+   "title": "55 Inch Class LG UHD AI UA7100 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 48.7,
+   "depth": 2.7,
+   "height": 28.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/55ua7100aub.webp"
+  },
+  {
+   "sku": "55UA7700PUB",
+   "title": "55 Inch Class LG UHD AI UA77 4K Smart TV 2025",
+   "salePrice": 299.99,
+   "listPrice": 379.99,
+   "cta": "cart",
+   "width": 54.3,
+   "depth": 4.6,
+   "height": 32.7,
+   "vesa": "200x300",
+   "image": "/oh/img/products/55ua7700pub.webp"
+  },
+  {
+   "sku": "55UQ7070ZUE",
+   "title": "LG 55 Inch Class UQ7070 ZUE series LED 4K UHD Smart webOS 22 TV",
+   "cta": "retailer",
+   "width": 48.6,
+   "depth": 2.3,
+   "height": 28.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55uq7070zue.webp"
+  },
+  {
+   "sku": "55UT7570PUB",
+   "title": "LG 55 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "width": 48.3,
+   "depth": 2.7,
+   "height": 28,
+   "vesa": "200x300",
+   "image": "/oh/img/products/55ut7570pub.webp"
+  },
+  {
+   "sku": "55UT8000AUA",
+   "title": "55 Inch Class UT8000 4K TV with webOS 24",
+   "cta": "retailer",
+   "width": 48.6,
+   "depth": 2.3,
+   "height": 28.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/55ut8000aua.webp"
+  },
+  {
+   "sku": "58NU700BPUD",
+   "title": "58 Inch Class LG 4K Nano UHD TV AI NU70 Smart TV 2026",
+   "cta": "retailer",
+   "width": 50.7,
+   "depth": 2.6,
+   "height": 29.8,
+   "vesa": "200x200",
+   "image": "/oh/img/products/58nu700bpud.webp"
+  },
+  {
+   "sku": "65LX7BPUA",
+   "title": "65 Inch Class LG Gallery TV with Frame LX7B Mini LED 4K Smart TV 2026",
+   "salePrice": 1099.99,
+   "listPrice": 1799.99,
+   "cta": "cart",
+   "width": 57.7,
+   "depth": 1.59,
+   "height": 33.4,
+   "vesa": "400x400",
+   "image": "/oh/img/products/65lx7bpua.webp"
+  },
+  {
+   "sku": "65QNED75BAA",
+   "title": "65 Inch Class LG QNED AI QNED75B Mini LED 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 57,
+   "depth": 2.8,
+   "height": 33,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned75baa.webp"
+  },
+  {
+   "sku": "65QNED7SBUA",
+   "title": "65 Inch Class LG QNED AI QNED7SB Mini LED 4K Smart TV 2026",
+   "salePrice": 429.99,
+   "listPrice": 479.99,
+   "cta": "cart",
+   "width": 57,
+   "depth": 10.6,
+   "height": 35.5,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned7sbua.webp"
+  },
+  {
+   "sku": "65QNED80TUC",
+   "title": "LG 65 Inch Class QNED80T Series 4K QNED TV with webOS 24",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned80tuc.webp"
+  },
+  {
+   "sku": "65QNED80UQA",
+   "title": "LG 65 Inch Class QNED80 UQA series LED 4K UHD Smart webOS 22 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 57.2,
+   "depth": 1.7,
+   "height": 33,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned80uqa.webp"
+  },
+  {
+   "sku": "65QNED80URA",
+   "title": "65 Inch Class TV LG URA Series QNED80 4K UHD TV",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned80ura.webp"
+  },
+  {
+   "sku": "65QNED82AUA",
+   "title": "65 Inch Class LG QNED AI QNED82A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 2,
+   "height": 33.1,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned82aua.webp"
+  },
+  {
+   "sku": "65QNED83UPA",
+   "title": "LG QNED MiniLED 83 Series 2022 65 Inch Class 4K Smart TV w/ AI ThinQ® (64.5 Inch Diag)",
+   "cta": "retailer",
+   "width": 56.9,
+   "depth": 11.6,
+   "height": 32.8,
+   "image": "/oh/img/products/65qned83upa.webp"
+  },
+  {
+   "sku": "65QNED84BAA",
+   "title": "65 Inch Class LG QNED evo AI QNED84B Mini LED 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 2.7,
+   "height": 33.1,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned84baa.webp"
+  },
+  {
+   "sku": "65QNED85AAA",
+   "title": "65 Inch Class LG QNED evo AI QNED85AA Mini LED 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned85aaa.webp"
+  },
+  {
+   "sku": "65QNED85BUA",
+   "title": "65 Inch Class LG QNED AI QNED85B Mini LED 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned85bua.webp"
+  },
+  {
+   "sku": "65QNED85TAA",
+   "title": "65 Inch Class QNED 4K LED 65QNED85TAA Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned85taa.webp"
+  },
+  {
+   "sku": "65QNED85TUA",
+   "title": "65 Inch Class QNED 4K LED QNED85T series TV with webOS 24",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65qned85tua.webp"
+  },
+  {
+   "sku": "65QNED8MBAA",
+   "title": "65 Inch Class LG QNED AI QNED8MB Mini LED 4K Smart TV 2026",
+   "salePrice": 699.99,
+   "cta": "cart",
+   "width": 57,
+   "depth": 2.8,
+   "height": 33,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned8mbaa.webp"
+  },
+  {
+   "sku": "65QNED90TAA",
+   "title": "65 Inch Class QNED 4K MiniLED QNED90T Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 57.2,
+   "depth": 1.8,
+   "height": 33,
+   "vesa": "400x400",
+   "image": "/oh/img/products/65qned90taa.webp"
+  },
+  {
+   "sku": "65QNED90TUA",
+   "title": "65 Inch Class QNED 4K MiniLED QNED90T Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 57.2,
+   "depth": 1.8,
+   "height": 33,
+   "vesa": "400x400",
+   "image": "/oh/img/products/65qned90tua.webp"
+  },
+  {
+   "sku": "65QNED91AAA",
+   "title": "65 Inch Class LG QNED evo AI QNED91AA 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 56.9,
+   "depth": 2.3,
+   "height": 32.7,
+   "vesa": "400x300",
+   "image": "/oh/img/products/65qned91aaa.webp"
+  },
+  {
+   "sku": "65QNED92AUA",
+   "title": "65 Inch Class LG QNED evo AI QNED92A Mini LED 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 56.9,
+   "depth": 2.3,
+   "height": 32.7,
+   "vesa": "400x300",
+   "image": "/oh/img/products/65qned92aua.webp"
+  },
+  {
+   "sku": "65QNED9MAUA",
+   "title": "65 Inch Class LG QNED evo AI QNED9MA Mini LED 4K Smart TV 2025 with True Wireless Video & Audio Transfer with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 2,
+   "height": 33.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/65qned9maua.webp"
+  },
+  {
+   "sku": "65UA7050PUB",
+   "title": "65 Inch Class LG UHD AI UA7050 4K Smart TV 2025",
+   "cta": "retailer",
+   "image": "/oh/img/products/65ua7050pub.webp"
+  },
+  {
+   "sku": "65UR9000PUA",
+   "title": "LG 65 Inch Class UR9000 series LED 4K UHD Smart webOS 23 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 57.3,
+   "depth": 1.2,
+   "height": 33.1,
+   "vesa": "300x300",
+   "image": "/oh/img/products/65ur9000pua.webp"
+  },
+  {
+   "sku": "65UT7570PUB",
+   "title": "LG 65 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "width": 56.9,
+   "depth": 2.7,
+   "height": 32.9,
+   "vesa": "200x300",
+   "image": "/oh/img/products/65ut7570pub.webp"
+  },
+  {
+   "sku": "70NU850BAUD",
+   "title": "70 Inch Class LG 4K Nano UHD TV AI NU85 Smart TV 2026",
+   "cta": "retailer",
+   "width": 61.7,
+   "depth": 3.7,
+   "height": 34.8,
+   "vesa": "300x300",
+   "image": "/oh/img/products/70nu850baud.webp"
+  },
+  {
+   "sku": "70UA7500ZUD",
+   "title": "70 Inch Class LG UHD AI UA75 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 61.7,
+   "depth": 3.7,
+   "height": 34.8,
+   "vesa": "300x300",
+   "image": "/oh/img/products/70ua7500zud.webp"
+  },
+  {
+   "sku": "75MRGB95BUA",
+   "title": "75 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
+   "salePrice": 3599.99,
+   "listPrice": 4999.99,
+   "cta": "cart",
+   "width": 65.9,
+   "depth": 1.8,
+   "height": 37.9,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75mrgb95bua.webp"
+  },
+  {
+   "sku": "75NU710BAUA",
+   "title": "75 Inch Class LG 4K Nano UHD TV AI NU71 Smart TV 2026",
+   "cta": "retailer",
+   "width": 65.7,
+   "depth": 2.8,
+   "height": 37.9,
+   "vesa": "300x300",
+   "image": "/oh/img/products/75nu710baua.webp"
+  },
+  {
+   "sku": "75QNED80TUC",
+   "title": "LG 75 Inch Class QNED80T Series 4K QNED TV with webOS 24",
+   "cta": "retailer",
+   "width": 66,
+   "depth": 1.2,
+   "height": 38,
+   "vesa": "400x300",
+   "image": "/oh/img/products/75qned80tuc.webp"
+  },
+  {
+   "sku": "75QNED80URA",
+   "title": "75 Inch Class TV LG URA Series QNED80 4K UHD TV",
+   "cta": "retailer",
+   "width": 66,
+   "depth": 1.2,
+   "height": 38,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75qned80ura.webp"
+  },
+  {
+   "sku": "75QNED85TAA",
+   "title": "75 Inch Class QNED 4K LED 75QNED85TAA Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 66,
+   "depth": 1.2,
+   "height": 38,
+   "vesa": "400x300",
+   "image": "/oh/img/products/75qned85taa.webp"
+  },
+  {
+   "sku": "75QNED8MBAA",
+   "title": "75 Inch Class LG QNED AI QNED8MB Mini LED 4K Smart TV 2026",
+   "salePrice": 999.99,
+   "cta": "cart",
+   "width": 65.7,
+   "depth": 2.8,
+   "height": 37.9,
+   "vesa": "300x300",
+   "image": "/oh/img/products/75qned8mbaa.webp"
+  },
+  {
+   "sku": "75QNED90TUA",
+   "title": "75 Inch Class QNED 4K MiniLED QNED90T Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 65.9,
+   "depth": 1.8,
+   "height": 37.9,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75qned90tua.webp"
+  },
+  {
+   "sku": "75QNED99TUA",
+   "title": "75 Inch Class QNED 8K MiniLED Smart TV 2024",
+   "cta": "retailer",
+   "width": 65.6,
+   "depth": 1.2,
+   "height": 37.7,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75qned99tua.webp"
+  },
+  {
+   "sku": "75QNED9MAUA",
+   "title": "75 Inch Class LG QNED evo AI QNED9MA Mini LED 4K Smart TV 2025 with True Wireless Video & Audio Transfer with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 66,
+   "depth": 2,
+   "height": 38.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/75qned9maua.webp"
+  },
+  {
+   "sku": "75UA7000PUB",
+   "title": "75 Inch Class LG UHD AI UA7000 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 66.1,
+   "depth": 2.4,
+   "height": 38,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75ua7000pub.webp"
+  },
+  {
+   "sku": "75UT7000PUA",
+   "title": "LG 75 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "width": 66.1,
+   "depth": 2.4,
+   "height": 38,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75ut7000pua.webp"
+  },
+  {
+   "sku": "75UT7590PUA",
+   "title": "LG 75 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "width": 66.1,
+   "depth": 2.4,
+   "height": 38,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75ut7590pua.webp"
+  },
+  {
+   "sku": "75UT8000AUA",
+   "title": "75 Inch Class UT8000 4K TV with webOS 24",
+   "cta": "retailer",
+   "width": 66.1,
+   "depth": 2.4,
+   "height": 38,
+   "vesa": "400x400",
+   "image": "/oh/img/products/75ut8000aua.webp"
+  },
+  {
+   "sku": "85NU870BAUA",
+   "title": "85 Inch Class LG 4K Nano UHD TV AI NU85 Smart TV 2026",
+   "cta": "retailer",
+   "width": 74.4,
+   "depth": 2.9,
+   "height": 42.8,
+   "vesa": "400x400",
+   "image": "/oh/img/products/85nu870baua.webp"
+  },
+  {
+   "sku": "85QNED74BAA",
+   "title": "85 Inch Class LG QNED AI QNED74B Mini LED 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 74.4,
+   "depth": 2.9,
+   "height": 42.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/85qned74baa.webp"
+  },
+  {
+   "sku": "85QNED92AUA",
+   "title": "85 Inch Class LG QNED evo AI QNED92A Mini LED 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 74.4,
+   "depth": 2.4,
+   "height": 42.6,
+   "vesa": "600x400",
+   "image": "/oh/img/products/85qned92aua.webp"
+  },
+  {
+   "sku": "86QNED70AUA",
+   "title": "86 Inch Class LG QNED AI QNED70A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 2.4,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86qned70aua.webp"
+  },
+  {
+   "sku": "86QNED80TUC",
+   "title": "LG 86 Inch Class QNED80T Series 4K QNED TV with webOS 24",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 1.2,
+   "height": 43.6,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86qned80tuc.webp"
+  },
+  {
+   "sku": "86QNED85TUA",
+   "title": "86 Inch Class QNED 4K LED QNED85T series TV with webOS 24",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 1.2,
+   "height": 43.6,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86qned85tua.webp"
+  },
+  {
+   "sku": "86QNED90TAA",
+   "title": "86 Inch Class QNED 4K MiniLED QNED90T Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 75.8,
+   "depth": 1.8,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86qned90taa.webp"
+  },
+  {
+   "sku": "86UA7500ZUA",
+   "title": "86 Inch Class LG UHD AI UA75 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 75.6,
+   "depth": 2.4,
+   "height": 43.4,
+   "vesa": "400x400",
+   "image": "/oh/img/products/86ua7500zua.webp"
+  },
+  {
+   "sku": "86UA9000AUA",
+   "title": "86 Inch Class LG UHD AI UA90 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 2.4,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86ua9000aua.webp"
+  },
+  {
+   "sku": "86UA9000AUC",
+   "title": "86 Inch Class LG UHD AI UA9000 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 2.4,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86ua9000auc.webp"
+  },
+  {
+   "sku": "86UQ7590PUD",
+   "title": "86 Inch Class UQ7590 series LED 4K UHD Smart webOS 22 TV",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 2.4,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86uq7590pud.webp"
+  },
+  {
+   "sku": "86UT7590PUA",
+   "title": "LG 86 Inch Class UHD Series 4K UHD TV with webOS 24",
+   "cta": "retailer",
+   "width": 75.9,
+   "depth": 2.4,
+   "height": 43.5,
+   "vesa": "600x400",
+   "image": "/oh/img/products/86ut7590pua.webp"
+  },
+  {
+   "sku": "98NU850BAUB",
+   "title": "98 Inch Class LG 4K Nano UHD TV AI NU85 Smart TV 2026",
+   "cta": "retailer",
+   "width": 86,
+   "depth": 2.9,
+   "height": 49.3,
+   "vesa": "600x400",
+   "image": "/oh/img/products/98nu850baub.webp"
+  },
+  {
+   "sku": "98NU850BPUB",
+   "title": "98 Inch Class LG 4K Nano UHD TV AI NU85 Smart TV 2026",
+   "salePrice": 1499.99,
+   "listPrice": 2199.99,
+   "cta": "cart",
+   "width": 74.4,
+   "depth": 2.9,
+   "height": 42.8,
+   "image": "/oh/img/products/98nu850bpub.webp"
+  },
+  {
+   "sku": "98QNED89TUA",
+   "title": "98 Inch Class QNED 4K LED QNED89T series TV with webOS 24",
+   "cta": "retailer",
+   "width": 85.9,
+   "depth": 4.3,
+   "height": 49.5,
+   "vesa": "800x400",
+   "image": "/oh/img/products/98qned89tua.webp"
+  },
+  {
+   "sku": "98UT9000PUA",
+   "title": "LG 98 Inch Class UHD Series 4K UHD Smart TV 2024",
+   "cta": "retailer",
+   "width": 85.9,
+   "depth": 4.3,
+   "height": 49.5,
+   "vesa": "800x400",
+   "image": "/oh/img/products/98ut9000pua.webp"
+  },
+  {
+   "sku": "OLED42C6PUA",
+   "title": "42 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
+   "salePrice": 1149.99,
+   "listPrice": 1399.99,
+   "cta": "cart",
+   "width": 36.7,
+   "depth": 1.6,
+   "height": 21.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled42c6pua.webp"
+  },
+  {
+   "sku": "OLED48B6GUA",
+   "title": "48 Inch Class LG OLED AI B6 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 42.1,
+   "depth": 1.8,
+   "height": 24.4,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48b6gua.webp"
+  },
+  {
+   "sku": "OLED48C3PUA",
+   "title": "LG OLED evo C3 48 Inch 4K Smart TV 2023",
+   "cta": "retailer",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48c3pua.webp"
+  },
+  {
+   "sku": "OLED48C4PUA",
+   "title": "LG C4 48 Inch Class OLED evo AI 4K Smart TV 2024 - OLED48C4PUA",
+   "cta": "retailer",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.4,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48c4pua.webp"
+  },
+  {
+   "sku": "OLED48C5AUA",
+   "title": "48 Inch Class LG OLED evo AI C5A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48c5aua.webp"
+  },
+  {
+   "sku": "OLED48C6AUA",
+   "title": "48 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.4,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48c6aua.webp"
+  },
+  {
+   "sku": "OLED48C6PUA",
+   "title": "48 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
+   "salePrice": 1199.99,
+   "listPrice": 1599.99,
+   "cta": "cart",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.4,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48c6pua.webp"
+  },
+  {
+   "sku": "OLED48G5SUA",
+   "title": "48 Inch Class LG OLED evo AI G5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 42.2,
+   "depth": 1.8,
+   "height": 24.3,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled48g5sua.webp"
+  },
+  {
+   "sku": "OLED55B3PUA",
+   "title": "LG 55 Inch Class B3 series OLED 4K UHD Smart webOS 23 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 48.3,
+   "depth": 1.8,
+   "height": 27.9,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55b3pua.webp"
+  },
+  {
+   "sku": "OLED55B4PUA",
+   "title": "55 Inch Class LG OLED B4 4K Smart TV 2024",
+   "cta": "retailer",
+   "width": 48.3,
+   "depth": 1.8,
+   "height": 27.9,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55b4pua.webp"
+  },
+  {
+   "sku": "OLED55C4AUA",
+   "title": "55 Inch Class OLED evo C4 Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 48.1,
+   "depth": 1.8,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55c4aua.webp"
+  },
+  {
+   "sku": "OLED55C4PUA",
+   "title": "LG C4 55 Inch Class OLED evo AI 4K Smart TV 2024 - OLED55C4PUA",
+   "cta": "retailer",
+   "width": 48.1,
+   "depth": 1.8,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55c4pua.webp"
+  },
+  {
+   "sku": "OLED55C5PUA",
+   "title": "55 Inch Class LG OLED evo AI C5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 48.1,
+   "depth": 1.8,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55c5pua.webp"
+  },
+  {
+   "sku": "OLED55C6PUA",
+   "title": "55 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
+   "salePrice": 1499.99,
+   "listPrice": 1999.99,
+   "cta": "cart",
+   "width": 48.1,
+   "depth": 1.8,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55c6pua.webp"
+  },
+  {
+   "sku": "OLED55G5WUA",
+   "title": "55 Inch Class LG OLED evo AI G5 4K Smart TV 2025 with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 48.1,
+   "depth": 1.1,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55g5wua.webp"
+  },
+  {
+   "sku": "OLED55G6WUA",
+   "title": "55 Inch Class LG OLED evo AI G6 4K Smart TV 2026 with Supplied Flush Wall Mount",
+   "salePrice": 1999.99,
+   "listPrice": 2499.99,
+   "cta": "cart",
+   "width": 48.1,
+   "depth": 1.1,
+   "height": 27.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled55g6wua.webp"
+  },
+  {
+   "sku": "OLED65B5AUA",
+   "title": "65 Inch Class LG OLED AI B5A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 57,
+   "depth": 1.8,
+   "height": 32.8,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled65b5aua.webp"
+  },
+  {
+   "sku": "OLED65B5PUA",
+   "title": "65 Inch Class LG OLED AI B5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 57,
+   "depth": 1.8,
+   "height": 32.8,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled65b5pua.webp"
+  },
+  {
+   "sku": "OLED65B6GUA",
+   "title": "65 Inch Class LG OLED AI B6 4K Smart TV 2026",
+   "salePrice": 1399.99,
+   "listPrice": 1999.99,
+   "cta": "cart",
+   "width": 57,
+   "depth": 1.8,
+   "height": 32.8,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled65b6gua.webp"
+  },
+  {
+   "sku": "OLED65C5PUA",
+   "title": "65 Inch Class LG OLED evo AI C5 4K Smart TV 2025",
+   "salePrice": 1499.99,
+   "listPrice": 2699.99,
+   "cta": "cart",
+   "width": 56.7,
+   "depth": 1.8,
+   "height": 32.5,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled65c5pua.webp"
+  },
+  {
+   "sku": "OLED65C6PUA",
+   "image": "/oh/img/products/oled65c6pua.webp"
+  },
+  {
+   "sku": "OLED65G4SUB",
+   "title": "LG G4 65 Inch Class OLED evo AI 4K Smart TV 2024 - OLED65G4SUB",
+   "cta": "retailer",
+   "width": 56.7,
+   "depth": 1,
+   "height": 32.5,
+   "image": "/oh/img/products/oled65g4sub.webp"
+  },
+  {
+   "sku": "OLED65G5WUA",
+   "title": "65 Inch Class LG OLED evo AI G5 4K Smart TV 2025 with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 56.7,
+   "depth": 1,
+   "height": 32.5,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled65g5wua.webp"
+  },
+  {
+   "sku": "OLED65G6WUA",
+   "title": "65 Inch Class LG OLED evo AI G6 4K Smart TV 2026 with Supplied Flush Wall Mount",
+   "salePrice": 2799.99,
+   "listPrice": 3399.99,
+   "cta": "cart",
+   "width": 56.7,
+   "depth": 1,
+   "height": 32.5,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled65g6wua.webp"
+  },
+  {
+   "sku": "OLED77B5PUA",
+   "title": "77 Inch Class LG OLED AI B5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 67.7,
+   "depth": 2,
+   "height": 38.9,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77b5pua.webp"
+  },
+  {
+   "sku": "OLED77B6EUA",
+   "title": "77 Inch Class LG OLED AI B6E 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 67.7,
+   "depth": 2,
+   "height": 38.9,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77b6eua.webp"
+  },
+  {
+   "sku": "OLED77B6GUA",
+   "title": "77 Inch Class LG OLED AI B6 4K Smart TV 2026",
+   "salePrice": 2299.99,
+   "listPrice": 2799.99,
+   "cta": "cart",
+   "width": 67.7,
+   "depth": 2,
+   "height": 38.9,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77b6gua.webp"
+  },
+  {
+   "sku": "OLED77C3AUA",
+   "title": "LG 77 Inch Class C3 Series OLED evo 4K UHD Smart webOS 23 w/ ThinQ AI TV",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1.9,
+   "height": 38.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77c3aua.webp"
+  },
+  {
+   "sku": "OLED77C4AUA",
+   "title": "77 Inch Class OLED evo C4 Series TV with webOS 24",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1.9,
+   "height": 38.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77c4aua.webp"
+  },
+  {
+   "sku": "OLED77C5PUA",
+   "title": "77 Inch Class LG OLED evo AI C5 4K Smart TV 2025",
+   "salePrice": 2199.99,
+   "listPrice": 3699.99,
+   "cta": "cart",
+   "width": 67.4,
+   "depth": 1.9,
+   "height": 38.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77c5pua.webp"
+  },
+  {
+   "sku": "OLED77C6HUA",
+   "title": "77 Inch Class LG OLED evo AI C6H 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1.9,
+   "height": 38.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77c6hua.webp"
+  },
+  {
+   "sku": "OLED77C6HUP",
+   "title": "77 Inch Class LG OLED evo AI C6H 4K Smart TV 2026",
+   "salePrice": 2599.99,
+   "listPrice": 3699.99,
+   "cta": "cart",
+   "width": 67.4,
+   "depth": 1.9,
+   "height": 38.7,
+   "vesa": "300x200",
+   "image": "/oh/img/products/oled77c6hup.webp"
+  },
+  {
+   "sku": "OLED77G3PUA",
+   "title": "LG OLED evo G3 77 Inch Class 4K OLED TV 2023",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1,
+   "height": 38.4,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled77g3pua.webp"
+  },
+  {
+   "sku": "OLED77G5WUA",
+   "title": "77 Inch Class LG OLED evo AI G5 4K Smart TV 2025 with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1,
+   "height": 38.7,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled77g5wua.webp"
+  },
+  {
+   "sku": "OLED77G6WUA",
+   "title": "77 Inch Class LG OLED evo AI G6 4K Smart TV 2026 with Supplied Flush Wall Mount",
+   "salePrice": 3799.99,
+   "listPrice": 4499.99,
+   "cta": "cart",
+   "width": 67.4,
+   "depth": 1,
+   "height": 38.7,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled77g6wua.webp"
+  },
+  {
+   "sku": "OLED77M3YUA",
+   "title": "LG OLED evo M Series 77 Inch Class 4K Smart TV with Wireless Video & Audio Transfer",
+   "salePrice": 2299.99,
+   "listPrice": 4999.99,
+   "cta": "cart",
+   "width": 64.4,
+   "depth": 1,
+   "height": 39,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled77m3yua.webp"
+  },
+  {
+   "sku": "OLED77M5PUA",
+   "title": "77 Inch Class LG OLED evo AI M5 4K Smart TV 2025 with True Wireless Video & Audio Transfer with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 67.4,
+   "depth": 1,
+   "height": 38.8,
+   "vesa": "300x300",
+   "image": "/oh/img/products/oled77m5pua.webp"
+  },
+  {
+   "sku": "OLED77T4PUA",
+   "title": "77 Inch Class LG SIGNATURE OLED T: World’s first Transparent 4K Smart TV 2024 with True Wireless Video & Audio Transfer",
+   "cta": "retailer",
+   "width": 69.6,
+   "depth": 10.3,
+   "height": 41.1,
+   "image": "/oh/img/products/oled77t4pua.webp"
+  },
+  {
+   "sku": "OLED77T6PUA",
+   "title": "77 Inch Class LG SIGNATURE OLED T6: Transparent 4K Smart TV 2026 with True Wireless Video & Audio Transfer",
+   "cta": "retailer",
+   "image": "/oh/img/products/oled77t6pua.webp"
+  },
+  {
+   "sku": "OLED77W6PUA",
+   "title": "77 Inch Class LG OLED evo AI W6 4K Smart TV 2026 with Wallpaper Design and Supplied Flush Wall Mount",
+   "salePrice": 4299.99,
+   "listPrice": 5499.99,
+   "cta": "cart",
+   "width": 67.4,
+   "depth": 0.4,
+   "height": 38.9,
+   "image": "/oh/img/products/oled77w6pua.webp"
+  },
+  {
+   "sku": "OLED83B4AUA",
+   "title": "83 Inch Class LG OLED B4 4K Smart TV 2024",
+   "cta": "retailer",
+   "width": 72.9,
+   "depth": 2.2,
+   "height": 41.8,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83b4aua.webp"
+  },
+  {
+   "sku": "OLED83B4PUA",
+   "title": "83 Inch Class LG OLED B4 4K Smart TV 2024",
+   "cta": "retailer",
+   "width": 72.9,
+   "depth": 2.2,
+   "height": 41.8,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83b4pua.webp"
+  },
+  {
+   "sku": "OLED83B5AUA",
+   "title": "83 Inch Class LG OLED AI B5A 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 72.5,
+   "depth": 2.1,
+   "height": 41.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83b5aua.webp"
+  },
+  {
+   "sku": "OLED83B5PUA",
+   "title": "83 Inch Class LG OLED AI B5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 72.5,
+   "depth": 2.1,
+   "height": 41.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83b5pua.webp"
+  },
+  {
+   "sku": "OLED83B6AUA",
+   "title": "83 Inch Class LG OLED AI B6 4K Smart TV 2026",
+   "cta": "retailer",
+   "width": 72.5,
+   "depth": 2.1,
+   "height": 41.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83b6aua.webp"
+  },
+  {
+   "sku": "OLED83C4PUA",
+   "title": "LG C4 83 Inch Class OLED evo AI 4K Smart TV 2024 - OLED83C4PUA",
+   "cta": "retailer",
+   "width": 72.9,
+   "depth": 2.2,
+   "height": 41.8,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83c4pua.webp"
+  },
+  {
+   "sku": "OLED83C5PUA",
+   "title": "83 Inch Class LG OLED evo AI C5 4K Smart TV 2025",
+   "cta": "retailer",
+   "width": 72.5,
+   "depth": 2.1,
+   "height": 41.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83c5pua.webp"
+  },
+  {
+   "sku": "OLED83C6HUP",
+   "title": "83 Inch Class LG OLED evo AI C6H 4K Smart TV 2026",
+   "salePrice": 4299.99,
+   "listPrice": 5299.99,
+   "cta": "cart",
+   "width": 72.5,
+   "depth": 2.1,
+   "height": 41.5,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83c6hup.webp"
+  },
+  {
+   "sku": "OLED83G4WUA",
+   "title": "LG G4 83 Inch Class OLED evo AI 4K Smart TV 2024 - OLED83G4WUA",
+   "cta": "retailer",
+   "width": 72.7,
+   "depth": 1.1,
+   "height": 41.6,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83g4wua.webp"
+  },
+  {
+   "sku": "OLED83G6WUA",
+   "title": "83 Inch Class LG OLED evo AI G6 4K Smart TV 2026 with Supplied Flush Wall Mount",
+   "salePrice": 5499.99,
+   "listPrice": 6499.99,
+   "cta": "cart",
+   "width": 72.7,
+   "depth": 1.1,
+   "height": 41.6,
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83g6wua.webp"
+  },
+  {
+   "sku": "OLED83M3PUA",
+   "title": "LG OLED evo M Series 83 Inch Class 4K Smart TV with Wireless Video & Audio Transfer",
+   "cta": "retailer",
+   "vesa": "400x400",
+   "image": "/oh/img/products/oled83m3pua.webp"
+  },
+  {
+   "sku": "OLED97G5WUA",
+   "title": "97 Inch Class LG OLED evo AI G5 4K Smart TV 2025 with Supplied Wall Mount",
+   "cta": "retailer",
+   "width": 84.8,
+   "depth": 1.1,
+   "height": 48.4,
+   "vesa": "600x400",
+   "image": "/oh/img/products/oled97g5wua.webp"
+  },
+  {
+   "sku": "OLED97G6WUA",
+   "title": "97 Inch Class LG OLED evo AI G6 4K Smart TV 2026 with Supplied Flush Wall Mount",
+   "salePrice": 19999.99,
+   "listPrice": 24999.99,
+   "cta": "cart",
+   "width": 84.8,
+   "depth": 1.1,
+   "height": 48.4,
+   "vesa": "600x400",
+   "image": "/oh/img/products/oled97g6wua.webp"
+  },
+  {
+   "sku": "OLED97M3PUA",
+   "title": "LG SIGNATURE OLED M 97 Inch Class 4K Smart TV with Wireless Video & Audio Transfer",
+   "cta": "retailer",
+   "width": 84.8,
+   "depth": 1.1,
+   "height": 48.2,
+   "vesa": "600x400",
+   "image": "/oh/img/products/oled97m3pua.webp"
+  },
+  {
+   "sku": "H7",
+   "title": "Sound Suite H7 | Wireless Soundbar 9.1.6 Spatial Audio | Dolby Atmos FlexConnect Soundbar for TV",
+   "salePrice": 999.99,
+   "cta": "cart",
+   "image": "/oh/img/products/h7.webp"
+  },
+  {
+   "sku": "H7_W7",
+   "title": "LG Cinema Suite 7 with H7 Soundbar and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 1599.98,
+   "cta": "cart",
+   "image": "/oh/img/products/h7-w7.webp"
+  },
+  {
+   "sku": "M5-P2_W7",
+   "title": "Stereo Suite 5 Pro with Two M5 Speakers and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 1059.97,
+   "listPrice": 1099.97,
+   "cta": "cart",
+   "image": "/oh/img/products/m5-p2-w7.webp"
+  },
+  {
+   "sku": "M5-P4_H7",
+   "title": "Immersive Quad Suite 5 with H7 Soundbar and four M5 Speakers, Dolby Atmos FlexConnect",
+   "salePrice": 1919.95,
+   "listPrice": 1999.95,
+   "cta": "cart",
+   "image": "/oh/img/products/m5-p4-h7.webp"
+  },
+  {
+   "sku": "M5-P4_H7_W7",
+   "title": "Immersive Quad Suite 5 Pro with H7 Soundbar, four M5 Speakers and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 2519.94,
+   "listPrice": 2599.94,
+   "cta": "cart",
+   "image": "/oh/img/products/m5-p4-h7-w7.webp"
+  },
+  {
+   "sku": "M7-P2_H7",
+   "title": "Immersive Suite 7 with H7 Soundbar and two M7 Speakers, Dolby Atmos FlexConnect",
+   "salePrice": 1699.97,
+   "listPrice": 1799.97,
+   "cta": "cart",
+   "image": "/oh/img/products/m7-p2-h7.webp"
+  },
+  {
+   "sku": "M7-P2_H7_W7",
+   "title": "Immersive Suite 7 Pro with H7 Soundbar, two M7 Speakers and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 2299.96,
+   "listPrice": 2399.96,
+   "cta": "cart",
+   "image": "/oh/img/products/m7-p2-h7-w7.webp"
+  },
+  {
+   "sku": "M7-P2_W7",
+   "title": "Stereo Suite 7 Pro with Two M7 Speakers and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 1299.97,
+   "listPrice": 1399.97,
+   "cta": "cart",
+   "image": "/oh/img/products/m7-p2-w7.webp"
+  },
+  {
+   "sku": "M7-P4_H7",
+   "title": "Immersive Quad Suite 7 with H7 Soundbar and four M7 Speakers, Dolby Atmos FlexConnect",
+   "salePrice": 2399.95,
+   "listPrice": 2599.95,
+   "cta": "cart",
+   "image": "/oh/img/products/m7-p4-h7.webp"
+  },
+  {
+   "sku": "M7-P4_H7_W7",
+   "title": "Immersive Quad Suite 7 Pro with H7 Soundbar, four M7 Speakers and W7 Subwoofer, Dolby Atmos FlexConnect",
+   "salePrice": 2999.94,
+   "listPrice": 3199.94,
+   "cta": "cart",
+   "image": "/oh/img/products/m7-p4-h7-w7.webp"
+  },
+  {
+   "sku": "S20A",
+   "title": "S20A LG Soundbar for TV with Dolby Audio™ 2.0 channel",
+   "salePrice": 99.99,
+   "listPrice": 119.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s20a.webp"
+  },
+  {
+   "sku": "S30A",
+   "title": "S30A LG Soundbar for TV with Dolby Audio™ 2.1 channel",
+   "cta": "retailer",
+   "image": "/oh/img/products/s30a.webp"
+  },
+  {
+   "sku": "S35A",
+   "title": "S35A LG Soundbar for TV with Dolby Audio™ 2.1 channel",
+   "salePrice": 149.99,
+   "listPrice": 219.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s35a.webp"
+  },
+  {
+   "sku": "S40T",
+   "title": "S40T LG Soundbar for TV with Dolby Audio™ 2.1 channel",
+   "salePrice": 229.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s40t.webp"
+  },
+  {
+   "sku": "S40TR",
+   "title": "S40TR LG Home Theater Soundbar with Dolby® and Rear Speakers, 4.1. channel",
+   "salePrice": 199.99,
+   "listPrice": 279.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s40tr.webp"
+  },
+  {
+   "sku": "S55TR",
+   "title": "S55TR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1. channel",
+   "cta": "retailer",
+   "image": "/oh/img/products/s55tr.webp"
+  },
+  {
+   "sku": "S60T",
+   "title": "S60T LG Soundbar for TV with Dolby Audio™ 3.1 channel",
+   "salePrice": 199.99,
+   "listPrice": 249.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s60t.webp"
+  },
+  {
+   "sku": "S60TR",
+   "title": "S60TR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1 channel",
+   "cta": "retailer",
+   "image": "/oh/img/products/s60tr.webp"
+  },
+  {
+   "sku": "S6FTR",
+   "title": "S6FTR LG Home Theater Soundbar with Dolby Audio™ and Rear Speakers, 5.1 channel",
+   "salePrice": 399.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s6ftr.webp"
+  },
+  {
+   "sku": "S70TR",
+   "title": "S70TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.1 channel, Best QNED matching",
+   "salePrice": 349.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s70tr.webp"
+  },
+  {
+   "sku": "S70TY",
+   "title": "S70TY LG Soundbar for TV with Dolby Atmos® 3.1.1 channel",
+   "salePrice": 349.99,
+   "listPrice": 399.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s70ty.webp"
+  },
+  {
+   "sku": "S7FTRS",
+   "title": "S7FTRS LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.1 channel",
+   "cta": "retailer",
+   "image": "/oh/img/products/s7ftrs.webp"
+  },
+  {
+   "sku": "S80TR",
+   "title": "S80TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 5.1.3 channel, Best OLED matching",
+   "salePrice": 849.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s80tr.webp"
+  },
+  {
+   "sku": "S80TY",
+   "title": "S80TY LG Soundbar for TV with Dolby Atmos 3.1.3 channel, Best LG OLED matching",
+   "salePrice": 599.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s80ty.webp"
+  },
+  {
+   "sku": "S90TR",
+   "title": "S90TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 7.1.3 channel, Best OLED matching",
+   "salePrice": 1199.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s90tr.webp"
+  },
+  {
+   "sku": "S90TY",
+   "title": "S90TY LG Soundbar for TV with Dolby Atmos® 5.1.3 channel, Best LG OLED matching",
+   "salePrice": 999.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s90ty.webp"
+  },
+  {
+   "sku": "S95AR",
+   "title": "S95AR LG Home Theater Soundbar for TV with Dolby Atmos® 9.1.5 channel, Best LG OLED matching",
+   "salePrice": 1499.99,
+   "listPrice": 1699.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s95ar.webp"
+  },
+  {
+   "sku": "S95TR",
+   "title": "S95TR LG Home Theater Soundbar with Dolby Atmos® and Rear Speakers, 9.1.5 channel, Best OLED matching",
+   "salePrice": 1599.99,
+   "cta": "cart",
+   "image": "/oh/img/products/s95tr.webp"
+  },
+  {
+   "sku": "SC9S",
+   "title": "SC9S LG Soundbar C for TV with Dolby Atmos® and Synergy Bracket 3.1.3 channel, Best OLED matching",
+   "salePrice": 699.99,
+   "listPrice": 799.99,
+   "cta": "cart",
+   "image": "/oh/img/products/sc9s.webp"
+  },
+  {
+   "sku": "LSW240B",
+   "title": "EZ Slim Wall Mount for LG TV's (VESA - 200 x 200)",
+   "salePrice": 49.99,
+   "cta": "cart",
+   "width": 116,
+   "depth": 0.55,
+   "height": 9.21,
+   "image": "/oh/img/products/lsw240b.webp"
+  },
+  {
+   "sku": "LSW440B",
+   "title": "EZ Slim Wall Mount for LG TV's (VESA - 400 x 400)",
+   "salePrice": 49.99,
+   "cta": "cart",
+   "width": 18.11,
+   "depth": 0.79,
+   "height": 17.72,
+   "image": "/oh/img/products/lsw440b.webp"
+  },
+  {
+   "sku": "LSW640B",
+   "title": "EZ Slim Wall Mount for LG TVs (VESA: 600 x 400)",
+   "salePrice": 99.99,
+   "cta": "cart",
+   "width": 26,
+   "depth": 1.1,
+   "height": 19.5,
+   "image": "/oh/img/products/lsw640b.webp"
+  },
+  {
+   "sku": "OLW480B",
+   "title": "EZ Slim Wall Mount for LG TV's (VESA - 300 X 300 / 300 X 200 / 400 X 200)",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "width": 13.7,
+   "depth": 0.9,
+   "height": 13.5,
+   "image": "/oh/img/products/olw480b.webp"
+  },
+  {
+   "sku": "WB21LGB",
+   "title": "Slim Wall Mount for LG QNED TV's",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "width": 5.33,
+   "depth": 0.68,
+   "height": 7.54,
+   "image": "/oh/img/products/wb21lgb.webp"
+  },
+  {
+   "sku": "WB21LMB",
+   "title": "Slim Wall Mount for LG TV's",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "width": 18.1,
+   "depth": 0.7,
+   "height": 11.2,
+   "image": "/oh/img/products/wb21lmb.webp"
+  },
+  {
+   "sku": "WB21LMC",
+   "title": "Slim Wall Mount for LG TV's",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "width": 27.5,
+   "depth": 0.7,
+   "height": 11.2,
+   "image": "/oh/img/products/wb21lmc.webp"
+  },
+  {
+   "sku": "WB22EGB",
+   "title": "Slim Wall Mount",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "image": "/oh/img/products/wb22egb.webp"
+  },
+  {
+   "sku": "WB24GCB",
+   "title": "EZ Slim Wall Mount for LG TV's",
+   "salePrice": 99.99,
+   "cta": "cart",
+   "width": 17.7,
+   "depth": 0.7,
+   "height": 17.2,
+   "image": "/oh/img/products/wb24gcb.webp"
+  },
+  {
+   "sku": "WB24GDB",
+   "title": "EZ Slim Wall Mount for LG TV's",
+   "salePrice": 99.99,
+   "cta": "cart",
+   "width": 25.6,
+   "depth": 0.7,
+   "height": 17.2,
+   "image": "/oh/img/products/wb24gdb.webp"
+  },
+  {
+   "sku": "WS25XA",
+   "title": "StanbyME 2 Carry Strap & Wall-Mount Holder",
+   "salePrice": 69.99,
+   "cta": "cart",
+   "image": "/oh/img/products/ws25xa.webp"
+  },
+  {
+   "sku": "UWD1CW",
+   "title": "LG SIGNATURE SideKick™ Pedestal Washer",
+   "salePrice": 799,
+   "cta": "cart",
+   "width": 23.5,
+   "depth": 26,
+   "height": 14.5,
+   "image": "/oh/img/products/uwd1cw.webp"
+  },
+  {
+   "sku": "WD100CW",
+   "title": "1.0 cu. ft. LG SideKick™ Pedestal Washer with TWINWash™ & Direct Drive Motor - White",
+   "salePrice": 699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.75,
+   "height": 14.13,
+   "image": "/oh/img/products/wd100cw.webp"
+  },
+  {
+   "sku": "WD200CB",
+   "title": "1.0 cu. ft. LG SideKick™ Pedestal Washer, LG TWINWash™ Compatible",
+   "salePrice": 699,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 29,
+   "depth": 30.88,
+   "height": 14.13,
+   "image": "/oh/img/products/wd200cb.webp"
+  },
+  {
+   "sku": "WD200CV",
+   "title": "1.0 cu. ft. LG SideKick™ Pedestal Washer with Direct Drive Motor - Graphite Steel",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 30.88,
+   "height": 14.13,
+   "image": "/oh/img/products/wd200cv.webp"
+  },
+  {
+   "sku": "WD205CK",
+   "title": "LG SIGNATURE 1.0 cu. ft. LG SideKick™ Pedestal Washer, LG TWINWash™ Compatible",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 30.88,
+   "height": 14.13,
+   "image": "/oh/img/products/wd205ck.webp"
+  },
+  {
+   "sku": "WD300CA",
+   "title": "27 Inch LG SideKick™ Pedestal Washer",
+   "salePrice": 659,
+   "listPrice": 799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.75,
+   "height": 14.13,
+   "image": "/oh/img/products/wd300ca.webp"
+  },
+  {
+   "sku": "WD300CB",
+   "title": "27 Inch LG SideKick™ Pedestal Washer",
+   "salePrice": 679,
+   "listPrice": 849,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.75,
+   "height": 14.13,
+   "image": "/oh/img/products/wd300cb.webp"
+  },
+  {
+   "sku": "WD300CW",
+   "title": "27 Inch LG SideKick™ Pedestal Washer",
+   "salePrice": 659,
+   "listPrice": 799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.75,
+   "height": 14.13,
+   "image": "/oh/img/products/wd300cw.webp"
+  },
+  {
+   "sku": "WD405CP",
+   "title": "LG SIGNATURE 1.0 cu. ft. 29 Inch SideKick™ Pedestal Washer, LG TWINWash™ Compatible",
+   "salePrice": 729,
+   "listPrice": 929,
+   "cta": "cart",
+   "width": 29,
+   "depth": 30.88,
+   "height": 14.13,
+   "image": "/oh/img/products/wd405cp.webp"
+  },
+  {
+   "sku": "WM1455HWA",
+   "title": "2.4 cu. ft. Smart Wi-Fi Enabled Compact Front Load Washer with Built-In Intelligence",
+   "salePrice": 1149,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 24,
+   "depth": 22.25,
+   "height": 33.5,
+   "image": "/oh/img/products/wm1455hwa.webp"
+  },
+  {
+   "sku": "WM3400CW",
+   "title": "4.5 cu. ft. Ultra Large Front Load Washer",
+   "salePrice": 749,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm3400cw.webp"
+  },
+  {
+   "sku": "WM3420CW",
+   "title": "4.5 cu. ft. Ultra Large Capacity Smart Front Load Washer",
+   "salePrice": 769,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm3420cw.webp"
+  },
+  {
+   "sku": "WM3470CW",
+   "title": "5.0 cu. ft. Mega Capacity Front Load Washer",
+   "salePrice": 1099,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm3470cw.webp"
+  },
+  {
+   "sku": "WM3600HWA",
+   "title": "4.5 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Washer with Built-In Intelligence & Steam Technology",
+   "salePrice": 698.99,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm3600hwa.webp"
+  },
+  {
+   "sku": "WM3900HBA",
+   "title": "4.5 cu. ft. Smart Wi-Fi Enabled Front Load Washer with TurboWash™ 360 Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm3900hba.webp"
+  },
+  {
+   "sku": "WM4000HBA",
+   "title": "4.5 cu. ft. Ultra Large Capacity Front Load Washer - Black Steel",
+   "salePrice": 949,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm4000hba.webp"
+  },
+  {
+   "sku": "WM4000HWA",
+   "title": "4.5 cu. ft. Ultra Large Capacity Front Load Washer - White",
+   "salePrice": 929,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm4000hwa.webp"
+  },
+  {
+   "sku": "WM4080HBA",
+   "title": "4.5 cu. ft. Ultra Large Capacity Smart Front Load ENERGY STAR Washer with TurboWash® 360° and AI DD®",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm4080hba.webp"
+  },
+  {
+   "sku": "WM4200HBA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Washer with TurboWash™ 360° and Built-In Intelligence",
+   "salePrice": 849,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.25,
+   "height": 39,
+   "image": "/oh/img/products/wm4200hba.webp"
+  },
+  {
+   "sku": "WM4500HBA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Washer with TurboWash™ 360° and Built-In Intelligence",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 33.25,
+   "height": 39,
+   "image": "/oh/img/products/wm4500hba.webp"
+  },
+  {
+   "sku": "WM5500HVA",
+   "title": "4.5 cu. ft. Capacity Smart Front Load ENERGY STAR Washer with TurboWash® 360° and AI DD® Built-In Intelligence",
+   "salePrice": 999,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm5500hva.webp"
+  },
+  {
+   "sku": "WM5500HWA",
+   "title": "4.5 cu. ft. Capacity Smart Front Load ENERGY STAR Washer with TurboWash® 360° and AI DD® Built-In Intelligence",
+   "salePrice": 799,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm5500hwa.webp"
+  },
+  {
+   "sku": "WM5700HVA",
+   "title": "4.5 cu. ft. Smart Front Load Washer with TurboWash® 360°, Built-In Intelligence and ezDispense®",
+   "salePrice": 949,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 39,
+   "image": "/oh/img/products/wm5700hva.webp"
+  },
+  {
+   "sku": "WM5800HAA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load Washer with TurboWash® 360°, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1049,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm5800haa.webp"
+  },
+  {
+   "sku": "WM5800HVA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load Washer with TurboWash® 360°, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1099,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm5800hva.webp"
+  },
+  {
+   "sku": "WM6500HBA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load ENERGY STAR Washer with TurboWash® 360° and AI DD® Built-In Intelligence",
+   "salePrice": 1249,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm6500hba.webp"
+  },
+  {
+   "sku": "WM6500HWA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load ENERGY STAR Washer with TurboWash® 360° and AI DD® Built-In Intelligence",
+   "salePrice": 1199,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm6500hwa.webp"
+  },
+  {
+   "sku": "WM6700HBA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load Washer with AI DD® 2.0 Built-In Intelligence & TurboWash® 360°",
+   "salePrice": 1349,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm6700hba.webp"
+  },
+  {
+   "sku": "WM6700HWA",
+   "title": "5.0 cu. ft. Mega Capacity Smart Front Load Washer with TurboWash® 360°and Built-In Intelligence",
+   "salePrice": 1249,
+   "listPrice": 1649,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm6700hwa.webp"
+  },
+  {
+   "sku": "WM8100HVA",
+   "title": "5.2 cu. ft. Mega Capacity TurboWash® Washer with Steam Technology",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 32.88,
+   "height": 40.75,
+   "image": "/oh/img/products/wm8100hva.webp"
+  },
+  {
+   "sku": "WM8900HBA",
+   "title": "5.2 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Washer with TurboWash® and Built-In Intelligence",
+   "salePrice": 1399,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29,
+   "depth": 32.88,
+   "height": 40.75,
+   "image": "/oh/img/products/wm8900hba.webp"
+  },
+  {
+   "sku": "WM9000HVA",
+   "title": "5.2 cu. ft. Large Smart Wi-Fi Enabled Front Load Washer TurboWash®",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 33.75,
+   "height": 41.25,
+   "image": "/oh/img/products/wm9000hva.webp"
+  },
+  {
+   "sku": "WM9500HKA",
+   "title": "LG SIGNATURE 5.8 cu. ft. Large Smart Wi-Fi Enabled Front Load Washer",
+   "cta": "retailer",
+   "width": 29.63,
+   "depth": 33.06,
+   "height": 41.19,
+   "image": "/oh/img/products/wm9500hka.webp"
+  },
+  {
+   "sku": "WM9700HPA",
+   "title": "LG SIGNATURE 5.8 cu. ft. Mega Capacity Smart Front Load Washer with TurboWash® 360°, Built-In Intelligence, ezDispense® and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1599,
+   "listPrice": 1999,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.13,
+   "height": 40.75,
+   "image": "/oh/img/products/wm9700hpa.webp"
+  },
+  {
+   "sku": "WM9900HSA",
+   "title": "LG SIGNATURE 5.8 cu. ft. Mega Capacity Smart Front Load Washer with Built-In Intelligence, TurboWash® 360°, ezDispense® and Touch LCD Control",
+   "salePrice": 1899,
+   "listPrice": 2499,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.13,
+   "height": 40.75,
+   "image": "/oh/img/products/wm9900hsa.webp"
+  },
+  {
+   "sku": "WT6100CW",
+   "title": "4.3 cu. ft. Ultra Large Capacity Top Load Washer with Impeller & TurboDrum™ Technology",
+   "salePrice": 549,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt6100cw.webp"
+  },
+  {
+   "sku": "WT6105CM",
+   "title": "4.1 cu. ft. Top Load Washer with 4-Way Agitator® and TurboDrum™ Technology",
+   "salePrice": 599,
+   "listPrice": 949,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt6105cm.webp"
+  },
+  {
+   "sku": "WT6105CW",
+   "title": "4.1 cu. ft. Top Load Washer with 4-Way Agitator® and TurboDrum™ Technology",
+   "salePrice": 549,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt6105cw.webp"
+  },
+  {
+   "sku": "WT6485CW",
+   "title": "4.5 cu. ft. Ultra Large Capacity Smart Top Load Washer with 4-Way® Agitator, EasyUnload™ & AI Sensing",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 42.5,
+   "image": "/oh/img/products/wt6485cw.webp"
+  },
+  {
+   "sku": "WT7000CW",
+   "title": "4.5 cu. ft. Ultra Large Capacity Top Load Washer with Impeller & TurboDrum™ Technology",
+   "salePrice": 699,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7000cw.webp"
+  },
+  {
+   "sku": "WT7005CW",
+   "title": "4.3 cu. ft. Ultra Large Capacity Top Load Washer with 4-Way™ Agitator & TurboDrum™ Technology",
+   "salePrice": 699,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7005cw.webp"
+  },
+  {
+   "sku": "WT7010CW",
+   "title": "4.5 cu. ft. Ultra Large Capacity Top Load Washer with Impeller & TurboDrum™ Technology",
+   "salePrice": 649,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7010cw.webp"
+  },
+  {
+   "sku": "WT7100CW",
+   "title": "4.5 cu. ft. Top Load Washer with Impeller",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7100cw.webp"
+  },
+  {
+   "sku": "WT7150CM",
+   "title": "5.0 cu. ft. Top Load ENERGY STAR Washer with Impeller, TurboDrum™, SlamProof® Glass Lid, & Water Plus",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7150cm.webp"
+  },
+  {
+   "sku": "WT7150CW",
+   "title": "5.0 cu. ft. Mega Capacity Top Load Washer with TurboDrum™ - White",
+   "salePrice": 749,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7150cw.webp"
+  },
+  {
+   "sku": "WT7155CW",
+   "title": "4.8 cu. ft. Mega Capacity Top Load Washer with 4-Way™ Agitator & TurboDrum™ Technology",
+   "salePrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7155cw.webp"
+  },
+  {
+   "sku": "WT7300CW",
+   "title": "5.0 cu. ft. Smart Wi-Fi Enabled Top Load Washer with TurboWash3D™ Technology",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7300cw.webp"
+  },
+  {
+   "sku": "WT7400CV",
+   "title": "5.5 cu. ft. Mega Capacity Top Load Washer with Impeller - Graphite Steel",
+   "salePrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7400cv.webp"
+  },
+  {
+   "sku": "WT7405CV",
+   "title": "5.3 cu. ft. Mega Capacity Smart Wi-Fi Enabled Top Load Washer with 4-Way™ Agitator & TurboWash3D™ Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7405cv.webp"
+  },
+  {
+   "sku": "WT7480CL",
+   "title": "5.5 cu. ft. Mega Capacity Smart Top Load ENERGY STAR Washer with Impeller, TurboWash 3D®, Water Plus",
+   "salePrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7480cl.webp"
+  },
+  {
+   "sku": "WT7800CW",
+   "title": "5.5 cu. ft. Smart Wi-Fi Enabled Top Load Washer with Impeller & TurboWash3D™ Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7800cw.webp"
+  },
+  {
+   "sku": "WT7900HWA",
+   "title": "5.5 cu. ft. Mega Capacity Smart Wi-Fi Enabled Top Load Washer with Impeller, TurboWash3D™ Technology & Allergiene™ Cycle",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 44.5,
+   "image": "/oh/img/products/wt7900hwa.webp"
+  },
+  {
+   "sku": "WT8200CL",
+   "title": "5.0 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™ & AI Sensing",
+   "salePrice": 879,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8200cl.webp"
+  },
+  {
+   "sku": "WT8200CW",
+   "title": "5.0 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™ & AI Sensing",
+   "salePrice": 829,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8200cw.webp"
+  },
+  {
+   "sku": "WT8205CW",
+   "title": "4.8 cu. ft. Mega Capacity Smart Top Load Washer with 4-Way® Agitator, EasyUnload™ & AI Sensing",
+   "salePrice": 829,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8205cw.webp"
+  },
+  {
+   "sku": "WT8400CB",
+   "title": "5.5 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™ & AI Sensing",
+   "salePrice": 949,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8400cb.webp"
+  },
+  {
+   "sku": "WT8400CW",
+   "title": "5.5 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™ & AI Sensing",
+   "salePrice": 899,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8400cw.webp"
+  },
+  {
+   "sku": "WT8405CB",
+   "title": "5.3 cu. ft. Mega Capacity Smart Top Load Washer with 4-Way® Agitator, EasyUnload™ & AI Sensing",
+   "salePrice": 949,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8405cb.webp"
+  },
+  {
+   "sku": "WT8480CL",
+   "title": "5.5 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™ & AI Sensing",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8480cl.webp"
+  },
+  {
+   "sku": "WT8600CW",
+   "title": "5.5 cu. ft. Mega Capacity Smart Top Load Washer with Impeller, EasyUnload™, AI Sensing, ezDispense®, Water Faucet & LCD Digital Dial Control",
+   "salePrice": 1149,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.38,
+   "height": 43,
+   "image": "/oh/img/products/wt8600cw.webp"
+  },
+  {
+   "sku": "DLE3400W",
+   "title": "7.4 cu. ft. Large Capacity Electric Dryer - White",
+   "salePrice": 749,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3400w.webp"
+  },
+  {
+   "sku": "DLE3420W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric Dryer",
+   "salePrice": 769,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3420w.webp"
+  },
+  {
+   "sku": "DLE3470M",
+   "title": "7.4 cu. ft. Ultra Large Capacity Electric Dryer",
+   "salePrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3470m.webp"
+  },
+  {
+   "sku": "DLE3470W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Electric Dryer",
+   "salePrice": 550,
+   "listPrice": 1099,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3470w.webp"
+  },
+  {
+   "sku": "DLE3600V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Electric Dryer with Built-In Intelligence",
+   "salePrice": 698.99,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3600v.webp"
+  },
+  {
+   "sku": "DLE3600W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Electric Dryer with Built-In Intelligence",
+   "salePrice": 698.99,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dle3600w.webp"
+  },
+  {
+   "sku": "DLE6100M",
+   "title": "7.3 cu. ft. Ultra Large High Efficiency Dryer™, Electric, Monochrome Grey",
+   "salePrice": 599,
+   "listPrice": 949,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle6100m.webp"
+  },
+  {
+   "sku": "DLE6100W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric ENERGY STAR Dryer with Sensor Dry",
+   "salePrice": 549,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle6100w.webp"
+  },
+  {
+   "sku": "DLE7000W",
+   "title": "7.3 cu. ft. Ultra Large High Efficiency Dryer™, Electric, White",
+   "salePrice": 699,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle7000w.webp"
+  },
+  {
+   "sku": "DLE7010W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Electric Dryer with Sensor Dry Technology",
+   "salePrice": 649,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle7010w.webp"
+  },
+  {
+   "sku": "DLE7100W",
+   "title": "7.3 cu. ft. Electric Dryer with Sensor Dry Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.25,
+   "image": "/oh/img/products/dle7100w.webp"
+  },
+  {
+   "sku": "DLE7150M",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric ENERGY STAR Dryer with Sensor Dry",
+   "salePrice": 600,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle7150m.webp"
+  },
+  {
+   "sku": "DLE7150W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Electric Dryer with Sensor Dry Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle7150w.webp"
+  },
+  {
+   "sku": "DLE7400VE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Rear Control Electric Dryer with EasyLoad™ Door",
+   "salePrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dle7400ve.webp"
+  },
+  {
+   "sku": "DLE8200L",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric Dryer with AI Sensing and ThinQ® Smart Features",
+   "salePrice": 879,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dle8200l.webp"
+  },
+  {
+   "sku": "DLE8200W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric Dryer with AI Sensing and ThinQ® Smart Features",
+   "salePrice": 829,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dle8200w.webp"
+  },
+  {
+   "sku": "DLE8400BE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric Dryer with LG EasyLoad™ Door and AI Sensing",
+   "salePrice": 949,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dle8400be.webp"
+  },
+  {
+   "sku": "DLE8400WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric Dryer with LG EasyLoad™ Door and AI Sensing",
+   "salePrice": 899,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dle8400we.webp"
+  },
+  {
+   "sku": "DLEC888W",
+   "title": "4.2 cu. ft. Compact Electric Condensing Front Load Dryer",
+   "salePrice": 999,
+   "cta": "cart",
+   "width": 24,
+   "depth": 25.25,
+   "height": 33.5,
+   "image": "/oh/img/products/dlec888w.webp"
+  },
+  {
+   "sku": "DLEX3900W",
+   "title": "7.4 cu. ft. Smart Wi-Fi Enabled Electric Dryer with TurboSteam™",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.2,
+   "height": 39,
+   "image": "/oh/img/products/dlex3900w.webp"
+  },
+  {
+   "sku": "DLEX4000B",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Electric Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 949,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlex4000b.webp"
+  },
+  {
+   "sku": "DLEX4000W",
+   "title": "7.4 cu. ft. Large Capacity Front Load Electric Dryer - White",
+   "salePrice": 929,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlex4000w.webp"
+  },
+  {
+   "sku": "DLEX4200B",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Electric Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 849,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlex4200b.webp"
+  },
+  {
+   "sku": "DLEX5500V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric ENERGY STAR Dryer with Sensor Dry & Steam Technology",
+   "salePrice": 725,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex5500v.webp"
+  },
+  {
+   "sku": "DLEX5500W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric ENERGY STAR Dryer with Sensor Dry & Steam Technology",
+   "salePrice": 675,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex5500w.webp"
+  },
+  {
+   "sku": "DLEX5800A",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric Dryer with TurboSteam®, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1049,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex5800a.webp"
+  },
+  {
+   "sku": "DLEX5800V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric Dryer with TurboSteam®, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1099,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex5800v.webp"
+  },
+  {
+   "sku": "DLEX6500B",
+   "title": "7.4 cu. ft. Smart Front Load Electric Dryer with AI Sensor Dry & TurboSteam™ Technology",
+   "salePrice": 1249,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex6500b.webp"
+  },
+  {
+   "sku": "DLEX6500W",
+   "title": "7.4 cu. ft. Smart Front Load Electric Dryer with AI Sensor Dry & TurboSteam™ Technology",
+   "salePrice": 1199,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex6500w.webp"
+  },
+  {
+   "sku": "DLEX6700B",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric Dryer with Built-In Intelligence & TurboSteam®",
+   "salePrice": 1349,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex6700b.webp"
+  },
+  {
+   "sku": "DLEX6700W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Electric Dryer with TurboSteam® & Built-In Intelligence",
+   "salePrice": 1299,
+   "listPrice": 1649,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlex6700w.webp"
+  },
+  {
+   "sku": "DLEX7800WE",
+   "title": "7.3 cu. ft. Smart Wi-Fi Enabled Electric Dryer with TurboSteam™",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.25,
+   "image": "/oh/img/products/dlex7800we.webp"
+  },
+  {
+   "sku": "DLEX7900BE",
+   "title": "7.3 cu. ft. Smart Wi-Fi Enabled Electric Dryer with TurboSteam™",
+   "salePrice": 799.99,
+   "listPrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlex7900be.webp"
+  },
+  {
+   "sku": "DLEX7900WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Rear Control Electric Dryer with TurboSteam™",
+   "salePrice": 750,
+   "listPrice": 1249,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlex7900we.webp"
+  },
+  {
+   "sku": "DLEX8600BE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Electric Dryer with LG EasyLoad™ Door, AI Sensing and TurboSteam™",
+   "salePrice": 1149,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlex8600be.webp"
+  },
+  {
+   "sku": "DLEX8600WE",
+   "title": "7.3 cu. ft. Ultra Large High Efficiency Electric TurboSteam™ LG EasyLoad™ Door, Wi-Fi Connectivity, White",
+   "salePrice": 1149,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlex8600we.webp"
+  },
+  {
+   "sku": "DLEX8900B",
+   "title": "9.0 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Electric Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 1399,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29,
+   "depth": 32.13,
+   "height": 40.75,
+   "image": "/oh/img/products/dlex8900b.webp"
+  },
+  {
+   "sku": "DLEX9000V",
+   "title": "9.0 cu. ft. Large Smart Wi-Fi Enabled Electric Dryer w/ TurboSteam™",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 33.38,
+   "height": 40.88,
+   "image": "/oh/img/products/dlex9000v.webp"
+  },
+  {
+   "sku": "DLEX9500K",
+   "title": "LG SIGNATURE 9.0 cu. ft. Large Smart Wi-Fi Enabled Electric Dryer w/ TurboSteam™",
+   "salePrice": 1150,
+   "listPrice": 2299,
+   "cta": "cart",
+   "width": 29,
+   "depth": 33.38,
+   "height": 40.88,
+   "image": "/oh/img/products/dlex9500k.webp"
+  },
+  {
+   "sku": "DLEX9700P",
+   "title": "LG SIGNATURE 9.0 cu. ft. Mega Capacity Smart Front Load Electric Dryer with TurboSteam®, Built-In Intelligence and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1599,
+   "listPrice": 1999,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.5,
+   "height": 40.88,
+   "image": "/oh/img/products/dlex9700p.webp"
+  },
+  {
+   "sku": "DLEX9900B",
+   "title": "LG SIGNATURE 9.0 cu. ft. Mega Capacity Smart Front Load Electric Dryer with Built-In Intelligence, TurboSteam® and Touch LCD Control",
+   "salePrice": 1899,
+   "listPrice": 2499,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.5,
+   "height": 40.88,
+   "image": "/oh/img/products/dlex9900b.webp"
+  },
+  {
+   "sku": "DLEX9900S",
+   "title": "LG SIGNATURE 9.0 cu. ft. Mega Capacity Smart Front Load Electric Dryer with Built-In Intelligence, TurboSteam® and Touch LCD Control",
+   "salePrice": 1899,
+   "listPrice": 2499,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.5,
+   "height": 40.88,
+   "image": "/oh/img/products/dlex9900s.webp"
+  },
+  {
+   "sku": "DLG3401W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Front Load Gas Dryer - White",
+   "salePrice": 849,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlg3401w.webp"
+  },
+  {
+   "sku": "DLG3421W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas Dryer",
+   "salePrice": 869,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlg3421w.webp"
+  },
+  {
+   "sku": "DLG3471W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Gas Dryer",
+   "salePrice": 1199,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlg3471w.webp"
+  },
+  {
+   "sku": "DLG3601V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with Built-In Intelligence",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlg3601v.webp"
+  },
+  {
+   "sku": "DLG6101W",
+   "title": "7.3 cu. ft. Rear Control Gas ENERGY STAR Dryer with Sensor Dry",
+   "salePrice": 649,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg6101w.webp"
+  },
+  {
+   "sku": "DLG6481W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas Dryer with AI Sensing and ThinQ® Smart Features",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.63,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg6481w.webp"
+  },
+  {
+   "sku": "DLG7001W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Gas Dryer with Sensor Dry Technology",
+   "salePrice": 799,
+   "listPrice": 1099,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg7001w.webp"
+  },
+  {
+   "sku": "DLG7151M",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas ENERGY STAR Dryer with Sensor Dry",
+   "salePrice": 1399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg7151m.webp"
+  },
+  {
+   "sku": "DLG7151X",
+   "title": "7.3 cu. ft. Ultra Large Capacity Gas Dryer with Sensor Dry Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg7151x.webp"
+  },
+  {
+   "sku": "DLG7301VE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Gas Dryer with Sensor Dry Technology",
+   "salePrice": 1249,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.25,
+   "image": "/oh/img/products/dlg7301ve.webp"
+  },
+  {
+   "sku": "DLG7401WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Rear Control Gas Dryer with EasyLoad™ Door",
+   "salePrice": 675,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlg7401we.webp"
+  },
+  {
+   "sku": "DLG8201W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas Dryer with AI Sensing and ThinQ® Smart Features",
+   "salePrice": 929,
+   "listPrice": 1249,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlg8201w.webp"
+  },
+  {
+   "sku": "DLG8401WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas Dryer with LG EasyLoad™ Door and AI Sensing",
+   "salePrice": 999,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlg8401we.webp"
+  },
+  {
+   "sku": "DLG8481LE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas Dryer with LG EasyLoad™ Door and AI Sensing",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlg8481le.webp"
+  },
+  {
+   "sku": "DLGX3901B",
+   "title": "7.4 cu. ft. Smart Wi-Fi Enabled Gas Dryer with TurboSteam™",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.2,
+   "height": 39,
+   "image": "/oh/img/products/dlgx3901b.webp"
+  },
+  {
+   "sku": "DLGX4001B",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 1049,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlgx4001b.webp"
+  },
+  {
+   "sku": "DLGX4001W",
+   "title": "7.4 cu. ft. Large Capacity Front Load Gas Dryer - White",
+   "salePrice": 1029,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlgx4001w.webp"
+  },
+  {
+   "sku": "DLGX4081W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load ENERGY STAR Gas Dryer with Sensor Dry & Steam Technology",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlgx4081w.webp"
+  },
+  {
+   "sku": "DLGX4201W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 949,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.13,
+   "height": 39,
+   "image": "/oh/img/products/dlgx4201w.webp"
+  },
+  {
+   "sku": "DLGX4501B",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with TurboSteam™ and Built-In Intelligence",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30,
+   "height": 39,
+   "image": "/oh/img/products/dlgx4501b.webp"
+  },
+  {
+   "sku": "DLGX5501V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas Dryer with Sensor Dry & Steam Technology",
+   "salePrice": 1099,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx5501v.webp"
+  },
+  {
+   "sku": "DLGX5501W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas ENERGY STAR Dryer with Sensor Dry & Steam Technology",
+   "salePrice": 725,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx5501w.webp"
+  },
+  {
+   "sku": "DLGX5801A",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas Dryer with TurboSteam®, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1149,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx5801a.webp"
+  },
+  {
+   "sku": "DLGX5801V",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas Dryer with TurboSteam®, AI Sensing and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1199,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx5801v.webp"
+  },
+  {
+   "sku": "DLGX6501B",
+   "title": "7.4 cu. ft. Smart Front Load Gas Dryer with AI Sensor Dry & TurboSteam™ Technology",
+   "salePrice": 1349,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx6501b.webp"
+  },
+  {
+   "sku": "DLGX6501W",
+   "title": "7.4 cu. ft. Smart Front Load Gas Dryer with AI Sensor Dry & TurboSteam™ Technology",
+   "salePrice": 1299,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx6501w.webp"
+  },
+  {
+   "sku": "DLGX6701W",
+   "title": "7.4 cu. ft. Ultra Large Capacity Smart Front Load Gas Dryer with TurboSteam® & Built-In Intelligence",
+   "salePrice": 1399,
+   "listPrice": 1749,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.75,
+   "height": 39,
+   "image": "/oh/img/products/dlgx6701w.webp"
+  },
+  {
+   "sku": "DLGX7481LE",
+   "title": "7.3 cu. ft. Smart Rear Control Gas ENERGY STAR Dryer with Sensor Dry & Steam Technology",
+   "salePrice": 1549,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlgx7481le.webp"
+  },
+  {
+   "sku": "DLGX7901BE",
+   "title": "7.3 cu. ft. Smart Wi-Fi Enabled Gas Dryer with TurboSteam™",
+   "salePrice": 859.99,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlgx7901be.webp"
+  },
+  {
+   "sku": "DLGX7901WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Wi-Fi Enabled Rear Control Gas Dryer with TurboSteam™",
+   "salePrice": 1349,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.5,
+   "height": 44.5,
+   "image": "/oh/img/products/dlgx7901we.webp"
+  },
+  {
+   "sku": "DLGX8601WE",
+   "title": "7.3 cu. ft. Ultra Large Capacity Rear Control Gas Dryer with LG EasyLoad™ Door, AI Sensing and TurboSteam™",
+   "salePrice": 1249,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 29.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlgx8601we.webp"
+  },
+  {
+   "sku": "DLGX8901B",
+   "title": "9.0 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with TurboSteam™ and Built-In Intelligence",
+   "salePrice": 1499,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 29,
+   "depth": 32.13,
+   "height": 40.75,
+   "image": "/oh/img/products/dlgx8901b.webp"
+  },
+  {
+   "sku": "DLGX8981V",
+   "title": "9.0 cu. ft. Mega Capacity Smart Wi-Fi Enabled Front Load Gas Dryer with TurboSteam™ and Built-In Intelligence",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 32.13,
+   "height": 40.75,
+   "image": "/oh/img/products/dlgx8981v.webp"
+  },
+  {
+   "sku": "DLGX9001V",
+   "title": "9.0 cu. ft. Large Smart Wi-Fi Enabled Gas Dryer w/ TurboSteam™",
+   "cta": "retailer",
+   "width": 29,
+   "depth": 33.38,
+   "height": 40.88,
+   "image": "/oh/img/products/dlgx9001v.webp"
+  },
+  {
+   "sku": "DLGX9501K",
+   "title": "LG SIGNATURE 9.0 cu. ft. Large Smart Wi-Fi Enabled Gas Dryer w/ TurboSteam™",
+   "salePrice": 2399,
+   "cta": "cart",
+   "width": 29,
+   "depth": 33.38,
+   "height": 40.88,
+   "image": "/oh/img/products/dlgx9501k.webp"
+  },
+  {
+   "sku": "DLGX9701P",
+   "title": "LG SIGNATURE 9.0 cu. ft. Mega Capacity Smart Front Load Gas Dryer with TurboSteam®, Built-In Intelligence and Hybrid Electronic Controls with LCD Display",
+   "salePrice": 1699,
+   "listPrice": 2099,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.5,
+   "height": 40.88,
+   "image": "/oh/img/products/dlgx9701p.webp"
+  },
+  {
+   "sku": "DLGX9901S",
+   "title": "LG SIGNATURE 9.0 cu. ft. Mega Capacity Smart Front Load Gas Dryer with Built-In Intelligence, TurboSteam® and Touch LCD Control",
+   "salePrice": 1999,
+   "listPrice": 2599,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.5,
+   "height": 40.88,
+   "image": "/oh/img/products/dlgx9901s.webp"
+  },
+  {
+   "sku": "DLHC1455W",
+   "title": "4.2 cu. ft. Smart Wi-Fi Enabled Compact Front Load Dryer with Dual Inverter HeatPump™ Technology",
+   "salePrice": 1349,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 24,
+   "depth": 26.38,
+   "height": 33.5,
+   "image": "/oh/img/products/dlhc1455w.webp"
+  },
+  {
+   "sku": "DLHC4002B",
+   "title": "7.8 cu. ft. Ultra Large Capacity Heat Pump Ventless Dryer, Wi-Fi Connectivity Black Steel",
+   "salePrice": 1299,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.25,
+   "height": 39,
+   "image": "/oh/img/products/dlhc4002b.webp"
+  },
+  {
+   "sku": "DLHC4002W",
+   "title": "7.8 cu. ft. Mega Capacity Smart Front Load Dryer with Dual Inverter HeatPump™ Technology and Inverter Direct Drive Motor System",
+   "salePrice": 1249,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.25,
+   "height": 39,
+   "image": "/oh/img/products/dlhc4002w.webp"
+  },
+  {
+   "sku": "DLHC5502B",
+   "title": "7.8 cu. ft. Mega Capacity Smart Front Load Dryer with Dual Inverter HeatPump™ Technology and Inverter Direct Drive Motor System",
+   "salePrice": 1399,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.25,
+   "height": 39,
+   "image": "/oh/img/products/dlhc5502b.webp"
+  },
+  {
+   "sku": "DLHC5502V",
+   "title": "7.8 cu. ft. Mega Capacity Smart Front Load Dryer with Dual Inverter HeatPump™ Technology and Inverter Direct Drive Motor System",
+   "salePrice": 999,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.25,
+   "height": 39,
+   "image": "/oh/img/products/dlhc5502v.webp"
+  },
+  {
+   "sku": "DLHC5502W",
+   "title": "7.8 cu. ft. Mega Capacity Smart Front Load Dryer with Dual Inverter Heat Pump Technology and Inverter Direct Drive Motor System",
+   "salePrice": 1349,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.25,
+   "height": 39,
+   "image": "/oh/img/products/dlhc5502w.webp"
+  },
+  {
+   "sku": "DLHC8402B",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Rear Control Ventless Dryer with Dual Inverter Heat Pump Technology and Inverter Direct Drive Motor System",
+   "salePrice": 1299,
+   "listPrice": 1649,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlhc8402b.webp"
+  },
+  {
+   "sku": "DLHC8402W",
+   "title": "7.3 cu. ft. Ultra Large Capacity Smart Rear Control Ventless Dryer with Dual Inverter Heat Pump Technology and Inverter Direct Drive Motor System",
+   "salePrice": 1249,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.25,
+   "height": 42.75,
+   "image": "/oh/img/products/dlhc8402w.webp"
+  },
+  {
+   "sku": "SWWE50N3",
+   "title": "LG STUDIO WashTower™ Smart Front Load 5.0 cu. ft. Washer and 7.4 cu. ft. Electric Dryer with Center Control®",
+   "salePrice": 3399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.75,
+   "height": 74.38,
+   "image": "/oh/img/products/swwe50n3.webp"
+  },
+  {
+   "sku": "SWWG50N3",
+   "title": "LG STUDIO WashTower™ Smart Front Load 5.0 cu. ft. Washer and 7.4 cu. ft. Gas Dryer with Center Control®",
+   "salePrice": 3499,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.75,
+   "height": 74.38,
+   "image": "/oh/img/products/swwg50n3.webp"
+  },
+  {
+   "sku": "SWWG50W4",
+   "title": "LG STUDIO WashTower™ with 5.0 cu. ft. Washer & 7.4 cu. ft. Dryer - Essence White",
+   "salePrice": 3599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.63,
+   "height": 74.38,
+   "image": "/oh/img/products/swwg50w4.webp"
+  },
+  {
+   "sku": "WKE100HVA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer",
+   "salePrice": 1899,
+   "listPrice": 2699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wke100hva.webp"
+  },
+  {
+   "sku": "WKE100HWA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer",
+   "salePrice": 1799,
+   "listPrice": 2599,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wke100hwa.webp"
+  },
+  {
+   "sku": "WKEX200HBA",
+   "title": "LG WashTower™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer - Black Steel",
+   "salePrice": 2099,
+   "listPrice": 2899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkex200hba.webp"
+  },
+  {
+   "sku": "WKEX200HGA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer",
+   "salePrice": 2899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkex200hga.webp"
+  },
+  {
+   "sku": "WKEX200HRA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer.",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkex200hra.webp"
+  },
+  {
+   "sku": "WKEX200HWA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Electric Dryer",
+   "salePrice": 1999,
+   "listPrice": 2799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkex200hwa.webp"
+  },
+  {
+   "sku": "WKEX300HBA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control® 5.0 cu. ft. Washer & 7.4 cu. ft. Electric Dryer",
+   "salePrice": 2299,
+   "listPrice": 3299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.63,
+   "height": 74.38,
+   "image": "/oh/img/products/wkex300hba.webp"
+  },
+  {
+   "sku": "WKG101HVA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Gas Dryer",
+   "salePrice": 1999,
+   "listPrice": 2799,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkg101hva.webp"
+  },
+  {
+   "sku": "WKG101HWA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Gas Dryer",
+   "salePrice": 1899,
+   "listPrice": 2699,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkg101hwa.webp"
+  },
+  {
+   "sku": "WKGX201HBA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Gas Dryer",
+   "salePrice": 2199,
+   "listPrice": 2999,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkgx201hba.webp"
+  },
+  {
+   "sku": "WKGX201HWA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control™ 4.5 cu. ft. Washer and 7.4 cu. ft. Gas Dryer",
+   "salePrice": 2099,
+   "listPrice": 2899,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.38,
+   "height": 74.38,
+   "image": "/oh/img/products/wkgx201hwa.webp"
+  },
+  {
+   "sku": "WKGX301HBA",
+   "title": "Single Unit Front Load LG WashTower™ with Center Control® 5.0 cu. ft. Washer & 7.4 cu. ft. Gas Dryer",
+   "salePrice": 2399,
+   "listPrice": 3399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.63,
+   "height": 74.38,
+   "image": "/oh/img/products/wkgx301hba.webp"
+  },
+  {
+   "sku": "WKHC152HWA",
+   "title": "Compact Single Unit LG WashTower™ with Center Control™ 2.4 cu. ft. Front Load Washer and 4.2 cu. ft. Electric Ventless HeatPump™ Dryer",
+   "salePrice": 2299,
+   "listPrice": 3199,
+   "cta": "cart",
+   "width": 24,
+   "depth": 26,
+   "height": 65.25,
+   "image": "/oh/img/products/wkhc152hwa.webp"
+  },
+  {
+   "sku": "WKHC252HBA",
+   "title": "Single Unit LG WashTower™ with Center Control™ 5.0 cu. ft. Front Load Washer and 7.8 cu. ft. Electric Ventless Heat Pump Dryer",
+   "salePrice": 2599,
+   "listPrice": 3399,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.75,
+   "height": 74.38,
+   "image": "/oh/img/products/wkhc252hba.webp"
+  },
+  {
+   "sku": "WKHC252HWA",
+   "title": "Single Unit LG WashTower™ with Center Control™ 5.0 cu. ft. Front Load Washer and 7.8 cu. ft. Electric Ventless Heat Pump Dryer",
+   "salePrice": 2499,
+   "listPrice": 3299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 32.75,
+   "height": 74.38,
+   "image": "/oh/img/products/wkhc252hwa.webp"
+  },
+  {
+   "sku": "WSEX200HNA",
+   "title": "LG STUDIO Single Unit Front Load WashTower™ with Center Control™ 5.0 cu. ft. Washer and 7.4 cu. ft. Electric Dryer",
+   "cta": "retailer",
+   "width": 27,
+   "depth": 32.75,
+   "height": 74.38,
+   "image": "/oh/img/products/wsex200hna.webp"
+  },
+  {
+   "sku": "LUWM101HWA",
+   "title": "LG SIGNATURE Smart Wi-Fi Enabled Washer/Dryer Combo",
+   "salePrice": 3299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 30.2,
+   "height": 39,
+   "image": "/oh/img/products/luwm101hwa.webp"
+  },
+  {
+   "sku": "WM3488HW",
+   "title": "2.3 cu. ft. Compact All-In-One Washer/Dryer",
+   "cta": "retailer",
+   "width": 24,
+   "depth": 25.25,
+   "height": 33.5,
+   "image": "/oh/img/products/wm3488hw.webp"
+  },
+  {
+   "sku": "WM3499HVA",
+   "title": "2.3 cu. ft. Smart Wi-Fi Enabled Compact All-In-One Washer/Dryer",
+   "cta": "retailer",
+   "image": "/oh/img/products/wm3499hva.webp"
+  },
+  {
+   "sku": "WM3555HVA",
+   "title": "2.4 cu. ft. Smart Wi-Fi Enabled Compact Front Load All-In-One Washer/Dryer Combo with Built-In Intelligence",
+   "salePrice": 1799,
+   "listPrice": 2199,
+   "cta": "cart",
+   "width": 24,
+   "depth": 22.25,
+   "height": 33.5,
+   "image": "/oh/img/products/wm3555hva.webp"
+  },
+  {
+   "sku": "WM6998HBA",
+   "title": "Ventless Washer/Dryer Combo LG WashCombo™ All-in-One 5.0 cu. ft. Mega Capacity with Inverter HeatPump™ Technology and Direct Drive Motor",
+   "salePrice": 2199,
+   "listPrice": 3299,
+   "cta": "cart",
+   "width": 27,
+   "depth": 33.13,
+   "height": 39,
+   "image": "/oh/img/products/wm6998hba.webp"
+  },
+  {
+   "sku": "WM9998HBA",
+   "title": "Ventless Washer/Dryer Combo LG SIGNATURE WashCombo™ All-in-One 5.8 cu. ft. Mega Capacity with Dual Inverter Heat Pump Technology, Built-In Intelligence, ezDispense® and Touch LCD Control",
+   "salePrice": 2599,
+   "listPrice": 3399,
+   "cta": "cart",
+   "width": 29,
+   "depth": 31.13,
+   "height": 40.75,
+   "image": "/oh/img/products/wm9998hba.webp"
+  },
+  {
+   "sku": "WDP6A",
+   "title": "LG 27 Inch Pedestal Storage Drawer",
+   "salePrice": 249,
+   "listPrice": 359,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28,
+   "height": 13.63,
+   "image": "/oh/img/products/wdp6a.webp"
+  },
+  {
+   "sku": "WDP6B",
+   "title": "LG 27 Inch Pedestal Storage Drawer",
+   "salePrice": 269,
+   "listPrice": 379,
+   "cta": "cart",
+   "width": 27,
+   "depth": 28.4,
+   "height": 13.6,
+   "image": "/oh/img/products/wdp6b.webp"
+  },
+  {
+   "sku": "WDP6V",
+   "title": "LG 27 Inch Pedestal Storage Drawer",
+   "salePrice": 269,
+   "listPrice": 379,
+   "cta": "cart",
+   "image": "/oh/img/products/wdp6v.webp"
+  },
+  {
+   "sku": "WDP6W",
+   "title": "LG 27 Inch Pedestal Storage Drawer",
+   "salePrice": 249,
+   "listPrice": 359,
+   "cta": "cart",
+   "image": "/oh/img/products/wdp6w.webp"
+  },
+  {
+   "sku": "WDP8B",
+   "title": "LG SIGNATURE 29\" Laundry Pedestal",
+   "salePrice": 329,
+   "listPrice": 429,
+   "cta": "cart",
+   "width": 29,
+   "depth": 29.2,
+   "height": 13.6,
+   "image": "/oh/img/products/wdp8b.webp"
+  },
+  {
+   "sku": "WDPS2W",
+   "title": "ADA Compliant Laundry Pedestal Riser - White",
+   "salePrice": 199,
+   "listPrice": 229,
+   "cta": "cart",
+   "image": "/oh/img/products/wdps2w.webp"
+  },
+  {
+   "sku": "KSTK5",
+   "title": "LG 29'' Laundry Front Load Stacking Kit",
+   "salePrice": 70,
+   "cta": "cart",
+   "image": "/oh/img/products/kstk5.webp"
+  },
+  {
+   "sku": "S3CW",
+   "title": "LG Styler® Smart Wi-Fi Enabled Steam Closet with TrueSteam® Technology and Exclusive Moving Hangers",
+   "salePrice": 1299,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 17.5,
+   "depth": 23,
+   "height": 72.81,
+   "image": "/oh/img/products/s3cw.webp"
+  },
+  {
+   "sku": "S3MFBN",
+   "title": "LG Styler® Smart Steam Closet with 3 Hangers - Mirror",
+   "salePrice": 1699,
+   "listPrice": 2099,
+   "cta": "cart",
+   "width": 17.5,
+   "depth": 23,
+   "height": 72.81,
+   "image": "/oh/img/products/s3mfbn.webp"
+  },
+  {
+   "sku": "S3RFBN",
+   "title": "LG Styler® Smart Wi-Fi Enabled Steam Closet with 3 Hangers - Espresso",
+   "cta": "retailer",
+   "width": 17.5,
+   "depth": 23,
+   "height": 72.81,
+   "image": "/oh/img/products/s3rfbn.webp"
+  },
+  {
+   "sku": "S3WFBN",
+   "title": "LG Styler® Smart Wi-Fi Enabled Steam Closet with TrueSteam® Technology and Exclusive Moving Hangers",
+   "salePrice": 1499,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 17.5,
+   "depth": 23,
+   "height": 72.81,
+   "image": "/oh/img/products/s3wfbn.webp"
+  },
+  {
+   "sku": "S5MSB",
+   "title": "LG STUDIO Styler - Refresh Garments in Minutes with Smart Wi-Fi Enabled Steam Clothing Care System",
+   "salePrice": 1899,
+   "listPrice": 2499,
+   "cta": "cart",
+   "width": 23.63,
+   "depth": 23.81,
+   "height": 77.17,
+   "image": "/oh/img/products/s5msb.webp"
+  },
+  {
+   "sku": "S5WBC",
+   "title": "LG Styler® Steam Closet with TrueSteam® Technology and Exclusive Moving Hangers",
+   "salePrice": 2299,
+   "cta": "cart",
+   "width": 23.63,
+   "depth": 23.81,
+   "height": 77.17,
+   "image": "/oh/img/products/s5wbc.webp"
+  },
+  {
+   "sku": "SC5GMR80H",
+   "title": "LG Styler® Smart Steam Closet with Dual TrueSteam® Technology, Dynamic MovingHanger™ and Built-In HandySteamer™",
+   "salePrice": 2199,
+   "listPrice": 2699,
+   "cta": "cart",
+   "width": 23.63,
+   "depth": 24.38,
+   "height": 77.38,
+   "image": "/oh/img/products/sc5gmr80h.webp"
+  },
+  {
+   "sku": "SC5GQR8GA",
+   "title": "LG SIGNATURE Styler® Smart Steam Closet with Dual TrueSteam® Technology, Dynamic MovingHanger™ and Built-In HandySteamer™",
+   "salePrice": 2299,
+   "listPrice": 2899,
+   "cta": "cart",
+   "width": 23.63,
+   "depth": 24.38,
+   "height": 77.38,
+   "image": "/oh/img/products/sc5gqr8ga.webp"
+  },
+  {
+   "sku": "SC5MAR4G",
+   "title": "LG Styler® Smart Steam Closet with Dual TrueSteam® Technology and Dynamic MovingHanger™",
+   "salePrice": 1999,
+   "listPrice": 2399,
+   "cta": "cart",
+   "width": 23.63,
+   "depth": 24.38,
+   "height": 77.38,
+   "image": "/oh/img/products/sc5mar4g.webp"
+  },
+  {
+   "sku": "WM4000HBA_DLGX4001B_WD300CB_WDP6B",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer Laundry Set in Black Steel",
+   "salePrice": 2946,
+   "listPrice": 3926,
+   "cta": "cart",
+   "image": "/oh/img/products/wm4000hba-dlgx4001b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM4000HBA_DLHC4002B_WD300CB_WDP6B",
+   "title": "4.5 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Ventless Dryer with pedestal washer and drawer Laundry Set in Black Steel",
+   "salePrice": 3196,
+   "listPrice": 4226,
+   "cta": "cart",
+   "image": "/oh/img/products/wm4000hba-dlhc4002b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 2766,
+   "listPrice": 3556,
+   "cta": "cart",
+   "image": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM4000HWA_DLGX4001W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 2866,
+   "listPrice": 3656,
+   "cta": "cart",
+   "image": "/oh/img/products/wm4000hwa-dlgx4001w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM4000HWA_DLHC4002W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Ventless Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 3086,
+   "listPrice": 4056,
+   "cta": "cart",
+   "image": "/oh/img/products/wm4000hwa-dlhc4002w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM5500HVA_DLGX5501V_WD300CV_WDP6V",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer Laundry Set in Graphite Steel",
+   "salePrice": 3046,
+   "listPrice": 4156,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5500hva-dlgx5501v-wd300cv-wdp6v.webp"
+  },
+  {
+   "sku": "WM5500HVA_DLHC5502V_WD300CV_WDP6V",
+   "title": "4.5 cu. ft. Front Load Washer and 7.8 cu.ft. Heat Pump Dryer with pedestal washer and drawer Laundry Set in Graphite Steel",
+   "salePrice": 2946,
+   "listPrice": 4576,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5500hva-dlhc5502v-wd300cv-wdp6v.webp"
+  },
+  {
+   "sku": "WM5500HWA_DLEX5500W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 2382,
+   "listPrice": 3856,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5500hwa-dlex5500w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM5500HWA_DLGX5501W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 2432,
+   "listPrice": 3956,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5500hwa-dlgx5501w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM5500HWA_DLHC5502W_WD300CW_WDP6W",
+   "title": "4.5 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 3056,
+   "listPrice": 4306,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5500hwa-dlhc5502w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM5800HAA_DLEX5800A_WD300CA_WDP6A",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer in Alpine White",
+   "salePrice": 3006,
+   "listPrice": 3856,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5800haa-dlex5800a-wd300ca-wdp6a.webp"
+  },
+  {
+   "sku": "WM5800HAA_DLGX5801A_WD300CA_WDP6A",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer in Alpine White",
+   "salePrice": 3106,
+   "listPrice": 3956,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5800haa-dlgx5801a-wd300ca-wdp6a.webp"
+  },
+  {
+   "sku": "WM5800HVA_DLGX5801V_WD300CV_WDP6V",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer in Graphite Steel",
+   "salePrice": 3246,
+   "listPrice": 4226,
+   "cta": "cart",
+   "image": "/oh/img/products/wm5800hva-dlgx5801v-wd300cv-wdp6v.webp"
+  },
+  {
+   "sku": "WM6500HBA_DLEX6500B_WD300CB_WDP6B",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in Black Steel",
+   "salePrice": 3446,
+   "listPrice": 4426,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6500hba-dlex6500b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM6500HBA_DLGX6501B_WD300CB_WDP6B",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer in Black Steel",
+   "salePrice": 3546,
+   "listPrice": 4526,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6500hba-dlgx6501b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM6500HBA_DLHC5502B_WD300CB_WDP6B",
+   "title": "5.0 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Ventless Dryer with pedestal washer and drawer in Black Steel",
+   "salePrice": 3596,
+   "listPrice": 4726,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6500hba-dlhc5502b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM6500HWA_DLGX6501W_WD300CW_WDP6W",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer in White",
+   "salePrice": 3406,
+   "listPrice": 4256,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6500hwa-dlgx6501w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM6500HWA_DLHC5502W_WD300CW_WDP6W",
+   "title": "5.0 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Ventless Dryer with pedestal washer and drawer in White",
+   "salePrice": 3456,
+   "listPrice": 4456,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6500hwa-dlhc5502w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM6700HBA_DLGX6701B_WD300CB_WDP6B",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu. ft. Gas Dryer with pedestal washer and drawer in Black Steel",
+   "salePrice": 3746,
+   "listPrice": 4726,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6700hba-dlgx6701b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM6700HBA_DLHC5502B_WD300CB_WDP6B",
+   "title": "5.0 cu. ft. Front Load Washer and 7.8 cu. ft. Heat Pump Ventless Dryer with pedestal washer and drawer in Black Steel",
+   "salePrice": 3696,
+   "listPrice": 4826,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6700hba-dlhc5502b-wd300cb-wdp6b.webp"
+  },
+  {
+   "sku": "WM6700HWA_DLEX6700W_WD300CW_WDP6W",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu.ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
+   "salePrice": 3456,
+   "listPrice": 4456,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6700hwa-dlex6700w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM6700HWA_DLGX6701W_WD300CW_WDP6W",
+   "title": "5.0 cu. ft. Front Load Washer and 7.4 cu.ft. Gas Dryer with pedestal washer and drawer in White",
+   "salePrice": 3556,
+   "listPrice": 4556,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6700hwa-dlgx6701w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "WM6700HWA_DLHC5502W_WD300CW_WDP6W",
+   "title": "5.0 cu. ft. Front Load Washer and 7.8 cu.ft. Heat Pump Ventless Dryer with pedestal washer and drawer in White",
+   "salePrice": 3506,
+   "listPrice": 4606,
+   "cta": "cart",
+   "image": "/oh/img/products/wm6700hwa-dlhc5502w-wd300cw-wdp6w.webp"
+  },
+  {
+   "sku": "LDE4413ST",
+   "title": "7.3 cu. ft. Electric Double Oven Range with ProBake Convection® and EasyClean®",
+   "salePrice": 999,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 47.28,
+   "image": "/oh/img/products/lde4413st.webp"
+  },
+  {
+   "sku": "LDE4415ST",
+   "title": "7.3 cu. ft. Electric Double Oven Range with ProBake Convection®, EasyClean® and Infrared Heating™ System",
+   "cta": "retailer",
+   "width": 29.93,
+   "depth": 28.93,
+   "image": "/oh/img/products/lde4415st.webp"
+  },
+  {
+   "sku": "LDEL7324YE",
+   "title": "7.3 cu. ft. Smart Electric Double Oven Freestanding Range with ProBake Convection®, Air Fry & Air Sous Vide",
+   "salePrice": 1499,
+   "listPrice": 2199,
+   "cta": "cart",
+   "width": 29.94,
+   "depth": 26.84,
+   "height": 46.47,
+   "image": "/oh/img/products/ldel7324ye.webp"
+  },
+  {
+   "sku": "LDG4313ST",
+   "title": "6.9 cu. ft. Gas Double Oven Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 47.31,
+   "image": "/oh/img/products/ldg4313st.webp"
+  },
+  {
+   "sku": "LDG4315ST",
+   "title": "6.9 cu. ft. Gas Double Oven Range with ProBake Convection®, EasyClean® and Gliding Rack",
+   "salePrice": 1599,
+   "listPrice": 1999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 28.94,
+   "height": 46.31,
+   "image": "/oh/img/products/ldg4315st.webp"
+  },
+  {
+   "sku": "LDGL6924S",
+   "title": "6.9 cu. ft. Smart Gas Double Oven Freestanding Range with ProBake Convection®, Air Fry & Air Sous Vide",
+   "salePrice": 1899,
+   "listPrice": 2399,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.25,
+   "height": 46.47,
+   "image": "/oh/img/products/ldgl6924s.webp"
+  },
+  {
+   "sku": "LDGL6924Y",
+   "title": "6.9 cu. ft. Smart Gas Double Oven Freestanding Range with ProBake Convection®, Air Fry & Air Sous Vide",
+   "salePrice": 1599,
+   "listPrice": 2399,
+   "cta": "cart",
+   "width": 29.94,
+   "depth": 26.84,
+   "height": 46.47,
+   "image": "/oh/img/products/ldgl6924y.webp"
+  },
+  {
+   "sku": "LPGU6319Y",
+   "title": "LG SIGNATURE 6.3 cu. ft. Smart Gas Slide-In Pro Range with Dynamic ProBake Convection®, Air Fry, Air Sous Vide and Roast Mode",
+   "salePrice": 5699,
+   "listPrice": 6399,
+   "cta": "cart",
+   "width": 35.88,
+   "depth": 29.31,
+   "height": 35.25,
+   "image": "/oh/img/products/lpgu6319y.webp"
+  },
+  {
+   "sku": "LRE3194ST",
+   "title": "6.3 cu. ft. Electric Single Oven Range with True Convection and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28,
+   "height": 47.43,
+   "image": "/oh/img/products/lre3194st.webp"
+  },
+  {
+   "sku": "LRE3194SW",
+   "title": "6.3 cu. ft. Electric Single Oven Range with True Convection and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28,
+   "height": 47.43,
+   "image": "/oh/img/products/lre3194sw.webp"
+  },
+  {
+   "sku": "LREL6321S",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Electric Range with EasyClean®",
+   "salePrice": 799,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrel6321s.webp"
+  },
+  {
+   "sku": "LREL6323S",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Fan Convection Electric Range with Air Fry & EasyClean®",
+   "salePrice": 899,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrel6323s.webp"
+  },
+  {
+   "sku": "LREL6325F",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled True Convection InstaView® Electric Range with Air Fry",
+   "salePrice": 899,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrel6325f.webp"
+  },
+  {
+   "sku": "LREN6321VE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Electric Range with Air Fry & EasyClean®",
+   "salePrice": 799,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.75,
+   "height": 46.5,
+   "image": "/oh/img/products/lren6321ve.webp"
+  },
+  {
+   "sku": "LREN6321YE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Electric Range with Air Fry & EasyClean®",
+   "salePrice": 799,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.13,
+   "height": 46.5,
+   "image": "/oh/img/products/lren6321ye.webp"
+  },
+  {
+   "sku": "LREN6323YE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® Electric Range with Air Fry & EasyClean®",
+   "salePrice": 949,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.75,
+   "height": 46.5,
+   "image": "/oh/img/products/lren6323ye.webp"
+  },
+  {
+   "sku": "LREN6325XE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® Electric Range with Air Fry & EasyClean®",
+   "salePrice": 1099,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.75,
+   "height": 46.5,
+   "image": "/oh/img/products/lren6325xe.webp"
+  },
+  {
+   "sku": "LREN6325ZE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® Electric Range with Air Fry & EasyClean®",
+   "salePrice": 1199,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.75,
+   "height": 46.5,
+   "image": "/oh/img/products/lren6325ze.webp"
+  },
+  {
+   "sku": "LRG3060ST",
+   "title": "5.4 cu. ft. Gas Single Oven Range with EasyClean®",
+   "cta": "retailer",
+   "width": 30,
+   "depth": 28.75,
+   "height": 47.43,
+   "image": "/oh/img/products/lrg3060st.webp"
+  },
+  {
+   "sku": "LRG3194BD",
+   "title": "5.4 cu. ft. Gas Single Oven Range with Fan Convection and EasyClean®",
+   "cta": "retailer",
+   "width": 30,
+   "depth": 28.75,
+   "height": 47.43,
+   "image": "/oh/img/products/lrg3194bd.webp"
+  },
+  {
+   "sku": "LRG3194ST",
+   "title": "5.4 cu. ft. Gas Single Oven Range with Fan Convection and EasyClean®",
+   "cta": "retailer",
+   "width": 30,
+   "depth": 28.75,
+   "height": 47.43,
+   "image": "/oh/img/products/lrg3194st.webp"
+  },
+  {
+   "sku": "LRGL5821S",
+   "title": "5.8 cu. ft. Smart Wi-Fi Enabled Gas Range with EasyClean®",
+   "salePrice": 949,
+   "listPrice": 1299,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgl5821s.webp"
+  },
+  {
+   "sku": "LRGL5823D",
+   "title": "5.8 cu. ft. Smart Wi-Fi Enabled Fan Convection Gas Range with Air Fry & EasyClean®",
+   "salePrice": 1049,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgl5823d.webp"
+  },
+  {
+   "sku": "LRGL5823S",
+   "title": "5.8 cu. ft. Smart Wi-Fi Enabled Fan Convection Gas Range with Air Fry & EasyClean®",
+   "salePrice": 999,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgl5823s.webp"
+  },
+  {
+   "sku": "LRGL5825F",
+   "title": "5.8 cu. ft. Smart Wi-Fi Enabled True Convection InstaView® Gas Range with Air Fry",
+   "salePrice": 1099,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.87,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgl5825f.webp"
+  },
+  {
+   "sku": "LRGN6321Y",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Probake Convection® Gas Range with Air Fry & EasyClean®",
+   "salePrice": 899,
+   "listPrice": 1099,
+   "cta": "cart",
+   "width": 29.96,
+   "depth": 29.28,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgn6321y.webp"
+  },
+  {
+   "sku": "LRGN6323Y",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Probake Convection® Gas Range with Air Fry & EasyClean®",
+   "salePrice": 1049,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 29.97,
+   "depth": 26.97,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgn6323y.webp"
+  },
+  {
+   "sku": "LRGN6323Z",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Probake Convection® Gas Range with Air Fry & EasyClean®",
+   "salePrice": 1149,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.56,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgn6323z.webp"
+  },
+  {
+   "sku": "LRGN6325X",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Probake Convection® Gas Range with Air Fry & EasyClean®",
+   "salePrice": 1199,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29.97,
+   "depth": 26.97,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgn6325x.webp"
+  },
+  {
+   "sku": "LRGN6325Z",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Probake Convection® Gas Range with Air Fry & EasyClean®",
+   "salePrice": 1299,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.56,
+   "height": 46.5,
+   "image": "/oh/img/products/lrgn6325z.webp"
+  },
+  {
+   "sku": "LRIN6323YE",
+   "title": "6.3 cu. ft. Smart Induction Freestanding Range with ProBake Convection® and Air Fry",
+   "salePrice": 1199,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 30,
+   "depth": 26.75,
+   "height": 46.5,
+   "image": "/oh/img/products/lrin6323ye.webp"
+  },
+  {
+   "sku": "LSDL6336F",
+   "title": "6.3 cu. ft. Smart Dual Fuel Slide-in Range with InstaView®, ProBake Convection®, Air Fry and Air Sous Vide",
+   "salePrice": 2099,
+   "listPrice": 3299,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.31,
+   "height": 37.12,
+   "image": "/oh/img/products/lsdl6336f.webp"
+  },
+  {
+   "sku": "LSDS6338F",
+   "title": "LG STUDIO 6.3 cu. ft. Smart Wi-Fi Dual Fuel Slide-in Range with ProBake Convection® and EasyClean®",
+   "salePrice": 2999,
+   "listPrice": 3599,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.37,
+   "height": 37.25,
+   "image": "/oh/img/products/lsds6338f.webp"
+  },
+  {
+   "sku": "LSE4611ST",
+   "title": "6.3 cu. ft. Electric Single Oven Slide-in Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 37.87,
+   "image": "/oh/img/products/lse4611st.webp"
+  },
+  {
+   "sku": "LSE4613BD",
+   "title": "6.3 cu. ft. Electric Single Oven Slide-in Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.88,
+   "depth": 28.94,
+   "height": 37.88,
+   "image": "/oh/img/products/lse4613bd.webp"
+  },
+  {
+   "sku": "LSE4616ST",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Induction Slide-in Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 37.87,
+   "image": "/oh/img/products/lse4616st.webp"
+  },
+  {
+   "sku": "LSE4617ST",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Induction Slide-in Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 37.87,
+   "image": "/oh/img/products/lse4617st.webp"
+  },
+  {
+   "sku": "LSEL6330S",
+   "title": "6.3 cu. ft. Electric Slide-in Range",
+   "salePrice": 899,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.22,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6330s.webp"
+  },
+  {
+   "sku": "LSEL6330SE",
+   "title": "6.3 cu. ft. Electric Slide-in Range",
+   "cta": "retailer",
+   "width": 29.88,
+   "depth": 29.22,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6330se.webp"
+  },
+  {
+   "sku": "LSEL6331F",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Electric Slide-in Range with EasyClean®",
+   "salePrice": 1099,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6331f.webp"
+  },
+  {
+   "sku": "LSEL6333F",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Fan Convection Electric Slide-in Range with Air Fry & EasyClean®",
+   "salePrice": 1049,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6333f.webp"
+  },
+  {
+   "sku": "LSEL6333XE",
+   "title": "6.3 cu ft. Smart Electric Slide-in Range with Air Fry & EasyClean®",
+   "salePrice": 1199,
+   "listPrice": 1799,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.81,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6333xe.webp"
+  },
+  {
+   "sku": "LSEL6333ZE",
+   "title": "6.3 cu ft. Smart Electric Slide-in Range with Air Fry & EasyClean®",
+   "salePrice": 1299,
+   "listPrice": 1899,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.81,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel6333ze.webp"
+  },
+  {
+   "sku": "LSEL6335D",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® InstaView® Electric Slide-In Range with Air Fry",
+   "salePrice": 2199,
+   "cta": "cart",
+   "width": 29.87,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6335d.webp"
+  },
+  {
+   "sku": "LSEL6335FE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® InstaView® Electric Slide-In Range with Air Fry",
+   "salePrice": 1599,
+   "listPrice": 2099,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 26.9,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6335fe.webp"
+  },
+  {
+   "sku": "LSEL6335LE",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Electric Slide-in Range with InstaView®, Fan Convection, Air Fry & EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 26.87,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6335le.webp"
+  },
+  {
+   "sku": "LSEL6335XE",
+   "title": "6.3 cu. ft. Smart Electric Slide-in Range with InstaView®, ProBake Convection®, and Air Fry",
+   "salePrice": 1399,
+   "listPrice": 2199,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6335xe.webp"
+  },
+  {
+   "sku": "LSEL6335ZE",
+   "title": "6.3 cu. ft. Smart Electric Slide-in Range with InstaView®, ProBake Convection®, and Air Fry",
+   "salePrice": 1499,
+   "listPrice": 2299,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6335ze.webp"
+  },
+  {
+   "sku": "LSEL6337F",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® InstaView™ Electric Slide-in Range with Air Fry",
+   "salePrice": 1299,
+   "listPrice": 2699,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.31,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6337f.webp"
+  },
+  {
+   "sku": "LSEL6337XE",
+   "title": "6.3 cu. ft. Smart Electric Slide-in Range with InstaView®, ProBake Convection®, and Air Fry",
+   "salePrice": 1699,
+   "listPrice": 2799,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.5,
+   "image": "/oh/img/products/lsel6337xe.webp"
+  },
+  {
+   "sku": "LSEL633CF",
+   "title": "6.3 cu. ft. Smart Electric Slide-in Range with Convection, Air Fry & EasyClean®",
+   "salePrice": 1299,
+   "listPrice": 1649,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsel633cf.webp"
+  },
+  {
+   "sku": "LSES6338F",
+   "title": "LG STUDIO 6.3 cu. ft. InstaView® Electric Slide-in Range with ProBake Convection® and Air Fry",
+   "salePrice": 2199,
+   "listPrice": 2999,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.37,
+   "height": 37.25,
+   "image": "/oh/img/products/lses6338f.webp"
+  },
+  {
+   "sku": "LSES6338N",
+   "title": "LG STUDIO 6.3 cu. ft. InstaView® Electric Slide-in Range with ProBake Convection® and Air Fry",
+   "salePrice": 3099,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 26.87,
+   "height": 37.25,
+   "image": "/oh/img/products/lses6338n.webp"
+  },
+  {
+   "sku": "LSGL5830S",
+   "title": "5.8 cu. ft. Gas Slide-in Range with EasyClean®",
+   "salePrice": 899,
+   "listPrice": 999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.22,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl5830s.webp"
+  },
+  {
+   "sku": "LSGL5831F",
+   "title": "5.8 cu. ft. Gas Single OvenSlide-in Range, EasyClean® plus Self Clean, ThinQ™, Printproof™ StainlessSteel",
+   "salePrice": 1199,
+   "listPrice": 1599,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl5831f.webp"
+  },
+  {
+   "sku": "LSGL5833F",
+   "title": "5.8 cu. ft. Smart Wi-Fi Enabled Fan Convection Gas Slide-in Range with Air Fry & EasyClean®",
+   "salePrice": 1599,
+   "listPrice": 1999,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl5833f.webp"
+  },
+  {
+   "sku": "LSGL5833X",
+   "title": "5.8 cu.ft. Smart Gas Single Oven Slide-in Range, Air Fry, Fan Convection, EasyClean®, Self Clean, ThinQ®, Printproof® Stainless Steel - New Handle",
+   "salePrice": 1399,
+   "listPrice": 1999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.22,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl5833x.webp"
+  },
+  {
+   "sku": "LSGL5833Z",
+   "title": "5.8 cu. ft. Smart Gas Slide-in Range with Convection, Air Fry and EasyClean®",
+   "salePrice": 1499,
+   "listPrice": 2099,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.22,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl5833z.webp"
+  },
+  {
+   "sku": "LSGL583CF",
+   "title": "5.8 cu. ft. Smart Gas Slide-in Range with Convection, Air Fry & EasyClean®",
+   "salePrice": 1199,
+   "listPrice": 1749,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.21,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgl583cf.webp"
+  },
+  {
+   "sku": "LSGL6335D",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled ProBake Convection® InstaView® Gas Slide-In Range with Air Fry",
+   "salePrice": 2499,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.31,
+   "height": 37.12,
+   "image": "/oh/img/products/lsgl6335d.webp"
+  },
+  {
+   "sku": "LSGL6335L",
+   "title": "6.3 cu. ft. Smart Wi-Fi Enabled Gas Slide-in Range with InstaView®, Fan Convection, Air Fry & EasyClean®",
+   "cta": "retailer",
+   "width": 29.88,
+   "depth": 29.31,
+   "height": 37.13,
+   "image": "/oh/img/products/lsgl6335l.webp"
+  },
+  {
+   "sku": "LSGL6335X",
+   "title": "6.3 cu ft. Smart Gas Slide-In Range ProBake Convection® InstaView®, and Air Fry",
+   "salePrice": 1599,
+   "listPrice": 2499,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 37.13,
+   "image": "/oh/img/products/lsgl6335x.webp"
+  },
+  {
+   "sku": "LSGL6335Z",
+   "title": "6.3 cu ft. Smart Gas Slide-In Range with ProBake Convection® InstaView®, and Air Fry",
+   "salePrice": 1699,
+   "listPrice": 2599,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 37.13,
+   "image": "/oh/img/products/lsgl6335z.webp"
+  },
+  {
+   "sku": "LSGL6337F",
+   "title": "6.3 cu. ft. Smart Gas Slide-in Range with InstaView® ProBake Convection®, Air Fry, and Air Sous Vide",
+   "salePrice": 2999,
+   "cta": "cart",
+   "width": 29.87,
+   "height": 37.12,
+   "image": "/oh/img/products/lsgl6337f.webp"
+  },
+  {
+   "sku": "LSGL6337X",
+   "title": "6.3 cu ft. Smart Gas Slide-In Range with InstaView®, ProBake Convection®, and Air Fry",
+   "salePrice": 1999,
+   "listPrice": 2999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 37.13,
+   "image": "/oh/img/products/lsgl6337x.webp"
+  },
+  {
+   "sku": "LSGS6338N",
+   "title": "LG STUDIO 6.3 cu. ft. InstaView® Gas Slide-in Range with ProBake Convection® and Air Fry",
+   "salePrice": 2499,
+   "listPrice": 3399,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 26.87,
+   "height": 37.25,
+   "image": "/oh/img/products/lsgs6338n.webp"
+  },
+  {
+   "sku": "LSGU6338X",
+   "title": "LG SIGNATURE 6.3 cu. ft. Single Oven Gas Slide-in Range with Dynamic Probake Convection® , Air Fry, Air Sous Vide, Roast, and Pizza mode",
+   "salePrice": 2899,
+   "listPrice": 3399,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 26.87,
+   "height": 37.12,
+   "image": "/oh/img/products/lsgu6338x.webp"
+  },
+  {
+   "sku": "LSGU6339X",
+   "title": "LG SIGNATURE 6.3 cu. ft. Smart Gas Slide-In Range with Dynamic ProBake Convection®, Air Fry, Air Sous Vide, Pizza mode and AI Gourmet Camera",
+   "salePrice": 3499,
+   "listPrice": 3999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 37.13,
+   "image": "/oh/img/products/lsgu6339x.webp"
+  },
+  {
+   "sku": "LSIL6332FE",
+   "title": "6.3 cu. ft. Smart Induction Slide-in Range with Convection and Air Fry",
+   "salePrice": 1299,
+   "listPrice": 2099,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.31,
+   "height": 36.5,
+   "image": "/oh/img/products/lsil6332fe.webp"
+  },
+  {
+   "sku": "LSIL6334FE",
+   "title": "6.3 cu. ft. Smart Induction Slide-in Range with ProBake Convection® and Air Fry",
+   "salePrice": 1499,
+   "listPrice": 2599,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 26.87,
+   "height": 36.5,
+   "image": "/oh/img/products/lsil6334fe.webp"
+  },
+  {
+   "sku": "LSIL6334XE",
+   "title": "6.3 cu. ft. Smart Induction Slide-In Range with ProBake Convection® and Air Fry",
+   "salePrice": 1699,
+   "listPrice": 2799,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.5,
+   "image": "/oh/img/products/lsil6334xe.webp"
+  },
+  {
+   "sku": "LSIL6336F",
+   "title": "6.3 cu. ft. Smart Induction Slide-in Range with InstaView®, ProBake Convection®, Air Fry, and Air Sous Vide",
+   "salePrice": 1849,
+   "listPrice": 2999,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.6,
+   "image": "/oh/img/products/lsil6336f.webp"
+  },
+  {
+   "sku": "LSIL6336FE",
+   "title": "6.3 cu. ft. Smart Induction Slide-in Range with InstaView®, ProBake Convection®, Air Fry, and Air Sous Vide",
+   "salePrice": 3299,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.6,
+   "image": "/oh/img/products/lsil6336fe.webp"
+  },
+  {
+   "sku": "LSIL6336XE",
+   "title": "6.3 cu. ft. Smart Induction Slide-In Range with InstaView®, ProBake Convection®, Air Fry, and Air Sous Vide",
+   "salePrice": 1999,
+   "listPrice": 3299,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "height": 36.5,
+   "image": "/oh/img/products/lsil6336xe.webp"
+  },
+  {
+   "sku": "LSIL633TFE",
+   "title": "6.3 cu. ft. Smart Induction Slide-in Range with Convection and Air Fry",
+   "cta": "retailer",
+   "width": 29.88,
+   "depth": 29.31,
+   "height": 36.5,
+   "image": "/oh/img/products/lsil633tfe.webp"
+  },
+  {
+   "sku": "LSIS6338FE",
+   "title": "LG STUDIO 6.3 cu. ft. InstaView® Induction Slide-in Range with Air Fry and Air Sous Vide",
+   "salePrice": 2699,
+   "listPrice": 3999,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 29.37,
+   "height": 37.25,
+   "image": "/oh/img/products/lsis6338fe.webp"
+  },
+  {
+   "sku": "LSIU6339XE",
+   "title": "LG SIGNATURE 6.3 cu. ft. Smart Induction Slide-In Range with Dynamic ProBake Convection®, Air Fry, Air Sous Vide, Pizza mode and AI Gourmet Camera",
+   "salePrice": 4299,
+   "listPrice": 4799,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 29.31,
+   "height": 36.5,
+   "image": "/oh/img/products/lsiu6339xe.webp"
+  },
+  {
+   "sku": "LSSE3027ST",
+   "title": "LG STUDIO 6.3 cu. ft. Electric Single Oven Slide-In-range with ProBake Convection®",
+   "cta": "retailer",
+   "width": 29.93,
+   "depth": 28.93,
+   "height": 37.01,
+   "image": "/oh/img/products/lsse3027st.webp"
+  },
+  {
+   "sku": "LTEL7337F",
+   "title": "7.3 cu. ft. Smart Electric Double Oven Slide-in Range with InstaView®, ProBake® Convection, Air Fry, and Air Sous Vide",
+   "salePrice": 2399,
+   "listPrice": 3599,
+   "cta": "cart",
+   "width": 29.87,
+   "image": "/oh/img/products/ltel7337f.webp"
+  },
+  {
+   "sku": "LTG4715BD",
+   "title": "6.9 cu. ft. Smart Wi-Fi Enabled Gas Double Oven Slide-In Range with ProBake Convection® and EasyClean®",
+   "cta": "retailer",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 37.87,
+   "image": "/oh/img/products/ltg4715bd.webp"
+  },
+  {
+   "sku": "LTGL6937D",
+   "title": "6.9 cu. ft. Smart Gas Double Oven Slide-in Range with InstaView®, ProBake® Convection, Air Fry, and Air Sous Vide",
+   "salePrice": 2699,
+   "listPrice": 3899,
+   "cta": "cart",
+   "width": 29.87,
+   "image": "/oh/img/products/ltgl6937d.webp"
+  },
+  {
+   "sku": "LTGL6937F",
+   "title": "6.9 cu. ft. Smart Gas Double Oven Slide-in Range with InstaView®, ProBake® Convection, Air Fry, and Air Sous Vide",
+   "salePrice": 2499,
+   "listPrice": 3799,
+   "cta": "cart",
+   "width": 29.87,
+   "image": "/oh/img/products/ltgl6937f.webp"
+  },
+  {
+   "sku": "LTIS7338XE",
+   "title": "LG STUDIO 7.3 cu. ft. Double Oven Induction Slide-in Range with Probake® Convection and Air Fry",
+   "salePrice": 3599,
+   "listPrice": 4699,
+   "cta": "cart",
+   "width": 29.88,
+   "depth": 26.88,
+   "image": "/oh/img/products/ltis7338xe.webp"
+  },
+  {
+   "sku": "LUTD4919SN",
+   "title": "LG SIGNATURE 7.3 cu. ft. Smart Wi-Fi Enabled Dual Fuel Double Oven Range with ProBake Convection®",
+   "salePrice": 3499,
+   "listPrice": 4299,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 28.93,
+   "height": 37.87,
+   "image": "/oh/img/products/lutd4919sn.webp"
+  },
+  {
+   "sku": "LMH2235ST",
+   "title": "2.2 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 519,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 15.81,
+   "height": 17.72,
+   "image": "/oh/img/products/lmh2235st.webp"
+  },
+  {
+   "sku": "LMHM2237ST",
+   "title": "2.2 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 449,
+   "listPrice": 549,
+   "cta": "cart",
+   "image": "/oh/img/products/lmhm2237st.webp"
+  },
+  {
+   "sku": "LMV1760ST",
+   "title": "1.7 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "cta": "retailer",
+   "image": "/oh/img/products/lmv1760st.webp"
+  },
+  {
+   "sku": "LMV1764ST",
+   "title": "1.7 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 299,
+   "listPrice": 349,
+   "cta": "cart",
+   "image": "/oh/img/products/lmv1764st.webp"
+  },
+  {
+   "sku": "LMV1831SS",
+   "title": "1.8 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "cta": "retailer",
+   "image": "/oh/img/products/lmv1831ss.webp"
+  },
+  {
+   "sku": "LMV2031SS",
+   "title": "2.0 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "cta": "retailer",
+   "image": "/oh/img/products/lmv2031ss.webp"
+  },
+  {
+   "sku": "LMVM2033ST",
+   "title": "2.0 cu. ft. Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 499,
+   "cta": "cart",
+   "width": 29.87,
+   "depth": 15.81,
+   "height": 16.44,
+   "image": "/oh/img/products/lmvm2033st.webp"
+  },
+  {
+   "sku": "MHEC1737F",
+   "title": "1.7 cu. ft. Smart Over-the-Range Convection Microwave with Air Fry",
+   "salePrice": 599,
+   "listPrice": 899,
+   "cta": "cart",
+   "image": "/oh/img/products/mhec1737f.webp"
+  },
+  {
+   "sku": "MHES1738N",
+   "title": "LG STUDIO 1.7 cu. ft. Over-the-Range Convection Microwave Oven with Air Fry",
+   "salePrice": 949,
+   "listPrice": 1399,
+   "cta": "cart",
+   "image": "/oh/img/products/mhes1738n.webp"
+  },
+  {
+   "sku": "MHEU1738N",
+   "title": "LG SIGNATURE 1.7 cu. ft. Over-the-Range Convection Microwave Oven with Air Fry and Air Sous Vide",
+   "salePrice": 1099,
+   "listPrice": 1249,
+   "cta": "cart",
+   "image": "/oh/img/products/mheu1738n.webp"
+  },
+  {
+   "sku": "MHEU1738X",
+   "title": "LG SIGNATURE 1.7 cu. ft. Over-the-Range Convection Microwave Oven with Air Fry and Air Sous Vide",
+   "salePrice": 1049,
+   "listPrice": 1199,
+   "cta": "cart",
+   "image": "/oh/img/products/mheu1738x.webp"
+  },
+  {
+   "sku": "MVEF1323F",
+   "title": "1.3 cu. ft. Smart Low Profile Over-the-Range Microwave Oven",
+   "salePrice": 399,
+   "listPrice": 649,
+   "cta": "cart",
+   "image": "/oh/img/products/mvef1323f.webp"
+  },
+  {
+   "sku": "MVEF1337F",
+   "title": "1.3 cu. ft. Smart Low Profile Over-the-Range Microwave Oven with Sensor Cook",
+   "salePrice": 499,
+   "listPrice": 749,
+   "cta": "cart",
+   "image": "/oh/img/products/mvef1337f.webp"
+  },
+  {
+   "sku": "MVEL2033D",
+   "title": "2.0 cu. ft. Smart Over-the-Range Microwave",
+   "salePrice": 449,
+   "listPrice": 649,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2033d.webp"
+  },
+  {
+   "sku": "MVEL2033F",
+   "title": "2.0 cu. ft. Smart Over-the-Range Microwave",
+   "salePrice": 399,
+   "listPrice": 599,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2033f.webp"
+  },
+  {
+   "sku": "MVEL2034X",
+   "title": "2.0 cu. ft. Wi-Fi Enabled Over-the-Range Microwave Oven with EasyClean®",
+   "cta": "retailer",
+   "image": "/oh/img/products/mvel2034x.webp"
+  },
+  {
+   "sku": "MVEL2035X",
+   "title": "2.0 cu. ft. Wi-Fi Enabled Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 399,
+   "listPrice": 599,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2035x.webp"
+  },
+  {
+   "sku": "MVEL2035Z",
+   "title": "2.2 cu. ft. Wi-Fi Enabled Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 449,
+   "listPrice": 649,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2035z.webp"
+  },
+  {
+   "sku": "MVEL2125F",
+   "title": "2.1 cu. ft. Smart Over-the-Range Microwave with ExtendaVent® 2.0",
+   "salePrice": 699,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2125f.webp"
+  },
+  {
+   "sku": "MVEL2125X",
+   "title": "2.1 cu. ft. Smart Over-the-Range Microwave Oven with ExtendaVent® 2.0 & EasyClean®",
+   "salePrice": 469,
+   "listPrice": 699,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2125x.webp"
+  },
+  {
+   "sku": "MVEL2137F",
+   "title": "2.1 cu. ft. Smart Over-the-Range Microwave with ExtendaVent®2.0 & EasyClean®",
+   "salePrice": 549,
+   "listPrice": 799,
+   "cta": "cart",
+   "image": "/oh/img/products/mvel2137f.webp"
+  },
+  {
+   "sku": "MVEM1621Y",
+   "title": "1.6 cu. ft. Over-the-Range Microwave Oven",
+   "salePrice": 229,
+   "listPrice": 299,
+   "cta": "cart",
+   "image": "/oh/img/products/mvem1621y.webp"
+  },
+  {
+   "sku": "MVEM1721F",
+   "title": "1.7 cu. ft. Over-the-Range Microwave Oven",
+   "salePrice": 249,
+   "listPrice": 399,
+   "cta": "cart",
+   "image": "/oh/img/products/mvem1721f.webp"
+  },
+  {
+   "sku": "MVEM1825F",
+   "title": "1.8 cu. ft. Smart Over-the-Range Microwave",
+   "salePrice": 299,
+   "listPrice": 499,
+   "cta": "cart",
+   "image": "/oh/img/products/mvem1825f.webp"
+  },
+  {
+   "sku": "MVEM1825X",
+   "title": "1.8 cu. ft. Smart Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 299,
+   "listPrice": 499,
+   "cta": "cart",
+   "image": "/oh/img/products/mvem1825x.webp"
+  },
+  {
+   "sku": "MVEM1825Z",
+   "title": "1.8 cu. ft. Smart Over-the-Range Microwave Oven with EasyClean®",
+   "salePrice": 349,
+   "listPrice": 549,
+   "cta": "cart",
+   "image": "/oh/img/products/mvem1825z.webp"
+  },
+  {
+   "sku": "ADFD5448AT",
+   "title": "24 Inch 48 dBA Front Control Smart Wi-Fi Enabled Dishwasher with QuadWash™",
+   "salePrice": 799,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 23.5,
+   "depth": 22.5,
+   "height": 32.06,
+   "image": "/oh/img/products/adfd5448at.webp"
+  },
+  {
+   "sku": "LDB4548ST",
+   "title": "24 Inch Top Control Dishwasher with QuadWash™ and EasyRack™ Plus",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldb4548st.webp"
+  },
+  {
+   "sku": "LDF5545BD",
+   "title": "24 Inch Front Control Dishwasher with QuadWash™ and EasyRack™ Plus",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldf5545bd.webp"
+  },
+  {
+   "sku": "LDF5545SS",
+   "title": "24 Inch Front Control Dishwasher with QuadWash™ and EasyRack™ Plus",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldf5545ss.webp"
+  },
+  {
+   "sku": "LDFC2423B",
+   "title": "24 Inch 52 dBA Front Control Dishwasher with LoDecibel Operation and Dynamic Dry™",
+   "salePrice": 529,
+   "listPrice": 699,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfc2423b.webp"
+  },
+  {
+   "sku": "LDFC2423V",
+   "title": "24 Inch 52 dBA Front Control Dishwasher with LoDecibel Operation and Dynamic Dry™",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfc2423v.webp"
+  },
+  {
+   "sku": "LDFC2423W",
+   "title": "24 Inch 52 dBA Front Control Dishwasher with LoDecibel Operation and Dynamic Dry™",
+   "salePrice": 529,
+   "listPrice": 699,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfc2423w.webp"
+  },
+  {
+   "sku": "LDFN3432T",
+   "title": "24 Inch Wide 50dBA QuadWash™ Front Control Dishwasher - Stainless Steel",
+   "salePrice": 799,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfn3432t.webp"
+  },
+  {
+   "sku": "LDFN343LS",
+   "title": "24 Inch Front Control Dishwasher with QuadWash™",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfn343ls.webp"
+  },
+  {
+   "sku": "LDFN4542D",
+   "title": "24 Inch 48 dBA Front Control Dishwasher with QuadWash™ and 3rd Rack",
+   "salePrice": 599,
+   "listPrice": 1099,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldfn4542d.webp"
+  },
+  {
+   "sku": "LDNPC44CS",
+   "title": "24 Inch 46dBA Smart Top Control Dishwasher with FlushFit™ Design and AutoVent Dry™",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 33.63,
+   "height": 23.75,
+   "image": "/oh/img/products/ldnpc44cs.webp"
+  },
+  {
+   "sku": "LDNPH654S",
+   "title": "24 Inch 44dBA Smart Top Control FlushFit Design Dishwasher with 1-Hour Wash & Dry and QuadWash® Pro",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnph654s.webp"
+  },
+  {
+   "sku": "LDNPH753D",
+   "title": "24 Inch 42 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 899,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnph753d.webp"
+  },
+  {
+   "sku": "LDNPH753S",
+   "title": "24 Inch 42 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 849,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnph753s.webp"
+  },
+  {
+   "sku": "LDNPH85CS",
+   "title": "24 Inch 39 dBA Top Control Dishwasher with FlushFit Design, 1-Hour Wash & QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 33.63,
+   "height": 23.75,
+   "image": "/oh/img/products/ldnph85cs.webp"
+  },
+  {
+   "sku": "LDNPM545S",
+   "title": "24 Inch 46 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 729,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnpm545s.webp"
+  },
+  {
+   "sku": "LDNPM654S",
+   "title": "24 Inch 44dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 799,
+   "listPrice": 1249,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnpm654s.webp"
+  },
+  {
+   "sku": "LDNPQ445S",
+   "title": "24 Inch 46 dBA Smart FlushFit™ Top Control Dishwasher with QuadWash® Pro, SteamAssist™, AutoVent Dry™ and 3rd Rack",
+   "salePrice": 649,
+   "listPrice": 1049,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnpq445s.webp"
+  },
+  {
+   "sku": "LDNPQ44HS",
+   "title": "24 Inch Smart FlushFit™Top Control Dishwasher with BlastZone™ Bottle Wash and QuadWash®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 33.63,
+   "height": 23.75,
+   "image": "/oh/img/products/ldnpq44hs.webp"
+  },
+  {
+   "sku": "LDNPQ555S",
+   "title": "24 Inch 46 dBA Smart FlushFit™ Top Control Dishwasher with QuadWash® Pro, and AutoVent™ Dry",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnpq555s.webp"
+  },
+  {
+   "sku": "LDNTH753D",
+   "title": "24 Inch 42 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 899,
+   "listPrice": 1449,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnth753d.webp"
+  },
+  {
+   "sku": "LDNTH753S",
+   "title": "24 Inch Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 849,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnth753s.webp"
+  },
+  {
+   "sku": "LDNTH862S",
+   "title": "24 Inch 39dBA Smart Top Control Dishwasher with FlushFit Design, 1-Hour Wash & Dry, BlastZone™, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 999,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldnth862s.webp"
+  },
+  {
+   "sku": "LDNTM545D",
+   "title": "24 Inch 46 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 779,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 26.13,
+   "height": 33.63,
+   "image": "/oh/img/products/ldntm545d.webp"
+  },
+  {
+   "sku": "LDNTM545S",
+   "title": "24 Inch 46 dBA Smart FlushFit™ Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ w/AutoVent Dry™",
+   "salePrice": 729,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/ldntm545s.webp"
+  },
+  {
+   "sku": "LDP6797ST",
+   "title": "24 Inch Top Control Smart Wi-Fi Enabled Dishwasher with QuadWash™",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldp6797st.webp"
+  },
+  {
+   "sku": "LDP6809SS",
+   "title": "24 Inch Top Control Smart Wi-Fi Enabled Dishwasher with QuadWash™ and TrueSteam®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldp6809ss.webp"
+  },
+  {
+   "sku": "LDP6810BD",
+   "title": "24 InchTop Control Smart Wi-Fi Enabled Dishwasher with QuadWash™ and TrueSteam®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldp6810bd.webp"
+  },
+  {
+   "sku": "LDP7808SS",
+   "title": "Top Control Dishwasher with QuadWash™ and TrueSteam®",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldp7808ss.webp"
+  },
+  {
+   "sku": "LDPH5554S",
+   "title": "24 Inch Smart Top-Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™",
+   "salePrice": 649,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 23,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldph5554s.webp"
+  },
+  {
+   "sku": "LDPH7972D",
+   "title": "24 Inch Top Control Wi-Fi Enabled Dishwasher with QuadWash™ Pro",
+   "salePrice": 799,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldph7972d.webp"
+  },
+  {
+   "sku": "LDPN454HT",
+   "title": "24 Inch Top Control Dishwasher with QuadWash™ and Dynamic Dry™",
+   "salePrice": 549,
+   "listPrice": 899,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldpn454ht.webp"
+  },
+  {
+   "sku": "LDPN6761T",
+   "title": "24 Inch Smart Dishwasher with QuadWash™ and Adjustable 3rd Rack, 44dB",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldpn6761t.webp"
+  },
+  {
+   "sku": "LDPS6762D",
+   "title": "24 Inch Smart Top Control Dishwasher with QuadWash® Pro, TrueSteam® and Dynamic Dry®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldps6762d.webp"
+  },
+  {
+   "sku": "LDT6809SS",
+   "title": "24 Inch Top Control Smart Wi-Fi Enabled Dishwasher with QuadWash™ and TrueSteam®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ldt6809ss.webp"
+  },
+  {
+   "sku": "LDT7808BD",
+   "title": "24 Inch Top Control Smart Wi-Fi Enabled Dishwasher with QuadWash™ and TrueSteam®",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldt7808bd.webp"
+  },
+  {
+   "sku": "LDTH5554D",
+   "title": "24 Inch Top-Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™",
+   "salePrice": 999,
+   "listPrice": 1249,
+   "cta": "cart",
+   "width": 23,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldth5554d.webp"
+  },
+  {
+   "sku": "LDTH555NS",
+   "title": "24 Inch Top-Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™",
+   "salePrice": 699,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 23,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldth555ns.webp"
+  },
+  {
+   "sku": "LDTH7972D",
+   "title": "24 Inch Smart Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™",
+   "salePrice": 949,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldth7972d.webp"
+  },
+  {
+   "sku": "LDTH7972S",
+   "title": "24 Inch Smart Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam®, and Dynamic Heat Dry™",
+   "salePrice": 899,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldth7972s.webp"
+  },
+  {
+   "sku": "LDTS5552D",
+   "title": "24 Inch Top Control Smart Dishwasher with QuadWash™",
+   "salePrice": 649,
+   "listPrice": 1199,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldts5552d.webp"
+  },
+  {
+   "sku": "LDTS5552S",
+   "title": "24 Inch QuadWash® Top Control Dishwasher - Stainless Steel",
+   "salePrice": 679,
+   "listPrice": 1149,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ldts5552s.webp"
+  },
+  {
+   "sku": "LUDP8908SN",
+   "title": "LG SIGNATURE 24 Inch 38 dBA Top Control Smart Wi-Fi Enabled Dishwasher with TrueSteam® and QuadWash™",
+   "salePrice": 2049,
+   "listPrice": 2299,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/ludp8908sn.webp"
+  },
+  {
+   "sku": "LUDP8997SN",
+   "title": "LG SIGNATURE Top Control Smart Wi-Fi Enabled Dishwasher with QuadWash™",
+   "width": 23.75,
+   "depth": 24.6,
+   "height": 33.6,
+   "image": "/oh/img/products/ludp8997sn.webp"
+  },
+  {
+   "sku": "SDNTH981E",
+   "title": "LG SIGNATURE FlushFit™ 24 Inch 39 dBA Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ with AutoVent™ Dry",
+   "cta": "retailer",
+   "width": 23.75,
+   "depth": 33.63,
+   "height": 23.75,
+   "image": "/oh/img/products/sdnth981e.webp"
+  },
+  {
+   "sku": "SDNTH981S",
+   "title": "LG SIGNATURE 24 Inch 39 dBA FlushFit™ Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ with AutoVent™ Dry",
+   "salePrice": 1449,
+   "listPrice": 1699,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 23.75,
+   "height": 33.63,
+   "image": "/oh/img/products/sdnth981s.webp"
+  },
+  {
+   "sku": "SDNTHS72S",
+   "title": "LG STUDIO FlushFit™ Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, and Dynamic Heat Dry™ with AutoVent™ Dry",
+   "salePrice": 1149,
+   "listPrice": 1549,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 33.63,
+   "height": 23.75,
+   "image": "/oh/img/products/sdnths72s.webp"
+  },
+  {
+   "sku": "SDWB24S3",
+   "title": "LG STUDIO Smart Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™",
+   "salePrice": 1199,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/sdwb24s3.webp"
+  },
+  {
+   "sku": "SDWB24W3",
+   "title": "LG STUDIO Smart Top Control Dishwasher with 1-Hour Wash & Dry, QuadWash® Pro, TrueSteam® and Dynamic Heat Dry™",
+   "salePrice": 1299,
+   "listPrice": 1499,
+   "cta": "cart",
+   "width": 23.75,
+   "depth": 24.63,
+   "height": 33.63,
+   "image": "/oh/img/products/sdwb24w3.webp"
+  },
+  {
+   "sku": "SDWD24P3",
+   "title": "LG STUDIO Panel Ready Top Control Dishwasher with TrueSteam®",
+   "salePrice": 1199,
+   "listPrice": 1399,
+   "cta": "cart",
+   "width": 23.5,
+   "depth": 21.88,
+   "height": 32.06,
+   "image": "/oh/img/products/sdwd24p3.webp"
+  },
+  {
+   "sku": "LF24Z6530S_LSEL6335XE_MVEM1825F_ADFD5448AT",
+   "image": "/oh/img/products/lf24z6530s-lsel6335xe-mvem1825f-adfd5448at.webp"
+  },
+  {
+   "sku": "LF24Z6530S_LSGL5833X_ADFD5448AT",
+   "image": "/oh/img/products/lf24z6530s-lsgl5833x-adfd5448at.webp"
+  },
+  {
+   "sku": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+   "image": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.webp"
+  },
+  {
+   "sku": "LF24Z6530S_LSIL6332FE_ADFD5448AT",
+   "image": "/oh/img/products/lf24z6530s-lsil6332fe-adfd5448at.webp"
+  },
+  {
+   "sku": "LF24Z6530S_LSIL6332FE_MVEM1825F_ADFD5448AT",
+   "image": "/oh/img/products/lf24z6530s-lsil6332fe-mvem1825f-adfd5448at.webp"
+  },
+  {
+   "sku": "LF29H8330S_LSEL6335XE_LDNPM654S",
+   "image": "/oh/img/products/lf29h8330s-lsel6335xe-ldnpm654s.webp"
+  },
+  {
+   "sku": "LF29H8330S_LSGL6335X_LDNPM654S",
+   "image": "/oh/img/products/lf29h8330s-lsgl6335x-ldnpm654s.webp"
+  },
+  {
+   "sku": "LF29S8365S_LSEL6335XE_LDNPM654S",
+   "image": "/oh/img/products/lf29s8365s-lsel6335xe-ldnpm654s.webp"
+  },
+  {
+   "sku": "LF29S8365S_LSGL6335X_LDNPM654S",
+   "image": "/oh/img/products/lf29s8365s-lsgl6335x-ldnpm654s.webp"
+  },
+  {
+   "sku": "LMWS29626S_LREN6323YE_LDFC2423V",
+   "image": "/oh/img/products/lmws29626s-lren6323ye-ldfc2423v.webp"
+  },
+  {
+   "sku": "LMWS29626S_LREN6323YE_MVEM1621Y_LDFC2423V",
+   "image": "/oh/img/products/lmws29626s-lren6323ye-mvem1621y-ldfc2423v.webp"
+  },
+  {
+   "sku": "LMWS29626S_LRGN6323Y_LDFC2423V",
+   "image": "/oh/img/products/lmws29626s-lrgn6323y-ldfc2423v.webp"
+  },
+  {
+   "sku": "LMWS29626S_LRGN6323Y_MVEM1621Y_LDFC2423V",
+   "image": "/oh/img/products/lmws29626s-lrgn6323y-mvem1621y-ldfc2423v.webp"
+  },
+  {
+   "sku": "LMWS29626S_LRIN6323YE_MVEM1621Y_LDFC2423V",
+   "image": "/oh/img/products/lmws29626s-lrin6323ye-mvem1621y-ldfc2423v.webp"
+  },
+  {
+   "sku": "LRMDS3006D_LSGL6335Z_LDNTM545D",
+   "image": "/oh/img/products/lrmds3006d-lsgl6335z-ldntm545d.webp"
+  },
+  {
+   "sku": "LRMVC2306D_LSEL6335ZE_LDNTM545D",
+   "image": "/oh/img/products/lrmvc2306d-lsel6335ze-ldntm545d.webp"
+  },
+  {
+   "sku": "LRMVC2306D_LSGL6335Z_LDNTM545D",
+   "image": "/oh/img/products/lrmvc2306d-lsgl6335z-ldntm545d.webp"
+  },
+  {
+   "sku": "LRMXS3006S_LSEL6335XE_LDNTH753S",
+   "image": "/oh/img/products/lrmxs3006s-lsel6335xe-ldnth753s.webp"
+  },
+  {
+   "sku": "LRMXS3006S_LSEL6335XE_MVEL2137F_LDNTH753S",
+   "image": "/oh/img/products/lrmxs3006s-lsel6335xe-mvel2137f-ldnth753s.webp"
+  },
+  {
+   "sku": "LRMXS3006S_LSGL6335X_MVEL2137F_LDNTH753S",
+   "image": "/oh/img/products/lrmxs3006s-lsgl6335x-mvel2137f-ldnth753s.webp"
+  },
+  {
+   "sku": "LRMXS3006S_LSIL6334XE_LDNTH753S",
+   "image": "/oh/img/products/lrmxs3006s-lsil6334xe-ldnth753s.webp"
+  },
+  {
+   "sku": "LRMXS3006S_LSIL6334XE_MVEL2137F_LDNTH753S",
+   "image": "/oh/img/products/lrmxs3006s-lsil6334xe-mvel2137f-ldnth753s.webp"
+  },
+  {
+   "sku": "LRYKC2606S_LSGL6337X_LDNTH753S",
+   "image": "/oh/img/products/lrykc2606s-lsgl6337x-ldnth753s.webp"
+  },
+  {
+   "sku": "LRYXC2606S_LSEL6337XE_LDNTH753S",
+   "image": "/oh/img/products/lryxc2606s-lsel6337xe-ldnth753s.webp"
+  },
+  {
+   "sku": "LRYXC2606S_LSGL6337X_LDNTH753S",
+   "image": "/oh/img/products/lryxc2606s-lsgl6337x-ldnth753s.webp"
+  },
+  {
+   "sku": "UM22WZH98S_LSGU6339X_MHEU1738X_SDNTH981S",
+   "title": "LG SIGNATURE Iconic Kitchen Package with 22 cu. ft. 4-Door French Door Refrigerator, Slide-in Gas Range, 24\" Top Control Dishwasher and Convection Microwave Oven in Stainless Steel",
+   "salePrice": 10196,
+   "listPrice": 11796,
+   "cta": "cart",
+   "image": "/oh/img/products/um22wzh98s-lsgu6339x-mheu1738x-sdnth981s.webp"
+  },
+  {
+   "sku": "LF24Z6530S",
+   "title": "24 cu. ft. Counter-Depth MAX™ with Zero Clearance™ 3-Door French Door Refrigerator with Dual Ice Makers and Craft Ice™",
+   "salePrice": 2199,
+   "listPrice": 3899,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 29.88,
+   "height": 70.25,
+   "image": "/oh/img/products/lf24z6530s.webp"
+  },
+  {
+   "sku": "LF29H8330S",
+   "title": "29 cu. ft. Smart Standard-Depth MAX™ 4-Door French Door Refrigerator with Full-Convert Drawer™",
+   "salePrice": 2399,
+   "listPrice": 3699,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 36.88,
+   "height": 70.38,
+   "image": "/oh/img/products/lf29h8330s.webp"
+  },
+  {
+   "sku": "LF29S8365S",
+   "title": "29 cu. ft. Smart InstaView® Door-in-Door® Standard-Depth MAX™ 4-Door French Door Refrigerator with MyColor™",
+   "salePrice": 2899,
+   "listPrice": 4099,
+   "cta": "cart",
+   "width": 35.75,
+   "height": 68.88,
+   "image": "/oh/img/products/lf29s8365s.webp"
+  },
+  {
+   "sku": "LMWS29626S",
+   "title": "29 cu. ft. 4 Door French Door Refrigerator with Double Freezer",
+   "salePrice": 1599,
+   "listPrice": 2399,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 36.25,
+   "height": 69.75,
+   "image": "/oh/img/products/lmws29626s.webp"
+  },
+  {
+   "sku": "LRMVC2306D",
+   "title": "23 cu. ft. Smart InstaView™ Door-in-Door® Counter-Depth Refrigerator with Craft Ice™",
+   "salePrice": 4099,
+   "listPrice": 4799,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 31.25,
+   "height": 69.13,
+   "image": "/oh/img/products/lrmvc2306d.webp"
+  },
+  {
+   "sku": "LRMXS3006S",
+   "title": "30 cu. ft. Smart French Door Refrigerator with Craft Ice™ & Full-Convert™ Drawer",
+   "salePrice": 1999,
+   "listPrice": 3999,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 38.13,
+   "height": 69.13,
+   "image": "/oh/img/products/lrmxs3006s.webp"
+  },
+  {
+   "sku": "LRYKC2606S",
+   "title": "26 cu. ft. Counter-Depth French Door Refrigerator - Stainless Steel",
+   "salePrice": 2999,
+   "listPrice": 4399,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 31.63,
+   "height": 70.25,
+   "image": "/oh/img/products/lrykc2606s.webp"
+  },
+  {
+   "sku": "LRYXC2606S",
+   "title": "26 cu. ft. Smart Counter-Depth MAX™ French Door Refrigerator with Four Types of Ice",
+   "salePrice": 2799,
+   "listPrice": 4199,
+   "cta": "cart",
+   "width": 35.75,
+   "depth": 29.13,
+   "height": 70.25,
+   "image": "/oh/img/products/lryxc2606s.webp"
+  },
+  {
+   "sku": "UM22WZH98S",
+   "title": "LG SIGNATURE 22 cu. ft. Counter-Depth with Zero Clearance™ 4-Door French Door Refrigerator with Thin Door Design",
+   "salePrice": 4199,
+   "listPrice": 5199,
+   "cta": "cart",
+   "width": 35.86,
+   "depth": 29.88,
+   "height": 69.56,
+   "image": "/oh/img/products/um22wzh98s.webp"
+  }
+ ]
+}
