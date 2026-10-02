@@ -12,6 +12,17 @@ and per-context layout". Its citations are at the same commit, `8b4f74c`. Nothin
 ("the visitor", "they", "their"), following the owner's ruling in `docs/enablement/LANE-BRIEF-COMMON.md`. No fact
 changed.
 
+**Revised a third time, 2026-10-02, after review round one (`docs/enablement/lanes/R.md` §10).** Nine corrections,
+S2-1 to S2-9: two rows of §10.1 (receipts; module order, now three rows that point at §10.4), §5.1's heading, §3.4's
+halving sentence and its worked arithmetic, §1's paragraph and its receipts row, §5.7's honesty wording, the
+glossary's γ, and §2.6's enablement site. Each was made by re-reading the cited code at `8b4f74c`. The current HEAD
+is `7158628`: its engine code differs from `8b4f74c` only for the OH demo, so every engine fact here holds there,
+and only `src/index.ts`'s line numbers move, by up to three (the OH routes' mount there is now committed, in
+`dcd37e5`, and `AGENTS.md` now lists the OH demo's worker). S2-9 is cited at `7158628`, because the enablement
+site's configuration changed after `8b4f74c`. Two demo-page lines that §10.4 cites moved at HEAD and stay cited at
+`8b4f74c`: `public/vantage/vantage.js:950-966` is now `:1001-1017`, and `public/demo-kit/transport.js:199` is now
+`:225`. No other fact changed.
+
 ## How to read this sheet
 
 - **Sources.** Every statement carries one: `path:line` for code, or a document with its section (§) or line.
@@ -71,7 +82,7 @@ changed.
 | Seed | A rule that uses how the visitor arrived (campaign term, channel, referring network, phone OS family) before they have shown interest | `src/content/types.ts:140-192` |
 | Regional prior, λ (lambda) | What shoppers in the visitor's region are interested in, blended in while the visitor's own evidence is thin. λ is the region's share of the blend | `src/reflex/regionTrend.ts:3-18` |
 | Cell | The context a decision was made in: arrival channel, visit-number band, region, leading interest, journey stage | `src/content/types.ts:383-391` |
-| Lift, γ (gamma) | Lift: how much better a piece does than its slot's own rate in the same cell. γ: the trust dial (0 to 1) that decides how much lift moves a score | `src/learn/stats.ts:1-6`; `src/content/decide.ts:60-62` |
+| Lift, γ (gamma) | Lift: how much better a piece does than its slot's own rate in the same cell. γ: the learning dial (0 to 1) that decides how much lift moves a score. A code comment calls it the "trust dial"; the package says learning dial | `src/learn/stats.ts:1-6`; `src/content/decide.ts:60-62`; `src/content/kinds.ts:642` |
 | Holdout arm | A share of visitors served the site's own defaults (`default`) or personalization without learning (`no_learning`) | `src/content/types.ts:210-221`, `:259-266` |
 | Decision record ("receipt") | One record per served position: what was served and the arithmetic behind it | `src/content/types.ts:451-548` |
 | Ledger | The append-only store of decision and outcome records, in R2 | `src/ledger/records.ts:1-5` |
@@ -100,9 +111,14 @@ which a marketer can repeat:
 > value of each dimension the brand chooses to score on, built from what they do on the site. When a page asks,
 > it ranks the brand's own published content for each slot on the page against that interest (leaning, where the
 > brand turns it on, on what their region is interested in until they have shown interests of their own), and answers
-> with the brand's own content ids in order, each with a receipt that shows the arithmetic. It runs on Cloudflare's
+> with the brand's own content ids in order, each with the reasons that placed it there. It runs on Cloudflare's
 > network, calls no AI model to decide, and every setting that can change an answer lives in published, versioned
-> documents that a merchandiser changes without a software release.
+> documents that the brand's team changes without a software release.
+
+Two phrases were corrected after review. "The reasons that placed it there": the page's answer carries each
+decision's drivers (§3.14), while a receipt is written only with the visitor's tracking consent and, with the SDK
+as shipped, not yet (§3.15). "The brand's team": the catalog, the seed rules and the dimensions have no console
+screen and are changed through the API, still without a release (§4.5).
 
 Wording rule: "calls no AI model to decide" is true and may be said. "We don't use a model" may not: a seam for the
 customer's own model exists in the code, withdrawn by policy (`src/content/service.ts:471-479`;
@@ -120,7 +136,7 @@ customer's own model exists in the code, withdrawn by policy (`src/content/servi
 | "everything that moves an answer in published, versioned documents" | **Correction: every setting does; not every input.** Weights, memory, thresholds, slot rules, pins, seeds, learning dials, holdout and regional settings live in the `reflex`, catalog, `slots`, `learn` and `prior` documents. Inputs that also move an answer: the visitor's own events; their region's population counts; the request itself (time, edge region, campaign term, OS family, named conditions); the learned statistics (inert while γ is 0). A few constants are fixed in code (the region's 24-hour memory, ten candidates recorded, four drivers listed). Worker settings (tenants, retention, host, profile) need an engineer (§4.6) | `src/config/publication.ts:11`; `src/reflex/regionTrend.ts:28-30`; `src/content/decide.ts:409`; `src/reflex/contentCompose.ts:321` |
 | Omitted: "calls no model to decide" | The external model term is withdrawn from live decisions; the decision function is pure arithmetic with no I/O | `src/content/service.ts:471-479`; `src/content/decide.ts:1-6`; `src/reflex/core.ts:21-22` |
 | Omitted: "the site paints" | The engine returns ids, order and reasons; the customer's front end renders | `docs/PS-Implementation-Runbook.md` §1 |
-| Omitted: "receipts" | One record per served position, with the arithmetic itemised | `src/content/decide.ts:521-562` |
+| Omitted: "receipts" | One record per served position, with the arithmetic itemised. Written only with the visitor's tracking consent and, with the SDK as shipped, not yet (§3.15); the page's own answer carries each decision's reasons either way (§3.14) | `src/content/decide.ts:521-562`; `src/content/service.ts:553-564`; `src/reflex/contentCompose.ts:64-78` |
 
 ---
 
@@ -212,9 +228,15 @@ provisioned tenant (`src/types/env.ts:30-31`; `docs/verizon/Vantage-Demo-Design.
   workers: the shared `edge-platform` (the older demos, on commit `26e2db1`, deployed only with
   `scripts/deploy-legacy-demos.sh`), `edge-platform-top-offers` and `edge-platform-vantage` (today's engine).
   A fourth, `edge-platform-oh`, is being built: its config `wrangler.oh.toml` and its routes `src/routes/oh.ts`
-  are committed (`2fdef50`), and their mount in `src/index.ts` was an uncommitted edit at the last check. A separate
-  `edge-platform-enablement` worker serves static enablement pages only: "No engine code, no bindings, no variables,
-  no secrets" (`wrangler.enablement.toml:1-13`, at `22bf36e`).
+  are committed (`2fdef50`), and their mount in `src/index.ts` was an uncommitted edit at the last check. The
+  internal enablement site has its own worker, `edge-platform-bti` (https://edge-platform-bti.expedge.workers.dev):
+  static pages served through an assets binding behind a passphrase gate, `enablement/worker.mjs`, which runs first
+  on every request. The gate holds two worker secrets, the passphrase and the key that signs a seven-day session
+  cookie; the worker carries no engine code and no store (`wrangler.enablement.toml:1-48`;
+  `enablement/worker.mjs:17-20`, `:30`; both at `7158628`, unchanged since `8086cb1`). The earlier
+  `edge-platform-enablement` worker stays behind Cloudflare Access and is no longer deployed to
+  (`wrangler.enablement.toml:6-7`). A deploy of `8086cb1` as version `8388fa81` is recorded in
+  `docs/enablement/BTI-Enablement-Design.md` §7; this lane did not check it.
 - **Never** a plain `npx wrangler deploy` from the repository root: it ships today's engine onto the shared worker,
   which breaks the older demos (`AGENTS.md`; `docs/demos/BOOTSTRAP.md` §0 rule 1, §4).
 - **Verify a deploy through the APIs, never the pages** (`AGENTS.md`; `docs/demos/BOOTSTRAP.md` §0 rule 2).
@@ -402,10 +424,15 @@ and 400 with τ 35 days, content type) and its action weights (view 1, wishlist 
 content impression 0, dwell 0.5, content click 1, video complete 2) apply only to the two legacy demo scopes
 (`src/reflex/core.ts:201-244`; `src/reflex/configStore.ts:409-417`).
 
-**Worked arithmetic at the defaults** (published constants, not measurements): one product view gives
-a = 1/2.8 = 0.357; two give 0.526; three give 3/4.8 = 0.625, a member. Entry needs R ≥ 2.7; exit comes when R
-falls below 1.4727. A member at R = 3 who stops leaves after τ · ln(3/1.4727) ≈ 9.96 days at τ = 14 days; an
-interest halves every τ · ln 2 ≈ 9.7 days.
+**Worked arithmetic at the defaults, with each product view weighted 1** (published constants, not measurements).
+A view weight of 1 is compiled only for the two legacy demo scopes, `coach` and `brighthour`; any other tenant
+counts the weight its own registry publishes, and 0 for an action its registry does not name
+(`src/reflex/core.ts:223`, `:574`; `src/demos/brighthour/reflexConfig.ts:146`; `src/reflex/configStore.ts:64-65`,
+`:409-417`). At that weight, one product view gives a = 1/2.8 = 0.357; two close together give 0.526; three give
+3/4.8 = 0.625, a member. Entry needs R ≥ 2.7; exit comes when R falls below 1.4727. A member at R = 3 who stops
+leaves after τ · ln(3/1.4727) ≈ 9.96 days at τ = 14 days. The evidence behind an interest, its raw score R, halves
+every τ · ln 2 ≈ 9.7 days; the interest itself, a = R/(R + K), falls by less: from 0.625 to 0.455 as R halves from 3
+(`src/reflex/core.ts:289-298`).
 
 ### 3.5 Visit and journey stage
 
@@ -777,12 +804,13 @@ says: "Safe desired-state provisioning for CUSTOMER stamps is still remediation 
 
 ## 5. Learning
 
-### 5.1 What is recorded from day one
+### 5.1 What is recorded, and when
 
 With tracking consent, and subject to the capture rule in §3.15: every served decision, every outcome, the
 visitor's ring, each slot's exposures and successes, the published lift snapshots, the hour aggregates and the day
 report (`src/content/service.ts:553-564`; `src/routes/decisions.ts:611-614`; `src/index.ts:284-306`). **Built.** On
-an SDK integration, decisions are recorded only for slots on the rendered basis with durable recovery on (§3.15).
+an SDK integration, decisions are recorded only for slots on the rendered basis with durable recovery on, which
+every configuration in the repository holds off, so with the SDK as shipped no decision is recorded yet (§3.15).
 
 ### 5.2 What moves nothing until γ moves
 
@@ -833,12 +861,23 @@ has no position discount. Build item: starts at `src/learn/explore.ts` (rotation
 | Autonomy (the engine proposing or applying weight changes) | Withdrawn: "Autonomy cycles and proposal changes are unavailable" | `src/learn/cycle.ts:2`, `:44-45` |
 | External model term (the customer's own model in the score) | Withdrawn by deployment policy | `src/content/service.ts:471-479`; test `src/content/consent.test.ts:1059` |
 
-### 5.7 The honesty wording, reused exactly
+### 5.7 The honesty wording
 
-- From the Vantage facts sheet: "Stage two moves nothing until γ moves." (`docs/verizon/explainer/FACTS.md:536`).
-- As published in the explainers: "It records from day one and moves nothing until the dial moves."
-  (`docs/verizon/Vantage-Signal-System-Technical-Note.md:231`); "Learning records from day one and moves nothing
-  until the dial moves" (`public/vantage/how-it-works.html:310`).
+- **To reuse.** "Learning is built, and it changes nothing until a person raises the learning dial" (§5.2).
+  "Receipts, outcomes and learning counts are recorded only with the visitor's tracking consent. A page that asks
+  the engine directly is recorded when its slots are on the default served basis; with the SDK as shipped, no
+  decision is recorded yet, because that needs a slot set to count rendered pieces and durable recovery, which no
+  configuration turns on" (§3.15, §5.1). Exploration is a separate published dial, off by default (§5.4). The
+  package's own sentences for these are P4 and P5 (`docs/enablement/BTI-Enablement-Design.md` §3.0).
+- **Published in the Vantage material, not to be reused as written:**
+  - "It records from day one and moves nothing until the dial moves."
+    (`docs/verizon/Vantage-Signal-System-Technical-Note.md:231`); "Learning records from day one and moves nothing
+    until the dial moves" (`public/vantage/how-it-works.html:310`). "Moves nothing until the dial moves" holds
+    (§5.2). "Records from day one" holds only with the visitor's tracking consent and, on an SDK integration, only
+    under the condition above; the Vantage pages record because they call the snapshot directly (§3.15, §5.1).
+  - "Stage two moves nothing until γ moves." (`docs/verizon/explainer/FACTS.md:536`). True, but "stage two" there is
+    the learning step of the score, lift^γ (§3.13; `src/content/decide.ts:213-215`, `:218-219`), not the journey
+    stage (§3.5); say "learning".
 - The Vantage sheet's "Never say" list: "We don't use a model." ("The decision is itemised arithmetic, but a model
   seam exists"); "Any lift or revenue claim." ("Inference is `unavailable`"); any latency claim; anything judging
   the customer's past work, "no limit", a bandit winner, another customer's name (`docs/verizon/explainer/FACTS.md:542-547`).
@@ -1206,7 +1245,7 @@ cost model is a model) (`docs/verizon/explainer/FACTS.md` "Not sourced"; `src/sd
 | Eligibility (windows, stock, regions, named conditions) | Built | §3.9 | Conditions are asserted by the caller and only gate |
 | Merchandiser controls (pins, off-limits, exclusions, diversity, multipliers, stage, freshness, fatigue) | Built | §3.10–§3.11; `src/reflex/contentCompose.test.ts`; `src/reflex/merchandising.test.ts` | An ineligible pin empties its slot (§9.4) |
 | Preferring pieces that complete the product on the page (the anchor product) | Built, not yet on a hosted demo | `2313527`; `src/content/complements.test.ts` | The page sends `ctx.anchor`; pieces list `complements` |
-| Receipts for every decision | Built | §3.14 | Four strongest tag terms only; operator access |
+| Receipts | Built; written only with consent | §3.14–§3.15 | Written only with the visitor's tracking consent. A page that calls the snapshot directly is recorded when its slots are on the default served basis; with the SDK as shipped, no decision is recorded yet: that needs a slot on the rendered basis and durable recovery, which every configuration holds off. Four strongest tag terms only; operator access |
 | Replay | Built | `src/learn/replay.ts:1-8` | Exact for one slot; never claim it for a whole page |
 | Versioned configuration without deploys; operator console | Built | §4 | No catalog or seed screen; publication propagation has no SLO |
 | Product re-ranking within a supplied list | Built | §7.2; `src/reflex/sortCandidates.test.ts` | Candidates must carry the registry's attribute fields |
@@ -1221,7 +1260,9 @@ cost model is a model) (`docs/verizon/explainer/FACTS.md` "Not sourced"; `src/sd
 | Named partner outcomes (pickup, referral) | Built, not yet on a hosted demo | `2313527`; `src/learn/namedOutcomes.test.ts` | Never reported as a sale |
 | Paid-search classification from an auto-tagged click | Classification built; the wire still refuses the click id | `src/services/visit.ts:381-395`; `2313527` commit message | Widening the entry contract is left to the remediation track |
 | Position-bias correction | Designed | §5.5 | Build item P05 |
-| Module sequencing and per-context layout | Designed | `docs/BTI-Parity-and-Mechanism.md` §3; tickets P01–P08 | First build item: per-context layout configuration (parity §3.8) |
+| Module order inside a slot (a stack of page modules, ranked like any pieces) | Built | §10.4 item 1; the Vantage phone page's `pdp-modules` slot | The page paints the modules in the order the engine returns |
+| Where each slot or module sits on a page | Demo only, set by the page's own script | §10.4 item 2 | On a customer's site, the site's own template (its CMS) places each slot; not an engine decision |
+| Per-context layout configuration (the layout or slot order changing by channel or visit) | Designed | §10.4 item 3; `docs/BTI-Parity-and-Mechanism.md` §3; tickets P01–P08 | First build item: per-context layout configuration (parity §3.8). What may be claimed: §10.4 item 4 |
 | Embeddings and a semantic term | Designed | `docs/BTI-Vector-Embeddings-Design.md`; no embedding code in `src` | Tickets P17–P25 |
 | Sign-in merge of anonymous and known profiles | Built | §3.1; `src/reflex/identityMerge.test.ts` | The customer's backend signs the proof |
 | Anonymous return recognition | Built, off until configured | §3.1 | Production window and purpose: Open |
@@ -1277,8 +1318,8 @@ From `docs/handover/HANDOFF-2026-09-18.md` §8 unless noted. None of these may b
 
 Added at the coordinator's request. Lane C2 found that `docs/demos/BOOTSTRAP.md` describes modules that reorder
 (§3, the Vantage row; §5.5, beat 13 of Top Offers) while the §10.1 row "Module sequencing and per-context layout"
-says Designed. Both are right about different things, and this item replaces that row's single label with the
-three below.
+said Designed. Both are right about different things, and this item replaces that row's single label with the
+three below; since review round one, §10.1 carries them as three rows.
 
 1. **Engine-decided module order inside a slot: Built.** On the Vantage phone page, the modules below the buy box
    are the slot `pdp-modules` (take 6; weights on price band, content type, perk, intent, lines and category).
