@@ -4,6 +4,14 @@
 engine to marketing, account executives and semi-technical pre-sales solutions engineers. Writers draw from this
 sheet and from nothing else; a fact that is missing goes back to the lead. This is not a customer document.
 
+**Revised 2026-10-02, at the coordinator's request after lane C2.** One fact added: what is built for module order
+and page layout. It adds one line in §3.12 and a new item, §10.4, which refines the §10.1 row "Module sequencing
+and per-context layout". Its citations are at the same commit, `8b4f74c`. Nothing else in the sheet changed.
+
+**Revised again, 2026-10-02, at the coordinator's request.** Every reference to a visitor is now gender neutral
+("the visitor", "they", "their"), following the owner's ruling in `docs/enablement/LANE-BRIEF-COMMON.md`. No fact
+changed.
+
 ## How to read this sheet
 
 - **Sources.** Every statement carries one: `path:line` for code, or a document with its section (§) or line.
@@ -60,8 +68,8 @@ sheet and from nothing else; a fact that is missing goes back to the lead. This 
 | ω (slot weight) | How much a dimension counts in a slot, from 0 to 1 | `src/content/kinds.ts:329-333` |
 | Pin | A merchandiser forcing named pieces into a slot's first positions | `src/reflex/contentCompose.ts:41-43` |
 | Eligibility | Whether a piece may be served at all: its status, window, stock flag and its own rule | `src/content/lifecycle.ts:65-73` |
-| Seed | A rule that uses how the visitor arrived (campaign term, channel, referring network, phone OS family) before she has shown interest | `src/content/types.ts:140-192` |
-| Regional prior, λ (lambda) | What shoppers in the visitor's region are interested in, blended in while her own evidence is thin. λ is the region's share of the blend | `src/reflex/regionTrend.ts:3-18` |
+| Seed | A rule that uses how the visitor arrived (campaign term, channel, referring network, phone OS family) before they have shown interest | `src/content/types.ts:140-192` |
+| Regional prior, λ (lambda) | What shoppers in the visitor's region are interested in, blended in while the visitor's own evidence is thin. λ is the region's share of the blend | `src/reflex/regionTrend.ts:3-18` |
 | Cell | The context a decision was made in: arrival channel, visit-number band, region, leading interest, journey stage | `src/content/types.ts:383-391` |
 | Lift, γ (gamma) | Lift: how much better a piece does than its slot's own rate in the same cell. γ: the trust dial (0 to 1) that decides how much lift moves a score | `src/learn/stats.ts:1-6`; `src/content/decide.ts:60-62` |
 | Holdout arm | A share of visitors served the site's own defaults (`default`) or personalization without learning (`no_learning`) | `src/content/types.ts:210-221`, `:259-266` |
@@ -74,7 +82,7 @@ sheet and from nothing else; a fact that is missing goes back to the lead. This 
 | Operator, operator token | A person with an account and a grant for a tenant; the short-lived signed token (a JWT) they act with | `src/middleware/operatorAuth.ts:10-48` |
 | Site key (SDK key) | Identifies the site and binds the tenant on shopper calls; it travels in the page | `src/middleware/edgeAccess.ts:76-121`; `docs/kit/00-README.md:24` |
 | Shopper capability | A short-lived token the server signs for one visitor and one session; the browser presents it on every shopper call | `src/identity/sessionCapability.ts:10-25` |
-| Session host, object host | The two places a visitor's interest state can live: a record in KV (`session`) or her own object (`do`). `REFLEX_HOST` chooses | `src/types/env.ts:109-112` |
+| Session host, object host | The two places a visitor's interest state can live: a record in KV (`session`) or their own object (`do`). `REFLEX_HOST` chooses | `src/types/env.ts:109-112` |
 | Generation 1, Generation 2 | The older shared demo pipeline; and the content decision service, which the newest demos and the contracted delivery run on | `docs/demos/BOOTSTRAP.md` §4 |
 
 ---
@@ -89,9 +97,9 @@ published, versioned documents."
 which a marketer can repeat:
 
 > A content decision service. For every visitor who has agreed to it, it keeps a graded, fading interest in each
-> value of each dimension the brand chooses to score on, built from what she does on the site. When a page asks,
+> value of each dimension the brand chooses to score on, built from what they do on the site. When a page asks,
 > it ranks the brand's own published content for each slot on the page against that interest (leaning, where the
-> brand turns it on, on what her region is interested in until she has shown interests of her own), and answers
+> brand turns it on, on what their region is interested in until they have shown interests of their own), and answers
 > with the brand's own content ids in order, each with a receipt that shows the arithmetic. It runs on Cloudflare's
 > network, calls no AI model to decide, and every setting that can change an answer lives in published, versioned
 > documents that a merchandiser changes without a software release.
@@ -109,7 +117,7 @@ customer's own model exists in the code, withdrawn by policy (`src/content/servi
 | "for each visitor" | **Correction: for each visitor who has consented.** Tracking and personalization start off; missing or expired consent means the site's own defaults. State is per visitor id inside a tenant, and two profiles merge on a signed sign-in | `src/content/consent.ts:1-8`; `src/sdk/README.md:258`; `src/tenancy/objects.ts:43-45`; `src/reflex/identityMerge.ts:6-8` |
 | "scores published content against it" | Correct, in a fixed order: eligibility and pins first; then the interest sum; then arrival seeds, journey stage, freshness, fatigue, merchandising multipliers and the learned lift | `src/content/decide.ts:202-211`, `:310-390`; `src/reflex/contentCompose.ts:181-247`, `:253-271` |
 | "at the edge" | Correct: Cloudflare Workers. The state it reads lives in KV, R2 and objects (§2) | `wrangler.toml:1-4` |
-| "everything that moves an answer in published, versioned documents" | **Correction: every setting does; not every input.** Weights, memory, thresholds, slot rules, pins, seeds, learning dials, holdout and regional settings live in the `reflex`, catalog, `slots`, `learn` and `prior` documents. Inputs that also move an answer: the visitor's own events; her region's population counts; the request itself (time, edge region, campaign term, OS family, named conditions); the learned statistics (inert while γ is 0). A few constants are fixed in code (the region's 24-hour memory, ten candidates recorded, four drivers listed). Worker settings (tenants, retention, host, profile) need an engineer (§4.6) | `src/config/publication.ts:11`; `src/reflex/regionTrend.ts:28-30`; `src/content/decide.ts:409`; `src/reflex/contentCompose.ts:321` |
+| "everything that moves an answer in published, versioned documents" | **Correction: every setting does; not every input.** Weights, memory, thresholds, slot rules, pins, seeds, learning dials, holdout and regional settings live in the `reflex`, catalog, `slots`, `learn` and `prior` documents. Inputs that also move an answer: the visitor's own events; their region's population counts; the request itself (time, edge region, campaign term, OS family, named conditions); the learned statistics (inert while γ is 0). A few constants are fixed in code (the region's 24-hour memory, ten candidates recorded, four drivers listed). Worker settings (tenants, retention, host, profile) need an engineer (§4.6) | `src/config/publication.ts:11`; `src/reflex/regionTrend.ts:28-30`; `src/content/decide.ts:409`; `src/reflex/contentCompose.ts:321` |
 | Omitted: "calls no model to decide" | The external model term is withdrawn from live decisions; the decision function is pure arithmetic with no I/O | `src/content/service.ts:471-479`; `src/content/decide.ts:1-6`; `src/reflex/core.ts:21-22` |
 | Omitted: "the site paints" | The engine returns ids, order and reasons; the customer's front end renders | `docs/PS-Implementation-Runbook.md` §1 |
 | Omitted: "receipts" | One record per served position, with the arithmetic itemised | `src/content/decide.ts:521-562` |
@@ -162,10 +170,10 @@ demo configs: `wrangler.vantage.toml:11-24`, `:112-120`; `wrangler.top-offers.to
 | `RateLimiter` (`RATE_LIMITER`) | name | Windowed request counters and the operator sign-in budget | Yes | `src/durable-objects/RateLimiter.ts`; `wrangler.toml:286-288` |
 | `PersonalizationWebSocket` (`PERSONALIZATION_WEBSOCKET`) | visitor | The visitor's live socket on the session host, which pushes segment and personalization updates | Yes | `src/routes/realtime.ts:77-90`; `src/durable-objects/PersonalizationWebSocket.ts` |
 | `OpalAgent` (`OpalAgent`) | chat session | A demo conversational agent: chat history, a Gemini model, a read-only query tool over the demo D1, gated write tools for Feature Experimentation | Omitted | `src/agents/OpalAgent.ts:18`; `src/agents/tools.ts:46-140`; `wrangler.toml:61-65` |
-| `ShopperReflex` (`SHOPPER_REFLEX`) | visitor, within a tenant | On both hosts: her session grants and her consent record. On the object host also: her interest state, her socket, and alarms set for the exact moment an interest will cross its exit line | Yes | `src/identity/consentContinuity.ts:8-45`; `src/routes/realtime.ts:620-633`; `src/durable-objects/ShopperReflex.ts:1-28`, `:1884-1952` |
+| `ShopperReflex` (`SHOPPER_REFLEX`) | visitor, within a tenant | On both hosts: the visitor's session grants and consent record. On the object host also: their interest state, their socket, and alarms set for the exact moment an interest will cross its exit line | Yes | `src/identity/consentContinuity.ts:8-45`; `src/routes/realtime.ts:620-633`; `src/durable-objects/ShopperReflex.ts:1-28`, `:1884-1952` |
 | `MeridianReflex` (`MERIDIAN_REFLEX`) | visitor of one demo | The Meridian demo's own per-visitor object | Omitted | `src/demos/meridian/MeridianReflex.ts:1-23` |
 | `RegionTrend` (`REGION_TREND`) | tenant and region | The region's population interest counts. No visitor ids. Publishes a snapshot to KV on a short coalesced alarm | Yes | `src/durable-objects/RegionTrend.ts:1-6`, `:16` |
-| `DecisionRing` (`DECISION_RING`) | visitor | Her last 200 served decisions within 7 days, a 90-day index of decision ids, and the online attribution of her outcomes | Yes | `src/durable-objects/DecisionRing.ts:1-6`, `:36-37`; `src/learn/stats.ts:34` |
+| `DecisionRing` (`DECISION_RING`) | visitor | The visitor's last 200 served decisions within 7 days, a 90-day index of decision ids, and the online attribution of their outcomes | Yes | `src/durable-objects/DecisionRing.ts:1-6`, `:36-37`; `src/learn/stats.ts:34` |
 | `LearnStats` (`LEARN_STATS`) | tenant, brand and slot | Fading counts of exposures and successes per piece per cell; publishes lift snapshots to KV and archives them to R2 | Yes | `src/durable-objects/LearnStats.ts:1-3`, `:23`; `src/learn/fan.ts:71-74` |
 
 Object classes belong to one Worker script, so each demo worker's visitors and statistics are its own even though
@@ -196,7 +204,7 @@ provisioned tenant (`src/types/env.ts:30-31`; `docs/verizon/Vantage-Demo-Design.
 | `AUTH_MODE=open` | Site-key and operator gates pass through; CORS reflects any origin unless `CORS_ORIGINS` is set. The shopper capability is still required on shopper routes ("there is no open-mode bypass") | `src/middleware/edgeAccess.ts:4-12`, `:56-67`, `:138`, `:184-188`; `src/sdk/README.md:214` |
 | `AUTH_MODE=enforced` | The site key must belong to the resolved tenant on `/realtime/*` and `/v1/:tenant/*`; operator routes need a JWT plus a grant for that tenant; CORS answers only `CORS_ORIGINS`, the same origin and the local dev server; the Generation 1 demo roots answer 404 | `src/index.ts:90-97`, `:226-246`; `src/middleware/edgeAccess.ts:100-153`; `src/middleware/operatorAuth.ts:31-48` |
 | Every configuration in the repository sets `enforced` | The `open` default in the code is not used by any checked-in configuration | `wrangler.toml:165`, `:241`, `:340`; `wrangler.vantage.toml:127`; `wrangler.top-offers.toml:127` |
-| `REFLEX_HOST` | `session` (the visitor's state in KV) on every configuration; `do` (state in her object) is built and held back by the ledger-stall finding (§9.4) | `wrangler.toml:179-182`, `:252`, `:351` |
+| `REFLEX_HOST` | `session` (the visitor's state in KV) on every configuration; `do` (state in the visitor's own object) is built and held back by the ledger-stall finding (§9.4) | `wrangler.toml:179-182`, `:252`, `:351` |
 
 ### 2.6 The demo workers and the customer stamps
 
@@ -251,12 +259,12 @@ provisioned tenant (`src/types/env.ts:30-31`; `docs/verizon/Vantage-Demo-Design.
 1. B1 → B6, `POST /v1/{tenant}/identity/session` with the site key and `X-Tenant`; back: a signed shopper
    capability, a visitor id `vis-<uuid>` and a session id `s-<uuid>` (`src/routes/identity.ts:275-341`;
    `src/identity/sessionCapability.ts:181`).
-2. B1 → B6 → B7, `POST /realtime/session/preferences`: the visitor's explicit consent choice, bound to her grant,
-   stored in her `ShopperReflex` (`src/routes/realtime.ts:600-633`).
+2. B1 → B6 → B7, `POST /realtime/session/preferences`: the visitor's explicit consent choice, bound to their grant,
+   stored in their `ShopperReflex` (`src/routes/realtime.ts:600-633`).
 3. B1 → B6, `POST /realtime/action`: one JSON event (type, visitor and session ids, data with the product id and
    the registry's attribute fields, arrival signals, a timestamp), with `X-Shopper-Session`, the site key and
    `X-Tenant` (`src/routes/realtime.ts:138-194`; `src/sdk/README.md:197-233`).
-4. B6 ↔ B8 (session host) or B6 ↔ B7 (object host): her interest vector, visit and journey counters, read and
+4. B6 ↔ B8 (session host) or B6 ↔ B7 (object host): the visitor's interest vector, visit and journey counters, read and
    written (`src/services/RealtimeSegmentEngine.ts:534-576`; `src/durable-objects/ShopperReflex.ts:1-28`).
 5. B6 → B10: the event's touches and its action weight, with the tenant and the region key; no visitor id
    (`src/reflex/regionTrend.ts:148-165`).
@@ -272,7 +280,7 @@ provisioned tenant (`src/types/env.ts:30-31`; `docs/verizon/Vantage-Demo-Design.
 9. B9 → B6: the regional snapshot and the lift snapshots, each through a 60-second cache; a lift snapshot is used
    only after a health check against B11 (`src/reflex/regionTrend.ts:31`, `:175-187`;
    `src/content/service.ts:85-117`; `src/learn/fan.ts:10-25`).
-10. B7 (`DecisionRing`) → B6: how often she was served each piece, only when a slot has a fatigue rule
+10. B7 (`DecisionRing`) → B6: how often the visitor was served each piece, only when a slot has a fatigue rule
     (`src/content/service.ts:484-488`).
 11. B6 → B12: decision records after the answer (§3.15 says when) and outcome records from reward-bearing events
     (`src/routes/decisions.ts:611-614`; `src/routes/realtime.ts:215-240`).
@@ -320,7 +328,7 @@ line says otherwise.
   hex characters of a salted hash of the account id; the raw account id is never a key (`src/identity/shopperId.ts:1-17`,
   `:44-55`). The two profiles merge: each value's faded scores are added at the later touch and memberships are
   unioned, so nothing is overridden (`src/reflex/identityMerge.ts:6-24`, `:49`, `:65`).
-- **Anonymous return recognition** (a visitor recognised on her next visit without signing in). Built, and off
+- **Anonymous return recognition** (a visitor recognised on their next visit without signing in). Built, and off
   until a tenant publishes a complete `continuity` block on its registry with a retention approval
   (`src/reflex/core.ts:81-115`; `src/reflex/configStore.ts:240-297`). **Open:** the production window and covered
   purpose (`docs/handover/HANDOFF-2026-09-18.md` §8, first row).
@@ -331,14 +339,14 @@ line says otherwise.
   instruction grants a purpose" (`src/content/consent.ts:7`; `src/sdk/README.md:258`). Each choice lasts 30 days
   (`src/content/consent.ts:17`; `docs/handover/HANDOFF-2026-09-18.md` §7, "Consent").
 - The choice is made with `POST /realtime/session/preferences`, carrying an operation bound to the visitor's own
-  grant, and is stored by her `ShopperReflex` on both hosts (`src/routes/realtime.ts:590-633`). Cookies and request
+  grant, and is stored by their `ShopperReflex` on both hosts (`src/routes/realtime.ts:590-633`). Cookies and request
   hints can only refuse, never grant (`docs/kit/01-integration-guide.md:5`).
 - Two switches. Personalization needs both tracking and personalization (`src/content/consent.ts:176`). Either off:
   the site's own defaults, with a note on every receipt (`src/content/service.ts:550`; `src/content/consent.ts:186`).
   Tracking off: nothing about the request is written, anywhere (`src/content/consent.ts:5-6`;
   `src/content/service.ts:553-564`).
 - Tracking on and personalization off: on the session host the visitor's interest vector is still updated and
-  stored and her region's counts still grow, while she is served the defaults
+  stored and their region's counts still grow, while they are served the defaults
   (`src/services/RealtimeSegmentEngine.ts:534-576`).
 
 ### 3.3 The event: from the wire to touches
@@ -382,7 +390,7 @@ line says otherwise.
 | Pruning | A value whose faded R falls below ε is dropped; at most `maxValuesPerDim` values per dimension, weakest evicted first | `src/reflex/core.ts:594-610` |
 | Entry and exit | Joins at a ≥ θ_in; once in, stays until a < θ_out. The validator refuses θ_out ≥ θ_in | `src/reflex/core.ts:612-628`; `src/reflex/configStore.ts:157-166`, `:319` |
 | Time alone | Any re-evaluation, including a zero-weight `tick`, can produce an exit; time can never produce an entry | `src/reflex/core.ts:553-566`, `:660-662` |
-| Closed-form exit | t* = t_last + τ · ln( R(1 − θ_out) / (K θ_out) ): the exact moment a member will cross her exit line | `src/reflex/core.ts:704-731` |
+| Closed-form exit | t* = t_last + τ · ln( R(1 − θ_out) / (K θ_out) ): the exact moment a member will cross their exit line | `src/reflex/core.ts:704-731` |
 
 **Defaults** (`src/reflex/core.ts:259-264`): τ 14 days, K 1.8, θ_in 0.6, θ_out 0.45, ε 0.0001, 24 values per
 dimension. Each dimension may override τ, K and both lines (`src/reflex/core.ts:43-46`, `:276-283`). τ is capped at
@@ -426,7 +434,7 @@ interest halves every τ · ln 2 ≈ 9.7 days.
   λ = 0.5.
 - **The blend**: ã = (1 − λ) · a + λ · share (`src/reflex/regionTrend.ts:238-252`), only on the dimensions
   `learn.regional.dimensions` lists, or all when it lists none (`src/reflex/regionTrend.ts:224-234`;
-  `src/content/kinds.ts:544-559`). On a dimension left out, her own value is still multiplied by (1 − λ).
+  `src/content/kinds.ts:544-559`). On a dimension left out, the visitor's own value is still multiplied by (1 − λ).
 - **When it is off.** When the learn document has no `regional` block, and on the holdout's default arm
   (`src/content/service.ts:441-447`). The compiled learn default, used when a scope has no learn document, has it
   on with kBlend 1 and minEvents 30 (`src/content/kinds.ts:697-707`).
@@ -439,7 +447,7 @@ interest halves every τ · ln 2 ≈ 9.7 days.
 ### 3.7 The shopper vector the decision reads
 
 The visitor's interests read at the moment of the request (`src/reflex/core.ts:665-676`), blended with the regional
-prior (`src/content/service.ts:445-463`); her own memberships, for seed dampening (`:532`); her journey stage and
+prior (`src/content/service.ts:445-463`); their own memberships, for seed dampening (`:532`); their journey stage and
 visit (`:387-405`). The vector exactly as scored is copied onto every decision record so the decision can be
 replayed (`src/content/decide.ts:500-519`).
 
@@ -495,11 +503,11 @@ A plain sum: no per-tag weight, no averaging. A piece with no `contentType` tag 
 | # | Term | Arithmetic | Source |
 |---|---|---|---|
 | 0 | Completes (since `2313527`) | + the slot's `complements` weight when the piece lists the product the request names in `ctx.anchor`; fails closed without an anchor; never on the default arm | `src/content/decide.ts:103-110`, `:177-189`, `:200`; `src/reflex/contentCompose.ts:265-268`; `src/content/kinds.ts:416-422` |
-| 1 | Seeds | + rule weight × the product of any dampen factors × ω for the tag's dimension, for each fired rule tag the piece carries. Signals: entry channel (six channel words), campaign term (case-insensitive), referring network, platform (`ios` or `android`). Dampening reads only her own memberships, never the region's or an asserted context | `src/content/decide.ts:257-301`, `:356-370`; `src/content/kinds.ts:251-317` |
+| 1 | Seeds | + rule weight × the product of any dampen factors × ω for the tag's dimension, for each fired rule tag the piece carries. Signals: entry channel (six channel words), campaign term (case-insensitive), referring network, platform (`ios` or `android`). Dampening reads only the visitor's own memberships, never the region's or an asserted context | `src/content/decide.ts:257-301`, `:356-370`; `src/content/kinds.ts:251-317` |
 | 2 | External model | **Withdrawn.** The seam would add w × the model's score; the service always marks it unavailable | `src/content/decide.ts:313-316`; `src/content/service.ts:471-479` |
 | 3 | Journey stage | Inside the piece's stage fit: + `inStage`; outside: × `outOfStage`; no fit: untouched; unknown stage: off | `src/content/decide.ts:233-240`, `:317-326` |
 | 4 | Freshness | + weight × 2^(−age in days / half-life), from `freshnessDate`, else the window's start | `src/content/decide.ts:241-256`, `:327-335` |
-| 5 | Fatigue | − weight × min(times served, cap) / cap, never below zero; "times served" counts this visitor anywhere in the brand inside the window, read from her ring | `src/content/decide.ts:336-345`, `:484-489` |
+| 5 | Fatigue | − weight × min(times served, cap) / cap, never below zero; "times served" counts this visitor anywhere in the brand inside the window, read from their ring | `src/content/decide.ts:336-345`, `:484-489` |
 | — | `score_base` | Recorded here | `src/content/decide.ts:346` |
 | 6 | Merchandising | If the score is above 0: × clamp(Π(1 + w·v), minBoost, maxBoost) over season, promotion and margin. v (0–1) is the piece's; w (−1 to 1) is the slot's; the default clamp is 0.5 to 2 | `src/reflex/merchandising.ts:84-85`, `:101-160`; `src/content/decide.ts:347-351`; `src/content/kinds.ts:161-171`, `:379-392` |
 | 7 | Learned lift | × lift^γ, with γ 0 by default. Item controls: `reject` ignores the lift; `freeze` uses a chosen one | `src/content/decide.ts:371-389`; `src/content/service.ts:490`; `src/content/kinds.ts:668-677` |
@@ -522,6 +530,9 @@ exploration (`src/content/decide.ts:218-220`).
   (`src/reflex/contentCompose.ts:299-339`).
 - No piece appears twice on a page (`src/reflex/contentCompose.ts:152`, `:252`).
 - With no signal at all, the slot serves catalog order, labelled as the default (`src/reflex/contentCompose.ts:316-321`).
+- **Module order.** A slot's candidates can be page modules, ranked like any other pieces: the Vantage phone page's
+  modules are the `pdp-modules` slot, painted in the order the engine returns. Where a slot sits on the page is
+  set by the page's template, not by the engine (§10.4).
 
 ### 3.13 The learning stage (recorded; inert while γ is 0)
 
@@ -1194,7 +1205,7 @@ cost model is a model) (`docs/verizon/explainer/FACTS.md` "Not sourced"; `src/sd
 | Arrival seeds (campaign term, channel, referring network, OS family) | Built | §3.11; `src/content/seedPlatform.test.ts` | Published on the slots document; no console screen |
 | Eligibility (windows, stock, regions, named conditions) | Built | §3.9 | Conditions are asserted by the caller and only gate |
 | Merchandiser controls (pins, off-limits, exclusions, diversity, multipliers, stage, freshness, fatigue) | Built | §3.10–§3.11; `src/reflex/contentCompose.test.ts`; `src/reflex/merchandising.test.ts` | An ineligible pin empties its slot (§9.4) |
-| "Completes what she committed to" (anchor product) | Built, not yet on a hosted demo | `2313527`; `src/content/complements.test.ts` | The page sends `ctx.anchor`; pieces list `complements` |
+| Preferring pieces that complete the product on the page (the anchor product) | Built, not yet on a hosted demo | `2313527`; `src/content/complements.test.ts` | The page sends `ctx.anchor`; pieces list `complements` |
 | Receipts for every decision | Built | §3.14 | Four strongest tag terms only; operator access |
 | Replay | Built | `src/learn/replay.ts:1-8` | Exact for one slot; never claim it for a whole page |
 | Versioned configuration without deploys; operator console | Built | §4 | No catalog or seed screen; publication propagation has no SLO |
@@ -1261,6 +1272,42 @@ From `docs/handover/HANDOFF-2026-09-18.md` §8 unless noted. None of these may b
 | — | The billing meter and rates; whether design-time tagging consumes Opal credits | Monetization (`docs/Monetization-Legal-Brief.md:5`) |
 | — | How a customer stamp gets its first tenant configuration | W08 and D01 (`src/routes/demoBootstrap.ts:12-14`) |
 | — | The architecture board's ruling on the findings in §9.4 | Architecture board (`docs/remediation/RESUME.md:3`) |
+
+### 10.4 Module order and page layout: what is built
+
+Added at the coordinator's request. Lane C2 found that `docs/demos/BOOTSTRAP.md` describes modules that reorder
+(§3, the Vantage row; §5.5, beat 13 of Top Offers) while the §10.1 row "Module sequencing and per-context layout"
+says Designed. Both are right about different things, and this item replaces that row's single label with the
+three below.
+
+1. **Engine-decided module order inside a slot: Built.** On the Vantage phone page, the modules below the buy box
+   are the slot `pdp-modules` (take 6; weights on price band, content type, perk, intent, lines and category).
+   Its candidates are the catalog's seven pieces of type `module`, which the engine scores and ranks like any
+   other slot (§3.11–§3.12) (`public/vantage/beats/open-slots.json:127`; `public/vantage/beats/open-catalog.json:975`,
+   `:1007`, `:1041`, `:1071`, `:1109`, `:1139`, `:1172`). The page paints them "in the order the engine returned"
+   (`public/vantage/vantage.js:950-966`), sorted by the decision's own `order` field
+   (`public/demo-kit/transport.js:199`). The plans inside the plan-pairing module are a second slot,
+   `plan-pairing`, ranked the same way. The hosted Vantage suite measures these orders
+   (`docs/verizon/explainer/FACTS.md` §12, beats 6–10). The modules' journey-stage fits are inert, because the
+   slot publishes no stage rule (`docs/verizon/explainer/FACTS.md` §6).
+2. **Where a module sits on the homepage: Demo only, set by the page's own script.** On both homepages the engine
+   decides only what is inside each decided area: on Vantage the hero, the four deals and the order of the phones
+   rail (through `/sort`, §7.2); on Top Offers the four promotions. The page places each area from a template that
+   stands in for the customer's CMS.
+   - Vantage: `placeDeals`, "their CMS's call, never the engine's" (`public/vantage/vantage.js:717-732`; the
+     templates at `public/vantage/beats/anchor.json:68` and `public/vantage/beats/15-continue-and-report.json:42-49`;
+     the demo kit's `template` step at `public/demo-kit/director.js:39`, `:409-410`).
+   - Top Offers: `placeModule`, a CSS order change with no engine publish (`public/top-offers/top-offers.js:656-674`;
+     beat 13 at `:889-903`).
+   - The demo routes on the worker apply named document publishes and serve receipts; none holds layout logic
+     (`src/routes/vantage.ts`; `src/routes/topOffers.ts`; `src/demos/kit/actionRoutes.ts`).
+3. **Per-context layout configuration: Designed.** This still holds. No slot setting changes a page's layout or a
+   slot's order by channel or visit (`src/content/kinds.ts:319-447`). It is parity §3.8 and ticket P01
+   (`docs/BTI-Parity-and-Mechanism.md` §3.8; `docs/BTI-Parity-Build-Tickets.md:33`, an untracked working file). Position-bias correction
+   is also still Designed (§5.5).
+4. **What a salesperson may claim about "the page rearranges itself":** "For each visitor, the engine orders
+   whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page
+   stays the site's own template, and changing the layout by context is a designed next step."
 
 ---
 
