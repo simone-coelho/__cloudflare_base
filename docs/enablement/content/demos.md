@@ -30,7 +30,7 @@ Vantage's interactive explainer, [https://edge-platform-vantage.expedge.workers.
 
 - First National Bank (`/visual-demo` on the shared worker) shows the 2025 platform, not this engine.
 - The storefront at `/storefront` on the shared worker was built for one customer with its own brand and products and is never shown to another.
-- OH, a home-appliances demo, is scaffolded and not yet hosted.
+- OH, a home-appliances demo built for one prospect, is hosted; ask the demo owner before showing it.
 
 The page at `/` on every worker is the 2025 dashboard, not the product.
 

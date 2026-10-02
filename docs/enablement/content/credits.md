@@ -9,7 +9,7 @@ The definitive map of which touchpoints consume token-based AI credits and which
 | During a shopper session | Setup & insight |
 |---|---|
 | **The engine decides.** | **Opal creates & explains.** |
-| Scoring interest, picking content, ranking what each slot shows, giving the page its answer. Deterministic math on edge infrastructure. | A person asks in natural language, or generative AI creates something: an audience, a test, a label, an image, an analysis. |
+| Scoring interest, picking content, ranking what each slot shows, giving the page its answer. Deterministic math on edge infrastructure. | A person asks in natural language, or generative AI creates something: an audience, a test, an image, an analysis. |
 | **● No AI · no credits · ever** | **● That's Opal · credit-metered** |
 
 **Opal is not connected to the engine today.**
@@ -131,7 +131,7 @@ Each follows the documented credit rule, which is **Designed**; the billing mete
 
 **Does the learning loop cost credits?** No. The learning, which content converts and for whom, is the engine's own statistics pipeline running on its own data. Asking Opal to *explain or analyze* those results is what costs credits, and Opal is not connected to the engine today.
 
-**Is the content auto-tagging a recurring cost?** Per content batch: large at onboarding, a small trickle as new content arrives. Whether it is billed as credits is still open, so quote it with onboarding only once that is decided.
+**Is design-time tagging a recurring cost?** Per content batch: large at onboarding, a small trickle as new content arrives. Whether it is billed as credits is still open, so quote it with onboarding only once that is decided.
 
 **What if the customer never buys Opal credits?** The engine runs fully without them: no decision calls an AI model, and the team reads receipts and the day report directly in the operator console. Opal is the natural-language accelerant and the transparency narrator, as designed: a strong attach, not a dependency.
 
