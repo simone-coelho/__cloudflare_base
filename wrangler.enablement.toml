@@ -1,0 +1,32 @@
+# -----------------------------------------------------------------------------
+# The internal enablement site for Optimizely marketing, account executives and solutions
+# engineers: static pages only. No engine code, no bindings, no variables, no secrets.
+#
+# Its own worker and address: https://edge-platform-enablement.expedge.workers.dev
+#
+# Deploy with this command and nothing else, from WSL (check first: node enablement/check-site.mjs):
+#   npx wrangler deploy --config wrangler.enablement.toml
+# Never deploy it from wrangler.toml, and never run a plain `npx wrangler deploy` from the repo
+# root: wrangler.toml names the shared demo worker and would ship today's engine onto it.
+#
+# It shares nothing with the demo workers: no KV, R2, D1, queues or Durable Objects, and none of
+# their variables or secrets. Do not change a demo worker's settings or secrets from here.
+#
+# It must never carry a credential. Everything under enablement/site/ is served wholesale, exactly
+# like public/ on the demo workers, so a token written into a page or a file there is a credential
+# anyone with the address can fetch. Sign-in goes in front of the site, never inside a page.
+#
+# After a deploy, verify the responses (status and headers), not only that a page opens.
+# -----------------------------------------------------------------------------
+
+name = "edge-platform-enablement"
+compatibility_date = "2025-06-01"   # the same date as wrangler.toml; nothing here executes, so it changes nothing
+
+# One address only. Preview URLs would add a second public address for every version
+# (<version>-edge-platform-enablement.expedge.workers.dev), so they are off.
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./enablement/site"
+not_found_handling = "404-page"   # an unknown address answers 404 and shows enablement/site/404.html

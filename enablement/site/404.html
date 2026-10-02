@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
+<title>Page not found | Optimizely enablement</title>
+<!-- Static page, same rules as index.html: nothing runs, nothing is stored, nothing is fetched.
+     Its inline style is allowed by its SHA-256 in _headers (see node enablement/check-site.mjs --hashes). -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
+<style>
+:root{
+  --fir:#08251A;--mid-fir:#0D3A29;
+  --lf-green:#ABFF44;--grass:#7DDD3D;
+  --neutral-3:#E4F0DA;--white:#FFFFFF;
+  --bg:var(--neutral-3);--ink:var(--fir);
+  --head:"Roboto Condensed",Roboto,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --body:Roboto,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:var(--fir);--ink:var(--white)}
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);font:400 1rem/1.3 var(--body)}
+main{max-width:1040px;margin:0 auto;padding:clamp(40px,8vw,96px) clamp(16px,4vw,32px)}
+.eyebrow{display:inline-block;margin:0 0 20px;padding:6px 16px;border-radius:999px;background:var(--lf-green);color:var(--fir);font:700 .875rem/1.1 var(--body)}
+h1{margin:0 0 28px;font:900 clamp(1.75rem,8.5vw,4rem)/1.02 var(--head);letter-spacing:-.03em;overflow-wrap:break-word;text-wrap:balance}
+.btn{display:inline-block;padding:14px 28px;border-radius:999px;background:var(--lf-green);color:var(--fir);font:600 1.0625rem/1.1 var(--head);letter-spacing:-.02em;text-decoration:none}
+.btn:hover{background:var(--grass)}
+.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Internal &middot; Optimizely</p>
+  <h1>We couldn&rsquo;t find that page</h1>
+  <a class="btn" href="/">Back to enablement</a>
+</main>
+</body>
+</html>
