@@ -49,6 +49,8 @@ const SPEC_QUOTES_NOT_TEXT = new Set(['the page rearranges itself', 'Addition, a
 // and listed in the notes, so the section and the page stay comparable until the design catches up.
 const SPEC_RULED = [
   { from: 'which demo to show, and to whom', to: 'which demo to show to whom', why: "the coordinator's ruling of 2026-10-02 titles the demo map \"Which demo to show to whom\"" },
+  // Written as a pattern, so the check itself names no one.
+  { from: /ask the demos' owner \([^)]*\)/g, to: 'ask the demo owner', why: "the coordinator's ruling of 2026-10-02: the package names no real person, so the demo owner is named by role only" },
 ];
 // Figures a ruling places on a page beyond what its markdown names; a page without one fails.
 const RULED_FIGURES = new Map([
@@ -345,7 +347,9 @@ for (const file of pages) {
       mode = 'spec';
       let section = designSection(join(root, srcPath), anchor);
       for (const r of SPEC_RULED) {
-        if (section.includes(r.from)) { section = section.split(r.from).join(r.to); notes.push(`${file}: in ${source}, "${r.from}" is read as "${r.to}": ${r.why}`); }
+        if (typeof r.from === 'string' && section.includes(r.from)) { section = section.split(r.from).join(r.to); notes.push(`${file}: in ${source}, "${r.from}" is read as "${r.to}": ${r.why}`); }
+        // A pattern's match is not printed: it may be the very words the ruling keeps off the pages.
+        if (r.from instanceof RegExp && (r.from.lastIndex = 0, r.from.test(section))) { r.from.lastIndex = 0; section = section.replace(r.from, r.to); notes.push(`${file}: in ${source}, a ruled phrase is read as "${r.to}": ${r.why}`); }
       }
       const p10 = designPara('P10');
       const items = specItems(section, p10 ? [p10] : []);
