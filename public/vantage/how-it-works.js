@@ -6,7 +6,7 @@
  * constants are the ones the demo publishes (scripts/seed-vantage.mjs at c720907, the
  * opening slots document public/vantage/beats/open-slots.json, the arrival seeds
  * public/vantage/seeds.json). Measured numbers come from the demo's facts sheet
- * (docs/verizon/explainer/FACTS.md) and are marked as measured where they show.
+ * (FACTS.md, kept with the explainer notes) and are marked as measured where they show.
  *
  * What this file is not: it decides nothing for the demo. The demo's decisions
  * come from the service; this page redoes the same arithmetic and says so.
@@ -87,7 +87,7 @@
 
   // ══════════════════════════════════════════════════════════════════════════
   // 1 · The published documents, as served on the demo worker on 2026-10-01
-  //     (docs/verizon/explainer/FACTS.md §10: reflex r3, slots r51, learn r3),
+  //     (the facts sheet, FACTS.md §10: reflex r3, slots r51, learn r3),
   //     identical to scripts/seed-vantage.mjs at c720907 and public/vantage/seeds.json.
   //     The page's arithmetic reads these objects; section 8 displays them.
   // ══════════════════════════════════════════════════════════════════════════
@@ -240,7 +240,7 @@
   const LANDING_TERM = 'iphone-18-pro';
 
   /**
-   * What the service returned when the demo was measured: docs/verizon/explainer/FACTS.md
+   * What the service returned when the demo was measured: the facts sheet, FACTS.md
    * §12 (and §9 for the receipt), quoted, never computed. "Hosted suite" is the request-level
    * suite on the demo worker; "E1 hosted" the facts lane's own reads, 2026-10-01. The suites
    * run in New York through the labelled ?region=US-NY override, from the ad, with no
@@ -261,7 +261,7 @@
     newYorkNoAd: { rows: ['launch offer 0.605'], src: 'the demo worker' },
   };
 
-  /** The real receipt, verbatim from docs/verizon/explainer/FACTS.md §9 (visitor id and nonce redacted there). */
+  /** The real receipt, verbatim from the facts sheet, FACTS.md §9 (visitor id and nonce redacted there). */
   const RECEIPT = {
     decision_id: 'vantage:muq3x3y9:<visitor>:home:deals:0:n1:<nonce>',
     ts: 1790893784385, page: 'home', slot: 'deals', position: 0, ranking_position: 0,
@@ -768,8 +768,206 @@
   const ROOM_TAG = ['memory compressed for the room', true];
   const SYN_TAG = ['regional sales: synthetic → warehouse', true];
 
-  function instHead(title, tags) {
-    return h('div', { class: 'inst-head' }, h('p', { class: 'inst-k', text: title }),
+  // ══════════════════════════════════════════════════════════════════════════
+  // 7a · Hints: a circled question mark on every control group and instrument
+  // ══════════════════════════════════════════════════════════════════════════
+  // Each hint is a real button (keyboard-focusable, aria-label, aria-describedby). Its
+  // tooltip lives in one layer on <body>, so no panel clips it; it opens on hover, focus
+  // and tap, is placed inside the viewport, follows a scroll, and closes on Escape, blur
+  // and a tap outside. Built from nodes and textContent like the rest: no library and no
+  // inline handler. Every statement in TIPS below is drawn from the facts sheet.
+  let tipSeq = 0, tipLayer = null, tipQuiet = false, tipFrame = 0;
+  const OPEN = { btn: null, tip: null, why: new Set(), timer: 0 };
+  /** A sentence with `code` spans, as nodes. */
+  const rich = (s) => String(s).split('`').map((part, i) => (i % 2 ? h('code', { text: part }) : part));
+  function placeTip(btn, tip) {
+    const m = 8, vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    tip.style.maxWidth = `${Math.min(360, vw - 2 * m)}px`;
+    tip.style.maxHeight = `${vh - 2 * m}px`;
+    tip.style.left = '0px';
+    tip.style.top = '0px';
+    const b = btn.getBoundingClientRect(), r = tip.getBoundingClientRect();
+    const left = clamp(b.left + b.width / 2 - r.width / 2, m, Math.max(m, vw - m - r.width));
+    let top = b.bottom + 8;
+    if (top + r.height > vh - m) top = b.top - 8 - r.height >= m ? b.top - 8 - r.height : Math.max(m, vh - m - r.height);
+    tip.style.left = `${Math.round(left)}px`;
+    tip.style.top = `${Math.round(top)}px`;
+  }
+  // Clears the state before touching the DOM: hiding a tooltip that holds focus fires focusout, which calls back in.
+  function hideTip() {
+    clearTimeout(OPEN.timer);
+    const { btn, tip } = OPEN;
+    if (!tip) return;
+    OPEN.btn = null;
+    OPEN.tip = null;
+    OPEN.why.clear();
+    tip.hidden = true;
+    btn.classList.remove('is-open');
+  }
+  function showTip(btn, tip, why) {
+    clearTimeout(OPEN.timer);
+    if (OPEN.tip !== tip) { hideTip(); OPEN.btn = btn; OPEN.tip = tip; tip.hidden = false; btn.classList.add('is-open'); }
+    OPEN.why.add(why);
+    placeTip(btn, tip);
+  }
+  function leaveSoon(tip) {
+    clearTimeout(OPEN.timer);
+    OPEN.timer = setTimeout(() => { if (OPEN.tip !== tip) return; OPEN.why.delete('hover'); if (!OPEN.why.size) hideTip(); }, 160);
+  }
+  /** spec: { t: title, s: one to three sentences, f: a one-line formula (optional), and p (published in), q (quoted from) or np (not published) }. */
+  function hint(spec, label) {
+    const id = `hint-${++tipSeq}`;
+    const where = spec.p ? ['Published in', spec.p] : spec.q ? ['Quoted from', spec.q] : ['Not published', spec.np || 'a page control'];
+    const tip = h('div', { class: 'tip', id, role: 'tooltip', tabindex: '-1', hidden: true },
+      h('p', { class: 'tip-t', text: spec.t }),
+      h('p', { class: 'tip-d' }, rich(spec.s)),
+      spec.f ? h('p', { class: 'tip-f', text: spec.f }) : null,
+      h('p', { class: 'tip-p' }, h('span', { class: 'tip-pk', text: where[0] }), ' ', rich(where[1])));
+    if (!tipLayer) { tipLayer = h('div', { class: 'tips' }); document.body.append(tipLayer); }
+    tipLayer.append(tip);
+    const btn = h('button', { type: 'button', class: 'hint', 'aria-label': `About ${String(label || spec.t).replace(/^([A-Z])(?=[a-z])/, (c) => c.toLowerCase())}`, 'aria-describedby': id }, '?');
+    btn.addEventListener('mouseenter', () => showTip(btn, tip, 'hover'));
+    btn.addEventListener('mouseleave', () => leaveSoon(tip));
+    tip.addEventListener('mouseenter', () => { if (OPEN.tip === tip) { clearTimeout(OPEN.timer); OPEN.why.add('hover'); } });
+    tip.addEventListener('mouseleave', () => leaveSoon(tip));
+    btn.addEventListener('focus', () => { if (!tipQuiet) showTip(btn, tip, 'focus'); });
+    btn.addEventListener('blur', (e) => { if (OPEN.tip === tip && !tip.contains(e.relatedTarget)) hideTip(); });
+    tip.addEventListener('focusout', (e) => { if (OPEN.tip === tip && e.relatedTarget !== btn && !tip.contains(e.relatedTarget)) hideTip(); });
+    btn.addEventListener('click', () => { if (OPEN.tip === tip && OPEN.why.has('pin')) hideTip(); else showTip(btn, tip, 'pin'); });
+    return btn;
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !OPEN.tip) return;
+    const btn = OPEN.btn, inside = OPEN.tip.contains(document.activeElement);
+    hideTip();
+    if (inside) { tipQuiet = true; btn.focus(); tipQuiet = false; }
+  });
+  document.addEventListener('pointerdown', (e) => { if (OPEN.tip && !OPEN.tip.contains(e.target) && !OPEN.btn.contains(e.target)) hideTip(); }, true);
+  function followTip() {
+    if (tipFrame || !OPEN.tip) return;
+    tipFrame = requestAnimationFrame(() => {
+      tipFrame = 0;
+      if (!OPEN.tip) return;
+      const b = OPEN.btn.getBoundingClientRect();
+      if ((b.width === 0 && b.height === 0) || b.bottom < 0 || b.top > document.documentElement.clientHeight) hideTip();
+      else placeTip(OPEN.btn, OPEN.tip);
+    });
+  }
+  window.addEventListener('scroll', followTip, { passive: true, capture: true });
+  window.addEventListener('resize', followTip);
+  /** A heading inside an instrument, with its hint. */
+  const ih = (text, tip) => h('p', { class: 'inst-h' }, text, hint(tip, text));
+  /** A static frame around a body that is redrawn, with the frame's hint in its corner. */
+  function framed(cls, body, tip, label) {
+    body.classList.add('hint-body');
+    return h('div', { class: `${cls} has-hint` }, h('div', { class: 'hint-corner' }, hint(tip, label)), body);
+  }
+
+  /** What every hint says. Constants, fields and figures are the facts sheet's (§1–§5, §9–§12). */
+  const TIPS = {
+    s1: { t: 'One candidate’s score, taken apart', s: 'Each row is one tag of the Galaxy S26 offer: her interest in its value, the deals slot’s weight for its dimension, and their product. A tag scores only when she has an interest in its value and the slot weighs its dimension; the bottom line is the sum, on her own vector before the regional prior.', f: 'score = Σ over its tags of a × w', p: 'the slots document, deals `weights` (`pages.home[1].weights`); the offer’s `tags`, in the catalog' },
+
+    s2head: { t: 'One coordinate of one shopper', s: 'What the engine keeps for one dimension value: the evidence R and the time of its last touch, read on the constants the sliders set. Everything in this panel is recomputed in your browser on every change.', p: 'the dimension registry: `K`, `thetaIn`, `thetaOut` and the dimension’s `tauMs`' },
+    s2K: { t: 'K, the evidence constant', s: 'The evidence at which interest is one half; interest never reaches 1, so more evidence always counts, by less each time. Moving it redraws both charts, the readout and the three worked numbers.', f: 'a = R / (R + K)', p: 'the dimension registry, `K`: 1.8' },
+    s2tau: { t: 'τ, this coordinate’s memory', s: 'How fast stored evidence fades: by a factor of e for every τ since the last touch. Brand is published at 60 s for the room; a dimension that names no τ takes the registry’s 14 days. Moving it redraws the chart against time, t* and the third worked number.', f: 'R_eff = R · e^(−Δt/τ)', p: 'the dimension registry, brand’s `dimensions[1].tauMs`: 60000; the default `tauMs`: 14 days' },
+    s2in: { t: 'θin, the entry line', s: 'She joins this value’s audience when her interest reaches the line: evidence R ≥ 2.7 at the published constants. Only a touch can make her join. Moving it moves the solid green line, the band and the touch at which she enters.', f: 'enter when a ≥ θin', p: 'the dimension registry, `thetaIn`: 0.6' },
+    s2out: { t: 'θout, the exit line', s: 'She leaves only when her interest falls under this lower line, R < 1.4727 at the published constants, so a shopper near one line does not flap in and out. The validator refuses a θout that is not below θin, and so does this slider. Moving it moves the dashed green line, the band’s end and t*.', f: 'leave when a < θout', p: 'the dimension registry, `thetaOut`: 0.45' },
+    s2w: { t: 'w, the action’s weight', s: 'What the next press adds to the evidence; an action no table names adds 0. Moving it redraws the chart against touches and the worked numbers, and changes what the next press adds.', f: 'R ← R_eff + w', p: 'the dimension registry, `weights`, for example `product_view`: 1' },
+    s2presets: { t: 'Weights from the published table', s: 'Each button sets w to the weight the registry gives that action: a view 1, a search 1.5, a selector or a compare 2, a cart add 3, a purchase 5.', p: 'the dimension registry, `weights`: `product_view`, `search`, `select`, `compare`, `add_to_cart`, `purchase`' },
+    s2touch: { t: 'Touches and the clock', s: 'Press adds one touch of weight w at the clock’s time now. The clock can be paused or run five or twenty times faster, so a minute of fading plays out in seconds; the last two buttons clear the touches and put the published constants back.', np: 'page controls; they drive the chart against time and the readout' },
+    s2chartA: { t: 'Interest against touches', s: 'Her interest after n touches with no time between them, at the current K and w, with the two audience lines. The yellow line marks the touch at which she enters.', f: 'a = n·w / (n·w + K)', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut`' },
+    s2chartB: { t: 'Interest against time', s: 'Her interest on the clock as you press: solid is what happened, dashed what happens if nothing else does, and the green band is when she is in the audience. The yellow line t* is the instant she leaves, solved in closed form, so nothing has to poll for it.', f: 't* = t + τ · ln(R (1 − θout) / (K θout))', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut` and the dimension’s `tauMs`' },
+    s2read: { t: 'The readout, at this instant', s: 'The evidence stored at the last touch, the evidence left now, her interest, whether she is in the audience, and when she leaves. Nothing is decayed in storage: every value here is computed from the clock at the read.', f: 'a = R_eff / (R_eff + K)', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut`, `tauMs`' },
+    s2worked: { t: 'The three worked numbers', s: 'One touch, three touches close together, and the time from three touches to under θout, at the constants above. At the published constants they read 0.357, 0.625 and 42.7 s at τ 60 s.', f: 'a = w / (w + K); τ · ln(3w (1 − θout) / (K θout))', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut`; brand’s `tauMs`' },
+
+    s3event: { t: 'The event the page sends', s: 'The request the demo page sends when she views a phone: its type and the product’s own attributes. It changes on every press in the panel below.', p: 'the dimension registry, `weights.product_view`: 1, what one view adds' },
+    s3touches: { t: 'What the engine extracts', s: 'One touch per registry dimension whose source field is on the event: a string is one value, a list several, and the price is banded at 400 and 900. A field no dimension names, such as os, is ignored.', p: 'the dimension registry, `dimensions`: each `source`, and `cuts` [400, 900] on `priceBand`' },
+    s3head: { t: 'One shopper, live', s: 'A shopper held in this browser on the published registry. Each press is one product view, applied with the engine’s arithmetic; sections 4 and 5 score this same shopper.', p: 'the dimension registry: `weights`, `dimensions`, `K`, `thetaIn`, `thetaOut`' },
+    device: { t: 'A product view', s: 'Each button is one product_view of that phone at weight 1, carrying its brand, ecosystem, price and category, so one press touches four coordinates at once. The last button empties her state: a stranger again.', p: 'the dimension registry, `weights.product_view`: 1' },
+    s3meters: { t: 'Her vector', s: 'A meter per coordinate she has, her interest read from the clock now. The solid tick is θin and the dotted tick θout; a white bar means she is in that audience, and a meter that glows was just touched.', p: 'the dimension registry, `thetaIn` 0.6, `thetaOut` 0.45 and each dimension’s `tauMs`' },
+    s3state: { t: 'The whole state', s: 'Everything the engine stores for her: per value, the evidence as of its last touch and the time of that touch. Interest is computed from the two at every read, which is why nothing has to run to make it fade.', f: 'a = R·e^(−Δt/τ) / (R·e^(−Δt/τ) + K)', p: 'the dimension registry, `K` and each dimension’s `tauMs`; at most `maxValuesPerDim` 64 values, pruned under `epsilon` 0.01' },
+
+    s4head: { t: 'One slot, every candidate', s: 'The shopper’s vector scored against every candidate in one slot: eligibility first, then the sum over each candidate’s tags of her interest times the slot’s weight, then the slot’s rules take the top N. Recomputed in your browser on the published documents.', f: 'score = Σ a[d][v] × w_slot[d]', p: 'the slots document, deals (`pages.home[1]`); the rail’s dials are not published: they travel on each POST /sort' },
+    s4vec: { t: 'Her vector, from section 3', s: 'The same live shopper as section 3: a press here or there moves both. The line lists every coordinate she has now; an empty vector is a stranger, scored on her region’s prior when scoring as served.', p: 'the dimension registry (her vector); the learn document, `regional` (the prior)' },
+    s4slot: { t: 'Which slot', s: 'The homepage deals module, 17 promotions with a take of 4, or the phones rail, which re-orders the site’s own phone grid. The weights belong to the slot, so the same interest counts differently in each.', p: 'the slots document, deals `take`: 4; the rail’s dials are not published: they travel on each POST /sort' },
+    s4mode: { t: 'Score with', s: 'As served is the whole decision: her vector blended with the region’s prior, the arrival’s seeds and the promotion multiplier, at γ = 0. The tag sum alone is the plain dot product on her own vector. It changes every score in the table and the four containers.', p: 'the learn document, `regional`; the slots document, deals `seeds` and `merchandising`' },
+    s4intent: { t: 'Asserted intent', s: 'The intent the page asserts for this request. Eligibility runs before scoring and fails closed: an offer gated to other intents is not scored at all. It changes which rows are scored.', p: 'each promotion’s `eligibleWhen.context.intent`, in the catalog' },
+    s4cap: { t: 'The diversity cap', s: 'At most this many pieces of one brand in the four: a third yields its container to the next ranked piece, and unbranded offers never count. It moves the containers and the rows marked yielded.', p: 'the slots document, deals `diversity`: `brand`, `max` 2' },
+    s4pin: { t: 'A pin', s: 'A pinned piece is a required prefix: it takes container 1 and is never ranked. If it is not eligible for this request, the whole slot serves nothing and records a pin diagnostic: the engine’s current behaviour.', p: 'the slots document, deals `pinnedPieceIds`: none in the opening document; beat 13 pins the Duo' },
+    s4weights: { t: 'The slot’s weights', s: 'What each dimension is worth in this slot, from 0 to 1: per slot, never per product. A dimension weighted 0 contributes nothing, and the campaign weight scores only through the seed, because no event builds that dimension. Moving one changes every sum in the table.', f: 'score = Σ a × w', p: 'the slots document, deals `weights`: brand 0.2, campaign 0.3, category 0.1, ecosystem 0.15, intent 1, lines 0.4, perk 0.1, priceBand 0.1' },
+    s4boxes: { t: 'The four containers', s: 'What the slot would serve: pinned pieces first, then the ranking under the cap, until four are filled. If every score is zero, the slot serves catalog order, labelled as the default.', p: 'the slots document, deals `take`: 4' },
+    s4table: { t: 'Every candidate', s: 'Each promotion with its tags and its sum written out term by term: her interest in the value times the slot’s weight, plus any seed, times any promotion multiplier. Rows that fail eligibility are listed but not scored; blue terms are blended dimensions, yellow ones seeds.', p: 'the catalog, each promotion’s `tags` and `eligibleWhen`; the slots document, deals `weights`' },
+    s4counts: { t: 'What it cost, counted', s: 'The lookups and multiply-adds this slot took: one per tag value on a weighted dimension, then one sort and a take of 4; the blend runs once per shopper. These are counts, not times: nothing has been timed on the service at 10,000 candidates.', p: 'the slots document, deals `weights` (which dimensions count)' },
+    s4bench: { t: '10,000 synthetic candidates', s: 'Generates 10,000 candidates in this browser from the registry’s vocabulary at the real pool’s tag density, scores them against the same vector and weights, sorts them and takes four under the cap. It reports what it counted; it times nothing.', np: 'a page control; the candidates are synthetic and exist only in this browser' },
+    s4railAff: { t: 'The rail’s affinity dial', s: 'Multiplies every score on the rail. At 0 every score is 0 and the order is the site’s own exactly, because the sort is stable on feed order.', f: 'score = dial × Σ a × w', np: 'sent on each POST /sort, from `rail.weights.affinity` in public/vantage/phones.json: 1. The slots document carries no sort dials.' },
+    rail: {
+      brand: { t: 'Rail weight: brand', s: 'What her brand interest is worth on the rail; the route clamps a weight to 0–10. Moving it re-scores and re-orders the rail.', np: 'sent on each POST /sort, from `rail.weights.dims.brand` in public/vantage/phones.json: 1' },
+      ecosystem: { t: 'Rail weight: ecosystem', s: 'What her ecosystem interest is worth on the rail; the route clamps a weight to 0–10. Moving it re-scores and re-orders the rail.', np: 'sent on each POST /sort, from `rail.weights.dims.ecosystem` in public/vantage/phones.json: 0.6' },
+      priceBand: { t: 'Rail weight: price band', s: 'What her price-band interest is worth on the rail; the route clamps a weight to 0–10. Moving it re-scores and re-orders the rail.', np: 'sent on each POST /sort, from `rail.weights.dims.priceBand` in public/vantage/phones.json: 0.8' },
+    },
+    s4railBoxes: { t: 'The rail’s first positions', s: 'The phones in the order the rail would show them, each with its position in the site’s own feed. The route never filters: every phone comes back, re-ordered.', np: 'sent on each POST /sort, from `rail` in public/vantage/phones.json' },
+    s4railTable: { t: 'Every phone', s: 'Each phone with the touches it produces and its sum written out. The rail scores her own vector only: no prior, no seeds, no multiplier, no learning and no pins on this route.', f: 'score = dial × Σ a × w', np: 'sent on each POST /sort, from `rail.weights` in public/vantage/phones.json' },
+
+    s5head: { t: 'The prior, the seeds and the hinge', s: 'The shopper scored the way a stranger is: her vector blended with her region’s synthetic sales at a weight λ that falls as her own evidence grows, plus the arrival’s seeds. Recomputed in your browser; the sales are synthetic, labelled synthetic → warehouse.', f: 'ã = (1 − λ)·a + λ·share', p: 'the learn document, `regional`: `kBlend` 0.5, `minEvents` 30, `dimensions` brand, ecosystem, priceBand, category' },
+    s5region: { t: 'Region, its synthetic sales', s: 'Whose sales the prior speaks for: New York’s or Texas’s: Vantage’s synthetic sales, labelled synthetic → warehouse; in production, the customer’s own. It moves the shares, the blended vector, the stranger’s receipt and the hinge.', p: 'the learn document, `regional.minEvents`: 30, the events a region needs to answer; the sales themselves are seeded, not published' },
+    s5ad: { t: 'Arrival', s: 'Whether she landed from the ad, whose landing entry carries utm_term=iphone-18-pro; the page resends it with every snapshot. From the ad, the campaign seed adds 0.2 on the campaign tag, which only the launch offer and the launch hero carry.', p: 'the slots document, deals `seeds[0]`: `campaign_term` iphone-18-pro, `weight` 0.2' },
+    s5dev: { t: 'Her device', s: 'Only the OS family is read from the request: iOS, Android or nothing. On an iPhone or an Android phone the OS-family seed adds 1 on that ecosystem tag; a laptop sends neither, so no platform seed fires.', p: 'the slots document, deals `seeds[1]` and `seeds[2]`: `platform` ios and android, `weight` 1, with their `dampen` rules' },
+    s5k: { t: 'kBlend, the prior’s strength', s: 'How long the region keeps speaking. At 0.5 a stranger has λ = 1, Σa = 0.5 gives λ = 0.5 and Σa = 3 gives 0.14; with no learn document at all, the compiled default is 1. It moves the λ curve, the blend, the receipt and the hinge.', f: 'λ = kBlend / (kBlend + Σa)', p: 'the learn document, `regional.kBlend`: 0.5' },
+    s5ev: { t: 'Σa, her evidence', s: 'The sum of all her own interests, on every dimension: read live from the shopper in section 3, or set by hand with the slider that appears. It moves the dot on the λ curve and everything blended from it.', np: 'an input; her evidence comes from her own events' },
+    s5sigma: { t: 'Σa set by hand', s: 'Sets her evidence directly, to read λ anywhere on the curve without pressing phones.', np: 'an input you set' },
+    s5live: { t: 'Read this request’s region', s: 'Optional: asks the demo’s cold-start read for the lean the service holds for this request’s region, with X-Tenant: vantage, no credential and no cookie. Nothing is sent until you press it; the seeded New York and Texas numbers stay the default.', np: 'a read of the service (GET /vantage/api/coldstart); it changes no document' },
+    s5lambda: { t: 'λ against her evidence', s: 'How much the population speaks as her evidence grows: red at the current kBlend, grey at the compiled default of 1, the white dot at her Σa now. The readout under it gives Σa, λ and her own share of the mix, 1 − λ.', f: 'λ = k / (k + Σa)', p: 'the learn document, `regional.kBlend`: 0.5' },
+    s5lean: { t: 'The region’s share per value', s: 'Within each blended dimension the region’s leading value is 1 and the others are fractions of it: shares, not probabilities. The outline is the share; the count beside a value is the synthetic sales behind it.', f: 'share = R_value / R_leader', p: 'the learn document, `regional.dimensions`: brand, ecosystem, priceBand, category' },
+    s5blend: { t: 'Her blended vector', s: 'For every value on a blended dimension: her own interest, the region’s share, and the mix at the current λ. Her stored vector is never written to; the blend is a copy made for this decision.', f: 'ã = (1 − λ)·a + λ·share', p: 'the learn document, `regional.kBlend` and `regional.dimensions`' },
+    s5seeds: { t: 'The arrival’s seeds', s: 'Which seeds fire for this arrival and what each adds: the campaign seed, 0.2 × the slot’s campaign weight 0.3, on the launch offer; the OS-family seed, 1 × the ecosystem weight 0.15, halved while she holds intent switch and withdrawn once she holds the other ecosystem.', p: 'the slots document, deals `seeds`' },
+    s5stranger: { t: 'A stranger’s receipt', s: 'The launch offer’s drivers as the record itemises them for a stranger: the four strongest tag terms, then the region’s part and the multiplier. Each a is the region’s share at λ = 1, not her own affinity: she has none yet.', p: 'the learn document, `regional`; the slots document, deals `weights` and `merchandising`' },
+    s5hinge: { t: 'The hinge', s: 'The launch offer and the Galaxy S26 offer at every step of the worked example, on the settings above, with the best Android offer dashed. The yellow line marks where Android overtakes the launch offer; the campaign seed never switches off, her own evidence outgrows it.', p: 'the learn document, `regional.kBlend`; the slots document, deals `seeds` and `merchandising`' },
+
+    s6head: { t: 'Two memories on one shopper', s: 'One shopper’s brand and ecosystem interest on one clock: brand forgets on 60 s for the room, ecosystem keeps the 14-day default. Recomputed in your browser.', p: 'the dimension registry, brand’s `dimensions[1].tauMs`: 60000; ecosystem names none, so the default `tauMs`: 14 days' },
+    s6tauB: { t: 'τ brand', s: 'Brand’s memory: published at 60 s for the room, where the engine’s default is 14 days. It moves both brand curves and when the brand claim leaves.', f: 'R_eff = R · e^(−Δt/τ)', p: 'the dimension registry, `dimensions[1].tauMs`: 60000' },
+    s6tauE: { t: 'τ ecosystem', s: 'Ecosystem’s memory: 14 days as published, 90 days as the design proposes for production and the validator’s cap, or an hour to watch it fade here. It moves the ecosystem curve.', p: 'the dimension registry, the default `tauMs`: 14 days' },
+    s6clock: { t: 'Clock speed', s: 'Runs this panel’s clock one, five or twenty times faster, so a minute of fading plays out in seconds.', np: 'a page control' },
+    s6views: { t: 'A Galaxy view, a Pixel view', s: 'Each press is one view at weight 1: the Galaxy touches brand samsung and ecosystem android, the Pixel brand google and ecosystem android. Reset clears both memories.', p: 'the dimension registry, `weights.product_view`: 1' },
+    s6chart: { t: 'Interest against time', s: 'Brand samsung, brand google and ecosystem android on one clock, with the entry and exit lines: solid is what happened, dashed what happens if she stops. A yellow line marks when a claim will leave.', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut` and each dimension’s `tauMs`' },
+    s6who: { t: 'Who is in, and until when', s: 'A meter per value with her interest now and, for each claim, whether she is in the audience and when she leaves, solved in closed form. Watch brand leave while ecosystem holds.', f: 't* = t + τ · ln(R (1 − θout) / (K θout))', p: 'the dimension registry, `thetaIn` 0.6, `thetaOut` 0.45' },
+
+    exHead: { t: 'Beats 1 to 5, recomputed', s: 'The demo’s opening scenario on the published documents: each step recomputes her touches, the decay, her vector, λ, the blend, the seeds, the multiplier, the sums and the take. Beside it is what the service returned when the demo was measured.', p: 'the dimension registry, the slots document and the learn document, as served: r3, r51, r3' },
+    exSteps: { t: 'The six steps', s: 'Each step is one moment: she lands from the ad, views a Galaxy S26 card and then its page, an S26 Ultra card, then the Pixel 11 page and goes home, and is asked again later. The homepage is asked at steps 0, 4 and 5; steps 1 to 3 show what it would answer.', np: 'a page control; t is seconds on the scenario’s clock' },
+    exRegion: { t: 'Region', s: 'Whose synthetic sales the prior speaks for. New York, from the ad on a laptop, has a measured row at every step; Texas was measured on arrival only.', p: 'the learn document, `regional.minEvents`: 30; the sales are seeded, labelled synthetic → warehouse' },
+    exAd: { t: 'Arrival', s: 'From the ad, the campaign seed fires on the launch offer and the launch hero; with no ad, it does not fire. It moves the launch offer’s score.', p: 'the slots document, deals `seeds[0]`: `weight` 0.2' },
+    exDev: { t: 'Her device', s: 'Only the OS family is read, and a laptop fires no platform seed. The suites ran with no platform header, so only the laptop has measured rows.', p: 'the slots document, deals `seeds[1]` and `seeds[2]`: `weight` 1' },
+    exGap: { t: 'Seconds between the Samsung touches', s: 'The spacing of the three Samsung touches. The fitted default, 3.5 s, reproduces the hosted reading of 0.612 after the third touch; brand forgets on 60 s, so a second of spacing moves the third decimal. It moves steps 1 to 5.', np: 'a fitted timing, not a measurement: the suite’s touches land 1 to 2.5 s apart and are read about a second later' },
+    exPix: { t: 'Seconds from the third touch to the hinge', s: 'How long after the third Samsung touch the Pixel page and home come. The fitted default, 2.6 s, gives brand 0.601 at the hinge, as hosted; at a presenter’s pace the Samsung claim fades before she reaches home. It moves steps 4 and 5.', np: 'a fitted timing, not a measurement' },
+    exAsk: { t: 'Seconds from the third touch to the re-ask', s: 'When the homepage is asked again. The default, 52 s, is when the hosted suite re-asked and read brand 0.398, under 0.45. It moves step 5.', np: 'a timing from the hosted suite, not a published constant' },
+    exReset: { t: 'Back to the fitted defaults', s: 'Puts the region, the arrival, the device and the three timings back to New York, from the ad, a laptop, 3.5 s, 2.6 s and 52 s: the settings with which the page reproduces the hosted readings.', np: 'a page control' },
+    exLeft: { t: 'This step, recomputed', s: 'What happened at this step, her own vector at the decision, λ and the blend, and the deals module: the four, then the ranking with every sum written out. All of it is recomputed here from the published documents.', f: 'score = (Σ ã × w + seeds) × multiplier', p: 'the dimension registry; the slots document, deals; the learn document, `regional`' },
+    exRight: { t: 'Measured on the service', s: 'What the service returned when the demo was measured on 1 October 2026, beside what this page recomputes. A measured row is shown only under the conditions it was measured in, all with no platform header: New York through the labelled override from the ad at every step, and Texas, or New York without the ad, on arrival.', q: 'the demo’s facts sheet, §9 and §12' },
+
+    s7head: { t: 'One item, one cell, one dial', s: 'One item’s counts in one cell of context, turned into a clamped lift and raised to the trust dial γ. Every input in this panel is yours to set; none is a measurement.', f: 'score = base × lift^γ', p: 'the learn document, `stats`: `n0` 30, `liftMin` 0.5, `liftMax` 2, `nMin` 30; `slots.deals.gamma`: 0' },
+    s7n: { t: 'n, exposures', s: 'How many times the item was served in her cell, decayed over the 21-day horizon. More exposures let the item’s own rate outweigh the pull toward p0. It moves the pooled rate, the lift, the chart and the ladder.', p: 'the learn document, `stats.tauLearnMs`: 21 days' },
+    s7s: { t: 's, successes', s: 'How many of those exposures were credited with a click; it cannot exceed n. It moves the item’s own rate, the pooled rate, the lift and the chart.', p: 'the learn document, `policy`: session scope, the last decision credited, a click counted for 30 minutes' },
+    s7p0: { t: 'p0, the slot’s rate in this cell', s: 'The rate the whole slot earns in this cell, itself pulled toward the next coarser cell’s rate. The item’s rate is pulled toward it, and its lift is measured against it.', f: 'p0 = (s_slot + n0 · p0,parent) / (n_slot + n0)', np: 'an input you set: a rate the engine counts, not a constant' },
+    s7n0: { t: 'n0, the shrinkage strength', s: 'How many observations’ worth of pull toward p0 the item’s rate carries, so a handful of lucky clicks cannot move it far. It moves the pooled rate, the chart’s curve and the lift.', f: 'p̂ = (s + n0 · p0) / (n + n0)', p: 'the learn document, `stats.n0`: 30' },
+    s7gamma: { t: 'γ, the trust dial', s: 'How much of the lift reaches the score, from 0 to 1 per slot. At 0 any lift to the power 0 is 1: the lift is computed, recorded and ignored. It moves only lift^γ, the score and the sentence under the readout.', f: 'score = base × lift^γ', p: 'the learn document, `slots.deals.gamma`: 0, as on every slot' },
+    s7base: { t: 'The base score', s: 'The score before the lift, which the dial multiplies. The default is the Galaxy S26 offer at the hinge, step 4 of the worked example.', np: 'an input you set' },
+    s7read: { t: 'The estimate and the score', s: 'The pooled rate, the item’s own rate it is pulled from, the lift clamped to [0.5, 2], lift^γ, and the score before and after the dial.', f: 'lift = clamp(p̂ / p0, 0.5, 2)', p: 'the learn document, `stats.liftMin` 0.5 and `stats.liftMax` 2' },
+    s7chart: { t: 'The pooled rate against exposures', s: 'At her rate s / n, how the pooled estimate moves from p0 toward that rate as exposures grow. The solid green lines are lift 0.5 and the clamp at 2, the dashed green line is p0, the blue dashed line her own rate, and the dot is n now.', f: 'p̂ = (s + n0 · p0) / (n + n0)', p: 'the learn document, `stats.n0`, `stats.liftMin`, `stats.liftMax`' },
+    s7ladder: { t: 'The ladder', s: 'Six cells from everyone down to her leading interest: the finest cell where the item has at least 30 exposures answers, so thin contexts borrow from wider ones. The counts per cell are illustrative, set by the slider under this heading.', p: 'the learn document, `stats.nMin`: 30' },
+    s7fan: { t: 'Each coarser cell holds × more', s: 'Illustrative: how many times more exposures each coarser cell holds than the one below it, to show which cell answers. It moves only the ladder.', np: 'an input you set, for the ladder' },
+
+    s8reg: { t: 'The dimension registry', s: 'The axes of her vector and the field each reads, each dimension’s memory, the evidence constant, the two audience lines, and what each action adds. Every write is validated whole and stamped with a revision; this is r3.', p: 'PUT /config/reflex: `K`, `thetaIn`, `thetaOut`, `tauMs`, `dimensions`, `weights`, `journey`' },
+    s8slots: { t: 'The slots', s: 'Per page, the slots in page order, each with its take, its weights and its rules: the stage rule, the seeds, the promotion multiplier, the diversity cap and pins. This is the opening state, r51.', p: 'PUT /content/slots: `pages.home[0]`, the hero; `pages.home[1]`, deals; and the phone page’s two slots' },
+    s8learn: { t: 'What the slots learn', s: 'The prior’s blend, the attribution policy, the statistics’ constants, and each slot’s trust dial γ, which is 0 on every slot. Revision r3.', p: 'PUT /content/learn: `holdout`, `regional`, `policy`, `stats`, `slots`' },
+
+    s9receipt: { t: 'The receipt', s: 'One record the service wrote for one served position: the launch offer in container 1, for a stranger from the ad, with New York asserted through the labelled override. A note in words sits beside every field; the visitor id and the nonce are redacted.', q: 'the demo’s facts sheet, §9, read from the demo worker on 1 October 2026' },
+    s9recompute: { t: 'Recompute it', s: 'The same decision twice: from the receipt’s own terms, and from the published documents on this page, with the receipt’s ten candidates beside the page’s. The count of candidates that agree is computed, not typed.', f: '0.2 + 0.15 + 0.1 + 0.1 = 0.55; + 0.06 = 0.61; × 1.1 = 0.671', p: 'the slots document, deals `weights`, `seeds`, `merchandising`; the learn document, `regional`' },
+
+    s10dims: { t: 'The registry’s dimensions', s: 'One line per dimension: the feed field it reads, how it is read, and the exact values the catalog uses. On a dimension the catalog names values on, a value outside them is simply not scored.', p: 'the dimension registry, `dimensions`; the vocabulary: the values the catalog’s `tags` name' },
+    s10feed: { t: 'A promotion feed’s fields', s: 'Each field of a promotion grid and what the engine does with it: scored, a band, eligibility, a multiplier or a prefix, or display only. Eligibility runs before scoring; the offer book goes to the page.', q: 'the demo’s facts sheet, §11' },
+  };
+
+  function instHead(title, tags, tip) {
+    return h('div', { class: 'inst-head' }, h('p', { class: 'inst-k' }, title, tip ? hint(tip, title.replace(/^Instrument · /, '')) : null),
       h('div', { class: 'inst-tags' }, (tags || []).map(([t, rep]) => h('p', { class: rep ? 'inst-tag inst-tag--rep' : 'inst-tag', text: t }))));
   }
 
@@ -799,7 +997,7 @@
     const show = () => { out.textContent = o.fmt(fromPos(input.value)); };
     input.addEventListener('input', () => { show(); o.on(fromPos(input.value)); });
     show();
-    const el = h('div', { class: 'ctrl' }, h('div', { class: 'ctrl-top' }, h('label', { for: id }, o.label), out), input,
+    const el = h('div', { class: 'ctrl' }, h('div', { class: 'ctrl-top' }, h('span', { class: 'ctrl-l' }, h('label', { for: id }, o.label), o.tip ? hint(o.tip, o.label) : null), out), input,
       o.sub ? h('p', { class: 'ctrl-sub', text: o.sub }) : null);
     return { el, input, set(v) { input.value = String(toPos(v)); show(); }, get value() { return fromPos(input.value); } };
   }
@@ -815,7 +1013,7 @@
     });
     return { el: wrap, set(v) { options.forEach(([ov], i) => buttons[i].setAttribute('aria-pressed', String(ov === v))); } };
   }
-  const ctrlBlock = (label, control, sub) => h('div', { class: 'ctrl' }, h('div', { class: 'ctrl-top' }, h('label', { text: label })), control, sub ? h('p', { class: 'ctrl-sub', text: sub }) : null);
+  const ctrlBlock = (label, control, sub, tip) => h('div', { class: 'ctrl' }, h('div', { class: 'ctrl-top' }, h('span', { class: 'ctrl-l' }, h('label', { text: label }), tip ? hint(tip, label) : null)), control, sub ? h('p', { class: 'ctrl-sub', text: sub }) : null);
 
   function readoutCell(k, v, s, cls) { return h('div', null, h('p', { class: 'k', text: k }), h('p', { class: cls ? `v ${cls}` : 'v', text: v }), s ? h('p', { class: 's', text: s }) : null); }
 
@@ -929,8 +1127,8 @@
   }
   function liveReset() { LIVE.state = emptyState(REGISTRY); LIVE.touched.clear(); LIVE.last = null; for (const fn of LIVE.listeners) fn(); }
   const DEVICE_BUTTONS = ['galaxy-s26', 'pixel-11', 'galaxy-s26-ultra', 'iphone-18-pro', 'moto-g-2026'];
-  function deviceButtons(compact) {
-    const row = h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'A product view' }));
+  function deviceButtons(compact, tip) {
+    const row = h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'A product view' }), tip ? hint(tip, 'the product-view buttons') : null);
     for (const id of DEVICE_BUTTONS) {
       const p = PHONE[id];
       const b = h('button', { type: 'button', class: 'ib dev', title: `${p.name}: brand ${p.brand}, ecosystem ${p.ecosystem}, $${p.price}` },
@@ -949,6 +1147,8 @@
   function initDiagram() {
     const mount = $('s1-diagram');
     if (!mount) return;
+    const cap = $('s1-caption');
+    if (cap) cap.prepend(hint(TIPS.s1, 'the diagram'));
     const draw = () => {
       const steps = runScenario({});
       const personal = steps[4].snap.dims;
@@ -1061,18 +1261,18 @@
     if (!mount) return;
     const S = { K: REGISTRY.K, tau: 60 * SECOND, thIn: REGISTRY.thetaIn, thOut: REGISTRY.thetaOut, w: 1, touches: [], clock: makeClock() };
     const TAUS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600].map((s) => s * SECOND);
-    const chartA = h('div', { class: 'chart-wrap' });
-    const chartB = h('div', { class: 'chart-wrap' });
+    const chartA = h('div');
+    const chartB = h('div');
     const readout = h('div', { class: 'readout' });
     const worked = h('div', { class: 'worked' });
     const closed = h('p', { class: 'inst-note' });
 
-    const kS = slider({ label: 'K, the evidence constant', min: 0.2, max: 6, step: 0.1, value: S.K, fmt: (v) => f1(v), sub: 'a = ½ when R = K. Published: 1.8.', on: (v) => { S.K = v; redrawAll(); } });
-    const tauS = slider({ label: 'τ, this coordinate’s memory', values: TAUS, value: S.tau, fmt: (v) => tauLabel(v), sub: 'Brand in this room: 60 s. The engine default: 14 days.', on: (v) => { S.tau = v; redrawAll(); } });
-    const inS = slider({ label: 'θin, enter at', min: 0.2, max: 0.95, step: 0.01, value: S.thIn, fmt: f2, sub: 'Published: 0.60.', on: (v) => { S.thIn = v; if (S.thOut >= v) { S.thOut = round3(Math.max(0.05, v - 0.05)); outS.set(S.thOut); } redrawAll(); } });
-    const outS = slider({ label: 'θout, leave under', min: 0.05, max: 0.9, step: 0.01, value: S.thOut, fmt: f2, sub: 'Published: 0.45. Kept under θin.', on: (v) => { S.thOut = Math.min(v, round3(S.thIn - 0.01)); if (S.thOut !== v) outS.set(S.thOut); redrawAll(); } });
-    const wS = slider({ label: 'w, the action’s weight', min: 0.5, max: 5, step: 0.5, value: S.w, fmt: (v) => wfmt(v), sub: 'What the next press adds.', on: (v) => { S.w = v; redrawAll(); } });
-    const presets = h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'Weights from the table' }),
+    const kS = slider({ label: 'K, the evidence constant', tip: TIPS.s2K, min: 0.2, max: 6, step: 0.1, value: S.K, fmt: (v) => f1(v), sub: 'a = ½ when R = K. Published: 1.8.', on: (v) => { S.K = v; redrawAll(); } });
+    const tauS = slider({ label: 'τ, this coordinate’s memory', tip: TIPS.s2tau, values: TAUS, value: S.tau, fmt: (v) => tauLabel(v), sub: 'Brand in this room: 60 s. The engine default: 14 days.', on: (v) => { S.tau = v; redrawAll(); } });
+    const inS = slider({ label: 'θin, enter at', tip: TIPS.s2in, min: 0.2, max: 0.95, step: 0.01, value: S.thIn, fmt: f2, sub: 'Published: 0.60.', on: (v) => { S.thIn = v; if (S.thOut >= v) { S.thOut = round3(Math.max(0.05, v - 0.05)); outS.set(S.thOut); } redrawAll(); } });
+    const outS = slider({ label: 'θout, leave under', tip: TIPS.s2out, min: 0.05, max: 0.9, step: 0.01, value: S.thOut, fmt: f2, sub: 'Published: 0.45. Kept under θin.', on: (v) => { S.thOut = Math.min(v, round3(S.thIn - 0.01)); if (S.thOut !== v) outS.set(S.thOut); redrawAll(); } });
+    const wS = slider({ label: 'w, the action’s weight', tip: TIPS.s2w, min: 0.5, max: 5, step: 0.5, value: S.w, fmt: (v) => wfmt(v), sub: 'What the next press adds.', on: (v) => { S.w = v; redrawAll(); } });
+    const presets = h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'Weights from the table' }), hint(TIPS.s2presets, 'the weight buttons'),
       [['view', 1], ['search', 1.5], ['selector / compare', 2], ['cart add', 3], ['purchase', 5]].map(([n, w]) =>
         h('button', { type: 'button', class: 'ib', text: `${n} ${w}`, onclick: () => { S.w = w; wS.set(w); redrawAll(); } })));
 
@@ -1089,13 +1289,13 @@
     });
 
     mount.append(
-      instHead('Instrument · one coordinate, for example brand samsung', [LOCAL_TAG, ['τ of 60 s is the room’s, compressed', true]]),
+      instHead('Instrument · one coordinate, for example brand samsung', [LOCAL_TAG, ['τ of 60 s is the room’s, compressed', true]], TIPS.s2head),
       h('div', { class: 'ctrls' }, kS.el, tauS.el, inS.el, outS.el, wS.el),
       presets,
-      h('div', { class: 'btnrow' }, pressB, pauseB, speed.el, clearB, resetB),
-      h('div', { class: 'cols' }, chartA, chartB),
-      readout, closed,
-      h('p', { class: 'inst-h', text: 'The three worked numbers, at the constants above' }),
+      h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'Touches' }), hint(TIPS.s2touch, 'the touch buttons and the clock'), pressB, pauseB, speed.el, clearB, resetB),
+      h('div', { class: 'cols' }, framed('chart-wrap', chartA, TIPS.s2chartA, 'the chart of interest against touches'), framed('chart-wrap', chartB, TIPS.s2chartB, 'the chart of interest against time')),
+      ih('The readout, at this instant', TIPS.s2read), readout, closed,
+      ih('The three worked numbers, at the constants above', TIPS.s2worked),
       worked,
     );
 
@@ -1210,17 +1410,20 @@
     const mount = $('s3-inst');
     if (!mount) return;
     const evPre = $('s3-event'), tPre = $('s3-touches');
+    const evK = $('s3-event-k'), tK = $('s3-touches-k');
+    if (evK) evK.append(hint(TIPS.s3event, 'the event the page sends'));
+    if (tK) tK.append(hint(TIPS.s3touches, 'what the engine extracts'));
     const showEvent = (e) => { evPre.textContent = eventText(e); tPre.textContent = touchesText(e, extractTouches(e.data, REGISTRY)); };
     showEvent(phoneEvent(PHONE['galaxy-s26'], 'card'));
     const meters = h('div', { class: 'meters' });
     const tableBody = h('tbody');
     const note = h('p', { class: 'inst-note' });
     mount.append(
-      instHead('Instrument · one shopper, live, on the published registry', [LOCAL_TAG, ROOM_TAG]),
-      deviceButtons(false),
+      instHead('Instrument · one shopper, live, on the published registry', [LOCAL_TAG, ROOM_TAG], TIPS.s3head),
+      deviceButtons(false, TIPS.device),
       h('div', { class: 'cols cols--wide' },
-        h('div', null, h('p', { class: 'inst-h', text: 'Her vector: every coordinate she has, read now' }), meters, note),
-        h('div', null, h('p', { class: 'inst-h', text: 'The whole state: (R, t) per value, nothing else' }),
+        h('div', null, ih('Her vector: every coordinate she has, read now', TIPS.s3meters), meters, note),
+        h('div', null, ih('The whole state: (R, t) per value, nothing else', TIPS.s3state),
           h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'value' }), h('th', { class: 'num', text: 'R stored' }), h('th', { class: 'num', text: 'last touch' }), h('th', { class: 'num', text: 'τ' }), h('th', { class: 'num', text: 'a now' }))), tableBody),
           h('p', { class: 'inst-note', text: 'The state is the pair (R, t) per value (src/reflex/core.ts:117-132). a is computed at every read from the clock, which is why nothing has to run to make her interest fade.' }))),
     );
@@ -1308,34 +1511,35 @@
     benchB.addEventListener('click', () => runBench());
     const priorNote = h('p', { class: 'inst-note' });
     dealsPane.append(
-      h('div', { class: 'ctrls' }, ctrlBlock('Score with', modeSeg.el), ctrlBlock('Asserted intent (eligibility)', intentSel, 'Gated offers fail closed.'), ctrlBlock('Diversity', capSel), ctrlBlock('Pin', pinSel, 'A required prefix: container 1, never ranked. If the pinned piece is not eligible for this request, the whole slot serves nothing: the engine’s current behaviour. Try an upgrade offer under intent new.')),
+      h('div', { class: 'ctrls' }, ctrlBlock('Score with', modeSeg.el, null, TIPS.s4mode), ctrlBlock('Asserted intent (eligibility)', intentSel, 'Gated offers fail closed.', TIPS.s4intent), ctrlBlock('Diversity', capSel, null, TIPS.s4cap), ctrlBlock('Pin', pinSel, 'A required prefix: container 1, never ranked. If the pinned piece is not eligible for this request, the whole slot serves nothing: the engine’s current behaviour. Try an upgrade offer under intent new.', TIPS.s4pin)),
       priorNote,
-      h('p', { class: 'inst-h', text: 'The slot’s weights: per slot, never per product' }),
+      ih('The slot’s weights: per slot, never per product', TIPS.s4weights),
       h('div', { class: 'ctrls' }, weightSliders.map((s) => s.el)),
       h('div', { class: 'btnrow' }, resetW),
-      h('p', { class: 'inst-h', text: 'The four containers' }), boxes, pinNote,
-      h('p', { class: 'inst-h', text: 'Every candidate, scored the same way' }),
+      ih('The four containers', TIPS.s4boxes), boxes, pinNote,
+      ih('Every candidate, scored the same way', TIPS.s4table),
       h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: '#' }), h('th', { text: 'candidate and its tags' }), h('th', { text: 'Σ a × w, written out' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'outcome' }))), tbody)),
-      counts, h('div', { class: 'btnrow' }, benchB), bench,
+      ih('What it cost, counted, not timed', TIPS.s4counts), counts, h('div', { class: 'btnrow' }, benchB, hint(TIPS.s4bench, 'the 10,000-candidate run')), bench,
     );
 
     // The rail pane
     const railAff = seg('Affinity weight', [[1, 'affinity 1'], [0, 'affinity 0: the site’s order']], 1, (v) => { S.rail.affinity = v; render(); });
-    const railSliders = Object.keys(RAIL.weights.dims).map((dim) => slider({ label: DIM_LABEL[dim], min: 0, max: 2, step: 0.05, value: RAIL.weights.dims[dim], fmt: (v) => wfmt(v), on: (v) => { S.rail.dims[dim] = v; render(); } }));
+    const railSliders = Object.keys(RAIL.weights.dims).map((dim) => slider({ label: DIM_LABEL[dim], tip: TIPS.rail[dim], min: 0, max: 2, step: 0.05, value: RAIL.weights.dims[dim], fmt: (v) => wfmt(v), on: (v) => { S.rail.dims[dim] = v; render(); } }));
     const railBoxes = h('div', { class: 'boxes boxes--6' });
     const railBody = h('tbody');
     railPane.append(
       h('p', { class: 'inst-note', text: 'POST /sort over the site’s own grid. The rail scores her own vector only: no regional prior and no seeds on this route (src/routes/sort.ts:100, :116). The dials travel on the request (public/vantage/phones.json); at affinity 0 every score is 0 and the order is the site’s exactly (src/reflex/sortCandidates.ts:142-146).' }),
-      h('div', { class: 'ctrls' }, ctrlBlock('Affinity', railAff.el), railSliders.map((s) => s.el)),
-      h('p', { class: 'inst-h', text: 'The six positions' }), railBoxes,
+      h('div', { class: 'ctrls' }, ctrlBlock('Affinity', railAff.el, null, TIPS.s4railAff), railSliders.map((s) => s.el)),
+      ih('The six positions', TIPS.s4railBoxes), railBoxes,
+      ih('Every phone, scored the same way', TIPS.s4railTable),
       h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: '#' }), h('th', { text: 'phone' }), h('th', { text: 'Σ a × w over the touches it produces' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'site order' }))), railBody)),
     );
 
     mount.append(
-      instHead('Instrument · one slot, every candidate', [LOCAL_TAG, ROOM_TAG, SYN_TAG]),
-      h('p', { class: 'inst-h', text: 'Her vector, from section 3 (the same live shopper)' }),
-      deviceButtons(true), vecLine,
-      h('div', { class: 'btnrow' }, tabs.el),
+      instHead('Instrument · one slot, every candidate', [LOCAL_TAG, ROOM_TAG, SYN_TAG], TIPS.s4head),
+      ih('Her vector, from section 3 (the same live shopper)', TIPS.s4vec),
+      deviceButtons(true, TIPS.device), vecLine,
+      h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'Slot' }), hint(TIPS.s4slot, 'the slot choice'), tabs.el),
       dealsPane, railPane,
     );
 
@@ -1516,8 +1720,8 @@
     const regionSeg = seg('Region', [['US-NY', 'New York'], ['US-TX', 'Texas']], S5.region, (v) => { S5.region = v; s5Changed(); });
     const adSeg = seg('Arrival', [[true, 'from the ad'], [false, 'no ad']], S5.ad, (v) => { S5.ad = v; s5Changed(); });
     const devSeg = seg('Device', [['desktop', 'laptop'], ['iphone', 'iPhone'], ['android', 'Android']], S5.device, (v) => { S5.device = v; s5Changed(); });
-    const kS = slider({ label: 'kBlend, the prior’s strength', min: 0.1, max: 3, step: 0.1, value: S5.kBlend, fmt: (v) => wfmt(round3(v)), sub: 'Published 0.5. The compiled default, with no learn document, is 1.', on: (v) => { S5.kBlend = round3(v); s5Changed(); } });
-    const sigmaS = slider({ label: 'Σa set by hand', min: 0, max: 8, step: 0.05, value: S5.sigma, fmt: (v) => f2(v), on: (v) => { S5.sigma = v; s5Changed(); } });
+    const kS = slider({ label: 'kBlend, the prior’s strength', tip: TIPS.s5k, min: 0.1, max: 3, step: 0.1, value: S5.kBlend, fmt: (v) => wfmt(round3(v)), sub: 'Published 0.5. The compiled default, with no learn document, is 1.', on: (v) => { S5.kBlend = round3(v); s5Changed(); } });
+    const sigmaS = slider({ label: 'Σa set by hand', tip: TIPS.s5sigma, min: 0, max: 8, step: 0.05, value: S5.sigma, fmt: (v) => f2(v), on: (v) => { S5.sigma = v; s5Changed(); } });
     const evSeg = seg('Her evidence', [['live', 'her live vector (section 3)'], ['hand', 'set by hand']], S5.evidence, (v) => { S5.evidence = v; sigmaS.el.hidden = v !== 'hand'; s5Changed(); });
     sigmaS.el.hidden = true;
     const liveB = h('button', { type: 'button', class: 'ib', text: 'Read this request’s region from the service' });
@@ -1544,9 +1748,9 @@
       } finally { liveB.disabled = false; }
     });
 
-    const lambdaChart = h('div', { class: 'chart-wrap' });
+    const lambdaChart = h('div');
     const lambdaRead = h('div', { class: 'readout' });
-    const leanBox = h('div', { class: 'panel' });
+    const leanBox = h('div');
     const blendBody = h('tbody');
     const seedList = h('ul', { class: 'events' });
     const hingeChart = h('div', { class: 'chart-wrap' });
@@ -1555,19 +1759,19 @@
     const strangerNote = h('p', { class: 'inst-note' });
     const strangerMeasured = h('p', { class: 'inst-note' });
     mount.append(
-      instHead('Instrument · the prior, the seeds and the hinge', [LOCAL_TAG, SYN_TAG]),
-      h('div', { class: 'ctrls' }, ctrlBlock('Region (synthetic sales)', regionSeg.el), ctrlBlock('Arrival', adSeg.el, 'utm_term=iphone-18-pro, resent with every snapshot.'), ctrlBlock('Her device', devSeg.el, 'Only the OS family, from the request.'), kS.el, ctrlBlock('Σa, her evidence', evSeg.el), sigmaS.el),
-      h('div', { class: 'btnrow' }, liveB), liveStatus,
-      h('div', { class: 'cols' }, h('div', null, lambdaChart, lambdaRead), leanBox),
-      h('p', { class: 'inst-h', text: 'Her blended vector, value by value: ã = (1 − λ)·a + λ·share' }),
+      instHead('Instrument · the prior, the seeds and the hinge', [LOCAL_TAG, SYN_TAG], TIPS.s5head),
+      h('div', { class: 'ctrls' }, ctrlBlock('Region (synthetic sales)', regionSeg.el, null, TIPS.s5region), ctrlBlock('Arrival', adSeg.el, 'utm_term=iphone-18-pro, resent with every snapshot.', TIPS.s5ad), ctrlBlock('Her device', devSeg.el, 'Only the OS family, from the request.', TIPS.s5dev), kS.el, ctrlBlock('Σa, her evidence', evSeg.el, null, TIPS.s5ev), sigmaS.el),
+      h('div', { class: 'btnrow' }, liveB, hint(TIPS.s5live, 'the optional read of this request’s region')), liveStatus,
+      h('div', { class: 'cols' }, h('div', null, framed('chart-wrap', lambdaChart, TIPS.s5lambda, 'the chart of λ against her evidence'), lambdaRead), framed('panel', leanBox, TIPS.s5lean, 'the region’s shares')),
+      ih('Her blended vector, value by value: ã = (1 − λ)·a + λ·share', TIPS.s5blend),
       h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'value' }), h('th', { class: 'num', text: 'her a' }), h('th', { class: 'num', text: 'region share' }), h('th', { text: 'ã, written out' }), h('th', { class: 'num', text: 'ã' }))), blendBody),
       h('p', { class: 'inst-note', text: 'Dimensions outside the list (intent, perk, lines, content type) take nothing from the region and keep (1 − λ) of her own: a stranger’s first intent touch counts at that discount until her evidence grows (src/reflex/regionTrend.ts:224-229).' }),
-      h('p', { class: 'inst-h', text: 'The arrival’s seeds on the deals slot, for this arrival' }), seedList,
-      h('p', { class: 'inst-h', text: 'A stranger’s receipt: the launch offer at λ = 1' }),
+      ih('The arrival’s seeds on the deals slot, for this arrival', TIPS.s5seeds), seedList,
+      ih('A stranger’s receipt: the launch offer at λ = 1', TIPS.s5stranger),
       h('p', { class: 'inst-sentence', text: 'On a stranger’s receipt the driver values are the region’s shares at λ = 1, not her own affinity: she has none yet, so every a is the region speaking.' }),
       h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'driver' }), h('th', { class: 'num', text: 'a (the region’s share)' }), h('th', { class: 'num', text: 'weight' }), h('th', { class: 'num', text: 'a × w' }))), strangerBody),
       strangerNote, strangerMeasured,
-      h('p', { class: 'inst-h', text: 'The hinge, as arithmetic: the launch offer and the Galaxy S26 offer across her presses' }), hingeChart, hingeNote,
+      ih('The hinge, as arithmetic: the launch offer and the Galaxy S26 offer across her presses', TIPS.s5hinge), hingeChart, hingeNote,
     );
 
     function render() {
@@ -1710,17 +1914,17 @@
     const speed = seg('Clock speed', [[1, '×1'], [5, '×5'], [20, '×20']], 1, (v) => S.clock.setSpeed(v));
     const resetB = h('button', { type: 'button', class: 'ib ib--ghost', text: 'Reset' });
     resetB.addEventListener('click', () => { for (const k of Object.keys(S.touches)) S.touches[k] = []; render(); });
-    const tauB = slider({ label: 'τ brand', values: [10, 20, 30, 45, 60, 90, 120, 300, 600].map((s) => s * SECOND), value: S.tauBrand, fmt: tauLabel, sub: 'Published for the room: 60 s. The engine default: 14 days.', on: (v) => { S.tauBrand = v; render(); } });
+    const tauB = slider({ label: 'τ brand', tip: TIPS.s6tauB, values: [10, 20, 30, 45, 60, 90, 120, 300, 600].map((s) => s * SECOND), value: S.tauBrand, fmt: tauLabel, sub: 'Published for the room: 60 s. The engine default: 14 days.', on: (v) => { S.tauBrand = v; render(); } });
     const tauE = seg('τ ecosystem', [[14 * DAY, '14 days (published)'], [90 * DAY, '90 days (design)'], [60 * MINUTE, '1 hour']], S.tauEco, (v) => { S.tauEco = v; render(); });
     const meters = h('div', { class: 'meters' });
-    const chart = h('div', { class: 'chart-wrap' });
+    const chart = h('div');
     const read = h('div', { class: 'readout' });
     const sentence = h('p', { class: 'inst-sentence inst-sentence--big' });
     mount.append(
-      instHead('Instrument · two memories on one shopper', [LOCAL_TAG, ROOM_TAG]),
-      h('div', { class: 'ctrls' }, tauB.el, ctrlBlock('τ ecosystem', tauE.el), ctrlBlock('Clock', speed.el)),
-      h('div', { class: 'btnrow' }, galaxyB, pixelB, resetB),
-      h('div', { class: 'cols cols--wide' }, chart, h('div', null, meters, read)),
+      instHead('Instrument · two memories on one shopper', [LOCAL_TAG, ROOM_TAG], TIPS.s6head),
+      h('div', { class: 'ctrls' }, tauB.el, ctrlBlock('τ ecosystem', tauE.el, null, TIPS.s6tauE), ctrlBlock('Clock', speed.el, null, TIPS.s6clock)),
+      h('div', { class: 'btnrow' }, h('span', { class: 'btnrow-k', text: 'Views' }), hint(TIPS.s6views, 'the view buttons'), galaxyB, pixelB, resetB),
+      h('div', { class: 'cols cols--wide' }, framed('chart-wrap', chart, TIPS.s6chart, 'the chart of interest against time'), h('div', null, ih('Who is in, and until when', TIPS.s6who), meters, read)),
       sentence,
     );
     function render() {
@@ -1776,27 +1980,28 @@
     const S = { ...EX_DEFAULTS, step: 4 };
     const stepsBar = h('div', { class: 'steps', role: 'group', 'aria-label': 'Steps' });
     const left = h('div');
-    const right = h('div', { class: 'measured' });
+    const right = h('div');
     const regionSeg = seg('Region', [['US-NY', 'New York'], ['US-TX', 'Texas']], S.region, (v) => { S.region = v; render(); });
     const adSeg = seg('Arrival', [[true, 'from the ad'], [false, 'no ad']], S.ad, (v) => { S.ad = v; render(); });
     const devSeg = seg('Device', [['desktop', 'laptop'], ['iphone', 'iPhone'], ['android', 'Android']], S.device, (v) => { S.device = v; render(); });
     // Three equal touches g apart cross θin only if 1 + x + x² ≥ K·θin/(1 − θin), x = e^(−g/τ): the widest g that still does.
     const bp = dimParams(REGISTRY, 'brand'), needR = (bp.K * bp.thetaIn) / (1 - bp.thetaIn);
     const crossGapMs = -bp.tauMs * Math.log((-1 + Math.sqrt(4 * needR - 3)) / 2);
-    const gapS = slider({ label: 'Seconds between the Samsung touches', min: 0.5, max: 10, step: 0.1, value: S.gapS, fmt: (v) => `${f1(v)} s`, sub: `Fitted default: 3.5 s, with which the page reproduces the hosted reading of 0.612 after the third touch. The suite’s own touches land 1 to 2.5 s apart and are read about a second later. Evenly spaced, three touches cross 0.60 only if the first and third land within ${f1((2 * crossGapMs) / SECOND)} s.`, on: (v) => { S.gapS = v; render(); } });
-    const pixS = slider({ label: 'Seconds from the third touch to the hinge', min: 0.5, max: 40, step: 0.1, value: S.toPixelS, fmt: (v) => `${f1(v)} s`, sub: 'Fitted default: 2.6 s, at which the page computes the hinge as brand 0.601 and the four 0.353 · 0.336 · 0.303 · 0.245. Slide it out to a presenter’s pace and watch the Samsung claim fade before she reaches home.', on: (v) => { S.toPixelS = v; render(); } });
-    const askS = slider({ label: 'Seconds from the third touch to the re-ask', min: 5, max: 150, step: 1, value: S.reaskS, fmt: (v) => `${v} s`, sub: 'Default: 52 s, when the hosted suite re-asked (brand 0.398). On stage the page waits a minute after the press.', on: (v) => { S.reaskS = v; render(); } });
+    const gapS = slider({ label: 'Seconds between the Samsung touches', tip: TIPS.exGap, min: 0.5, max: 10, step: 0.1, value: S.gapS, fmt: (v) => `${f1(v)} s`, sub: `Fitted default: 3.5 s, with which the page reproduces the hosted reading of 0.612 after the third touch. The suite’s own touches land 1 to 2.5 s apart and are read about a second later. Evenly spaced, three touches cross 0.60 only if the first and third land within ${f1((2 * crossGapMs) / SECOND)} s.`, on: (v) => { S.gapS = v; render(); } });
+    const pixS = slider({ label: 'Seconds from the third touch to the hinge', tip: TIPS.exPix, min: 0.5, max: 40, step: 0.1, value: S.toPixelS, fmt: (v) => `${f1(v)} s`, sub: 'Fitted default: 2.6 s, at which the page computes the hinge as brand 0.601 and the four 0.353 · 0.336 · 0.303 · 0.245. Slide it out to a presenter’s pace and watch the Samsung claim fade before she reaches home.', on: (v) => { S.toPixelS = v; render(); } });
+    const askS = slider({ label: 'Seconds from the third touch to the re-ask', tip: TIPS.exAsk, min: 5, max: 150, step: 1, value: S.reaskS, fmt: (v) => `${v} s`, sub: 'Default: 52 s, when the hosted suite re-asked (brand 0.398). On stage the page waits a minute after the press.', on: (v) => { S.reaskS = v; render(); } });
     const resetT = h('button', { type: 'button', class: 'ib ib--ghost', text: 'Back to the fitted defaults' });
     resetT.addEventListener('click', () => {
       Object.assign(S, { region: EX_DEFAULTS.region, ad: EX_DEFAULTS.ad, device: EX_DEFAULTS.device, gapS: EX_DEFAULTS.gapS, toPixelS: EX_DEFAULTS.toPixelS, reaskS: EX_DEFAULTS.reaskS });
       regionSeg.set(S.region); adSeg.set(S.ad); devSeg.set(S.device); gapS.set(S.gapS); pixS.set(S.toPixelS); askS.set(S.reaskS); render();
     });
     mount.append(
-      instHead('Instrument · beats 1 to 5, recomputed', [LOCAL_TAG, ROOM_TAG, SYN_TAG]),
+      instHead('Instrument · beats 1 to 5, recomputed', [LOCAL_TAG, ROOM_TAG, SYN_TAG], TIPS.exHead),
+      ih('The six steps', TIPS.exSteps),
       stepsBar,
-      h('div', { class: 'ctrls' }, ctrlBlock('Region', regionSeg.el), ctrlBlock('Arrival', adSeg.el), ctrlBlock('Her device', devSeg.el), gapS.el, pixS.el, askS.el),
-      h('div', { class: 'btnrow' }, resetT),
-      h('div', { class: 'ex-grid' }, left, right),
+      h('div', { class: 'ctrls' }, ctrlBlock('Region', regionSeg.el, null, TIPS.exRegion), ctrlBlock('Arrival', adSeg.el, null, TIPS.exAd), ctrlBlock('Her device', devSeg.el, null, TIPS.exDev), gapS.el, pixS.el, askS.el),
+      h('div', { class: 'btnrow' }, resetT, hint(TIPS.exReset, 'the reset to the fitted defaults')),
+      h('div', { class: 'ex-grid' }, h('div', { class: 'ex-col' }, ih('This step, recomputed', TIPS.exLeft), left), h('div', { class: 'measured' }, ih('Measured on the service', TIPS.exRight), right)),
     );
     function render() {
       const steps = runScenario({ region: S.region, ad: S.ad, device: S.device, gapS: S.gapS, toPixelS: S.toPixelS, reaskS: S.reaskS });
@@ -1868,7 +2073,6 @@
       left.append(h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'candidate' }), h('th', { text: 'Σ ã × w + seeds × multiplier' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'outcome' }))), tb)));
       // Measured, beside it: FACTS.md §12, under the conditions it was measured in, and only those.
       clear(right);
-      right.append(h('p', { class: 'inst-h', text: 'Measured on the service' }));
       const ul = h('ul');
       const C = FACTS.conditions;
       const asMeasured = S.region === C.region && S.ad === C.ad && S.device === C.device;
@@ -1904,23 +2108,23 @@
     if (!mount) return;
     const base = (() => { const st = runScenario({})[4]; const r = st.decision.rows.find((x) => x.piece.id === 'promo-galaxy-s26-new-line'); return round3(r.score); })();
     const S = { n: 400, s: 22, p0: 0.04, n0: LEARN_DOC.stats.n0, gamma: 0, base, fan: 3 };
-    const sS = slider({ label: 's, successes (clicks) in her cell', min: 0, max: 400, step: 1, value: S.s, fmt: (v) => String(v), on: (v) => { S.s = Math.min(v, S.n); if (S.s !== v) sS.set(S.s); render(); } });
-    const nS = slider({ label: 'n, exposures of this item in her cell', min: 0, max: 3000, step: 10, value: S.n, fmt: (v) => String(v), sub: 'Decayed over the 21-day horizon.', on: (v) => { S.n = v; if (S.s > v) { S.s = v; sS.set(v); } sS.input.max = String(Math.max(1, v)); render(); } });
+    const sS = slider({ label: 's, successes (clicks) in her cell', tip: TIPS.s7s, min: 0, max: 400, step: 1, value: S.s, fmt: (v) => String(v), on: (v) => { S.s = Math.min(v, S.n); if (S.s !== v) sS.set(S.s); render(); } });
+    const nS = slider({ label: 'n, exposures of this item in her cell', tip: TIPS.s7n, min: 0, max: 3000, step: 10, value: S.n, fmt: (v) => String(v), sub: 'Decayed over the 21-day horizon.', on: (v) => { S.n = v; if (S.s > v) { S.s = v; sS.set(v); } sS.input.max = String(Math.max(1, v)); render(); } });
     sS.input.max = String(S.n);
-    const pS = slider({ label: 'p0, the slot’s rate in this cell', min: 0.005, max: 0.2, step: 0.005, value: S.p0, fmt: (v) => `${(v * 100).toFixed(1)} %`, on: (v) => { S.p0 = v; render(); } });
-    const n0S = slider({ label: 'n0, the shrinkage strength', min: 1, max: 300, step: 1, value: S.n0, fmt: (v) => String(v), sub: 'Published: 30.', on: (v) => { S.n0 = v; render(); } });
-    const gS = slider({ label: 'γ, the trust dial', min: 0, max: 1, step: 0.05, value: S.gamma, fmt: f2, sub: 'Published: 0 on every slot.', on: (v) => { S.gamma = v; render(); } });
-    const bS = slider({ label: 'the base score it multiplies', min: 0, max: 1, step: 0.001, value: S.base, fmt: f3, sub: 'Default: the Galaxy S26 offer at the hinge (worked example, step 4).', on: (v) => { S.base = v; render(); } });
-    const fanS = slider({ label: 'each coarser cell holds × more exposures', min: 1, max: 8, step: 0.5, value: S.fan, fmt: (v) => `× ${v}`, sub: 'Illustrative counts you set, for the ladder below.', on: (v) => { S.fan = v; render(); } });
+    const pS = slider({ label: 'p0, the slot’s rate in this cell', tip: TIPS.s7p0, min: 0.005, max: 0.2, step: 0.005, value: S.p0, fmt: (v) => `${(v * 100).toFixed(1)} %`, on: (v) => { S.p0 = v; render(); } });
+    const n0S = slider({ label: 'n0, the shrinkage strength', tip: TIPS.s7n0, min: 1, max: 300, step: 1, value: S.n0, fmt: (v) => String(v), sub: 'Published: 30.', on: (v) => { S.n0 = v; render(); } });
+    const gS = slider({ label: 'γ, the trust dial', tip: TIPS.s7gamma, min: 0, max: 1, step: 0.05, value: S.gamma, fmt: f2, sub: 'Published: 0 on every slot.', on: (v) => { S.gamma = v; render(); } });
+    const bS = slider({ label: 'the base score it multiplies', tip: TIPS.s7base, min: 0, max: 1, step: 0.001, value: S.base, fmt: f3, sub: 'Default: the Galaxy S26 offer at the hinge (worked example, step 4).', on: (v) => { S.base = v; render(); } });
+    const fanS = slider({ label: 'each coarser cell holds × more exposures', tip: TIPS.s7fan, min: 1, max: 8, step: 0.5, value: S.fan, fmt: (v) => `× ${v}`, sub: 'Illustrative counts you set, for the ladder below.', on: (v) => { S.fan = v; render(); } });
     const read = h('div', { class: 'readout' });
     const sentence = h('p', { class: 'inst-sentence inst-sentence--big' });
-    const chart = h('div', { class: 'chart-wrap' });
+    const chart = h('div');
     const ladderBody = h('tbody');
     mount.append(
-      instHead('Instrument · one item, one cell, one dial', [LOCAL_TAG, ['inputs here are yours, not measurements', true]]),
+      instHead('Instrument · one item, one cell, one dial', [LOCAL_TAG, ['inputs here are yours, not measurements', true]], TIPS.s7head),
       h('div', { class: 'ctrls' }, nS.el, sS.el, pS.el, n0S.el, gS.el, bS.el),
-      read, sentence,
-      h('div', { class: 'cols cols--wide' }, chart, h('div', null, h('p', { class: 'inst-h', text: 'The ladder: the finest cell with n ≥ nMin 30 answers' }), fanS.el,
+      ih('The estimate and the score', TIPS.s7read), read, sentence,
+      h('div', { class: 'cols cols--wide' }, framed('chart-wrap', chart, TIPS.s7chart, 'the chart of the pooled rate'), h('div', null, ih('The ladder: the finest cell with n ≥ nMin 30 answers', TIPS.s7ladder), fanS.el,
         h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'the cell, and its key' }), h('th', { class: 'num', text: 'n' }), h('th', { text: '' }))), ladderBody))),
       h('p', { class: 'inst-note', text: 'Every served decision is an exposure and every credited click a success, recorded from day one (src/learn/stats.ts:162-183). With γ at 0 those counts are kept and move nothing; once a cell has a lift in force, it is recorded on the receipt and ignored. On stage no cell has one yet, so the receipts read lift: null.' }),
     );
@@ -2086,9 +2290,11 @@
       ['What the slots learn', 'PUT /content/learn · served at learn r3, published 14:34:53 UTC · seed: scripts/seed-vantage.mjs:621-638 at c720907', PUBLISHED.learn, NOTES.learn, false],
     ];
     const wrap = h('div', { class: 'docs' });
-    for (const [title, ref, doc, notes, open] of docs) {
-      wrap.append(h('details', { class: 'doc', open: open || null }, h('summary', null, h('span', { class: 'doc-t', text: title }), h('span', { class: 'doc-r', text: ref })), annotatedBlock(doc, notes)));
-    }
+    const tips = [TIPS.s8reg, TIPS.s8slots, TIPS.s8learn];
+    docs.forEach(([title, ref, doc, notes, open], i) => {
+      const details = h('details', { class: 'doc', open: open || null }, h('summary', null, h('span', { class: 'doc-t', text: title }), h('span', { class: 'doc-r', text: ref })), annotatedBlock(doc, notes));
+      wrap.append(h('div', { class: 'doc-wrap has-hint' }, h('div', { class: 'hint-corner' }, hint(tips[i], title)), details));
+    });
     mount.append(h('p', { class: 'note', text: 'As served on the demo worker on 1 October 2026 (the demo’s facts sheet, §10), identical to the seed’s own definitions; annotated for reading, published as plain JSON. The arithmetic on this page reads the same values.' }), wrap);
   }
 
@@ -2152,11 +2358,11 @@
     });
     const sumTags = row.terms.filter((t) => t.w && t.a > 0).reduce((s, t) => s + t.a * t.w, 0);
     mount.append(
-      h('p', { class: 'rcpt-meta' }, h('span', null, h('b', { text: 'The launch offer, container 1, for a stranger from the ad' })),
+      h('p', { class: 'rcpt-meta' }, h('span', null, h('b', { text: 'The launch offer, container 1, for a stranger from the ad' }), hint(TIPS.s9receipt, 'the receipt')),
         h('span', { text: 'New York asserted through the labelled rehearsal override · intent new · no platform header · read 2026-10-01 22:29:44 UTC · the demo’s facts sheet, §9' })),
       annotatedBlock(RECEIPT, RECEIPT_NOTES),
       h('div', { class: 'inst recompute' },
-        instHead('Recompute it from the receipt, then from the documents', [LOCAL_TAG]),
+        instHead('Recompute it from the receipt, then from the documents', [LOCAL_TAG], TIPS.s9recompute),
         h('p', { class: 'inst-note', text: `From the receipt: the tag terms 1 × 0.2 + 1 × 0.15 + 1 × 0.1 + 1 × 0.1 = 0.55, all of it regional at λ = 1; plus the seed 0.06 = score_base 0.61; × 1.1 = 0.671 = score_final. Without the ad: 0.55 × 1.1 = 0.605. The seed’s share of the final score: 0.671 − 0.605 = +0.066, which is contextual.applied.` }),
         h('p', { class: 'inst-note', text: `From the documents, on this page: the tag terms ${f3(sumTags)}, score_base ${f3(round3(row.scoreBase))}, score_final ${f3(round3(row.score))}, the seed applied +${f3(row.seedApplied)}; the record’s drivers ${sameDrivers ? 'agree term for term' : 'differ'}.` }),
         h('table', { class: 'tbl' }, h('thead', null, h('tr', null, h('th', { text: 'the receipt’s candidates' }), h('th', { class: 'num', text: 'the service' }), h('th', { class: 'num', text: 'this page' }), h('th', { text: '' }))), body),
@@ -2166,7 +2372,7 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Section 10 · What your catalog needs: the mapping
+  // Section 10 · What we need from the customer: the mapping
   // ══════════════════════════════════════════════════════════════════════════
   function initS10() {
     const mount = $('s10-map');
@@ -2203,9 +2409,10 @@
         h('td', { 'data-k': 'decided?', text: decided })));
     }
     mount.append(
+      h('p', { class: 'mini-k' }, 'The registry’s dimensions, and the feed field each reads', hint(TIPS.s10dims, 'the dimension table')),
       h('table', { class: 'maptbl' }, h('thead', null, h('tr', null, h('th', { text: 'dimension' }), h('th', { text: 'feed field' }), h('th', { text: 'how it is read' }), h('th', { text: 'values (exact)' }))), body),
       h('p', { class: 'refline', text: 'The registry and the vocabulary as served (scripts/seed-vantage.mjs:81-112 at c720907; the demo’s facts sheet, §10 and §11).' }),
-      h('p', { class: 'mini-k', text: 'A promotion feed’s fields, and what the engine does with each' }),
+      h('p', { class: 'mini-k' }, 'A promotion feed’s fields, and what the engine does with each', hint(TIPS.s10feed, 'the promotion-feed table')),
       h('table', { class: 'maptbl' }, h('thead', null, h('tr', null, h('th', { text: 'feed field' }), h('th', { text: 'where it goes' }), h('th', { text: 'decided?' }))), feedBody),
       h('p', { class: 'refline', text: 'The demo’s facts sheet, §11. Several fields are eligibility or display, never scored: eligibility runs before scoring and the offer book goes to the page.' }),
     );

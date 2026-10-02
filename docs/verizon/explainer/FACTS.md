@@ -2,9 +2,9 @@
 
 **Internal. Lane E1, 2026-10-01.** The writers' only source; anything missing goes to the lead.
 
-**Revised 2026-10-01 by lane W3, at review R2's request:** §2's order of terms is corrected. The external term comes before stage (`decide.ts:291-294`, then `:295-304`). At the coordinator's request, §12's hosted-suite provenance now cites the transcript in the repo, and notes that the suite asserts New York from beat 3 onward. In a third round, §2's per-promotion count of multiply-adds is corrected for the deals slot, and §10 gains two definitions, objective and governanceVersion, for the technical note's appendix.
+**Revised 2026-10-01 by lane W3, at review R2's request:** §2's order of terms is corrected. The external term comes before stage (`decide.ts:291-294`, then `:295-304`). At the coordinator's request, §12's hosted-suite provenance now cites the transcript in the repo, and notes that the suite asserts New York from beat 3 onward. In a third round, §2's per-promotion count of multiply-adds is corrected for the deals slot, and §10 gains two definitions, objective and governanceVersion, for the technical note's appendix. In a fourth round, at the owner's direction, the sheet names no customer: the two mentions read "the customer", and the three repo paths that named the customer's folder are now relative to this sheet; no fact changed.
 
-**References.** `path:line` is code at commit `5ddc64d`; every engine path cited is identical at HEAD (`c720907`). Three files have changed since and are cited as at `5ddc64d`: `src/routes/vantage.ts` (its code now in `src/demos/kit/helpers.ts`), `src/routes/vantageColdStart.ts` (now `src/demos/kit/coldStartRoutes.ts`) and `public/vantage/vantage.js`. `L1 §5` is `docs/verizon/lanes/L1.md` §5. **E1 hosted** means read by this lane from `edge-platform-vantage`, 2026-10-01, 22:25–22:39 UTC: snapshots only (no event moved a prior), documents read with a five-minute read-only operator token, tenant reset at the end (open-slots r52, open-catalog r62).
+**References.** `path:line` is code at commit `5ddc64d`; every engine path cited is identical at HEAD (`c720907`). Three files have changed since and are cited as at `5ddc64d`: `src/routes/vantage.ts` (its code now in `src/demos/kit/helpers.ts`), `src/routes/vantageColdStart.ts` (now `src/demos/kit/coldStartRoutes.ts`) and `public/vantage/vantage.js`. `L1 §5` is `../lanes/L1.md` §5 (a path starting `../` is relative to this sheet's folder). **E1 hosted** means read by this lane from `edge-platform-vantage`, 2026-10-01, 22:25–22:39 UTC: snapshots only (no event moved a prior), documents read with a five-minute read-only operator token, tenant reset at the end (open-slots r52, open-catalog r62).
 
 ## 1. The affinity arithmetic (`src/reflex/core.ts`)
 
@@ -466,7 +466,7 @@ Served: reflex r3, slots r51, learn r3, catalog r61 (17 promotions, 4 heroes, 7 
 
 **Reads.** Events carry the product id: a held product's attributes win, else the event's own count, bounded as in §1 (`core.ts:481-506`); `/sort` carries attributes on the request. The offer book (`grammar`, `badge`, `cta`) goes to the page's `catalog.json`, never the engine (`seed-vantage.mjs:201-203`).
 
-**Verizon's grid fields** (research brief: "type, eligible intents, plan and line requirements, flash end date, priority, maximum flag and resulting monthly price", session scratchpad `research-telco-buying.md:105`; priority flag `:76`; not combinable `:102`):
+**The customer's promotion-grid fields** (research brief: "type, eligible intents, plan and line requirements, flash end date, priority, maximum flag and resulting monthly price", session scratchpad `research-telco-buying.md:105`; priority flag `:76`; not combinable `:102`):
 
 | Grid field | In Vantage | Decided? |
 |---|---|---|
@@ -487,7 +487,7 @@ Served: reflex r3, slots r51, learn r3, catalog r61 (17 promotions, 4 heroes, 7 
 
 ## 12. Measured numbers
 
-**Sources:** E1 hosted (22:29–22:38 UTC); **hosted suite** = the request-level output, `docs/verizon/lanes/evidence/suite-page-hosted-2026-10-01.txt` (an unchanged copy, 15:22 UTC; the README beside it names the script, the host, the time and the 112-of-112 result), whose revisions match F3's closing 112/112 run on worker `a04595db` (F3 §6); the rest as their lane notes say. The suite asserts New York from beat 3 onward (the transcript's beat-3 header: "back in New York").
+**Sources:** E1 hosted (22:29–22:38 UTC); **hosted suite** = the request-level output, `../lanes/evidence/suite-page-hosted-2026-10-01.txt` (an unchanged copy, 15:22 UTC; the README beside it names the script, the host, the time and the 112-of-112 result), whose revisions match F3's closing 112/112 run on worker `a04595db` (F3 §6); the rest as their lane notes say. The suite asserts New York from beat 3 onward (the transcript's beat-3 header: "back in New York").
 
 | Beat | Figure | Source |
 |---|---|---|
@@ -544,14 +544,14 @@ Served: reflex r3, slots r51, learn r3, catalog r61 (17 promotions, 4 heroes, 7 
 - **"We don't use a model."** The decision is itemised arithmetic, but a model seam exists. The room heard "No hidden model; it fits on an envelope" (script, beat 3); go no further.
 - **Any lift or revenue claim.** Inference is `unavailable`.
 - **"Under 200 ms."** The only sourced figure is doc 32 §5, from staging on 2026-09-05: 235 ms P50 inside the worker for a never-seen shopper, and 5 ms for a returning one (`docs/architecture/32-latency-numbers.md:14-17`, `:88-89`). Nothing has been timed on Vantage.
-- **Anything judging Verizon's past work**, "no limit", a bandit winner, or another customer's name (design §6).
+- **Anything judging the customer's past work**, "no limit", a bandit winner, or another customer's name (design §6).
 
 **Corrections to carry:** the engine's table lacks six weights (§1); "superseded" is the page's sentence (§4); the buy box is not a slot (§2); the four usually hold their order at the exit (L4 §6).
 
 ## Not sourced
 
 1. The 235 ms and "tens of ms" lines: doc 32 only (§13).
-2. The hosted suite figures for each beat: now in the repo, `docs/verizon/lanes/evidence/suite-page-hosted-2026-10-01.txt` (§12).
+2. The hosted suite figures for each beat: now in the repo, `../lanes/evidence/suite-page-hosted-2026-10-01.txt` (§12).
 3. +1.00 per click is a local figure (L5 §5). On the hosted worker, D1 recorded only that the report grew.
 4. Nothing has been measured at production τ.
 5. Nothing has been timed at 10,000 candidates.
