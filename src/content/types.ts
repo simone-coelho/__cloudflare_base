@@ -23,6 +23,14 @@ export interface ContentPiece extends ContentPieceLike {
   freshnessDate?: string;
   /** CW32 (BTIE A.3.6 `featured_product_ids`): the products the piece features, in the customer's product ids, so a shoppable module can be painted and a product decision joined. Carried, validated, never rewritten. */
   featuredProductIds?: string[];
+  /**
+   * The products this piece COMPLETES, in the customer's product ids: a dryer
+   * module completes the washer it pairs with, a mount the TV it fits. Carried
+   * and validated like `featuredProductIds`, never rewritten. It moves nothing
+   * by itself; a slot's `complements` rule reads it against the anchor product
+   * the request names (`ctx.anchor`) and prefers the pieces that complete it.
+   */
+  complements?: string[];
   /** CW33 (BTIE D11): the catalog's own stock flag. `false` removes the piece from every decision; absent or `true` means in stock. */
   inStock?: boolean;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
@@ -110,9 +118,19 @@ export interface SlotStrategy {
    * the slot has no contextual seeding at all.
    */
   seeds?: SeedRule[];
+  /**
+   * This slot prefers the pieces that complete the anchor product the request
+   * names (`ctx.anchor`, a product id), through the composer's `prefer` hook:
+   * a piece whose `complements` lists that id gains `weight` in its base score,
+   * itemised as a `completes` driver. Fails closed: a request that names no
+   * anchor prefers nothing. Personalization, so never on the holdout's default arm.
+   */
+  complements?: ComplementsRule;
 }
 
 export interface DiversityRule { dimension: string; max: number }
+/** A slot's preference for the pieces that complete the request's anchor product; `weight` in the engine's 0..1 rule range. */
+export interface ComplementsRule { weight: number }
 
 /**
  * The arrival signals a seed rule may read. Each is context, never learned

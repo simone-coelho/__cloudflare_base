@@ -145,6 +145,7 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   copy('journeyStageFit', list);
   copy('freshnessDate');
   copy('featuredProductIds', list);
+  copy('complements', list);
   copy('inStock', v => stockOf(v) ?? v);
   copy('merchandising', v => {
     if (csv && typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
@@ -256,7 +257,7 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
-  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock', 'merchandising',
+  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock', 'merchandising',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────

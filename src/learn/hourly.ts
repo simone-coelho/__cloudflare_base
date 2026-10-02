@@ -24,7 +24,8 @@ import { readRetention, requireRetention, mergeRetention, type RetentionEnv, typ
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
-import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy } from './report';
+import { attributionArm, canonicalReportJson, countDayObjects, presetPolicies, publishedAllocation, readWindowSummary, reportCoverage, reportKey, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, runReport, type ArmRow, type DayReport, type ReportPolicy,
+  addNamedOutcomes, creditNamedOutcome, emptyNamedOutcomes, namedOutcomeRow, validNamedOutcomes, type NamedOutcomes } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowIdentity, rawText, validDuplicateCounts,
@@ -253,6 +254,15 @@ export interface HourBrand {
   rows_hidden: number;
   /** W21 C1.08: the same hour by experimental assignment. Absent where this hour cannot say. */
   assignments?: HourAssignments;
+  /**
+   * The hour's named outcomes (`NamedOutcomes`, src/learn/report.ts), in the
+   * shape the day carries, so the hours of a day add into exactly what the raw
+   * day counts. Its ABSENCE is the statement that this hour cannot say: an
+   * aggregate folded before this member existed carries none, and a day summed
+   * with any such hour answers `namedOutcomes: null`. Every hour this build
+   * folds carries it, empty included.
+   */
+  named?: NamedOutcomes;
 }
 export interface HourAggregate {
   version: 1;
@@ -777,6 +787,12 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
         }
       }
     }
+    // A named outcome is credited, under its own name, to every decision the
+    // LEARNING policy pays — the raw-day branch's own rule (`src/learn/report.ts`),
+    // without the slot's reward filter. Its record count is taken in `buildHour`.
+    const learning = ctx.policies.find((p) => p.role === 'learning');
+    const named = learning ? namedOutcomeRow((hb.named ??= emptyNamedOutcomes()), o) : null;
+    if (named && learning) for (const c of attribute(o, ring, learning)) creditNamedOutcome(named, c.slot, c.item);
   }
   if (folded && ctx.from > state.through) state.through = ctx.from;   // the version-1 mark, still the newest hour folded
   if (older) {
@@ -895,6 +911,8 @@ function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand
         aggregateName(slot); visit(); if (brand === ids.brand) slots.add(slot);
         const e = aggregateMap(value); aggregateNumber(e.decisions); aggregateNumber(e.explored);
       }
+      // The named outcomes are admitted as strictly: present and malformed refuses the day.
+      if (Object.hasOwn(b, 'named')) { visit(); if (validNamedOutcomes(b.named) === null) unavailable(); }
       // W21 C1.08: the per-assignment member is admitted exactly as strictly as
       // the served one; a malformed one refuses the day rather than being
       // ignored, which would answer a denominator from a source read loosely.
@@ -1086,6 +1104,12 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const visitorOutcomes: VisitorOutcomes | null = assignments
     ? { version: 1, basis: 'enrolled_visitors', arms: armNames.map(arm => ({ arm, visitors: assignments.visitors[arm] ?? 0,
       byType: Object.fromEntries(Object.entries(assignments.outcomes[arm] ?? {}).sort(([x], [y]) => x.localeCompare(y))) })) } : null;
+  // The named outcomes, summed from the hours that carry this brand, and only
+  // where every one of them can say: one hour folded before the member existed
+  // makes the day's count unknowable, not smaller.
+  const brandHours = sorted.flatMap((a) => (a.brands[ids.brand] ? [a.brands[ids.brand]!] : []));
+  const namedOutcomes = brandHours.every((b) => validNamedOutcomes(b.named) !== null)
+    ? brandHours.reduce((day, b) => addNamedOutcomes(day, validNamedOutcomes(b.named)!), emptyNamedOutcomes()) : null;
   const last = sorted[sorted.length - 1];
   const counts = { decisions: hb.decisions, outcomes: hb.outcomes, visitors: hb.visitorsDay, truncated: sorted.some((a) => a.truncated) || !!hb.visitorsIncomplete,
     ...(hb.duplicates ? { duplicates: hb.duplicates } : {}) };
@@ -1115,6 +1139,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
       ? Math.min(...sorted.map(a => Number.isFinite(a.horizonMs) && a.horizonMs >= 0 ? a.horizonMs : 0)) : 0),
     armVisitors,
     visitorOutcomes,
+    namedOutcomes,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
     hours,
     coverage: reportCoverage({ counts, hours }, {
@@ -1547,7 +1572,12 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     const counts = (brands[duplicate.brand] ??= emptyBrand()).duplicates ??= { decisions: 0, outcomes: 0 };
     counts[duplicate.stream === 'decision' ? 'decisions' : 'outcomes'] += duplicate.count;
   }
-  for (const o of outcomes) (brands[o.brand] ??= emptyBrand()).outcomes += 1;
+  for (const o of outcomes) {
+    const hb = (brands[o.brand] ??= emptyBrand());
+    hb.outcomes += 1;
+    const named = namedOutcomeRow((hb.named ??= emptyNamedOutcomes()), o);
+    if (named) named.outcomes += 1;
+  }
   if (tombs.size) {
     for (const d of loaded.decisions) if (hidden(tombs, d)) (brands[d.entry.brand] ??= emptyBrand()).rows_hidden += 1;
     for (const o of loaded.outcomes) if (hidden(tombs, o)) (brands[o.brand] ??= emptyBrand()).rows_hidden += 1;
@@ -1640,6 +1670,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     // truth — and one whose membership this fold could not account for withdraws
     // the member entirely, which is what `coverage.unassignedHours` then names.
     if (unaccounted.has(brand)) delete b.assignments; else b.assignments ??= emptyAssignments();
+    b.named ??= emptyNamedOutcomes();
     try {
       b.computation = computationBasis(learn,
         Object.entries(b.policies).map(([name, p]) => ({ name, role: p.role, policy: p.policy })),

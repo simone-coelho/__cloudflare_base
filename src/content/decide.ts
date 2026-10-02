@@ -101,6 +101,14 @@ export interface DecideInput {
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
 
+/**
+ * The request context signal that names the anchor product, the product the
+ * page is about (`ctx.anchor=<product id>` on the snapshot), for the slots
+ * that prefer the pieces completing it. It is the signal the request contract
+ * already carries for this; there is no separate viewed-product member.
+ */
+export const ANCHOR_SIGNAL = 'anchor';
+
 /** The sample bound both existing advisory channels carry; the count stays whole. */
 const CONSTRAINT_WARNING_SAMPLE = 50;
 
@@ -166,6 +174,19 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
   const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
+  // The slots that prefer what completes the anchor product the request names,
+  // through the composer's `prefer` hook. The anchor is context the page asserts,
+  // never evidence about the shopper and never kept beyond the receipt's driver.
+  // FAIL CLOSED: a request that names no anchor prefers nothing, and a slot rule
+  // that is not a finite weight in (0, 1] is ignored rather than guessed at.
+  // Personalization, so never on the holdout's default arm.
+  const anchorSignal = i.eligibility?.signals?.[ANCHOR_SIGNAL];
+  const anchor = typeof anchorSignal === 'string' ? anchorSignal.trim() : '';
+  const completesAnchor = (p: ContentPieceLike): boolean => anchor !== '' && ((p as ContentPiece).complements ?? []).includes(anchor);
+  const complementsOf = new Map<string, number>(i.arm === 'default' || anchor === '' ? [] : i.slots.flatMap((s) => {
+    const w = s.complements?.weight;
+    return typeof w === 'number' && Number.isFinite(w) && w > 0 && w <= 1 ? [[s.slot, w] as const] : [];
+  }));
   const specs: ContentSlotSpec[] = i.slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
@@ -176,6 +197,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
     // CW33: the slot's diversity rule, applied by the composer at the take.
     ...(s.diversity ? { diversity: s.diversity } : {}),
+    ...(complementsOf.has(s.slot) ? { prefer: { test: completesAnchor, bonus: complementsOf.get(s.slot)!, label: anchor } } : {}),
   }));
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
@@ -434,6 +456,15 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     return { ...summary, contribution: Math.round(contribution * 1000) / 1000 };
   };
   for (const d of decisions) {
+    // The composer keeps a served piece's four strongest drivers, so a `completes`
+    // bonus smaller than four interest terms would leave the receipt without the
+    // reason it was preferred. It is itemised whenever it applied, never claimed
+    // where it did not: only a ranked piece that completes the anchor in a slot
+    // whose rule was in force.
+    if (complementsOf.has(d.slot) && d.strategy !== 'tenant-pinned' && !d.explain.drivers.some((x) => x.dim === 'completes')) {
+      const piece = byId.get(d.contentId);
+      if (piece && completesAnchor(piece)) d.explain.drivers.push({ dim: 'completes', value: anchor, a: 1, weight: complementsOf.get(d.slot)! });
+    }
     const r = regionalOf(d);
     if (r) d.explain.drivers.push({ dim: 'regional', value: r.region, a: r.lambda, weight: Math.round((r.contribution / (r.lambda || 1)) * 1000) / 1000 });
     if (ext?.status === 'ok') {

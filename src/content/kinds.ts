@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
 import { platformWordOf } from '@/services/platform';
-import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ComplementsRule, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -33,7 +33,7 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
   'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
-  'featuredProductIds', 'inStock']);
+  'featuredProductIds', 'complements', 'inStock']);
 
 /**
  * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
@@ -189,6 +189,12 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     if (!Array.isArray(p.featuredProductIds) || !p.featuredProductIds.every(isStr)) errors.push(`${at}.featuredProductIds: array of product id strings`);
     else featuredProductIds = [...new Set((p.featuredProductIds as string[]).map((x) => x.trim()).filter(Boolean))];
   }
+  // The products the piece completes, validated exactly as the products it features are.
+  let complements: string[] | undefined;
+  if (p.complements !== undefined) {
+    if (!Array.isArray(p.complements) || !p.complements.every(isStr)) errors.push(`${at}.complements: array of product id strings`);
+    else complements = [...new Set((p.complements as string[]).map((x) => x.trim()).filter(Boolean))];
+  }
   if (p.inStock !== undefined && typeof p.inStock !== 'boolean') errors.push(`${at}.inStock: boolean when present`);
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
@@ -197,6 +203,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(journeyStageFit ? { journeyStageFit } : {}),
     ...(isStr(p.freshnessDate) ? { freshnessDate: p.freshnessDate } : {}),
     ...(featuredProductIds && featuredProductIds.length ? { featuredProductIds } : {}),
+    ...(complements && complements.length ? { complements } : {}),
     ...(typeof p.inStock === 'boolean' ? { inStock: p.inStock } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
@@ -406,6 +413,13 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.windowHours) || f.windowHours <= 0 || !isNum(f.cap) || !Number.isInteger(f.cap) || f.cap < 1) errors.push(`${at}.fatigue: { weight 0..1, windowHours > 0, cap integer ≥ 1 }`);
     else fatigue = { weight: f.weight, windowHours: f.windowHours, cap: f.cap };
   }
+  // The composer's `prefer` hook, published: prefer what completes the request's anchor product.
+  let complements: ComplementsRule | undefined;
+  if (s.complements !== undefined) {
+    const c = s.complements;
+    if (!isRecord(c) || !isNum(c.weight) || c.weight < 0 || c.weight > 1) errors.push(`${at}.complements: { weight 0..1 }`);
+    else complements = { weight: c.weight };
+  }
   let diversity: DiversityRule | undefined;
   if (s.diversity !== undefined) {
     const d = s.diversity;
@@ -428,7 +442,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}),
+    ...(seeds ? { seeds } : {}), ...(complements ? { complements } : {}),
   };
 }
 
