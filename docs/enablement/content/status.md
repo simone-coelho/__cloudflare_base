@@ -18,7 +18,7 @@ Engine facts as of commit 8b4f74c, October 2, 2026. Every word follows the [Glos
 | The site keeps its own defaults, and they render whenever the engine is silent. | **Built** | |
 | The site's consent banner passes the visitor's explicit choice; nothing happens without it. | **Built** | |
 | Product events carry the attributes the registry reads, because the engine holds no product catalog for a customer. | **Built** | |
-| Every setting is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision. | **Built** | No propagation time is promised |
+| Every rule and weight the brand sets is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision; identity and access settings are worker configuration set by an engineer. | **Built** | No propagation time is promised |
 | The brand's team works in the operator console; engineers set the deployment's own settings, such as its tenants, keys, allowed origins and retention. | **Built** | The catalog and arrival seeds have no console screen and are published through the API |
 | Each brand is a tenant: everything it owns sits under its own prefix, and nothing pools across brands. | **Built** | Engineers declare a deployment's tenants |
 | Design-time tagging with the brand's own AI model, outside the decision; a person approves every tag before anything is published. | **Built** | Off by default; it needs provider approvals, and sample calibration is open |
