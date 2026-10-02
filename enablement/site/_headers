@@ -1,14 +1,16 @@
 # Response headers for every address on the internal enablement site.
-# Workers static assets read this file when the site is deployed; the file itself is never served.
-# Check it before every deploy:  node enablement/check-site.mjs
+# The assets binding applies this file to every page the gate (enablement/worker.mjs) serves; the file
+# itself is never served. Check it before every deploy:  node enablement/check-site.mjs
 #
-# The Content-Security-Policy allows nothing except the inline style each page carries, named by its
-# SHA-256 (never unsafe-inline), and the inline icon. After editing the CSS in a page, run
+# The Content-Security-Policy lets a page load its stylesheet and its script from this site only
+# (/site.css and /site.js, as 'self'), images only as inline data: URIs (the tab icon), and nothing else:
+# no inline script, no other address, and no inline style unless named here by its SHA-256 (never
+# unsafe-inline). One page still carries an inline style: E0's 404.html, allowed by the single hash beside
+# 'self'. When that style moves to /site.css, delete the hash; the preflight fails until you do, and
 #   node enablement/check-site.mjs --hashes
-# and paste its style-src value into the policy below. A stale hash leaves the page unstyled and the
-# browser console reports that it refused to apply the inline style.
+# prints the style-src value the pages need.
 /*
-  Content-Security-Policy: default-src 'none'; style-src 'sha256-F6R0q2n/1TfqeKlCaZDEnovWp0bG3RcZ1R/kKNwiKRU=' 'sha256-LRgjqgMTPuMOlIMph0nB0RLZCWCUAAVXNVuSTjM/u7w='; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self' 'sha256-F6R0q2n/1TfqeKlCaZDEnovWp0bG3RcZ1R/kKNwiKRU='; script-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

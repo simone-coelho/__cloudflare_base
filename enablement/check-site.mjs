@@ -6,11 +6,17 @@
 //   node enablement/check-site.mjs --hashes   print the style-src value for enablement/site/_headers
 //
 // No dependencies, changes nothing, deploys nothing. It proves from the files alone what the site
-// promises: the Content Security Policy in site/_headers allows exactly the inline styles the pages
-// carry (a stale hash leaves a page unstyled), no page runs anything or loads anything from another
-// address, the package name is written in one place, and wrangler.enablement.toml names the gate
-// (enablement/worker.mjs) in front of every request, with the ASSETS binding and no variable or
-// credential. It also proves the gate holds no secret and runs the gate's unit tests.
+// promises:
+//   - every page and file the site needs is there, and the served folder holds nothing else;
+//   - the policy in site/_headers is exactly the page policy: styles and scripts from this site only
+//     ('self'), images only as data: URIs, and a hash only for an inline style still in use;
+//   - a page loads nothing but /site.css and /site.js, runs no other script, and links out only to the
+//     site itself and the three demo workers; site.css and site.js load and store nothing;
+//   - the package name is written once on every page, inside its h1, the same string everywhere;
+//   - wrangler.enablement.toml names the gate (enablement/worker.mjs) in front of every request, with
+//     the ASSETS binding and no variable or credential, and nothing served or configured holds one;
+//   - the gate holds no secret and its unit tests pass;
+//   - every page says what its source says (node enablement/render-check.mjs, lane P1's text check).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -19,9 +25,37 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const siteDir = join(root, 'enablement', 'site');
+const figuresDir = join(siteDir, 'figures');
+const sourceFiguresDir = join(root, 'docs', 'enablement', 'figures');
 const configPath = join(root, 'wrangler.enablement.toml');
 const workerPath = join(root, 'enablement', 'worker.mjs');
 const workerTestPath = join(root, 'enablement', 'worker.test.mjs');
+const renderCheckPath = join(root, 'enablement', 'render-check.mjs');
+const renderPagesPath = join(root, 'enablement', 'render-pages.mjs');
+
+// The pages the site must have, beside E0's 404.html. Each <name>.html is served at /<name> (index at /).
+const PAGES = ['index', 'what-it-is', 'selling-it', 'how-it-works', 'status', 'credits', 'glossary', 'demos'];
+// The only script and the only stylesheet a page may load, written exactly so.
+const SCRIPT_TAG = '<script src="/site.js" defer></script>';
+const STYLESHEET_TAG = '<link rel="stylesheet" href="/site.css">';
+// The only addresses an <a href> may name besides the site's own paths: the site and the three demo workers.
+const LINK_HOSTS = new Set([
+  'edge-platform-bti.expedge.workers.dev',
+  'edge-platform.expedge.workers.dev',
+  'edge-platform-top-offers.expedge.workers.dev',
+  'edge-platform-vantage.expedge.workers.dev',
+]);
+// The page policy, exactly. Only style-src may add a hash, and only for an inline style still in use.
+const POLICY = {
+  'default-src': ["'none'"],
+  'style-src': ["'self'"],
+  'script-src': ["'self'"],
+  'img-src': ['data:'],
+  'base-uri': ["'none'"],
+  'form-action': ["'none'"],
+  'frame-ancestors': ["'none'"],
+};
+const POLICY_TEXT = Object.entries(POLICY).map(([k, v]) => `${k} ${v.join(' ')}`).join('; ');
 
 // The only things wrangler.enablement.toml may say. Widen these on purpose, never by accident.
 // main, assets.binding and assets.run_worker_first were added on purpose by lane E2 for the gate.
@@ -42,69 +76,149 @@ const pages = files.filter((f) => extname(f).toLowerCase() === '.html').map((f) 
 const hashesInUse = [...new Set(pages.flatMap((p) => inlineStyles(p.html).map(sha)))];
 
 if (process.argv.includes('--hashes')) {
-  console.log(`style-src ${hashesInUse.join(' ')}`);
+  console.log(`style-src ${["'self'", ...hashesInUse].join(' ')}`);
   process.exit(0);
 }
 
 const problems = [];
 const check = (cond, what) => { console.log(`${cond ? 'ok   ' : 'FAIL '} ${what}`); if (!cond) problems.push(what); };
 
-// 1. The files that must exist.
-for (const f of ['index.html', '404.html', '_headers']) check(existsSync(join(siteDir, f)), `enablement/site/${f} exists`);
+// 1. The files that must exist, and nothing else in the served folder.
+for (const f of [...PAGES.map((p) => `${p}.html`), '404.html', '_headers', 'site.css', 'site.js']) check(existsSync(join(siteDir, f)), `enablement/site/${f} exists`);
+const figureFiles = existsSync(figuresDir) ? readdirSync(figuresDir).filter((n) => n.toLowerCase().endsWith('.svg')).sort() : [];
+const staleFigures = figureFiles.filter((n) => existsSync(join(sourceFiguresDir, n)) && read(join(sourceFiguresDir, n)) !== read(join(figuresDir, n)));
+check(figureFiles.length > 0 && staleFigures.length === 0,
+  `enablement/site/figures/ holds the figures, each the same as its source in docs/enablement/figures/ (${figureFiles.join(', ') || 'none'}${staleFigures.length ? `; differs: ${staleFigures.join(', ')}` : ''})`);
+for (const f of [renderCheckPath, renderPagesPath]) check(existsSync(f), `${rel(f)} exists`);
+const SERVED_SHAPE = /^(?:[a-z0-9-]+\.html|site\.css|site\.js|_headers|figures\/[a-z0-9-]+\.svg)$/;
+const strays = files.map((f) => relative(siteDir, f).split(sep).join('/')).filter((f) => !SERVED_SHAPE.test(f));
+check(strays.length === 0, `enablement/site/ holds only pages, site.css, site.js, figures/*.svg and _headers${strays.length ? ` (also: ${strays.join(', ')})` : ''}`);
 
-// 2. The policy in _headers: strict, and exactly matching the inline styles.
+// 2. The policy in _headers: one rule for every address, and exactly the page policy.
 const headersFile = join(siteDir, '_headers');
 const headersText = existsSync(headersFile) ? read(headersFile) : '';
 const headerValue = (name) => {
   const line = headersText.split('\n').map((l) => l.trim()).find((l) => l.toLowerCase().startsWith(`${name.toLowerCase()}:`));
   return line ? line.slice(name.length + 1).trim() : '';
 };
+const ruleLines = headersText.split('\n').filter((l) => l.trim() && !l.trim().startsWith('#'));
+const rulePaths = ruleLines.filter((l) => !/^\s/.test(l)).map((l) => l.trim());
+const headerNames = ruleLines.filter((l) => /^\s/.test(l)).map((l) => l.trim().split(':')[0].trim().toLowerCase());
+check(rulePaths.length === 1 && rulePaths[0] === '/*' && !headerNames.some((n) => n.startsWith('!')) && new Set(headerNames).size === headerNames.length,
+  '_headers: one rule, /*, for every address, naming each header once and removing none');
 const directives = {};
+const repeated = [];
 for (const d of headerValue('Content-Security-Policy').split(';').map((x) => x.trim()).filter(Boolean)) {
-  const [k, ...v] = d.split(/\s+/); directives[k.toLowerCase()] = v;
+  const [k, ...v] = d.split(/\s+/);
+  if (k.toLowerCase() in directives) repeated.push(k);
+  directives[k.toLowerCase()] = v;
 }
 const none = (d) => JSON.stringify(directives[d]) === JSON.stringify(["'none'"]);
 check(none('default-src'), "CSP: default-src is 'none'");
 for (const d of ['base-uri', 'form-action', 'frame-ancestors']) check(none(d), `CSP: ${d} is 'none'`);
-check(!Object.values(directives).flat().some((t) => /^('unsafe-inline'|'unsafe-eval'|\*|https?:|ws:|wss:)$/.test(t)), 'CSP: no unsafe-inline, unsafe-eval, wildcard or remote source');
+// Every source must be 'self', 'none', data: or a style hash: that refuses unsafe-inline, unsafe-eval,
+// wildcards, nonces, blob: and every host or scheme source alike.
+const strangeSources = Object.values(directives).flat().filter((t) => !/^('self'|'none'|'sha256-[A-Za-z0-9+/]{43}='|data:)$/.test(t));
+check(Object.keys(directives).length > 0 && strangeSources.length === 0,
+  `CSP: no unsafe-inline, unsafe-eval, wildcard or remote source${strangeSources.length ? ` (found ${strangeSources[0]})` : ''}`);
 const allowedHashes = (directives['style-src'] || []).filter((t) => t.startsWith("'sha256-"));
+const withoutHashes = Object.fromEntries(Object.entries(directives).map(([k, v]) => [k, k === 'style-src' ? v.filter((t) => !t.startsWith("'sha256-")) : v]));
+const samePolicy = repeated.length === 0 && Object.keys(withoutHashes).length === Object.keys(POLICY).length
+  && Object.entries(POLICY).every(([k, v]) => JSON.stringify(withoutHashes[k]) === JSON.stringify(v));
+check(samePolicy, `CSP: the policy is ${POLICY_TEXT}, each directive once (a hash may stand beside 'self' in style-src)`);
 for (const p of pages) for (const css of inlineStyles(p.html)) check(allowedHashes.includes(sha(css)), `CSP allows the inline style of ${p.file} (${sha(css)})`);
 check(allowedHashes.every((h) => hashesInUse.includes(h)), 'CSP lists no hash that no page uses');
 check(/nosniff/i.test(headerValue('X-Content-Type-Options')), 'header: X-Content-Type-Options nosniff');
+check(/^DENY$/i.test(headerValue('X-Frame-Options')), 'header: X-Frame-Options DENY');
 check(/no-referrer/i.test(headerValue('Referrer-Policy')), 'header: Referrer-Policy no-referrer');
 check(/no-store/i.test(headerValue('Cache-Control')) && /private/i.test(headerValue('Cache-Control')), 'header: Cache-Control private, no-store');
 check(/max-age=\d{7,}/.test(headerValue('Strict-Transport-Security')), 'header: Strict-Transport-Security with a long max-age');
+check(/noindex/i.test(headerValue('X-Robots-Tag')), 'header: X-Robots-Tag noindex');
 
-// 3. The pages run nothing, store nothing and fetch nothing from anywhere else.
+// 3. A page runs no script but /site.js, loads nothing but /site.css and /site.js, and its links leave
+//    only for the site itself and the three demo workers. site.css and site.js load and store nothing.
 const BANNED_TAG = /<(script|form|input|select|textarea|iframe|frame|object|embed|applet|base)\b/i;
 const SCHEME = /^\s*([a-z][a-z0-9+.-]*:|\/\/)/i;
+const ICON_TAG = /^<link rel="icon" href="data:image\/[^"]*">$/i;
+const ADDRESS_ATTR = /\s(href|xlink:href|src|srcset|action|formaction|poster|data|cite|background|ping)\s*=\s*("([^"]*)"|'([^']*)')/gi;
+// An attribute's address as the browser reads it: character references decoded, tabs and newlines dropped.
+const asRead = (v) => v
+  .replace(/&#x([0-9a-f]+);?/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);?/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&(colon|sol|bsol|tab|newline|period);/gi, (_, n) => ({ colon: ':', sol: '/', bsol: '\\', tab: '\t', newline: '\n', period: '.' })[n.toLowerCase()])
+  .replace(/[\t\n\r]/g, '')
+  .trim();
+// A path on this site or a fragment: no scheme, no "//" host, no backslash (browsers read "/\x" as "//x").
+const onSite = (v) => !SCHEME.test(asRead(v)) && !asRead(v).includes('\\');
+const toDemoOrSite = (v) => {
+  try {
+    const u = new URL(asRead(v));
+    return u.protocol === 'https:' && LINK_HOSTS.has(u.hostname) && !u.username && !u.password && !u.port;
+  } catch {
+    return false;
+  }
+};
+const cssLoads = (css) => [...css.matchAll(/url\(\s*["']?([^)"']*)/gi)].map((m) => m[1].trim()).filter((u) => !/^(data:|#)/i.test(u));
+const cssLoadsSomething = (css) => cssLoads(css).length > 0 || /@import|@font-face/i.test(css);
 for (const p of pages) {
   const html = noComments(p.html);
-  check(!BANNED_TAG.test(html), `${p.file}: no script, form, input, iframe, object, embed or base element`);
+  const scriptTags = html.split(SCRIPT_TAG).length - 1;
+  check(scriptTags <= 1 && !BANNED_TAG.test(html.split(SCRIPT_TAG).join('')),
+    `${p.file}: no script but ${SCRIPT_TAG}, and no form, input, iframe, object, embed or base element`);
   check(!/\son[a-z]+\s*=|\sstyle\s*=|javascript:|http-equiv\s*=/i.test(html), `${p.file}: no event handler, style attribute, javascript: URL or http-equiv`);
-  const badLinks = [...html.matchAll(/<link\b[^>]*>/gi)].filter((m) => !/\brel\s*=\s*["']?icon\b/i.test(m[0]));
-  check(badLinks.length === 0, `${p.file}: the only link element is the inline icon`);
-  const external = [];
-  for (const m of html.matchAll(/<(\w+)\b([^>]*)>/g)) {
-    for (const a of m[2].matchAll(/\b(href|src|action|formaction|poster|srcset|data|cite|background|ping)\s*=\s*("([^"]*)"|'([^']*)')/gi)) {
+  const badLinks = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]).filter((t) => t !== STYLESHEET_TAG && !ICON_TAG.test(t));
+  check(badLinks.length === 0, `${p.file}: the only link elements are the inline icon and ${STYLESHEET_TAG}`);
+  const loadsOut = [];
+  const linksOut = [];
+  for (const m of html.matchAll(/<([a-zA-Z][\w:-]*)\b([^>]*)>/g)) {
+    const tag = m[1].toLowerCase();
+    for (const a of m[2].matchAll(ADDRESS_ATTR)) {
+      const name = a[1].toLowerCase();
       const v = a[3] ?? a[4];
-      const inlineIcon = m[1].toLowerCase() === 'link' && /^data:image\//i.test(v);
-      if (SCHEME.test(v) && !inlineIcon) external.push(v);
+      if ((tag === 'a' || tag === 'area') && name === 'href') {
+        if (!onSite(v) && !toDemoOrSite(v)) linksOut.push(v);
+      } else if (!(tag === 'link' && name === 'href' && /^data:image\//i.test(v)) && !onSite(v)) {
+        loadsOut.push(v);
+      }
     }
+    for (const u of cssLoads(asRead(m[2]))) loadsOut.push(`url(${u})`);
   }
-  const css = inlineStyles(p.html);
-  const cssUrls = css.flatMap((c) => [...c.matchAll(/url\(\s*["']?([^)"']+)/gi)].map((m) => m[1]).filter((u) => !/^(data:|#)/i.test(u)));
-  check(external.length === 0 && cssUrls.length === 0 && !css.some((c) => /@import|@font-face/i.test(c)),
-    `${p.file}: nothing is loaded from another address${external.length ? ` (found ${external[0]})` : ''}`);
+  check(loadsOut.length === 0 && !inlineStyles(p.html).some(cssLoadsSomething),
+    `${p.file}: nothing is loaded from another address${loadsOut.length ? ` (found ${loadsOut[0]})` : ''}`);
+  check(linksOut.length === 0, `${p.file}: links leave only for the site itself and the three demo workers${linksOut.length ? ` (found ${linksOut[0]})` : ''}`);
 }
+const siteCssPath = join(siteDir, 'site.css');
+const siteJsPath = join(siteDir, 'site.js');
+const siteCss = existsSync(siteCssPath) ? read(siteCssPath) : '';
+const siteJs = existsSync(siteJsPath) ? read(siteJsPath) : '';
+check(siteCss !== '' && !cssLoadsSomething(siteCss), 'site.css loads nothing: no url() but data:, no @import, no @font-face');
+const SCRIPT_API = [
+  [/\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|\bimport\s*\(/, 'a network call'],
+  [/localStorage|sessionStorage|indexedDB|cookieStore|document\.cookie|\bcaches\./, 'storage'],
+  [/\beval\s*\(|\bFunction\s*\(|set(?:Timeout|Interval)\s*\(\s*['"`]/, 'code built from a string'],
+  [/innerHTML|outerHTML|insertAdjacentHTML|document\.write/, 'HTML written from a string'],
+];
+const scriptHits = SCRIPT_API.filter(([re]) => re.test(siteJs)).map(([, what]) => what);
+check(siteJs !== '' && scriptHits.length === 0, `site.js makes no network call, uses no storage, builds no code or HTML from a string${scriptHits.length ? ` (found ${scriptHits.join(', ')})` : ''}`);
 
-// 4. The package name is written once.
+// 4. The package name: once on every page, inside its h1, the same string everywhere, nowhere else.
+const NAME_ELEMENT = /<(\w+)\b[^>]*\bid="package-name"[^>]*>([\s\S]*?)<\/\1>/;
 const index = pages.find((p) => p.file.endsWith('/index.html'));
-const named = index && noComments(index.html).match(/<(\w+)\b[^>]*\bid="package-name"[^>]*>([\s\S]*?)<\/\1>/);
-const packageName = named ? named[2].trim() : '';
-check(Boolean(packageName) && (noComments(index.html).match(/\bid="package-name"/g) || []).length === 1, 'index.html has exactly one element with id="package-name"');
-const occurrences = packageName ? [...pages.map((p) => noComments(p.html)), headersText].reduce((n, t) => n + t.split(packageName).length - 1, 0) : 0;
-check(occurrences === 1, `the package name is written in one place only (found ${occurrences})`);
+const packageName = index ? ((noComments(index.html).match(NAME_ELEMENT) || [])[2] || '').trim() : '';
+check(Boolean(packageName), 'index.html names the package in an element with id="package-name"');
+const contentPages = pages.filter((p) => !p.file.endsWith('/404.html'));
+for (const p of contentPages) {
+  const html = noComments(p.html);
+  const ids = (html.match(/\bid="package-name"/g) || []).length;
+  const h1 = (html.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/i) || [''])[0];
+  const inH1 = ((h1.match(NAME_ELEMENT) || [])[2] || '').trim();
+  const times = packageName ? html.split(packageName).length - 1 : 0;
+  check(ids === 1 && inH1 === packageName && times === 1,
+    `${p.file}: the package name once, in the h1's element with id="package-name", the same as index.html's (ids ${ids}, in the h1 ${inH1 === packageName ? 'yes' : 'no'}, written ${times} time${times === 1 ? '' : 's'})`);
+}
+const otherServed = files.filter((f) => !contentPages.some((p) => p.file === rel(f)) && (TEXT.has(extname(f).toLowerCase()) || f.endsWith('_headers')));
+const nameElsewhere = packageName ? otherServed.filter((f) => noComments(read(f)).includes(packageName)).map(rel) : [];
+check(nameElsewhere.length === 0, `the package name is in no other served file (404.html, site.css, site.js, the figures, _headers)${nameElsewhere.length ? ` (found in ${nameElsewhere.join(', ')})` : ''}`);
 
 // 5. The worker config: the gate in front of the pages, one binding, no variable or credential.
 const configText = existsSync(configPath) ? read(configPath) : '';
@@ -190,6 +304,13 @@ const tests = spawnSync(process.execPath, ['--test', '--test-reporter=tap', work
 const tally = (label) => ((tests.stdout || '').match(new RegExp(`^# ${label} (\\d+)$`, 'm')) || [])[1] ?? '?';
 check(tests.status === 0, `node --test enablement/worker.test.mjs passes (${tally('pass')} of ${tally('tests')} tests)`);
 if (tests.status !== 0) console.log((tests.stdout || '').split('\n').filter((l) => /^not ok|^\s+(error|expected|actual):/.test(l)).slice(0, 24).join('\n') || tests.stderr || String(tests.error));
+
+// 8. The text check: every page says what its source says (lane P1's enablement/render-check.mjs).
+const textCheck = existsSync(renderCheckPath) ? spawnSync(process.execPath, [renderCheckPath], { cwd: root, encoding: 'utf8', timeout: 120000 }) : null;
+const textLines = (textCheck?.stdout || '').split('\n').map((l) => l.trim()).filter(Boolean);
+const textSummary = textLines.find((l) => /^\d+ problem\(s\)|All checks passed/.test(l)) || (textCheck ? `exit ${textCheck.status}` : 'the file is missing');
+check(textCheck?.status === 0, `node enablement/render-check.mjs passes (${textSummary.replace(/:$/, '')})`);
+if (textCheck && textCheck.status !== 0) console.log(textLines.filter((l) => l.startsWith('FAIL')).slice(0, 24).map((l) => `      render-check: ${l}`).join('\n') || textCheck.stderr || String(textCheck.error));
 
 console.log(problems.length ? `\n${problems.length} problem(s). Do not deploy.` : '\nAll checks passed.');
 process.exit(problems.length ? 1 : 0);
