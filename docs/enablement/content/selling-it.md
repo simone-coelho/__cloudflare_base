@@ -58,7 +58,7 @@ These are the rows an account executive needs. Every row, with its caveat, is on
 
 | What happens | Verdict |
 |---|---|
-| Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | **Built** |
+| Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded when its slots use the default served basis; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | **Built** |
 | A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot. | **Built** |
 | Outcomes are credited to the decision that earned them, within windows the brand can set; a named partner outcome is never reported as a sale. | **Built** |
 | The day report is an attribution diagnostic, with no claim of lift. | **Built** |
