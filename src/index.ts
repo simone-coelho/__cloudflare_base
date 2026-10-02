@@ -51,6 +51,7 @@ import { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk 
 import { topOffersRoutes } from '@/routes/topOffers'; // Lantern & Lane merchandiser half (docs/qvc)
 import { vantageRoutes } from '@/routes/vantage'; // Vantage carrier demo: beats and receipts (docs/verizon)
 import { vantageColdStartRoutes } from '@/routes/vantageColdStart'; // Vantage cold-start panel (docs/verizon)
+import { ohRoutes, ohColdStartRoutes } from '@/routes/oh'; // OH demo: beats, receipts and the cold-start panel (docs/oh)
 
 import { routeAgentRequest } from 'agents';
 
@@ -154,6 +155,8 @@ app.route('/top-offers/api', topOffersRoutes(async (request, env, ctx) => app.fe
 // panel. Both answer 404 unless DEPLOYMENT_PROFILE is 'demo'.
 app.route('/vantage/api', vantageRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
 app.route('/vantage/api/coldstart', vantageColdStartRoutes);
+app.route('/oh/api', ohRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+app.route('/oh/api/coldstart', ohColdStartRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {

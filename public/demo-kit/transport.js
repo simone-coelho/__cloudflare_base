@@ -22,6 +22,11 @@
 //   defaultIntent()     the answer asserted on every snapshot as ctx.intent when the visitor has given none
 //   visitor()           the vertical's own fields on a new visitor (her lines, her cart, ...)
 //   beatName(key, kind) the opening documents, for a reset where the reset route is absent
+//   context(pageKey, v) optional: the context signals a page asserts about itself on its snapshot, as { name: value }
+//                       (a product page: { anchor: <sku>, family: <family> }), each sent as ctx.<name>; ask() also takes
+//                       them per call (ask(key, v, { context })). Region and intent stay the kit's own and are never
+//                       replaced; a name the engine would refuse, or an empty value, is not sent. Without either, a
+//                       snapshot is exactly what it was before the hook existed
 //   fixtures            { api(path, payload, opts), receipts(ids) }: the ?fixtures flag's canned answers
 // No DOM or window access at import time.
 import { arr, sleep, uid } from './util.js';
@@ -183,18 +188,39 @@ export function createTransport(k) {
   }
 
   // ── The question. One snapshot per page view; the page renders what it says. ──
-  async function ask(pageKey, v = cur()) {
+  /** The engine's own bounds on a context signal's name (src/routes/decisions.ts): a letter, then up to 31 letters, digits or _. */
+  const SIGNAL_NAME = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
+  /**
+   * What a page asserts about itself on this snapshot, beyond region and intent: config.context(pageKey, v), then
+   * the call's own, as [name, value] pairs in that order. Region and intent are the kit's (the presenter's labelled
+   * controls and her answer) and are never replaced from here; an empty value or a name the engine refuses is not sent.
+   */
+  function contextSignals(pageKey, v, own) {
+    const out = new Map();
+    for (const src of [cfg.context ? cfg.context(pageKey, v) : null, own]) {
+      if (!src || typeof src !== 'object') continue;
+      for (const [name, raw] of Object.entries(src)) {
+        if (name === 'region' || name === 'intent' || !SIGNAL_NAME.test(name)) continue;
+        const value = raw === null || raw === undefined ? '' : String(raw).trim();
+        if (value) out.set(name, value); else out.delete(name);
+      }
+    }
+    return [...out];
+  }
+  async function ask(pageKey, v = cur(), opts = {}) {
     const q = new URLSearchParams({ page: (cfg.pageNames || {})[pageKey] || pageKey });
     const entry = snapshotEntry(v && v.entry);
     if (entry) q.set('entry', entry);
     if (state.ctx.region) q.set('ctx.region', state.ctx.region);
     const intent = (v && v.intent) || defaultIntent();
     if (intent) q.set('ctx.intent', intent);   // asserted on every snapshot: gated offers fail closed without it
+    const signals = contextSignals(pageKey, v, opts && opts.context);
+    for (const [name, value] of signals) q.set(`ctx.${name}`, value);   // the page's own context (a product page: anchor, family)
     const r = await api(`/v1/${TENANT}/decisions/snapshot?${q}`, undefined, { visitor: v });
     if (!r.ok || !r.body || !Array.isArray(r.body.decisions)) {
       return { ok: false, status: r.status, error: (r.body && r.body.error) || `the decision service answered ${r.status || 'nothing'}` };
     }
-    return { ok: true, set: { ...r.body, asked: { intent: q.get('ctx.intent'), region: q.get('ctx.region') } } };
+    return { ok: true, set: { ...r.body, asked: { intent: q.get('ctx.intent'), region: q.get('ctx.region'), ...Object.fromEntries(signals) } } };
   }
   const bySlot = (set, slot) => ((set && set.decisions) || []).filter((d) => d.slot === slot).sort((a, b) => a.order - b.order);
 

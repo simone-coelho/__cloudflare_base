@@ -19,7 +19,10 @@
 <link rel="stylesheet" href="/demo-kit/compare.css" />
 </head>
 <!-- index.html, product.html and m.html carry the same shell; each boots into its own view (data-entry).
-     Change all three together, or rerun the scaffold into a fresh directory and compare. -->
+     Change all three together, or rerun the scaffold into a fresh directory and compare.
+     The phone (lane P3): the homepage's slots at phone width. A direct load is a stranger decided live, her region from
+     the request; Sign in opens the sheet naming the fictional account, and the worker signs the link (oh.js, P3). The
+     sign-in control and its receipt line are in the markup here; on the other two shells oh.js adds the same at boot. -->
 <body data-entry="phone" class="shell--phone">
 <a class="skip" href="#stage">Skip to the page</a>
 
@@ -34,7 +37,7 @@
 <!-- ═══════════════════════════════ THE SITE ═══════════════════════════════ -->
 <div class="site" id="site">
   <header class="site-header static">
-    <div class="utility"><span class="nper">not personalised</span><span class="u-right"><span>Support</span><span>Find a store</span><span class="u-sign" id="signIn">Sign in</span></span></div>
+    <div class="utility"><span class="nper">not personalised</span><span class="u-right"><span>Support</span><span>Find a store</span><span class="u-sign" id="signIn" role="button" tabindex="0" data-act="sign-in" data-ctl="sign-in">Sign in</span></span></div>
     <div class="mast">
       <a class="wordmark" href="/oh/" data-nav="home" data-ctl="home"><span class="wm" id="wordmark">OH.</span><span class="wm-tag" id="tagline">Optimized Home</span></a>
       <nav class="mainnav" id="mainnav" aria-label="Shop">
@@ -43,6 +46,9 @@
       </nav>
     </div>
   </header>
+  <!-- The sign-in's receipt (lane P3): who she is signed in as, "linked at sign-in · consented · no device matching", and
+       what her other device's taste brought. Hidden until she signs in; oh.js writes it. -->
+  <p class="p3-signed" id="p3Signed" aria-live="polite" hidden></p>
 
   <main class="stage" id="stage">
     <section class="view view--home" id="view-home" data-page="home">

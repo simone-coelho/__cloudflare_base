@@ -219,7 +219,11 @@
           { "close": { "pick": "hero-nfl-gift-card" } },
           { "close": { "pick": "deal-matching-soundbar" } },
           { "close": { "pick": "deal-sound-suite-bundle" } },
-          { "close": { "pick": "deal-free-wall-mounting" } }
+          { "close": { "pick": "deal-free-wall-mounting" } },
+          { "close": { "pick": "offer-tv-gift-card" } },
+          { "close": { "pick": "offer-tv-matching-soundbar" } },
+          { "close": { "pick": "offer-tv-sound-suite" } },
+          { "close": { "pick": "offer-tv-free-mounting" } }
         ],
         "declare": ["<b>Publishes</b> the catalog: the gift-card offer’s window has closed, with the offers that close with it"],
         "will": ["The closed offer and the out-of-stock package leave every surface on the next decision"],

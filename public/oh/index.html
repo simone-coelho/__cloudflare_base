@@ -47,6 +47,17 @@
   <main class="stage" id="stage">
     <section class="view view--home" id="view-home" data-page="home">
       <p class="offlimits-note"><b>Off limits</b> the header &middot; the service strip &middot; the footer: never decided, never personalised</p>
+      <!-- The service strip: static, the same for everyone. -->
+      <div class="svc-strip static" aria-label="Services"><span class="nper">not personalised</span><span><b>Free delivery</b></span><span><b>14-day returns</b></span><span><b>Extended coverage</b></span><span><b>Haul-away</b></span><span><b>Pick up at Best Buy</b> on select TVs and laundry</span><span><b>Chat with an expert</b></span></div>
+      <!-- Slot continue, take 1, gated on the return visit (ctx.visit = return): off the page until a decision says otherwise. -->
+      <section class="module decided" id="mod-continue" data-slot="continue" data-gated="true" hidden aria-labelledby="head-continue">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>continue</b> &middot; take 1 &middot; gated on a return visit &middot; decided per visitor</p>
+          <h2 id="head-continue">Welcome back</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-continue" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-continue" hidden></p>
+      </section>
       <!-- Slot hero, take 1: the page renders what comes back, in the order it comes back. -->
       <section class="module decided" id="mod-hero" data-slot="hero" aria-labelledby="head-hero">
         <header class="module-head"><div>
@@ -74,19 +85,10 @@
         <div class="cards cards--many" id="slot-deals" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-deals" hidden></p>
       </section>
-      <!-- Slot continue, take 1: the page renders what comes back, in the order it comes back. -->
-      <section class="module decided" id="mod-continue" data-slot="continue" data-gated="true" hidden aria-labelledby="head-continue">
+      <!-- Rail for-you: POST /sort over the site's four picks in each room; at an affinity weight of zero the site's own order. -->
+      <section class="module decided" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
         <header class="module-head"><div>
-          <p class="module-where">slot <b>continue</b> &middot; take 1 &middot; decided per visitor</p>
-          <h2 id="head-continue">Pick up where you left off</h2>
-        </div></header>
-        <div class="cards cards--one" id="slot-continue" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
-        <p class="engine-down" id="down-continue" hidden></p>
-      </section>
-      <!-- Rail for-you: POST /sort over the products file; at an affinity weight of zero the site's own order. -->
-      <section class="module" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
-        <header class="module-head"><div>
-          <p class="module-where">rail <b>for-you</b> &middot; <code>POST /sort</code> over the products</p>
+          <p class="module-where">rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 8</p>
           <h2 id="head-for-you">Recommended for you</h2>
         </div><span class="rail-chip" id="chip-for-you">the site&rsquo;s own order</span></header>
         <div class="rail" id="rail-for-you"></div>
@@ -95,8 +97,8 @@
 
     <section class="view view--grid" id="view-tvs" data-page="tvs" hidden>
       <p class="offlimits-note"><b>Off limits</b> the filters &middot; the sort control: never decided, never personalised</p>
-      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>TVs</span></nav>
-      <header class="view-head"><h1 class="view-title">TVs</h1><span class="nper">filters and sort: not personalised</span></header>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>TV &amp; Audio</span><span>/</span><span>TVs</span></nav>
+      <header class="view-head"><h1 class="view-title">TVs</h1><span class="p1-sub">OLED evo, QNED evo Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches</span></header>
       <!-- Slot grid-promo, take 1: the page renders what comes back, in the order it comes back. -->
       <section class="module decided" id="mod-grid-promo" data-slot="grid-promo" aria-labelledby="head-grid-promo">
         <header class="module-head"><div>
@@ -106,11 +108,11 @@
         <div class="cards cards--one" id="slot-grid-promo" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-grid-promo" hidden></p>
       </section>
-      <!-- Rail tv-grid: POST /sort over the products file; at an affinity weight of zero the site's own order. -->
-      <section class="module" id="mod-tv-grid" data-rail="tv-grid" aria-labelledby="head-tv-grid">
+      <!-- Rail tv-grid: POST /sort over every priced TV, with the regional prior; at an affinity weight of zero the site's own order. -->
+      <section class="module decided" id="mod-tv-grid" data-rail="tv-grid" aria-labelledby="head-tv-grid">
         <header class="module-head"><div>
-          <p class="module-where">rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the products</p>
-          <h2 id="head-tv-grid">TVs</h2>
+          <p class="module-where">rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the TVs &middot; take 24</p>
+          <h2 id="head-tv-grid">Every TV, ordered for you</h2>
         </div><span class="rail-chip" id="chip-tv-grid">the site&rsquo;s own order</span></header>
         <div class="rail" id="rail-tv-grid"></div>
       </section>
