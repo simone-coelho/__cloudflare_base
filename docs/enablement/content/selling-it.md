@@ -1,199 +1,137 @@
 # Behavioral Targeting and Intelligence: selling it
 
-For account executives.
+For account executives, who tell the story to a customer and answer what comes back.
 
-**Sell what is built, label what is designed, and promise nothing that is open.**
+**Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
 
-## One visitor, three moments
+## Most visitors are strangers, and most buying happens before anyone knows them
 
-Before the visitor arrives, the brand's team publishes its rules and tags each of its content pieces in the words the engine scores on. A visitor nobody has identified then arrives from an ad, accepts the site's consent banner and looks at a few products from one brand. The next time the page asks, the engine ranks that brand's pieces higher in each slot, a place on the page that it decides, wherever the rules allow, and the answer says why. After the visit, the engine counts what each piece earned once recording is on, and nothing it learns moves a ranking until a person raises the learning dial.
+Most of the people on a brand's site are strangers. They have not signed in, they have no profile, and many have never visited before. A great deal of buying happens in exactly that window, before anyone knows who the visitor is.
 
-## What you are selling fits in one paragraph
+Tools made for known customers are blind in that window. They wait for an email address, a login or a purchase history, and by then the visit is over. So teams write rules to fill the gap: one rule for visitors from paid social, another for the spring campaign, another for a region. The rules go stale the week a campaign ends. They multiply, because every new idea needs one more. And they fight, because nothing decides which rule wins when two apply. A luxury retailer's own brief said of its rule-based personalization: "It works, but it caps out."
 
-The engine decides which of the brand's own content each visitor sees, and in what order. For every visitor who has agreed to it, it keeps a graded, fading interest in each value of each dimension the brand chooses to score on, built from what they do on the site. When a page asks, it ranks the brand's own published content for each slot on the page against that interest, leaning, where the brand turns it on, on what their region is interested in until they have shown interests of their own. It answers with the brand's own content ids in order, each with the reasons that placed it there. It runs on Cloudflare's network, calls no AI model to decide, and every setting that can change an answer lives in published, versioned documents that the brand's team changes without a software release.
+The engine starts where those tools stop: with the stranger, on the first page.
 
-Write its name in full the first time, then say the engine. It is not the behavioral targeting in other Optimizely products.
+## The engine is a personal stylist for every visitor, at internet scale
 
-## What is built, designed and open, in the visitor's order
+Picture a personal stylist on the shop floor, one for every visitor. A good stylist reads the room before anyone speaks. They watch without interrogating. They rearrange the table as they learn what a person likes, and they pivot the moment attention moves. A luxury retailer's own brief asked for exactly this: "a site that feels like a stylist who remembers".
 
-Built: in the code and exercised. Designed: in an architecture document, not in the code. Open: no decision yet.
+That is the engine. It decides the page at the point in time, from what the visitor is doing now: which of the brand's content fills each place on the page, and in what order the page's sections appear.
 
-These are the rows an account executive needs. Every row, with its caveat, is on [What is built, designed and open](https://edge-platform-bti.expedge.workers.dev/status), and every term is in the [Glossary](https://edge-platform-bti.expedge.workers.dev/glossary).
+It is not a recommendations engine, and it does not replace one. It lives alongside whatever recommendations the brand already runs and organizes the page by interest, in real time, around them. Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side.
 
-**Before: what the brand sets up before the visitor arrives**
+## Seven scenes carry the whole story
 
-| What happens | Verdict |
+Each scene is a moment a customer will recognize. Tell them in this order, and every part of the engine appears at least once.
+
+**The stranger from an ad.** A visitor nobody knows taps a social ad for a new phone and lands on the brand's home page. Before their first click, the page already feels local: it leans on what visitors in their region are interested in, read from the request itself. It also answers the ad, so the phone they were promised leads. They accept the consent banner and tap a different maker's phone, and the first click changes the page: that maker's phones move up wherever the brand's rules allow. On the product page, the sections below the buy box reorder around the visitor, and the recommendations carousel is one of the sections the engine orders. The buy box itself never moves, because the brand marked it off limits. The site never waits on the engine: if an answer is slow, the brand's own page renders exactly as it would have. Each decision is made in the data center nearest the visitor, on Cloudflare's network. We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.
+
+**The drift and release.** Think of interest as a row of buckets, one for each value the brand cares about: each maker, each category, each price band. Every action pours a little into the buckets it touches, a purchase more than a view, and every bucket drains steadily on its own clock. When a bucket fills past its entry line, the visitor joins that audience. It has to drain below a lower release line before they leave, so nobody flickers in and out. A cap keeps any one bucket from taking over: the tenth click counts for less than the first, and a slot shows only so many pieces of one kind. Now the visitor who came from the phone ad starts browsing watches. The phone bucket drains, the watch bucket fills, and the page follows. The ad lets go of the page, and the receipt says why in plain words: the campaign's context was superseded by what the visitor did. When the visitor stops browsing, the watch interest drains below its release line on its own, with no further click, and the release is written on the receipt too. Nobody wrote an expiration rule.
+
+**The pinned paid section.** A brand sells space on its own pages: a partner's funded placement, a launch week, a seasonal campaign. Merchandisers keep the wheel, in a fixed order. Gates go first: anything out of stock, outside its window or outside its region never shows. Pins go next: the section the brand sold holds the position it was sold for, first, third or wherever the agreement says. Then the engine ranks everything else around it. On the receipt, the pinned section reads as an instruction, not a decision, so anyone can tell the two apart long afterwards, and the receipt also keeps what ranking would have chosen instead. A merchandising weight can lean on a season, a promotion or margin, but it multiplies interest the visitor has shown; it cannot invent interest that is not there. No sold placement is quietly ranked away.
+
+**The signal from another channel.** The visit often starts somewhere else. The link in an email, an ad, a social post or a partner's quiz carries a campaign term, and the engine reads it along with the channel, the referring network and the operating system family of the visitor's phone. Before the first click on the site, content that matches the campaign rises by a small weight the brand publishes, and the receipt shows exactly how much; then the visitor's own behavior takes over. Signals can also start work beside the page. When a product starts trending on social, Opal can propose a test on that signal and launch it through Feature Experimentation, a contextual bandit (CMAB) test included, with a person approving. ODP keeps the long memory: the interests and audiences the engine forms land there for the brand's other teams, and a known customer's history can arrive warm. When the visitor signs in, the brand's own server vouches for them, and everything they did as a stranger carries over to their known profile, with nothing overridden.
+
+**The catalog tagged by Opal.** A merchandiser loads a batch of new pieces that carry few tags. Opal proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one before anything reaches the site. The new pieces are ranked from the moment they go live, on their tags alone, with no history needed, and fresh pieces get a fair start. The same merchandiser asks Opal, in plain words, to create an audience, to explain why a hero did well with paid-social visitors, or to draft the next test. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. For shoppers, the brand can switch on optional AI add-ons with its credits: AI search that knows the visitor, a style concierge, and generated imagery of real products. Each is the brand's to use or not. The whole boundary is on the credits page, [Where Opal and AI credits fit](https://edge-platform-bti.expedge.workers.dev/credits).
+
+**The receipt read aloud.** A customer's analyst points at a card and asks why it is there. Read the receipt aloud. This piece is here because the visitor's interest in this maker, times the slot's weight for maker, plus their interest in this price band, times its weight, came to the highest total. The campaign they arrived on added a small, published amount, the spring promotion weight nudged it up, and nothing was pinned. It fits on the back of an envelope, and a person can recompute it by hand. Every decision and every override is written out this way, with the version of every setting in force, so "why did this visitor see this?" is a lookup, not an investigation. Given a decision's id, the engine can decide again from the recorded inputs and show that the answer matches. Every decision and every outcome lands in the brand's own warehouse, where its analysts read the results on their own numbers.
+
+**The data scientist tuning a constant.** A data scientist on the brand's team thinks interest in price band should drain faster than interest in a maker. In the console, they change that dimension's memory and save. The change is a new revision of a published document, in force without a software release, and the next receipt shows the new term. If it was a mistake, one step rolls it back, and the rollback is itself on the record. Every weight, memory and threshold, every slot rule and pin, and every learning dial is set this way, by marketers and data scientists, in plain sight. The analysts can also import what they already know as starting beliefs, which live evidence then confirms or corrects. Learning works the same way: the engine counts which pieces earn outcomes in which contexts, and the brand decides how far that may move the page, with holdout groups kept from the start and lift measured on the brand's own numbers. It records what works from the first day and changes nothing until the brand turns the dial.
+
+## Customers choose it for different reasons, and each weighs them differently
+
+These are the reasons customers give, in no particular order. Each customer weighs them differently, so listen for the two or three yours raises first, and lead with those.
+
+| Customers choose it because | What that means for them |
 |---|---|
-| The brand chooses the dimensions it scores on, the attribute each reads, how much each action counts and how long interest lasts, in its registry. | **Built** |
-| The brand's own content pieces arrive by import or pull, tagged in the registry's vocabulary; no console screen edits them. | **Built** |
-| The brand maps its pages and slots: how many pieces each slot shows, its weights, pins, rules, exclusions and off-limits places. | **Built** |
-| The site keeps its own defaults, and they render whenever the engine is silent. | **Built** |
-| The site's consent banner passes the visitor's explicit choice; nothing happens without it. | **Built** |
-| Product events carry the attributes the registry reads, because the engine holds no product catalog for a customer. | **Built** |
-| Every rule and weight the brand sets is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision; identity and access settings are worker configuration set by an engineer. | **Built** |
-| The brand's team works in the operator console; engineers set the deployment's own settings, such as its tenants, keys, allowed origins and retention. | **Built** |
-| A customer deployment is set up by a workflow that stops before the tenant has its first configuration. | **Open** |
-| Connecting ODP or Feature Experimentation to a customer deployment. | **Open** |
-| Retention periods for each category of data. | **Open** |
+| They can control it | Their rules run first, the placements they sell hold, and every constant is theirs to set |
+| It decides at the point in time | The page answers what the visitor is doing now, not what other shoppers did last month |
+| It is performant at the edge | Each decision is made in the data center nearest the visitor, on Cloudflare's network |
+| Every decision is explainable | A receipt writes out the arithmetic, short enough to check by hand |
+| It hooks to Opal | The team asks in plain words, and Opal authors, explains, tags and proposes tests |
+| AI is theirs to use or not | The engine calls no AI model to decide, and every AI add-on is optional |
+| It learns to the degree they govern | Learning moves the page only as far as the brand turns the dial |
+| It links with ODP | Interests and audiences land where the brand's other teams already work |
+| It works alongside their recommendations | It orders the page around them, and reorders a product list without removing anything |
+| It honors the placements they sell | A pinned section holds its place, and its receipt says it was an instruction |
 
-**During: what the engine does while the visitor is on the site**
+## One visitor shows how it works
 
-| What happens | Verdict |
-|---|---|
-| Nothing is personalized or recorded until the visitor's consent choice arrives; without it they see the site's defaults. | **Built** |
-| A stranger is served from their first event, on how they arrived: the campaign term, the channel, the referring network and the operating system family of their phone. | **Built** |
-| Where the brand turns it on, a stranger leans on what their region is interested in, from the site's own events, until their own interests take over. | **Built** |
-| Each action adds to a graded, fading interest per dimension value, and audiences form and dissolve on two lines. | **Built** |
-| The brand's rules come first: eligibility (windows, stock, regions and named conditions), pins, exclusions and off-limits slots, all before any ranking. A pinned piece that cannot be served empties its whole slot. | **Built** |
-| The score ranks what is left: the visitor's interests times the slot's weights, then arrival seeds, journey stage, freshness, fatigue and merchandising weights, in that order, and learning only once its dial is raised. | **Built** |
-| The answer is the brand's own content ids in order, each with its reasons, and the site renders them. | **Built** |
-| A product list from the commerce platform is re-ranked by the visitor's interests, with nothing removed. | **Built** |
-| At sign-in the visitor's anonymous and signed-in profiles merge, overriding nothing. | **Built** |
-| Typed search with the brand's own AI model, outside the decision; off by default. | **Built** |
-| No AI model in the decision. | **Built** |
-| The engine orders whatever sits in a slot for each visitor, a stack of page modules included, and shows why. | **Built** |
-| Configuring a page's layout per context, such as by channel or visit; where each slot sits on the page stays the site's own template. | **Designed** |
+Here is the same visitor, as the engine sees them. The site sends each thing the visitor does, such as a view, an add to cart or a purchase, as an event that carries the product's attributes. Each event pours into the interest buckets for the values it touches, such as a maker or a price band, at the weight the brand set for that action.
 
-**After: what is counted once the visitor has been answered**
+Each place on the page that the engine decides is a slot, and each slot has its own weights: the home page's hero may care most about region and channel, a product gallery about price band. When the page asks, the engine applies the brand's rules first. Then it scores every eligible piece in each slot, adding up interest times weight plus anything the arrival or a merchandising weight contributes, and sorts. It answers with the brand's own content ids, in order, each with its reasons, and the site renders them.
 
-| What happens | Verdict |
-|---|---|
-| Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded when its slots use the default served basis; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | **Built** |
-| A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot. | **Built** |
-| Outcomes are credited to the decision that earned them, within windows the brand can set; a named partner outcome is never reported as a sale. | **Built** |
-| The day report is an attribution diagnostic, with no claim of lift. | **Built** |
-| Learning computes how much better each piece does in each context, and moves nothing until a person raises the learning dial. | **Built** |
-| Holdout arms; the demos run none. | **Built** |
-| The design of a production experiment. | **Open** |
-| Exploration, built and off by default. | **Built** |
-| Which form of exploration a customer is offered. | **Open** |
-| Erasure: bounded and resumable, and not proof of physical erasure. | **Built** |
-| A usage meter for billing, and its rates. | **Open** |
+Nothing is personalized or recorded until the visitor makes a consent choice. The engine curates which content leads, never a price, a discount, financing or credit. For the full mechanism and the arithmetic, bring a solutions engineer, whose piece is [How it works and where it runs](https://edge-platform-bti.expedge.workers.dev/how-it-works).
 
-The one exception to keep straight: everything after the answer depends on recording. With the SDK as shipped, recording is not switched on yet, because it needs each slot set to count rendered pieces and durable recovery, which no configuration has. So say that the Vantage and Top Offers demos record today, and that a customer's site records from the day recording is switched on.
+## What a customer can measure, and the questions that surface it
 
-The picture shows where all of this runs. In five sentences:
+Every outcome below is a number the customer can baseline now and measure on their own data. Ask the question first; the number follows.
 
-1. The site sends events and asks for decisions; its front end renders the answer, or its own default when there is none.
-2. The engine runs on Cloudflare's network, in the data center nearest the visitor.
-3. Each consenting visitor's interests live in the engine's own storage, inside the customer's own deployment.
-4. The brand's published documents define every rule and weight the engine follows.
-5. Every answer carries its reasons; receipts, the record of what was served and why, are kept with the visitor's consent once recording is on.
-
-![Where the engine runs on Cloudflare](../figures/architecture.png)
-
-## The customer provides these, and here is what each is for
-
-| What we need | What we use it for | Who provides it |
+| What the customer can measure | The question that surfaces it | What the engine changes |
 |---|---|---|
-| The exact addresses, scheme and host, that the customer's pages call from, for staging and production | The list of sites the engine accepts calls from | The customer's platform team |
-| A site key for each brand, or one we create | It identifies the site and ties every call from its pages to the brand; it is not a secret | The customer, or us |
-| The registry: the dimensions to score on, the attribute each reads, how much each action counts and how long interest lasts | What the engine scores on, and how fast it forgets | The customer, with Professional Services |
-| A content feed: each piece's own id, type, title and tags in the registry's vocabulary, the kinds of slot it may fill, the address it renders from, and its time window | The catalog the engine ranks | The customer's content team |
-| A slot map: the pages, their slots and each slot's default | The slots document; the default renders whenever the engine is silent | The customer's front-end and merchandising owners |
-| Product events that carry the product id and the attributes the registry reads | Building interest, because the engine holds no product catalog for a customer | The customer's tag owner |
-| The purchase event: order id, value, currency and items | Outcomes, for attribution and learning | The customer's commerce and analytics owners |
-| An explicit consent choice, passed by the site from its consent banner | Without it, nothing personalizes and nothing is recorded | The customer's privacy owner |
-| A signed proof of identity at sign-in, and the secret behind it | Merging the visitor's anonymous and signed-in profiles | The customer's backend team |
-| Retention periods for each category of data | Required before anything that depends on them is captured | The customer's privacy owner |
-| A person to run the connection check from inside the customer's network | It proves the network path from the customer's side | The customer |
+| How visits from strangers convert, first visits above all | How many of your visitors arrive as strangers, and how do their visits convert compared with visitors you know? | Strangers get a relevant page from the first click |
+| Time spent on personalization rules | Who writes and retires your personalization rules, and how many hours a month does it take? | Interest fills and drains on its own, so nobody writes expiration rules |
+| Page speed, and what it costs in conversion | Have you measured what a slower page costs you in conversion? | Each decision is made at the edge, nearest the visitor |
+| Lift the customer trusts | How do you measure personalization lift now, and who signs off on the number? | Holdout groups run from the start, and every decision lands in their own warehouse, so lift is measured on their numbers |
+| Placements and campaigns kept as sold | What happens now when personalization collides with a placement you sold or a campaign you launched? | Gates, then pins, then ranking, with every override on the receipt |
+| What the team launches | If the hours spent on rules came back, what would your team launch? | Time moves from upkeep to new campaigns and content |
 
-Optional: product lists to re-rank, from the commerce platform; a catalog search service and the brand's own AI model key, for typed search; and past events to import.
+## What a customer provides, and what we use it for
 
-## Who sets what
+Each ask comes with its reason. Your solutions engineer covers the technical detail.
 
-| Who | Where | What they set |
+| What we need | What we use it for | Who usually provides it |
 |---|---|---|
-| The brand's team | In the operator console | Each slot's weights, pins, rules and take, which is how many pieces it shows; how much each action counts and how long interest lasts; the learning dials; the holdout share |
-| The brand's team | Through the API, without a software release | The catalog, including each piece's time window and eligibility rule; arrival seeds; the dimensions and the attributes they read; journey thresholds |
-| An engineer | In the deployment's own settings | Tenants, keys, allowed origins, retention, and where visitor state lives |
+| Their content, with their own ids, tags, the slots each piece may fill and its publish window | The material every decision is made from; the engine answers with their ids | The content team |
+| Their vocabulary of interest: the dimensions that matter, how much each action counts, how long interest lasts | Relevance described in the brand's own words | The brand's team, with Professional Services |
+| A map of the page's slots, with each slot's default | Which places the engine decides; the default renders whenever there is no answer | The front-end and merchandising owners |
+| Behavior events from the site, carrying each product's attributes, and the purchase event | Filling each visitor's interest, and crediting outcomes to the decisions that earned them | The site's tag and analytics owners |
+| The visitor's consent choice, from the consent banner | Nothing is personalized or recorded without it | The privacy owner |
+| A signed proof of identity at sign-in | Carrying a visitor's interests across sign-in | The backend team |
+| The addresses their pages call from, a site key, and a connection check from inside their network | Accepting calls only from the brand's own sites | The platform team |
+| How long each category of data may be kept | Keeping data only as long as agreed | The privacy owner |
+| A destination in their warehouse | Landing every decision and outcome where their analysts work | The data team |
 
-## The questions customers ask have true answers
+Optional: product lists from the commerce platform, to reorder for each visitor; the brand's own AI model key, for AI search and tagging; starting beliefs from its analysts; the past behavior of known customers; and Opal credits for Opal's work and the AI add-ons.
 
-**Is it AI?** No. It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons. AI belongs to authoring and analysis, in Opal, which is not connected to the engine today.
+## Objections have short, true answers
 
-**Isn't this CMAB, or an A/B test?** No. It ranks the brand's own content for each visitor and depends on no experiment. It measures itself with its own holdout; Optimizely's CMAB is a separate capability of Feature Experimentation.
+A program lead at a luxury retailer once asked how a page could learn its order without versions to learn from: "How else would it learn? I don't understand." The answer was one sentence: an ordering is a ranking. Most objections have answers that short.
 
-**Isn't this a recommendations engine?** It decides what each decided place on a page shows, and in what order, for a visitor nobody has identified, and it says why. It ranks the brand's own published content, and it can also re-rank a product list the commerce platform supplies.
+| They ask | Say | Never say |
+|---|---|---|
+| Isn't this a recommendations engine? | Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. It even orders the recommendations carousel among the page's sections. | "It replaces your recommendations." |
+| Is it AI? | The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. | "We don't use a model." |
+| How fast is it? | We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor. | "We guarantee a response time." |
+| How does it learn the order without versions? | An ordering is a ranking. The engine scores each section for this visitor and sorts, so there are no versions to make, and the page the brand runs is the starting point. | "We test every combination of your page." |
+| Will it override our merchandisers? | Never. Gates come first, then the pins for what you sell, then ranking, and every override reads on its receipt as an instruction, not a decision. | "The algorithm knows best." |
+| Can we see why it chose that? | Yes. Every decision is written out as arithmetic on a receipt a person can recompute by hand. | "Trust the model." |
+| Does it change things on its own? | It records what works from the first day and changes nothing until the brand turns the dial. | "It optimizes itself." |
+| Do we need to know who the visitor is? | No. It works for strangers from the first click, and when a visitor signs in, everything they did before carries over. | "It identifies your visitors." |
+| What about privacy? | Nothing is personalized or recorded until the visitor chooses, and it never decides a price, a discount, financing or credit. | "It's anonymous, so consent doesn't apply." |
+| Do we need ODP, Feature Experimentation or Opal? | It links with ODP and Feature Experimentation and works with Opal, and each adds something, while the engine makes its decisions on its own. | "You have to buy the whole suite first." |
+| Will every page view spend AI credits? | No. Serving a page calls no AI model, so it spends no credit, however much traffic grows. | "Credits grow with your traffic." |
+| Does it run in our mobile app? | It runs on the website, through one script the site adds once. | "It runs in your native app." |
+| How long until it is live? | One integration on the site, then each capability is switched on in configuration; timing is agreed with each customer. | "Live in two weeks." |
 
-**Isn't it just click tracking?** It decides from interest, not clicks. Each event adds to the visitor's interest in the values it touches, such as a brand or a price band, and that interest fades unless they keep showing it.
+## Each hosted demo tells part of the story
 
-**Does the page rearrange itself?** For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step.
+Start a demo from where you are: the region on screen is the viewer's real one. The [Demo map](https://edge-platform-bti.expedge.workers.dev/demos) has the full beats.
 
-**Does it need to know who the visitor is?** No. It works from the visitor's first event, knowing them only by a random id. When they sign in, their anonymous and signed-in profiles merge, and nothing is overridden.
+| Demo and address | The scenes it shows | Keep in mind |
+|---|---|---|
+| Vantage, a carrier's online shop: [https://edge-platform-vantage.expedge.workers.dev/vantage/](https://edge-platform-vantage.expedge.workers.dev/vantage/) | The stranger from an ad, with a first page that answers the ad and the region; the drift and release, as the page lets the ad go and an interest fades; a product page whose sections the engine orders; a pinned launch; a receipt behind every card | Its regional sales are synthetic and marked so on screen. It shows real phone makers' images, so legal confirms before any public or recorded use |
+| Vantage's interactive explainer: [https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works) | The data scientist tuning a constant: every constant on a slider, recomputing a real receipt | Made for a customer's engineers; bring a solutions engineer |
+| Top Offers, on screen Lantern & Lane, a retailer's promotions module: [https://edge-platform-top-offers.expedge.workers.dev/top-offers/](https://edge-platform-top-offers.expedge.workers.dev/top-offers/) | The pinned paid section, with "ranking was skipped" on its receipt; a merchandiser's day of real publishes, from a closing window to a new promotion ranked on its tags alone; the receipt read aloud | Its click report credits clicks to decisions; lift is measured on the brand's own numbers |
+| Meridian, on screen Calder, one brand with two businesses: [https://edge-platform.expedge.workers.dev/meridian/](https://edge-platform.expedge.workers.dev/meridian/) | The signal from another channel: an email, an ad, a text sign-up and a partner's form before the visit; the drift and release; Opal and experiments in the operator's act | The page shows the fade on its own timer: describe it as the interest falling below its release line |
+| The Bright Hour, a live-shopping retailer: [https://edge-platform.expedge.workers.dev/live/](https://edge-platform.expedge.workers.dev/live/) | The catalog tagged by AI, with a person approving each tag; a new offer ranked with no history; an item selling out mid-visit; receipts | Its memories are compressed to seconds for the room; its Offer Desk is at [https://edge-platform.expedge.workers.dev/live/ops](https://edge-platform.expedge.workers.dev/live/ops) |
+| The storefront: [https://edge-platform.expedge.workers.dev/storefront](https://edge-platform.expedge.workers.dev/storefront) | Opal creating an audience in plain words; experiments and contextual bandit tests; AI search and the style concierge; a social trend turned into a generated hero and a test | For internal viewing only: it carries one brand's own products and is never shown to another company |
 
-**Does every page view spend AI credits?** No. Serving a page calls no AI model, so it spends no credit, however much traffic grows.
+## Four sentences to say word for word
 
-**How fast is it?** We quote no timing figure. Timing is measured on the customer's own deployment, once it exists.
+- We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.
+- It records what works from the first day and changes nothing until the brand turns the dial.
+- The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.
+- Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side.
 
-**Will it lift conversion?** We make no lift claim. The day report credits outcomes to decisions as an attribution diagnostic. The design of a production experiment is open and belongs to the customer's data science and business owners.
-
-**Does it learn on its own?** No. Learning counts outcomes, and they move a ranking only as far as the brand's learning dial allows; the dial starts at zero, and only a person raises it.
-
-**Can we see why it decided?** Yes. Every answer carries its reasons. With the visitor's consent, and once recording is on, a receipt keeps what was served, its strongest reasons and the arithmetic, and the brand's operators read it in the console.
-
-**What does it store, and for how long?** With consent: random visitor and session ids, interests per dimension value, visit counters, receipts and outcomes. Never: the account id itself, any device detail beyond the phone's operating system family, or conditions a page asserts. How long each category is kept is set per customer, and the periods are open.
-
-**How do we govern it?** The brand's team does. Its rules run first, every change to a published document is a new revision that records who changed it and why, and any revision can be rolled back.
-
-**Can it use our ODP data?** Not in the decision today. The decision reads no ODP data, and connecting ODP to a customer deployment is open.
-
-**How long does implementation take?** This material gives no date. The path is described, and the step that gives a customer deployment its first configuration is open.
-
-**Does it work in our native apps?** There is no native app SDK.
-
-**Which demo should I show?** The demo map answers that: [Demo map](https://edge-platform-bti.expedge.workers.dev/demos).
-
-## Where AI and credits fit
-
-The engine decides, and it calls no AI model to decide, so serving a page never spends an AI credit, however much traffic grows. AI work that people do, such as writing content, explaining results or analyzing them, is where credits belong, and Opal is that product; it is not connected to the engine today. The engine's own reasons for each decision are arithmetic it produces itself. How each line is metered and priced is monetization's decision and is still open.
-
-The whole boundary is on the credits page, [Where Opal and AI credits fit](https://edge-platform-bti.expedge.workers.dev/credits).
-
-## Bring a solutions engineer when the question is how, not what
-
-Bring one for architecture and the stack; the arithmetic; integration and the events; data, privacy and retention detail; and any question this page answers with open. Their piece is [How it works and where it runs](https://edge-platform-bti.expedge.workers.dev/how-it-works).
-
-## Sentences to say, and sentences never to say
-
-- Sell what is built, label what is designed, and promise nothing that is open.
-- The engine decides which of the brand's own content each visitor sees, and in what order.
-- It serves every visitor who consents, known or not, from their first event.
-- Nothing is personalized or recorded until the site passes the visitor's explicit consent choice. Without it, the visitor sees the site's own defaults.
-- Learning is built, and it changes nothing until a person raises the learning dial.
-- The site sends events and asks for decisions. The engine answers with the brand's own content ids in order, each with its reasons. The site renders them, and renders its own defaults whenever the engine is silent.
-- It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons.
-- ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today.
-- For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step.
-- The brand's rules come first; the engine ranks what is left.
-
-| Never say | Say instead |
-|---|---|
-| "It's AI", "AI-powered decisions", "we don't use a model" | "It calls no AI model to decide." |
-| "Real-time interest", "instant", or any timing or throughput figure | "In the visitor's session, from their first event. We quote no timing figure; timing is measured on the customer's own deployment." |
-| "Changes go live in seconds" | "A save is in force without a software release." |
-| "Learning that counts from day one", "it learns from day one", "it records from day one" | "Learning is built, and it changes nothing until a person raises the learning dial." Then what recording needs, as the one exception above says |
-| "A receipt for every decision", "every decision is recorded" | "Every answer carries its reasons; receipts are kept with the visitor's consent once recording is on." |
-| "It learns automatically", "it optimizes itself", "autonomous", "a bandit picks the winner" | "Nothing learned moves a score until a person raises the learning dial. Automatic weight changes and Thompson sampling are switched off by policy and not offered." |
-| Any lift, conversion or revenue figure or promise | "We make no lift claim; the day report is an attribution diagnostic." |
-| "It remembers every click a visitor makes" | "It decides from interest, not clicks." |
-| "Yes, it's a recommendations engine" | "It ranks the brand's own content for each decided place on a page." |
-| "It's CMAB", "it runs on experiments" | "It is not CMAB and depends on no experiment." |
-| "The engine rearranges the page", "the page rearranges itself for each visitor" | "For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why." |
-| "It's anonymous, so it doesn't need consent" | "Nothing is personalized or recorded until the site passes the visitor's explicit consent choice." |
-| "It knows who they are", "identity resolution" | "It knows the visitor by a random id until they sign in; then the two profiles merge." |
-| "Fingerprinting", "device detection" | "It reads no device detail beyond the operating system family of the visitor's phone." |
-| "Erased in one call", "guaranteed deletion" | "Erasure is bounded and resumable, and it is not proof of physical erasure." |
-| "It replays the whole page exactly" | "Replay is exact for one slot." |
-| "ODP is the backbone", "it all lives in ODP" | "The decision reads no ODP data, and ODP is not connected to it today." |
-| "Opal explains every decision", "you need Opal credits to run it" | "The engine's reasons are arithmetic it produces itself, and serving a page spends no credit; Opal is not connected to it today." |
-| "It holds your product catalog" | "It holds no product catalog for a customer; product events carry the attributes it scores." |
-| "It runs in your native app", "our mobile SDK" | "There is no native app SDK." |
-| "Implementation takes two weeks", any delivery date | "This material gives no date; the step that gives a deployment its first configuration is open." |
-| "We already sell this as behavioral targeting" | "It is the engine described here, not the behavioral targeting in other Optimizely products." |
-| "It is live at a customer", any case study, or any customer, prospect or competitor name | "We name no customer and cite no case study." |
-| A share of anonymous traffic | "Visitors nobody has identified." |
-| "We can put Vantage's images in a public deck" | "Legal confirms before any public or recorded use." |
-| Any line that describes another kind of system | Our own reasoning only: what the engine does |
-
-**Sell what is built, label what is designed, and promise nothing that is open.**
+**Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
