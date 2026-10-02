@@ -27,9 +27,9 @@ The steps follow the figure, in order.
 3. **Touches from the event.** An event names an action and carries the product's attributes. Each attribute the registry reads becomes a touch, weighted by the action.
 4. **Interest is read.** When the page asks, the visitor's interests are read as they stand at that moment.
 5. **The regional prior.** Where the brand turns it on, a stranger leans on their region's interests, less as their own grow. Demo regional data is synthetic, and labeled so.
-6. **Candidates are gated.** Only pieces that may be served remain: live, in their window, in stock, and passing their own rule.
-7. **Each piece is scored.** The score is the sum of interest times the slot's weight over the piece's tags, then a few published adjustments.
-8. **Pins and the diversity cap.** Pinned pieces come first. The rest follow by score, with a cap on pieces that share one value.
+6. **Candidates are gated.** Only pieces that may be served remain: live, in their window, in stock, and passing their own rule. Pinned pieces are then reserved, before any scoring.
+7. **Each piece is scored.** Each piece that is not pinned is scored: the sum of interest times the slot's weight over the piece's tags, then a few published adjustments.
+8. **Pins and the diversity cap.** Pinned pieces come first, and are never scored. The rest follow by score, with a cap on pieces that share one value.
 9. **The answer and the receipt.** The page gets the brand's content ids in order, with reasons. The receipt keeps the arithmetic and names every document in force by revision. It is kept only with tracking consent, and the shipped SDK keeps none yet.
 10. **Outcomes and the dial.** Outcomes are credited and counted, and they move nothing until a person raises the learning dial ([A.5](#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves)).
 
@@ -91,7 +91,7 @@ The detail: [B.6](#b6-privacy-and-security-are-enforced-in-the-request-path)
 
 ## A.8 Every claim carries a label: built, designed or open
 
-**Built:** the decision path with consent, tenancy and access; the order of whatever sits in a slot, page modules included; the documents and the console; receipts, and replay of one slot; attribution and the day report; learning with the dial at 0; product re-ordering. **Designed:** position-bias correction, per-context layout configuration, and embeddings. **Open:** a customer deployment's first configuration; ODP and Feature Experimentation on a customer deployment; the retention periods; the production experiment; the production memory settings; the billing meter; timing on the target deployment. The one exception to keep straight: everything after the answer depends on recording, and with the SDK as shipped recording is not switched on yet ([A.5](#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves)).
+**Built:** the decision path with consent, tenancy and access; the order of whatever sits in a slot, page modules included; the documents and the console; receipts, and replay of one slot; attribution and the day report; learning with the dial at 0; product re-ranking. **Designed:** position-bias correction, per-context layout configuration, and embeddings. **Open:** a customer deployment's first configuration; ODP and Feature Experimentation on a customer deployment; the retention periods; the production experiment; the production memory settings; the billing meter; timing on the target deployment. The one exception to keep straight: everything after the answer depends on recording, and with the SDK as shipped recording is not switched on yet ([A.5](#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves)).
 
 | Never say | Say instead |
 |---|---|
@@ -101,7 +101,7 @@ The detail: [B.6](#b6-privacy-and-security-are-enforced-in-the-request-path)
 | "It optimizes itself." | "Nothing learned moves a score until a person raises the learning dial. Automatic weight changes and Thompson sampling are switched off by policy and not offered." |
 | "It lifted conversion." | "The day report credits outcomes to decisions; it claims no lift." |
 | "The page rearranges itself." | "For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step." |
-| "Opal makes the decisions." | "The engine decides; Opal creates and explains." |
+| "Opal makes the decisions." | "The engine decides; Opal creates and explains. Opal is not connected to the engine today." |
 
 The detail: [B.8](#b8-ten-statuses-come-up-most-and-the-status-page-holds-the-rest) and [B.7](#b7-limits-are-budgets-in-the-code-and-no-timing-may-be-quoted)
 
@@ -121,8 +121,8 @@ Back to the walk: [A.1](#a1-the-unit-of-state-is-the-dimension-value-not-the-cli
 
 1. **Identity.** The first call mints `vis-<uuid>`, `s-<uuid>` and a shopper capability signed with HMAC-SHA-256, valid for at most 24 hours. The sign-in merge adds faded scores and unions audiences, so nothing is overridden.
 2. **Consent.** Personalization needs both switches. With either off, the defaults show and every receipt carries a note. Cookies and request hints can only refuse. A choice lasts 30 days, fixed in code.
-3. **Touches.** The action is `data.action`, else `data.eventName`, else `data.event`, else the event type. An action the registry does not name weighs 0. A customer tenant's events count only with `eventAttributes: event-when-unknown`; the default, `catalog-only`, counts nothing. A value outside the catalog's vocabulary builds nothing on that dimension.
-4. **Interest.** The registry's defaults are τ 14 days (at most 90), K 1.8, an entry line of 0.6, an exit line of 0.45, a pruning floor of 0.0001 and 24 values per dimension, each open to a per-dimension override. With a view weighing 1, one view gives 0.357, two give 0.526, and three give 0.625, enough to join an audience. Time alone can take a visitor out of an audience, never put one in. The code calls the 14 days "a documented ENGINEERING default, not a customer calibration", and the production value is open.
+3. **Touches.** The action is `data.action`, else `data.eventName`, else `data.event`, else the event type. An action the registry does not name weighs 0. A customer tenant's events count only with `eventAttributes: event-when-unknown`; the default, `catalog-only`, counts nothing. Where the catalog names values on a dimension, an event value outside them builds nothing on it.
+4. **Interest.** The registry's defaults are τ 14 days (at most 90), K 1.8, an entry line of 0.6, an exit line of 0.45, a pruning floor of 0.0001 and 24 values per dimension; τ, K and both lines can each be set per dimension. With a view weighing 1, one view gives 0.357, two give 0.526, and three give 0.625, enough to join an audience. Time alone can take a visitor out of an audience, never put one in. The code calls the 14 days "a documented ENGINEERING default, not a customer calibration", and the production value is open.
 5. **Journey stage.** A visit ends after 30 idle minutes, fixed in code. The journey stage moves to considering, reported as thinking, at the third interaction, and to deciding at the first purchase, unless the registry's `journey` block says otherwise.
 6. **Regional prior.** Touches also count for the visitor's region, with no visitor id, on a 24-hour memory fixed in code. Shares are relative to each dimension's leader. The region answers once it has `minEvents` events, else its country, else everyone: the regional fallback. The compiled default is on, with kBlend 1 and minEvents 30, set in the learn document's `regional` block. An asserted region selects the prior only on the demo profile, with tracking consent, and the receipt says so.
 7. **Eligibility.** A piece must be `live`, inside its window, not `inStock: false`, and pass its `eligibleWhen` rule. Region rules match exactly or by country, and fail closed without a region.
@@ -182,7 +182,7 @@ Back to the walk: [A.5](#a5-learning-counts-outcomes-and-moves-nothing-until-the
 |---|---|---|
 | `holdout`: share, arms, salt | 5% to `default` | Console, Dials |
 | `regional`: on, `kBlend`, `minEvents`, `dimensions` | On, 1, 30, every dimension | Dials; the dimension list by API |
-| `policy`: attribution windows | Same session, same piece, last decision; 30 minutes for click, dwell, video and custom outcomes, 6 hours for wishlist and add to bag, 7 days for purchase | Dials |
+| `policy`: attribution windows | Same session, same piece, last decision; 30 minutes for click, dwell, video and custom outcomes, 6 hours for wishlist and add to cart, 7 days for purchase | Dials |
 | `stats`: shrinkage strength n0, the counts' memory, the lift clamp, minimum exposures nMin | 30, 21 days, 0.5 to 2, 30 | Dials |
 | Per slot: `gamma`, reward, objective, measurement basis, exploration | 0, click, unit, `served`, off | Dials |
 | Item controls: freeze, reject, reset | None | What it has learned |
@@ -253,7 +253,7 @@ Back to the walk: [A.6](#a6-the-site-sends-events-and-paints-what-the-engine-ret
 | `POST /realtime/session/preferences` | The visitor's consent choice, bound to their grant | The choice, stored in the visitor's object |
 | `POST /realtime/action` | One event, with `X-Shopper-Session`, site key, `X-Tenant` | The product references it could not place |
 | `GET` or `POST /v1/{tenant}/decisions/snapshot` | Page, brand, channel, arrival, page instance; on `GET`, up to eight `ctx.<name>` conditions | Per slot, content ids, scores and drivers; document versions; consent and timing sources; experiment assignment |
-| `POST /v1/{tenant}/identity/link` | The backend's signature over tenant, visitor, account and expiry | The merged profile |
+| `POST /v1/{tenant}/identity/link` | The backend's signature over tenant, visitor, account and expiry | The two profiles merge |
 | `POST /sort` | Up to 500 candidates with the registry's attribute fields | The same ids in the visitor's order, with drivers |
 | `POST /content/catalog/import` or `/pull` | JSON or CSV, or a URL, from an operator | A new catalog revision |
 | `GET /v1/{tenant}/ledger/batches` | A day | Its ledger objects, for a warehouse job |
@@ -287,7 +287,7 @@ Optional: candidate product lists from the commerce platform, for product re-ran
 
 Back to the walk: [A.7](#a7-consent-comes-first-identities-are-pseudonymous-and-tenants-are-kept-apart)
 
-| Area | As built | In the code |
+| Area | As built | Where in the code (for engineers) |
 |---|---|---|
 | Consent | Off until an explicit, scoped choice; two switches; 30 days; tracking off writes nothing | `src/content/consent.ts` |
 | Visitor identity | Random ids in an HMAC-SHA-256 shopper capability valid at most 24 hours, required on every call from the visitor's browser; caller-chosen ids and old cookies confer nothing | `src/identity/sessionCapability.ts` |
@@ -357,17 +357,17 @@ Every other row, the path to a customer deployment and the open decisions with t
 
 Back to the walk: [Part A](#part-a-the-walk)
 
-The worked example is the Vantage demo. Its technical note for a customer's engineers (a Word document, version 1.1) has this piece's shape, with one visitor worked through, a real receipt and the published documents. Its interactive page, *How it works*, puts the constants on sliders: [https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works). The demo is at [https://edge-platform-vantage.expedge.workers.dev/vantage/](https://edge-platform-vantage.expedge.workers.dev/vantage/).
+The worked example is the Vantage demo. Its interactive page, *How it works*, puts the constants on sliders: [https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works). The demo is at [https://edge-platform-vantage.expedge.workers.dev/vantage/](https://edge-platform-vantage.expedge.workers.dev/vantage/).
 
 | For an engineer | What it covers |
 |---|---|
-| `docs/kit/00-README.md` to `docs/kit/04-staging-connection.md` | The integration kit |
-| `src/sdk/README.md` | The SDK |
+| The integration kit under `docs/kit` | The overview, the integration guide, the API reference and the staging connection check |
+| `docs/kit/03-payload-schemas.md` | The payload schemas |
+| The SDK's notes under `src/sdk` | The SDK |
 | `docs/deployment/01-deploy.md` | The deployment workflow |
-| `docs/PS-Implementation-Runbook.md` | The services motion |
-| `docs/architecture/22-outcome-learning-design.md` | Learning |
-| `docs/architecture/28-operator-surfaces-evaluation.md` | The console |
-| `docs/architecture/31-load-test-2026-09-05.md`, `docs/architecture/32-latency-numbers.md` | The staging measurements: the method only, quote nothing |
-| `docs/architecture/35-audit-verification-and-source-of-truth.md` | What is verified |
+| `docs/architecture/28-operator-surfaces-evaluation.md` | The console's design |
+| The architecture documents under `docs/architecture` | Learning, the audit of what is verified, and the rest of the design |
+
+These are internal engineering documents: never forward one to a customer.
 
 > **Every setting that can change an answer lives in a published, versioned document; the engine does the arithmetic at the edge, calls no AI model to decide, and shows its work on a receipt.**

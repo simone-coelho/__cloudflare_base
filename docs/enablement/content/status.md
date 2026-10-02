@@ -105,7 +105,7 @@ The one exception to keep straight: everything after the answer depends on recor
 | Customer, brand, environment and region topology, and residency | Architecture and the customer |
 | Money semantics: currency, refunds, returns and priors | The customer's business and data science owners |
 | Entitlements, feeds, the commerce platform, the warehouse, ODP and distribution acceptance | Commercial, customer and integration owners |
-| The production memory and its entry and exit lines | An owner input |
+| The production memory, K and the entry and exit lines | An owner input |
 | Recognizing a returning visitor: the production window and purpose | The customer, privacy and delivery |
 | The billing meter and its rates, and whether design-time tagging consumes AI credits | Monetization |
 | How a customer deployment gets its first tenant configuration | A remediation item and an owner decision |
@@ -141,6 +141,6 @@ The whole boundary is on the credits page, [Where Opal and AI credits fit](https
 | "It works in native apps", "our mobile SDK" | "There is no native app SDK." |
 | Any timing or throughput figure, "instant" | "We quote no timing figure; timing is measured on the customer's own deployment." |
 | "Live in two weeks", any delivery date | "This material gives no date; the step that gives a deployment its first configuration is open." |
-| "The engine rearranges the page" | The module sentence above |
+| "The engine rearranges the page" | "For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step." |
 
 > **Claim only what is Built; name what is Designed; say what is Open.**
