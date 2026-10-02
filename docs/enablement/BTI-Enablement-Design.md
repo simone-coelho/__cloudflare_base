@@ -44,13 +44,13 @@ Where this document and the common brief differ, the common brief governs and th
 | Piece | Reader | Source | Page | Word copy |
 |---|---|---|---|---|
 | (a) Landing page | An Optimizely colleague choosing what to read | §3.2 of this design | `/` | none (§12) |
-| (b) What it is | A marketer | `content/what-it-is.md` | `/what-it-is` | `word/What-It-Is-v1.0.docx` |
-| (c) Selling it | An account executive | `content/selling-it.md` | `/selling-it` | `word/Selling-It-v1.0.docx` |
-| (d) How it works and where it runs | A pre-sales solutions engineer | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | `word/How-It-Works-v1.0.docx` |
-| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits-source.html` for the page; `content/credits.md`, the same text, for Word | `/credits` | `word/Where-AI-Credits-Fit-v1.0.docx` |
-| (f) The glossary | A marketer; every entry holds for the other two | `GLOSSARY.md` | `/glossary` | `word/Glossary-v1.0.docx` |
-| (g) The demo map | An account executive | `content/demos.md` | `/demos` | `word/Demo-Map-v1.0.docx` |
-| (h) What is built, designed and open | Anyone at Optimizely who must know what may be claimed today (§12) | `content/status.md` | `/status` | `word/Status-v1.0.docx` |
+| (b) What it is | A marketer | `content/what-it-is.md` | `/what-it-is` | `word/Enablement-What-It-Is-v1.0.docx` |
+| (c) Selling it | An account executive | `content/selling-it.md` | `/selling-it` | `word/Enablement-Selling-It-v1.0.docx` |
+| (d) How it works and where it runs | A pre-sales solutions engineer | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | `word/Enablement-How-It-Works-and-Where-It-Runs-v1.0.docx` |
+| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits-source.html` for the page; `content/credits.md`, the same text, for Word | `/credits` | `word/Enablement-Where-Opal-and-AI-Credits-Fit-v1.0.docx` |
+| (f) The glossary | A marketer; every entry holds for the other two | `GLOSSARY.md` | `/glossary` | `word/Enablement-Glossary-v1.0.docx` |
+| (g) The demo map | An account executive | `content/demos.md` | `/demos` | `word/Enablement-Which-Demo-to-Show-to-Whom-v1.0.docx` |
+| (h) What is built, designed and open | Anyone at Optimizely who must know what may be claimed today (§12) | `content/status.md` | `/status` | `word/Enablement-What-Is-Built-Designed-and-Open-v1.0.docx` |
 
 Paths in this table are relative to `docs/enablement/`; pages are addresses on the enablement site.
 
@@ -122,11 +122,11 @@ Every piece except the glossary and the status page follows this shape; their ex
 | P5 | Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded when its slots use the default served basis; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | (c); (d) in its own words | §3.15, §5.1 |
 | P6 | The site sends events and asks for decisions. The engine answers with the brand's own content ids in order, each with its reasons. The site renders them, and renders its own defaults whenever the engine is silent. | (c); (d) in its own words | §1, §7.1, §7.7 |
 | P7 | It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons. | (c); (b) and (d) in their own words | §1, §6.1, §3.14 |
-| P8 | Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open. | (c); (d) in its own words | §0 Stamp, §10.2, §10.3 |
+| P8 | Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open. | (d) in its own words. (c) omits it by the lead's acceptance, because its content sits in the figure's lead and in rows B9, B11, B12 and A13 (§12) | §0 Stamp, §10.2, §10.3 |
 | P9 | ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today. | (c); (b) and (d) in their own words | §6.2, §7.3, §7.4 |
 | P10 | For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. | (b), (c), (d), (g), (h) | §10.4 item 4 |
 
-**Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) about 290 as built, with the three card rules. (b) 1,200 to 1,800. (c) 1,800 to 2,400. (d), as accepted, a walk of about 1,250 words and a detail of about 2,200 words of prose, plus tables. (e) up to 1,600. (f) as needed. (g) up to 1,100. (h) as its tables need, with little prose around them.
+**Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) about 290 as built, with the three card rules. (b) 1,200 to 1,800. (c) about 3,260 as rebuilt, by the lead's acceptance: the tables the design mandates drive its length (§12). (d), as accepted, a walk of about 1,250 words and a detail of about 2,200 words of prose, plus tables. (e) up to 1,600. (f) as needed. (g) up to 1,100. (h) as its tables need, with little prose around them.
 
 ### 3.1 The rows: before, during and after the session
 
@@ -225,7 +225,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 
 This section describes the piece as lane C1 built it and the lead accepted it, with review R's round-one edits applied (`lanes/R.md` §4; the lead's ruling, option 1, §12). Where it departs from §3.0, the departure is recorded here.
 
-- **Reader:** a marketer; the reader line is "For marketing, writing about the engine for customers and the market." **Owner:** C1. **Source:** `content/what-it-is.md`. **Address:** `/what-it-is`. **Word copy:** `word/What-It-Is-v1.0.docx`.
+- **Reader:** a marketer; the reader line is "For marketing, writing about the engine for customers and the market." **Owner:** C1. **Source:** `content/what-it-is.md`. **Address:** `/what-it-is`. **Word copy:** `word/Enablement-What-It-Is-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: what it is`
 - **Rule:** C1's, first and last, in bold: "With consent, the engine remembers what each visitor is interested in, not who they are, and ranks your content by the rules your team publishes." Paragraph C stays the landing page's.
 - **Sections, in order, as built:**
@@ -244,9 +244,9 @@ This section describes the piece as lane C1 built it and the lead accepted it, w
 
 ### 3.4 (c) Selling it, for account executives
 
-Piece (c) is rebuilt to this section, with review R's round-one edits applied where they still apply after the rebuild (`lanes/R.md` §5; the lead's ruling, option 2, §12). Its demo table moves to the demo map, and (c) links to it.
+Piece (c) is rebuilt to this section, with review R's round-one edits applied where they still apply after the rebuild (`lanes/R.md` §5; the lead's ruling, option 2, §12). Its demo table moves to the demo map, and (c) links to it. As rebuilt, and by the lead's acceptance: (c) omits P8, whose content sits in the figure's lead and in rows B9, B11, B12 and A13; and it runs to about 3,260 words, because the tables this section mandates drive its length.
 
-- **Reader:** an account executive. **Owner:** C2. **Source:** `content/selling-it.md`. **Address:** `/selling-it`. **Word copy:** `word/Selling-It-v1.0.docx`.
+- **Reader:** an account executive. **Owner:** C2. **Source:** `content/selling-it.md`. **Address:** `/selling-it`. **Word copy:** `word/Enablement-Selling-It-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: selling it`
 - **Rule:** "Sell what is built, label what is designed, and promise nothing that is open."
 - **Sections, in order:**
@@ -255,7 +255,7 @@ Piece (c) is rebuilt to this section, with review R's round-one edits applied wh
   3. `## What you are selling fits in one paragraph`: P1, then: "Write its name in full the first time, then say the engine. It is not the behavioral targeting in other Optimizely products."
   4. `## What is built, designed and open, in the visitor's order`: three tables. Before: B1 to B9, B11, B12. During: D1 to D6, D8 to D10, D13, D14, D19, D16. After: A1 to A9, A11, A13. Then: "The one exception to keep straight: everything after the answer depends on recording. With the SDK as shipped, recording is not switched on yet, because it needs each slot set to count rendered pieces and durable recovery, which no configuration has."
   5. `## The customer provides these, and here is what each is for`: S2 §7.7 with three columns, `What we need`, `What we use it for`, `Who provides it`, every row stating both the need and the purpose.
-  6. `## Who sets what`: a table. The brand's team in the console: weights, pins, windows, rules, take, the learning dials, the holdout share. The brand's team through the API, without a release: the catalog, arrival seeds, dimensions and their sources, journey thresholds. An engineer: tenants, keys, allowed origins, retention, where visitor state lives (S2 §4.5, §4.6).
+  6. `## Who sets what`: a table, as C2 built it. The brand's team in the console: each slot's weights, pins, rules and take; how much each action counts and how long interest lasts; the learning dials; the holdout share. The brand's team through the API, without a software release: the catalog, including each piece's time window and eligibility rule, which are catalog fields with no console screen; arrival seeds; the dimensions and the attributes they read; journey thresholds. An engineer, in the deployment's own settings: tenants, keys, allowed origins, retention, and where visitor state lives (S2 §4.5, §4.6).
   7. `## The questions customers ask have true answers`: the answers below, each two or three sentences, verbatim unless the review finds a fault.
   8. `## Where AI and credits fit`: P2, and the credits page's address.
   9. `## Bring a solutions engineer when the question is how, not what`: architecture and the stack; the arithmetic; integration and the events; data, privacy and retention detail; any question this page answers with "open".
@@ -291,7 +291,7 @@ Piece (c) is rebuilt to this section, with review R's round-one edits applied wh
 
 This section describes the piece as lane C3 built it and the lead accepted it (§12). Where it departs from §3.0, the departure is recorded here and in the log.
 
-- **Reader:** a pre-sales solutions engineer. **Owner:** C3. **Source:** `content/how-it-works-and-where-it-runs.md`. **Address:** `/how-it-works`. **Word copy:** `word/How-It-Works-v1.0.docx`.
+- **Reader:** a pre-sales solutions engineer. **Owner:** C3. **Source:** `content/how-it-works-and-where-it-runs.md`. **Address:** `/how-it-works`. **Word copy:** `word/Enablement-How-It-Works-and-Where-It-Runs-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: how it works and where it runs`
 - **Rule:** "Every setting that can change an answer lives in a published, versioned document; the engine does the arithmetic at the edge, calls no AI model to decide, and shows its work on a receipt." It stands as a bold quotation under the reader line and again as the piece's last paragraph. "The unit of state is the dimension value, not the click" is A.1's heading. "Shows its work on a receipt" holds together with the recording condition, which A.5 and A.8 state (P5).
 - **Front matter, no heading:** the reader line ("For pre-sales solutions engineers."); the rule; the three labels in one sentence each; that no latency or throughput figure appears, with a link to B.7; a link to the glossary by its title.
@@ -342,7 +342,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 
 ### 3.6 (e) The credits page, standalone and restyled
 
-- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** P1, which wrote both sources below. **Address:** `/credits`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
+- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** P1, which wrote both sources below. **Address:** `/credits`. **Word copy:** `word/Enablement-Where-Opal-and-AI-Credits-Fit-v1.0.docx`.
 - **Sources:** `content/credits-source.html`, the page that was shared, kept whole with its corrections, from which the page is built; and `content/credits.md`, the same text in order as markdown, from which lane W builds the Word copy. The render check compares the page with both. The original stays filed, untouched, at `docs/enablement/research/opal-ai-credits-placement.source.html`. This is the one piece whose page is built from HTML, not markdown (§6).
 - **The corrections rule** (the lead's ruling, §12): corrections make false statements true, with the design's labels (Built, Designed, Open; "demo only"; "switched off by policy and not offered"). The structure, order, devices and voice stay. Every candidate P1 found on the page as built (`lanes/P1.md` §5) is checked against S2: a statement S2 shows false is corrected; anything that is only the original's voice stays.
 - **Rule:** the original's, "The engine decides. Opal creates and explains." It is followed at once by "Opal is not connected to the engine today." (S2 §6.2), marked on the page as an addition.
@@ -354,7 +354,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 
 ### 3.7 (f) The glossary page
 
-- **Reader:** a marketer, the least technical reader; every definition also holds for an account executive and a solutions engineer. **Owner:** E1 (`GLOSSARY.md`). **Renders it:** P1. **Address:** `/glossary`. **Word copy:** `word/Glossary-v1.0.docx`, built by W.
+- **Reader:** a marketer, the least technical reader; every definition also holds for an account executive and a solutions engineer. **Owner:** E1 (`GLOSSARY.md`). **Renders it:** P1. **Address:** `/glossary`. **Word copy:** `word/Enablement-Glossary-v1.0.docx`, built by W.
 - **Rule:** "One word for each meaning, defined once, in plain words."
 - **Sections:** the reader line; the rule; `## How to read it`; one `##` section per letter; the rule again.
 - **Where it departs from §3.0, on purpose:** its source sits at `docs/enablement/GLOSSARY.md`, not under `content/`, because the lead assigned that path; it has no session tables, no example and no never-say table, because it is the reference every piece points to; its letter headings are labels, not statements.
@@ -363,7 +363,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 
 ### 3.8 (g) The demo map
 
-- **Reader:** an account executive. **Owner:** P1, which wrote the source from this section. **Source:** `content/demos.md`, the page's and the Word copy's. **Address:** `/demos`. **Word copy:** `word/Demo-Map-v1.0.docx`.
+- **Reader:** an account executive. **Owner:** P1, which wrote the source from this section. **Source:** `content/demos.md`, the page's and the Word copy's. **Address:** `/demos`. **Word copy:** `word/Enablement-Which-Demo-to-Show-to-Whom-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: which demo to show to whom`
 - **Rule:** "Choose the demo by the question your customer is asking, and show today's engine on Vantage or Top Offers."
 - **Facts:** the demos' addresses, rooms and beats come from `docs/demos/BOOTSTRAP.md` §2, §3, §5 and §6 and S1 tables F and I, by the lead's ruling; every statement about the engine inside it still traces to S2. No demo is described by the customer it was built for; a vertical ("a carrier's online shop", "a retailer's promotions module") is enough.
@@ -379,7 +379,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
      - **The Bright Hour**, `https://edge-platform.expedge.workers.dev/live/`, with its Offer Desk at `/live/ops`. Question: what about offers that live for hours? Sees: a live-shopping retailer deciding under expiry; a new offer born and ranked with no history; an item selling out mid-session; receipts. Never claims (addition, as built, from (c)'s caution for this demo): "It runs on the shared demo deployment's older build, not today's engine. Never present it as the product."
      - One shared line under the table: "Both run Generation 1, the older demo pipeline, at an older version of the code. Their memories are compressed to seconds for the room, and their AI chat and experiment screens are demo seams, not the engine."
   4. `## Engineers who saw a demo can move the numbers themselves`: Vantage's interactive explainer, `https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works`, for a customer's engineers or an SE: every constant on a slider, recomputed in the browser, naming no customer.
-  5. `## Three things are not for showing as the engine`: First National Bank (`/visual-demo` on the shared worker) shows the 2025 platform, not this engine; the storefront at `/storefront` on the shared worker was built for one customer with its own brand and products and is never shown to another; OH, a home-appliances demo, is scaffolded and not yet hosted. The page at `/` on every worker is the 2025 dashboard, not the product.
+  5. `## Three things are not for showing as the engine`: First National Bank (`/visual-demo` on the shared worker) shows the 2025 platform, not this engine; the storefront at `/storefront` on the shared worker was built for one customer with its own brand and products and is never shown to another; OH, a home-appliances demo built for one prospect, is hosted; ask the demo owner before showing it. The page at `/` on every worker is the 2025 dashboard, not the product.
   6. `## Before you show a demo`: open it from where you are, because the region on screen is the request's real one, and any other region is asserted by a press and labeled; regional data in the demos is synthetic and labeled; Vantage shows real phone makers' product images, and legal confirms before any public or recorded use; Vantage's regional data has a one-day memory and is reseeded before a showing, so ask the demo owner before a customer sees any demo.
   7. `## A demo for your own customer is a restyle, not a rebuild`: a demo is a palette, a product feed and a set of beats on a shared kit; it takes the customer's colors and never its logo; it may show real names for the products the customer itself sells; an SE follows the demo kit's how-to (`docs/demo-kit/HOWTO.md`), and nothing is created in the cloud without the owner's approval.
   8. The rule again.
@@ -413,7 +413,7 @@ The figures as lane D1 drew them (`lanes/D1.md`). Each caption is the figure's S
 
 ### 3.10 (h) What is built, designed and open
 
-- **Reader:** anyone at Optimizely who must know what may be claimed today; the reader line is "For anyone at Optimizely who must know what may be claimed today." Like the glossary, it serves every reader, by the lead's ruling (§12). **Owner:** C3. **Source:** `content/status.md`. **Address:** `/status`. **Word copy:** `word/Status-v1.0.docx`.
+- **Reader:** anyone at Optimizely who must know what may be claimed today; the reader line is "For anyone at Optimizely who must know what may be claimed today." Like the glossary, it serves every reader, by the lead's ruling (§12). **Owner:** C3. **Source:** `content/status.md`. **Address:** `/status`. **Word copy:** `word/Enablement-What-Is-Built-Designed-and-Open-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: what is built, designed and open`
 - **Rule:** "Claim only what is Built; name what is Designed; say what is Open." As a bold quotation under the reader line, and again as the last paragraph.
 - **What it holds:** S2 §10's tables in full, once for the whole package: every row of §3.1 (B1 to B16, D1 to D22, A1 to A13), in its wording and with its verdict; S2 §10.2's path to a customer deployment; S2 §10.3's open decisions, each with the owner the record names. No other piece repeats them in full: (d)'s B.8 is a ten-row summary that links here, and (b) and (c) carry only their own rows.
@@ -467,6 +467,8 @@ No latency or throughput figure appears anywhere, for any reason (common brief; 
 
 A duration that is a constant in the code may be stated as a constant where a piece needs it: the memory's default and cap, the region's one-day memory, the consent life of 30 days, the attribution windows, the 30-minute visit gap, the 24-hour shopper capability. One exception: the document cache's lifetime is never quoted, because it reads as a promise of how fast a change reaches visitors, which the integration kit explicitly does not make (S2 §4.1). Say "in force without a software release".
 
+**The illustration ruling** (the lead's, 2026-10-02). A scaling illustration, such as "whether a site has one million sessions or ten million", is allowed when it is plainly an illustration and not a measurement. It is never a timing figure, and it never stands for a capacity the engine has been measured at. The credits page's corrections 7 and 35 rest on this ruling (`lanes/P1.md` §5).
+
 ### 4.4 The facts every piece respects
 
 | Fact (common brief, S2) | The words pieces use |
@@ -486,6 +488,7 @@ Say "It calls no AI model to decide" (S2 §1, §6.1). Never say "we don't use a 
 - **May be quoted, in (d) only:** S2 §3.17's published constants and S2 §3.4's worked arithmetic, with the view weight stated; S2 §9.3's limits, labeled as budgets in the code, not measured capacity.
 - **May be quoted anywhere:** the consent life (30 days); "a default memory of 14 days, at most 90, with the production value open"; the attribution windows; the fact that the learning dial runs from 0 to 1 and starts at 0.
 - **Demo-only numbers, never the engine's:** the memories of seconds and minutes in demos (S1 §2.2 lists 60 seconds, 90 seconds and about ten minutes, found in demo configurations); the weights compiled for two older demo scopes (S2 §3.4, §3.17); holdouts of zero on stage (S2 §5.3); the synthetic regional sales seeded into demos (S2 §3.6); census figures shown on a demo's panel (S2 §10.1). A piece that mentions any of these says "compressed for the room" or "synthetic, labeled".
+- **Allowed as an illustration only:** a scaling illustration that is plainly not a measurement, under the illustration ruling (§4.3).
 - **Never:** a timing (§4.3); a lift, conversion or revenue figure; a cost per session or per visitor (S2 §6.3 says the cost model assumes a host no deployment runs); a share of anonymous traffic (not in S2).
 
 ### 4.7 S2 wording the package does not reuse as written
@@ -600,12 +603,12 @@ The page and the Word copy are renderings of the source. A change is made in the
 **The Word copy.** Lane W builds each with the repository's converter, unchanged:
 
 ```
-node scripts/md2docx.mjs <source.md> docs/enablement/word/<File>-v1.0.docx \
+node scripts/md2docx.mjs <source.md> docs/enablement/word/Enablement-<Title>-v1.0.docx \
   "<the source's title line, verbatim>" "<Subtitle>" "<Prepared for>" \
   "1.0" "<Month D, YYYY>" "Internal: Optimizely only"
 ```
 
-The subtitle is the reader and the facts stamp, for example "For marketing · engine facts as of commit 8b4f74c". "Prepared for" is the reader's team, for example "Optimizely marketing". The version is the bare number, because the converter prints its own "Version" label. File names carry no package name, so a rename does not rename files, and carry their version; when a new version replaces an old one, the lead removes the old file (lanes do not delete). The converter needs the `docx` package installed once per machine, outside the repository (its header says how); W uses an existing install and installs nothing.
+The subtitle is the reader and the facts stamp, for example "For marketing · engine facts as of commit 8b4f74c". "Prepared for" is the reader's team, for example "Optimizely marketing". The version is the bare number, because the converter prints its own "Version" label. File names are `Enablement-<Title>-v1.0.docx`, the piece's title in capitalized words: they carry no package name, so a rename does not rename files, and they carry their version. As built there are seven, one for each piece but the landing page: `Enablement-What-It-Is`, `Enablement-Selling-It`, `Enablement-How-It-Works-and-Where-It-Runs`, `Enablement-What-Is-Built-Designed-and-Open`, `Enablement-Where-Opal-and-AI-Credits-Fit` (built from `content/credits.md`), `Enablement-Glossary` and `Enablement-Which-Demo-to-Show-to-Whom`, each `-v1.0.docx`; when a new version replaces an old one, the lead removes the old file (lanes do not delete). The converter needs the `docx` package installed once per machine, outside the repository (its header says how); W uses an existing install and installs nothing.
 
 **The page, a designed rendering of the same text.** Each content page wraps the piece in `<article data-source="docs/enablement/content/<piece>.md">` (the glossary names `docs/enablement/GLOSSARY.md`). Everything inside it is the source's text; everything outside it is the chrome in §7. P1 may choose any layout, type and color inside the brand, but may not drop or reword text inside the article. A word that is not the source's, such as a rule's label or the session figure on (b), is marked on the page as an addition (`data-added`, or `data-replaces` for a replaced title). The figure's internal text sits inside an inline SVG and is outside the comparison; its caption is a `<figcaption>` and is inside it.
 
@@ -778,7 +781,23 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 - New engine facts: S2 changes only through the lead.
 - The passphrase itself, which is the owner's, and the Microsoft sign-in that takes over from the gate when the material moves inside Optimizely.
 - Moving the material inside Optimizely, a later step.
-- Search, analytics, forms or any script on the site.
+- Search, analytics or forms on the site, or any script beyond `/site.js`'s progressive enhancement.
+
+**Follow-ups for the next release:** review round two's eleven recommendations, none blocking (`lanes/R.md` R2.4 to R2.9).
+
+| Id | Where | The follow-up | Owner |
+|---|---|---|---|
+| RR-1 | `enablement/site/site.css` | Give the reader tags and the landing cards' number badges a neutral fill, so the three label fills mean only Built, Designed and Open | P1 |
+| RR-2 | `enablement/site/site.js`, `initTabs` | Set `aria-orientation="vertical"` on the tab list when it stacks on a phone, so assistive technology announces the up and down arrows the code already honors | P1 |
+| RR-3 | `enablement/site/site.css` | Keep preformatted blocks on their lines on a phone and let them scroll sideways, so (d)'s B.1 formula does not wrap mid-formula | P1 |
+| RE-1 | `content/credits-source.html`, `content/credits.md` | "ODP event ingest, seed, profile updates" becomes "ODP event ingest, audience seeding, profile updates", since the glossary keeps "seed" for an arrival rule | P1 |
+| RE-2 | The same two sources | Meter 3 begins "Optional add-on line, as designed:", as meter 1 carries its label | P1 |
+| RE-3 | The same two sources | "Tap through them." becomes "Read each part in turn.", which the Word copy can honor | P1 |
+| RG-1 | §3.8 and `content/demos.md` | "a retailer's four-container promotions module" becomes "four-place", since the glossary retires "container" for slot | E1 and P1, together |
+| RF-1 | `before-during-after.svg` | Give the Opal half of the rule a white or dark fill, removing the last trace of the old credit-band colors | D1 |
+| RF-2 | The glossary page | Its reader tag reads "For everyone" while its reader line names a marketer; consider "For marketing" | The lead's call; then P1 |
+| RF-3 | `architecture.svg` | "worker" becomes "Worker" in the box titles and zones, as the glossary spells it; optional | D1 |
+| RC-1 | `content/selling-it.md`, its never-say table | Use §4.9's wording for lines about another kind of system, with the lead's "what it is not" allowance, so (c) does not contradict (b) | C2 |
 
 ---
 
@@ -847,3 +866,9 @@ No other owner decision is known that the package needs. The questions in §4.8 
 | 2026-10-02 | **Credit verdicts are words.** The session figure keeps one legend, Built, Designed and Open, and gives each card's credit verdict as bold words at its top, with no fill and no second legend. The credits page's credit tags follow the same rule, and P1 aligns the page's chips on the next render (§3.6, §3.9) | lead |
 | 2026-10-02 | **Row B7 reworded,** because "Every setting is a published, versioned document" overstated S2 §4.6: some settings are worker configuration that an engineer sets. It now reads "Every rule and weight the brand sets is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision; identity and access settings are worker configuration set by an engineer." The verdict stays Built; C2 and C3 mirror it in (c) and (h). P1 and (d)'s rule use the similar phrase "every setting that can change an answer", left as they are | lead |
 | 2026-10-02 | **P5 corrected,** from S2's correction round: "A page that asks the engine directly is recorded" becomes "A page that asks the engine directly is recorded when its slots use the default served basis", because a direct call that includes any slot on the rendered basis records nothing (`src/content/service.ts:557` at `8b4f74c`). The rest of P5 is unchanged. Row A1 repeats P5's words and takes the same insertion, as does the glossary's Recording entry; C2 and C3 make it in their verbatim copies | lead |
+| 2026-10-02 | From review round two (R2-1): **OH is hosted** since `6484544`. §3.8 item 5 now reads "OH, a home-appliances demo built for one prospect, is hosted; ask the demo owner before showing it", and it stays under "not for showing as the engine" | lead |
+| 2026-10-02 | **The illustration ruling:** a scaling illustration ("whether a site has one million sessions or ten million") is allowed when it is plainly an illustration and not a measurement, and never a timing figure. The credits page's corrections 7 and 35 rest on it (§4.3, §4.6) | lead |
+| 2026-10-02 | §3.4 item 6 follows C2's reading: windows and eligibility rules are catalog fields, set through the API, not in the console (S2 §4.5) | lead |
+| 2026-10-02 | **(c) as rebuilt is accepted** with two departures: it omits P8, whose content sits in the figure's lead and in rows B9, B11, B12 and A13; and it runs to about 3,260 words, because the tables the design mandates drive it (§3.0, §3.4) | lead |
+| 2026-10-02 | **The Word copies** are named `Enablement-<Title>-v1.0.docx`, with no package name, and there are seven, the credits page's and the demo map's included. §1, §3 and §6 name them as built | lead |
+| 2026-10-02 | Review round two's eleven non-blocking recommendations are listed in §10 as follow-ups for the next release, each with its owner | lead |
