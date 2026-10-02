@@ -30,7 +30,7 @@ These are the rows an account executive needs. Every row, with its caveat, is on
 | The site keeps its own defaults, and they render whenever the engine is silent. | **Built** |
 | The site's consent banner passes the visitor's explicit choice; nothing happens without it. | **Built** |
 | Product events carry the attributes the registry reads, because the engine holds no product catalog for a customer. | **Built** |
-| Every setting is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision. | **Built** |
+| Every rule and weight the brand sets is a published, versioned document, in force without a software release, with its history and a rollback that is itself a new revision; identity and access settings are worker configuration set by an engineer. | **Built** |
 | The brand's team works in the operator console; engineers set the deployment's own settings, such as its tenants, keys, allowed origins and retention. | **Built** |
 | A customer deployment is set up by a workflow that stops before the tenant has its first configuration. | **Open** |
 | Connecting ODP or Feature Experimentation to a customer deployment. | **Open** |
