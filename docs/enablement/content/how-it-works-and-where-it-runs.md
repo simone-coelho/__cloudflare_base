@@ -340,16 +340,16 @@ These are the rows a solutions engineer is asked about most, worded as every pie
 
 | What happens | Verdict |
 |---|---|
-| A stranger is served from their first event, on how they arrived: the campaign term, the channel, the referring network and the operating system family of their phone. | Built |
-| Where the brand turns it on, a stranger leans on what their region is interested in, from the site's own events, until their own interests take over. | Built |
-| A product list from the commerce platform is re-ranked by the visitor's interests, with nothing removed. | Built |
-| The engine orders whatever sits in a slot for each visitor, a stack of page modules included, and shows why. | Built |
-| Configuring a page's layout per context, such as by channel or visit; where each slot sits on the page stays the site's own template. | Designed |
-| A first paint decided on the site's own server: a source module exists, and acceptance on a real site is the open part. | Open |
-| A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot. | Built |
-| Learning computes how much better each piece does in each context, and moves nothing until a person raises the learning dial. | Built |
-| A customer deployment is set up by a workflow that stops before the tenant has its first configuration. | Open |
-| Connecting ODP or Feature Experimentation to a customer deployment. | Open |
+| A stranger is served from their first event, on how they arrived: the campaign term, the channel, the referring network and the operating system family of their phone. | **Built** |
+| Where the brand turns it on, a stranger leans on what their region is interested in, from the site's own events, until their own interests take over. | **Built** |
+| A product list from the commerce platform is re-ranked by the visitor's interests, with nothing removed. | **Built** |
+| The engine orders whatever sits in a slot for each visitor, a stack of page modules included, and shows why. | **Built** |
+| Configuring a page's layout per context, such as by channel or visit; where each slot sits on the page stays the site's own template. | **Designed** |
+| A first paint decided on the site's own server: a source module exists, and acceptance on a real site is the open part. | **Open** |
+| A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot. | **Built** |
+| Learning computes how much better each piece does in each context, and moves nothing until a person raises the learning dial. | **Built** |
+| A customer deployment is set up by a workflow that stops before the tenant has its first configuration. | **Open** |
+| Connecting ODP or Feature Experimentation to a customer deployment. | **Open** |
 
 Every other row, the path to a customer deployment and the open decisions with their owners are on the status page, [What is built, designed and open](https://edge-platform-bti.expedge.workers.dev/status).
 
