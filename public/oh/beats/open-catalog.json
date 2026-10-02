@@ -2380,7 +2380,7 @@
      "id": "mod_laundry_dryer",
      "customerContentId": "mod-laundry-dryer",
      "type": "module",
-     "title": "The dryer that goes with it, in your fuel",
+     "title": "The dryer that goes with it",
      "subtitle": "The same series in gas or electric (gas runs about $100 more), or a ventless heat pump. Our merchandiser's rule, shown as one.",
      "tags": {
       "category": [
@@ -2854,7 +2854,7 @@
       "pdp-modules"
      ],
      "lifecycle": {
-      "status": "live"
+      "status": "draft"
      },
      "eligibleWhen": {
       "context": {
@@ -2866,38 +2866,6 @@
      },
      "journeyStageFit": [
       "deciding"
-     ],
-     "complements": [
-      "DLEX4000W",
-      "DLEX5500W",
-      "DLEX5800A",
-      "DLEX6500B",
-      "DLEX6700W",
-      "DLGX4001B",
-      "DLGX4001W",
-      "DLGX5501V",
-      "DLGX5501W",
-      "DLGX5801A",
-      "DLGX5801V",
-      "DLGX6501B",
-      "DLGX6501W",
-      "DLGX6701B",
-      "DLGX6701W",
-      "DLHC4002B",
-      "DLHC4002W",
-      "DLHC5502B",
-      "DLHC5502V",
-      "DLHC5502W",
-      "WM4000HBA",
-      "WM4000HWA",
-      "WM5500HVA",
-      "WM5500HWA",
-      "WM5800HAA",
-      "WM5800HVA",
-      "WM6500HBA",
-      "WM6500HWA",
-      "WM6700HBA",
-      "WM6700HWA"
      ],
      "inStock": true
     },

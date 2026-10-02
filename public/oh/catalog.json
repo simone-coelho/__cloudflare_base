@@ -2183,6 +2183,32 @@
     "cta": "See pickup TVs",
     "order": 28,
     "outcome": "partner_pickup",
+    "retailers": {
+     "source": "the demo's own list, not LG's data and not a live PriceSpider answer: modelled on the retailers PriceSpider's where-to-buy showed on lg.com on 2026-10-01 (lg-site-recon.md §5: FIND ONLINE for OLED77G5WUA and LRSWS2806S, FIND NEARBY by distance). No addresses; a nearby entry's distanceMiles is null until the page fills it from the visitor's real region.",
+     "groups": [
+      {
+       "key": "pickup",
+       "label": "Best Buy pickup",
+       "families": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "uhd-tv"
+       ],
+       "online": [],
+       "nearby": [
+        {
+         "name": "Best Buy",
+         "kind": "nearby",
+         "distanceMiles": null,
+         "note": "the pickup partner: an OH order, handed over by Best Buy"
+        }
+       ]
+      }
+     ]
+    },
     "seen": "lg.com store pickup, lg-site-recon.md §5"
    }
   },
@@ -2684,6 +2710,40 @@
     "order": 35,
     "outcome": "partner_pickup",
     "beat": 16,
+    "retailers": {
+     "source": "the demo's own list, not LG's data and not a live PriceSpider answer: modelled on the retailers PriceSpider's where-to-buy showed on lg.com on 2026-10-01 (lg-site-recon.md §5: FIND ONLINE for OLED77G5WUA and LRSWS2806S, FIND NEARBY by distance). No addresses; a nearby entry's distanceMiles is null until the page fills it from the visitor's real region.",
+     "groups": [
+      {
+       "key": "pickup",
+       "label": "Best Buy pickup",
+       "families": [
+        "front-load-dryer",
+        "front-load-washer",
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "pedestal-washer",
+        "qned-tv",
+        "rear-control-dryer",
+        "soundbar",
+        "top-load-washer",
+        "uhd-tv",
+        "washer-dryer-combo",
+        "washtower"
+       ],
+       "online": [],
+       "nearby": [
+        {
+         "name": "Best Buy",
+         "kind": "nearby",
+         "distanceMiles": null,
+         "note": "the pickup partner: an OH order, handed over by Best Buy"
+        }
+       ]
+      }
+     ]
+    },
     "seen": "lg-site-recon.md §5 (Best Buy pickup of LG.com orders; eligible: TVs, soundbars, some laundry)",
     "role": "where-to-buy, outcome one: an OH order fulfilled by a partner, credited to the decision that earned it; never on ranges, dishwashers, refrigerators or packages"
    }
@@ -2751,6 +2811,150 @@
     "outcome": "retailer_referral",
     "beat": 16,
     "seen": "lg-site-recon.md §5 (PriceSpider where-to-buy)",
+    "retailers": {
+     "source": "the demo's own list, not LG's data and not a live PriceSpider answer: modelled on the retailers PriceSpider's where-to-buy showed on lg.com on 2026-10-01 (lg-site-recon.md §5: FIND ONLINE for OLED77G5WUA and LRSWS2806S, FIND NEARBY by distance). No addresses; a nearby entry's distanceMiles is null until the page fills it from the visitor's real region.",
+     "groups": [
+      {
+       "key": "tv-audio",
+       "label": "TVs and audio",
+       "families": [
+        "hd-tv",
+        "lifestyle-tv",
+        "micro-rgb-tv",
+        "oled-tv",
+        "qned-tv",
+        "soundbar",
+        "tv-mount",
+        "uhd-tv"
+       ],
+       "online": [
+        {
+         "name": "Best Buy",
+         "kind": "online"
+        },
+        {
+         "name": "Costco",
+         "kind": "online"
+        },
+        {
+         "name": "ABC Warehouse",
+         "kind": "online",
+         "note": "a regional dealer"
+        },
+        {
+         "name": "RC Willey",
+         "kind": "online",
+         "note": "a regional dealer"
+        }
+       ],
+       "nearby": [
+        {
+         "name": "Best Buy",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Costco",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Sam's Club",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "BJ's",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Walmart",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Micro Center",
+         "kind": "nearby",
+         "distanceMiles": null
+        }
+       ]
+      },
+      {
+       "key": "appliances",
+       "label": "Appliances",
+       "families": [
+        "dual-fuel-range",
+        "electric-range",
+        "front-control-dishwasher",
+        "front-load-dryer",
+        "front-load-washer",
+        "gas-range",
+        "induction-range",
+        "kitchen-package",
+        "laundry-set",
+        "otr-microwave",
+        "pedestal",
+        "pedestal-washer",
+        "rear-control-dryer",
+        "refrigerator",
+        "stacking-kit",
+        "styler",
+        "top-control-dishwasher",
+        "top-load-washer",
+        "washer-dryer-combo",
+        "washtower"
+       ],
+       "online": [
+        {
+         "name": "Lowe's",
+         "kind": "online"
+        },
+        {
+         "name": "Home Depot",
+         "kind": "online"
+        },
+        {
+         "name": "Wayfair",
+         "kind": "online"
+        },
+        {
+         "name": "US Appliance",
+         "kind": "online",
+         "note": "an independent"
+        },
+        {
+         "name": "Electronic Express",
+         "kind": "online",
+         "note": "an independent"
+        }
+       ],
+       "nearby": [
+        {
+         "name": "Best Buy",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Lowe's",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "Home Depot",
+         "kind": "nearby",
+         "distanceMiles": null
+        },
+        {
+         "name": "An independent appliance dealer",
+         "kind": "nearby",
+         "distanceMiles": null,
+         "note": "named by the page, never a real address"
+        }
+       ]
+      }
+     ]
+    },
     "role": "where-to-buy, outcome two: a referral through a PriceSpider-shaped list, credited to the decision; a referral is not a sale"
    }
   },
@@ -2812,7 +3016,7 @@
    "id": "mod_laundry_dryer",
    "customerContentId": "mod-laundry-dryer",
    "type": "module",
-   "title": "The dryer that goes with it, in your fuel",
+   "title": "The dryer that goes with it",
    "subtitle": "The same series in gas or electric (gas runs about $100 more), or a ventless heat pump. Our merchandiser's rule, shown as one.",
    "tags": {
     "category": [
@@ -3310,7 +3514,7 @@
     "pdp-modules"
    ],
    "lifecycle": {
-    "status": "live"
+    "status": "draft"
    },
    "eligibleWhen": {
     "context": {
@@ -3323,44 +3527,23 @@
    "journeyStageFit": [
     "deciding"
    ],
-   "complements": [
-    "DLEX4000W",
-    "DLEX5500W",
-    "DLEX5800A",
-    "DLEX6500B",
-    "DLEX6700W",
-    "DLGX4001B",
-    "DLGX4001W",
-    "DLGX5501V",
-    "DLGX5501W",
-    "DLGX5801A",
-    "DLGX5801V",
-    "DLGX6501B",
-    "DLGX6501W",
-    "DLGX6701B",
-    "DLGX6701W",
-    "DLHC4002B",
-    "DLHC4002W",
-    "DLHC5502B",
-    "DLHC5502V",
-    "DLHC5502W",
-    "WM4000HBA",
-    "WM4000HWA",
-    "WM5500HVA",
-    "WM5500HWA",
-    "WM5800HAA",
-    "WM5800HVA",
-    "WM6500HBA",
-    "WM6500HWA",
-    "WM6700HBA",
-    "WM6700HWA"
-   ],
    "inStock": true,
    "display": {
     "order": 42,
     "relation": "companions.packages",
-    "note": "memberSum is null where two member prices are not in the crawl; then the page shows the set price and the set deal, never a computed saving",
-    "beat": 5
+    "beat": 5,
+    "setCheck": {
+     "prices": "the product page's price where public/oh/specs.json has one (2026-10-02), else the feed's, as the page merges them",
+     "sets": 23,
+     "saving": [],
+     "unpriced": [
+      "WM5500HVA_DLGX5501V_WD300CV_WDP6V",
+      "WM5500HVA_DLHC5502V_WD300CV_WDP6V",
+      "WM5800HVA_DLGX5801V_WD300CV_WDP6V",
+      "WM6700HBA_DLGX6701B_WD300CB_WDP6B"
+     ]
+    },
+    "note": "draft: no laundry set costs less than its pieces at the prices the page shows (each set equals the sum of its four pieces; LG's extra $150 to $250 is applied in the cart, deal_laundry_sets), so the card is absent everywhere rather than ranked and then hidden. The front-load gate stays as the guard; publishing it live needs a set that saves, and the build makes it live by itself when one does."
    }
   },
   {
