@@ -78,7 +78,8 @@ export function assertedContextOf(value: unknown, intents: ReadonlySet<string>):
   if (!isRecord(value)) return new Error('context must be an object of intent and region');
   const out: AssertedContext = {};
   for (const [key, raw] of Object.entries(value)) {
-    const name = key.replace(/^ctx./, '');
+    // `ctx.intent` or `intent`: the dot is literal, so `ctx-intent` or `ctxXintent` names nothing asserted.
+    const name = key.replace(/^ctx\./, '');
     if (name !== 'intent' && name !== 'region') return new Error(`context names ${key}; only intent and region are asserted`);
     if (typeof raw !== 'string') return new Error(`context.${name} must be a string`);
     const v = name === 'region' ? raw.trim().toUpperCase() : raw.trim();

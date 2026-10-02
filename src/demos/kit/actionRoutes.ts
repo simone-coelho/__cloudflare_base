@@ -29,8 +29,10 @@
 //     truth for what a beat means. The worst an anonymous caller can do is move
 //     the demo tenant between states the demo ships.
 //   • /receipt answers only the caller's OWN decisions: it requires the
-//     shopper's session capability, refuses an id that names another visitor
-//     (or another tenant) before any read, checks the record's owner after it,
+//     shopper's session capability ON THE DEMO'S OWN TENANT (another tenant's
+//     capability gets 404, on a worker that provisions two demos), refuses an id
+//     that names another visitor (or another tenant) before any read, checks
+//     the record's owner after it,
 //     and returns a projection that leaves out the visitor and session ids and
 //     the replay inputs (the affinity vector).
 //   • Nothing fabricates authority. Each action mints a genuine 60-second
@@ -243,13 +245,19 @@ export function demoActionRoutes(config: DemoActionConfig & { dispatch: Dispatch
    * page asks again.
    */
   routes.post('/receipt', requireShopper({ forward: false, bodyLimit: 8192 }), async (c) => {
+    const principal = shopperPrincipal(c.req.raw);
+    // Bound to this demo's tenant. requireShopper binds the capability to the
+    // X-Tenant it came with, and on a worker that provisions two demos that can
+    // be the other one: her session there is not a session here, so this route
+    // is absent to it, before the body or any id is looked at.
+    if (principal.tenant !== tenant) return c.json({ ok: false, error: 'not found' }, 404);
     const body = await c.req.json().catch(() => null) as { decisionId?: unknown; decisionIds?: unknown; context?: unknown } | null;
     const many = isRecord(body) && Array.isArray(body.decisionIds);
     const ids: unknown[] = many ? (body!.decisionIds as unknown[]) : [isRecord(body) ? body.decisionId : undefined];
     if (!ids.length || ids.length > RECEIPTS_PER_REQUEST) {
       return c.json({ ok: false, error: `ask for 1..${RECEIPTS_PER_REQUEST} decisions` }, 400);
     }
-    const subject = shopperPrincipal(c.req.raw).subject;
+    const subject = principal.subject;
     if (!ids.every((id) => ownDecisionId(id, subject, tenant))) {
       return c.json({ ok: false, error: 'every decisionId must name one of this shopper’s own decisions' }, 400);
     }

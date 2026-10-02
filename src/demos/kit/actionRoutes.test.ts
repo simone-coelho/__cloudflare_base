@@ -241,6 +241,59 @@ describe('its own receipts: the tenant prefix and the asserted intents', () => {
   });
 });
 
+/**
+ * A ledger that answers ANY tenant's id as the shopper's own record: what R2's
+ * probe read on a worker that provisions two kit demos, where a kestrel
+ * capability reached /v1/vantage/ledger/<id> and got a 200.
+ */
+const anyLedger = (request: Request) => {
+  const m = /^\/v1\/([^/]+)\/ledger\/(.+)$/.exec(new URL(request.url).pathname);
+  if (!m) return Response.json({ ok: false, error: `unexpected ${request.url}` }, { status: 500 });
+  return Response.json({ ok: true, record: { decision_id: decodeURIComponent(m[2]!), visitor_id: SHOPPER, session_id: 's-1',
+    page: 'laundry', slot: 'companions', position: 0, item_id: `${m[1]}-item` } });
+};
+
+/** Her session capability on `tenant`, sent with X-Tenant (her own tenant unless named). */
+async function shopperOn(r: ReturnType<typeof rig>, tenant: string, body: unknown, xTenant = tenant) {
+  const { capability } = await issueSessionCapability(r.env as unknown as Env, { tenant, subject: SHOPPER, sessionId: 's-1', kind: 'anonymous' });
+  return r.post('/receipt', body, { 'X-Tenant': xTenant, 'X-Shopper-Session': capability });
+}
+
+describe('the receipt is bound to the demo’s own tenant, on a worker that provisions two demos (R2)', () => {
+  const both = ['kestrel', 'vantage'];
+
+  it('answers each demo’s own shopper from its own ledger (the control)', async () => {
+    for (const [config, tenant] of [[KESTREL, 'kestrel'], [VANTAGE_ACTIONS, 'vantage']] as const) {
+      const r = rig(config, { tenants: both, reply: anyLedger });
+      const res = await shopperOn(r, tenant, { decisionId: idOn(tenant) });
+      expect(res.status, tenant).toBe(200);
+      expect(((await res.json()) as { record: Record<string, unknown> }).record).toMatchObject({ decision_id: idOn(tenant), item_id: `${tenant}-item` });
+      expect(r.calls.map((c) => new URL(c.url).pathname)).toEqual([`/v1/${tenant}/ledger/${encodeURIComponent(idOn(tenant))}`]);
+    }
+  });
+
+  it('answers 404 to the other demo’s shopper, whatever she asks for, and reads nothing', async () => {
+    for (const [config, own, other] of [[VANTAGE_ACTIONS, 'vantage', 'kestrel'], [KESTREL, 'kestrel', 'vantage']] as const) {
+      const r = rig(config, { tenants: both, reply: anyLedger });
+      // An id on this demo's prefix naming her (R2's probe), several of them, one on her own tenant, and none.
+      for (const body of [{ decisionId: idOn(own) }, { decisionIds: [idOn(own), idOn(own)] }, { decisionId: idOn(other) }, {}]) {
+        const res = await shopperOn(r, other, body);
+        expect(res.status, `${other}'s shopper on ${own}: ${JSON.stringify(body)}`).toBe(404);
+        expect(await res.json()).toEqual({ ok: false, error: 'not found' });
+        expect(res.headers.get('Cache-Control')).toBe('no-store');
+      }
+      expect(r.calls, `${own} read nothing`).toEqual([]);
+    }
+  });
+
+  it('and her capability cannot borrow the demo’s tenant: X-Tenant must be the capability’s own (401, nothing read)', async () => {
+    const r = rig(VANTAGE_ACTIONS, { tenants: both, reply: anyLedger });
+    const res = await shopperOn(r, 'kestrel', { decisionId: idOn('vantage') }, 'vantage');
+    expect(res.status).toBe(401);
+    expect(r.calls).toEqual([]);
+  });
+});
+
 describe('one factory, two demos', () => {
   it('builds Vantage and a second demo side by side, sharing nothing', async () => {
     const kestrel = rig(KESTREL, { tenants: ['kestrel', 'vantage'] });
@@ -359,5 +412,16 @@ describe('the kit helpers, with the tenant and the asserted set as parameters', 
     expect(message({ intent: 'gift' }, new Set())).toMatch(/^context\.intent must be one of/);
     expect(message({ region: 'Texas' }, kestrel)).toBe('context.region must be a region key such as US-TX');
     expect(assertedContextOf(undefined, kestrel)).toBeNull();
+  });
+
+  it('assertedContextOf: only `ctx.` with a literal dot is stripped (R2)', () => {
+    const kestrel = new Set(['gift', 'self']);
+    expect(assertedContextOf({ 'ctx.intent': 'gift', 'ctx.region': 'us-ca' }, kestrel)).toEqual({ intent: 'gift', region: 'US-CA' });
+    // Any other character where the dot stands names nothing the page asserts.
+    for (const key of ['ctx-intent', 'ctxXintent', 'ctx_region', 'ctx/region', 'ctx..intent', 'CTX.intent']) {
+      const out = assertedContextOf({ [key]: key.endsWith('region') ? 'US-CA' : 'gift' }, kestrel);
+      expect(out, key).toBeInstanceOf(Error);
+      expect((out as Error).message, key).toBe(`context names ${key}; only intent and region are asserted`);
+    }
   });
 });

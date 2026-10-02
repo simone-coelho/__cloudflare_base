@@ -4,10 +4,11 @@
 //   1. generated    npm run check:generated: the SDK and Meridian bundles match their sources (a deploy
 //                   does not rebuild them; `npm run dev` does)
 //   2. typecheck    the app typecheck, as the gate runs it: tsc --noEmit --incremental false --composite false
-//   3. credentials  the credential grep over the demo's public directory (served wholesale) and its config
-//                   files: the repository's own token shapes (scripts/rehearse-vantage-page.mjs), the file
-//                   names the suites probe for, and every secret value in the local .dev.vars (named, never
-//                   printed)
+//   3. credentials  the credential grep over everything the demo's pages load (served wholesale: its
+//                   public/<slug>, the kit's public/demo-kit, and every directory or file under public/ the
+//                   files there name, lib/credentials.mjs servedPaths) and its config files: the
+//                   repository's own token shapes (scripts/rehearse-vantage-page.mjs), the file names the
+//                   suites probe for, and every secret value in the local .dev.vars (named, never printed)
 //   4. suites       the demo's suites, one at a time (both publish into the one tenant), against --base
 //
 //   node scripts/demo-kit/check-demo.mjs --config scripts/demo-kit/configs/vantage.json [--base http://127.0.0.1:9112]
@@ -22,7 +23,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { argOf, configArg, loadValidConfig, REPO_ROOT } from './lib/config.mjs';
-import { scanForCredentials, secretValues, TOKEN_PATTERNS } from './lib/credentials.mjs';
+import { scanForCredentials, secretValues, servedPaths, TOKEN_PATTERNS } from './lib/credentials.mjs';
 
 /** A Windows path as WSL mounts it (C:\x\y → /mnt/c/x/y). */
 export const wslPathOf = (p) => p.replace(/^([A-Za-z]):[\\/]*/, (_, d) => `/mnt/${d.toLowerCase()}/`).split('\\').join('/');
@@ -93,15 +94,19 @@ async function main() {
   }
 
   if (!skip.has('credentials')) {
-    section(`the credential grep over ${config.publicDir} and the config`);
+    // Everything the pages load, not only public/<slug> (R2): the kit's modules, and whatever the files name.
+    const served = servedPaths({ root: REPO_ROOT, publicDir: config.publicDir });
+    const servedList = served.map((s) => s.path).join(', ');
+    section(`the credential grep over what the pages load (${servedList}) and the config`);
+    for (const s of served) console.log(`   · ${s.path}${s.dir ? '/' : ''}${s.via ? `  (named by ${s.via})` : s.path === config.publicDir ? '  (the config\'s publicDir)' : '  (the kit)'}`);
     const t0 = Date.now();
     const devVars = `${REPO_ROOT}/.dev.vars`;
     const secrets = existsSync(devVars) ? secretValues(readFileSync(devVars, 'utf8')) : [];
     const docFiles = Object.values(config.seed?.documents ?? {}).filter((d) => d?.file).map((d) => path(d.file));
     const extraFiles = [...new Set([...Object.values(sources), ...docFiles])];
-    const scan = scanForCredentials({ dir: path(config.publicDir), extraFiles, secrets, root: REPO_ROOT });
+    const scan = scanForCredentials({ dirs: served.map((s) => path(s.path)), extraFiles, secrets, root: REPO_ROOT });
     for (const f of scan.findings) console.log(`   ✗ ${f.file}: ${f.what}`);
-    const detail = `${scan.dirFiles} files in ${config.publicDir} and ${scan.extraFiles} config file(s), ${scan.textFiles} read as text; `
+    const detail = `${scan.dirFiles} files in ${servedList} and ${scan.extraFiles} config file(s), ${scan.textFiles} read as text; `
       + `${TOKEN_PATTERNS.length} token shapes, the never-served names, ${scan.secretsSearched} .dev.vars secret value(s)${existsSync(devVars) ? '' : ' (no .dev.vars here)'}; `
       + `${scan.findings.length ? `${scan.findings.length} finding(s)` : 'no finding'}`;
     console.log(`   ${scan.findings.length ? '✗' : '✓'} ${detail}`);

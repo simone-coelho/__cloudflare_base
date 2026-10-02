@@ -34,6 +34,28 @@ test('the common fields: name, slug, tenant, the public directory, and a worker 
   assert.match(errorsOf((c) => { c.worker.devPort = 80; }), /worker\.devPort/);
 });
 
+test('never a customer stamp: the staging and production workers and their queues are refused, and so is wrangler.toml (R2)', () => {
+  for (const name of ['edge-platform-staging', 'edge-platform-production']) {
+    assert.match(errorsOf((c) => { c.worker.name = name; }), new RegExp(`^worker\\.name: ${name} is the customer (staging|production) stamp, never a demo target`, 'm'), name);
+  }
+  for (const queue of ['events-staging', 'events-production', 'events-staging-dead-letter', 'events-production-dead-letter']) {
+    assert.match(errorsOf((c) => { c.worker.queue = queue; }), /^worker\.queue: must not be the customer (staging|production) stamp's queue/m, queue);
+  }
+  for (const file of ['wrangler.toml', './wrangler.toml', 'scripts/../wrangler.toml', 'WRANGLER.TOML']) {
+    assert.match(errorsOf((c) => { c.worker.config = file; }), /^worker\.config: ".*" is the shared worker's config, which also deploys the customer stamps/m, file);
+  }
+  // The controls: another demo's own worker config and a demo-shaped worker pass these rules.
+  assert.equal(errorsOf((c) => { c.worker.config = 'wrangler.top-offers.toml'; }), '');
+  assert.equal(errorsOf((c) => { c.worker.name = 'edge-platform-vantage-2'; c.worker.queue = 'events-vantage-2'; }), '');
+});
+
+test('the public directory is public/<slug>: a copied config left unedited cannot write into another demo (R2)', () => {
+  assert.match(errorsOf((c) => { c.slug = 'lg'; }), /^publicDir: "public\/vantage" must be "public\/lg", the directory of this demo's own slug/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'public/top-offers'; }), /^publicDir: "public\/top-offers" must be "public\/vantage"/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'public/demo-kit'; }), /^publicDir: "public\/demo-kit" must be "public\/vantage"/m);
+  assert.equal(errorsOf((c) => { c.publicDir = 'public/vantage/'; }), '', 'the same directory with its trailing slash');
+});
+
 test('paths stay inside the repository, and whatever a script writes stays inside the demo\'s public directory', () => {
   assert.equal(resolveInside(REPO_ROOT, '../outside'), null);
   assert.equal(resolveInside(REPO_ROOT, 'C:/Windows'), null);
@@ -75,6 +97,29 @@ test('a config never carries a credential: a key that would hold one, or a value
   assert.match(errorsOf((c) => { c.about = `Authorization: Bearer ${'a'.repeat(30)}`; }), /carries a bearer token literal/);
   assert.match(errorsOf((c) => { c.region.label = `ss1.${'b'.repeat(40)}`; }), /carries a shopper capability literal/);
   assert.equal(errorsOf((c) => { c.worker.secrets = ['TENANTS', 'JWT_SECRET']; c.tokens = { brand: '#cd040b' }; }), '', 'secret NAMES and design tokens are fine');
+});
+
+test('a credential key is matched by pattern, not an exact list: any value under one is refused, however plain (R2)', () => {
+  // Values that match no token shape, so only the key rule can refuse them.
+  const plain = 'plain-value-of-no-token-shape';
+  const keys = [
+    // R2's example, and every key the exact list held.
+    'apiToken', 'token', 'accessToken', 'operatorToken', 'bearer', 'authorization', 'secret', 'jwt', 'jwtSecret', 'clientSecret',
+    'password', 'passwd', 'apiKey', 'api_key', 'privateKey', 'private_key',
+    // Spellings the exact list missed.
+    'TOKEN', 'refresh_token', 'x-auth-token', 'tokenValue', 'Secrets', 'CLIENT_SECRET', 'dbPassword', 'adminPasswd', 'jwtKey', 'x-jwt',
+    'signingKey', 'SIGNING-KEY', 'sdkKey', 'accessKeys', 'apikey', 'privatekey', 'credentials', 'proxyAuthorization', 'BearerHeader',
+  ];
+  for (const key of keys) {
+    assert.match(errorsOf((c) => { c.worker[key] = plain; }), new RegExp(`^config\\.worker\\.${key.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')}: a config never carries a credential`, 'm'), key);
+    assert.match(errorsOf((c) => { c.seed.beats.extra = { [key]: plain }; }), /^config\.seed\.beats\.extra\..+: a config never carries a credential/m, `${key}, nested`);
+  }
+  // The controls: a bare `key` is a lookup key (the Vantage imagery config holds placeholder.key and a source's chroma key),
+  // a key that only leads with "key" is not a compound, and words that merely contain the letters are not credentials.
+  for (const key of ['key', 'KEY', 'keys', 'keyTol', 'keyword', 'monkey', 'markerKeyName', 'author', 'authority', 'passage']) {
+    assert.equal(errorsOf((c) => { c.worker[key] = plain; }), '', key);
+  }
+  assert.equal(config.imagery.placeholder.key, 'device', 'the Vantage config still holds a bare key, and passes (the first test)');
 });
 
 test('the region section: anchors, model, extras, limits and the label length', () => {

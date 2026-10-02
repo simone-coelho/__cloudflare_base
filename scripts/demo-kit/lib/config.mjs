@@ -5,15 +5,16 @@
 // root. A section may be written inline or as the path of a JSON file that holds it ("region": "…/region.json").
 //
 // The rules a config must keep, checked before any script reads a document or touches the network:
-//   • names are slugs; the worker is never the shared one, its queue never the shared queue;
-//   • every path stays inside the repository, and everything a script WRITES (the beat documents, the
-//     imagery) stays inside the demo's own public directory;
+//   • names are slugs; the worker is never the shared one nor a customer stamp (staging, production), its
+//     queue never theirs, and its wrangler config never wrangler.toml;
+//   • every path stays inside the repository; the public directory is public/<slug>, and everything a
+//     script WRITES (the beat documents, the imagery) stays inside it;
 //   • the beat lists are closed and consistent (publishable ⊆ files, reset ⊆ publishable);
 //   • vocabularies are exact and duplicate-free;
-//   • NO CREDENTIAL: no key that names one, no value shaped like a token. Tokens come from --token or from
-//     local minting, never from a file.
+//   • NO CREDENTIAL: no key that names one (matched by pattern, isCredentialKey), no value shaped like a
+//     token. Tokens come from --token or from local minting, never from a file.
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tokenFindings } from './credentials.mjs';
 
@@ -24,9 +25,47 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const DIM = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 const REGION_KEY = /^US-[A-Z]{2}$/;
-/** A key that would hold a credential's value. Lists of secret NAMES (for a worker's setup) are fine; values are not. */
-const CREDENTIAL_KEY = /^(token|accessToken|operatorToken|bearer|authorization|secret|jwt|jwtSecret|clientSecret|password|passwd|apiKey|api_key|privateKey|private_key)$/i;
 export const SECTIONS = ['seed', 'region', 'imagery', 'check'];
+
+/**
+ * The workers and queues a demo config may never name: the shared demo worker and its queues, and the
+ * customer stamps wrangler.toml deploys as `--env staging` and `--env production` (DEPLOYMENT_PROFILE=customer,
+ * never a demo target, AGENTS.md). Each maps to the sentence the refusal prints.
+ */
+const FORBIDDEN_WORKERS = Object.freeze({
+  'edge-platform': 'edge-platform is the SHARED demo worker; a demo has its own',
+  'edge-platform-staging': 'edge-platform-staging is the customer staging stamp, never a demo target; a demo has its own worker',
+  'edge-platform-production': 'edge-platform-production is the customer production stamp, never a demo target; a demo has its own worker',
+});
+const FORBIDDEN_QUEUES = Object.freeze({
+  events: 'must not be the shared worker\'s queue',
+  'events-dead-letter': 'must not be the shared worker\'s queue',
+  'events-staging': 'must not be the customer staging stamp\'s queue',
+  'events-staging-dead-letter': 'must not be the customer staging stamp\'s queue',
+  'events-production': 'must not be the customer production stamp\'s queue',
+  'events-production-dead-letter': 'must not be the customer production stamp\'s queue',
+});
+/** The shared worker's config, which also holds the customer stamps' environments. */
+const SHARED_WORKER_CONFIG = 'wrangler.toml';
+
+/**
+ * Whether a config key would hold a credential's value, by pattern rather than by an exact list (R2): any
+ * key that contains token, secret, password (or passwd), jwt, bearer, authorization or credential, in any
+ * case and in any spelling (apiToken, CLIENT_SECRET, dbPassword, x-jwt), and any key whose LAST word is
+ * key or keys (apiKey, private_key, SIGNING-KEY, sdkKey). A bare `key` is a lookup key, not a credential
+ * (imagery.placeholder.key, a source's chroma key, a dimension's key), and `keyTol` leads with it, so
+ * neither is matched. Lists of secret NAMES (for a worker's setup) are fine, since only a string value
+ * under such a key is refused.
+ */
+const CREDENTIAL_WORD = /token|secret|passw(?:or)?d|jwt|bearer|authorization|credential/i;
+const wordsOf = (key) => String(key).split(/[^A-Za-z0-9]+|(?<=[a-z0-9])(?=[A-Z])/).filter(Boolean).map((w) => w.toLowerCase());
+export function isCredentialKey(key) {
+  if (CREDENTIAL_WORD.test(key)) return true;
+  const words = wordsOf(key);
+  if (words.length > 1 && /^keys?$/.test(words[words.length - 1])) return true;
+  // Run-together spellings of the common compounds: apikey, privatekey, accesskey, signingkey, secretkey, sdkkey.
+  return words.length === 1 && /^(?:api|private|access|signing|sdk|client|master|encryption|license)keys?$/.test(words[0]);
+}
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isString = (v, max = 2000) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
@@ -103,7 +142,7 @@ function noCredentials(errors, value, where = 'config') {
   if (Array.isArray(value)) { value.forEach((v, i) => noCredentials(errors, v, `${where}[${i}]`)); return; }
   if (isObject(value)) {
     for (const [k, v] of Object.entries(value)) {
-      if (CREDENTIAL_KEY.test(k) && typeof v === 'string' && v.trim()) errors.push(`${where}.${k}: a config never carries a credential (tokens come from --token or local minting)`);
+      if (isCredentialKey(k) && typeof v === 'string' && v.trim()) errors.push(`${where}.${k}: a config never carries a credential (tokens come from --token or local minting)`);
       noCredentials(errors, v, `${where}.${k}`);
     }
     return;
@@ -300,16 +339,29 @@ export function validateConfig(config, { root = REPO_ROOT, sections = SECTIONS }
   if (!isString(config.tenant, 63) || !SLUG.test(config.tenant)) errors.push('tenant: the demo\'s tenant id, a slug');
   let publicDir = null;
   if (typeof config.publicDir !== 'string' || !/^public\/[a-z0-9][a-z0-9-]*\/?$/.test(config.publicDir)) errors.push('publicDir: "public/<slug>", the directory the demo serves');
-  else { const abs = pathRule(errors, root, 'publicDir', config.publicDir, { kind: 'dir' }); if (abs) publicDir = { abs, rel: config.publicDir }; }
+  else {
+    // Bound to the slug (R2): a config copied from another demo and left unedited would otherwise seed and
+    // publish that demo's beat documents into this demo's tenant.
+    const own = isString(config.slug, 63) && SLUG.test(config.slug) ? `public/${config.slug}` : null;
+    if (own && config.publicDir.replace(/\/$/, '') !== own) errors.push(`publicDir: "${config.publicDir}" must be "${own}", the directory of this demo's own slug`);
+    const abs = pathRule(errors, root, 'publicDir', config.publicDir, { kind: 'dir' });
+    if (abs) publicDir = { abs, rel: config.publicDir };
+  }
   const w = config.worker;
   if (!isObject(w)) errors.push('worker: { name, queue, devPort }');
   else {
     if (!isString(w.name, 63) || !SLUG.test(w.name)) errors.push('worker.name: a worker name such as edge-platform-vantage');
-    else if (w.name === 'edge-platform') errors.push('worker.name: edge-platform is the SHARED demo worker; a demo has its own');
+    else if (Object.hasOwn(FORBIDDEN_WORKERS, w.name)) errors.push(`worker.name: ${FORBIDDEN_WORKERS[w.name]}`);
     if (!isString(w.queue, 63) || !SLUG.test(w.queue)) errors.push('worker.queue: a queue name such as events-vantage');
-    else if (w.queue === 'events' || w.queue === 'events-dead-letter') errors.push('worker.queue: must not be the shared worker\'s queue');
+    else if (Object.hasOwn(FORBIDDEN_QUEUES, w.queue)) errors.push(`worker.queue: ${FORBIDDEN_QUEUES[w.queue]}`);
     if (!isInt(w.devPort, 1024, 65535)) errors.push('worker.devPort: the local wrangler dev port');
-    if (w.config !== undefined) pathRule(errors, root, 'worker.config', w.config, { kind: 'file', mustExist: false, ext: '.toml' });
+    if (w.config !== undefined) {
+      const abs = pathRule(errors, root, 'worker.config', w.config, { kind: 'file', mustExist: false, ext: '.toml' });
+      // Compared case-insensitively, since a Windows checkout opens WRANGLER.TOML as the same file.
+      if (abs && relative(root, abs).split(sep).join('/').toLowerCase() === SHARED_WORKER_CONFIG) {
+        errors.push(`worker.config: "${w.config}" is the shared worker's config, which also deploys the customer stamps (staging, production); a demo has its own, such as wrangler.${isString(config.slug, 63) ? config.slug : '<slug>'}.toml`);
+      }
+    }
   }
   if (sections.includes('seed')) seedRules(errors, root, config.seed, publicDir);
   if (sections.includes('region')) regionRules(errors, root, config.region);
