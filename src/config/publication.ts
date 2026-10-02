@@ -352,6 +352,28 @@ export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, 
   }
   return result;
 }
+/**
+ * One member of a pinned set, or `null` where the set itself says the member
+ * does not exist (lane E2).
+ *
+ * Absence and unreadability are kept apart, as `publishedProposals` keeps them
+ * for the proposals list (`src/routes/decisions.ts`). The set was read and its
+ * digest checked like every other pin, so a missing member is the sealed set's
+ * own statement and never a guess: a set cannot lose a member without failing
+ * its digest. Everything else refuses exactly as `readPinnedPublication` does: a
+ * set of another scope, and a member the set DOES list whose document cannot be
+ * read or does not match its ref.
+ *
+ * For a member a tenant may legitimately never publish, such as imported priors:
+ * the demo bootstrap creates a set of reflex, catalog, slots and learn, and no
+ * prior. A member every reader needs is read with `readPinnedPublication`, where
+ * absence is still an authority failure.
+ */
+export async function readOptionalPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T> | null> {
+  required(set.scope === publicationScope(kind, scope) && object(set.refs));
+  if (!Object.hasOwn(set.refs, member(kind, scope))) return null;
+  return readPinnedPublication(env, kind, scope, set);
+}
 export async function readPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, servingCache = false): Promise<Revision<T>> {
   return readPinnedPublication(env, kind, scope, await pinPublication(env, publicationScope(kind, scope), servingCache));
 }

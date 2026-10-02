@@ -10,7 +10,7 @@ import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth,
 import { foldRetainedDay, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
-import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
+import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
@@ -851,8 +851,14 @@ export class LearnStats {
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {
     // Unavailable authority is not an explicit empty prior document. Never
     // publish a prior-free replacement merely because the authority failed.
+    // Lane E2: a committed set that carries NO prior member is not a failure of
+    // the authority. The sealed set is the authority's whole answer, and it says
+    // this tenant has imported no priors (the demo bootstrap creates reflex,
+    // catalog, slots and learn, and no prior). That reads as no priors, the
+    // snapshot's `priorVersion` 0, and learns exactly what an empty document
+    // does. A prior member the set lists and that cannot be read still refuses.
     const pin = await pinPublication(this.env, d.tenant, true);
-    const [rev, learn] = await Promise.all([readPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
+    const [rev, learn] = await Promise.all([readOptionalPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
     const configured = { reward: learn.value.slots?.[d.slot]?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
       objective: learn.value.slots?.[d.slot]?.objective ?? 'unit', measurementBasis: learn.value.slots?.[d.slot]?.measurementBasis ?? 'served-v1' };
     const stored = await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' });
@@ -868,6 +874,8 @@ export class LearnStats {
       if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
         objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
     }
+    // The configuration check above still ran: absence of priors excuses nothing else.
+    if (!rev) return null;
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
     // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
     // is money does not learn one. The import door refuses such a row, so this
