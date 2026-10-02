@@ -32,11 +32,11 @@ Each step carries a verdict in one legend: **Built**, in the code and exercised;
 
 | Step | When | Verdict |
 |---|---|---|
-| 1. What is watched | Before and on arrival | Built: nothing, until the visitor makes an explicit choice |
-| 2. What is remembered | As the visitor browses | Built: a graded interest per dimension value |
-| 3. How a decision is made | Each time a page asks | Built: the brand's rules first, then the visitor's interests, with a receipt |
-| 4. What fades, and when | When the visitor leaves | Built: every interest, on a memory set per dimension |
-| 5. How it learns | Afterwards | Built, with the one exception below: it counts, and moves nothing until the dial turns |
+| 1. What is watched | Before and on arrival | **Built**: nothing, until the visitor makes an explicit choice |
+| 2. What is remembered | As the visitor browses | **Built**: a graded interest per dimension value |
+| 3. How a decision is made | Each time a page asks | **Built**: the brand's rules first, then the visitor's interests, with a receipt |
+| 4. What fades, and when | When the visitor leaves | **Built**: every interest, on a memory set per dimension |
+| 5. How it learns | Afterwards | **Built**, with the one exception below: it counts, and moves nothing until the dial turns |
 
 The one exception: on a customer's site, recording receipts and outcomes through the SDK, the engine's browser library, waits on a setting that needs retention periods the customer has approved, an open decision. The hosted demos record today.
 
@@ -50,9 +50,9 @@ The engine's core is built and runs today; the path onto a customer's own site i
 
 | Verdict | What it covers |
 |---|---|
-| Built | Consent gating; graded, fading interests, with entry and exit lines for audiences; the cold start, from how a visitor arrived and the regional prior; date, stock and region rules, pins, exclusions and the other merchandising controls; receipts; versioned settings changed without a software release, most of them in the operator console; product re-ranking, which reorders a product list that a commerce platform supplies; outcome counting and the day report; the learning dial; holdout groups that see the site's own defaults, for comparison; the sign-in merge of a visitor's interests |
-| Designed | Ordering a page's modules, its blocks such as a hero or a row of products, for each context; correcting what it learns for where on the page a piece was shown; matching content by meaning as well as by tags |
-| Open | The customer deployment path, from a customer's first settings to going live; connections to Opal, ODP and Feature Experimentation; measurement on a customer's site, including recording through the SDK, retention periods and the experiment design; the commercial meter and its rates |
+| **Built** | Consent gating; graded, fading interests, with entry and exit lines for audiences; the cold start, from how a visitor arrived and the regional prior; date, stock and region rules, pins, exclusions and the other merchandising controls; receipts; versioned settings changed without a software release, most of them in the operator console; product re-ranking, which reorders a product list that a commerce platform supplies; outcome counting and the day report; the learning dial; holdout groups that see the site's own defaults, for comparison; the sign-in merge of a visitor's interests |
+| **Designed** | Ordering a page's modules, its blocks such as a hero or a row of products, for each context; correcting what it learns for where on the page a piece was shown; matching content by meaning as well as by tags |
+| **Open** | The customer deployment path, from a customer's first settings to going live; connections to Opal, ODP and Feature Experimentation; measurement on a customer's site, including recording through the SDK, retention periods and the experiment design; the commercial meter and its rates |
 
 ## Sentences to say
 
