@@ -26,8 +26,7 @@ it runs, what it stores, what is configured and how, and what is built, designed
 to a section of that sheet; if you need a fact that is not there, stop and ask the lead rather than inventing
 it or reading the code yourself. Labels, used consistently in every piece and in one colour legend on every
 page: **Built** (in the code and exercised), **Designed** (in an architecture document, not in the code),
-**Open** (no decision yet). Never a latency or throughput figure, anywhere, for any reason: the sheet explains
-why none may be quoted. Say "calls no AI model to decide"; never "we don't use a model".
+**Open** (no decision yet). Performance is claimed in our own words from our own measurements, as a realistic range stated as typical, with the measurement's date and basis available in the research (S5 §1.1), never as a specific promise and never a figure we cannot support; the exact sentence every piece uses is set by the lead in the design document. Say "calls no AI model to decide"; never "we don't use a model".
 
 Facts the sheet establishes that every piece must respect:
 
@@ -103,3 +102,15 @@ what you built, what you checked, and anything in this brief you could not honou
 - Pieces (b) and (c) are reconciled with the design as the lead rules in the design's log: (b) accepted as
   built with the review's edits applied; (c) rebuilt to the design's §3.4 with the review's edits applied.
 - Links between pieces are real links to the page addresses, never an italic title alone.
+
+## Ruling added 2026-10-02 (owner): the design is the source of truth for the material
+
+Marketing, sales and solutions-engineer material describes the product as designed, where it will be when the
+current remediation and design completion land, in the present tense, organized by the four rollout stages
+(foundation, content launch, algorithmic lift, layout composition). The built / designed / open labels, the
+facts-sheet audit and the consent caveat belong to engineering records and to the engineers' status page
+only; they never appear as labels, caveats or headlines in the marketer's or seller's pieces. Internal
+material may name customers and competitors as proof points (Tapestry, QVC, the Dynamic Yield displacement);
+anything that leaves the company stays customer-neutral. Every piece tells one story in order: the problem,
+the North Star, what we built as capabilities with their use cases, why the edge, how it works, the stages.
+Narrative decisions are made with the owner, not ruled by the lead.
