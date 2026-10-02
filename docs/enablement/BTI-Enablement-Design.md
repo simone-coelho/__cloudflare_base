@@ -43,13 +43,13 @@ Where this document and the common brief differ, the common brief governs and th
 
 | Piece | Reader | Source | Page | Word copy |
 |---|---|---|---|---|
-| (a) Landing page | An Optimizely colleague choosing what to read | `content/landing.md` | `/` | none (§12) |
+| (a) Landing page | An Optimizely colleague choosing what to read | §3.2 of this design | `/` | none (§12) |
 | (b) What it is | A marketer | `content/what-it-is.md` | `/what-it-is` | `word/What-It-Is-v1.0.docx` |
 | (c) Selling it | An account executive | `content/selling-it.md` | `/selling-it` | `word/Selling-It-v1.0.docx` |
 | (d) How it works and where it runs | A pre-sales solutions engineer | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | `word/How-It-Works-v1.0.docx` |
-| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits.md` | `/credits` | `word/Where-AI-Credits-Fit-v1.0.docx` |
+| (e) Where Opal and AI credits fit | An account executive who quotes | `content/credits-source.html` | `/credits` | `word/Where-AI-Credits-Fit-v1.0.docx` |
 | (f) The glossary | A marketer; every entry holds for the other two | `GLOSSARY.md` | `/glossary` | `word/Glossary-v1.0.docx` |
-| (g) The demo map | An account executive | `content/demo-map.md` | `/demos` | `word/Demo-Map-v1.0.docx` |
+| (g) The demo map | An account executive | §3.8 of this design, until `content/demo-map.md` exists | `/demos` | `word/Demo-Map-v1.0.docx` |
 | (h) What is built, designed and open | Anyone at Optimizely who must know what may be claimed today (§12) | `content/status.md` | `/status` | `word/Status-v1.0.docx` |
 
 Paths in this table are relative to `docs/enablement/`; pages are addresses on the enablement site.
@@ -98,7 +98,7 @@ Paths in this table are relative to `docs/enablement/`; pages are addresses on t
 
 ### 3.0 What every piece shares
 
-Every piece except the glossary and the status page follows this shape; their exceptions are in §3.7 and §3.10. Piece (d) as accepted departs in the ways §3.5 records.
+Every piece except the glossary and the status page follows this shape; their exceptions are in §3.7 and §3.10. Piece (d) as accepted departs in the ways §3.5 records, and the credits page keeps the shared page's own shape (§3.6).
 
 1. **Title line:** `# Behavioral Targeting and Intelligence: <title>`, the only place the name is written.
 2. **Reader line:** the first paragraph names the one reader, for example "For account executives."
@@ -126,7 +126,7 @@ Every piece except the glossary and the status page follows this shape; their ex
 | P9 | ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today. | (b), (c), (d) | §6.2, §7.3, §7.4 |
 | P10 | For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. | (b), (c), (d), (g), (h) | §10.4 item 4 |
 
-**Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) under 200. (b) 1,200 to 1,800. (c) 1,800 to 2,400. (d), as accepted, a walk of about 1,250 words and a detail of about 2,200 words of prose, plus tables. (e) up to 1,600. (f) as needed. (g) up to 1,100. (h) as its tables need, with little prose around them.
+**Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) about 290 as built, with the three card rules. (b) 1,200 to 1,800. (c) 1,800 to 2,400. (d), as accepted, a walk of about 1,250 words and a detail of about 2,200 words of prose, plus tables. (e) up to 1,600. (f) as needed. (g) up to 1,100. (h) as its tables need, with little prose around them.
 
 ### 3.1 The rows: before, during and after the session
 
@@ -202,7 +202,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 
 ### 3.2 (a) The landing page
 
-- **Reader:** an Optimizely colleague choosing what to read. **Owner:** P1. **Source:** `content/landing.md`, transcribed from the text below. **Address:** `/`. **Word copy:** none.
+- **Reader:** an Optimizely colleague choosing what to read. **Owner:** P1. **Source:** the text below, which the page builder renders; no `content/landing.md` is written. **Address:** `/`. **Word copy:** none. **As built:** about 290 words, the three card rules included.
 - **Rule:** paragraph C, as the lede and again as the last line above the footer.
 - **Text, in order, verbatim:**
   1. `h1`: the name, in `#package-name`.
@@ -212,6 +212,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
      - "For marketing", linking to "What it is": "What the engine does before, during and after a visitor's session, and the words to use about it."
      - "For account executives", linking to "Selling it": "What is built, designed and open, the questions customers ask, and the sentences to say and never to say."
      - "For solutions engineers", linking to "How it works and where it runs": "How a decision is made, where it runs on Cloudflare's network, and what a customer provides."
+     - Each card also carries its piece's rule, which the page builder reads from the piece's source and the render check compares with it.
   5. `## Four references serve every reader`, then four links:
      - "What is built, designed and open": "Every capability with its verdict, and every open decision with its owner."
      - "Where Opal and AI credits fit": "Where AI and its cost live, and the sentences that settle the question."
@@ -237,7 +238,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   9. `## What it does not do`: these sentences, verbatim. "It calls no AI model to decide." "It does not paint the page; the site renders what it is sent." "It does not need to know who the visitor is." "It reads no device detail beyond the operating system family of the visitor's phone." "It never stores the visitor's account id." P9.
   10. `## Words to use, and words to avoid`: the lists below.
   11. The rule again.
-- **Figures:** none in this release (§3.9).
+- **Figures:** the session figure, D1's `before-during-after`, added on the page as a Before / During / After switcher, marked as an addition; without JavaScript it is the plain figure (§3.9).
 - **Sentences to say:** C; "It works for visitors nobody has identified, from their first event, once they have consented."; "The brand's rules come first; the engine ranks what is left."; "Every answer carries its reasons."; P7's first clause; "Interest builds with what the visitor does and fades with time."; P4; P10; "Every setting is published and versioned, and changes without a software release."
 - **Never say, beyond §4.9:**
 
@@ -341,32 +342,15 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 
 ### 3.6 (e) The credits page, standalone and restyled
 
-- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** C2. **Source:** `content/credits.md`. **Address:** `/credits`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
-- **Title:** `# Behavioral Targeting and Intelligence: where Opal and AI credits fit, and where they never do`
-- **Rule:** "The engine decides. Opal creates and explains." It is followed at once by: "Opal is not connected to the engine today." (S2 §6.2.)
-- **Source material.** `docs/Opal-Credit-Boundary-Pricing-Guide.md`, and the page that was shared, which adds two sections (the two scaling lines; the order-form map) and the takeaway lines (S3 §2.1). The lead has filed the shared page at `docs/enablement/research/opal-ai-credits-placement.source.html`; C2 reads it there.
-- **What stays.** The page's structure and devices, in S3 §2.3's order: one question in the title; one reader; the rule, boxed, first; the session's three parts as the spine; a verdict on every row; a takeaway per part; one picture of the consequence; three lines and three meters, never blended; three sentences to say; the questions that come up; the order form; the rule again, last.
-- **What changes, and only this** (each change forced by S2 or the voice):
-  1. The inline sentence under the rule (above).
-  2. "Opal creates audiences in ODP" goes: no Opal integration is wired, and the demo stand-in creates audiences elsewhere (S2 §6.2, Appendix A).
-  3. "Discovery proposals (stage 3)" goes: automatic proposals are switched off by policy (S2 §5.6), and "stage" belongs to the journey.
-  4. "CMAB serving decisions" either goes or is defined as a Feature Experimentation capability outside the engine (S2 §7.4); "Analytics via OptiAnalytics" goes, because S2 does not hold it.
-  5. The traffic example with session counts becomes "However much a customer's traffic grows, its credit use does not move with it." (no figures, §4.3).
-  6. The page's figure is D1's `before-during-after` (§3.9), the session spine with a verdict band and a status chip on every card. The two scaling graphs are not drawn in this release; their consequence is said in words, and the platform meter is labeled Designed, because no usage meter exists in the code (S2 §6.3).
-  7. The order-form section describes the lines as the pricing guide does, labeled Designed, with "rates and packaging are monetization's decision" labeled Open; ODP and Feature Experimentation are their own licenses, outside the decision path, and the word "memory" for ODP goes (S2 §6.3, §7.3).
-  8. **One color legend.** The original colors its rows by credit verdict. On this page the package's one legend (Built, Designed, Open) keeps its colors, and the credit verdicts become words in a column of their own, the four words of D1's figure: "No AI · no credits", "Credits apply", "Metered per use" and "Credits not decided" (the last for design-time tagging, whose billing S2 §6.3 leaves open). No second color legend in the page's tables (§12).
-  9. The voice: no dash in the title, "and" for "&", American English, "receipt" for "explain record", headings as statements.
-- **Sections, in order:**
-  1. No heading: the reader line ("For account executives who quote the engine with Opal.") and the rule, with its inline sentence.
-  2. `## Every touchpoint falls before, during or after the visitor's session`: figure `before-during-after` with a one-sentence lead; three tables with columns `Touchpoint`, `Credits`, `Verdict`; a takeaway sentence under each. The one exception to keep straight, under "During": shopper-facing AI features are metered per use as designed; typed search is built and off by default, and the advisor and generated imagery are demo only (S2 §6.3).
-  3. `## The consequence is two lines`: in words in this release: the platform meter grows with traffic as designed, and AI credits do not move, because serving a page calls no AI model.
-  4. `## Three revenue lines, three meters`: the platform, Opal credits and shopper-facing AI features, each Designed, with its meter as described; "Never blend the platform meter with credits or AI features." (S2 §6.3 guardrails).
-  5. `## Three sentences settle the AI-cost question`: from the original, checked against S2.
-  6. `## The questions that come up on every deal`: the original five, each answer checked against S2.
-  7. `## The order form, line by line`: as change 7 says.
-  8. The rule again.
+- **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** C2. **Address:** `/credits`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
+- **Source:** `content/credits-source.html`, the page that was shared, kept whole with its corrections. The original stays filed, untouched, at `docs/enablement/research/opal-ai-credits-placement.source.html`. This is the one piece whose source is HTML, not markdown (§6).
+- **The corrections rule** (the lead's ruling, §12): corrections make false statements true, with the design's labels (Built, Designed, Open; "demo only"; "switched off by policy and not offered"). The structure, order, devices and voice stay. Every candidate P1 found on the page as built (`lanes/P1.md` §5) is checked against S2: a statement S2 shows false is corrected; anything that is only the original's voice stays.
+- **Rule:** the original's, "The engine decides. Opal creates and explains." It is followed at once by "Opal is not connected to the engine today." (S2 §6.2), marked on the page as an addition.
+- **As built** (lane P1): the page carries the source whole and in its order: the masthead, the rule, the timeline's three phases with every row, the scaling cards, the three meters, the three sentences, the five questions, the order form and the closing lines. The original script's data became static HTML. Without JavaScript, the three phases read one after another. With it, `site.js` turns them into tabs, Before first, with the original's behavior, plus the arrow keys, Home and End.
+- **Marked additions on the page:** the package name in `#package-name`; the title "Where Opal and AI Credits Fit, and Where They Never Do", which replaces the original's; the sentence after the rule; the legend; the session figure; and the lead line "Each question opens to its answer." above the questions.
+- **Credit verdicts:** in D1's figure language, every tag keeping its word: fir for no credits, light fir for credits apply, neutral for the exception, an outline for the products under their own licenses. The package legend (Built, Designed, Open) stays the only label legend; R checks that the two cannot be confused (§3.9).
 - **Summary carried into (b), (c), (d) and (h):** P2.
-- **Figures:** D1's `before-during-after`, captioned with its SVG title (§3.9).
+- **Figures:** D1's `before-during-after`, static in section 01 with a lead line, because the timeline above it is already a before, during and after switcher; captioned with its SVG title (§3.9).
 
 ### 3.7 (f) The glossary page
 
@@ -383,6 +367,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
 - **Title:** `# Behavioral Targeting and Intelligence: which demo to show, and to whom`
 - **Rule:** "Choose the demo by the question your customer is asking, and show today's engine on Vantage or Top Offers."
 - **Facts:** the demos' addresses, rooms and beats come from `docs/demos/BOOTSTRAP.md` §2, §3, §5 and §6 and S1 tables F and I, by the lead's ruling; every statement about the engine inside it still traces to S2. No demo is described by the customer it was built for; a vertical ("a carrier's online shop", "a retailer's promotions module") is enough.
+- **As built** (lane P1): the page renders this section word for word, because `content/demo-map.md` does not exist yet. Three items on the page are not this section's words; each is marked on the page as an addition, and each is marked "Addition, as built" below.
 - **Sections, in order:**
   1. No heading: "For account executives." and the rule.
   2. `## Two demos run today's engine`: a table with columns `Demo`, `Address`, `The question it answers`, `What the room sees`, `What it never claims`.
@@ -390,8 +375,8 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
      - **Top Offers** (on screen, Lantern & Lane), `https://edge-platform-top-offers.expedge.workers.dev/top-offers/`. Question: can the merchandiser keep control while each visitor earns their own offers? Sees: a retailer's four-container promotions module filled from a pool; the visitor earning it; a merchandiser's day of real, versioned publishes (a window closing, a new promotion with no history, a weight, a pin); a weather and location rule; the module moved on the page by the page's own template, standing in for the customer's content system, while its four promotions stay the engine's (demo only); the click report, labeled attribution. Never claims: products (the pool is promotions); incrementality; a lift number; that the engine moved the module.
      - Under the table, P10, so the room's "the page rearranges itself" is said exactly.
   3. `## Two older demos show one idea each, on the older pipeline`: the same columns.
-     - **Meridian** (on screen, Calder), `https://edge-platform.expedge.workers.dev/meridian/`. Question: does it work across industries, and whom does the page believe, the ad or the visitor? Sees: one brand, two businesses, with a live swap from retail to a bank; the hinge from the advertised product to what the visitor looks at; an interest fading out while the presenter waits, which the page shows on its own timer as the engine's decay re-asked, never as a pushed alarm.
-     - **The Bright Hour**, `https://edge-platform.expedge.workers.dev/live/`, with its Offer Desk at `/live/ops`. Question: what about offers that live for hours? Sees: a live-shopping retailer deciding under expiry; a new offer born and ranked with no history; an item selling out mid-session; receipts.
+     - **Meridian** (on screen, Calder), `https://edge-platform.expedge.workers.dev/meridian/`. Question: does it work across industries, and whom does the page believe, the ad or the visitor? Sees: one brand, two businesses, with a live swap from retail to a bank; the hinge from the advertised product to what the visitor looks at; an interest fading out while the presenter waits, which the page shows on its own timer as the engine's decay re-asked, never as a pushed alarm. Never claims (addition, as built, from (c)'s caution for this demo): "Its hands-off change is the fading arithmetic checked again on a timer. Never call it a push from the engine."
+     - **The Bright Hour**, `https://edge-platform.expedge.workers.dev/live/`, with its Offer Desk at `/live/ops`. Question: what about offers that live for hours? Sees: a live-shopping retailer deciding under expiry; a new offer born and ranked with no history; an item selling out mid-session; receipts. Never claims (addition, as built, from (c)'s caution for this demo): "It runs on the shared demo deployment's older build, not today's engine. Never present it as the product."
      - One shared line under the table: "Both run Generation 1, the older demo pipeline, at an older version of the code. Their memories are compressed to seconds for the room, and their AI chat and experiment screens are demo seams, not the engine."
   4. `## Engineers who saw a demo can move the numbers themselves`: Vantage's interactive explainer, `https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works`, for a customer's engineers or an SE: every constant on a slider, recomputed in the browser, naming no customer.
   5. `## Three things are not for showing as the engine`: First National Bank (`/visual-demo` on the shared worker) shows the 2025 platform, not this engine; the storefront at `/storefront` on the shared worker was built for one customer with its own brand and products and is never shown to another; OH, a home-appliances demo, is scaffolded and not yet hosted. The page at `/` on every worker is the 2025 dashboard, not the product.
@@ -399,7 +384,7 @@ This section describes the piece as lane C3 built it and the lead accepted it (�
   7. `## A demo for your own customer is a restyle, not a rebuild`: a demo is a palette, a product feed and a set of beats on a shared kit; it takes the customer's colors and never its logo; it may show real names for the products the customer itself sells; an SE follows the demo kit's how-to (`docs/demo-kit/HOWTO.md`), and nothing is created in the cloud without the owner's approval.
   8. The rule again.
 - **Figures:** none.
-- **Never say, beyond §4.9:**
+- **Never say, beyond §4.9.** On the page, under the heading "Sentences never to say, and what to say instead" (addition, as built: this section lists the table without a heading):
 
 | Never say | Say instead |
 |---|---|
@@ -416,13 +401,15 @@ The figures as lane D1 drew them (`lanes/D1.md`). Each caption is the figure's S
 |---|---|---|---|
 | `architecture.svg`, `architecture.png` | The customer's site and the operator each talking to one worker on Cloudflare's network, the engine's storage behind it, and the optional outside services, all off by default (D1 §2.1, from S2 §2.2 to §2.7) | "Where the engine runs on Cloudflare" | (d), A.3; (c) |
 | `decision-path.svg`, `decision-path.png` | The path from a visitor's event to a decision, step by step, with the published document that governs each step (D1 §2.2, from S2 §3) | "From an event to a decision" | (d), A.1 |
-| `before-during-after.svg`, `before-during-after.png` | The credits page's device: the rule in two halves, the three parts of one session, a verdict band and a status chip on every card, the one exception flagged once, a takeaway per part (D1 §2.3, from S2 §6 and the pricing guide under S2's corrections) | "One shopper's session: what happens before, during and after" | (e) |
+| `before-during-after.svg`, `before-during-after.png` | The credits page's device: the rule in two halves, the three parts of one session, a verdict band and a status chip on every card, the one exception flagged once, a takeaway per part (D1 §2.3, from S2 §6 and the pricing guide under S2's corrections) | "One visitor's session: what happens before, during and after" | (e), static in section 01; (b), as a Before / During / After switcher at the end of a section, marked as an addition |
 
-**Not drawn in this release:** the session strip planned for (b) and (c), the seam between site and engine, and the credits page's two scaling lines. Pieces (b) and (c) carry no session figure, and the credits page says the two lines' consequence in words.
+**Not drawn in this release:** the session strip planned for (b) and (c), the seam between site and engine, and the credits page's two scaling lines. Piece (b) carries the session figure instead, as a switcher; (c) carries `architecture` only; the credits page keeps its own scaling cards.
+
+**How the pages show them** (lane P1): inlined verbatim and captioned with their SVG titles, on a white panel in both themes. Below 720 pixels the frame scrolls sideways, under the line "The figure scrolls sideways." The switcher on (b) has a lead paragraph and three buttons, Before, During and After. A button brings its part forward and fades the other two, and pressing it again shows all three. Without JavaScript, every figure is the plain figure.
 
 **Rules for every figure.** Drawn once by D1 as SVG, with presentation attributes only: no `style` attribute, no `<style>` element, no script, no external reference, no embedded font or image, so each is safe to inline as it is. Ids are prefixed per figure, and each has a `<title>` and a `<desc>` through `aria-labelledby`. Text is real `<text>` in the pages' system font stack. Labels use the glossary's words and are gender neutral; no customer name, no timing figure, and no number beyond the product names R2 and D1. The legend's pills are the package's one legend (Built, Designed, Open), each with its word. A PNG at twice the drawn size sits beside each SVG for Word.
 
-**For review lane R:** the credits figure colors its credit-verdict bands (D1 §6), and its "Credits not decided" band is white with a dashed border, like the Open pill. R checks that the bands cannot be read as a second label legend, against the one-legend ruling (§12).
+**For review lane R:** the credits figure colors its credit-verdict bands (D1 §6), and the credits page colors its credit tags in the same language (§3.6). The figure's "Credits not decided" band is white with a dashed border, like the Open pill. R checks that neither can be read as a second label legend (§12).
 
 ### 3.10 (h) What is built, designed and open
 
@@ -462,7 +449,7 @@ The package has three labels, used the same way in every piece:
 - **Designed:** in an architecture document, not in the code.
 - **Open:** no decision yet.
 
-**The legend, verbatim, on every content page:** "Built: in the code and exercised. Designed: in an architecture document, not in the code. Open: no decision yet." Each label has one color, the same on every page and in every figure, chosen by P1 from the brand palette; every chip also carries its word, so the meaning never rests on color alone. In Word the label is the word, in bold, in the verdict column.
+**The legend, verbatim, on every page that shows a label** (as built, every page but the demo map): "Built: in the code and exercised. Designed: in an architecture document, not in the code. Open: no decision yet." Each label has one color, the same on every page and in every figure, chosen by P1 from the brand palette; every chip also carries its word, so the meaning never rests on color alone. In Word the label is the word, in bold, in the verdict column.
 
 **S2's other three labels** map as follows, so the legend stays at three:
 
@@ -568,11 +555,11 @@ The common brief adopts S3 Part 2's first five rules as binding. Rules 6 to 10 a
 | 4. Sentences to say and never to say | §4.9 applies | §3.3 lists | §3.4 answers and lists | Its never-say table in A.8 | The original's three sentences | Deprecated entries | §3.8 list | Its sentences and never-say table |
 | 5. Examples before mechanism; instruments explained first | Cards say what each page gives | The visitor's story first | Three moments first | The unit of state first, with its figure | The rule, then the session | Plain words before any symbol | The question before the demo | Not applicable: a reference; the legend and the stamp come before any table |
 
-**On the pages, rule 5 means:** a plain lead paragraph sits above every figure and every group of disclosures. Pages run no script (§7), so the only interactive elements are links and `<details>` disclosures.
+**On the pages, rule 5 means:** a plain lead paragraph sits above every figure, every switcher and every group of disclosures. Pages load one same-origin script, `/site.js`, as progressive enhancement only (§7): the credits page's tabs, the session figure's buttons, keyboard scrolling of wide figures, and opening every answer before print. Without it, every page reads in full.
 
 **Rules 6 to 10** (S3 §2.5). 6, an FAQ of the questions that actually come up: (c) and (e). 7, a map of the order form, in the same color language: (e), labeled Designed and Open. 8, honesty in one ledger and confidence everywhere else: reconciled with the brief's "honesty inline" as one label on the row it qualifies, never a repeated caveat, with the never-say table as the ledger. 9, one word per meaning: the glossary. 10, no customer names, no judgement of anyone's system, no stale dates: every piece.
 
-**What to avoid** (S3 §2.6): the point after a long sequence (every piece leads with its rule); terms never defined (every term at first use, and the glossary); instruments before explanation; one page for several readers; caveats on every screen; state carried across screens (none: no script); numbers that differ from the engine's; a stale structure, such as a ladder of offerings that cannot be skipped; several names for one thing; density.
+**What to avoid** (S3 §2.6): the point after a long sequence (every piece leads with its rule); terms never defined (every term at first use, and the glossary); instruments before explanation; one page for several readers; caveats on every screen; state carried across screens (none: `/site.js` keeps no state between pages); numbers that differ from the engine's; a stale structure, such as a ladder of offerings that cannot be skipped; several names for one thing; density.
 
 **The voice** (the common brief's, restated so a lane has it in one place):
 
@@ -587,7 +574,7 @@ The common brief adopts S3 Part 2's first five rules as binding. Rules 6 to 10 a
 
 ## 6. Formats and the single-source rule
 
-**One source per piece.** Each piece's source is one markdown file: `docs/enablement/content/<piece>.md`, and the glossary at `docs/enablement/GLOSSARY.md`. The page and the Word copy are renderings of that file. A change is made in the source first; the page is then re-rendered and the Word copy rebuilt. A Word file is never edited by hand.
+**One source per piece.** Each piece's source is one markdown file: `docs/enablement/content/<piece>.md`, and the glossary at `docs/enablement/GLOSSARY.md`. Three exceptions, as built: the credits page's source is the corrected HTML `docs/enablement/content/credits-source.html` (§3.6); the landing page renders §3.2's text; the demo map renders §3.8's text until `content/demo-map.md` exists. The page and the Word copy are renderings of the source. A change is made in the source first; the page is then re-rendered and the Word copy rebuilt. A Word file is never edited by hand.
 
 **The markdown, written for both renderings.**
 
@@ -608,43 +595,56 @@ node scripts/md2docx.mjs <source.md> docs/enablement/word/<File>-v1.0.docx \
 
 The subtitle is the reader and the facts stamp, for example "For marketing · engine facts as of commit 8b4f74c". "Prepared for" is the reader's team, for example "Optimizely marketing". The version is the bare number, because the converter prints its own "Version" label. File names carry no package name, so a rename does not rename files, and carry their version; when a new version replaces an old one, the lead removes the old file (lanes do not delete). The converter needs the `docx` package installed once per machine, outside the repository (its header says how); W uses an existing install and installs nothing.
 
-**The page, a designed rendering of the same text.** Each content page wraps the piece in `<article data-source="docs/enablement/content/<piece>.md">` (the glossary names `docs/enablement/GLOSSARY.md`). Everything inside it is the source's text; everything outside it is the chrome in §7. P1 may choose any layout, type and color inside the brand, but may not add, drop or reword text inside the article. The figure's internal text sits inside an inline SVG and is outside the comparison; its caption is a `<figcaption>` and is inside it.
+**The page, a designed rendering of the same text.** Each content page wraps the piece in `<article data-source="docs/enablement/content/<piece>.md">` (the glossary names `docs/enablement/GLOSSARY.md`). Everything inside it is the source's text; everything outside it is the chrome in §7. P1 may choose any layout, type and color inside the brand, but may not drop or reword text inside the article. A word that is not the source's, such as a rule's label or the session figure on (b), is marked on the page as an addition (`data-added`, or `data-replaces` for a replaced title). The figure's internal text sits inside an inline SVG and is outside the comparison; its caption is a `<figcaption>` and is inside it.
 
-**The text check.** P1 writes `enablement/check-text.mjs`. For every page with a `data-source`, it extracts the article's visible text (tags removed, entities decoded, inline SVG skipped, whitespace collapsed, typographic quotes and apostrophes normalized), renders the source to text by the same rule (markup removed, a figure reduced to its caption, list markers and table pipes removed), and compares the two as word sequences. Any difference fails and prints the first place they diverge. It runs before every deploy, beside the preflight.
+**The page builder:** `enablement/render-pages.mjs` (lane P1) renders every page from its source, with the one stylesheet `/site.css` and the one script `/site.js`, so a change to a source is re-rendered, never hand-edited on a page.
 
-**Figures.** Drawn once by D1 under `docs/enablement/figures/` (§3.9). Pages embed the SVG inline, copied verbatim from the figure file, so a page stays one request and the image policy is unchanged; the text check, or a separate step in it, confirms the inline copy matches the file.
+**The text check:** `node enablement/render-check.mjs` (lane P1). It compares each page with its source sentence by sentence, in both directions, and fails on any missing source sentence and on any page sentence that is neither in the source nor marked as an addition. It also fails on an inline figure that differs from its file, a caption that is not its figure's title, missing chrome (the package name, the stamp, the footer line, the skip link, or the legend on a page that shows a label), and any scan hit: a gendered pronoun, a customer or person name the brief lists, a timing figure, or the abbreviation §2 keeps out of visible text. `--verbose` lists every marked addition. It runs before every deploy, beside the preflight.
+
+**Figures.** Drawn once by D1 under `docs/enablement/figures/` (§3.9). Pages embed the SVG inline, copied verbatim from the figure file, so no figure is a request of its own and the image policy is unchanged; the render check confirms each inline copy matches its file.
 
 ---
 
 ## 7. The site
 
-- **The worker.** `edge-platform-bti`, at `https://edge-platform-bti.expedge.workers.dev`. It serves the pages P1 builds under `enablement/site/`, and nothing else; it shares nothing with the demo workers. Lane E2 owns its code and configuration and records them, with the deploy command, in `docs/enablement/lanes/E2.md`. The first worker, `edge-platform-enablement` (`wrangler.enablement.toml`, assets only, behind Cloudflare Access), is history (§12).
-- **The gate: a passphrase, in the worker itself** (lane E2). One passphrase, held as a worker secret; a signed cookie that lasts seven days; failed attempts slowed; nothing served without it. It replaced Cloudflare Access on 2026-10-02, after Access's one-time email codes did not reach the owner (§12). It is temporary, until the material moves inside Optimizely and the Microsoft sign-in takes over.
-- **The gate is not a content page.** Its own passphrase page and its cookie belong to lane E2. Content pages still hold no form, script, cookie or storage (below), and nothing on them depends on the gate.
-- **What the gate means for verification.** No script holds the passphrase, so hosted pages are not checked by script. Every page is proven as built files before a deploy: the preflight, the text check and the headless Chrome checks in §9 run against the built files locally. After a deploy, an outside check without the passphrase proves that every address, unknown ones included, serves no page content. With the passphrase, a person sees the pages in a browser. Whether a script may ever hold the passphrase is the owner's decision (§11).
-- **The pages and their addresses, with no trailing slash:** `/` (a), `/what-it-is` (b), `/selling-it` (c), `/how-it-works` (d), `/status` (h), `/credits` (e), `/glossary` (f), `/demos` (g), plus E0's 404 page for any other address. P1 lays out the files under `enablement/site/` so each page answers at its address.
-- **The chrome, on every content page, verbatim:**
-  - the skip link, "Skip to the page";
+- **The worker.** `edge-platform-bti`, at `https://edge-platform-bti.expedge.workers.dev`. It serves the pages P1 builds under `enablement/site/`, and nothing else; it shares nothing with the demo workers. Lane E2 owns its code, `enablement/worker.mjs` with its tests `enablement/worker.test.mjs`, and its configuration, `wrangler.enablement.toml`, which now names `edge-platform-bti`, runs the worker before the assets and keeps preview addresses off (`docs/enablement/lanes/E2.md`). The first worker, `edge-platform-enablement`, stays behind Cloudflare Access and is no longer deployed to (§12).
+- **The gate: a passphrase, in the worker itself** (lane E2). One passphrase, held as a worker secret, with a second secret, the key that signs the cookie; a signed cookie that lasts seven days; failed attempts slowed; nothing served without it. The values live only in the worker and in the owner's local `.dev.vars`. It replaced Cloudflare Access on 2026-10-02, after Access's one-time email codes did not reach the owner (§12). It is temporary, until the material moves inside Optimizely and the Microsoft sign-in takes over.
+- **The gate is not a content page.** Its own sign-in page at `/auth` and its cookie belong to lane E2. Content pages still hold no form, inline script, cookie or storage (below), and nothing on them depends on the gate.
+- **What the gate means for verification.** No script holds the passphrase, so hosted pages are not checked by script. Every page is proven as built files before a deploy: the preflight, the render check and the headless Chrome checks in §9 run against the built files locally. After a deploy, an outside check without the passphrase proves that every address, unknown ones included, serves no page content. With the passphrase, a person sees the pages in a browser. Whether a script may ever hold the passphrase is the owner's decision (§11).
+- **The pages and their addresses, with no trailing slash:** `/` (a), `/what-it-is` (b), `/selling-it` (c), `/how-it-works` (d), `/status` (h), `/credits` (e), `/glossary` (f), `/demos` (g), plus E0's 404 page for any other address. As built, the pages are flat files (`what-it-is.html` and the rest), served without the extension by the assets binding's default handling, beside `/site.css`, `/site.js` and `figures/`.
+- **The chrome, on every content page, verbatim, as built:**
+  - the skip link, "Skip to the page", the first Tab stop;
   - the eyebrow, "Internal · Optimizely";
-  - the navigation, linking to every page: "All pages" (`/`), "What it is", "Selling it", "How it works", "Status", "AI credits", "Glossary", "Demo map";
-  - the legend (§4.2);
+  - the navigation, linking to every page, with the current page marked: "All pages" (`/`), "What it is", "Selling it", "How it works", "Status", "AI credits", "Glossary", "Demo map";
+  - the reader tag at the top of each piece: "For marketing", "For account executives", "For solutions engineers" or "For everyone";
+  - the legend (§4.2), on every page that shows a label;
   - the version stamp: "Updated <Month D, YYYY> · engine facts as of commit 8b4f74c", where the date is the day the page's text last changed and the commit is the one S2 is pinned to;
-  - the footer, kept from E0: "Internal reference · do not forward outside Optimizely".
+  - a footer listing every piece by its full title and reader, ending with the line "Internal · Optimizely · do not forward outside Optimizely".
+  - The package name is written once per page, in `#package-name` inside the `h1`; the page's `<title>` never repeats it.
 - **The version stamp's rule.** When S2 is revised and pinned to a new commit, every page's stamp changes with it, and every piece is reviewed against the difference in S2 before the new stamp ships. The Word copy carries the same commit in its subtitle and the build date on its cover.
-- **The headers,** the set E0 built in `enablement/site/_headers`, on every response, whichever part of the worker sets them (lane E2): a Content-Security-Policy of `default-src 'none'`, each page's inline style allowed by its SHA-256 and never by `unsafe-inline`, `img-src data:`, and `base-uri`, `form-action` and `frame-ancestors` set to `'none'`; `nosniff`; frame denial; `no-referrer`; a closed Permissions-Policy; HSTS; `Cache-Control: private, no-store`; `X-Robots-Tag: noindex, nofollow, noarchive`. After any style change, `node enablement/check-site.mjs --hashes` gives the new `style-src` value.
-- **What a page may hold.** Static HTML with one inline `<style>` and inline SVG figures; no script, no form, no font or image from anywhere, no storage, no cookie, no API call. Links (`<a href>`) to the site's own pages, to the demo workers' addresses in §3.8 and to nothing else.
-- **The preflight,** `node enablement/check-site.mjs` (E0's 38 checks). Its checks on the worker's own configuration, which assumed an assets-only worker, belong to lane E2 now that the worker runs the gate. P1 widens three of the page checks on purpose, each with a mutation test that fails for the right reason:
-  1. **The package name**, from "once in the whole site" to: every content page has exactly one element with `id="package-name"`, inside its `h1`; every page carries the same string; the string appears nowhere else on that page.
-  2. **Links out**, from "no address with a scheme" to: an `<a href>` may name an `https` address on an allowlist (the site itself and the three demo workers); nothing else may name another address, and nothing may be loaded from one.
-  3. **The chrome:** every content page carries the legend and the version stamp exactly, and one `<article data-source>`.
-- **The deploy, the lead's, from WSL:** the page checks pass first, then the deploy command lane E2 records in `docs/enablement/lanes/E2.md`:
+- **The headers,** in `enablement/site/_headers`, which the assets binding applies to every page the gate serves (E2 measured it): a Content-Security-Policy of `default-src 'none'; style-src 'self'; script-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`, never `unsafe-inline` or `unsafe-eval`; `nosniff`; frame denial; `no-referrer`; a closed Permissions-Policy; HSTS; `Cache-Control: private, no-store`; `X-Robots-Tag: noindex, nofollow, noarchive`. Every style lives in `/site.css` and all behavior in `/site.js`, so no page carries an inline style or script; `img-src data:` stays for the tab icon. E0's 404 page still carries an inline style, which needs its hash kept in `style-src` or a move onto `/site.css` (P1 §4, item 2).
+- **What a page may hold.** Static HTML that loads only `/site.css` and `/site.js` from its own site, with inline SVG figures; no inline style or script, no form, no font or image from anywhere, no storage, no cookie (the gate's cookie is the gate's), no API call. `/site.js` is progressive enhancement only (§5): without it, every page reads in full. Each page makes only same-origin requests: the page, the stylesheet and the script. Links (`<a href>`) go to the site's own pages, to the demo workers' addresses in §3.8, and to nothing else.
+- **The preflight,** `node enablement/check-site.mjs`, lane E2's since it widened E0's checks for the gate: the configuration may now name `main`, the assets binding and `run_worker_first`, and the gate's own checks are added. For the pages as built it widens on purpose, as P1 §4 sets out: the eight pages, `site.css`, `site.js` and the figures as required files; `style-src 'self'` and `script-src 'self'` with no hash; exactly one empty `<script src="/site.js" defer>` and one `<link rel="stylesheet" href="/site.css">` allowed; `<a href>` to the allowlist (the site itself and the three demo workers) kept apart from anything that loads, which stays same-origin; the package name once per page, inside the `h1`. The chrome is proven by the render check, which the preflight may call. Each widened check is proven by a mutation that fails for the right reason.
+- **The deploy, the lead's, from WSL** (`docs/enablement/lanes/E2.md` §5):
 
 ```
-node enablement/check-site.mjs && node enablement/check-text.mjs
+node enablement/check-site.mjs && node enablement/render-check.mjs && \
+  npx wrangler deploy --config wrangler.enablement.toml
 ```
 
-  Never a plain `npx wrangler deploy` from the repository root: `wrangler.toml` names the shared demo worker.
-- **After the deploy,** verify the responses, not that a page opens. From outside, without the passphrase: every address in this section, and one that does not exist, answers with the gate and carries no page content. E0's items 1 to 4 (status, the 404 page, the headers, one request per page) are proven on the built files before the deploy, and may be seen with the passphrase in a browser's developer tools.
+  A first deploy sets the two secrets after it, as E2's note says; until both exist, the worker answers 503 to everything. Never a plain `npx wrangler deploy` from the repository root: `wrangler.toml` names the shared demo worker.
+- **After the deploy,** verify the responses, not that a page opens. From outside, without the passphrase: every address answers with the gate and carries no page content. With the passphrase: the pages, the 404 page for an unknown address, and the headers above. E0's items 1 to 4 (status, the 404 page, the headers, the requests per page) are proven on the built files before the deploy.
+- **Deployed and verified, 2026-10-02** (the lead, `lanes/E2.md`). `edge-platform-bti` version `8388fa81`, from commit `8086cb1`, deployed from a clean worktree with both secrets already set. Checked from outside:
+
+| Request | Answer |
+|---|---|
+| `/`, with no session | 302 to `/auth` |
+| `/auth` | 200, with the strict headers and one password field |
+| A wrong passphrase | 401, and no cookie |
+| The right passphrase | 303, setting the session cookie |
+| `/`, with that cookie | 200 |
+| An unknown address, with that cookie | 404 |
+| `/`, with a forged cookie | 302 to `/auth` |
 
 ---
 
@@ -725,11 +725,11 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 |---|---|---|---|
 | **E1** design | `docs/enablement/BTI-Enablement-Design.md`, `docs/enablement/GLOSSARY.md`, `docs/enablement/README.md`, `docs/enablement/lanes/E1.md` | The glossary, this design, the folder map | Now; the glossary first |
 | **C1** marketing | `docs/enablement/content/what-it-is.md`, `docs/enablement/lanes/C1.md` | (b) | The glossary lands |
-| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/content/credits.md`, `docs/enablement/content/demo-map.md`, `docs/enablement/lanes/C2.md` | (c), (e), (g) | The glossary lands; for (e), the shared credits page is filed at `docs/enablement/research/opal-ai-credits-placement.source.html` |
+| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/content/credits-source.html`, `docs/enablement/content/demo-map.md` (not yet written; §3.8 is the source until it is), `docs/enablement/lanes/C2.md` | (c), (e)'s corrected source, (g) | The glossary lands; for (e), the original shared page is filed at `docs/enablement/research/opal-ai-credits-placement.source.html` |
 | **C3** solutions engineers | `docs/enablement/content/how-it-works-and-where-it-runs.md`, `docs/enablement/content/status.md`, `docs/enablement/lanes/C3.md` | (d), (h) | The glossary lands |
 | **D1** diagrams | `docs/enablement/figures/**`, `docs/enablement/lanes/D1.md` | Three figures, SVG and PNG (§3.9) | This design lands |
-| **P1** pages and site | `enablement/site/**`, `enablement/check-site.mjs`, `enablement/check-text.mjs`, `docs/enablement/content/landing.md`, `docs/enablement/lanes/P1.md` | (a); the chrome; the pages for (b) to (h); the widened preflight and the text check | This design lands (chrome, checks and landing page first); each content page once its source has passed review round 1 |
-| **E2** the site's worker and gate | The worker's code and configuration, as its note records them, and `docs/enablement/lanes/E2.md` | The worker `edge-platform-bti`, the passphrase gate, the deploy command | The owner's instruction of 2026-10-02 |
+| **P1** pages and site | `enablement/site/**` (the pages, `site.css`, `site.js`, the figures' copies), `enablement/render-pages.mjs`, `enablement/render-check.mjs`, `docs/enablement/lanes/P1.md` | (a); the chrome; the pages for (b) to (h); the page builder and the render check | This design lands (chrome, checks and landing page first); each content page once its source has passed review round 1 |
+| **E2** the site's worker and gate | `enablement/worker.mjs`, `enablement/worker.test.mjs`, `wrangler.enablement.toml`, `enablement/check-site.mjs`, `docs/enablement/lanes/E2.md` | The worker `edge-platform-bti`, the passphrase gate, the preflight, the deploy command | The owner's instruction of 2026-10-02 |
 | **W** Word builds | `docs/enablement/word/**`, `docs/enablement/lanes/W.md` | Seven Word copies, one for each piece but the landing page | Each source has passed review round 1 and the lead's read |
 | **R** independent review | `docs/enablement/lanes/R.md` (rounds appended) | A verdict per piece, page and Word copy | Round 1 when every source and figure has a draft; round 2 when the pages and Word copies exist |
 
@@ -750,9 +750,9 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 - **E1:** every glossary entry traces to S2, or to the common brief for the package's own conventions, in `lanes/E1.md`; the lead accepts the design.
 - **C1, C2, C3:** every engine statement traces to an S2 section, listed in the lane note against each section of the piece; the shape in §3.0; the rows from §3.1 with their wording and verdicts; the verbatim paragraphs as written; glossary words only, and a search for every deprecated term finds none in the piece; no customer, prospect or competitor name; no timing figure; no em-dash; American English; gender-neutral wording, with no match for `\b(she|her|hers|he|him|his)\b` in any case; headings as statements; `#` once and `##` for sections; figures and links as §6 says; the name once; the word budget.
 - **D1:** the rules in §3.9; each PNG matches its SVG; captions verbatim; each figure checked in light and dark on a test page; labels in the glossary's words and gender neutral.
-- **P1:** the preflight passes with its three widened checks, each widened check proven by a mutation that fails for the right reason; the text check passes for every content page; on the built files, served locally, because no script holds the passphrase (§7), in headless Chrome at 320, 375, 768 and 1280 pixels, light and dark: no horizontal scroll, exactly one request per page, no console message, WCAG AA contrast for every text and background pair, the legend and stamp present, the skip link the first Tab stop.
+- **P1:** the preflight passes with its widened checks, each proven by a mutation that fails for the right reason; `node enablement/render-check.mjs` passes for every page; on the built files, served locally, because no script holds the passphrase (§7), in headless Chrome at 320, 375, 768 and 1280 pixels, light and dark: no horizontal scroll, only same-origin requests (the page, `/site.css` and `/site.js`), no console message, WCAG AA contrast for every text and background pair, the legend on every page that shows a label, the stamp and the footer line present, the skip link the first Tab stop, and every page complete without JavaScript.
 - **W:** each copy built by the unchanged converter; a title page and a linked contents; every in-document link resolves (the build fails otherwise); each figure renders; the file is named with its version. Not machine-verifiable: Ctrl+Click in Word and a PDF export; the owner tries one link on first opening.
-- **R:** a PASS or FAIL per piece, page and Word copy, every finding located to a line, covering facts against S2, the rules, the voice, the never-say list, the text check, the preflight, the rendering and the Word structure. R scans every piece, page, figure and Word copy for `\b(she|her|hers|he|him|his)\b`, in any case, and fails the piece on any match. R reviews pages as built files, since no script holds the passphrase. R writes nothing else.
+- **R:** a PASS or FAIL per piece, page and Word copy, every finding located to a line, covering facts against S2, the rules, the voice, the never-say list, the render check, the preflight, the rendering and the Word structure. R scans every piece, page, figure and Word copy for `\b(she|her|hers|he|him|his)\b`, in any case, and fails the piece on any match. R reviews pages as built files, since no script holds the passphrase. R writes nothing else.
 
 ---
 
@@ -821,3 +821,6 @@ No other owner decision is known that the package needs. The questions in §4.8 
 | 2026-10-02 | Six rows from lane C3 join the master list so that S2 §10.1 is there in full, each with S2 §10.1's verdict: B14 tenancy and isolation (Built), B15 design-time tagging (Built, off by default), B16 Opal authoring and explanation (Open), D20 the census figures (Built, demo only), D21 the anchor product (Built, not yet on a hosted demo), D22 paid-search classification (Built, the classification only) | lead |
 | 2026-10-02 | The figures are D1's three, `architecture`, `decision-path` and `before-during-after` (the credits page's), each captioned with its SVG title; the session strip, the seam and the credits page's two scaling lines are not drawn in this release; the credits page's verdict words follow D1's figure (§3.6, §3.9) | E1, reconciling with lane D1 |
 | 2026-10-02 | Links show a page's title and carry its address as their target, because the site's host name carries the abbreviation that §2 keeps out of visible text (§2, §6) | E1, from lane C3's practice |
+| 2026-10-02 | **The pages as built** (lane P1), described in §3, §5, §6 and §7. Eight pages, built by `enablement/render-pages.mjs` and checked by `enablement/render-check.mjs`, which replaces the planned `check-text.mjs`. They share one stylesheet `/site.css` and one script `/site.js`, progressive enhancement only, under `style-src 'self'; script-src 'self'; img-src data:`, so each page makes a few same-origin requests instead of one. The footer line is "Internal · Optimizely · do not forward outside Optimizely". The landing page runs to about 290 words, with each card's piece rule. The session figure is a Before / During / After switcher on (b) and static on (e). The demo map renders §3.8, with its three additions marked. Every word not in a source is marked as an addition | lead |
+| 2026-10-02 | **The credits page's corrected source** is kept as `docs/enablement/content/credits-source.html`. Corrections make false statements true, with the design's labels; the structure, order, devices and voice stay. The original stays filed in `research/` (§3.6) | lead (ruling) |
+| 2026-10-02 | **Deployed and verified:** `edge-platform-bti` version `8388fa81` from commit `8086cb1`. Outside checks: 302 to `/auth` with no session, 401 for a wrong passphrase, 303 with the session cookie for the right one, 200 with it, 404 for an unknown address, 302 for a forged cookie (§7) | lead |
