@@ -170,6 +170,22 @@ node scripts/seed-vantage-region.mjs --base https://edge-platform-vantage.expedg
 
 The phone page is `/vantage/phone?id=<id>`, which the assets binding serves everywhere. The path form `/vantage/phone/<id>` is retired: lane F1 emptied L1's route after R1 N7. A browser navigation to it never reached the worker, because the assets binding's fallback answers navigations with the root page. `run_worker_first` would have changed that, but it broke local POSTs with 405. The page suite still reports what a browser gets at the path form, as information.
 
+## The explainers (for Verizon's engineers, 2026-10-01)
+
+Three pieces, written after the showing so their lead engineer can see why this is not click tracking; all three
+draw their numbers from one facts sheet, `docs/verizon/explainer/FACTS.md`, and every measured figure traces to a
+line of the hosted suite transcript in `lanes/evidence/`.
+
+| Piece | Where | Rebuild |
+|---|---|---|
+| One-page note, "Why the unit of state is the dimension value, not the click" | `Vantage-Why-Dimensions-Not-Clicks.md` and the single Word copy beside it (the highest version number is the only one kept; superseded copies leave the repo) | `lanes/W2.md` has the md2docx command and the one-page measurement; run it from WSL (the `docx` package lives there) |
+| Technical note, "How the Vantage signal system works" | `Vantage-Signal-System-Technical-Note.md` and its Word copy | `lanes/W1.md` §6: the command, the five document.xml checks and the page measurement |
+| Interactive page, "How it works" | `public/vantage/how-it-works.html`, `.js`, `.css`; served at `/vantage/how-it-works` on the Vantage worker once deployed | static, no build; its self-test runs on load and reads nothing but the public cold-start route with `X-Tenant: vantage` |
+
+Rules: the documents link to the hosted page, so they go out only after a deploy has made it answer 200 (it
+answers 403 until then); the review file `lanes/R2.md` holds the verdict each piece shipped under; no piece
+describes or judges the customer's own system, and any edit keeps it that way.
+
 ## What is still open
 
 | | |
