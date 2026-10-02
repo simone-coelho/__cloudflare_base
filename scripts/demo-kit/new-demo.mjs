@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/demo-kit/new-demo.mjs — a new demo, scaffolded from its demo.config.json (docs/demo-kit/Demo-Kit-Design.md §2.3–§2.5).
 //
-//   node scripts/demo-kit/new-demo.mjs --config public/<slug>/demo.config.json [--dry-run] [--leave <path>[,<path>…]] [--rebuild-beats]
+//   node scripts/demo-kit/new-demo.mjs --config public/<slug>/demo.config.json [--dry-run] [--leave <path>[,<path>…]] [--rebuild-beats] [--root <dir>]
 //
 // It validates the config (lib/config.mjs validateDemoConfig), refuses a slug whose worker, queue, tenant or dev port
 // another demo in the repository already holds, and writes, from the templates under scripts/demo-kit/templates/:
@@ -23,16 +23,21 @@
 // rewrites the beat documents and the kit config from the catalog as it stands (after the demo's own catalog replaces
 // a starter one), before anyone has edited them by hand. --dry-run writes nothing and prints the plan.
 //
+// --root <dir> scaffolds into another tree (a scratch copy of the repository, for a proof): the config is read from
+// <dir>/public/<slug>/demo.config.json, collisions are checked against <dir>'s own worker configs and kit configs, and
+// EVERY write lands under <dir>, the worker config included (this repository's builder, with --out into <dir>). The
+// templates are read from <dir> when it carries them, else from this repository.
+//
 // It creates no cloud resource of any kind: the worker, its queues, its tenant and its secrets are printed, by name,
 // for the owner's one-time approval, with the deploy command.
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { isEntry } from './lib/cli.mjs';
 import { argOf, REPO_ROOT, validateDemoConfig } from './lib/config.mjs';
-import { WORKER_SECRETS, collisions, exists, mountLines, operatorsOf, planScaffold } from './lib/scaffold.mjs';
+import { TEMPLATES, WORKER_SECRETS, collisions, exists, mountLines, operatorsOf, planScaffold } from './lib/scaffold.mjs';
 
-export const USAGE = 'usage: node scripts/demo-kit/new-demo.mjs --config public/<slug>/demo.config.json [--dry-run] [--leave <path>[,<path>…]] [--rebuild-beats]';
+export const USAGE = 'usage: node scripts/demo-kit/new-demo.mjs --config public/<slug>/demo.config.json [--dry-run] [--leave <path>[,<path>…]] [--rebuild-beats] [--root <dir>]';
 
 /**
  * The files --rebuild-beats may rewrite: the beat documents, and the kit config with its reflex and learn documents,
@@ -47,6 +52,15 @@ const derivedLines = (text) => String(text).split('\n').filter((l) => /^ {2}'[^'
 
 /** The worker builder's command line for a demo. */
 export const builderArgs = (demo) => ['scripts/build-demo-worker-config.mjs', '--name', demo.worker.name, '--queue', demo.worker.queue, '--dev-port', String(demo.worker.devPort)];
+/**
+ * The same, for a scaffold into another root: this repository's builder (it reads this repository's wrangler.toml)
+ * with --out naming the file inside that root, so the worker config is written there and nowhere else.
+ */
+export function builderArgsFor(demo, root) {
+  if (resolve(root) === resolve(REPO_ROOT)) return builderArgs(demo);
+  const [script, ...rest] = builderArgs(demo);
+  return [resolve(REPO_ROOT, script), ...rest, '--out', resolve(root, `wrangler.${demo.slug}.toml`)];
+}
 
 /**
  * What a run does with each planned file: write it, leave it (it exists), rebuild it (--rebuild-beats), or leave it
@@ -62,9 +76,13 @@ export function decide(plan, { root = REPO_ROOT, slug, leave = [], rebuild = fal
 }
 
 /** The scaffold, from a command line. Returns the exit code: 0 done, 1 a step failed, 2 a usage, config or collision error. */
-export async function main(argv = process.argv.slice(2), { root = REPO_ROOT, log = console.log, err = console.error, nowMs = Date.now(), runBuilder = true } = {}) {
+export async function main(argv = process.argv.slice(2), { root: given = REPO_ROOT, log = console.log, err = console.error, nowMs = Date.now(), runBuilder = true } = {}) {
   const file = argOf(argv, '--config');
   if (!file) { err(USAGE); return 2; }
+  const rootArg = argOf(argv, '--root');
+  if (argv.includes('--root') && !rootArg) { err(USAGE); return 2; }
+  const root = rootArg ? resolve(process.cwd(), rootArg) : given;
+  if (rootArg && !existsSync(root)) { err(`✗ --root ${rootArg}: no such directory`); return 2; }
   const abs = resolve(process.cwd(), file);
   let demo;
   try { demo = JSON.parse(readFileSync(abs, 'utf8')); } catch (error) { err(`✗ ${file}: ${error.message}`); return 2; }
@@ -78,10 +96,12 @@ export async function main(argv = process.argv.slice(2), { root = REPO_ROOT, log
   const dry = argv.includes('--dry-run');
   const leave = (argOf(argv, '--leave', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
   let plan;
-  try { plan = planScaffold({ demo, root, nowMs }); } catch (error) { err(`✗ ${error.message}`); return 2; }
+  // A scratch root without the kit's templates uses this repository's: the scaffold is the same, only its writes move.
+  const templates = existsSync(resolve(root, 'scripts', 'demo-kit', 'templates')) ? resolve(root, 'scripts', 'demo-kit', 'templates') : TEMPLATES;
+  try { plan = planScaffold({ demo, root, nowMs, templates }); } catch (error) { err(`✗ ${error.message}`); return 2; }
   const decided = decide(plan, { root, slug: demo.slug, leave, rebuild: argv.includes('--rebuild-beats') });
 
-  log(`\n${demo.name}: the scaffold from ${where}${dry ? ' (dry run: nothing written)' : ''}`);
+  log(`\n${demo.name}: the scaffold from ${where}${dry ? ' (dry run: nothing written)' : ''}${resolve(root) !== resolve(REPO_ROOT) ? ` into ${root} (--root: every write lands there)` : ''}`);
   for (const n of plan.notes) log(`  · ${n}`);
   const mark = { write: '+', rebuild: '~', skip: '=', leave: '-' };
   for (const group of ['server', 'page', 'beats', 'data', 'kit', 'suites', 'docs']) {
@@ -97,9 +117,9 @@ export async function main(argv = process.argv.slice(2), { root = REPO_ROOT, log
   }
 
   log('\n  worker');
-  if (dry || !runBuilder) log(`   · node ${builderArgs(demo).join(' ')}${dry ? '  (not run: dry run)' : '  (not run)'}`);
+  if (dry || !runBuilder) log(`   · node ${builderArgsFor(demo, root).join(' ')}${dry ? '  (not run: dry run)' : '  (not run)'}`);
   else {
-    const r = spawnSync(process.execPath, builderArgs(demo), { cwd: root, encoding: 'utf8' });
+    const r = spawnSync(process.execPath, builderArgsFor(demo, root), { cwd: root, encoding: 'utf8' });
     log(`   ${r.status === 0 ? '+' : '✗'} ${(r.stdout || r.stderr || '').trim()}`);
     if (r.status !== 0) { err('✗ the worker builder failed; the rest of the scaffold is written'); return 1; }
   }

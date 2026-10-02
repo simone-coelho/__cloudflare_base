@@ -17,7 +17,8 @@
 <link rel="stylesheet" href="/demo-kit/compare.css" />
 </head>
 <!-- index.html, product.html and m.html carry the same shell; each boots into its own view (data-entry).
-     Change all three together, or rerun the scaffold into a fresh directory and compare. -->
+     Change all three together, or rerun the scaffold into a fresh directory and compare. The director docks as
+     demo.config.json's director says (@@DOCK@@; the kit's director.js and kit.css draw the dock). -->
 <body data-entry="@@ENTRY@@" class="@@BODY_CLASS@@">
 <a class="skip" href="#stage">Skip to the page</a>
 
@@ -30,15 +31,29 @@
 
 <div class="shell">
 <!-- ═══════════════════════════════ THE SITE ═══════════════════════════════ -->
+<!-- A working store before anything is decided: the header, the published template on the homepage, the grids, the
+     product page, search, the cart and where to buy all work by hand (public/demo-kit/store.js). The first visitor is
+     minted on the first click on the site, or the director's first press, never on load. -->
 <div class="site" id="site">
+  @@PENCIL@@
   <header class="site-header static">
-    <div class="utility"><span class="nper">not personalised</span><span class="u-right"><span>Support</span><span>Find a store</span><span class="u-sign" id="signIn">Sign in</span></span></div>
     <div class="mast">
       <a class="wordmark" href="/@@SLUG@@/" data-nav="home" data-ctl="home"><span class="wm" id="wordmark">@@WORDMARK@@</span><span class="wm-tag" id="tagline">@@TAGLINE@@</span></a>
       <nav class="mainnav" id="mainnav" aria-label="Shop">
           @@NAV@@
-          <span class="nper">not personalised</span>
       </nav>
+      <form class="search" id="searchForm" role="search" action="/@@SLUG@@/" data-store-search>
+        <input id="searchInput" name="q" type="search" placeholder="@@L_SEARCH_PLACEHOLDER@@" aria-label="@@L_SEARCH@@" autocomplete="off" />
+        <button type="submit" data-act="store-search" data-ctl="search" aria-label="@@L_SEARCH@@"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      </form>
+      <div class="mast-tools">
+        <span class="region-chip" id="regionChip" hidden></span>
+        <button type="button" class="u-sign" id="signIn" data-act="store-signin" data-ctl="sign-in">@@L_SIGN_IN@@</button>
+        <button type="button" class="cart-btn" id="cartBtn" data-act="store-cart-open" data-ctl="cart" aria-label="@@L_CART@@">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 4h2.2l2.1 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.6 8H6.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.4" fill="currentColor"/><circle cx="17" cy="19.5" r="1.4" fill="currentColor"/></svg>
+          <span class="cart-count" id="cartCount" data-cart-count data-hide-empty hidden>0</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -47,8 +62,9 @@
   </main>
 
   <footer class="site-footer static">
-    <span class="nper">not personalised</span>
+    @@FOOTER@@
     <p class="foot-legal" id="footLegal">@@LEGAL@@</p>
+    <span class="nper">the header, the service strip and the footer are not personalised</span>
   </footer>
 </div>
 
@@ -148,6 +164,9 @@
     </div>
   </div>
 </div>
+
+<!-- ── The store's toast (public/demo-kit/store.js): the cart, where to buy, checkout, search and sign-in open in the sheet above. ── -->
+<div class="st-toast" id="storeToast" role="status" aria-live="polite" hidden></div>
 
 <!-- ── Compare: the demo kit's overlay (public/demo-kit/compare.js) is injected into <body> on first use. ── -->
 

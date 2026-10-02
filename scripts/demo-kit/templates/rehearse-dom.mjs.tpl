@@ -54,6 +54,24 @@ function pageHelpers({ vis, txt, shown }) {
     broken: [...document.images].filter((i) => vis(i).ok && i.complete && i.naturalWidth === 0).map((i) => i.getAttribute('src')),
   });
   window.__k4 = { vis, txt, snapshot };
+  // The store a visitor uses (lane K5): what each view shows, read the way a person sees it.
+  const view = () => document.querySelector('#stage > .view:not([hidden])');
+  const store = () => ({
+    url: location.pathname + location.search, view: (view() || {}).id || null,
+    header: { wordmark: vis('#wordmark').ok, nav: shown('#mainnav [data-nav]').length, search: vis('form[data-store-search] input[name="q"]').ok,
+      signIn: vis('#signIn').ok && txt('#signIn').length > 0, cart: vis('[data-act="store-cart-open"]').ok, count: txt('[data-cart-count]') },
+    slots: [...(view() || document).querySelectorAll('[data-slot]')].filter((m) => vis(m).ok).map((m) => ({ slot: m.dataset.slot,
+      cards: shown('.card', m).map((c) => ({ cid: c.dataset.cid, title: txt(c.querySelector('h3')), img: Boolean(c.querySelector('img')), decided: Boolean(c.dataset.opDecisionId) })) })),
+    grid: { cards: shown('.pgrid .pcard', view() || document).length, filters: shown('.filters .fval', view() || document).length, count: txt((view() || document).querySelector('.grid-bar .count')) },
+    product: { title: txt('#bbTitle'), price: txt('#bbPrice'), add: vis('#bbAdd').ok && !document.getElementById('bbAdd').disabled, retail: vis('#bbRetail').ok },
+    sheet: { open: vis('#sheetBack').ok, kind: txt('#sheetBody .sk'), lines: shown('#sheetBody .st-line').length, buyHere: vis('#sheetBody [data-act="store-retailer-buy"]').ok,
+      sellers: shown('#sheetBody [data-act="store-referral"], #sheetBody [data-act="store-pickup"]').length, total: txt('#sheetBody [data-cart-total]') },
+    broken: [...document.images].filter((i) => vis(i).ok && i.complete && i.naturalWidth === 0).map((i) => i.getAttribute('src')),
+    overflow: document.documentElement.scrollWidth - innerWidth,
+  });
+  /** A press as a hand makes it: the control's own click, through the page's one dispatcher. */
+  const press = (selector) => { const el = typeof selector === 'string' ? document.querySelector(selector) : selector; if (!el) return false; el.scrollIntoView({ block: 'center' }); el.click(); return true; };
+  window.__k5 = { store, press, view };
 }
 const rgb = (hex) => { const h = hex.replace('#', ''); const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; return `rgb(${[0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16)).join(', ')})`; };
 const runBeat = (i) => evaluate(`(async () => { const run = window.${HOOK}.go(${i}); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()`);
@@ -84,6 +102,81 @@ try {
   ok('the director\'s opening sentence is on screen', boot.lineOk && boot.line.length > 10, boot.line.slice(0, 90));
   ok('no horizontal overflow', boot.overflow <= 1, `${boot.overflow}px`);
   await shot('00-boot');
+
+  // ── The store by hand, before any beat (lane K5): a stranger's own clicks, the same handlers the director runs ──
+  console.log('\n── The store by hand: no beat pressed');
+  const settle = async (cond, ms = 15000) => { await waitFor(cond, ms).catch(() => false); await sleep(SETTLE_MS); return evaluate('window.__k5.store()'); };
+  const pressAt = (sel) => evaluate(`window.__k5.press(${JSON.stringify(sel)})`);
+  const MINT = /\/identity\/session$|\/realtime\/session\/preferences$|\/realtime\/action$|\/decisions\/snapshot$|^\/sort$/;
+  const onLoad = [...requests.values()].filter((r) => r.press === 'boot');
+  ok('the boot page minted no visitor: no session, no consent, no event and no decision was asked on load', onLoad.every((r) => !MINT.test(r.path)),
+    onLoad.map((r) => r.path).join(', ') || 'no API call');
+  const B = await evaluate('window.__k5.store()');
+  ok('the header is a store\'s: the wordmark, the nav, a search box, Sign in and the cart', B.header.wordmark && B.header.nav > 0 && B.header.search && B.header.signIn && B.header.cart,
+    `nav ${B.header.nav}`);
+  const open = B.slots.filter((s) => s.cards.length);
+  ok('the boot page renders the published template: every slot on screen holds real content (a title, an image where the piece has one), none of it decided',
+    open.length > 0 && open.every((s) => s.cards.every((c) => c.title && !c.decided)) && open.some((s) => s.cards.some((c) => c.img)),
+    open.map((s) => `${s.slot}: ${s.cards.map((c) => c.cid).join(', ')}`).join(' · '));
+  ok('no image on the boot page is broken', B.broken.length === 0, B.broken.join(', '));
+  press = 'hand';
+  const tile = await evaluate(`(() => { const t = document.querySelector('#catTiles .tile, #view-home .card[data-go-nav], #mainnav [data-nav]:not([data-nav="home"])'); return t ? (t.dataset.nav || t.dataset.goNav) : null; })()`);
+  await pressAt(`#catTiles .tile[data-nav="${tile}"], #view-home .card[data-go-nav="${tile}"], #mainnav [data-nav="${tile}"]`);
+  const G = await settle(`(() => { const v = document.querySelector('#stage > .view:not([hidden])'); return v && v.querySelector('.pgrid .pcard'); })()`);
+  ok(`a tile opens its grid (${tile}): the address bar says ?view=${tile}, and the grid lists the room's products`, G.url.includes(`view=${encodeURIComponent(tile)}`) && G.grid.cards > 0, `${G.url} · ${G.grid.cards} cards · ${G.grid.count}`);
+  const minted = [...requests.values()].filter((r) => r.press === 'hand');
+  const order = minted.map((r) => r.path);
+  ok('the first click minted the visitor (her session, then her consent), then sent the page view', order.some((p) => /\/identity\/session$/.test(p)) && order.some((p) => /preferences$/.test(p))
+    && order.findIndex((p) => /\/identity\/session$/.test(p)) < order.findIndex((p) => /\/realtime\/action$/.test(p)), order.join(' → ').slice(0, 240));
+  const actions = () => [...requests.values()].filter((r) => /\/realtime\/action$/.test(r.path)).length;
+  if (G.grid.filters > 0) {
+    const sent = actions();
+    await pressAt('#stage > .view:not([hidden]) .filters .fval');
+    const F = await settle(`document.querySelector('#stage > .view:not([hidden]) .filters .fval[aria-pressed="true"]')`);
+    ok('a filter derived from the attribute map narrows the grid and sends its event', F.grid.cards > 0 && F.grid.cards <= G.grid.cards && actions() > sent, `${G.grid.cards} → ${F.grid.cards} · ${F.grid.count}`);
+  } else info('this grid has no attribute with two values, so no filter shows');
+  await pressAt('#stage > .view:not([hidden]) .pgrid .pcard');
+  const PD = await settle(`(() => { const t = document.getElementById('bbTitle'); return t && t.offsetParent && t.textContent.length > 0 && t.textContent !== 'Product'; })()`);
+  ok('a product card opens the product page: its title, its price, Add to cart and where to buy, every one on screen', PD.product.title && /\$/.test(PD.product.price) && PD.product.add && PD.product.retail,
+    `${PD.product.title} · ${PD.product.price}`);
+  const pdpDecided = PD.slots.filter((s) => s.cards.length);
+  if (pdpDecided.length) ok('the product page\'s modules are decided for her, in the engine\'s order', pdpDecided.every((s) => s.cards.every((c) => c.decided)), pdpDecided.map((s) => `${s.slot}: ${s.cards.map((c) => c.cid).join(', ')}`).join(' · '));
+  const sentAdd = actions();
+  await pressAt('#bbAdd');
+  const C = await settle(`(document.querySelector('[data-cart-count]') || {}).textContent === '1'`);
+  ok('Add to cart sends the order-start event and the header\'s cart counts it', C.header.count === '1' && actions() > sentAdd, `count ${C.header.count}`);
+  await pressAt('[data-act="store-cart-open"]');
+  const CS = await settle(`document.querySelector('#sheetBody .st-line')`);
+  ok('the cart opens with its line and a total', CS.sheet.open && CS.sheet.lines === 1 && /\$/.test(CS.sheet.total), `${CS.sheet.lines} line · ${CS.sheet.total}`);
+  await shot('03-cart');
+  await pressAt('#sheetBody [data-act="store-cart-close"]');
+  await pressAt('#bbRetail');
+  const R = await settle(`document.querySelector('#sheetBody [data-act="store-retailer-buy"], #sheetBody [data-act="store-referral"]')`);
+  ok('where to buy opens: buying here first, then the sellers, each button a named outcome', R.sheet.open && R.sheet.buyHere && R.sheet.sellers > 0, `${R.sheet.sellers} seller button(s)`);
+  await shot('04-where-to-buy');
+  await pressAt('#sheetClose');
+  await evaluate('history.back()');
+  const BK = await settle(`(() => { const v = document.querySelector('#stage > .view:not([hidden])'); return v && v.querySelector('.pgrid .pcard'); })()`);
+  ok('the browser\'s Back returns to the grid', BK.url.includes(`view=${encodeURIComponent(tile)}`) && BK.grid.cards > 0, BK.url);
+  await pressAt('#site .wordmark');
+  const H = await settle(`(() => { const v = document.querySelector('#stage > .view:not([hidden])'); return v && v.dataset.page === 'home' && v.querySelector('[data-slot] .card[data-op-decision-id]'); })()`);
+  const decided = H.slots.filter((s) => s.cards.length);
+  ok('the homepage she returns to is decided for her: her own clicks were the evidence', decided.length > 0 && decided.every((s) => s.cards.every((c) => c.decided)),
+    decided.map((s) => `${s.slot}: ${s.cards.map((c) => c.cid).join(', ')}`).join(' · '));
+  const word = await evaluate(`((document.querySelector('.pgrid .pcard .pname, .rail .pcard .pname') || {}).textContent || '').trim().split(/\\s+/).filter((w) => w.length > 3)[0] || ''`);
+  if (word) {
+    await evaluate(`(() => { const f = document.querySelector('form[data-store-search]'); f.elements.q.value = ${JSON.stringify(word)}; f.requestSubmit(); })()`);
+    const S = await settle(`(() => { const v = document.querySelector('#stage > .view:not([hidden])'); return v && v.dataset.page === 'search' && v.querySelector('.pgrid .pcard'); })()`);
+    ok(`the search box finds “${word}” in the feed, in the engine's order`, S.view === 'view-search' && S.grid.cards > 0 && S.url.includes('q='), `${S.grid.cards} · ${S.grid.count}`);
+  }
+  const refusedHand = refusedIn('hand');
+  ok('every call the hand made was answered', refusedHand.length === 0, refusedHand.join(' ~ '));
+  const H2 = await evaluate('window.__k5.store()');
+  ok('no image broken and no horizontal overflow on the last page', H2.broken.length === 0 && H2.overflow <= 1, `${H2.broken.length} broken · ${H2.overflow}px`);
+  // The walk starts from a fresh page, as a presenter's would.
+  await cdp('Page.navigate', { url });
+  await booted();
+  await evaluate(inPage(pageHelpers));
 
   // ── Act 1, beat 1: the stranger, her region from the request ─────────────
   press = 0;

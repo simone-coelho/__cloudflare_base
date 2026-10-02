@@ -1,8 +1,9 @@
 // scripts/demo-kit/lib/region.mjs — the all-states synthetic regional seed, from a vocabulary.
 //
 // Lifted from scripts/seed-vantage-region.mjs with the demo's constants made config (region section):
-// the seeded vocabulary, the two rehearsed regions written verbatim, and the income-tilt model for every
-// other state (docs/verizon/lanes/F2.md §2):
+// the seeded vocabulary, the rehearsed regions written verbatim, and a model for every other state: the
+// income-tilt model (docs/verizon/lanes/F2.md §2), or the fixed model (a seeded, stable lean per state with
+// declared skews and no census term, below at fixedRegion):
 //
 //   x = clamp((state median household income − national median) / spreadUsd, −1, 1)
 //   t = 0.5 + tSpan · x
@@ -76,11 +77,81 @@ export function modelledRegion(key, census, { national, model, rehearsed }) {
   return { label: model.label.replace(/\{\{census\.label\}\}/g, census.label), rows, census, model: { x: round3(x), t: round3(t) } };
 }
 
+// ── The fixed model: a seeded, stable lean per state with declared skews, no census term anywhere ──
+//
+//   model.kind 'fixed' (lane K5, on Lane D1's need: OH's regional sales lean by a seeded draw, not by income):
+//     rows    the mix every modelled state sells before its lean (the national rows)
+//     leans   drawn per state from the seed, in order. With `factor`: one of `values` leads, and the rows that carry it
+//             (and every `within` touch) are scaled by the factor. With `shares`: a seeded shuffle of `values` gives
+//             the order, and the rows that carry the i-th value (within `within`) share shares[i] of those rows' total
+//     skews   declared, never drawn: in the listed regions, the rows that carry every `when` touch are scaled by the factor
+//     extras  as the income-tilt model's: a fixed row in the listed states
+//   The draw: FNV-1a (32-bit, over the UTF-16 code units) of "<seed>|<region key>" seeds mulberry32, so a region's lean
+//   is the same on every run and every machine. The census file names the states; no census figure enters a row.
+
+/** FNV-1a, 32-bit, over a string's UTF-16 code units. */
+export function fnv1a(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+}
+/** mulberry32: a small seeded generator in [0, 1). */
+export function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const carries = (touches, when) => Object.entries(when || {}).every(([d, v]) => touches[d] === v);
+const arr = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
+
+/** One state under the fixed model: the national rows, its seeded leans, the declared skews, whole sales, the extras. */
+export function fixedRegion(key, census, { model, limits = null }) {
+  const draw = mulberry32(fnv1a(`${model.seed}|${key}`));
+  const rows = model.rows.map((r) => ({ touches: { ...r.touches }, units: r.units }));
+  const leads = {};
+  for (const lean of model.leans) {
+    const within = rows.filter((r) => carries(r.touches, lean.within) && lean.values.includes(r.touches[lean.dimension]));
+    if (lean.factor !== undefined) {
+      const v = lean.values[Math.floor(draw() * lean.values.length)];
+      leads[lean.dimension] = v;
+      for (const r of within) if (r.touches[lean.dimension] === v) r.units *= lean.factor;
+      continue;
+    }
+    const order = [...lean.values];
+    for (let i = order.length - 1; i > 0; i -= 1) { const j = Math.floor(draw() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    leads[lean.dimension] = order[0];
+    const total = within.reduce((n, r) => n + r.units, 0), sum = lean.shares.reduce((n, s) => n + s, 0);
+    order.forEach((v, i) => {
+      const mine = within.filter((r) => r.touches[lean.dimension] === v);
+      const had = mine.reduce((n, r) => n + r.units, 0);
+      for (const r of mine) r.units = had > 0 ? (r.units / had) * total * (lean.shares[i] / sum) : 0;
+    });
+  }
+  const skewed = [];
+  for (const s of model.skews) {
+    if (!arr(s.regions).includes(key)) continue;
+    skewed.push(s.name);
+    for (const r of rows) if (carries(r.touches, s.when)) r.units *= s.factor;
+  }
+  const cap = limits && limits.unitsPerRow ? limits.unitsPerRow : Infinity;
+  const out = rows.map((r) => ({ touches: r.touches, units: Math.min(cap, Math.round(r.units)) })).filter((r) => r.units > 0);
+  for (const extra of model.extras) if (extraRegions(extra).has(key)) out.push({ touches: { ...extra.touches }, units: extra.units });
+  return { label: model.label.replace(/\{\{census\.label\}\}/g, census.label), rows: out, census, model: { kind: 'fixed', leads, skews: skewed } };
+}
+
 /** Every region the seed can write: the rehearsed ones first, verbatim, then every other census region by key. */
-export function allRegions({ census, national, rehearsed, model }) {
+export function allRegions({ census, national, rehearsed, model, limits = null }) {
   const all = {};
   for (const [key, r] of Object.entries(rehearsed)) all[key] = { label: r.label, rows: r.rows, census: census.get(key) ?? null, model: null };
-  for (const key of [...census.keys()].sort()) if (!all[key]) all[key] = modelledRegion(key, census.get(key), { national, model, rehearsed });
+  for (const key of [...census.keys()].sort()) {
+    if (all[key]) continue;
+    all[key] = model.kind === 'fixed' ? fixedRegion(key, census.get(key), { model, limits }) : modelledRegion(key, census.get(key), { national, model, rehearsed });
+  }
   return all;
 }
 
@@ -90,7 +161,7 @@ export function buildRegions(region, { path }) {
   if (!national || census.size !== region.expectRegions) {
     throw new Error(`${region.census}: expected ${region.expectRegions} region rows and a national row, read ${census.size}${national ? '' : ' and no national row'}`);
   }
-  return { census, national, all: allRegions({ census, national, rehearsed: region.rehearsed, model: region.model }) };
+  return { census, national, all: allRegions({ census, national, rehearsed: region.rehearsed, model: region.model, limits: region.limits }) };
 }
 
 export const unitsOf = (rows) => rows.reduce((n, r) => n + r.units, 0);
@@ -137,6 +208,13 @@ export const textOf = (region) => ({ ...TEXT_DEFAULTS, ...(region.text ?? {}), s
 export function modelLine(region, { national, all }) {
   const m = region.model, text = textOf(region);
   const short = (k) => k.replace(/^US-/, '');
+  if (m.kind === 'fixed') {
+    const leans = m.leans.map((l) => `${l.dimension} ${l.factor !== undefined ? `leads ×${l.factor} with one of ${l.values.join('/')}` : `in a seeded order of ${l.values.join('/')} at ${l.shares.join('/')}`}`).join('; ');
+    const skews = m.skews.map((s) => `${s.name} ×${s.factor} in ${arr(s.regions).length} region(s)`).join('; ');
+    const extras = m.extras.map((x) => `${x.name} ${x.units} in the listed states (${extraRegions(x).size})`).join('; ');
+    return `The model: fixed, seeded "${m.seed}" (FNV-1a of "<seed>|<region>" seeding mulberry32, the same every run); ${unitsOf(m.rows)} national units a state; ${leans || 'no drawn lean'}; skews: ${skews || 'none'}`
+      + `${extras ? `; ${extras}` : ''}. No census figure enters a row; ${region.census} names the states only.\n`;
+  }
   const totals = [...new Set([m.low, m.high].map((k) => unitsOf(region.rehearsed[k].rows.filter((r) => r.touches[m.blend.dimension] === m.blend.value))))];
   const extras = m.extras.map((x) => `${x.name} ${x.units} in the listed states (${extraRegions(x).size})`).join('; ');
   return `The model: x = clamp((income − ${usd(national.income)}) / ${usd(m.spreadUsd)}, −1, 1); t = 0.5 + ${m.tSpan}·x; ${text.blendWord} = ${short(m.low)}·(1 − t) + ${short(m.high)}·t, ${totals.join(' to ')};`
@@ -145,6 +223,10 @@ export function modelLine(region, { national, all }) {
 
 export function regionLine(region, key, r) {
   const m = region.model, text = textOf(region);
+  if (m.kind === 'fixed') {
+    const how = r.model ? `leads ${Object.entries(r.model.leads).map(([d, v]) => `${d} ${v}`).join(', ') || 'none'}${r.model.skews.length ? ` · ${r.model.skews.join(', ')}` : ''}` : text.rehearsedNote;
+    return `${key.padEnd(6)} ${(r.census ? r.census.label : key).padEnd(21)} ${how.padEnd(40)} ${String(unitsOf(r.rows)).padStart(4)} units  ${shareLine(sharesOf(r.rows), text.shareOrder)}`;
+  }
   const blended = r.rows.filter((x) => x.touches[m.blend.dimension] === m.blend.value).reduce((n, x) => n + x.units, 0);
   return `${key.padEnd(6)} ${(r.census ? r.census.label : key).padEnd(21)} ${r.census ? usd(r.census.income).padStart(9) : ''.padStart(9)}  `
     + `${r.model ? `x ${r.model.x.toFixed(3).padStart(6)} t ${r.model.t.toFixed(3)}` : text.rehearsedNote.padEnd(20)}  `

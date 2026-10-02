@@ -8,7 +8,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { loadValidConfig } from './config.mjs';
 import {
-  buildRegions, extraRegions, panelLine, panelProblems, parseCensus, rowsProblems, runRegionSeed, seedRegion, sharesOf, unitsByDimension, unitsOf,
+  allRegions, buildRegions, extraRegions, fnv1a, modelLine, mulberry32, panelLine, panelProblems, parseCensus, regionLine, rowsProblems, runRegionSeed, seedRegion, sharesOf,
+  unitsByDimension, unitsOf,
 } from './region.mjs';
 
 const configFile = fileURLToPath(new URL('../configs/vantage.json', import.meta.url));
@@ -146,4 +147,70 @@ test('panelProblems names each way a panel can read wrong', () => {
   assert.match(panelProblems('US-NC', { ...good, lean: { ...good.lean, seeded: { units: 1 } } }, want).join(), /seed marker 1, seeded 458/);
   assert.match(panelProblems('US-NC', { ...good, census: { grain: 'metro', medianHouseholdIncomeUsd: 1 } }, want).join(), /census metro \$1/);
   assert.match(panelLine('US-NC', null), /^US-NC panel: grain —; census none; lean none$/);
+});
+
+// ── The fixed model (lane K5): a seeded, stable lean per state with declared skews, no census term anywhere ──
+const fixedRegionSection = () => ({
+  ...structuredClone(region),
+  rehearsed: { 'US-TX': structuredClone(region.rehearsed['US-TX']) },
+  model: {
+    kind: 'fixed', seed: 'kit-region-lean-v1', label: '{{census.label}}: synthetic sales, a fixed seeded lean (no census)',
+    rows: [{ touches: { category: 'phones', brand: 'apple', ecosystem: 'ios', priceBand: 'premium' }, units: 120 },
+      { touches: { category: 'phones', brand: 'samsung', ecosystem: 'android', priceBand: 'premium' }, units: 100 },
+      { touches: { category: 'phones', brand: 'google', ecosystem: 'android', priceBand: 'core' }, units: 80 }],
+    leans: [{ dimension: 'brand', values: ['apple', 'samsung', 'google'], factor: 1.5 }],
+    skews: [{ name: 'android in the south', regions: ['US-GA', 'US-AL'], when: { ecosystem: 'android' }, factor: 2 }],
+    extras: [],
+  },
+});
+
+test('the fixed model: every other state takes the national rows with one seeded lead, the same on every run, and no census figure moves a row', () => {
+  const section = fixedRegionSection();
+  const a = buildRegions(section, { path: vantage.path }).all, b = buildRegions(section, { path: vantage.path }).all;
+  assert.equal(Object.keys(a).length, 51);
+  assert.equal(a['US-TX'].model, null, 'a rehearsed region is still written verbatim');
+  assert.deepEqual(a, b, 'the draw is stable: FNV-1a of "<seed>|<region>" seeding mulberry32');
+  const leads = new Set();
+  for (const [key, r] of Object.entries(a)) {
+    if (!r.model) continue;
+    assert.equal(r.model.kind, 'fixed');
+    const lead = r.model.leads.brand;
+    leads.add(lead);
+    const base = Object.fromEntries(section.model.rows.map((x) => [x.touches.brand, x.units]));
+    const skewed = r.model.skews.includes('android in the south');
+    for (const row of r.rows) {
+      const want = Math.round(base[row.touches.brand] * (row.touches.brand === lead ? 1.5 : 1) * (skewed && row.touches.ecosystem === 'android' ? 2 : 1));
+      assert.equal(row.units, want, `${key} ${row.touches.brand}`);
+    }
+    assert.deepEqual(rowsProblems(r.rows, section.vocabulary, section.limits), [], `${key} passes the seed route's own checks`);
+    assert.equal(skewed, ['US-GA', 'US-AL'].includes(key), `${key}: the skew is declared, never drawn`);
+  }
+  assert.deepEqual([...leads].sort(), ['apple', 'google', 'samsung'], 'across 50 states every value leads somewhere');
+  // No census term: two census files with the same states and different incomes give the same rows.
+  const twin = buildRegions(section, { path: vantage.path });
+  const moved = new Map([...twin.census].map(([k, c]) => [k, { ...c, income: c.income * 3 }]));
+  const again = allRegions({ census: moved, national: { ...twin.national, income: 1 }, rehearsed: section.rehearsed, model: section.model, limits: section.limits });
+  for (const key of Object.keys(a)) assert.deepEqual(again[key].rows, a[key].rows, `${key}: income does not move a row`);
+  assert.match(modelLine(section, { national: twin.national, all: a }), /^The model: fixed, seeded "kit-region-lean-v1" .* No census figure enters a row/);
+  assert.match(regionLine(section, 'US-GA', a['US-GA']), /leads brand \w+ · android in the south/);
+});
+
+test('the fixed model\'s ordered lean: a seeded order of the values shares the rows it covers, whole sales, the total kept', () => {
+  const section = fixedRegionSection();
+  section.model.leans = [{ dimension: 'brand', values: ['apple', 'samsung', 'google'], shares: [0.5, 0.3, 0.2], within: { category: 'phones' } }];
+  section.model.skews = [];
+  const all2 = buildRegions(section, { path: vantage.path }).all;
+  const orders = new Set();
+  for (const r of Object.values(all2)) {
+    if (!r.model) continue;
+    const units = Object.fromEntries(r.rows.map((x) => [x.touches.brand, x.units]));
+    const order = Object.entries(units).sort((x, y) => y[1] - x[1]).map(([k]) => k);
+    assert.equal(order[0], r.model.leads.brand, 'the first of the seeded order leads');
+    assert.deepEqual(order.map((k) => units[k]), [150, 90, 60], 'the shares of the 300 units the lean covers');
+    orders.add(order.join('>'));
+  }
+  assert.ok(orders.size >= 4, `the order is drawn per state (${orders.size} distinct orders over 50 states)`);
+  assert.equal(fnv1a('a'), 0xe40c292c, 'FNV-1a 32-bit, as published');
+  const draw = mulberry32(1);
+  assert.ok([draw(), draw(), draw()].every((x) => x >= 0 && x < 1));
 });

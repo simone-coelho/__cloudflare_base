@@ -178,6 +178,32 @@ try {
   const cc = await client.coldstart(contrast);
   ok(`the panel reads ${contrast} as asserted, not observed`, Boolean(cc) && cc.region && cc.region.key === contrast && cc.region.source === 'asserted',
     cc ? `${(cc.region || {}).key} · ${(cc.region || {}).source}` : 'no answer');
+
+  // ── The store by hand (lane K5): the template the boot page renders, and the events a hand sends ──
+  console.log('\n── The store: the published template on boot, and the events a hand sends');
+  const openPieces = (await assetJson('beats/open-catalog.json')).publish.document.pieces || [];
+  const openSlots = (await assetJson('beats/open-slots.json')).publish.document.pages[home.page] || [];
+  for (const slot of homeSlots.filter((x) => !x.gate)) {
+    const live = openPieces.filter((p) => (p.slotTypes || []).includes(slot.slot) && !p.eligibleWhen && p.inStock !== false && (!p.lifecycle || p.lifecycle.status === 'live'));
+    ok(`the opening documents give the boot page a template for ${slot.slot}: ${live.length} live, ungated piece(s), take ${slot.take}`, live.length > 0 && openSlots.some((x) => x.slot === slot.slot));
+  }
+  const shell = shells.home;
+  ok('the boot shell is a store\'s: a search form, Sign in, the cart with its count, and the store\'s module', /data-store-search/.test(shell) && /id="signIn"/.test(shell) && /data-act="store-cart-open"/.test(shell)
+    && /data-cart-count/.test(shell) && /import \{ store \} from '\/demo-kit\/store\.js'/.test(shells.js));
+  const sold = productList.find((p) => Number(String(demo.products.attributes.price_usd || 'price').split('.').reduce((v, k) => (v == null ? v : v[k]), p)) > 0);
+  if (sold) {
+    const attrs = { productId: String(sold[demo.products.id]) };
+    for (const [attr, path] of Object.entries(demo.products.attributes)) { const v = path.split('.').reduce((x, k) => (x == null ? x : x[k]), sold); if (v !== undefined && v !== null) attrs[attr] = v; }
+    const pv = await client.send(her, 'product_view', { ...attrs, view: 'page' });
+    ok(`a hand's product view is accepted with the products map's attributes (${Object.keys(attrs).length - 1} attributes, ${pv.status})`, pv.ok);
+    const [fk] = Object.keys(attrs).filter((k) => k !== 'productId' && !/price/i.test(k) && typeof attrs[k] === 'string');
+    if (fk) {
+      const fv = await client.send(her, 'custom', { event: 'filter', control: 'filter', filter: fk, value: attrs[fk], [fk]: attrs[fk] });
+      ok(`a hand's filter (${fk} = ${attrs[fk]}) is accepted as the beat verbs send it: custom, data.event filter (${fv.status})`, fv.ok);
+    }
+    const add = await client.send(her, 'add_to_cart', { ...attrs, quantity: 1 });
+    ok(`a hand's Add to cart is accepted: add_to_cart, the order-start action, with the product's attributes (${add.status})`, add.ok);
+  } else info('the products file is still a placeholder: no product to send events about');
 } catch (error) {
   checks.fail(`the walk threw: ${error.message}`);
 } finally {

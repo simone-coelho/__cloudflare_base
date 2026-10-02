@@ -23,7 +23,7 @@
 // created: that is the owner's one-time approval.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { REPO_ROOT, demoSlots, durationMs } from './config.mjs';
+import { REPO_ROOT, STORE_LABELS, demoSlots, durationMs } from './config.mjs';
 import { DAY, MINUTE, actOfFrom, envelope, iso, jsonText, shifted } from './seed.mjs';
 
 export const TEMPLATES = resolve(REPO_ROOT, 'scripts', 'demo-kit', 'templates');
@@ -108,6 +108,7 @@ export function catalogPieces(doc, anchorMs, { fields = null } = {}) {
     // The published document carries the engine's fields only: a page's own fields (display, provenance) stay in
     // catalog.json, which the page reads; the engine names any other key as unknown and refuses the write.
     if (fields) for (const k of Object.keys(out)) if (!fields.has(k)) delete out[k];
+    else { delete out.display; delete out.provenance; }   // without the engine's list, the kit's own page-only fields still stay out
     return out;
   });
 }
@@ -140,12 +141,14 @@ export function applyGates(demo, pieces) {
  * one piece (a value no piece names builds no taste, and the seed refuses it), each arrival seed's tags are carried
  * by the first piece of its slot, and a slot with a `gate` fails closed until the page asserts it.
  */
-export function starterCatalog(demo, anchorMs) {
+export function starterCatalog(demo, anchorMs, { products = [] } = {}) {
   const dims = demo.dimensions;
   const missing = dims.filter((d) => !Array.isArray(d.values) || !d.values.length).map((d) => d.key);
   if (missing.length) throw new Error(`the starter catalog needs every dimension's values (dimensions[].values), or a catalog.json: ${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} none`);
   const cursor = Object.fromEntries(dims.map((d) => [d.key, 0]));
   const next = (key) => { const d = dims.find((x) => x.key === key); const v = d.values[cursor[key] % d.values.length]; cursor[key] += 1; return v; };
+  const fromProducts = arr(products).length ? starterFromProducts(demo, anchorMs, { products, next }) : null;
+  if (fromProducts) return fromProducts;
   const pieces = [];
   for (const s of demoSlots(demo)) {
     const count = s.take === 1 ? 2 : s.take + 2;
@@ -165,14 +168,102 @@ export function starterCatalog(demo, anchorMs) {
       });
     }
   }
-  // Coverage: a value no piece names yet joins the pieces round-robin, so every value builds taste.
+  coverValues(dims, pieces);
+  return { about: 'A STARTER catalog written by scripts/demo-kit/new-demo.mjs because the demo had none: placeholder pieces, one set per decided slot, tagged so every dimension value is named once. The demo\u2019s own catalog replaces this file; then rebuild the opening documents (node scripts/demo-kit/new-demo.mjs --config <demo.config.json> --rebuild-beats).', starter: true, anchor: iso(anchorMs), pieces };
+}
+
+/** A product's field by its path in the row (attributes.category), as the products map names it. */
+const fieldOf = (p, path) => String(path || '').split('.').reduce((v, k) => (v == null ? undefined : v[k]), p);
+const dollars = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * A starter catalog drawn from the products file, when the demo has products and no catalog of its own yet (lane K5):
+ * the boot page renders the template with real content (each piece features a real product, by its name, price and
+ * image) before the catalog lane writes the demo's own pieces. Per snapshot slot: a tile slot gets one tile per store
+ * category; a hero slot three heroes; any other its take and two more. Products are spread across the categories,
+ * pictured and in stock first, with the products on sale first for a promotion. Each piece's tags are its product's
+ * own values on the dimensions the slot weighs (a value the product lacks is taken round-robin from the dimension's
+ * list), each seed's tags ride on its slot's first piece, a gated slot fails closed, and every value of every
+ * dimension is named once (a value no piece names builds no taste, and the seed refuses it). Page-only fields
+ * (display: the order, the image's product, the call to action, the rooms a tile opens) stay out of what the engine
+ * receives. Labelled as the scaffold's: the demo's own catalog replaces it.
+ */
+function starterFromProducts(demo, anchorMs, { products, next }) {
+  const P = demo.products;
+  const store = storeSettings(demo);
+  const dims = demo.dimensions;
+  const idOf = (p) => String(fieldOf(p, P.id));
+  const nameOf = (p) => fieldOf(p, P.nameField ?? 'name') || idOf(p);
+  const priceOf = (p) => { const v = Number(fieldOf(p, P.attributes.price_usd || 'price')); return Number.isFinite(v) && v > 0 ? v : null; };
+  const listOf = (p) => { const v = Number(fieldOf(p, store.fields.listPrice)); return Number.isFinite(v) && v > 0 ? v : null; };
+  const catOf = (p) => fieldOf(p, P.categoryField ?? 'category');
+  const onSale = (p) => listOf(p) !== null && priceOf(p) !== null && listOf(p) > priceOf(p);
+  const priced = products.filter((p) => p && priceOf(p) !== null);
+  if (!priced.length) return null;
+  const ranked = [...priced.filter((p) => fieldOf(p, P.imageField ?? 'image') && fieldOf(p, store.fields.inStock) !== false), ...priced.filter((p) => !fieldOf(p, P.imageField ?? 'image') || fieldOf(p, store.fields.inStock) === false)];
+  // Round-robin across the categories, in the products file's order within each.
+  const groups = new Map();
+  for (const p of ranked) { const c = String(catOf(p) ?? ''); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(p); }
+  const spread = [];
+  for (let i = 0; spread.length < ranked.length; i += 1) for (const list of groups.values()) if (list[i]) spread.push(list[i]);
+  const sale = [...spread.filter(onSale), ...spread.filter((p) => !onSale(p))];
+  const cursorOf = { spread: 0, sale: 0 };
+  const take = (from) => { const list = from === 'sale' ? sale : spread; const p = list[cursorOf[from] % list.length]; cursorOf[from] += 1; return p; };
+  const tagsFor = (s, p) => {
+    const tags = {};
+    for (const key of Object.keys(s.weights)) {
+      const d = dims.find((x) => x.key === key);
+      if (!d) continue;
+      const path = P.attributes[key] ?? (d.source ? P.attributes[d.source] : undefined);
+      const own = arr(path ? fieldOf(p, path) : undefined).map(String).filter((v) => arr(d.values).includes(v));
+      tags[key] = own.length ? [...new Set(own)] : [next(key)];
+    }
+    return tags;
+  };
+  const pieces = [];
+  const piece = (s, n, p, extra) => {
+    const tags = p ? tagsFor(s, p) : {};
+    if (n === 1) for (const r of arr(demo.seeds)) if (arr(r.slots).includes(s.slot)) for (const t of r.tags) tags[t.dimension] = [...new Set([t.value, ...arr(tags[t.dimension])])];
+    const cid = `${s.slot}-${n}`;
+    pieces.push({
+      id: cid.replace(/-/g, '_'), customerContentId: cid, type: pieceTypeOf(s), tags, slotTypes: [s.slot], lifecycle: { status: 'live' },
+      window: { from: iso(anchorMs - 7 * DAY), to: iso(anchorMs + 60 * DAY) }, inStock: true,
+      ...(p ? { featuredProductIds: [idOf(p)] } : {}),
+      ...(s.gate ? { eligibleWhen: { context: structuredClone(s.gate) } } : {}),
+      ...extra, display: { order: n - 1, ...(p ? { imageSku: idOf(p) } : {}), ...(extra.display || {}), source: 'the scaffold’s starter, from the products file' },
+    });
+  };
+  for (const s of demoSlots(demo)) {
+    const kind = pieceTypeOf(s);
+    if (kind === 'tile' && store.categories.length) {
+      store.categories.slice(0, Math.max(s.take + 2, 3)).forEach((c, i) => {
+        const p = spread.find((x) => c.categories.includes(catOf(x))) || null;
+        const count = priced.filter((x) => c.categories.includes(catOf(x))).length;
+        piece(s, i + 1, p, { title: c.label, subtitle: c.blurb || `${count} product${count === 1 ? '' : 's'}`, display: { cta: 'Shop', categories: [...c.categories], room: c.key } });
+      });
+      continue;
+    }
+    const count = kind === 'hero' ? Math.max(3, s.take) : s.take + 2;
+    for (let n = 1; n <= count; n += 1) {
+      const p = take(kind === 'promotion' ? 'sale' : 'spread');
+      const price = priceOf(p), list = listOf(p);
+      const off = list !== null && price !== null && list > price ? list - price : 0;
+      if (kind === 'hero') piece(s, n, p, { title: nameOf(p), subtitle: off ? `Now ${dollars(price)}: save ${dollars(off)}` : `From ${dollars(price)}`, display: { cta: 'Shop now' } });
+      else if (kind === 'promotion') piece(s, n, p, { title: off ? `Save ${dollars(off)} on the ${nameOf(p)}` : nameOf(p), subtitle: off ? `Now ${dollars(price)}, was ${dollars(list)}.` : `${dollars(price)}, the same for everyone.`, display: { cta: 'See the deal' } });
+      else piece(s, n, p, { title: nameOf(p), subtitle: `${dollars(price)}`, display: { cta: 'View' } });
+    }
+  }
+  coverValues(dims, pieces);
+  return { about: 'A STARTER catalog written by scripts/demo-kit/new-demo.mjs from the products file, because the demo had no catalog: each piece features a real product (its name, price and image), one set per decided slot, tagged with its product’s own values so every dimension value is named once. The demo’s own catalog replaces this file; then rebuild the opening documents (node scripts/demo-kit/new-demo.mjs --config <demo.config.json> --rebuild-beats).', starter: true, fromProducts: true, anchor: iso(anchorMs), pieces };
+}
+/** Coverage: a value no piece names yet joins the pieces round-robin, so every value builds taste. */
+function coverValues(dims, pieces) {
   let i = 0;
-  for (const d of dims) for (const v of d.values) {
+  for (const d of dims) for (const v of arr(d.values)) {
     if (pieces.some((p) => arr(p.tags[d.key]).includes(v))) continue;
     const p = pieces[i % pieces.length]; i += 1;
     p.tags[d.key] = [...arr(p.tags[d.key]), v];
   }
-  return { about: 'A STARTER catalog written by scripts/demo-kit/new-demo.mjs because the demo had none: placeholder pieces, one set per decided slot, tagged so every dimension value is named once. The demo\u2019s own catalog replaces this file; then rebuild the opening documents (node scripts/demo-kit/new-demo.mjs --config <demo.config.json> --rebuild-beats).', starter: true, anchor: iso(anchorMs), pieces };
 }
 
 /**
@@ -394,7 +485,9 @@ export function siteSettings(demo, { ids, roles }) {
       name: demo.products.nameField ?? 'name', category: demo.products.categoryField ?? 'category', image: demo.products.imageField ?? 'image',
       overlay: demo.products.overlay ? { file: `/${demo.products.overlay.file.replace(/^public\//, '')}`, by: demo.products.overlay.by ?? demo.products.id } : null,
       // What a product page asserts about its product, as ctx.<name> = the row's field (OH: anchor = the sku, family = its family).
-      pageContext: { ...(demo.products.pageContext ?? {}) }, family: demo.products.familyField ?? null, modelFamily: demo.products.modelFamilyField ?? null },
+      pageContext: { ...(demo.products.pageContext ?? {}) }, family: demo.products.familyField ?? null, modelFamily: demo.products.modelFamilyField ?? null,
+      // A product's own configurations (a bike's frame sizes, a phone's storage steps), each with its own catalog price.
+      variants: demo.products.variants ? structuredClone(demo.products.variants) : null },
     reportSlots: [...demo.reportSlots],
     regionDims: [...demo.region.dimensions],
     contrast: arr(demo.region.contrast),
@@ -404,68 +497,224 @@ export function siteSettings(demo, { ids, roles }) {
     signIn: demo.flags?.signIn ? { accounts: demo.flags.signIn.accounts.map((a) => a.name) } : null,
     clockJump: demo.flags?.clockJump ?? null,
     roadmap: arr(demo.roadmap),
+    store: storeSettings(demo),
+    director: directorSettings(demo),
+    labels: labelsOf(demo),
   };
 }
 
-// ── The page's markup ───────────────────────────────────────────────────────
+/** Every visible word of the working store: the kit's neutral defaults with demo.config.json's `labels` over them. */
+export const labelsOf = (demo) => ({ ...STORE_LABELS, ...(isObject(demo.labels) ? demo.labels : {}) });
 
-/** A decided slot's module: the region the vertical's renderer fills, in the order the engine returned. */
+// ── The working store (lane K5): what public/demo-kit/store.js and the page read ──
+
+/** The director's dock, with the store's default: docked right and collapsed until the presenter opens it (?present=1). */
+export const directorSettings = (demo) => ({ dock: demo.director?.dock ?? 'right', collapsed: demo.director?.collapsed ?? true });
+
+/**
+ * The store's settings, with what the scaffold derives where demo.config.json's `store` is silent: the nav's rooms
+ * (the store's categories, else the grid pages, else the products file's categories), the homepage's sections in
+ * order (the first slot, the service strip, the category tiles when no decided slot holds tiles, then the other slots
+ * and the rails), the product fields beyond the products map, the search fields (the name, the id and the attribute
+ * map's fields), and every list the store renders.
+ */
+export function storeSettings(demo) {
+  const st = isObject(demo.store) ? demo.store : {};
+  const pages = arr(demo.pages);
+  const grids = pages.filter((p) => p && p.entry === 'grid' && !p.slotsOf);
+  const railCats = (p) => arr(p.sorted).map((s) => s.category).filter(Boolean);
+  let categories;
+  if (arr(st.categories).length) {
+    categories = st.categories.map((c) => {
+      const page = grids.find((p) => p.key === c.key) || null;
+      return { key: c.key, label: c.label, categories: arr(c.categories).length ? [...c.categories] : page && railCats(page).length ? railCats(page) : [c.key],
+        blurb: c.blurb ?? null, image: c.image ?? null, weights: c.weights ? { ...c.weights } : null, page: page ? page.key : null };
+    });
+  } else if (grids.length) {
+    categories = grids.map((p) => ({ key: p.key, label: p.label || titleCase(p.key), categories: railCats(p).length ? railCats(p) : [p.key], blurb: null, image: null, weights: null, page: p.key }));
+  } else {
+    categories = arr(demo.products?.categories).map((c) => ({ key: c, label: titleCase(c), categories: [c], blurb: null, image: null, weights: null, page: null }));
+  }
+  const home = pages.find((p) => p && p.entry === 'home') || {};
+  const names = [...arr(home.slots).map((s) => s.slot), ...arr(home.sorted).map((s) => s.slot)];
+  const tiles = arr(home.slots).some((s) => pieceTypeOf(s) === 'tile');
+  const layout = arr(st.layout?.home).length ? [...st.layout.home]
+    : [...names.slice(0, 1), ...(arr(st.service).length ? ['service'] : []), ...(!tiles && categories.length ? ['categories'] : []), ...names.slice(1)];
+  const attrs = isObject(demo.products?.attributes) ? demo.products.attributes : {};
+  return {
+    categories, layout,
+    fields: { listPrice: 'listPrice', rating: 'rating', reviews: 'reviews', inStock: 'inStock', badges: 'badges', description: 'description', gallery: 'gallery', specs: 'specs', ...(st.fields || {}) },
+    filters: arr(st.filters), filterValues: st.filterValues ?? null, priceBands: arr(st.priceBands),
+    variants: arr(st.variants).map((v) => ({ ...v, by: [...v.by] })),
+    addOns: arr(st.addOns).map((a) => ({ ...a, ...(a.categories ? { categories: [...a.categories] } : {}) })),
+    service: arr(st.service).map((s) => ({ ...s })),
+    retailers: arr(st.retailers).map((r) => ({ ...r, ...(r.categories ? { categories: [...r.categories] } : {}) })),
+    pencil: st.pencil ?? null, delivery: st.delivery ?? null, financing: st.financing ?? null,
+    footer: arr(st.footer).map((f) => ({ head: f.head, links: [...f.links] })),
+    search: { fields: arr(st.search?.fields).length ? [...st.search.fields] : Object.entries(attrs).filter(([k]) => !/price/i.test(k)).map(([, v]) => v) },
+  };
+}
+
+// ── The page's markup: the store (lane K5) ──────────────────────────────────
+
+/** A decided slot's module: on boot the published template (pins, then the catalog's order), then what the engine decided, in its order. */
 function slotModule(s) {
-  return `      <!-- Slot ${s.slot}, take ${s.take}: the page renders what comes back, in the order it comes back. -->
-      <section class="module decided" id="mod-${s.slot}" data-slot="${s.slot}"${s.gate ? ' data-gated="true" hidden' : ''} aria-labelledby="head-${s.slot}">
+  const kind = pieceTypeOf(s);
+  return `      <!-- Slot ${s.slot}, take ${s.take}: on boot the published template; once she is here, what the engine decided, in its order. -->
+      <section class="module decided module--${esc(kind)}" id="mod-${s.slot}" data-slot="${s.slot}"${s.gate ? ' data-gated="true" hidden' : ''} data-kind="${esc(kind)}" aria-labelledby="head-${s.slot}">
         <header class="module-head"><div>
-          <p class="module-where">slot <b>${esc(s.slot)}</b> &middot; take ${s.take} &middot; decided per visitor</p>
           <h2 id="head-${s.slot}">${esc(s.label || titleCase(s.slot))}</h2>
+          <p class="module-where">slot <b>${esc(s.slot)}</b> &middot; take ${s.take} &middot; <span id="how-${s.slot}">the site&rsquo;s own page</span></p>
         </div></header>
-        <div class="cards cards--${s.take === 1 ? 'one' : 'many'}" id="slot-${s.slot}" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <div class="cards cards--${kind === 'hero' || s.take === 1 ? 'one' : kind === 'tile' ? 'tiles' : 'many'}" id="slot-${s.slot}" aria-live="polite"><p class="slot-wait">Loading the page&hellip;</p></div>
         <p class="engine-down" id="down-${s.slot}" hidden></p>
       </section>`;
 }
+/** A /sort rail: the products file's own order until she is here, then the engine's order for her. */
 function railModule(s) {
-  return `      <!-- Rail ${s.slot}: POST /sort over the products file; at an affinity weight of zero the site's own order. -->
-      <section class="module" id="mod-${s.slot}" data-rail="${s.slot}" aria-labelledby="head-${s.slot}">
+  return `      <!-- Rail ${s.slot}: POST /sort over the products; the site's own order until a visitor exists. -->
+      <section class="module rail-mod" id="mod-${s.slot}" data-rail="${s.slot}" aria-labelledby="head-${s.slot}">
         <header class="module-head"><div>
-          <p class="module-where">rail <b>${esc(s.slot)}</b> &middot; <code>POST /sort</code> over the products</p>
           <h2 id="head-${s.slot}">${esc(s.label || titleCase(s.slot))}</h2>
+          <p class="module-where">rail <b>${esc(s.slot)}</b> &middot; <code>POST /sort</code> over the products</p>
         </div><span class="rail-chip" id="chip-${s.slot}">the site&rsquo;s own order</span></header>
+        <p class="lean" id="lean-${s.slot}" hidden></p>
         <div class="rail" id="rail-${s.slot}"></div>
       </section>`;
 }
+/** A product grid: the filters the attribute map derives, the sort control (Best match is POST /sort), the count, the cards. */
+function gridModule(key, s = null) {
+  return `      <!-- Grid ${key}: filters from the products' attribute map; Best match is POST /sort; price and rating are her own sort. -->
+      <section class="grid-wrap" id="grid-${key}" data-grid="${key}"${s ? ` data-rail="${s.slot}"` : ''}>
+        <aside class="filters" id="filters-${key}" aria-label="Filters"></aside>
+        <div class="grid-main">
+          <div class="grid-bar"><p class="count" id="count-${key}"></p><div class="sort" id="sort-${key}" role="group" aria-label="Sort"></div></div>
+          <p class="lean" id="lean-${key}" hidden></p>
+          <div class="pgrid" id="rail-${key}"></div>
+        </div>
+      </section>`;
+}
+/** The service strip: the store's own promises, the same for everyone. */
+function serviceStrip(service) {
+  return `      <section class="service static" id="serviceStrip" aria-label="Our service">
+        ${service.map((s) => `<div class="svc"><b>${esc(s.title)}</b>${s.text ? `<span>${esc(s.text)}</span>` : ''}</div>`).join('\n        ')}
+      </section>`;
+}
+/** A room opens its grid page when the config has one, else the store's room view: either way the store's grid route, ?view=<key>. */
+const navAttrs = (c, base) => `data-nav="${esc(c.page || c.key)}" href="${base}?view=${esc(c.page || c.key)}"`;
+/** The category tiles: the store's rooms, the same for everyone; each opens its grid. Images are the rooms' first products'. */
+function categoryTiles(categories, L, base) {
+  return `      <section class="module static" id="mod-categories" aria-labelledby="head-categories">
+        <header class="module-head"><div><h2 id="head-categories">${esc(L.shopByCategory)}</h2></div></header>
+        <div class="tiles" id="catTiles">
+          ${categories.map((c) => `<a class="tile" ${navAttrs(c, base)} data-ctl="tile-${esc(c.key)}"><span class="tile-img" data-room-img="${esc(c.key)}"${c.image ? ` data-src="${esc(c.image)}"` : ''}></span><b>${esc(c.label)}</b>${c.blurb ? `<span>${esc(c.blurb)}</span>` : ''}</a>`).join('\n          ')}
+        </div>
+      </section>`;
+}
+
+/** The product page's anatomy: the buy box (functional, never decided), the tabs, then the decided modules, the specs, the reviews. */
+function productAnatomy(p, L) {
+  return `      <nav class="crumbs" id="crumbs-${p.key}"></nav>
+      <!-- THE BUY BOX. Off limits: never decided, never personalised. Every control in it works. -->
+      <section class="buybox" id="buyBox" aria-label="Buy box">
+        <div class="bb-grid">
+          <div class="bb-gallery"><div class="bb-image" id="bbImage"></div><div class="bb-thumbs" id="bbThumbs"></div></div>
+          <div class="bb-config">
+            <p class="bb-badges" id="bbBadges"></p>
+            <h1 class="bb-title" id="bbTitle">Product</h1>
+            <p class="bb-meta" id="bbMeta"></p>
+            <div class="bb-price" id="bbPrice"></div>
+            <p class="bb-line" id="bbFinancing" hidden></p>
+            <p class="bb-line" id="bbDelivery" hidden></p>
+            <div class="bb-opts" id="bbOpts"></div>
+            <div class="bb-addons" id="bbAddons"></div>
+            <div class="bb-review" id="bbReview"></div>
+            <div class="bb-actions">
+              <button type="button" class="btn btn--brand" id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">${esc(L.addToCart)}</button>
+              <button type="button" class="btn btn--line" id="bbRetail" data-act="store-retailers" data-ctl="find-retailer">${esc(L.findRetailer)}</button>
+            </div>
+            <p class="offlimits"><b>Off limits</b> the buy box is never decided and never personalised</p>
+          </div>
+        </div>
+      </section>
+      <nav class="pdp-tabs" id="pdpTabs" aria-label="On this page">
+        <button type="button" data-act="tab" data-target="buyBox" data-ctl="tab-overview">${esc(L.overview)}</button>
+        <button type="button" data-act="tab" data-target="pdpSpecs" data-ctl="tab-specs">${esc(L.specs)}</button>
+        <button type="button" data-act="tab" data-target="pdpReviews" data-ctl="tab-reviews">${esc(L.reviews)}</button>
+      </nav>`;
+}
+const productTail = (L) => `      <section class="pdp-specs static" id="pdpSpecs" aria-labelledby="head-specs"><h2 id="head-specs">${esc(L.specs)}</h2><dl class="specs" id="specsList"></dl></section>
+      <section class="pdp-reviews static" id="pdpReviews" aria-labelledby="head-reviews"><h2 id="head-reviews">${esc(L.reviews)}</h2><div id="reviewsBody"></div></section>`;
 const offLimits = (items) => (items.length ? `      <p class="offlimits-note"><b>Off limits</b> ${items.map(esc).join(' &middot; ')}: never decided, never personalised</p>\n` : '');
 
-/** The site's views: one per page of the config that has its own slots, in the shell every entry shares. */
+/**
+ * The site's views: the homepage in the store's section order, each grid page with its slots and its product grid,
+ * the room view (a category without a grid page of its own), the search results, and the product page's anatomy,
+ * in the shell every entry shares. Each view is the one data-page names; the page shows one at a time.
+ */
 export function siteViews(demo) {
+  const store = storeSettings(demo);
+  const L = labelsOf(demo);
   const views = [];
+  const section = (id, cls, page, hidden, body) => `    <section class="view ${cls}" id="${id}" data-page="${page}"${hidden ? ' hidden' : ''}>\n${body}\n    </section>`;
   for (const p of demo.pages) {
     if (p.slotsOf) continue;
-    const id = `view-${p.key}`;
     const parts = [];
-    if (p.entry === 'product') {
-      parts.push(`      <nav class="crumbs" id="crumbs-${p.key}"></nav>
-      <!-- THE BUY BOX. Off limits: never decided, never personalised. -->
-      <section class="buybox" id="buyBox" aria-label="Buy box">
-        <p class="offlimits"><b>Off limits</b> the buy box is never decided and never personalised</p>
-        <div class="bb-grid"><div class="bb-image" id="bbImage"></div><div class="bb-config">
-          <h1 class="bb-title" id="bbTitle">Product</h1><p class="bb-meta" id="bbMeta"></p><div class="bb-price" id="bbPrice"></div>
-          <div class="bb-actions"><button type="button" class="btn btn--brand" id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">Add to Cart</button></div>
-        </div></div>
-      </section>`);
-    } else if (p.entry === 'grid') {
-      parts.push(`      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>${esc(p.label || titleCase(p.key))}</span></nav>
-      <header class="view-head"><h1 class="view-title">${esc(p.label || titleCase(p.key))}</h1><span class="nper">filters and sort: not personalised</span></header>`);
+    if (p.entry === 'home') {
+      const slots = new Map(arr(p.slots).map((s) => [s.slot, s])), rails = new Map(arr(p.sorted).map((s) => [s.slot, s]));
+      const placed = new Set();
+      for (const name of store.layout) {
+        if (slots.has(name)) parts.push(slotModule(slots.get(name)));
+        else if (rails.has(name)) parts.push(railModule(rails.get(name)));
+        else if (name === 'service' && store.service.length) parts.push(serviceStrip(store.service));
+        else if (name === 'categories' && store.categories.length) parts.push(categoryTiles(store.categories, L, `/${demo.slug}/`));
+        placed.add(name);
+      }
+      // A slot or rail the layout leaves out still has its place, after the rest: nothing decided goes unrendered.
+      for (const s of arr(p.slots)) if (!placed.has(s.slot)) parts.push(slotModule(s));
+      for (const s of arr(p.sorted)) if (!placed.has(s.slot)) parts.push(railModule(s));
+      views.push(section(`view-${p.key}`, 'view--home', p.key, false, `${offLimits(arr(p.offLimits))}${parts.join('\n')}`));
+      continue;
     }
+    if (p.entry === 'product') {
+      parts.push(productAnatomy(p, L));
+      for (const s of arr(p.slots)) parts.push(slotModule(s));
+      for (const s of arr(p.sorted)) parts.push(railModule(s));
+      parts.push(productTail(L));
+      views.push(section(`view-${p.key}`, 'view--product', p.key, true, parts.join('\n')));
+      continue;
+    }
+    if (p.entry === 'grid') {
+      const label = p.label || titleCase(p.key);
+      parts.push(`      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home" href="/${demo.slug}/">Home</a><span>/</span><span>${esc(label)}</span></nav>
+      <header class="view-head"><h1 class="view-title">${esc(label)}</h1></header>`);
+      for (const s of arr(p.slots)) parts.push(slotModule(s));
+      for (const s of arr(p.sorted)) parts.push(s.category ? gridModule(s.slot, s) : railModule(s));
+      views.push(section(`view-${p.key}`, 'view--grid', p.key, true, `${offLimits(arr(p.offLimits))}${parts.join('\n')}`));
+      continue;
+    }
+    // Any other entry: its slots and rails, as the page lanes will dress them.
     for (const s of arr(p.slots)) parts.push(slotModule(s));
     for (const s of arr(p.sorted)) parts.push(railModule(s));
-    views.push(`    <section class="view view--${p.entry}" id="${id}" data-page="${p.key}"${p.entry === 'home' ? '' : ' hidden'}>
-${offLimits(arr(p.offLimits))}${parts.join('\n')}
-    </section>`);
+    views.push(section(`view-${p.key}`, `view--${p.entry}`, p.key, true, parts.join('\n')));
   }
+  views.push(section('view-room', 'view--grid', 'room', true, `      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home" href="/${demo.slug}/">Home</a><span>/</span><span id="roomCrumb"></span></nav>
+      <header class="view-head"><h1 class="view-title" id="roomTitle">Shop</h1></header>
+${gridModule('room')}`));
+  views.push(section('view-search', 'view--search', 'search', true, `      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home" href="/${demo.slug}/">Home</a><span>/</span><span>${esc(L.search)}</span></nav>
+      <header class="view-head"><h1 class="view-title" id="searchTitle">${esc(L.search)}</h1></header>
+${gridModule('search')}`));
   return views.join('\n\n');
 }
 
-/** The primary navigation: home, and every page that is not the phone's or the product's. */
+/** The primary navigation: the store's rooms, each to its grid. */
 function navLinks(demo) {
-  return demo.pages.filter((p) => !p.slotsOf && p.entry === 'grid').map((p) => `<button type="button" data-nav="${p.key}" data-ctl="nav-${p.key}">${esc(p.label || titleCase(p.key))}</button>`).join('\n          ');
+  return storeSettings(demo).categories.map((c) => `<a ${navAttrs(c, `/${demo.slug}/`)} data-ctl="nav-${esc(c.key)}">${esc(c.label)}</a>`).join('\n          ');
+}
+/** The footer's columns, from the store's footer: the same for everyone. */
+function footerColumns(demo) {
+  const cols = storeSettings(demo).footer;
+  return cols.length ? `<div class="foot-cols">${cols.map((c) => `<div><b>${esc(c.head)}</b>${c.links.map((l) => `<span>${esc(l)}</span>`).join('')}</div>`).join('')}</div>` : '';
 }
 
 function googleFonts(fonts = {}) {
@@ -626,9 +875,10 @@ export function planScaffold({ demo, root = REPO_ROOT, nowMs = Date.now(), templ
   let pieces = catalogPieces(given, anchorMs, { fields });
   let starter = null;
   if (!pieces) {
-    starter = starterCatalog(demo, anchorMs);
+    const feed = readJsonIf(resolve(root, demo.products.file));
+    starter = starterCatalog(demo, anchorMs, { products: arr(isObject(feed) ? feed[demo.products.list ?? 'products'] : null) });
     pieces = catalogPieces(starter, anchorMs, { fields });
-    notes.push(given ? `${catalogFile} has no pieces list the scaffold can read; the opening catalog is the starter set (and ${catalogFile} is left as it is)` : `${catalogFile} does not exist yet: a labelled starter catalog is written there`);
+    notes.push(given ? `${catalogFile} has no pieces list the scaffold can read; the opening catalog is the starter set (and ${catalogFile} is left as it is)` : `${catalogFile} does not exist yet: a labelled starter catalog is written there${starter.fromProducts ? `, drawn from ${demo.products.file} (${starter.pieces.length} pieces, each featuring a real product)` : ''}`);
   } else {
     const dropped = [...new Set(given.pieces.flatMap((p) => Object.keys(p)).filter((k) => fields && !fields.has(k) && k !== 'windowDays'))];
     notes.push(`the opening catalog is cut from ${catalogFile} (${pieces.length} pieces${catalogAnchor ? `, its windows against its own anchor ${given.anchor}, which the anchor file carries` : ''})${dropped.length ? `, the engine's fields only (${dropped.join(', ')} stay in the file, for the page)` : ''}`);
@@ -668,6 +918,10 @@ export function planScaffold({ demo, root = REPO_ROOT, nowMs = Date.now(), templ
     TAGLINE: esc(demo.brand.tagline ?? ''), NAV: navLinks(demo), VIEWS: siteViews(demo), LEGAL: esc(demo.brand.legal ?? `${demo.name} is a fictional brand built for a demonstration.`),
     FIRST_LINE: esc(`${demo.beats.list[0].label}. Press Next to begin.`), FIRST_LABEL: esc(`${demo.beats.list[0].no} · ${demo.beats.list[0].label}`),
     BODY_CLASS: entry === 'phone' ? 'shell--phone' : '',
+    DOCK: directorSettings(demo).dock === 'right' ? `docked right, ${directorSettings(demo).collapsed ? 'collapsed to a slim rail until the presenter opens it' : 'open'}` : 'under the site, the kit bar',
+    PENCIL: storeSettings(demo).pencil ? `<p class="pencil static" id="pencil">${esc(storeSettings(demo).pencil)}</p>` : '',
+    FOOTER: footerColumns(demo), L_SIGN_IN: esc(labelsOf(demo).signIn), L_SEARCH: esc(labelsOf(demo).search), L_SEARCH_PLACEHOLDER: esc(labelsOf(demo).searchPlaceholder),
+    L_CART: esc(`${labelsOf(demo).cart}, 0 ${labelsOf(demo).itemMany}`),
   });
   add(`${pub}/index.html`, fill(shell, pageVars('home', demo.brand.title), 'page.shell.html.tpl'), 'page');
   add(`${pub}/product.html`, fill(shell, pageVars('product', demo.brand.title), 'page.shell.html.tpl'), 'page');

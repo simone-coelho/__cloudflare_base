@@ -229,6 +229,66 @@ function touchesRule(errors, where, touches, vocabulary) {
   }
 }
 
+/** The regional seed's models (lib/region.mjs): income-tilt (Vantage's) and fixed (a seeded lean, no census term). */
+export const REGION_MODELS = Object.freeze(['income-tilt', 'fixed']);
+/** The income-tilt model's own fields: a fixed model carries none of them, so no census term can hide in it. */
+const INCOME_FIELDS = Object.freeze(['spreadUsd', 'tSpan', 'low', 'high', 'blend']);
+
+/** The extras both models share: a fixed row in the listed states. */
+function extrasRules(errors, region, m, limits) {
+  if (!Array.isArray(m.extras)) { errors.push('region.model.extras: a list (empty when the model adds nothing)'); return; }
+  m.extras.forEach((x, i) => {
+    if (!isString(x?.name, 80)) errors.push(`region.model.extras[${i}].name: 1..80 characters`);
+    touchesRule(errors, `region.model.extras[${i}]`, x?.touches, region.vocabulary);
+    if (!isInt(x?.units, 1, limits?.unitsPerRow ?? 100000)) errors.push(`region.model.extras[${i}].units: a whole number within the per-row limit`);
+    const lists = Array.isArray(x?.regions) ? [x.regions] : isObject(x?.regions) ? Object.values(x.regions) : null;
+    if (!lists || !lists.every((l) => Array.isArray(l) && l.every((k) => REGION_KEY.test(k)))) errors.push(`region.model.extras[${i}].regions: a list of region keys, or an object of named lists`);
+  });
+}
+const labelRule = (errors, m) => { if (!isString(m.label, 200) || m.label.replace(/\{\{census\.label\}\}/g, 'Wyoming').length > 80) errors.push('region.model.label: the panel label, at most 80 characters once {{census.label}} is filled'); };
+
+/**
+ * The fixed model (lane K5): a seeded, stable lean per state with declared skews and no census term anywhere. Its seed
+ * names the draw; its rows are the national mix; each lean draws one leading value (factor) or a seeded order of
+ * values with their shares (shares), within the rows that carry its `within` touches; each skew scales the rows that
+ * carry its `when` touches in the regions it lists. An income field is refused: the model reads no census figure.
+ */
+function fixedModelRules(errors, region, m, limits) {
+  const voc = isObject(region.vocabulary) ? region.vocabulary : {};
+  const carried = INCOME_FIELDS.filter((k) => m[k] !== undefined);
+  if (carried.length) errors.push(`region.model: a fixed model carries no income term (${carried.join(', ')}); the census names the states, nothing more`);
+  if (!isString(m.seed, 80)) errors.push('region.model.seed: the draw\'s seed, 1..80 characters (FNV-1a of "<seed>|<region>" seeding mulberry32)');
+  if (!Array.isArray(m.rows) || !m.rows.length || m.rows.length > (limits?.rows ?? 10000)) errors.push('region.model.rows: the national mix every modelled state sells, 1..the per-region row limit');
+  else m.rows.forEach((row, i) => {
+    touchesRule(errors, `region.model.rows[${i}]`, row?.touches, region.vocabulary);
+    if (!isInt(row?.units, 1, limits?.unitsPerRow ?? 100000)) errors.push(`region.model.rows[${i}].units: a whole number within the per-row limit`);
+  });
+  const within = (where, w) => { if (w !== undefined) touchesRule(errors, where, w, region.vocabulary); };
+  if (!Array.isArray(m.leans)) errors.push('region.model.leans: a list (empty when nothing is drawn)');
+  else m.leans.forEach((l, i) => {
+    const where = `region.model.leans[${i}]`;
+    if (!isObject(l) || !Object.hasOwn(voc, l.dimension)) { errors.push(`${where}.dimension: a seeded dimension`); return; }
+    if (!Array.isArray(l.values) || l.values.length < 2 || new Set(l.values).size !== l.values.length || !l.values.every((v) => voc[l.dimension].includes(v))) errors.push(`${where}.values: two or more distinct values of ${l.dimension}'s vocabulary`);
+    const both = l.factor !== undefined && l.shares !== undefined, neither = l.factor === undefined && l.shares === undefined;
+    if (both || neither) errors.push(`${where}: exactly one of factor (one value leads) or shares (a seeded order of the values)`);
+    else if (l.factor !== undefined && !(typeof l.factor === 'number' && l.factor > 0 && l.factor <= 10)) errors.push(`${where}.factor: a number in (0, 10]`);
+    else if (l.shares !== undefined && !(Array.isArray(l.shares) && Array.isArray(l.values) && l.shares.length === l.values.length && l.shares.every((s) => typeof s === 'number' && s > 0 && s <= 1)
+      && l.shares.reduce((n, s) => n + s, 0) <= 1.0001)) errors.push(`${where}.shares: one share in (0, 1] per value, summing to at most 1`);
+    within(`${where}.within`, l.within);
+  });
+  if (!Array.isArray(m.skews)) errors.push('region.model.skews: a list (empty when nothing is declared)');
+  else m.skews.forEach((s, i) => {
+    const where = `region.model.skews[${i}]`;
+    if (!isObject(s) || !isString(s.name, 80)) { errors.push(`${where}.name: 1..80 characters`); return; }
+    if (!Array.isArray(s.regions) || !s.regions.length || !s.regions.every((k) => REGION_KEY.test(k))) errors.push(`${where}.regions: the region keys it is declared for`);
+    if (!isObject(s.when) || !Object.keys(s.when).length) errors.push(`${where}.when: the touches a skewed row carries`);
+    else touchesRule(errors, `${where}.when`, s.when, region.vocabulary);
+    if (!(typeof s.factor === 'number' && s.factor > 0 && s.factor <= 10)) errors.push(`${where}.factor: a number in (0, 10]`);
+  });
+  extrasRules(errors, region, m, limits);
+  labelRule(errors, m);
+}
+
 function regionRules(errors, root, region) {
   if (!isObject(region)) { errors.push('region: required, an object (or the path of a JSON file holding it)'); return; }
   if (!isString(region.operator, 63) || !NAME.test(region.operator)) errors.push('region.operator: the operator subject the region seed mints as');
@@ -260,7 +320,8 @@ function regionRules(errors, root, region) {
   }
   const m = region.model;
   if (!isObject(m)) { errors.push('region.model: required'); return; }
-  if (m.kind !== 'income-tilt') errors.push('region.model.kind: "income-tilt" (the only model the kit has)');
+  if (!REGION_MODELS.includes(m.kind)) { errors.push(`region.model.kind: ${REGION_MODELS.map((k) => `"${k}"`).join(' or ')} (lib/region.mjs)`); return; }
+  if (m.kind === 'fixed') { fixedModelRules(errors, region, m, limits); return; }
   if (!(typeof m.spreadUsd === 'number' && m.spreadUsd > 0)) errors.push('region.model.spreadUsd: dollars of median income per unit of x, > 0');
   if (!(typeof m.tSpan === 'number' && m.tSpan > 0 && m.tSpan <= 0.5)) errors.push('region.model.tSpan: how far from the middle a state may lean, in (0, 0.5]');
   for (const k of ['low', 'high']) if (!isObject(region.rehearsed) || !Object.hasOwn(region.rehearsed, m[k] ?? '')) errors.push(`region.model.${k}: one of the rehearsed regions`);
@@ -502,6 +563,177 @@ export const SEED_SIGNALS = Object.freeze(['entry_channel', 'campaign_term', 're
 export const BEAT_CHANGES = Object.freeze(['shiftDays', 'close', 'outOfStock', 'pin']);
 /** The only fields a sign-in demo account carries: a fictional name and what it is for. Its secret lives on the worker. */
 const ACCOUNT_FIELDS = Object.freeze(['name', 'about']);
+/** Where the director docks (lane K5; the behaviour is public/demo-kit/director.js and kit.css): beside the site, or under it. */
+export const DIRECTOR_DOCKS = Object.freeze(['right', 'bottom']);
+/** The product fields the working store reads beyond the products map (public/demo-kit/store.js, the scaffold's page). */
+export const STORE_FIELDS = Object.freeze(['listPrice', 'rating', 'reviews', 'inStock', 'badges', 'description', 'gallery', 'specs', 'url']);
+/** The store's home sections that are not slots or rails: the service strip and the category tiles. */
+export const STORE_SECTIONS = Object.freeze(['service', 'categories']);
+/** The retailer kinds the where-to-buy modal lists: online sellers first, then nearby stores. */
+export const RETAILER_KINDS = Object.freeze(['online', 'store']);
+
+/**
+ * Every visible word of the working store (lane K5): the buttons, the titles, the toasts and the store's honest
+ * sentences, by key, with NEUTRAL defaults. A kit module carries no demo's words: public/demo-kit/store.js reads
+ * every label it shows from the page's settings, which the scaffold writes from these defaults with
+ * demo.config.json's `labels` over them (a customer's own wording, such as its site's button text, goes there). A
+ * label may name {placeholders}, exactly the default's.
+ */
+export const STORE_LABELS = Object.freeze({
+  // The header
+  signIn: 'Sign in', search: 'Search', searchPlaceholder: 'Search', cart: 'Cart', itemOne: 'item', itemMany: 'items', close: 'Close',
+  // Cards, grids and the product page (the scaffold's page; the vertical replaces its renderers)
+  addToCart: 'Add to cart', findRetailer: 'Where to buy', outOfStock: 'Out of stock', shopByCategory: 'Shop by category',
+  bestMatch: 'Best match', priceLow: 'Price: low to high', priceHigh: 'Price: high to low', topRated: 'Top rated',
+  filter: 'Filter', clearAll: 'Clear all', results: 'results', result: 'result', searchResults: 'Results for “{query}”',
+  addOns: 'Add to your order', review: 'Review your selections', model: 'Model', specs: 'Specs', reviews: 'Reviews', overview: 'Overview',
+  // The filters (public/demo-kit/store.js)
+  filterPrice: 'Price', filterShow: 'Show only', inStock: 'In stock', onSale: 'On sale', under: 'Under {price}', andUp: '{price} and up', range: '{lo} – {hi}',
+  // POST /sort, as a grid, a rail or search says where its order came from
+  sortDecided: 'decided for her by POST /sort', sortNoVisitor: 'no visitor yet', sortNoCapture: 'the engine sorts once she has a captured event',
+  sortDown: 'POST /sort did not answer ({why})', sortEmpty: 'nothing to sort',
+  leansWith: 'leans with {region}’s sales', leanAsserted: '(asserted)', leanSynthetic: 'synthetic → warehouse', leanOwn: 'this worker’s own', everyRegion: 'every region',
+  // Search, when the page shows its results in a sheet
+  resultsFor: '{count} results for “{query}”', resultFor: '{count} result for “{query}”', noResults: 'Nothing in the store matches “{query}”',
+  searchHint: 'Try a type, a category or a model number.', searchSorted: 'In the engine’s order, POST /sort over every match', searchSite: 'In the site’s own order: POST /sort did not answer',
+  // The cart
+  cartTitle: 'Your cart', cartEmpty: 'Your cart is empty', cartEmptyHint: 'Add something from a product page and it shows here, with its add-ons and any set saving.',
+  subtotal: 'Subtotal', addOnsTotal: 'Add-ons', included: 'included', packageSaving: 'Package saving', pairSaving: 'Pair saving', total: 'Total',
+  setWhy: 'together {price} · apart {sum}, the catalog’s own figures', setWhyShort: 'the catalog’s own figure',
+  remove: 'Remove', qtyDown: 'One fewer', qtyUp: 'One more', checkout: 'Checkout', continueShopping: 'Continue shopping',
+  restoredLine: 'kept from an earlier visit in this tab: no decision is credited',
+  cartNote: 'Prices are the catalog’s, the same for everyone; a saving shows only when the lines complete a set the catalog prices lower.',
+  // Checkout
+  checkoutKicker: 'Checkout · a demonstration', checkoutTitle: 'What this demo records',
+  checkoutNote: 'Placing this order sends the engine one order event per line ({lines} in all, {total}), each against the decision that led to it: {credited} of {all} lines carry one.',
+  checkoutNothing: 'Nothing else. No payment is taken, no card or address is asked for, nothing ships.',
+  creditedTo: 'credited to decision {id}', noDecision: 'no decision led here', placeOrder: 'Place the demo order', backToCart: 'Back to the cart',
+  // Where to buy
+  retailersTitle: 'Where to buy the {name}', buyDirect: 'Buy here', fromStore: 'From {store}', samePrice: 'the same price for everyone',
+  pickupAt: 'Pick up at {partner}', pickupNote: 'an order of ours, handed over by a partner', pickup: 'Pick up at a partner',
+  onlineSellers: 'Online', onlineNote: 'online · price and stock at the retailer', nearbyStores: 'Nearby stores',
+  nearbyNote: 'in store near you · {region}, from the request · price and stock at the retailer', referral: 'Buy from a retailer',
+  noSellers: 'No other seller is listed for this product.',
+  outcomeCredited: 'A press here is sent as a named outcome with the decision that earned it.',
+  outcomeUncredited: 'No decided where-to-buy module earned this press, so an outcome here is credited to no decision.',
+  outcomeNote: 'A referral is not a sale: what the retailer sells is the retailer’s ledger. A pickup is an order of ours, never a second purchase. The list is the same for everyone and nothing leaves this page.',
+  // Sign in
+  signInTo: 'Sign in to {store}', signedInAs: 'Signed in as {account}', signInAs: 'Sign in as {name}', greeting: 'Hi, {name}', demoAccount: 'a fictional demo account',
+  noAccounts: 'No demo account is configured for this store.',
+  signInNote: 'Signed in, the devices you use are one profile, and only then: no device matching, ever. Prices are the same signed in or not.',
+  signInFine: 'A demonstration with a fictional account and no password: the worker signs who signed in with its own identity secret, and this page never holds it.',
+  // The toasts and the refusals
+  added: 'Added to your cart: {name}', addFailed: 'The engine did not take the add ({status}); the cart keeps the line',
+  ordered: 'Demo order recorded: {lines} lines, no payment taken', orderPartial: 'The engine took {ok} of {all} order lines',
+  pickupChosen: 'Pickup at {partner} chosen for the {name}', referred: 'Referred to {partner}: a referral, not a sale',
+  noProduct: 'No product {sku} in the feed', outOfStockHere: '{name} is out of stock here', noPrice: '{name} has no price here, so it cannot go in the cart',
+  notOnPage: 'The {view} page is not on this site yet; here is the homepage',
+});
+const placeholdersOf = (s) => [...String(s).matchAll(/\{([a-z]+)\}/g)].map((m) => m[1]).sort().join(',');
+
+/** demo.config.json `labels`: each a key of STORE_LABELS, a plain sentence (no markup), with exactly the default's {placeholders}. */
+function labelRules(at, labels) {
+  if (labels === undefined) return;
+  if (!isObject(labels)) { at('labels', 'an object of label key → its words (scripts/demo-kit/lib/config.mjs STORE_LABELS names the keys and their neutral defaults)'); return; }
+  for (const [k, v] of Object.entries(labels)) {
+    if (!Object.hasOwn(STORE_LABELS, k)) at(`labels.${k}`, 'not a label of the working store (STORE_LABELS)');
+    else if (!isString(v, 400) || /[<>]/.test(v)) at(`labels.${k}`, 'plain words, 1..400 characters, no markup');
+    else if (placeholdersOf(v) !== placeholdersOf(STORE_LABELS[k])) at(`labels.${k}`, `names {${placeholdersOf(v) || 'nothing'}}; the label names {${placeholdersOf(STORE_LABELS[k]) || 'nothing'}}`);
+  }
+}
+
+/**
+ * The working store's options (demo.config.json `store`, lane K5), every one optional: what the scaffold's store
+ * reads that the rest of the config does not say. Each names fields of the products map or of the rows, so a typo
+ * is refused here rather than rendering an empty control.
+ */
+function storeRules(at, demo) {
+  const st = demo.store;
+  if (st === undefined) return;
+  if (!isObject(st)) { at('store', 'an object: { categories?, fields?, filters?, priceBands?, variants?, addOns?, service?, retailers?, pencil?, footer?, search?, layout?, delivery?, financing? }'); return; }
+  const attrs = isObject(demo.products?.attributes) ? demo.products.attributes : {};
+  const feedCategories = Array.isArray(demo.products?.categories) ? demo.products.categories : null;
+  const list = (k, max, each) => {
+    if (st[k] === undefined) return;
+    if (!Array.isArray(st[k]) || !st[k].length || st[k].length > max) { at(`store.${k}`, `a list of 1..${max}`); return; }
+    st[k].forEach((x, i) => each(x, `store.${k}[${i}]`));
+  };
+  const keys = new Set();
+  list('categories', 13, (c, w) => {
+    if (!isObject(c) || !isString(c.key, 40) || !NAME.test(c.key)) { at(`${w}.key`, 'a category key, lower-case'); return; }
+    if (keys.has(c.key)) at(`${w}.key`, `"${c.key}" is listed twice`);
+    keys.add(c.key);
+    // A category's key is its grid's address (?view=<key>): a page of that key must be a grid page, or there is none.
+    const page = Array.isArray(demo.pages) ? demo.pages.find((p) => p && p.key === c.key) : null;
+    if (page && page.entry !== 'grid') at(`${w}.key`, `"${c.key}" is the ${page.entry} page's key; a category's key names its grid (a grid page of that key, or none)`);
+    if (c.key === 'home' || c.key === 'search' || c.key === 'room') at(`${w}.key`, `"${c.key}" is one of the store's own views`);
+    if (!isString(c.label, 40)) at(`${w}.label`, 'what the nav calls it, 1..40 characters');
+    if (c.categories !== undefined) {
+      if (!Array.isArray(c.categories) || !c.categories.length || !c.categories.every((x) => isString(x, 64))) at(`${w}.categories`, 'the product categories this room shows');
+      else if (feedCategories) for (const x of c.categories) if (!feedCategories.includes(x)) at(`${w}.categories`, `"${x}" is not one of products.categories`);
+    }
+    if (c.blurb !== undefined && !isString(c.blurb, 200)) at(`${w}.blurb`, 'its tile’s sentence, 1..200 characters');
+    if (c.image !== undefined && !(isString(c.image, 300) && c.image.startsWith(`/${demo.slug}/`) && !c.image.includes('..'))) at(`${w}.image`, `an image path under /${demo.slug}/`);
+    if (c.weights !== undefined && !(isObject(c.weights) && Object.entries(c.weights).every(([d, x]) => (demo.dimensions || []).some((dd) => dd && dd.key === d) && typeof x === 'number' && x >= 0 && x <= 10))) at(`${w}.weights`, 'an object of dimension → weight 0..10, for its grid’s POST /sort');
+  });
+  if (st.fields !== undefined) {
+    if (!isObject(st.fields)) at('store.fields', `an object of ${STORE_FIELDS.join(' | ')} → the product field`);
+    else for (const [k, v] of Object.entries(st.fields)) {
+      if (!STORE_FIELDS.includes(k)) at(`store.fields.${k}`, `not one of ${STORE_FIELDS.join(', ')}`);
+      else if (!(isString(v, 200) && FIELD_PATH.test(v))) at(`store.fields.${k}`, `"${v}" is not a field name (or a dotted path into the row)`);
+    }
+  }
+  if (st.filters !== undefined) {
+    if (!Array.isArray(st.filters) || !st.filters.length) at('store.filters', 'the attributes a grid filters on, in order: keys of products.attributes');
+    else for (const k of st.filters) if (!Object.hasOwn(attrs, k)) at('store.filters', `"${k}" is not a key of products.attributes`);
+  }
+  if (st.filterValues !== undefined && !isInt(st.filterValues, 2, 40)) at('store.filterValues', 'the most values a filter group lists, 2..40');
+  if (st.priceBands !== undefined && !(Array.isArray(st.priceBands) && st.priceBands.length && st.priceBands.length <= 8
+    && st.priceBands.every((x, i) => typeof x === 'number' && x > 0 && (i === 0 || x > st.priceBands[i - 1])))) at('store.priceBands', 'the band edges, rising: [500, 1000, 2000]');
+  list('variants', 4, (v, w) => {
+    if (!isObject(v)) { at(w, '{ label, by, option, prefix?, suffix? }'); return; }
+    if (!isString(v.label, 30)) at(`${w}.label`, 'what the selector is called (Size, Colour), 1..30');
+    if (!Array.isArray(v.by) || !v.by.length || v.by.length > 3 || !v.by.every((f) => isString(f, 200) && FIELD_PATH.test(f))) at(`${w}.by`, 'the fields sibling rows share (1..3 field names or dotted paths)');
+    if (!(isString(v.option, 200) && FIELD_PATH.test(v.option))) at(`${w}.option`, 'the field each sibling differs by');
+    for (const k of ['prefix', 'suffix']) if (v[k] !== undefined && !(typeof v[k] === 'string' && v[k].length <= 8)) at(`${w}.${k}`, 'at most 8 characters around each option');
+  });
+  const addOnKeys = new Set();
+  list('addOns', 8, (a, w) => {
+    if (!isObject(a) || !isString(a.key, 40) || !NAME.test(a.key)) { at(`${w}.key`, 'an add-on key, lower-case'); return; }
+    if (addOnKeys.has(a.key)) at(`${w}.key`, `"${a.key}" is listed twice`);
+    addOnKeys.add(a.key);
+    if (!isString(a.label, 80)) at(`${w}.label`, 'what the buy box calls it, 1..80');
+    if (!(typeof a.price === 'number' && a.price >= 0 && a.price < 100000)) at(`${w}.price`, 'its price, a number (the same for everyone)');
+    if (a.categories !== undefined && !(Array.isArray(a.categories) && a.categories.length && a.categories.every((x) => isString(x, 64)))) at(`${w}.categories`, 'the product categories it is offered on');
+  });
+  list('service', 6, (s, w) => {
+    if (!isObject(s) || !isString(s.title, 40)) at(`${w}.title`, 'the promise, 1..40 characters');
+    else if (s.text !== undefined && !isString(s.text, 90)) at(`${w}.text`, 'its line, 1..90 characters');
+  });
+  const retailerKeys = new Set();
+  list('retailers', 12, (r, w) => {
+    if (!isObject(r) || !isString(r.key, 40) || !NAME.test(r.key)) { at(`${w}.key`, 'a seller key, lower-case'); return; }
+    if (retailerKeys.has(r.key)) at(`${w}.key`, `"${r.key}" is listed twice`);
+    retailerKeys.add(r.key);
+    if (!isString(r.name, 60)) at(`${w}.name`, 'the seller’s name, 1..60');
+    if (!RETAILER_KINDS.includes(r.kind)) at(`${w}.kind`, RETAILER_KINDS.join(' | '));
+    if (r.pickup !== undefined && typeof r.pickup !== 'boolean') at(`${w}.pickup`, 'false when a store does not offer pickup (its outcome is then a referral)');
+    if (r.note !== undefined && !isString(r.note, 120)) at(`${w}.note`, '1..120 characters');
+    if (r.categories !== undefined && !(Array.isArray(r.categories) && r.categories.length && r.categories.every((x) => isString(x, 64)))) at(`${w}.categories`, 'the product categories it sells');
+  });
+  for (const k of ['pencil', 'delivery', 'financing']) if (st[k] !== undefined && !isString(st[k], 140)) at(`store.${k}`, '1..140 characters');
+  list('footer', 5, (f, w) => {
+    if (!isObject(f) || !isString(f.head, 30)) at(`${w}.head`, 'the column’s heading, 1..30');
+    else if (!Array.isArray(f.links) || !f.links.length || f.links.length > 8 || !f.links.every((x) => isString(x, 40))) at(`${w}.links`, '1..8 link texts');
+  });
+  if (st.search !== undefined && !(isObject(st.search) && (st.search.fields === undefined || (Array.isArray(st.search.fields) && st.search.fields.every((f) => isString(f, 200) && FIELD_PATH.test(f)))))) at('store.search', '{ fields?: [the fields the search box reads beyond the name and the id] }');
+  if (st.layout !== undefined) {
+    const home = Array.isArray(demo.pages) ? demo.pages.find((p) => p && p.entry === 'home') : null;
+    const allowed = new Set([...STORE_SECTIONS, ...(home ? [...(Array.isArray(home.slots) ? home.slots : []), ...(Array.isArray(home.sorted) ? home.sorted : [])].map((s) => s && s.slot) : [])]);
+    if (!isObject(st.layout) || !Array.isArray(st.layout.home) || !st.layout.home.length) at('store.layout', '{ home: [the homepage’s sections in order: its slots and rails by name, service, categories] }');
+    else for (const n of st.layout.home) if (!allowed.has(n)) at('store.layout.home', `"${n}" is not a homepage slot or rail, nor one of ${STORE_SECTIONS.join(', ')}`);
+  }
+}
 
 /** The snapshot slots of a demo config's pages, in page order, each with its page key and engine page name. */
 export function demoSlots(demo) {
@@ -742,6 +974,21 @@ export function validateDemoConfig(demo, { root = REPO_ROOT, tokens = kitTokens(
       }
     }
   }
+  // The director's dock (lane K5): a presenter's tool beside the site or under it, collapsed until the presenter opens it.
+  const dr = demo.director;
+  if (dr !== undefined) {
+    if (!isObject(dr)) at('director', `{ dock?: ${DIRECTOR_DOCKS.join(' | ')}, collapsed?: true | false }`);
+    else {
+      if (dr.dock !== undefined && !DIRECTOR_DOCKS.includes(dr.dock)) at('director.dock', DIRECTOR_DOCKS.join(' | '));
+      if (dr.collapsed !== undefined && typeof dr.collapsed !== 'boolean') at('director.collapsed', 'true (a slim rail until the presenter opens it) or false');
+      const extra = Object.keys(dr).filter((k) => !['dock', 'collapsed'].includes(k));
+      if (extra.length) at('director', `carries ${extra.join(', ')}: only dock and collapsed`);
+    }
+  }
+  if (demo.products !== undefined && demo.products.categories !== undefined
+    && !(Array.isArray(demo.products.categories) && demo.products.categories.length && demo.products.categories.every((x) => isString(x, 64)))) at('products.categories', 'the categories the products file carries');
+  storeRules(at, demo);
+  labelRules(at, demo.labels);
   const ar = demo.arrival;
   if (!isObject(ar) || !isString(ar.utm_term, 256)) at('arrival', '{ utm_source, utm_medium, utm_term, utm_campaign? }: the landing beat 1 opens on');
   const copy = demo.copy;

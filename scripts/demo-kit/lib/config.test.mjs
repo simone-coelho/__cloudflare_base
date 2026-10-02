@@ -130,7 +130,7 @@ test('the region section: anchors, model, extras, limits and the label length', 
   const r = (mutate) => errorsOf((c) => mutate(c.region), ['region']);
   assert.match(r((x) => { x.model.low = 'US-CA'; }), /region\.model\.low: one of the rehearsed regions/);
   assert.match(r((x) => { x.model.high = x.model.low; }), /two different regions/);
-  assert.match(r((x) => { x.model.kind = 'linear'; }), /income-tilt/);
+  assert.match(r((x) => { x.model.kind = 'linear'; }), /"income-tilt" or "fixed"/);
   assert.match(r((x) => { x.model.tSpan = 0.8; }), /tSpan/);
   assert.match(r((x) => { x.model.blend.value = 'pagers'; }), /category=pagers is not in the vocabulary/);
   assert.match(r((x) => { x.model.extras[0].regions = ['Texas']; }), /extras\[0\]\.regions/);
@@ -139,6 +139,36 @@ test('the region section: anchors, model, extras, limits and the label length', 
   assert.match(r((x) => { x.model.label = `{{census.label}}: ${'z'.repeat(80)}`; }), /at most 80 characters/);
   assert.match(r((x) => { x.census = 'migrations/seed/missing.sql'; }), /does not exist/);
   assert.match(r((x) => { x.text.shareOrder = ['intent']; }), /region\.text\.shareOrder/);
+});
+
+/** A fixed model over Vantage's own vocabulary (lane K5): the national rows, one drawn lean, one ordered lean, one declared skew. */
+const fixedModel = () => ({
+  kind: 'fixed', seed: 'kit-region-lean-v1', label: '{{census.label}}: synthetic sales, a fixed seeded lean (no census)',
+  rows: [{ touches: { category: 'phones', brand: 'apple', ecosystem: 'ios', priceBand: 'premium' }, units: 120 },
+    { touches: { category: 'phones', brand: 'samsung', ecosystem: 'android', priceBand: 'premium' }, units: 100 },
+    { touches: { category: 'phones', brand: 'google', ecosystem: 'android', priceBand: 'core' }, units: 80 }],
+  leans: [{ dimension: 'brand', values: ['apple', 'samsung', 'google'], factor: 1.5 }, { dimension: 'priceBand', values: ['premium', 'core'], shares: [0.6, 0.4], within: { category: 'phones' } }],
+  skews: [{ name: 'android in the south', regions: ['US-TX', 'US-GA'], when: { ecosystem: 'android' }, factor: 1.3 }],
+  extras: [],
+});
+
+test('the region section accepts a fixed model, and refuses an income term in it, a value outside the vocabulary, or a lean that is both kinds', () => {
+  const r = (mutate) => errorsOf((c) => { c.region.model = fixedModel(); mutate(c.region.model, c.region); }, ['region']);
+  assert.equal(r(() => {}), '', 'a fixed model with leans, shares and a skew is valid');
+  assert.match(r((m) => { m.spreadUsd = 25000; }), /a fixed model carries no income term \(spreadUsd\)/);
+  assert.match(r((m) => { m.blend = { dimension: 'category', value: 'phones', key: ['brand'] }; }), /no income term \(blend\)/);
+  assert.match(r((m) => { delete m.seed; }), /region\.model\.seed/);
+  assert.match(r((m) => { m.rows = []; }), /region\.model\.rows: the national mix/);
+  assert.match(r((m) => { m.rows[0].touches.brand = 'nokia'; }), /region\.model\.rows\[0\]\.touches\.brand: "nokia" is not one of/);
+  assert.match(r((m) => { m.leans[0].values = ['apple']; }), /leans\[0\]\.values: two or more distinct values/);
+  assert.match(r((m) => { m.leans[0].shares = [0.5, 0.3, 0.2]; }), /leans\[0\]: exactly one of factor .* or shares/);
+  assert.match(r((m) => { delete m.leans[1].shares; }), /leans\[1\]: exactly one of factor/);
+  assert.match(r((m) => { m.leans[1].shares = [0.8, 0.4]; }), /leans\[1\]\.shares: one share in \(0, 1\] per value, summing to at most 1/);
+  assert.match(r((m) => { m.leans[0].dimension = 'colour'; }), /leans\[0\]\.dimension: a seeded dimension/);
+  assert.match(r((m) => { m.skews[0].regions = ['Texas']; }), /skews\[0\]\.regions/);
+  assert.match(r((m) => { m.skews[0].factor = 0; }), /skews\[0\]\.factor: a number in \(0, 10\]/);
+  assert.match(r((m) => { m.skews[0].when = {}; }), /skews\[0\]\.when/);
+  assert.match(r((m) => { m.kind = 'census-tilt'; }), /region\.model\.kind: "income-tilt" or "fixed"/);
 });
 
 test('the imagery section: every source has a licence, an https page and the sources its kind needs', () => {

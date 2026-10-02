@@ -8,10 +8,10 @@ import test from 'node:test';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig, loadValidConfig, REPO_ROOT, validateConfig } from './config.mjs';
+import { loadConfig, loadValidConfig, REPO_ROOT, STORE_LABELS, validateConfig } from './config.mjs';
 import { DAY, MINUTE, prepareSeed } from './seed.mjs';
 import { beatFile, fill, idents, mountLines, planScaffold, selectPiece } from './scaffold.mjs';
-import { builderArgs, main } from '../new-demo.mjs';
+import { builderArgs, builderArgsFor, main } from '../new-demo.mjs';
 
 const ANCHOR = Date.UTC(2026, 9, 2, 12, 0, 0);
 const tiny = () => ({
@@ -286,4 +286,128 @@ test('a demo\'s own catalog: the opening document carries the engine\'s fields o
   assert.equal(existsSync(join(root, 'public', 'kx', 'beats', '03-close.json')), true);
   const loaded = loadValidConfig(join(root, 'scripts', 'demo-kit', 'configs', 'kx.json'), { root, sections: ['seed'], exit: (c) => { throw new Error(`invalid ${c}`); } });
   assert.deepEqual(prepareSeed({ config: loaded.config, path: loaded.path, nowMs: Date.now() }).errors, []);
+});
+
+// ── The working store (lane K5) ─────────────────────────────────────────────
+/** A demo with a feed, a store section, the dock and its own labels: what K5's starter scaffolds into a working store. */
+const shop = () => {
+  const d = tiny();
+  d.director = { dock: 'right', collapsed: true };
+  d.pages[0].slots[0].pieceType = 'hero';
+  d.pages[0].slots[1].pieceType = 'promotion';
+  d.products = { ...d.products, nameField: 'name', categoryField: 'category', imageField: 'image', categories: ['a', 'b', 'c'],
+    variants: { list: 'configs', key: 'k', attributes: { price_usd: 'price' } } };
+  d.store = {
+    pencil: 'Free shipping this week', delivery: 'Delivered in 3 days', financing: 'Or four payments',
+    categories: [{ key: 'alpha', label: 'Alpha', categories: ['a'] }, { key: 'beta', label: 'Beta', categories: ['b', 'c'], blurb: 'B and C' }],
+    service: [{ title: 'Free returns', text: '30 days' }, { title: 'Expert help' }],
+    addOns: [{ key: 'care', label: 'Care plan', price: 19 }], retailers: [{ key: 'r1', name: 'Seller One', kind: 'online' }],
+    variants: [{ label: 'Size', by: ['family'], option: 'size' }], footer: [{ head: 'Shop', links: ['Alpha', 'Beta'] }],
+  };
+  d.labels = { addToCart: 'Put it in the bag' };
+  return d;
+};
+const feed = () => ({ products: [
+  { id: 'P1', name: 'Product One', category: 'a', price: 120, listPrice: 150, image: '/kx/img/p1.png', family: 'f1', size: 'S', inStock: true },
+  { id: 'P2', name: 'Product Two', category: 'b', price: 80, image: '/kx/img/p2.png', family: 'f1', size: 'M', inStock: true },
+  { id: 'P3', name: 'Product Three', category: 'c', price: 300, listPrice: 360, image: '/kx/img/p3.png', family: 'f2', inStock: true },
+  { id: 'P4', name: 'Product Four', category: 'a', price: 45, image: null, family: 'f3', inStock: false },
+] });
+function scratchShop(demo = shop(), { products = feed(), kinds = true } = {}) {
+  const s = scratch(demo);
+  writeFileSync(join(s.root, 'public', demo.slug, 'products.json'), JSON.stringify(products));
+  if (kinds) { mkdirSync(join(s.root, 'src', 'content'), { recursive: true }); cpSync(join(REPO_ROOT, 'src', 'content', 'kinds.ts'), join(s.root, 'src', 'content', 'kinds.ts')); }
+  return s;
+}
+
+test('K5: the scaffold is a working store: the header, the homepage in the slots\' template order, a grid per room, search, the product page\'s anatomy, the store\'s module bound, the dock and the labels', async () => {
+  const { root, file } = scratchShop();
+  const { code, out } = await run(root, file);
+  assert.equal(code, 0, out);
+  const html = readFileSync(join(root, 'public', 'kx', 'index.html'), 'utf8');
+  assert.match(html, /<p class="pencil static" id="pencil">Free shipping this week<\/p>/);
+  assert.match(html, /<form class="search" id="searchForm" role="search" action="\/kx\/" data-store-search>/);
+  assert.match(html, /<button type="button" class="u-sign" id="signIn" data-act="store-signin" data-ctl="sign-in">Sign in<\/button>/);
+  assert.match(html, /data-act="store-cart-open"[\s\S]*?data-cart-count data-hide-empty hidden>0</);
+  assert.match(html, /<a data-nav="alpha" href="\/kx\/\?view=alpha" data-ctl="nav-alpha">Alpha<\/a>/, 'the nav is the store\'s categories');
+  const home = /<section class="view view--home" id="view-home"[\s\S]*?\n {4}<\/section>/.exec(html)[0];
+  const order = ['id="mod-hero"', 'id="serviceStrip"', 'id="mod-categories"', 'id="mod-deals"', 'id="mod-back"', 'id="mod-rail"'].map((x) => home.indexOf(x));
+  assert.ok(order.every((x, i) => x > 0 && (i === 0 || x > order[i - 1])), `the homepage: the first slot, the service strip, the category tiles, the other slots, the rails (${order})`);
+  assert.match(home, /<a class="tile" data-nav="beta" href="\/kx\/\?view=beta" data-ctl="tile-beta">.*<b>Beta<\/b><span>B and C<\/span><\/a>/);
+  for (const id of ['view-room', 'view-search', 'grid-room', 'grid-search', 'filters-room', 'sort-room', 'rail-room', 'bbAdd', 'bbRetail', 'bbOpts', 'bbAddons', 'bbReview', 'bbFinancing', 'bbDelivery', 'pdpTabs', 'specsList', 'reviewsBody', 'storeToast']) {
+    assert.ok(html.includes(`id="${id}"`), `#${id}`);
+  }
+  assert.match(html, /id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">Put it in the bag<\/button>/, 'the demo\'s own label on the buy box');
+  assert.match(html, /id="bbRetail" data-act="store-retailers" data-ctl="find-retailer">Where to buy<\/button>/, 'the kit\'s neutral default where the demo is silent');
+  assert.match(html, /<div class="foot-cols"><div><b>Shop<\/b><span>Alpha<\/span><span>Beta<\/span><\/div><\/div>/);
+  assert.doesNotMatch(html, /@@/);
+  const js = readFileSync(join(root, 'public', 'kx', 'kx.js'), 'utf8');
+  assert.match(js, /import \{ store \} from '\/demo-kit\/store\.js';/);
+  assert.match(js, /store\.bind\(\{\n {4}demo, site: SITE, lanes: LANES, base: BASE,/);
+  assert.match(js, /\.\.\.\(SITE\.director\.dock === 'right' \? \{ dock: \{ collapsed: SITE\.director\.collapsed \} \} : \{\}\),/, 'the dock goes to createDemo as the kit\'s config.dock');
+  const SITE = JSON.parse(/const SITE = (\{[\s\S]*?\n\});\n/.exec(js)[1]);
+  assert.deepEqual(SITE.director, { dock: 'right', collapsed: true });
+  assert.equal(SITE.labels.addToCart, 'Put it in the bag');
+  assert.equal(SITE.labels.findRetailer, 'Where to buy');
+  assert.deepEqual(Object.keys(SITE.labels).sort(), Object.keys(STORE_LABELS).sort(), 'every label the store reads, written');
+  assert.deepEqual(SITE.store.categories.map((c) => [c.key, c.categories, c.page]), [['alpha', ['a'], null], ['beta', ['b', 'c'], null]]);
+  assert.deepEqual(SITE.store.layout, ['hero', 'service', 'categories', 'deals', 'back', 'rail']);
+  assert.deepEqual(SITE.products.variants, { list: 'configs', key: 'k', attributes: { price_usd: 'price' } });
+  const css = readFileSync(join(root, 'public', 'kx', 'kx.css'), 'utf8');
+  assert.match(css, /\.site \{ container: site \/ inline-size; \}/, 'the store\'s narrower layouts answer the site\'s own width');
+  assert.match(css, /body\.kit-dock--collapsed \.module-where/, 'the demo\'s frame gives way to the plain store while the director is collapsed');
+});
+
+test('K5: with a products file and no catalog, the starter catalog features real products in every slot, a tile per category where a slot holds tiles, and still names every value', async () => {
+  const d = shop();
+  d.pages[0].slots.push({ slot: 'rooms', take: 2, pieceType: 'tile', weights: { category: 1 } });
+  const { root, file } = scratchShop(d);
+  const { code, out } = await run(root, file);
+  assert.equal(code, 0, out);
+  assert.match(out, /a labelled starter catalog is written there, drawn from public\/kx\/products\.json \(\d+ pieces, each featuring a real product\)/);
+  const cat = read(root, 'public/kx/catalog.json');
+  assert.equal(cat.fromProducts, true);
+  const bySlot = (s) => cat.pieces.filter((p) => p.slotTypes.includes(s));
+  assert.equal(bySlot('hero').length, 3, 'three heroes for a hero slot');
+  for (const p of cat.pieces.filter((x) => !x.slotTypes.includes('rooms'))) {
+    assert.ok(feed().products.some((x) => x.id === p.featuredProductIds[0]), `${p.customerContentId} features a product of the feed`);
+    assert.ok(p.display.imageSku && Number.isInteger(p.display.order), `${p.customerContentId}: its image's product and its order in the template`);
+  }
+  assert.ok(bySlot('hero').every((p) => feed().products.some((x) => x.name === p.title)), 'a hero is titled by its product\'s name');
+  assert.match(bySlot('deals')[0].title, /^Save \$\d+\.\d{2} on the Product (One|Three)$/, 'a promotion leads with a product on sale');
+  assert.deepEqual(bySlot('rooms').map((p) => [p.title, p.display.room, p.display.categories]), [['Alpha', 'alpha', ['a']], ['Beta', 'beta', ['b', 'c']]], 'a tile per store category');
+  assert.ok(bySlot('back').every((p) => p.eligibleWhen && p.eligibleWhen.context.visit[0] === 'return'), 'a gated slot fails closed');
+  assert.ok(bySlot('hero')[0].tags.category.includes('b') && bySlot('deals')[0].tags.category.includes('b'), 'the arrival seed rides on its slots\' first pieces');
+  for (const dm of d.dimensions) for (const v of dm.values) assert.ok(cat.pieces.some((p) => (p.tags[dm.key] || []).includes(v)), `${dm.key}=${v} is named`);
+  const open = read(root, 'public/kx/beats/open-catalog.json').publish.document.pieces;
+  assert.ok(open.every((p) => !('display' in p)), 'the page\'s own fields never reach the engine');
+  const loaded = loadValidConfig(join(root, 'scripts', 'demo-kit', 'configs', 'kx.json'), { root, sections: ['seed'], exit: (c) => { throw new Error(`invalid ${c}`); } });
+  assert.deepEqual(prepareSeed({ config: loaded.config, path: loaded.path, nowMs: ANCHOR + DAY }).errors, [], 'the seed\'s own checks pass on the starter');
+});
+
+test('K5: --root scaffolds into another tree and every write lands there, the worker config included (this repository\'s builder, --out into the root)', async () => {
+  const { root, file } = scratchShop();
+  const outside = join(REPO_ROOT, 'wrangler.kx.toml');
+  assert.equal(existsSync(outside), false);
+  const lines = [];
+  const code = await main(['--config', file, '--root', root], { log: (l) => lines.push(l), err: (l) => lines.push(l), nowMs: ANCHOR });
+  assert.equal(code, 0, lines.join('\n'));
+  assert.match(lines.join('\n'), /into .* \(--root: every write lands there\)/);
+  assert.match(readFileSync(join(root, 'wrangler.kx.toml'), 'utf8'), /^name = "edge-platform-kx"$/m, 'the worker config, in the root');
+  assert.equal(existsSync(outside), false, 'nothing written in this repository');
+  assert.ok(existsSync(join(root, 'src', 'demos', 'kx.config.ts')) && existsSync(join(root, 'public', 'kx', 'kx.js')));
+  assert.deepEqual(builderArgsFor(shop(), REPO_ROOT), builderArgs(shop()), 'at the repository root, the builder\'s own command line');
+  assert.equal(await main(['--config', file, '--root', join(root, 'no-such-dir')], { log: () => {}, err: () => {} }), 2, 'a root that does not exist is refused');
+});
+
+test('K5: a store layout names the homepage\'s sections in order; a slot it leaves out still gets its place after them', async () => {
+  const d = shop();
+  d.store.layout = { home: ['deals', 'categories', 'hero'] };
+  const { root, file } = scratchShop(d);
+  assert.equal((await run(root, file)).code, 0);
+  const html = readFileSync(join(root, 'public', 'kx', 'index.html'), 'utf8');
+  const home = /<section class="view view--home"[\s\S]*?\n {4}<\/section>/.exec(html)[0];
+  const at = (x) => home.indexOf(x);
+  assert.ok(at('id="mod-deals"') < at('id="mod-categories"') && at('id="mod-categories"') < at('id="mod-hero"') && at('id="mod-hero"') < at('id="mod-back"') && at('id="mod-back"') < at('id="mod-rail"'));
+  assert.equal(at('id="serviceStrip"'), -1, 'a section the layout leaves out is not drawn unless it is a slot or a rail');
 });

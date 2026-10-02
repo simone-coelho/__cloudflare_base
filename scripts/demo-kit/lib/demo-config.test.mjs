@@ -17,7 +17,12 @@ test('OH\'s demo config is valid, and it names what the design names', () => {
   assert.equal(oh.worker.name, 'edge-platform-oh');
   assert.equal(oh.beats.list.length, 16, 'the sixteen beats of design §4');
   assert.equal(oh.dimensions.length, 16, 'the sixteen dimensions of design §3');
-  assert.deepEqual(oh.regional.dimensions, ['category', 'type', 'sizeBand', 'priceTier', 'fuel'], 'the regional allowlist of design §3');
+  // The regional allowlist is the config's own (R4 removed priceTier from OH's): every name a dimension, the region
+  // seed's dimensions the same list, and the learn document the scaffold wrote from it publishing exactly it.
+  const learn = JSON.parse(readFileSync(new URL('../configs/oh/learn.json', import.meta.url), 'utf8'));
+  assert.ok(oh.regional.dimensions.length > 0 && oh.regional.dimensions.every((d) => oh.dimensions.some((x) => x.key === d)), 'every allowlisted name is a dimension');
+  assert.deepEqual(oh.region.dimensions, oh.regional.dimensions, 'the region seed writes exactly the allowlisted dimensions');
+  assert.deepEqual(learn.regional.dimensions, oh.regional.dimensions, 'the published learn document carries the config\'s allowlist');
   assert.deepEqual(demoSlots(oh).map((s) => s.slot), ['hero', 'category-rail', 'deals', 'continue', 'grid-promo', 'pdp-modules', 'pdp-offers'], 'the decided slots of design §2');
 });
 
@@ -114,4 +119,47 @@ test('what the page asserts, the data files and the documents stay the demo\'s o
   assert.match(errorsOf((c) => { c.region.contrast = ['California']; }), /^region\.contrast: region keys such as US-CA/m);
   assert.match(errorsOf((c) => { c.docs.dir = 'docs/lg'; }), /^docs\.dir: "docs\/oh"/m);
   assert.match(errorsOf((c) => { delete c.copy.scoredSentence; }), /^copy:/m);
+});
+
+// ── The working store's options (lane K5): the dock, the store, the labels ───
+const withStore = (mutate) => errorsOf((c) => {
+  c.director = { dock: 'right', collapsed: true };
+  c.store = {
+    categories: [{ key: 'tvs', label: 'TVs', categories: ['tvs', 'soundbars'] }, { key: 'laundry', label: 'Laundry', categories: ['washers', 'dryers'] }],
+    filters: ['type', 'sizeBand', 'finish'], priceBands: [500, 1000, 2000],
+    variants: [{ label: 'Size', by: ['attributes.series', 'modelYear'], option: 'sizeInches', suffix: '″' }],
+    addOns: [{ key: 'protection', label: 'Protection plan', price: 99, categories: ['tvs'] }],
+    service: [{ title: 'Free delivery', text: 'on every order' }],
+    retailers: [{ key: 'seller', name: 'A seller', kind: 'online' }, { key: 'store', name: 'A store', kind: 'store', pickup: true }],
+    footer: [{ head: 'Shop', links: ['TVs'] }], layout: { home: ['hero', 'service', 'deals'] }, search: { fields: ['attributes.type'] },
+    fields: { listPrice: 'listPrice', rating: 'rating' }, pencil: 'Free shipping', delivery: 'Delivered free', financing: 'Pay over time',
+  };
+  c.labels = { addToCart: 'Add to Cart', findRetailer: 'Find a Retailer', added: 'Added: {name}' };
+  mutate(c);
+});
+
+test('the director docks right or under the site, collapsed or not; the store\'s options name fields of the map and the rows; the labels are the kit\'s keys, plain words, with the default\'s placeholders', () => {
+  assert.equal(withStore(() => {}), '', 'a full store section, the dock and the labels are valid');
+  assert.match(withStore((c) => { c.director.dock = 'left'; }), /^director\.dock: right \| bottom/m);
+  assert.match(withStore((c) => { c.director.collapsed = 'yes'; }), /^director\.collapsed/m);
+  assert.match(withStore((c) => { c.director.key = 'D'; }), /^director: carries key: only dock and collapsed/m);
+  assert.match(withStore((c) => { c.store.categories[0].categories.push('phones'); }), /store\.categories\[0\]\.categories: "phones" is not one of products\.categories/);
+  assert.match(withStore((c) => { c.store.categories[1].key = 'tvs'; }), /store\.categories\[1\]\.key: "tvs" is listed twice/);
+  assert.match(withStore((c) => { c.store.categories[0].key = 'product'; }), /"product" is the product page's key; a category's key names its grid/);
+  assert.match(withStore((c) => { c.store.categories[0].key = 'search'; }), /"search" is one of the store's own views/);
+  assert.match(withStore((c) => { c.store.categories[0].image = '/vantage/x.png'; }), /store\.categories\[0\]\.image: an image path under \/oh\//);
+  assert.match(withStore((c) => { c.store.filters.push('colour'); }), /store\.filters: "colour" is not a key of products\.attributes/);
+  assert.match(withStore((c) => { c.store.priceBands = [1000, 500]; }), /store\.priceBands: the band edges, rising/);
+  assert.match(withStore((c) => { c.store.variants[0].by = []; }), /store\.variants\[0\]\.by/);
+  assert.match(withStore((c) => { c.store.variants[0].option = 'size inches'; }), /store\.variants\[0\]\.option/);
+  assert.match(withStore((c) => { c.store.addOns[0].price = 'free'; }), /store\.addOns\[0\]\.price/);
+  assert.match(withStore((c) => { c.store.retailers[0].kind = 'mail'; }), /store\.retailers\[0\]\.kind: online \| store/);
+  assert.match(withStore((c) => { c.store.layout.home.push('hero-2'); }), /store\.layout\.home: "hero-2" is not a homepage slot or rail/);
+  assert.match(withStore((c) => { c.store.fields.price = 'salePrice'; }), /store\.fields\.price: not one of listPrice/);
+  assert.match(withStore((c) => { c.store.service = Array.from({ length: 7 }, () => ({ title: 'x' })); }), /store\.service: a list of 1\.\.6/);
+  assert.match(withStore((c) => { c.labels.buyNow = 'Buy now'; }), /^labels\.buyNow: not a label of the working store/m);
+  assert.match(withStore((c) => { c.labels.addToCart = '<b>Add</b>'; }), /^labels\.addToCart: plain words, 1\.\.400 characters, no markup/m);
+  assert.match(withStore((c) => { c.labels.added = 'Added to your cart'; }), /^labels\.added: names \{nothing\}; the label names \{name\}/m);
+  assert.match(withStore((c) => { c.labels.cartTitle = 'Bag of {name}'; }), /^labels\.cartTitle: names \{name\}; the label names \{nothing\}/m);
+  assert.match(withStore((c) => { c.store.retailers[0].apiKey = 'k'; }), /a config never carries a credential/);
 });
