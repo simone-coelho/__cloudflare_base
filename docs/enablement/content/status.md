@@ -60,7 +60,7 @@ Engine facts as of commit 8b4f74c, October 2, 2026. Every word follows the [Glos
 
 | What happens | Verdict | Caveat |
 |---|---|---|
-| Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | **Built** | |
+| Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded when its slots use the default served basis; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet. | **Built** | |
 | A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot. | **Built** | The receipt lists the four strongest tag terms; weaker ones sit inside the base score |
 | Outcomes are credited to the decision that earned them, within windows the brand can set; a named partner outcome is never reported as a sale. | **Built** | Named partner outcomes are not yet on a hosted demo |
 | The day report is an attribution diagnostic, with no claim of lift. | **Built** | |
@@ -122,7 +122,7 @@ The whole boundary is on the credits page, [Where Opal and AI credits fit](https
 - Claim only what is Built; name what is Designed; say what is Open.
 - It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons.
 - Learning is built, and it changes nothing until a person raises the learning dial.
-- Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet.
+- Receipts, outcomes and learning counts are recorded only with the visitor's consent. A page that asks the engine directly is recorded when its slots use the default served basis; with the SDK as shipped, a slot is recorded only when it is set to count rendered pieces and durable recovery is on, and no configuration has it on yet.
 - Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open.
 - ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today.
 - For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step.
