@@ -812,15 +812,28 @@ export function serverVars(demo, { publishable, seedVocabulary = demo.region.voc
 
 /** The lines the lead adds to src/index.ts: the import with the others, the two mounts after Vantage's. */
 export function mountLines(demo) {
-  const { camel } = idents(demo.slug);
+  const { camel, constant: C } = idents(demo.slug);
   return {
     import: `import { ${camel}Routes, ${camel}ColdStartRoutes } from '@/routes/${demo.slug}'; // ${demo.name} demo: beats, receipts and the cold-start panel (docs/${demo.slug})`,
     mounts: [
       `app.route('/${demo.slug}/api', ${camel}Routes(async (request, env, ctx) => app.fetch(request, env, ctx)));`,
       `app.route('/${demo.slug}/api/coldstart', ${camel}ColdStartRoutes);`,
     ],
+    // Not src/index.ts's: src/demos/kit/root.ts's DEMO_ROOTS, so the demo's worker answers "/" and an unknown page with
+    // its root (lane K6). Its drift guard (src/demos/kit/root.test.ts) fails until the entry is there.
+    root: {
+      file: 'src/demos/kit/root.ts',
+      import: `import { ${C}_ACTIONS } from '@/demos/${demo.slug}.config';`,
+      entry: `{ tenant: ${C}_ACTIONS.tenant, root: demoRootOf(${C}_ACTIONS.beatsPath) },`,
+    },
   };
 }
+
+/** The DEMO_ROOTS lines as the lead reads them beside the mount lines: where they go, then the import and the entry. */
+export const rootLines = (demo) => {
+  const { root } = mountLines(demo);
+  return [`// ${root.file}: the import beside the other demo configs, the entry in DEMO_ROOTS (lane K6)`, root.import, root.entry];
+};
 
 // ── Collisions with what the repository already holds ──────────────────────
 
@@ -950,11 +963,13 @@ export function planScaffold({ demo, root = REPO_ROOT, nowMs = Date.now(), templ
 
   // The documents.
   const mounts = mountLines(demo);
+  notes.push(`for the lead, with the mount lines: ${mounts.root.file} takes ${mounts.root.import} and, in DEMO_ROOTS, ${mounts.root.entry} (the worker's "/" and unknown pages go to /${slug}/; lane K6)`);
   const beatsTable = demo.beats.list.map((b, i) => `| ${b.no} | ${demo.beats.acts[String(b.act)]} | ${b.press.replace(/\|/g, '\\|')} | ${(b.moves || b.will[0]).replace(/<[^>]+>/g, '').replace(/\|/g, '\\|')} | ${beatFile(i, b.key)} (${b.kind}) | ${b.lane || '—'} |`).join('\n');
   const docVars = {
     SLUG: slug, NAME: demo.name, CUSTOMER: demo.customer ?? '—', DESIGN: demo.design ?? '(none named)', TENANT: demo.tenant, WORKER: demo.worker.name, QUEUE: demo.worker.queue, PORT: String(demo.worker.devPort),
     DATE: iso(nowMs).slice(0, 10), BEATS_TABLE: beatsTable, SECRETS: WORKER_SECRETS.join(', '), OPERATORS: Object.values(operatorsOf(slug)).join(', '),
-    MOUNT_IMPORT: mounts.import, MOUNT_1: mounts.mounts[0], MOUNT_2: mounts.mounts[1], CAMEL: camel, PASCAL: pascal, CONST: C,
+    // The DEMO_ROOTS lines ride in the same block as the mount lines, after them, each file named (lane K6).
+    MOUNT_IMPORT: mounts.import, MOUNT_1: mounts.mounts[0], MOUNT_2: [mounts.mounts[1], '', ...rootLines(demo)].join('\n'), CAMEL: camel, PASCAL: pascal, CONST: C,
     BEATS_COUNT: String(demo.beats.list.length), SLOTS: demoSlots(demo).map((s) => `\`${s.slot}\``).join(', '),
   };
   add(`docs/${slug}/${demo.name}-Demo-Design.md`, fill(T('doc.design.md.tpl'), docVars, 'doc.design.md.tpl'), 'docs');

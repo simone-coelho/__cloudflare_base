@@ -91,6 +91,22 @@ for (const path of ['', 'phone?id=galaxy-s26', 'phone/galaxy-s26', 'vantage.js',
 ok('the home shell is the Vantage page', /<title>Vantage/.test(shells['']) && /data-entry="home"/.test(shells['']));
 ok('the phone shell boots into the phone view', /data-entry="phone"/.test(shells['phone?id=galaxy-s26']));
 {
+  // The worker's root is the demo (lane K6, src/demos/kit/root.ts): "/" answers 302 to /vantage/, never the
+  // repository's legacy dashboard. It holds where the worker provisions vantage alone, as the hosted one does, and
+  // its config routes "/" to the worker first (scripts/build-demo-worker-config.mjs). The documented local rig
+  // provisions six tenants from .dev.vars, so against a loopback --base the result is printed, not asserted.
+  const root = await fetch(`${base}/`, { redirect: 'manual', cache: 'no-store' });
+  const to = root.headers.get('location');
+  const landed = await navigate('/');
+  const home = landed.ok ? await landed.text() : '';
+  const redirects = root.status === 302 && to !== null && new URL(to, `${base}/`).pathname === '/vantage/' && /data-entry="home"/.test(home);
+  const label = 'the worker\'s root "/" redirects to /vantage/, and a browser landing there gets the Vantage page';
+  const detail = `/ → ${root.status}${to ? ` ${to}` : ''}${root.status === 200 ? ' (the root page: this worker provisions more than vantage, or its config does not route "/" to the worker first)' : ''}`;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname)) {
+    info(`${label}: ${redirects ? 'yes' : 'no'} · ${detail} · informational on a local rig, asserted against a hosted worker`);
+  } else ok(label, redirects, detail);
+}
+{
   // The footer's "How it works" link, on both shells, to the explainer (lane C2; R3 follow-up 3d).
   const footerOf = (html) => (/<footer\b[\s\S]*?<\/footer>/i.exec(String(html)) || [''])[0];
   const links = (html) => /<a\b[^>]*\bhref=["']\/vantage\/how-it-works["'][^>]*>\s*How it works\s*<\/a>/.test(footerOf(html));

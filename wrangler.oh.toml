@@ -139,7 +139,8 @@ TREND_ROLLUP_TENANTS = "coach"
 [assets]
 directory = "public"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
+not_found_handling = "none"
+run_worker_first = [ "/" ]
 
 [dev]
 port = 9120

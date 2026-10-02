@@ -37,10 +37,20 @@ test('the Vantage config inherits every var verbatim, on the shipped session hos
     if (key === 'LEDGER_RECOVERY_CONFIG') continue;
     assert.equal(cfg.vars[key], value, key);
   }
-  for (const key of ['kv_namespaces', 'r2_buckets', 'd1_databases', 'durable_objects', 'migrations', 'assets', 'triggers']) {
+  for (const key of ['kv_namespaces', 'r2_buckets', 'd1_databases', 'durable_objects', 'migrations', 'triggers']) {
     assert.deepEqual(cfg[key], base[key], key);
   }
   assert.equal(cfg.dev.port, 9110);
+});
+
+test('the worker answers its own root, and a request no asset matches still reaches it (lane K6)', () => {
+  const { run_worker_first: first, not_found_handling: notFound, ...assets } = cfg.assets;
+  assert.deepEqual(first, ['/'], 'the root alone runs the worker first: every file is still served by the asset layer');
+  assert.equal(notFound, 'none', 'with a run_worker_first list, "single-page-application" would answer every unrouted API GET with index.html');
+  const { not_found_handling: shared, ...inherited } = base.assets;
+  assert.deepEqual(assets, inherited, 'the directory and the binding are inherited');
+  assert.equal(shared, 'single-page-application', 'the source config is not mutated: the shared worker keeps its root page');
+  assert.equal(base.assets.run_worker_first, undefined);
 });
 
 test('--set overrides only the var it names, and never the source config', () => {

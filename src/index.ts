@@ -52,6 +52,7 @@ import { topOffersRoutes } from '@/routes/topOffers'; // Lantern & Lane merchand
 import { vantageRoutes } from '@/routes/vantage'; // Vantage carrier demo: beats and receipts (docs/verizon)
 import { vantageColdStartRoutes } from '@/routes/vantageColdStart'; // Vantage cold-start panel (docs/verizon)
 import { ohRoutes, ohColdStartRoutes } from '@/routes/oh'; // OH demo: beats, receipts and the cold-start panel (docs/oh)
+import { demoRootResponse } from '@/demos/kit/root'; // a demo worker's "/" is its demo (docs/demo-kit, K6)
 
 import { routeAgentRequest } from 'agents';
 
@@ -251,6 +252,7 @@ export default {
       const agentResponse = await routeAgentRequest(request, env);
       if (agentResponse) return agentResponse;
     }
+    const demoRoot = demoRootResponse(request, env, app.routes); if (demoRoot) return demoRoot;
     return app.fetch(request, env, ctx);
   },
   scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {

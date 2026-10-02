@@ -38,6 +38,19 @@
 //   env.*                   staging/production stamps belong to the customer
 //                           workflow, never to a demo worker
 //   --set vars              only what the caller names
+//   assets                  run_worker_first ["/"] and not_found_handling
+//                           "none" (lane K6). The worker answers its own root
+//                           (src/demos/kit/root.ts: a 302 to the one demo it
+//                           provisions), where the asset layer would serve
+//                           public/index.html, the repository's legacy
+//                           dashboard. Both settings are needed: once
+//                           run_worker_first is a list, the asset layer applies
+//                           not_found_handling to every request it routes
+//                           itself, so "single-page-application" would answer
+//                           every API GET (/vantage/api/coldstart, /v1/...) with
+//                           index.html. With "none", a request no asset matches
+//                           reaches the worker as it does today, and an unknown
+//                           page is the worker's 404, never the dashboard.
 //
 // Everything else is inherited verbatim: KV, R2 and D1 are shared as Top Offers
 // shares them; Durable Object classes are per worker, so this worker's visitor
@@ -117,6 +130,7 @@ export function buildConfig(base, { name, queue, set = [], devPort = 0 }) {
   }
   for (const [key, value] of set) cfg.vars[key] = value;
   if (devPort) cfg.dev = { ...(cfg.dev ?? {}), port: devPort };
+  cfg.assets = { ...(cfg.assets ?? {}), run_worker_first: ['/'], not_found_handling: 'none' };
   return { cfg, dlq };
 }
 
