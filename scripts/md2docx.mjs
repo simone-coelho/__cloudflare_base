@@ -17,8 +17,10 @@
 // ~/.md2docx. If none resolves, the script says exactly that and exits 2.
 //
 // ── What this produces ───────────────────────────────────────────────────────
-// US Letter, 1in margins, Calibri body, a title page, a contents field that
-// updates itself when Word opens the file, a running header and a page footer.
+// US Letter, 1in margins, Calibri body, a title page, a Word table of contents
+// over the # and ## headings (pre-filled, each entry linked to its section,
+// page numbers filled in by Word when it opens the file), a running header
+// and a page footer.
 // Supports: # to ##### headings, paragraphs, - and 1. lists (2-space nesting),
 // | tables |, ``` fenced code, > callouts, --- rules, **bold**, *italic*,
 // `code`, [text](url).
@@ -40,7 +42,17 @@
 //    is open. Write a new version rather than fighting the lock.
 // 7. Do not automate Word itself on the owner's machine. New-Object
 //    Word.Application attaches to their RUNNING instance and Quit() would close
-//    their open documents. The contents field self-updates, so there is no need.
+//    their open documents.
+// 8. A bare Word contents FIELD stays empty until fields are updated, so a
+//    reader saw no index; plain linked text instead was not a real contents and
+//    did not behave like one. The contents is a real TOC field that carries a
+//    pre-filled, linked entry per heading (so every viewer shows it), marked
+//    dirty with updateFields on, so Word offers to fill in the page numbers
+//    when the file opens. In Word, Ctrl+Click follows an entry.
+// 9. Every numbered list restarts at 1 (its own numbering instance), and the
+//    hanging indent is wide enough for "99." in bold. With one shared instance
+//    a later list began at 11; with a 260-twip hang the two-digit number pushed
+//    the first line to the next tab stop, so wrapped lines sat left of the text.
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
@@ -54,7 +66,7 @@ function loadDocx() {
   process.exit(2);
 }
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle,
-  Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, TableOfContents,
+  Table, TableRow, TableCell, WidthType, ShadingType, PageBreak, Bookmark, TableOfContents,
   Header, Footer, PageNumber, ExternalHyperlink, LevelFormat, convertInchesToTwip, TabStopType, PageOrientation } = loadDocx();
 
 const [, , IN, OUT, TITLE = 'Untitled', SUBTITLE = '', FOR = '', VERSION = '', DATED = '', CLASS = 'Confidential', ORIENT = ''] = process.argv;
@@ -90,12 +102,24 @@ function runs(text, opts = {}) {
   return out.length ? out : [new TextRun({ text: '', font: BODY, size: 21 })];
 }
 
-const heading = (lvl, txt) => new Paragraph({
-  heading: [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5][lvl],
-  pageBreakBefore: lvl === 1,
-  spacing: { before: lvl === 1 ? 0 : lvl === 2 ? 320 : 240, after: lvl <= 2 ? 160 : 100 },
-  border: lvl === 1 ? { bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE, space: 6 } } : undefined,
-  children: [new TextRun({ text: strip(txt), font: BODY, size: { 1: 30, 2: 25, 3: 22, 4: 21, 5: 20 }[lvl], bold: true, color: lvl === 2 ? BLUE : NAVY })],
+const toc = [];   // rule 8: { lvl, text, id } for every # and ## heading, in order
+const heading = (lvl, txt) => {
+  const run = new TextRun({ text: strip(txt), font: BODY, size: { 1: 30, 2: 25, 3: 22, 4: 21, 5: 20 }[lvl], bold: true, color: lvl === 2 ? BLUE : NAVY });
+  const id = lvl <= 2 ? `sec${toc.length + 1}` : null;
+  if (id) toc.push({ lvl, text: strip(txt), id });
+  return new Paragraph({
+    heading: [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5][lvl],
+    pageBreakBefore: lvl === 1,
+    spacing: { before: lvl === 1 ? 0 : lvl === 2 ? 320 : 240, after: lvl <= 2 ? 160 : 100 },
+    border: lvl === 1 ? { bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE, space: 6 } } : undefined,
+    children: id ? [new Bookmark({ id, children: [run] })] : [run],
+  });
+};
+
+// Rule 8: a real TOC field, pre-filled with one linked entry per # and ## heading.
+const contents = () => new TableOfContents('Contents', {
+  hyperlink: true, headingStyleRange: '1-2', beginDirty: true,
+  cachedEntries: toc.map(({ lvl, text, id }) => ({ title: text, level: lvl, href: id })),
 });
 
 const oneCell = (kids, fill, leftBar) => new Table({
@@ -152,7 +176,7 @@ function table(rows) {
 
 // ── parse ────────────────────────────────────────────────────────────────────
 const lines = md.split('\n'), kids = [];
-let i = 0, wide = [];
+let i = 0, wide = [], numberedLists = 0;
 while (i < lines.length) {
   const l = lines[i];
   if (/^```/.test(l)) {
@@ -169,7 +193,8 @@ while (i < lines.length) {
     kids.push(new Paragraph({ text: '', spacing: { after: 60 } })); continue;
   }
   if (/^(\s*)\d+\.\s+/.test(l)) {
-    while (i < lines.length && /^(\s*)\d+\.\s+/.test(lines[i])) { const m = /^(\s*)\d+\.\s+(.*)$/.exec(lines[i]); kids.push(new Paragraph({ children: runs(m[2]), numbering: { reference: 'numbers', level: Math.min(2, Math.floor(m[1].length / 3)) }, spacing: { after: 60, line: 264 } })); i++; }
+    const instance = ++numberedLists;   // rule 9: every list restarts at 1
+    while (i < lines.length && /^(\s*)\d+\.\s+/.test(lines[i])) { const m = /^(\s*)\d+\.\s+(.*)$/.exec(lines[i]); kids.push(new Paragraph({ children: runs(m[2]), numbering: { reference: 'numbers', level: Math.min(2, Math.floor(m[1].length / 3)), instance }, spacing: { after: 60, line: 264 } })); i++; }
     kids.push(new Paragraph({ text: '', spacing: { after: 60 } })); continue;
   }
   if (!l.trim()) { i++; continue; }
@@ -197,17 +222,26 @@ const front = [
   }),
   new Paragraph({ children: [new PageBreak()] }),
   new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: 'Contents', font: BODY, size: 30, bold: true, color: NAVY })] }),
-  new TableOfContents('Contents', { hyperlink: true, headingStyleRange: '1-3' }),   // self-updates on open
+  contents(),   // rule 8: pre-filled and linked; Word fills in the page numbers
   new Paragraph({ children: [new PageBreak()] }),
 ];
 
 const doc = new Document({
   creator: 'Optimizely', title: TITLE, description: SUBTITLE,
+  features: { updateFields: true },   // rule 8: Word fills in the contents' page numbers on open
   numbering: { config: [
     { reference: 'bullets', levels: [0, 1, 2].map((l) => ({ level: l, format: LevelFormat.BULLET, text: l === 0 ? '▪' : l === 1 ? '–' : '·', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360 + l * 360, hanging: 240 } }, run: { color: l ? GREY : BLUE } } })) },
-    { reference: 'numbers', levels: [0, 1, 2].map((l) => ({ level: l, format: l === 1 ? LevelFormat.LOWER_LETTER : LevelFormat.DECIMAL, text: `%${l + 1}.`, alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360 + l * 360, hanging: 260 } }, run: { bold: l === 0, color: NAVY } } })) },
+    // Rule 9: the number starts where a bullet does (120) and the hang fits "99." in bold.
+    { reference: 'numbers', levels: [0, 1, 2].map((l) => ({ level: l, format: l === 1 ? LevelFormat.LOWER_LETTER : LevelFormat.DECIMAL, text: `%${l + 1}.`, alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 520 + l * 360, hanging: 400 } }, run: { bold: l === 0, color: NAVY } } })) },
   ] },
-  styles: { default: { document: { run: { font: BODY, size: 21, color: '1A1A1A' }, paragraph: { spacing: { line: 276, after: 120 } } } } },
+  styles: {
+    default: { document: { run: { font: BODY, size: 21, color: '1A1A1A' }, paragraph: { spacing: { line: 276, after: 120 } } } },
+    // Rule 8: Word's own contents styles, so the entries look the same before and after Word updates them.
+    paragraphStyles: [
+      { id: 'TOC1', name: 'toc 1', basedOn: 'Normal', next: 'Normal', run: { font: BODY, size: 22, bold: true, color: NAVY }, paragraph: { spacing: { before: 140, after: 40 } } },
+      { id: 'TOC2', name: 'toc 2', basedOn: 'Normal', next: 'Normal', run: { font: BODY, size: 20, color: '1A1A1A' }, paragraph: { indent: { left: 360 }, spacing: { before: 0, after: 30 } } },
+    ],
+  },
   sections: [{
     properties: { page: { size: { width: 12240, height: 15840, orientation: LANDSCAPE ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT }, margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1), right: convertInchesToTwip(1) } }, titlePage: true },
     children: front.concat(kids),
