@@ -66,160 +66,54 @@
 // launched headless with a fresh profile of its own under the OS temp directory
 // (never shared with another run) and closed through the DevTools protocol at the
 // end. Run it from Windows on this machine (Node 22 or later, Chrome or Edge).
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+// The harness (lane K3, part c). Chrome over DevTools, computed visibility, the
+// wire audit, --shots, the press timer and the capture timings are the demo kit's
+// (scripts/demo-kit/lib/cdp.mjs), and so is the checks' vocabulary, the "!" lines
+// included (lib/rehearse.mjs); this file holds what is Vantage's: its page's DOM
+// hooks, its 22 presses and what each must show. The kit runs it as
+// node scripts/demo-kit/rehearse.mjs --config vantage --suite dom --base <url>.
+import { apiPaths, auditWire, captureTimingLines, checkDemoRouteBodies, checkScriptErrors, findChrome, header, inPage, launchChrome, parseSize,
+  pressTimer, recordWire, screenshotter, tallyWire } from './demo-kit/lib/cdp.mjs';
+import { createChecks, flagReader, sleep } from './demo-kit/lib/rehearse.mjs';
 
-const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+const arg = flagReader();
 const base = arg('--base', 'http://localhost:9110').replace(/\/+$/, '');
 const WAIT = Number(arg('--wait', '45'));
-const [WIDTH, HEIGHT] = arg('--size', '1440x900').split('x').map(Number);
+const [WIDTH, HEIGHT] = parseSize(arg('--size', '1440x900'));
 const SHOTS = arg('--shots', null);
 const SETTLE_MS = 1500;               // the longest entrance animation is 1.2 s; the meters' fill eases over 0.4 s
 const THETA_IN = 0.6, THETA_OUT = 0.45;
 
-let failures = 0, passes = 0;
-const defects = [];
-const ok = (label, condition, detail = '') => {
-  if (condition) { passes += 1; console.log(`   ✓ ${label}${detail ? `  (${detail})` : ''}`); }
-  else { failures += 1; console.log(`   ✗ ${label}${detail ? ` — ${detail}` : ''}`); }
-  return Boolean(condition);
-};
 /**
  * A defect in another lane's file, recorded in docs/verizon/lanes/L5.md with its
  * fix, that this suite cannot repair. It prints on every run and is named on the
  * last line; it turns into an ordinary pass the day the fix lands. --strict fails on it.
  */
 const STRICT = process.argv.includes('--strict');
-const known = (label, condition, detail, owner) => {
-  if (condition) return ok(label, true, detail);
-  if (STRICT) return ok(label, false, detail);
-  defects.push(`${label} (${owner})`);
-  console.log(`   ! ${label} — ${detail}\n     known page defect, recorded for ${owner} in docs/verizon/lanes/L5.md`);
-  return false;
-};
-const info = (line) => console.log(`        ${line}`);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const checks = createChecks({ infoIndent: 8, strict: STRICT, defectsDoc: 'docs/verizon/lanes/L5.md' });
+const { ok, known, info } = checks;
 const has = (text, needle) => String(text || '').toLowerCase().includes(String(needle).toLowerCase());
 
 // ── The browser ───────────────────────────────────────────────────────────────
-const CHROMES = [arg('--chrome'), process.env.CHROME_PATH,
-  'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].filter(Boolean);
-const CHROME = CHROMES.find((p) => existsSync(p));
+const CHROME = findChrome([arg('--chrome'), process.env.CHROME_PATH]);
 if (!CHROME) { console.log('✗ no Chrome or Edge found; pass --chrome "<path>"'); process.exit(1); }
 if (typeof WebSocket === 'undefined') { console.log('✗ this suite needs Node 22 or later (a global WebSocket)'); process.exit(1); }
 
 // A browser profile of its own for every run: two runs sharing one profile collide at launch (R1, 2026-09-30).
-// Each run leaves one small directory under the OS temp directory; nothing here deletes anything.
-const profile = mkdtempSync(join(tmpdir(), 'vantage-rehearsal-chrome-'));
-const launchedAt = Date.now();
-const chrome = spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run',
-  '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--force-device-scale-factor=1', `--window-size=${WIDTH},${HEIGHT}`,
-  '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', 'about:blank'], { stdio: 'ignore' });
-let chromeExited = false;
-chrome.on('exit', () => { chromeExited = true; });
-
-async function devtoolsPort() {
-  const file = join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 120; i += 1) {
-    try { if (statSync(file).mtimeMs >= launchedAt - 2000) { const port = Number(readFileSync(file, 'utf8').split('\n')[0]); if (port) return port; } } catch { /* not yet */ }
-    if (chromeExited) break;
-    await sleep(250);
-  }
-  throw new Error(`${CHROME} did not open a DevTools port`);
-}
-
-let ws = null, nextId = 0;
-const pending = new Map();
-const listeners = new Map();
-const on = (method, fn) => listeners.set(method, [...(listeners.get(method) || []), fn]);
-function cdp(method, params = {}) {
-  const id = ++nextId;
-  ws.send(JSON.stringify({ id, method, params }));
-  return new Promise((resolve, reject) => pending.set(id, { resolve, reject, method }));
-}
-async function connect(port) {
-  let target = null;
-  for (let i = 0; i < 40 && !target; i += 1) {
-    try { target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((t) => t.type === 'page'); } catch { /* not yet */ }
-    if (!target) await sleep(250);
-  }
-  if (!target) throw new Error('no page target in the browser');
-  ws = new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error('the DevTools socket did not open')); });
-  ws.onmessage = (m) => {
-    const msg = JSON.parse(m.data);
-    if (msg.id && pending.has(msg.id)) {
-      const p = pending.get(msg.id); pending.delete(msg.id);
-      if (msg.error) p.reject(new Error(`${p.method}: ${msg.error.message}`)); else p.resolve(msg.result);
-    } else if (msg.method) for (const fn of listeners.get(msg.method) || []) fn(msg.params);
-  };
-}
-async function evaluate(expression) {
-  const r = await cdp('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) throw new Error(`in the page: ${(r.exceptionDetails.exception && r.exceptionDetails.exception.description) || r.exceptionDetails.text}`.slice(0, 400));
-  return r.result.value;
-}
-async function waitFor(expression, ms) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) { if (await evaluate(expression)) return true; await sleep(250); }
-  return false;
-}
-async function closeBrowser(port) {
-  try {
-    const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
-    const b = new WebSocket(version.webSocketDebuggerUrl);
-    await new Promise((resolve, reject) => { b.onopen = resolve; b.onerror = reject; });
-    b.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
-    for (let i = 0; i < 40 && !chromeExited; i += 1) await sleep(250);
-  } catch { /* the browser may already be gone */ }
-  if (!chromeExited) console.log(`   · the browser (pid ${chrome.pid}) did not close on request`);
-}
+const browser = launchChrome({ chrome: CHROME, width: WIDTH, height: HEIGHT, profilePrefix: 'vantage-rehearsal-chrome-' });
+const { cdp, evaluate, waitFor } = browser;
 
 // ── The wire: every request the page makes, by press ─────────────────────────
-const requests = new Map();
-const consoleErrors = [];
 let press = -1;
-const API = (url) => { try { const p = new URL(url).pathname; return /^\/(v1|realtime|sort|vantage\/api|content|config|ops)\b/.test(p) ? p : null; } catch { return null; } };
-on('Network.requestWillBeSent', (e) => {
-  const path = API(e.request.url);
-  if (!path) return;
-  // The body is kept for the demo's own merchandiser routes only (a beat by name, the reset): what the page sends there is checked.
-  const body = /^\/vantage\/api\/(beat|reset)$/.test(path) ? (e.request.postData ?? null) : undefined;
-  requests.set(e.requestId, { press, path, url: e.request.url, method: e.request.method, headers: e.request.headers || {}, status: null, failed: null, body, at: Date.now() });
-});
-on('Network.responseReceived', (e) => { const r = requests.get(e.requestId); if (r) r.status = e.response.status; });
-on('Network.loadingFailed', (e) => { const r = requests.get(e.requestId); if (r && !e.canceled) r.failed = e.errorText; });
-on('Runtime.exceptionThrown', (e) => consoleErrors.push(((e.exceptionDetails.exception || {}).description || e.exceptionDetails.text || '').slice(0, 300)));
-const header = (r, name) => Object.entries(r.headers).find(([k]) => k.toLowerCase() === name.toLowerCase())?.[1];
-const refusedIn = (i) => [...requests.values()].filter((r) => r.press === i && (r.failed || (r.status !== null && r.status >= 400)))
-  .map((r) => `${r.method} ${r.path} → ${r.failed || r.status}`);
+// The body is kept for the demo's own merchandiser routes only (a beat by name, the reset): what the page sends there is checked.
+const wire = recordWire(browser, { api: apiPaths('/vantage/api'), keepBody: /^\/vantage\/api\/(beat|reset)$/, pressNow: () => press });
+const { requests, refusedIn } = wire;
 
 // ── What a person sees: computed style up the chain, and a real box ──────────
-// Runs inside the page. Locators use the DOM hooks lane L2 documented; every
-// assertion is on rendered text, computed visibility or layout.
-function pageHelpers() {
-  const name = (n) => (n.id ? `#${n.id}` : `${n.tagName.toLowerCase()}${n.classList.length ? `.${n.classList[0]}` : ''}`);
-  const vis = (el) => {
-    if (typeof el === 'string') el = document.querySelector(el);
-    if (!el) return { ok: false, why: 'not in the page' };
-    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
-      const cs = getComputedStyle(n);
-      if (cs.display === 'none') return { ok: false, why: `display: none on ${name(n)}` };
-      if (cs.visibility === 'hidden' || cs.visibility === 'collapse') return { ok: false, why: `visibility: ${cs.visibility} on ${name(n)}` };
-      if (Number(cs.opacity) === 0) return { ok: false, why: `opacity: 0 on ${name(n)}` };
-    }
-    const r = el.getBoundingClientRect();
-    if (r.width < 1 || r.height < 1) return { ok: false, why: `no box (${Math.round(r.width)}×${Math.round(r.height)})` };
-    return { ok: true, w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top + scrollY), inView: r.bottom > 0 && r.top < innerHeight };
-  };
-  const txt = (el) => { if (typeof el === 'string') el = document.querySelector(el); return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''; };
-  const own = (el) => (el ? [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, ' ').trim() : '');
-  const shown = (sel, root) => [...(root || document).querySelectorAll(sel)].filter((e) => vis(e).ok);
+// Runs inside the page, handed the kit's readers (vis: computed visibility up the
+// whole ancestor chain and a real layout box). Locators use the DOM hooks lane L2
+// documented; every assertion is on rendered text, computed visibility or layout.
+function pageHelpers({ vis, txt, own, shown }) {
   const view = () => ['viewHome', 'viewPhones', 'viewPhone', 'viewPage'].find((id) => vis(`#${id}`).ok) || null;
   const meters = () => shown('#vectors .vecrow').map((row) => {
     const track = row.querySelector('.track'), fill = row.querySelector('.fill'), tick = row.querySelector('.thresh');
@@ -551,14 +445,7 @@ const RACE_PRESS = `(() => {
 const FOOTER_LINK = `(() => { const a = [...document.querySelectorAll('footer a')].find((x) => x.textContent.trim() === 'How it works');
   const v = a ? window.__l5.vis(a) : { ok: false, why: 'no such link' }; return { ok: v.ok, why: v.why || '', path: a ? new URL(a.href).pathname : null }; })()`;
 /** --shots <dir>: the view on screen, as a PNG. */
-async function shoot(name) {
-  if (!SHOTS) return;
-  mkdirSync(SHOTS, { recursive: true });
-  const r = await cdp('Page.captureScreenshot', { format: 'png' });
-  const file = join(SHOTS, `C1-${WIDTH}-${name}.png`);
-  writeFileSync(file, Buffer.from(r.data, 'base64'));
-  info(`screenshot ${file}`);
-}
+const shoot = screenshotter({ browser, dir: SHOTS, prefix: 'C1', width: WIDTH, info });
 async function closeCompare() {
   await evaluate("document.getElementById('cmp-close').click()");
   await sleep(300);
@@ -600,12 +487,10 @@ const firstPaintCaptures = [];
 const phonesDoc = await (await fetch(`${base}/vantage/phones.json`)).json();
 const phoneName = (id) => ((phonesDoc.phones || []).find((p) => p.id === id) || {}).name || id;
 
-const port = await devtoolsPort();
+const port = await browser.port();
 try {
-  await connect(port);
-  await cdp('Page.enable'); await cdp('Runtime.enable'); await cdp('Network.enable');
-  await cdp('Network.setCacheDisabled', { cacheDisabled: true });
-  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+  await browser.connect(port);
+  await browser.prepare();
   const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname);
   const OVERRIDE = (anchor.regions && anchor.regions.first) || 'US-NY';
   const booted = () => waitFor("/^ready|error|missing|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
@@ -618,7 +503,7 @@ try {
     press = 'edge';
     await cdp('Page.navigate', { url: plain });
     const up = await booted();
-    await evaluate(`(${pageHelpers.toString()})()`);
+    await evaluate(inPage(pageHelpers));
     const landed = up ? await evaluate("(async () => { const run = window.__vantage.go(0); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()") : 'the page did not boot';
     await sleep(SETTLE_MS);
     const S = await evaluate('window.__l5.snapshot()');
@@ -646,7 +531,7 @@ try {
     await cdp('Page.navigate', { url: direct });
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier });
     await booted();
-    await evaluate(`(${pageHelpers.toString()})()`);
+    await evaluate(inPage(pageHelpers));
     const up = await waitFor("window.__l5.vis('#cmp-back').ok", 15000);
     const F = await evaluate('({ pressed: window.__c1press || null, compare: window.__l5.snapshot().compare })');
     ok('Compare pressed during the first paint opens the overlay on the message, not nothing', up && F.pressed && F.pressed.decided === 0 && F.compare.msg === NO_FRAME,
@@ -677,7 +562,7 @@ try {
     await cdp('Page.navigate', { url: direct });
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier });
     await booted();
-    await evaluate(`(${pageHelpers.toString()})()`);
+    await evaluate(inPage(pageHelpers));
     const pressed = await waitFor('Boolean(window.__c2race)', 20000);
     await waitFor(`${toolDone} || (/^No earlier frame yet/.test(window.__l5.snapshot().compare.msg) && /done/.test(document.getElementById('status').textContent))`, 30000);
     await sleep(400);
@@ -696,7 +581,7 @@ try {
 
   console.log('\n── The page loads, and asks for no credential');
   const ready = await booted();
-  await evaluate(`(${pageHelpers.toString()})()`);
+  await evaluate(inPage(pageHelpers));
   const boot = await evaluate('window.__l5.snapshot()');
   ok('the page loaded its content and the engine documents', ready && /^ready/.test(boot.status), boot.status.slice(0, 160));
   ok('the director hook is exposed under ?debug=1', await evaluate('typeof (window.__vantage || {}).go === "function"'));
@@ -723,9 +608,9 @@ try {
   for (let i = 0; i < NO.length; i += 1) {
     press = i;
     console.log(`\n── ${NO[i]} · ${await evaluate(`(() => { const b = window.__vantage.beats()[${i}]; return typeof b.label === 'function' ? b.label() : b.label; })()`)}`);
-    const t0 = Date.now();
+    const timer = pressTimer(), { t0 } = timer;
     const landed = await evaluate(`(async () => { const run = window.__vantage.go(${i}); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()`);
-    const beatMs = Date.now() - t0;   // the press itself, from go() to its landing (the line's first figure adds the settle and the waits)
+    timer.land();   // the press itself, from go() to its landing (the line's first figure adds the settle and the waits)
     await sleep(SETTLE_MS);
     let S = await evaluate('window.__l5.snapshot()');
     if (i === 0) {
@@ -742,7 +627,7 @@ try {
       S = await evaluate('window.__l5.snapshot()');
     }
     snaps[i] = S;
-    info(`${((Date.now() - t0) / 1000).toFixed(1)} s (the press ${(beatMs / 1000).toFixed(1)} s) · ${S.view} · ${S.view === 'viewPhone' ? `modules ${moduleTitles(S).join(' | ')} · plans ${S.plans.map((p) => p.name).join(' | ')}`
+    info(`${timer.line()} · ${S.view} · ${S.view === 'viewPhone' ? `modules ${moduleTitles(S).join(' | ')} · plans ${S.plans.map((p) => p.name).join(' | ')}`
       : S.view === 'viewHome' ? `hero “${S.hero.title || S.hero.label}” · deals ${titles(S).join(' | ')}` : `meters ${S.meters.slice(0, 4).map((m) => `${m.value} ${m.a.toFixed(2)}`).join(' · ')}`}`);
     ok(`↳ ${NO[i]}: the press landed`, landed === 'done', landed);
     // Every performed beat starts with a Before (lane C1), cloned as the press lands, before the beat acts;
@@ -981,48 +866,21 @@ try {
   {
     // From the press to the clone is what a beat waits for; from the press to the frame is when Compare can show it.
     const caps = [...firstPaintCaptures, ...(await evaluate('window.__vantage.compare().then((k) => k.timings())'))].filter((x) => x.kind === 'baseline');
-    const median = (a) => { const s = [...a].sort((p, q) => p - q); return s.length ? s[Math.floor(s.length / 2)] : null; };
     const phones = (phonesDoc.phones || []).map((p) => `${p.name} page · `);
     const onHome = (x) => /^homepage · /.test(x.label), onPhone = (x) => phones.some((p) => x.label.startsWith(p));
     const groups = [['the homepage', onHome], ['a phone page', onPhone], ['the phones grid and content pages', (x) => !onHome(x) && !onPhone(x)]];
-    for (const [name, test] of groups) {
-      const list = caps.filter(test);
-      if (!list.length) continue;
-      const work = list.map((x) => x.render + x.encode);
-      info(`${name}: ${list.length} Before frame(s), ${list[0].w}×${median(list.map((x) => x.h))} px · cloned a median ${median(list.map((x) => x.wait))} ms after it started (max ${Math.max(...list.map((x) => x.wait))}), all a press waits for`
-        + ` · then rendered and encoded in a median ${median(work)} ms (max ${Math.max(...work)}; render ${median(list.map((x) => x.render))}, encode ${median(list.map((x) => x.encode))}),`
-        + ` ${list.filter((x) => x.held > 0).length} of them after their beat landed`);
-    }
+    for (const line of captureTimingLines(caps, groups)) info(line);
   }
 
   console.log('\n── The wire, for the whole walk');
-  const all = [...requests.values()];
-  const api = all.filter((r) => !/^\/(content|config|ops)\//.test(r.path));
-  const noTenant = api.filter((r) => header(r, 'X-Tenant') !== 'vantage');
-  ok(`every API call the page made carried X-Tenant: vantage (${api.length} calls)`, noTenant.length === 0, noTenant.slice(0, 4).map((r) => `${r.method} ${r.path}`).join(' ~ '));
-  ok('the page made no /content, /config or /ops call of its own', all.every((r) => !/^\/(content|config|ops)\//.test(r.path)),
-    all.filter((r) => /^\/(content|config|ops)\//.test(r.path)).map((r) => r.path).join(' ~ '));
-  ok('no request carried an Authorization header', all.every((r) => !header(r, 'Authorization')));
-  {
-    // What the page sends to its merchandiser routes (lane C2; R3 follow-up 3a): a beat goes by name, so its body is
-    // a kind, a name and a note, and nothing else; a reset sends nothing. No document crosses from the page.
-    const parse = (b) => { try { return b == null ? null : JSON.parse(b); } catch { return null; } };
-    const beatsSent = all.filter((r) => r.path === '/vantage/api/beat'), resets = all.filter((r) => r.path === '/vantage/api/reset');
-    const badBeat = beatsSent.filter((r) => { const b = parse(r.body); return !b || typeof b !== 'object' || Array.isArray(b) || Object.keys(b).some((k) => !['kind', 'name', 'note'].includes(k))
-      || !['catalog', 'slots'].includes(b.kind) || typeof b.name !== 'string' || !b.name || (b.note !== undefined && typeof b.note !== 'string'); });
-    const badReset = resets.filter((r) => { const b = parse(r.body); return !b || typeof b !== 'object' || Object.keys(b).length > 0; });
-    ok(`every beat the page applied sent only its kind, its name and a note, and every reset nothing: no document crosses from the page (${beatsSent.length} beat(s), ${resets.length} reset(s))`,
-      beatsSent.length > 0 && badBeat.length === 0 && badReset.length === 0,
-      [...badBeat, ...badReset].map((r) => `${r.path} ${r.body == null ? '(no body readable on the wire)' : `keys ${Object.keys(parse(r.body) || {}).join(',') || 'none'} · ${String(r.body).length} bytes`}`).join(' ~ ').slice(0, 220)
-        || beatsSent.map((r) => (parse(r.body) || {}).name).join(', '));
-  }
-  const byPath = {};
-  for (const r of api) { const k = r.path.replace(/\/v1\/vantage\/decisions\/snapshot.*/, '/v1/vantage/decisions/snapshot'); byPath[k] = (byPath[k] || 0) + 1; }
-  info(Object.entries(byPath).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ×${n}`).join(' · '));
-  ok('no script error in the page', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' ~ '));
+  const { api } = auditWire(checks, wire, { tenant: 'vantage' });
+  // What the page sends to its merchandiser routes (lane C2; R3 follow-up 3a): a beat goes by name, so its body is
+  // a kind, a name and a note, and nothing else; a reset sends nothing. No document crosses from the page.
+  checkDemoRouteBodies(checks, wire, { api: '/vantage/api' });
+  info(tallyWire(api, { tenant: 'vantage' }));
+  checkScriptErrors(checks, wire);
 } catch (error) {
-  failures += 1;
-  console.log(`   ✗ the walk threw at press ${press + 1}: ${error.message}`);
+  checks.fail(`the walk threw at press ${press + 1}: ${error.message}`);
 } finally {
   console.log('\n── The tenant is left at its opening state');
   try {
@@ -1030,10 +888,8 @@ try {
     const out = await res.json().catch(() => ({}));
     ok('POST /vantage/api/reset republishes the opening slots, then the opening catalog', out.ok === true && (out.applied || []).map((x) => x.name).join(',') === 'open-slots,open-catalog');
   } catch (error) { ok('POST /vantage/api/reset', false, error.message); }
-  try { ws && ws.close(); } catch { /* closing */ }
-  await closeBrowser(port);
+  await browser.close(port);
 }
 
-const tail = defects.length ? ` · ${defects.length} known page defect${defects.length === 1 ? '' : 's'} printed above (${defects.map((d) => d.replace(/^↳ /, '')).join('; ')})` : '';
-console.log(`\n${failures ? `✗ ${failures} of ${failures + passes} check(s) failed: do not hand this over${tail}` : `✓ ${passes} checks: the real page runs every press, and every effect has a visible cause${tail}`}`);
-process.exit(failures ? 1 : 0);
+checks.summary({ failed: 'do not hand this over', passed: 'the real page runs every press, and every effect has a visible cause' });
+process.exit(checks.exitCode());

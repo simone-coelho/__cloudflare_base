@@ -54,8 +54,8 @@
   "imagery": "scripts/demo-kit/configs/vantage/imagery.json",
   "check": {
     "suites": [
-      { "name": "request level", "script": "scripts/rehearse-vantage-page.mjs" },
-      { "name": "DOM", "script": "scripts/rehearse-vantage-dom.mjs" }
+      { "name": "request level", "kind": "page", "script": "scripts/rehearse-vantage-page.mjs" },
+      { "name": "DOM", "kind": "dom", "script": "scripts/rehearse-vantage-dom.mjs" }
     ]
   }
 }

@@ -42,63 +42,33 @@
 // two shells link. A beat request's body is checked to be its kind, name and
 // note alone; the "How it works" footer link is checked on both shells; and the
 // demo kit is checked to hold no Vantage literal outside tokens.css.
+//
+// The harness (lane K3, part c). The requests and the checks' vocabulary are the
+// demo kit's (scripts/demo-kit/lib/rehearse.mjs), and so are the token shapes and
+// the walk over the committed files (lib/credentials.mjs); this file holds what is
+// Vantage's: its page, its beats and what each must do. The kit runs it as
+// node scripts/demo-kit/rehearse.mjs --config vantage --suite page --base <url>.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import http from 'node:http';
-import https from 'node:https';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TEXT_FILE as TEXT, tokenFindings as tokenIn, walkFiles as walk } from './demo-kit/lib/credentials.mjs';
+import { codeOnly, createChecks, createClient, flagReader, ids, sleep } from './demo-kit/lib/rehearse.mjs';
 
-const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+const arg = flagReader();
 const base = arg('--base', 'http://localhost:9110').replace(/\/+$/, '');
 const EXIT_WAIT = Number(arg('--exit-wait', '50'));
 const TENANT = 'vantage', SOURCE = 'vantage-demo';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const THETA_IN = 0.6, THETA_OUT = 0.45;
 
-let failures = 0, passes = 0;
-const ok = (label, condition, detail = '') => {
-  if (condition) { passes += 1; console.log(`   ✓ ${label}${detail ? `  (${detail})` : ''}`); }
-  else { failures += 1; console.log(`   ✗ ${label}${detail ? ` — ${detail}` : ''}`); }
-  return Boolean(condition);
-};
-const info = (line) => console.log(`      ${line}`);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const checks = createChecks({ infoIndent: 6 });
+const { ok, info } = checks;
 const short = (id) => String(id || '').replace(/^promo-|^plan-|^hero-/, '');
 const fmt = (list) => (list || []).map((d) => `${short(d.customerContentId)}${d.strategy === 'tenant-pinned' ? '(pin)' : ''} ${Number(d.score || 0).toFixed(3)}`).join(' · ');
-const ids = (list) => (list || []).map((d) => d.customerContentId);
 
 // ── What the browser can reach ────────────────────────────────────────────────
-const asset = (path) => fetch(`${base}/vantage/${path}`, { cache: 'no-store' });
-/**
- * A page as a browser navigates to it: the assets layer answers a navigation differently from a plain
- * fetch. Node's fetch drops Sec-Fetch-* (forbidden request headers), so this goes through node:http.
- */
-function navigate(path, hops = 0) {
-  const url = new URL(path.startsWith('/') ? `${base}${path}` : `${base}/vantage/${path}`);
-  const lib = url.protocol === 'https:' ? https : http;
-  return new Promise((resolve, reject) => {
-    const req = lib.request(url, { method: 'GET', headers: { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Site': 'none', Accept: 'text/html,application/xhtml+xml', 'Cache-Control': 'no-store' } }, (res) => {
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => { body += chunk; });
-      res.on('end', () => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hops < 3) {
-          resolve(navigate(new URL(res.headers.location, url).pathname + new URL(res.headers.location, url).search, hops + 1));
-          return;
-        }
-        resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, text: async () => body });
-      });
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
-const assetJson = async (path) => {
-  const res = await asset(path);
-  if (!res.ok) throw new Error(`/vantage/${path} answered ${res.status}`);
-  return res.json();
-};
+const client = createClient({ base, tenant: TENANT, source: SOURCE, assets: '/vantage/', api: '/vantage/api' });
+const { asset, assetJson, navigate } = client;
 
 console.log(`\nVantage page rehearsal against ${base}`);
 
@@ -135,7 +105,8 @@ const BEAT_FILES = ['anchor', 'open-catalog', 'open-slots', '01-arrival', '02-an
 let beatsServed = 0;
 for (const name of BEAT_FILES) { const res = await asset(`beats/${name}.json`); if (res.ok) beatsServed += 1; else console.log(`   ✗ beats/${name}.json → ${res.status}`); }
 ok(`the ${BEAT_FILES.length} beat documents are served`, beatsServed === BEAT_FILES.length, `${beatsServed}/${BEAT_FILES.length}`);
-for (const path of ['phones.json', 'plans.json', 'catalog.json', 'seeds.json', 'img/MANIFEST.json']) {
+// seeds.json is retired (lane K3c): the slots documents under beats/ hold the arrival seeds, and nothing read it.
+for (const path of ['phones.json', 'plans.json', 'catalog.json', 'img/MANIFEST.json']) {
   const res = await asset(path);
   ok(`/vantage/${path} → ${res.status}`, res.ok);
 }
@@ -162,60 +133,6 @@ const AD_ENTRY = { utmSource: LANDING.get('utm_source'), utmMedium: LANDING.get(
 
 // ── No credential is served or committed, and the page holds none ─────────────
 console.log('\n── No credential is served, embedded or committed');
-const TOKENISH = [
-  [/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}/, 'a JWT'],
-  [/Bearer\s+(?!\$\{)[A-Za-z0-9._~+/=-]{24,}/, 'a bearer token literal'],
-  [/ss1\.[A-Za-z0-9._-]{30,}/, 'a shopper capability literal'],
-];
-const tokenIn = (text) => TOKENISH.filter(([re]) => re.test(text)).map(([, what]) => what);
-/**
- * A file's code without its comments, line for line (lane C2's kit-boundary guard): each comment becomes spaces and
- * keeps its newlines. Strings, template literals (with their ${} nesting) and regular expressions stay as code: a
- * literal in any of them is a literal. A "/" starts a regular expression where an operand is expected.
- */
-function codeOnly(src, kind) {
-  const blank = (s) => s.replace(/[^\n]/g, ' ');
-  if (kind === 'css') return src.replace(/\/\*[\s\S]*?\*\//g, blank);
-  const KEYWORDS = new Set(['return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await']);
-  const n = src.length;
-  const stack = [];             // inside template literals: '`', and '{' for each brace opened within a ${ }
-  let out = '', i = 0;
-  while (i < n) {
-    const c = src[i], d = src[i + 1];
-    if (stack[stack.length - 1] === '`') {
-      if (c === '\\') { out += src.slice(i, i + 2); i += 2; continue; }
-      if (c === '`') { stack.pop(); out += c; i += 1; continue; }
-      if (c === '$' && d === '{') { stack.push('{'); out += '${'; i += 2; continue; }
-      out += c; i += 1; continue;
-    }
-    if (c === '/' && d === '/') { const e = src.indexOf('\n', i); const end = e < 0 ? n : e; out += blank(src.slice(i, end)); i = end; continue; }
-    if (c === '/' && d === '*') { const e = src.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += blank(src.slice(i, end)); i = end; continue; }
-    if (c === '"' || c === "'") {
-      let j = i + 1;
-      while (j < n && src[j] !== c && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
-      out += src.slice(i, j + 1); i = j + 1; continue;
-    }
-    if (c === '`') { stack.push('`'); out += c; i += 1; continue; }
-    if (c === '{' && stack.length) { stack.push('{'); out += c; i += 1; continue; }
-    if (c === '}' && stack[stack.length - 1] === '{') { stack.pop(); out += c; i += 1; continue; }
-    if (c === '/') {
-      const before = out.replace(/\s+$/, '');
-      const last = before.slice(-1), w = (/[A-Za-z_$][\w$]*$/.exec(before) || [''])[0];
-      if (!last || '(,=:[!&|?{};+-*%<>~^'.includes(last) || KEYWORDS.has(w)) {
-        let j = i + 1, cls = false;
-        while (j < n && src[j] !== '\n') {
-          const ch = src[j];
-          if (ch === '\\') { j += 2; continue; }
-          if (ch === '[') cls = true; else if (ch === ']') cls = false; else if (ch === '/' && !cls) break;
-          j += 1;
-        }
-        out += src.slice(i, j + 1); i = j + 1; continue;
-      }
-    }
-    out += c; i += 1;
-  }
-  return out;
-}
 {
   // Not served is what matters, not which refusal: a hosted worker answers 403 for an absent asset where the dev server answers 404.
   for (const leak of ['beats/operator.local.json', 'operator.local.json', 'beats/token.json']) {
@@ -231,7 +148,7 @@ function codeOnly(src, kind) {
       if (!pageModules.has(next)) pageModules.set(next, await (await fetch(`${base}${next}`, { cache: 'no-store' })).text());
     }
   }
-  const served = ['', 'phone?id=galaxy-s26', 'vantage.js', 'vantage.css', 'phones.json', 'plans.json', 'catalog.json', 'seeds.json', 'beats.json',
+  const served = ['', 'phone?id=galaxy-s26', 'vantage.js', 'vantage.css', 'phones.json', 'plans.json', 'catalog.json', 'beats.json',
     'img/MANIFEST.json', ...BEAT_FILES.map((b) => `beats/${b}.json`)];
   // And every stylesheet and script the two shells link from this origin (lane C2): the kit's tokens.css, kit.css and
   // compare.css ride every page as surely as its modules do.
@@ -253,8 +170,6 @@ function codeOnly(src, kind) {
   ok(`no served page or document carries a token (${served.length + pageModules.size - 1 + linked.size} checked)`, hits.length === 0, hits.join(' ~ '));
 
   // The committed side: every file this demo ships, read from the checkout.
-  const walk = (dir) => readdirSync(dir).flatMap((n) => { const p = join(dir, n); return statSync(p).isDirectory() ? walk(p) : [p]; });
-  const TEXT = /\.(html|js|mjs|ts|css|json|svg|md|toml|txt)$/i;
   const committed = [
     ...walk(join(ROOT, 'public/vantage')).filter((f) => TEXT.test(f)),
     ...walk(join(ROOT, 'public/demo-kit')).filter((f) => TEXT.test(f)),
@@ -328,27 +243,7 @@ function codeOnly(src, kind) {
 }
 
 // ── Everything below uses only what the page has ──────────────────────────────
-const H = { 'X-SDK-Key': 'demo-site', 'Content-Type': 'application/json', 'X-Tenant': TENANT };
-async function call(path, { method, body, visitor, headers } = {}) {
-  const h = { ...H, ...(headers || {}) };
-  if (visitor) h['X-Shopper-Session'] = visitor.session.capability;
-  for (const [k, v] of Object.entries(h)) if (v === null) delete h[k];
-  const t0 = Date.now();
-  try {
-    const res = await fetch(base + path, { method: method || (body === undefined ? 'GET' : 'POST'), headers: h,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-    return { status: res.status, ok: res.ok, ms: Date.now() - t0, body: await res.json().catch(() => ({})) };
-  } catch (error) {
-    return { status: 0, ok: false, ms: Date.now() - t0, body: { error: String(error.message || error) } };
-  }
-}
-/** The demo route, by name: the page's own merchandiser door. No document crosses from here. */
-async function demoRoute(path, body) {
-  const res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': TENANT }, body: JSON.stringify(body || {}) });
-  const out = await res.json().catch(() => ({}));
-  if (!res.ok || out.ok !== true) throw new Error(`${path} ${JSON.stringify(body)} → ${res.status} ${out.error || ''}`);
-  return out;
-}
+const { call, demoRoute } = client;          // X-Tenant and the site key on every call; the demo route by name, no document
 
 console.log('\n── The unsigned-read trap, and the doors that stay shut');
 {
@@ -367,89 +262,31 @@ console.log('\n── The unsigned-read trap, and the doors that stay shut');
   ok(`a receipt without a shopper session is refused (${anon.status})`, anon.status === 401);
 }
 
-/** Session first, then her explicit consent, exactly as the page does (mintVisitor). */
-async function mintVisitor(entry, label) {
-  const minted = await call(`/v1/${TENANT}/identity/session`, { body: {} });
-  if (!minted.body.session) throw new Error(`no shopper session (${minted.status} ${minted.body.error || ''})`);
-  const v = { label, session: minted.body.session, entry: entry || {}, intent: 'new', lines: 1, plan: null, config: null };
-  const s = v.session;
-  const pref = await call('/realtime/session/preferences', { visitor: v, body: { userId: s.subject, trackingConsent: true, personalizationEnabled: true,
-    choice: { id: crypto.randomUUID().replace(/-/g, ''), expectedRevision: null, grantId: s.grantId, iat: s.iat, exp: s.exp } } });
-  if (!pref.body.consent || !pref.body.consent.personalization) throw new Error('the visitor did not grant consent');
-  return v;
-}
+/** Session first, then her explicit consent, exactly as the page does (mintVisitor), with the page's own state for her. */
+const mintVisitor = (entry, label) => client.mintVisitor(entry, label, { intent: 'new', lines: 1, plan: null, config: null });
 const page = { region: null };                // the page's asserted region (state.ctx.region)
-const transient = [];
-/**
- * One event, as send() posts it. The page does not retry; this does, once, so a
- * transient engine refusal cannot impersonate a ranking fault downstream. Every
- * refusal is listed at the end by name, never absorbed silently.
- */
-async function send(v, type, data) {
-  const body = { userId: v.session.subject, sessionId: v.session.sessionId, source: SOURCE, type, data,
-    ...(v.entry && Object.keys(v.entry).length ? { entry: v.entry } : {}) };
-  let r = await call('/realtime/action', { visitor: v, body });
-  if (!r.ok) {
-    const why = r.body && r.body.error ? ` (${String(r.body.error).slice(0, 80)})` : '';
-    await sleep(600);
-    r = await call('/realtime/action', { visitor: v, body });
-    transient.push(`${type} → ${why ? `${why.trim()} ` : ''}refused once; asked again → ${r.status}`);
-  }
-  return r;
-}
-const sendCustom = (v, event, data) => send(v, 'custom', { event, ...data });
-/**
- * creditDecided(): a click on any control inside a decided container (a module,
- * a plan card) is also that container's reward, one content_click per nesting
- * level, sent together before the control's own event. They move contentType on
- * her vector, so a replay without them measures a different page.
- */
-const credit = (v, ...decisions) => Promise.all(decisions.filter(Boolean).map((d) =>
-  send(v, 'content_click', { contentId: d.contentId, slot: d.slot, decisionId: d.decisionId, customerContentId: d.customerContentId })));
+// One event, as send() posts it, asked again once on a refusal and listed at the end (client.transient). The
+// content clicks of creditDecided() move contentType on her vector, so a replay without them measures a different page.
+const { send, sendCustom, credit, meters, coldstart } = client;
 const moduleOf = (set, cid) => (set.modules || []).find((d) => d.customerContentId === cid) || null;
 /** One snapshot, as ask() builds it: the landing entry on every one, ctx.region when asserted, ctx.intent always. */
 async function ask(v, pageKey) {
-  const q = new URLSearchParams({ page: pageKey });
-  if (v.entry && Object.keys(v.entry).length) q.set('entry', JSON.stringify(v.entry));
-  if (page.region) q.set('ctx.region', page.region);
-  q.set('ctx.intent', v.intent || 'new');
-  const r = await call(`/v1/${TENANT}/decisions/snapshot?${q}`, { visitor: v });
-  if (!r.ok || !Array.isArray(r.body.decisions)) throw new Error(`the decision service answered ${r.status} ${r.body.error || ''}`);
-  const by = (slot) => r.body.decisions.filter((d) => d.slot === slot).sort((a, b) => a.order - b.order);
-  return { ms: r.ms, arm: r.body.arm, asked: { intent: q.get('ctx.intent'), region: q.get('ctx.region') }, all: r.body.decisions,
-    hero: by('hero'), deals: by('deals'), modules: by('pdp-modules'), plans: by('plan-pairing') };
-}
-async function meters(v) {
-  const r = await call('/realtime/reflex', { visitor: v });
-  return { dims: (r.body.affinity && r.body.affinity.dims) || {}, audiences: (r.body.affinity && r.body.affinity.audiences) || [], stage: r.body.journeyStage };
+  const r = await client.snapshot(v, pageKey, { region: page.region, intent: v.intent || 'new' });
+  return { ms: r.ms, arm: r.arm, asked: { intent: r.asked.intent, region: r.asked.region }, all: r.all,
+    hero: r.slot('hero'), deals: r.slot('deals'), modules: r.slot('pdp-modules'), plans: r.slot('plan-pairing') };
 }
 const a = (m, dim, value) => Number(((m.dims[dim] || {})[value]) || 0);
-async function sortRail(v) {
+function sortRail(v) {
   const candidates = phonesDoc.phones.map((p) => ({ id: p.id, brand: p.brand, ecosystem: eco(p), os: eco(p), price_usd: Number(p.price_usd) }));
-  const r = await call('/sort', { visitor: v, body: { userId: v.session.subject, sessionId: v.session.sessionId, candidates, weights: (phonesDoc.rail || {}).weights || { affinity: 1 } } });
-  return r.ok && Array.isArray(r.body.order) ? r.body.order : null;
+  return client.sort(v, candidates, (phonesDoc.rail || {}).weights || { affinity: 1 });
 }
 /** What refreshHome() asks: the snapshot, then the rail and the meters. */
 async function refreshHome(v) { const set = await ask(v, 'home'); const rail = await sortRail(v); const m = await meters(v); return { ...set, rail, m }; }
 async function refreshPhone(v) { const set = await ask(v, 'phone'); const m = await meters(v); return { ...set, m }; }
-/** The full records behind decisions, as prefetchReceipts() asks: 202 while the ledger consumer writes, every 2 s, ten times. */
-async function receipts(v, decisions, asked) {
-  const want = [...new Set(decisions.map((d) => d.decisionId).filter(Boolean))].slice(0, 12);
-  const got = new Map();
-  const context = asked && asked.intent ? { intent: asked.intent, ...(asked.region ? { region: asked.region } : {}) } : undefined;
-  for (let attempt = 0; attempt < 10 && got.size < want.length; attempt += 1) {
-    const r = await call('/vantage/api/receipt', { visitor: v, body: { decisionIds: want.filter((id) => !got.has(id)), ...(context ? { context } : {}) } });
-    for (const rec of r.body.records || []) got.set(rec.decision_id, rec);
-    if (got.size >= want.length || !(r.status === 200 || r.status === 202)) break;
-    await sleep(2000);
-  }
-  return got;
-}
+/** The full records behind decisions, as prefetchReceipts() asks, with the context the snapshot asserted. */
+const receipts = (v, decisions, asked) => client.receipts(v, decisions,
+  asked && asked.intent ? { intent: asked.intent, ...(asked.region ? { region: asked.region } : {}) } : undefined);
 const recOf = (recs, d) => (d && recs.get(d.decisionId)) || null;
-async function coldstart(region) {
-  const r = await call(`/vantage/api/coldstart${region ? `?region=${encodeURIComponent(region)}` : ''}`);
-  return r.ok ? r.body : null;
-}
 let A = null;                                  // shopper A, the visitor the room follows
 let home = null, phoneSet = null, thirdTouchAt = 0;
 
@@ -898,8 +735,7 @@ try {
     ok(`per module too: the phone page’s modules have rows (${mods.n})`, mods.n > 0, mods.error || '');
   }
 } catch (error) {
-  failures += 1;
-  console.log(`   ✗ the page path threw: ${error.message}`);
+  checks.fail(`the page path threw: ${error.message}`);
 }
 
 console.log('\n── The tenant is left at its opening state');
@@ -912,10 +748,10 @@ try {
   ok('a new arrival from the ad opens on the launch offer again: no pin, no Black Friday', ids(d.deals)[0] === IDS.launch
     && d.deals.every((x) => x.strategy !== 'tenant-pinned') && !ids(d.deals).includes(IDS.blackFriday), fmt(d.deals));
 } catch (error) {
-  failures += 1;
-  console.log(`   ✗ the reset failed: ${error.message}`);
+  checks.fail(`the reset failed: ${error.message}`);
 }
+const { transient } = client;
 if (transient.length) console.log(`\n   · the engine refused ${transient.length} event(s) once (an engine finding, not a page fault):\n     ${transient.join('\n     ')}`);
 
-console.log(`\n${failures ? `✗ ${failures} of ${failures + passes} check(s) failed: the page is not ready to hand over` : `✓ ${passes} checks: the page works through its own path, with no manual step`}`);
-process.exit(failures ? 1 : 0);
+checks.summary({ failed: 'the page is not ready to hand over', passed: 'the page works through its own path, with no manual step' });
+process.exit(checks.exitCode());

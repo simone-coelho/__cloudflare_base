@@ -139,9 +139,9 @@ test('a token or a .dev.vars value planted anywhere the pages load is found: pub
 test('check-demo itself fails on a token planted in public/demo-kit/, run on a scratch copy of the kit, never the checkout', () => {
   const secret = randomBytes(18).toString('hex');
   const root = plantedTree(secret);
-  // The kit's check-demo and the two libraries it loads, copied so that their REPO_ROOT is the scratch tree.
+  // The kit's check-demo and the three libraries it loads, copied so that their REPO_ROOT is the scratch tree.
   const kitDir = fileURLToPath(new URL('..', import.meta.url));
-  for (const rel of ['check-demo.mjs', 'lib/config.mjs', 'lib/credentials.mjs']) {
+  for (const rel of ['check-demo.mjs', 'lib/config.mjs', 'lib/credentials.mjs', 'lib/rehearse.mjs']) {
     mkdirSync(dirname(join(root, 'scripts', 'demo-kit', rel)), { recursive: true });
     copyFileSync(join(kitDir, rel), join(root, 'scripts', 'demo-kit', rel));
   }
@@ -150,7 +150,7 @@ test('check-demo itself fails on a token planted in public/demo-kit/, run on a s
     'scripts/demo-kit/configs/demo.json': JSON.stringify({
       name: 'Demo', slug: 'demo', tenant: 'demo', publicDir: 'public/demo',
       worker: { name: 'edge-platform-demo', queue: 'events-demo', devPort: 9199 },
-      check: { suites: [{ name: 'request level', script: 'scripts/suite.mjs' }] },
+      check: { suites: [{ name: 'request level', kind: 'page', script: 'scripts/suite.mjs' }] },
     }),
     '.dev.vars': `JWT_SECRET=${secret}\nTENANTS={"demo":{}}\n`,
   });

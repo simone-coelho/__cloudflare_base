@@ -9,9 +9,10 @@
 //                   files there name, lib/credentials.mjs servedPaths) and its config files: the
 //                   repository's own token shapes (scripts/rehearse-vantage-page.mjs), the file names the
 //                   suites probe for, and every secret value in the local .dev.vars (named, never printed)
-//   4. suites       the demo's suites, one at a time (both publish into the one tenant), against --base
+//   4. suites       the demo's suites, one at a time (both publish into the one tenant), against --base, each
+//                   through the kit's runner: rehearse.mjs --config <file> --suite <its kind> --base <url>
 //
-//   node scripts/demo-kit/check-demo.mjs --config scripts/demo-kit/configs/vantage.json [--base http://127.0.0.1:9112]
+//   node scripts/demo-kit/check-demo.mjs --config vantage [--base http://127.0.0.1:9112]   (a slug, or the config file's path)
 //        [--skip generated,typecheck,credentials,suites]
 //
 // The suites run only against an explicit --base: they publish beats into the tenant and end with its
@@ -22,23 +23,18 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { argOf, configArg, loadValidConfig, REPO_ROOT } from './lib/config.mjs';
+import { argOf, configArg, configFileFor, loadValidConfig, REPO_ROOT } from './lib/config.mjs';
 import { scanForCredentials, secretValues, servedPaths, TOKEN_PATTERNS } from './lib/credentials.mjs';
+import { suiteSummary } from './lib/rehearse.mjs';
+
+/** The kit's suite runner (lane K3, part c): each suite runs as rehearse.mjs --config <file> --suite <kind> --base <url>. */
+const REHEARSE = 'scripts/demo-kit/rehearse.mjs';
 
 /** A Windows path as WSL mounts it (C:\x\y → /mnt/c/x/y). */
 export const wslPathOf = (p) => p.replace(/^([A-Za-z]):[\\/]*/, (_, d) => `/mnt/${d.toLowerCase()}/`).split('\\').join('/');
 
-/** The count a suite's last line states: "✓ 111 checks: …" or "✗ 3 of 111 check(s) failed: …". */
-export function suiteSummary(text) {
-  const lines = String(text).trim().split(/\r?\n/).reverse();
-  for (const line of lines) {
-    const pass = /✓ (\d+) checks?\b/.exec(line);
-    if (pass) return { ok: true, passed: Number(pass[1]), total: Number(pass[1]), line: line.trim() };
-    const fail = /✗ (\d+) of (\d+) check\(s\) failed/.exec(line);
-    if (fail) return { ok: false, passed: Number(fail[2]) - Number(fail[1]), total: Number(fail[2]), line: line.trim() };
-  }
-  return null;
-}
+/** The count a suite's last line states: "✓ 111 checks: …" or "✗ 3 of 111 check(s) failed: …" (the checks' vocabulary, lib/rehearse.mjs). */
+export { suiteSummary };
 
 /** True when a failure is the other platform's native binary, not a real defect. */
 export const otherPlatformBinary = (text) => /installed esbuild for another platform|@esbuild\/win32|Could not load the "sharp" module/i.test(String(text));
@@ -58,8 +54,10 @@ function run(command, args, { shell = false, quiet = false } = {}) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const file = configArg(argv, ['--config', '--base', '--skip']);
-  if (!file) { console.error('usage: node scripts/demo-kit/check-demo.mjs --config <file> [--base <url>] [--skip generated,typecheck,credentials,suites]'); process.exit(2); }
+  const named = configArg(argv, ['--config', '--base', '--skip']);
+  if (!named) { console.error('usage: node scripts/demo-kit/check-demo.mjs --config <demo|file> [--base <url>] [--skip generated,typecheck,credentials,suites]'); process.exit(2); }
+  // A demo's slug names scripts/demo-kit/configs/<slug>.json, as rehearse.mjs reads it; a path is a path.
+  const file = configFileFor(named) ?? named;
   const loaded = loadValidConfig(file, { sections: ['check'] });
   const { config, path, sources } = loaded;
   const skip = new Set((argOf(argv, '--skip', '') || '').split(',').map((s) => s.trim()).filter(Boolean));
@@ -118,9 +116,10 @@ async function main() {
       console.log('\n━━ suites: not run, no --base given (they publish into the tenant and end with its reset, so they never run against a default)');
       step('suites', false, 'not run: no --base', 0);
     } else {
+      const configRel = relative(REPO_ROOT, loaded.file).split('\\').join('/');
       for (const s of config.check.suites) {
-        section(`${s.name}: node ${s.script} --base ${base}${s.args?.length ? ` ${s.args.join(' ')}` : ''}`);
-        const r = await run(process.execPath, [path(s.script), '--base', base, ...(s.args ?? [])]);
+        section(`${s.name}: node ${REHEARSE} --config ${configRel} --suite ${s.kind} --base ${base} (runs ${s.script}${s.args?.length ? ` ${s.args.join(' ')}` : ''})`);
+        const r = await run(process.execPath, [path(REHEARSE), '--config', loaded.file, '--suite', s.kind, '--base', base]);
         const summary = suiteSummary(r.text);
         step(s.name, r.code === 0 && summary?.ok === true, summary ? `${summary.passed} of ${summary.total} checks` : `exit ${r.code}, no summary line`, r.seconds);
       }

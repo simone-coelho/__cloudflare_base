@@ -317,11 +317,18 @@ function imageryRules(errors, root, imagery, publicDir) {
   });
 }
 
+/** The kinds of suite a demo has, which scripts/demo-kit/rehearse.mjs --suite selects: request level and DOM. */
+export const SUITE_KINDS = Object.freeze(['page', 'dom']);
+
 function checkRules(errors, root, check) {
   if (!isObject(check)) { errors.push('check: required, { suites }'); return; }
-  if (!Array.isArray(check.suites) || !check.suites.length) { errors.push('check.suites: the demo\'s suites, each { name, script, args? }'); return; }
+  if (!Array.isArray(check.suites) || !check.suites.length) { errors.push('check.suites: the demo\'s suites, each { name, kind, script, args? }'); return; }
+  const kinds = new Set();
   check.suites.forEach((s, i) => {
     if (!isObject(s) || !isString(s.name, 80)) errors.push(`check.suites[${i}].name: required`);
+    if (!SUITE_KINDS.includes(s?.kind)) errors.push(`check.suites[${i}].kind: ${SUITE_KINDS.join(' or ')} (page: the request-level suite; dom: the real page in headless Chrome), the name rehearse.mjs --suite selects it by`);
+    else if (kinds.has(s.kind)) errors.push(`check.suites[${i}].kind: "${s.kind}" is listed twice; a demo has one suite of each kind`);
+    else kinds.add(s.kind);
     pathRule(errors, root, `check.suites[${i}].script`, s?.script, { kind: 'file' });
     if (s?.args !== undefined && !(Array.isArray(s.args) && s.args.every((a) => typeof a === 'string'))) errors.push(`check.suites[${i}].args: a list of strings`);
   });
@@ -382,6 +389,17 @@ export function loadValidConfig(file, { sections, root = REPO_ROOT, exit = (code
 
 /** The value of a command-line flag (`--flag value`), or the fallback. argv is already sliced. */
 export const argOf = (argv, flag, fallback) => { const i = argv.indexOf(flag); return i >= 0 && argv[i + 1] !== undefined && !argv[i + 1].startsWith('--') ? argv[i + 1] : fallback; };
+
+/**
+ * The config file a --config value names: a file as given (relative to the working directory or to the
+ * repository root), or a demo's slug, which names scripts/demo-kit/configs/<slug>.json. Null when neither exists.
+ */
+export function configFileFor(value, { root = REPO_ROOT, cwd = process.cwd(), exists = existsSync } = {}) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const candidates = isAbsolute(value) ? [value] : [resolve(cwd, value), resolve(root, value)];
+  if (SLUG.test(value)) candidates.push(resolve(root, 'scripts', 'demo-kit', 'configs', `${value}.json`));
+  return candidates.find((p) => exists(p) && /\.json$/i.test(p)) ?? null;
+}
 
 /** The config named by --config, or by the first argument that is not a flag or a flag's value. */
 export function configArg(argv, valued = []) {

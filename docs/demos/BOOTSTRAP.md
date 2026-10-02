@@ -351,7 +351,7 @@ isolation suite passed 10 of 10 with Coach's pipeline included.
 |---|---|
 | Any shared-worker change | `MERIDIAN_BASE=<base> node scripts/meridian-rehearsal.mjs` and `node scripts/meridian-isolation.mjs` — the second exercises Coach's pipeline |
 | Any Top Offers change | `node scripts/rehearse-top-offers-page.mjs --base <base>` (request level) and `node scripts/rehearse-top-offers-dom.mjs --base <base>` (loads the real page script and presses the real buttons) |
-| Any Vantage change | `node scripts/rehearse-vantage-page.mjs --base <base>` (request level, 110 checks) and `node scripts/rehearse-vantage-dom.mjs --base <base>` (the real page in a fresh browser profile, 221 checks); never two suites at once on one tenant, and restart a local rig after a report build |
+| Any Vantage change | `node scripts/rehearse-vantage-page.mjs --base <base>` (request level, 115 checks; 116 when the day report reads the ledger) and `node scripts/rehearse-vantage-dom.mjs --base <base>` (the real page in a fresh browser profile, 292 checks, run from Windows with Chrome), or both at once through the kit: `node scripts/demo-kit/check-demo.mjs --config vantage --base <base>` (generated bundles, typecheck, the credential grep over everything the pages load, then the two suites); never two suites at once on one tenant, and restart a local rig after a report build. Both suites are the vertical's outcomes on `scripts/demo-kit/lib/rehearse.mjs` and `lib/cdp.mjs` (2026-10-02) |
 | A Coach storefront change | `bash scripts/rehearse-storefront.sh` — drives both transports headlessly and compares them; needs `SHOT_TOKEN` |
 
 Two hand-offs of Top Offers passed a request-level test and still failed in the browser, because both bugs lived

@@ -465,7 +465,7 @@
   }
  },
  "seeds": {
-  "source": "public/vantage/seeds.json (lane L4)",
+  "source": "public/vantage/beats/open-slots.json and 13-pin-duo-preorder.json (seeds.json retired, lane K3c)",
   "bySlot": {
    "hero": [
     {
