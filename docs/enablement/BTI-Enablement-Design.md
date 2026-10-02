@@ -123,6 +123,7 @@ Every piece except the glossary follows this shape. The glossary's exceptions ar
 | P7 | It calls no AI model to decide: a decision is arithmetic over the brand's published settings and counted evidence, and each one lists its reasons. | (b), (c), (d) | §1, §6.1, §3.14 |
 | P8 | Each customer gets its own deployment on Cloudflare's network, one per environment, with its own storage. The workflow that sets one up stops before the customer's first configuration; that step, the ODP and Feature Experimentation connectors, measurement on the SDK, retention periods and the billing meter are open. | (c), (d) | §0 Stamp, §10.2, §10.3 |
 | P9 | ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today. | (b), (c), (d) | §6.2, §7.3, §7.4 |
+| P10 | For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. | (b), (c), (d), (g) | §10.4 item 4 |
 
 **Word budgets** (S1 §3: a read-alone piece stays under about 2,200 words). (a) under 200. (b) 1,200 to 1,800. (c) 1,800 to 2,400. (d) the walk up to 2,200, the detail up to 2,800. (e) up to 1,600. (f) as needed. (g) up to 1,100.
 
@@ -167,7 +168,8 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 | D13 | Typed search with the brand's own AI model, outside the decision; off by default. | Built | §6.1, §10.1 | | ✓ | ✓ |
 | D14 | No AI model in the decision. | Built | §6.1 | ✓ | ✓ | ✓ |
 | D15 | A first paint decided on the site's own server: a source module exists, and acceptance on a real site is the open part. | Open | §7.1 | | | ✓ |
-| D16 | The designed mechanism for ordering a page's modules per visitor, with the layout configured per context. | Designed | §10.1 | | ✓ | ✓ |
+| D19 | The engine orders whatever sits in a slot for each visitor, a stack of page modules included, and shows why. | Built | §10.4 item 1, §3.12 | ✓ | ✓ | ✓ |
+| D16 | Configuring a page's layout per context, such as by channel or visit; where each slot sits on the page stays the site's own template. | Designed | §10.4 item 3, §10.1 | | ✓ | ✓ |
 | D17 | A semantic term from embeddings. | Designed | §10.1 | | | ✓ |
 | D18 | An exit pushed at the exact moment an interest crosses its line runs on the object host, which no deployment uses today; on the session host the exit is computed at the next read. | Built | §10.1, §2.5 | | | ✓ |
 
@@ -220,7 +222,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   2. `## One visitor shows what it does`: the example. A stranger arrives from an ad for one product; the page answers how they arrived and where they are; they look at something else; the page follows them; they leave, and their session is counted. No numbers and no customer. It may close by naming Vantage as the hosted demo where this can be seen, with its address.
   3. `## The engine in one paragraph`: P1 verbatim.
   4. `## Before the visitor arrives, the brand sets the rules`: rows B1, B2 (without its last clause), B3, B4, B5, B7. Figure F1 sits above this section's table, with a one-sentence lead.
-  5. `## While the visitor browses, the engine ranks what is left`: rows D1, D2, D3, D4, D5 (first sentence), D8, D14.
+  5. `## While the visitor browses, the engine ranks what is left`: rows D1, D2, D3, D4, D5 (first sentence), D8, D19, D14.
   6. `## After the visitor leaves, the engine counts what worked`: rows A1 (first sentence, ending "once recording is switched on"), A2, A4, A5. Then: "The one exception to keep straight: learning is built, and it changes nothing until a person raises the learning dial."
   7. `## The name has two halves`: behavioral targeting is the rules and weights the brand's team writes, in force without a software release; intelligence is counted learning behind a dial, never AI; and the name is not the behavioral targeting in other Optimizely products. The full name is not repeated here.
   8. `## Where AI and credits fit`: P2, and the credits page's address.
@@ -228,7 +230,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   10. `## Words to use, and words to avoid`: the lists below.
   11. The rule again.
 - **Figures:** F1.
-- **Sentences to say:** C; "It works for visitors nobody has identified, from their first event, once they have consented."; "The brand's rules come first; the engine ranks what is left."; "Every answer carries its reasons."; P7's first clause; "Interest builds with what the visitor does and fades with time."; P4; "Every setting is published and versioned, and changes without a software release."
+- **Sentences to say:** C; "It works for visitors nobody has identified, from their first event, once they have consented."; "The brand's rules come first; the engine ranks what is left."; "Every answer carries its reasons."; P7's first clause; "Interest builds with what the visitor does and fades with time."; P4; P10; "Every setting is published and versioned, and changes without a software release."
 - **Never say, beyond §4.9:**
 
 | Never say | Say instead |
@@ -249,7 +251,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   1. No heading: "For account executives." and the rule.
   2. `## One visitor, three moments`: the example in three to five sentences, before, during and after.
   3. `## What you are selling fits in one paragraph`: P1, then: "Write its name in full the first time, then say the engine. It is not the behavioral targeting in other Optimizely products."
-  4. `## What is built, designed and open, in the visitor's order`: figure F1 with a one-sentence lead; three tables. Before: B1 to B9, B11, B12. During: D1 to D6, D8 to D10, D13, D14, D16. After: A1 to A9, A11, A13. Then: "The one exception to keep straight: everything after the answer depends on recording. With the SDK as shipped, recording is not switched on yet, because it needs each slot set to count rendered pieces and durable recovery, which no configuration has."
+  4. `## What is built, designed and open, in the visitor's order`: figure F1 with a one-sentence lead; three tables. Before: B1 to B9, B11, B12. During: D1 to D6, D8 to D10, D13, D14, D19, D16. After: A1 to A9, A11, A13. Then: "The one exception to keep straight: everything after the answer depends on recording. With the SDK as shipped, recording is not switched on yet, because it needs each slot set to count rendered pieces and durable recovery, which no configuration has."
   5. `## The customer provides these, and here is what each is for`: S2 §7.7 with three columns, `What we need`, `What we use it for`, `Who provides it`, every row stating both the need and the purpose. Figure F2 above it, with a one-sentence lead.
   6. `## Who sets what`: a table. The brand's team in the console: weights, pins, windows, rules, take, the learning dials, the holdout share. The brand's team through the API, without a release: the catalog, arrival seeds, dimensions and their sources, journey thresholds. An engineer: tenants, keys, allowed origins, retention, where visitor state lives (S2 §4.5, §4.6).
   7. `## The questions customers ask have true answers`: the answers below, each two or three sentences, verbatim unless the review finds a fault.
@@ -271,7 +273,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   - *How long does implementation take?* "This material gives no date. The path is described, and the step that gives a customer deployment its first configuration is open."
   - *Does it work in our native apps?* "There is no native app SDK."
   - *Which demo should I show?* "The demo map answers that:" and the demo map's address.
-- **Sentences to say:** the rule; P1's first sentence; P3; P4; P6; P7; P9; "The brand's rules come first; the engine ranks what is left."
+- **Sentences to say:** the rule; P1's first sentence; P3; P4; P6; P7; P9; P10; "The brand's rules come first; the engine ranks what is left."
 - **Never say, beyond §4.9:**
 
 | Never say | Say instead |
@@ -316,7 +318,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
   9. The rule again, as the last paragraph of the piece.
 - **Figures:** F2, F3, F4.
 - **Numbers it may quote:** the published constants in S2 §3.17 and the worked arithmetic in S2 §3.4 (with the weight stated); the limits in S2 §9.3, labeled "budgets in the code, not measured capacity". Never a timing, and never a cache lifetime presented as how fast a change reaches visitors (§4.3).
-- **Sentences to say:** the rule; P6; P7; P5; P8; "Every term on a receipt is one the engine computed; nothing is inferred by a model."; "The brand's rules come first; the engine ranks what is left."
+- **Sentences to say:** the rule; P6; P7; P5; P8; P10; "Every term on a receipt is one the engine computed; nothing is inferred by a model."; "The brand's rules come first; the engine ranks what is left."
 - **Never say, beyond §4.9:**
 
 | Never say | Say instead |
@@ -333,7 +335,7 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 - **Reader:** an account executive who quotes the engine alongside Opal. **Owner:** C2. **Source:** `content/credits.md`. **Address:** `/credits/`. **Word copy:** `word/Where-AI-Credits-Fit-v1.0.docx`.
 - **Title:** `# Behavioral Targeting and Intelligence: where Opal and AI credits fit, and where they never do`
 - **Rule:** "The engine decides. Opal creates and explains." It is followed at once by: "Opal is not connected to the engine today." (S2 §6.2.)
-- **Source material.** `docs/Opal-Credit-Boundary-Pricing-Guide.md` in the repository, and the page that was shared, `opal-ai-credits-placement.html`, which lives outside the repository in the owner's Downloads folder (S3 §2.1) and adds two sections (the two scaling lines; the order-form map) and the takeaway lines. **Before C2 starts this piece, the lead copies the shared page to `docs/enablement/research/opal-ai-credits-placement.html`**, so the lane reads a file in the repository.
+- **Source material.** `docs/Opal-Credit-Boundary-Pricing-Guide.md`, and the page that was shared, which adds two sections (the two scaling lines; the order-form map) and the takeaway lines (S3 §2.1). The lead has filed the shared page at `docs/enablement/research/opal-ai-credits-placement.source.html`; C2 reads it there.
 - **What stays.** The page's structure and devices, in S3 §2.3's order: one question in the title; one reader; the rule, boxed, first; the session's three parts as the spine; a verdict on every row; a takeaway per part; one picture of the consequence; three lines and three meters, never blended; three sentences to say; the questions that come up; the order form; the rule again, last.
 - **What changes, and only this** (each change forced by S2 or the voice):
   1. The inline sentence under the rule (above).
@@ -375,8 +377,9 @@ One master list. A piece copies the rows it carries (the last columns), keeps th
 - **Sections, in order:**
   1. No heading: "For account executives." and the rule.
   2. `## Two demos run today's engine`: a table with columns `Demo`, `Address`, `The question it answers`, `What the room sees`, `What it never claims`.
-     - **Vantage**, `https://edge-platform-vantage.expedge.workers.dev/vantage/`. Question: what can the engine do for a visitor nobody has identified, from the first click? Sees: a carrier's online shop in which a stranger is served from the first paint on how they arrived and their region's synthetic sales; the page following them away from the ad; a phone page whose sections below the buy box change order as they browse, while the buy box stays off limits; a merchandiser's pin and availability rule shown as overrides; receipts behind every card. Never claims: any decision on price, financing or credit; anything geographic beyond availability; a reorder when an interest fades; a lift number.
-     - **Top Offers** (on screen, Lantern & Lane), `https://edge-platform-top-offers.expedge.workers.dev/top-offers/`. Question: can the merchandiser keep control while each visitor earns their own offers? Sees: a retailer's four-container promotions module filled from a pool; the visitor earning it; a merchandiser's day of real, versioned publishes (a window closing, a new promotion with no history, a weight, a pin); a weather and location rule; the module moving on the page; the click report, labeled attribution. Never claims: products (the pool is promotions); incrementality; a lift number.
+     - **Vantage**, `https://edge-platform-vantage.expedge.workers.dev/vantage/`. Question: what can the engine do for a visitor nobody has identified, from the first click? Sees: a carrier's online shop in which a stranger is served from the first paint on how they arrived and their region's synthetic sales; the page following them away from the ad; a phone page whose modules below the buy box the engine orders for them as they browse, while the buy box stays off limits; a merchandiser's pin and availability rule shown as overrides; receipts behind every card. Never claims: any decision on price, financing or credit; anything geographic beyond availability; a reorder when an interest fades; a lift number; that the engine places the homepage's areas, which the page's own template places, standing in for the customer's content system (demo only).
+     - **Top Offers** (on screen, Lantern & Lane), `https://edge-platform-top-offers.expedge.workers.dev/top-offers/`. Question: can the merchandiser keep control while each visitor earns their own offers? Sees: a retailer's four-container promotions module filled from a pool; the visitor earning it; a merchandiser's day of real, versioned publishes (a window closing, a new promotion with no history, a weight, a pin); a weather and location rule; the module moved on the page by the page's own template, standing in for the customer's content system, while its four promotions stay the engine's (demo only); the click report, labeled attribution. Never claims: products (the pool is promotions); incrementality; a lift number; that the engine moved the module.
+     - Under the table, P10, so the room's "the page rearranges itself" is said exactly.
   3. `## Two older demos show one idea each, on the older pipeline`: the same columns.
      - **Meridian** (on screen, Calder), `https://edge-platform.expedge.workers.dev/meridian/`. Question: does it work across industries, and whom does the page believe, the ad or the visitor? Sees: one brand, two businesses, with a live swap from retail to a bank; the hinge from the advertised product to what the visitor looks at; an interest fading out while the presenter waits, which the page shows on its own timer as the engine's decay re-asked, never as a pushed alarm.
      - **The Bright Hour**, `https://edge-platform.expedge.workers.dev/live/`, with its Offer Desk at `/live/ops`. Question: what about offers that live for hours? Sees: a live-shopping retailer deciding under expiry; a new offer born and ranked with no history; an item selling out mid-session; receipts.
@@ -479,7 +482,7 @@ These are notes for the lead's next revision of S2, not corrections made to it.
 
 Not used until the lead adds them to S2 or rules them out.
 
-1. **Ordering a page's modules.** The Vantage phone page orders its sections below the buy box per visitor (BOOTSTRAP §3), while S2 §10.1 labels "module sequencing and per-context layout" Designed. Question for the lead: may the pieces say that ranking a page's modules as pieces of one slot is Built, with the per-context layout mechanism Designed? Until then, (c) and (d) use row D16 and the glossary's module entry, which say only what S2 says, and the demo map describes what the room sees.
+1. **Ordering a page's modules: settled by S2 §10.4 (2026-10-02).** On the Vantage phone page the engine decides the module order: `pdp-modules` is a normal slot whose pieces are modules, ranked like any other (Built, row D19). On the demo homepages the engine decides what is inside each slot, while the page's own script places the slots from a template standing in for the customer's CMS (Demo only; the demo map says so for Vantage and Top Offers). Per-context layout configuration stays Designed (row D16). The claim a piece may make is P10, from S2 §10.4 item 4.
 2. **A share of anonymous traffic.** No figure in S2. Never quoted; say "visitors nobody has identified".
 3. **The demos' compressed memories.** Their values are in S1 §2.2, not S2. Never quoted; say "compressed for the room".
 4. **Content personalization and experience personalization** as names of two activations (S3 §1.8 keeps them). Not defined in S2; not used in this release.
@@ -513,6 +516,7 @@ Not used until the lead adds them to S2 or rules them out.
 | "It holds your product catalog" | "It holds no product catalog for a customer; product events carry the attributes it scores." | S2 §3.3 |
 | "Live in two weeks", any delivery date | "This material gives no date; the step that gives a deployment its first configuration is open." | S2 §10.2, §10.3 |
 | "Census targeting", "income targeting" | "Census figures are shown in one demo, never scored." | S2 §10.1 |
+| "The engine rearranges the page", "the engine decides the layout" | P10 | S2 §10.4 |
 | "They score people; we decide pages", or any line about another system | Our own reasoning only | common brief |
 | A customer, prospect or competitor name; a case study | No name; a vertical for a demo | common brief |
 | A deprecated word | The glossary's word | `GLOSSARY.md` |
@@ -688,14 +692,14 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 |---|---|---|---|
 | **E1** design | `docs/enablement/BTI-Enablement-Design.md`, `docs/enablement/GLOSSARY.md`, `docs/enablement/README.md`, `docs/enablement/lanes/E1.md` | The glossary, this design, the folder map | Now; the glossary first |
 | **C1** marketing | `docs/enablement/content/what-it-is.md`, `docs/enablement/lanes/C1.md` | (b) | The glossary lands |
-| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/content/credits.md`, `docs/enablement/content/demo-map.md`, `docs/enablement/lanes/C2.md` | (c), (e), (g) | The glossary lands; (e) once the lead has copied the shared credits page into `research/` |
+| **C2** account executives | `docs/enablement/content/selling-it.md`, `docs/enablement/content/credits.md`, `docs/enablement/content/demo-map.md`, `docs/enablement/lanes/C2.md` | (c), (e), (g) | The glossary lands; for (e), the shared credits page is filed at `docs/enablement/research/opal-ai-credits-placement.source.html` |
 | **C3** solutions engineers | `docs/enablement/content/how-it-works.md`, `docs/enablement/lanes/C3.md` | (d) | The glossary lands |
 | **D1** diagrams | `docs/enablement/figures/**`, `docs/enablement/lanes/D1.md` | F1 to F5, SVG and PNG | This design lands |
 | **P1** pages and site | `enablement/site/**`, `enablement/check-site.mjs`, `enablement/check-text.mjs`, `docs/enablement/content/landing.md`, `docs/enablement/lanes/P1.md` | (a); the chrome; the pages for (b) to (g); the widened preflight and the text check | This design lands (chrome, checks and landing page first); each content page once its source has passed review round 1 |
 | **W** Word builds | `docs/enablement/word/**`, `docs/enablement/lanes/W.md` | Six Word copies | Each source has passed review round 1 and the lead's read |
 | **R** independent review | `docs/enablement/lanes/R.md` (rounds appended) | A verdict per piece, page and Word copy | Round 1 when every source and figure has a draft; round 2 when the pages and Word copies exist |
 
-**The lead** commits by path at each integration point; copies the shared credits page into `research/`; answers §4.8; revises S2 when a fact is added; deploys the enablement worker and verifies the redirect from outside. The sign-in is already in place (the owner, 2026-10-02, §7).
+**The lead** commits by path at each integration point; answers §4.8 (item 1 settled by S2 §10.4; the shared credits page filed in `research/`); revises S2 when a fact is added; deploys the enablement worker and verifies the redirect from outside. The sign-in is already in place (the owner, 2026-10-02, §7).
 
 **The order.**
 
@@ -774,3 +778,5 @@ No other owner decision is known that the package needs. The questions in §4.8 
 | 2026-10-02 | Vocabulary: interest (affinity for engineers); receipt (never explain record); learning dial (not trust dial); visit band (not bucket); regional fallback and pooling levels (not ladder); journey stage the only stage, and no "phase"; context (cell for engineers); customer deployment (stamp for engineers); visitor (shopper in retail examples); the engine's catalog is content, never products (`GLOSSARY.md`) | E1, on the lead's brief |
 | 2026-10-02 | The document cache's lifetime is never quoted, because it reads as a propagation promise the kit does not make; "in force without a software release" instead (§4.3) | E1, on the lead's brief |
 | 2026-10-02 | Word file names carry their version and no package name; superseded versions are removed by the lead, never by a lane | E1, on the lead's brief |
+| 2026-10-02 | **Module order and page layout, per S2 §10.4.** On the phone page the engine decides the module order: `pdp-modules` is a normal slot (Built). On the homepages the engine decides what is inside each slot, while the demo page's own script places the slots from a template standing in for the customer's CMS (Demo only). Per-context layout configuration stays Designed. Applied as rows D19 (Built) and D16 (Designed), paragraph P10, the glossary's module entry, the demo map's Vantage and Top Offers lines, and a never-say row; §4.8 item 1 is settled. C1 adds D19 to (b) | lead, on S2 §10.4 |
+| 2026-10-02 | The shared credits page is filed at `docs/enablement/research/opal-ai-credits-placement.source.html`, and C2 reads it there | lead |

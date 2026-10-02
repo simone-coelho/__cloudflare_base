@@ -174,7 +174,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Merchandising weight.** A multiplier the brand sets on a slot for season, promotion or margin, applied to pieces that carry those values and held within a range, half to double by default. It changes a score; it never overrides the brand's rules.
 
-**Module.** A block of a page's layout, such as a hero, a row of products or a promotions block. The mechanism designed for ordering a page's modules per visitor, with the layout configured per context, is Designed, not built.
+**Module.** A block of a page's layout, such as a hero, a row of products or a promotions block. When a page's modules are the pieces of one slot, the engine orders them for each visitor and shows why, as on one demo's phone page. Where each slot sits on the page stays the site's own template, and configuring the layout per context is Designed, not built.
 
 ## O
 
