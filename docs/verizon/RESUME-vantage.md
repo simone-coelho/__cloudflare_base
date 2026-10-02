@@ -24,7 +24,7 @@ A demo for Verizon that sells nothing. It shows how we think about personalisati
 | | |
 |---|---|
 | Local worker | `http://localhost:9110/vantage/`: `wrangler dev` **inside WSL**, `--config wrangler.vantage.toml --persist-to .wrangler/state-vantage-l1`, on the session host (`REFLEX_HOST=session`). It will not be running after a restart. |
-| Hosted worker | **`https://edge-platform-vantage.expedge.workers.dev/vantage/`**, live since 2026-10-01 (version `222b29ab`, lane D1): its own worker, never the shared `edge-platform` and never the Top Offers worker. Reseed it every rehearsal morning (below). |
+| Hosted worker | **`https://edge-platform-vantage.expedge.workers.dev/vantage/`**, live since 2026-10-01 (lane D1). Current version `cfc5d93d`, deployed 2026-10-01 20:4x local from a clean worktree of `93e51c7` (the explainer set, the Compare fix and the kit’s script wrappers; the demo-kit session’s page rewrite was not yet committed, so the footer link to the explainer rides the next deploy). Verified: request-level suite 113 of 113, the explainer self-test exact (`lanes/evidence/`). Its own worker, never the shared `edge-platform` and never the Top Offers worker. Reseed it every rehearsal morning (below). |
 | Other ports | 9111 and 9112 were lanes L2 and L4's scratch servers. Not needed. |
 
 The page is `public/vantage/index.html` and `phone.html` with `vantage.js`. The worker side is `src/routes/vantage.ts` (beats by name, reset, receipt, report), `src/routes/vantageColdStart.ts` (the Arrival panel) and the engine changes listed in L4.md.
@@ -203,3 +203,4 @@ describes or judges the customer's own system, and any edit keeps it that way.
 - **A press that changes nothing visible is a broken press.** The DOM suite fails it.
 - **Verify through the APIs, never the pages.**
 - **This checkout is shared.** Stage only your own paths; never `git add -A`.
+- **Deploy from a clean worktree made by WSL git, never by Windows git.** A deploy must ship exactly the commit named, so it runs from a worktree of that commit, not from the shared checkout with its uncommitted lanes. Windows git checks the worktree out with CRLF endings and `npm run check:generated` then fails on the SDK bundle for that reason alone; WSL git (`core.autocrlf input`) gives LF and the three bundles match exactly. A worktree nested under the repo resolves the main checkout’s `node_modules` by walking up, so it needs no junction; never put a junction to `node_modules` inside a worktree you will later remove, because the removal would delete through it. Record the version id wrangler prints (2026-10-01: `cfc5d93d`).
