@@ -63,6 +63,11 @@ Facts the sheet establishes that every piece must respect:
 - No competitor names. We explain our own reasoning; we never describe or judge another system.
 - Honesty inline, not in a footnote: built, designed, open; "synthetic" where data is synthetic; "designed,
   not built" where so.
+- **Gender neutral, always** (owner's ruling, 2026-10-02). A visitor, shopper, customer, reader or team member is
+  named by role ("the visitor", "the shopper", "the reader") or referred to as "they", "them", "their". Never
+  "she", "her", "he" or "him" for anyone who is not a real named person. This includes the one-rule sentences
+  ("not who they are", never "not who she is"), tables, figure labels and hints. Do not alternate between a
+  role noun and a pronoun of either gender.
 - American English (the brand guideline for global material).
 - Sentences short, one idea each. No em-dashes. Headings are statements.
 
