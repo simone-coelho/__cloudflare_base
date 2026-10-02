@@ -323,7 +323,7 @@
    "customerContentId": "pin-micro-rgb-evo",
    "type": "hero",
    "title": "New for 2026: Micro RGB evo.",
-   "subtitle": "LG's MRGB95 at 75 and 100 inches, from $3,599.99.",
+   "subtitle": "The MRGB95 at 75 and 100 inches, from $3,599.99.",
    "tags": {
     "category": [
      "tvs"
@@ -1206,7 +1206,7 @@
    "customerContentId": "deal-matching-soundbar",
    "type": "promotion",
    "title": "Up to $200 off a matching soundbar with your TV",
-   "subtitle": "With an eligible LG TV in the same order. Valid through 10/4/26.",
+   "subtitle": "With an eligible TV in the same order. Valid through 10/4/26.",
    "tags": {
     "category": [
      "tvs",
@@ -1275,7 +1275,7 @@
    "id": "deal_sound_suite_bundle",
    "customerContentId": "deal-sound-suite-bundle",
    "type": "promotion",
-   "title": "Up to $400 off an LG TV and Sound Suite together",
+   "title": "Up to $400 off a TV and Sound Suite together",
    "subtitle": "On eligible TV and Sound Suite bundles. Valid through 10/4/26.",
    "tags": {
     "category": [
@@ -1959,7 +1959,7 @@
    "customerContentId": "deal-thinq-warranty",
    "type": "promotion",
    "title": "A two-year limited warranty on select appliances",
-   "subtitle": "Register the appliance in the LG ThinQ app; purchases from participating retailers count too. Valid through 12/31/26.",
+   "subtitle": "Register the appliance in the ThinQ app; purchases from participating retailers count too. Valid through 12/31/26.",
    "tags": {
     "category": [
      "washers",
@@ -1998,9 +1998,9 @@
     "imageSku": "WM4000HWA",
     "seen": "the WM6500HWA product page offer carousel, 2026-10-01 (categoryAttributes.washer.activeOffersOnPdp); retailer purchases included per lg-site-recon.md §0",
     "grammar": {
-     "who": "Owners of select LG appliances, wherever bought",
+     "who": "Owners of select appliances, wherever bought",
      "value": "A two-year limited warranty",
-     "consideration": "Register in the LG ThinQ app",
+     "consideration": "Register in the ThinQ app",
      "ends": "Valid through 12/31/26",
      "combinable": true
     }
@@ -2962,7 +2962,7 @@
    "id": "mod_protection",
    "customerContentId": "mod-protection",
    "type": "module",
-   "title": "LG Premium Care by Asurion",
+   "title": "Premium Care by Asurion",
    "subtitle": "One, two or three years of cover, no deductible, priced per model at checkout.",
    "tags": {
     "contentType": [
@@ -3788,7 +3788,7 @@
    "customerContentId": "mod-range-microwave",
    "type": "module",
    "title": "The microwave that goes above it",
-   "subtitle": "The over-the-range microwave LG packages with this range first, then the same finish. Our merchandiser's rule, shown as one.",
+   "subtitle": "The over-the-range microwave packaged with this range first, then the same finish. Our merchandiser's rule, shown as one.",
    "tags": {
     "category": [
      "microwaves"
@@ -3914,7 +3914,7 @@
    "customerContentId": "mod-range-dishwasher",
    "type": "module",
    "title": "The dishwasher in the same finish",
-   "subtitle": "The dishwasher LG packages with it first, then the same finish family. Our merchandiser's rule, shown as one.",
+   "subtitle": "The dishwasher packaged with it first, then the same finish family. Our merchandiser's rule, shown as one.",
    "tags": {
     "category": [
      "dishwashers"
@@ -4073,7 +4073,7 @@
    "customerContentId": "mod-kitchen-range",
    "type": "module",
    "title": "The range that goes with it",
-   "subtitle": "The range LG packages with it first, then the same finish family. Our merchandiser's rule, shown as one.",
+   "subtitle": "The range packaged with it first, then the same finish family. Our merchandiser's rule, shown as one.",
    "tags": {
     "category": [
      "ranges"
@@ -4479,7 +4479,7 @@
    "customerContentId": "offer-soundbar-with-tv",
    "type": "promotion",
    "title": "Up to $200 off with select TVs",
-   "subtitle": "When this soundbar is in the same order as an eligible LG TV. Valid through 10/4/26.",
+   "subtitle": "When this soundbar is in the same order as an eligible TV. Valid through 10/4/26.",
    "tags": {
     "category": [
      "soundbars",
@@ -4871,7 +4871,7 @@
    "customerContentId": "offer-thinq-warranty",
    "type": "promotion",
    "title": "Two-year limited warranty",
-   "subtitle": "Register it in the LG ThinQ app; retailer purchases count too. Valid through 12/31/26.",
+   "subtitle": "Register it in the ThinQ app; retailer purchases count too. Valid through 12/31/26.",
    "tags": {
     "room": [
      "laundry-room",
