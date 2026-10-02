@@ -46,7 +46,7 @@ The engine calls no AI model to decide, and even its receipts are written as dat
 
 ## What is true today
 
-The engine's core is built and runs today; the path onto a customer's own site is where the open decisions sit. Two hosted demos run on today's engine, [Vantage](https://edge-platform-vantage.expedge.workers.dev/vantage) and [Top Offers](https://edge-platform-top-offers.expedge.workers.dev/top-offers), and their regional data is synthetic and labeled. Describe what is built, call designed items designed, and promise nothing that is open. Two more limits: there is no native mobile app kit, and no speed, lift or revenue figure may be quoted, since none has been measured in a quotable way.
+The engine's core is built and runs today; the path onto a customer's own site is where the open decisions sit. Two hosted demos run on today's engine, [Vantage](https://edge-platform-vantage.expedge.workers.dev/vantage) and [Top Offers](https://edge-platform-top-offers.expedge.workers.dev/top-offers), and their regional data is synthetic and labeled. For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. Describe what is built, call designed items designed, and promise nothing that is open. Two more limits: there is no native mobile app kit, and no speed, lift or revenue figure may be quoted, since none has been measured in a quotable way.
 
 | Verdict | What it covers |
 |---|---|
