@@ -39,7 +39,7 @@ The page at `/` on every worker is the 2025 dashboard, not the product.
 - Open it from where you are, because the region on screen is the request's real one, and any other region is asserted by a press and labeled.
 - Regional data in the demos is synthetic and labeled.
 - Vantage shows real phone makers' product images, and legal confirms before any public or recorded use.
-- Vantage's regional data has a one-day memory and is reseeded before a showing, so ask the demos' owner (Simone Coelho) before a customer sees any demo.
+- Vantage's regional data has a one-day memory and is reseeded before a showing, so ask the demo owner before a customer sees any demo.
 
 ## A demo for your own customer is a restyle, not a rebuild
 
