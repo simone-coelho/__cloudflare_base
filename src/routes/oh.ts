@@ -22,8 +22,22 @@
 //     OH_ACCOUNTS (src/demos/oh.config.ts). The account id it stands for is the
 //     server's; no id, visitor or document crosses from the page.
 //   • It links only the CALLER's own browser: the visitor is the subject of the
-//     shopper capability she presents, on the demo's own tenant, and an already
-//     recognised browser is refused, exactly as the link route refuses it.
+//     shopper capability she presents, on the demo's own tenant. An already
+//     recognised browser is refused (409), exactly as the link route refuses it.
+//     So is an anonymous session that a sign-in already retired (401, R4 F6): her
+//     own object, asked with her capability, no longer answers to it, which is the
+//     engine's answer to that capability on every owned route, so a retired session
+//     is never upgraded to the person's. Nothing is minted for either.
+//   • A FRESH PERSON ON EVERY SHOWING (R4 F3). The account id is the name's slug
+//     and the reset generation: oh-demo-dana-whitfield-<generation>. The generation
+//     is the catalog revision the demo's reset publishes last (open-catalog, noted
+//     "reset: open-catalog" by the kit's reset), read from the configuration
+//     publication's own history, which is strongly consistent. Every reset advances
+//     it; the beats' catalog publishes after a reset (11, 13) do not. So "Dana
+//     Whitfield" is a new profile after each reset, her laptop and her phone in one
+//     showing are the same person, and yesterday's visitors never merge into today's.
+//     Before any reset on record the generation is 0; a history that cannot be read
+//     refuses the sign-in (503) rather than guess.
 //   • The assertion is minted here, with the worker's IDENTITY_SECRETS (the
 //     tenant's current secret, through the identity code's own secretsFor and
 //     signAssertion), for two minutes, and goes only into an in-process call to
@@ -51,7 +65,10 @@ import { demoColdStartRoutes } from '@/demos/kit/coldStartRoutes';
 import { isRecord } from '@/demos/kit/helpers';
 import { capabilityToken, requireShopper, shopperPrincipal, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { secretsFor, signAssertion } from '@/identity/assertion';
-import { OH_ACCOUNTS, OH_ACTIONS, OH_COLD_START, OH_TENANT } from '@/demos/oh.config';
+import { publicationHistory } from '@/config/publication';
+import { CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
+import { shopperObject } from '@/tenancy/objects';
+import { OH_ACCOUNTS, OH_ACTIONS, OH_BEATS, OH_COLD_START, OH_RESET, OH_TENANT } from '@/demos/oh.config';
 
 export { OH_TENANT, OH_BEATS, OH_RESET, OH_REPORT_SLOTS, OH_ACCOUNTS } from '@/demos/oh.config';
 
@@ -71,6 +88,26 @@ export function ohAccountId(name: string): string {
 
 /** The closed list, copied and frozen when the module loads: name → account id. */
 const ACCOUNTS: ReadonlyMap<string, string> = new Map(OH_ACCOUNTS.map((name) => [name, ohAccountId(name)]));
+
+/** The identity a sign-in links in one showing: the name's account id and the reset generation. */
+export function linkedAccountId(name: string, generation: number): string {
+  return `${ohAccountId(name)}-${generation}`;
+}
+
+/** The publish that ends the demo's reset, as the kit's reset notes it ("reset: <name>"): OH_RESET's last name. */
+const RESET_LAST = OH_RESET[OH_RESET.length - 1]!;
+export const RESET_NOTE = `reset: ${RESET_LAST}`;
+const RESET_KIND = OH_BEATS[RESET_LAST] === 'slots' ? SLOTS_KIND : CONTENT_KIND;
+
+/**
+ * The reset generation: the revision of the latest publish the reset made (its note
+ * RESET_NOTE), from the publication's retained history (the last 50 revisions), or 0
+ * when no reset is on record. Throws when the history cannot be read.
+ */
+export async function resetGeneration(env: Env): Promise<number> {
+  const index = await publicationHistory(env, RESET_KIND as typeof CONTENT_KIND, OH_TENANT);
+  return index.reduce((latest, entry) => (entry.note === RESET_NOTE && entry.revision > latest ? entry.revision : latest), 0);
+}
 
 /** The live sign-in (beat 15), re-entering the worker's own app through `dispatch`. */
 export function ohSignInRoutes(dispatch: Dispatch) {
@@ -92,19 +129,34 @@ export function ohSignInRoutes(dispatch: Dispatch) {
     if (!isRecord(body) || Object.keys(body).length !== 1 || typeof body.account !== 'string') {
       return c.json({ ok: false, error: 'the body is { account } and nothing else' }, 400);
     }
-    const accountId = ACCOUNTS.get(body.account);
-    if (accountId === undefined) {
+    if (!ACCOUNTS.has(body.account)) {
       return c.json({ ok: false, error: `not a demo account; the demo accounts are ${OH_ACCOUNTS.join(', ')}` }, 400);
     }
     // The link refuses a browser that already carries a person (detach first); say so before minting anything.
     if (principal.kind !== 'anonymous') return c.json({ ok: false, error: 'this browser is already signed in' }, 409);
     const secret = secretsFor(c.env, OH_TENANT)[0];
     if (!secret) return c.json({ ok: false, error: 'identity verification is not configured on this worker' }, 503);
+    const capability = capabilityToken(c.req.raw)!;
+
+    // A session a sign-in already retired: her own object no longer answers to it. Asked
+    // with her capability at the identity export door, a read that changes nothing.
+    let owned: Response;
+    try {
+      owned = await shopperObject(c.env.SHOPPER_REFLEX, principal.subject, OH_TENANT)
+        .fetch('https://shopper-reflex/identity/export', { headers: { [SHOPPER_HEADER]: capability, 'X-Tenant': OH_TENANT } });
+    } catch { return c.json({ ok: false, error: 'her shopper session could not be checked' }, 503); }
+    if (owned.status === 401) return c.json({ ok: false, error: 'this session was retired by its own sign-in; it signs in no more' }, 401);
+    if (!owned.ok) return c.json({ ok: false, error: `her shopper session could not be checked (${owned.status})` }, 503);
+
+    let generation: number;
+    try { generation = await resetGeneration(c.env); }
+    catch { return c.json({ ok: false, error: 'the reset generation cannot be read, so the sign-in cannot say which showing’s person this is' }, 503); }
+    const accountId = linkedAccountId(body.account, generation);
 
     const exp = Math.floor(Date.now() / 1000) + SIGN_IN_ASSERTION_TTL_SECONDS;
     const assertion = await signAssertion(secret, OH_TENANT, principal.subject, accountId, exp);
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json', 'X-Tenant': OH_TENANT, [SHOPPER_HEADER]: capabilityToken(c.req.raw)!,
+      'Content-Type': 'application/json', 'X-Tenant': OH_TENANT, [SHOPPER_HEADER]: capability,
     };
     // The link route sits behind the site-key gate and reads the consent refusal cookies: hers, passed on as she sent them.
     const sdkKey = c.req.header('X-SDK-Key'), cookie = c.req.header('Cookie');

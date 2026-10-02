@@ -68,6 +68,8 @@ node scripts/demo-kit/region-seed.mjs --config scripts/demo-kit/configs/oh.json 
 node scripts/demo-kit/check-demo.mjs --config oh --base https://edge-platform-oh.expedge.workers.dev
 ```
 
+**A reset starts a new Dana:** the sign-in links `oh-demo-dana-whitfield-<generation>`, the generation being the catalog revision the last reset published (beat 1, or a suite's closing reset), so one showing's laptop and phone are one fresh person and nobody from an earlier showing is in her (`src/routes/oh.ts`).
+
 ## Hard-won rules (from Vantage)
 
 - **A reseed is followed by a deploy, always.** The worker applies beats from its own `ASSETS` copy of `public/oh/beats/`.

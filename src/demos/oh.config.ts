@@ -48,12 +48,14 @@ export const OH_ACCOUNTS: readonly string[] = Object.freeze(['Dana Whitfield']);
 /** What the cold-start panel says, verbatim, every time. */
 export const OH_COLD_START_SENTENCE = 'aggregate, never the individual; we curate, never price.';
 
-/** The dimensions a seeded regional sale may touch, and the exact values each may carry. */
+/**
+ * The dimensions a seeded regional sale may touch, and the exact values each may carry: equal to the vocabulary of
+ * scripts/demo-kit/configs/oh/region.json (D1). No price tier: the regional lean carries none (R4 F4's ruling).
+ */
 export const OH_SEED_VOCABULARY: Readonly<Record<string, readonly string[]>> = {
   category: ['dishwashers', 'dryers', 'kitchen-packages', 'laundry-accessories', 'laundry-sets', 'microwaves', 'pedestals', 'ranges', 'refrigerators', 'soundbars', 'styler', 'tv-mounts', 'tvs', 'washer-dryer-combos', 'washers', 'washtowers'],
   type: ['3-piece', '4-piece', 'all-in-one', 'freestanding', 'french-door', 'front-control', 'front-load', 'hd', 'home-theater', 'lifestyle', 'micro-rgb', 'oled', 'over-the-range', 'pedestal-drawer', 'pedestal-riser', 'pedestal-washer', 'qned', 'rear-control', 'slide-in', 'sound-suite', 'soundbar', 'stacking-kit', 'steam-closet', 'top-control', 'top-load', 'uhd', 'wall-mount', 'washtower'],
   sizeBand: ['24-inch', '30-inch', '42-54', '55-64', '65-74', '75-82', '83-and-up', 'up-to-41'],
-  priceTier: ['best', 'better', 'flagship', 'good'],
   fuel: ['dual-fuel', 'electric', 'gas', 'induction'],
 };
 
@@ -79,5 +81,5 @@ export const OH_COLD_START: DemoColdStartConfig = {
   sentence: OH_COLD_START_SENTENCE,
   markerKey: OH_SEED_MARKER_KEY,
   seedScript: 'scripts/demo-kit/region-seed.mjs --config scripts/demo-kit/configs/oh.json',
-  scoredSentence: 'No census term enters any score. The census figure explains the lean; the lean is the brand’s own sales, seeded here as synthetic data.',
+  scoredSentence: 'No census term enters any score, and none shaped this synthetic lean; the census is shown for context. The lean is the brand’s own sales, seeded here as synthetic data.',
 };

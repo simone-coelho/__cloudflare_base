@@ -8,7 +8,9 @@
 // The last block runs the real identity link (src/routes/identity.ts) and the
 // real shopper objects on the session host, as src/routes/identity.test.ts does,
 // and shows the engine's contract through this route: a laptop and a phone sign
-// in to the same account, and the person is the sum of both.
+// in to the same account, and the person is the sum of both. R4's two rulings are
+// here too: the account is a fresh person on every showing (its id carries the reset
+// generation), and a session its own sign-in retired signs in no more.
 import { describe, expect, it, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
@@ -24,11 +26,12 @@ import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSo
 import { shopperObjectName } from '@/tenancy/objects';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import { DEFAULT_REFLEX_CONFIG, snapshot, type ReflexState } from '@/reflex/core';
-import { initializePublicationSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublicationSet, readPublication, type PublicationBaseline } from '@/config/publication';
+import { write } from '@/config/versionedStore';
 import { reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
 import type { RetentionCategory } from '@/retention';
-import { OH_ACCOUNTS, OH_BEATS, SIGN_IN_ASSERTION_TTL_SECONDS, ohAccountId, ohRoutes, ohSignInRoutes } from './oh';
+import { OH_ACCOUNTS, OH_BEATS, RESET_NOTE, SIGN_IN_ASSERTION_TTL_SECONDS, linkedAccountId, ohAccountId, ohRoutes, ohSignInRoutes, resetGeneration } from './oh';
 
 const JWT = 'p3-synthetic-route-signing-material-0123456789';
 const SECRET = 'p3-Synthetic-OH-Identity-Material-0123456789abcdef';
@@ -63,17 +66,30 @@ const linkReply = async (request: Request) => {
   }, { headers: { 'Set-Cookie': 'opt_session_id=s-person; Path=/; HttpOnly' } });
 };
 
-function rig(options: { profile?: string; env?: Record<string, unknown>; reply?: (request: Request) => Response | Promise<Response> } = {}) {
+/**
+ * Her own object as the route asks it (the identity export door, with her capability): it answers to a live
+ * session, and refuses one its own sign-in retired, as the real object does (src/durable-objects/ShopperReflex.ts).
+ */
+const objectStub = (retired = false) => ({ idFromName: (n: string) => n,
+  get: () => ({ fetch: async () => (retired ? Response.json({ ok: false, error: 'Shopper session unavailable' }, { status: 401 }) : Response.json({ ok: true })) }) });
+
+function rig(options: { profile?: string; env?: Record<string, unknown>; reply?: (request: Request) => Response | Promise<Response>; retired?: boolean; storage?: boolean } = {}) {
   const calls: Array<{ method: string; url: string; headers: Headers; body: Record<string, unknown> }> = [];
   const dispatch = async (request: Request) => {
     calls.push({ method: request.method, url: request.url, headers: request.headers, body: await request.clone().json() as Record<string, unknown> });
     return (options.reply ?? linkReply)(request);
   };
-  const env = baseEnv({ DEPLOYMENT_PROFILE: options.profile ?? 'demo', ...(options.env ?? {}) });
+  // R4's rulings add two reads: the reset generation, off the configuration publication, and her own object.
+  const env = baseEnv({ DEPLOYMENT_PROFILE: options.profile ?? 'demo', ...(options.storage === false ? {} : { STORAGE: new FakeR2() }),
+    SHOPPER_REFLEX: objectStub(options.retired), ...(options.env ?? {}) });
+  const ready = options.storage === false ? Promise.resolve() : publishBaseline(env);
   const app = ohRoutes(dispatch as never);
-  const post = (path: string, body: unknown, headers: Record<string, string> = {}) => app.request(`https://demo.example/${path.replace(/^\//, '')}`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': 'oh', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body),
-  }, env, ctx);
+  const post = async (path: string, body: unknown, headers: Record<string, string> = {}) => {
+    await ready;
+    return app.request(`https://demo.example/${path.replace(/^\//, '')}`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'X-Tenant': 'oh', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body),
+    }, env, ctx);
+  };
   return { app, env, calls, post };
 }
 
@@ -130,14 +146,15 @@ describe('the OH sign-in route', () => {
     expect(link.headers.get('X-SDK-Key')).toBe('demo-site');
     expect(link.headers.get('Cookie')).toBe('opt_tracking_consent=true');
     expect(Object.keys(link.body).sort()).toEqual(['accountId', 'assertion', 'exp', 'source', 'visitorId']);
-    expect(link.body).toMatchObject({ visitorId: LAPTOP, accountId: ohAccountId(ACCOUNT), source: 'login' });
+    // No reset on record in this rig: the generation is 0 (the id rule, R4 F3).
+    expect(link.body).toMatchObject({ visitorId: LAPTOP, accountId: linkedAccountId(ACCOUNT, 0), source: 'login' });
     const exp = link.body.exp as number;
     expect(exp - before).toBeGreaterThanOrEqual(SIGN_IN_ASSERTION_TTL_SECONDS - 1);
     expect(exp - before).toBeLessThanOrEqual(SIGN_IN_ASSERTION_TTL_SECONDS + 1);
     // The proof is the identity code's own: it verifies for exactly this visitor and account, and for nothing else.
-    expect(link.body.assertion).toBe(await signAssertion(SECRET, 'oh', LAPTOP, ohAccountId(ACCOUNT), exp));
-    expect(await verifyAssertion(env, 'oh', { visitorId: LAPTOP, accountId: ohAccountId(ACCOUNT), exp, assertion: link.body.assertion as string })).toEqual({ ok: true, assurance: 'signed' });
-    expect((await verifyAssertion(env, 'oh', { visitorId: PHONE, accountId: ohAccountId(ACCOUNT), exp, assertion: link.body.assertion as string })).ok).toBe(false);
+    expect(link.body.assertion).toBe(await signAssertion(SECRET, 'oh', LAPTOP, linkedAccountId(ACCOUNT, 0), exp));
+    expect(await verifyAssertion(env, 'oh', { visitorId: LAPTOP, accountId: linkedAccountId(ACCOUNT, 0), exp, assertion: link.body.assertion as string })).toEqual({ ok: true, assurance: 'signed' });
+    expect((await verifyAssertion(env, 'oh', { visitorId: PHONE, accountId: linkedAccountId(ACCOUNT, 0), exp, assertion: link.body.assertion as string })).ok).toBe(false);
   });
 
   it('answers success, the linked flag and her new session, and never the secret, the proof or the account', async () => {
@@ -174,6 +191,22 @@ describe('the OH sign-in route', () => {
       expect(r.status, String(IDENTITY_SECRETS)).toBe(503);
       expect(bare.calls).toHaveLength(0);
     }
+  });
+
+  it('refuses a session its own sign-in already retired (401), before anything is minted (R4 F6)', async () => {
+    const { post, calls, env } = rig({ retired: true });
+    const res = await post('/sign-in', { account: ACCOUNT }, { [SHOPPER_HEADER]: (await session(env)).capability });
+    // 401, not 409: the engine answers a retired capability with 401 on every owned route; there is nothing to detach.
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ ok: false, error: 'this session was retired by its own sign-in; it signs in no more' });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('refuses to guess which showing’s person it is when the reset generation cannot be read (503)', async () => {
+    const { post, calls, env } = rig({ storage: false });
+    const res = await post('/sign-in', { account: ACCOUNT }, { [SHOPPER_HEADER]: (await session(env)).capability });
+    expect(res.status).toBe(503);
+    expect(calls).toHaveLength(0);
   });
 
   it('leaves the kit’s routes in place beside it', async () => {
@@ -230,6 +263,25 @@ class FakeR2 {
 /** The registry as a demo tenant publishes it: products stay out of the catalog, their attributes ride on the event (CW24). */
 const cfg = { ...DEFAULT_REFLEX_CONFIG, eventAttributes: 'event-when-unknown' as const };
 
+/** The tenant's configuration, published as an explicit baseline, as the identity suite publishes coach's. */
+async function publishBaseline(env: Env) {
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = 'oh'): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  await initializePublicationSet(env, [
+    baseline(REFLEX_KIND, cfg, reflexScopeForTenant('oh')),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+}
+/** One catalog publish with its note, as the content route records it (the kit's reset notes "reset: open-catalog"). Answers its revision. */
+async function publishCatalog(env: Env, note: string): Promise<number> {
+  const base = await readPublication(env, CONTENT_KIND, 'oh');
+  const r = await write(env, CONTENT_KIND, 'oh', { pieces: [] }, { actor: 'oh-demo', note, operationId: `${base.revision}:${crypto.randomUUID()}`,
+    expectedRevision: base.revision, ...(base.publication ? { expectedPublication: base.publication } : {}) });
+  if (!r.ok) throw new Error(r.errors.join('; '));
+  return r.revision.revision;
+}
+
 describe('the sign-in through the real link, on the session host', () => {
   let env: Env;
 
@@ -271,17 +323,6 @@ describe('the sign-in through the real link, on the session host', () => {
     env.SHOPPER_REFLEX = shopper.ns; env.DECISION_RING = ring.ns; env.PERSONALIZATION_WEBSOCKET = relay.ns;
   }
 
-  /** The tenant's configuration, published as an explicit baseline, as the identity suite publishes coach's. */
-  async function publish() {
-    const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = 'oh'): PublicationBaseline =>
-      ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
-    await initializePublicationSet(env, [
-      baseline(REFLEX_KIND, cfg, reflexScopeForTenant('oh')),
-      baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
-      baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
-    ], '0:' + crypto.randomUUID());
-  }
-
   /**
    * A consenting anonymous browser with some taste, accrued the way live traffic accrues it: her explicit choice
    * through her own object's consent door, then product views through its ingest door, each with her capability
@@ -321,7 +362,7 @@ describe('the sign-in through the real link, on the session host', () => {
   beforeEach(async () => {
     env = baseEnv({ CACHE: new FakeKV(), SESSIONS: new FakeKV(), STORAGE: new FakeR2() });
     bindObjects();
-    await publish();
+    await publishBaseline(env);
   });
 
   it('a laptop and then a phone sign in as the same fictional account: one person, the sum of both', async () => {
@@ -335,8 +376,8 @@ describe('the sign-in through the real link, on the session host', () => {
     expect(phone.status).toBe(200);
     const b = await phone.json() as typeof a;
 
-    // One person, named by the account alone, and the session each device carries from now on is hers.
-    const person = await shopperIdFor(env, 'oh', ohAccountId(ACCOUNT));
+    // One person, named by the account and the reset generation (0: none on record), and the session each device carries from now on is hers.
+    const person = await shopperIdFor(env, 'oh', linkedAccountId(ACCOUNT, 0));
     for (const r of [a, b]) {
       expect(r).toMatchObject({ ok: true, linked: true, session: { kind: 'recognized', subject: person } });
       expect(Object.keys(r).sort()).toEqual(['linked', 'ok', 'session']);
@@ -360,18 +401,42 @@ describe('the sign-in through the real link, on the session host', () => {
     expect((await read(LAPTOP, laptopCap)).status).toBe(401);
   });
 
-  it('a second press from the same browser is the same link, and folds nothing twice', async () => {
+  it('a session its own sign-in retired signs in no more: 401, no new session, nothing folded twice (R4 F6)', async () => {
     const old = await browseAs(LAPTOP, 's-laptop', ['OLED']);
     const signIn = worker();
     const first = await signIn(old);
     expect(first.status).toBe(200);
     const again = await signIn(old);
-    // The engine answers a retried link with its durable receipt (src/reflex/shopperReflex.identity.test.ts).
-    expect(again.status).toBe(200);
-    const person = await shopperIdFor(env, 'oh', ohAccountId(ACCOUNT));
-    expect(((await again.json()) as { session: { subject: string } }).session.subject).toBe(person);
+    // Without the check the link's own idempotent receipt would answer 200 with a fresh recognised session.
+    expect(again.status).toBe(401);
+    const body = await again.json() as Record<string, unknown>;
+    expect(body.ok).toBe(false);
+    expect(body).not.toHaveProperty('session');
+    const person = await shopperIdFor(env, 'oh', linkedAccountId(ACCOUNT, 0));
     const profile = await new SessionManager(env, { tenant: 'oh' }).getSessionByUserId(person);
     expect(profile!.attributes.product_views).toBe(1);
+  });
+
+  it('a fresh person on every showing: each reset gives a new linked id; one reset gives one person on the laptop and the phone (R4 F3)', async () => {
+    const signIn = worker();
+    const subjectOf = async (r: Response) => { expect(r.status).toBe(200); return ((await r.json()) as { session: { subject: string } }).session.subject; };
+    // The first showing: its reset, then the laptop, a beat's own catalog publish (beat 13's), then the phone.
+    const first = await publishCatalog(env, RESET_NOTE);
+    expect(await resetGeneration(env)).toBe(first);
+    const laptop1 = await subjectOf(await signIn(await browseAs(LAPTOP, 's-laptop', ['OLED'])));
+    await publishCatalog(env, 'three weeks pass: every window moves back 21 days');
+    expect(await resetGeneration(env)).toBe(first);
+    const phone1 = await subjectOf(await signIn(await browseAs(PHONE, 's-phone', ['Soundbar'])));
+    expect(phone1).toBe(laptop1);
+    expect(laptop1).toBe(await shopperIdFor(env, 'oh', linkedAccountId(ACCOUNT, first)));
+    // The next showing: a new reset, and the same name is a new person; the first showing's devices are not in her.
+    const second = await publishCatalog(env, RESET_NOTE);
+    expect(second).toBeGreaterThan(first);
+    const laptop2 = await subjectOf(await signIn(await browseAs('vis-00000000-0000-4000-8000-0000000000c3', 's-laptop-2', ['QNED'])));
+    expect(laptop2).toBe(await shopperIdFor(env, 'oh', linkedAccountId(ACCOUNT, second)));
+    expect(laptop2).not.toBe(laptop1);
+    const today = await new SessionManager(env, { tenant: 'oh' }).getSessionByUserId(laptop2);
+    expect(Object.keys(snapshot(today!.reflex!, Date.now(), cfg).dims.line ?? {})).toEqual(['QNED']);
   });
 
   it('an unknown name never reaches the link, whatever the session', async () => {
@@ -383,6 +448,6 @@ describe('the sign-in through the real link, on the session host', () => {
     const own = await read(LAPTOP, cap);
     expect(own.status).toBe(200);
     expect(((await own.json()) as { forwardTo: unknown }).forwardTo).toBeNull();
-    expect(await new SessionManager(env, { tenant: 'oh' }).getSessionByUserId(await shopperIdFor(env, 'oh', ohAccountId(ACCOUNT)))).toBeNull();
+    expect(await new SessionManager(env, { tenant: 'oh' }).getSessionByUserId(await shopperIdFor(env, 'oh', linkedAccountId(ACCOUNT, 0)))).toBeNull();
   });
 });
