@@ -118,17 +118,43 @@
       </section>
     </section>
 
+    <!-- THE PRODUCT PAGE (lane M2), in lg.com's anatomy, top to bottom. oh.js's P2 section paints it from one template
+         (productViewHtml), and puts the same template into index.html and m.html the first time a product opens there. -->
     <section class="view view--product" id="view-product" data-page="product" hidden>
-      <p class="offlimits-note"><b>Off limits</b> the buy box: price, sizes, Add to Cart and the financing line: never decided, never personalised</p>
-      <nav class="crumbs" id="crumbs-product"></nav>
-      <!-- THE BUY BOX. Off limits: never decided, never personalised. -->
-      <section class="buybox" id="buyBox" aria-label="Buy box">
-        <p class="offlimits"><b>Off limits</b> the buy box is never decided and never personalised</p>
-        <div class="bb-grid"><div class="bb-image" id="bbImage"></div><div class="bb-config">
-          <h1 class="bb-title" id="bbTitle">Product</h1><p class="bb-meta" id="bbMeta"></p><div class="bb-price" id="bbPrice"></div>
-          <div class="bb-actions"><button type="button" class="btn btn--brand" id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">Add to Cart</button></div>
-        </div></div>
-      </section>
+      <p class="offlimits-note"><b>Off limits</b> the buy bar, the sizes and colours, the services and the selections total: never decided, never personalised</p>
+      <nav class="crumbs pdp-crumbs" id="crumbs-product" aria-label="Breadcrumb"></nav>
+      <!-- THE BUY BOX, as lg.com's buy bar: the title, the SKU and the stars, the price block, the financing line as the
+           site shows it, the feed's button. Off limits to the engine: never decided, never personalised. -->
+      <section class="buybox pdp-bar" id="buyBox" aria-label="Buy box"></section>
+      <!-- The buy bar's twin (shown once the bar scrolls up under the header) and the tabs, sticky together. -->
+      <div class="pdp-stick" id="pdpStick"><div class="pdp-stick-bar" id="pdpStickBar"></div>
+        <nav class="pdp-tabs" id="pdpTabs" aria-label="On this page">
+          <button type="button" data-act="pdp-tab" data-to="pdpTop" data-ctl="tab-overview" aria-current="true">Overview</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpSpecs" data-ctl="tab-specs" aria-current="false">Specifications</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpFeatures" data-ctl="tab-features" aria-current="false">Features</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpReviews" data-ctl="tab-reviews" aria-current="false">Reviews</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpQa" data-ctl="tab-qa" aria-current="false">Q&amp;A</button>
+        </nav>
+      </div>
+      <div class="pdp-top" id="pdpTop">
+        <div class="pdp-left">
+          <!-- The gallery: static, the product's accepted image, the feed's badges, the heart (wishlist_add). -->
+          <div class="pdp-gallery static" id="pdpGallery" aria-label="Gallery"></div>
+          <!-- Slot pdp-offers, take 2, as the offer carousel: in the engine's order, under the gallery, away from the financing line. -->
+          <section class="module decided pdp-offers" id="mod-pdp-offers" data-slot="pdp-offers" aria-labelledby="head-pdp-offers">
+            <header class="module-head"><div>
+              <p class="module-where">slot <b>pdp-offers</b> &middot; take 2 &middot; decided per visitor</p>
+              <h2 id="head-pdp-offers">Special offers</h2>
+            </div><div class="pdp-onav"><button type="button" class="pdp-oarrow" data-act="pdp-offers-nav" data-dir="-1" data-ctl="offers-prev" aria-label="Previous offer">&lsaquo;</button><span id="pdpOcount">0 / 0</span><button type="button" class="pdp-oarrow" data-act="pdp-offers-nav" data-dir="1" data-ctl="offers-next" aria-label="Next offer">&rsaquo;</button></div></header>
+            <section class="changes" id="changes-pdp-offers" aria-live="polite"><div class="changes-before"><span class="changes-cap">What was on screen before this press</span><ol class="ordlist" id="before-pdp-offers"><li class="ghost-empty">No product page had been opened yet.</li></ol></div><div class="changes-what"><span class="changes-cap">What changed</span><ul class="deltas" id="deltas-pdp-offers"><li class="delta-none">Open a product to begin.</li></ul></div></section>
+            <div class="pdp-otrack" id="slot-pdp-offers" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+            <p class="engine-down" id="down-pdp-offers" hidden></p>
+          </section>
+        </div>
+        <!-- The buy column: static, the catalog's: key features, delivery and pickup, the size or colour tiles, a package's
+             members, the services, "Review your selections" with Add to Cart and Find a Retailer. -->
+        <div class="pdp-config static" id="pdpConfig" aria-label="Choose and buy"></div>
+      </div>
       <!-- The type switch: static, the site’s own (each type’s best seller at this price tier), never decided. -->
       <nav class="pdp-type" id="pdpType" aria-label="Other types" hidden></nav>
       <!-- Slot pdp-modules, take 6: the page renders what comes back, in the order it comes back. -->
@@ -143,24 +169,17 @@
         <div class="pdp-gone" id="pdpGone" aria-live="polite"></div>
         <p class="engine-down" id="down-pdp-modules" hidden></p>
       </section>
-      <!-- Slot pdp-offers, take 2: the page renders what comes back, in the order it comes back. -->
-      <section class="module decided" id="mod-pdp-offers" data-slot="pdp-offers" aria-labelledby="head-pdp-offers">
-        <header class="module-head"><div>
-          <p class="module-where">slot <b>pdp-offers</b> &middot; take 2 &middot; decided per visitor</p>
-          <h2 id="head-pdp-offers">Offers on this product</h2>
-        </div></header>
-        <section class="changes" id="changes-pdp-offers" aria-live="polite"><div class="changes-before"><span class="changes-cap">What was on screen before this press</span><ol class="ordlist" id="before-pdp-offers"><li class="ghost-empty">No product page had been opened yet.</li></ol></div><div class="changes-what"><span class="changes-cap">What changed</span><ul class="deltas" id="deltas-pdp-offers"><li class="delta-none">Open a product to begin.</li></ul></div></section>
-        <div class="cards cards--many" id="slot-pdp-offers" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
-        <p class="engine-down" id="down-pdp-offers" hidden></p>
-      </section>
-      <!-- The specs: static, the feed and specs.json merged by sku; the fit tool here when the engine did not decide it on this page. -->
-      <section class="pdp-specs static" id="pdpSpecs" aria-label="Specs"></section>
+      <!-- The specifications, the features, the reviews (the feed's rating and count) and the questions: static. -->
+      <section class="pdp-specs pdp-sec static" id="pdpSpecs" aria-label="Specifications"></section>
+      <section class="pdp-sec static" id="pdpFeatures" aria-label="Features"></section>
+      <section class="pdp-sec static" id="pdpReviews" aria-label="Reviews"></section>
+      <section class="pdp-sec static" id="pdpQa" aria-label="Questions and answers"></section>
     </section>
   </main>
 
   <footer class="site-footer static">
     <span class="nper">not personalised</span>
-    <p class="foot-legal" id="footLegal">OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 1 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income.</p>
+    <p class="foot-legal" id="footLegal">OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 2 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income.</p>
   </footer>
 </div>
 

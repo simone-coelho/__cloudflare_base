@@ -360,3 +360,527 @@ Each lane's helpers now sit beside mine. Each beat's checks run at the end of my
 | The dead path (P2's landing) | `askWithContext` and the product branch in `askPage` removed; `askPage` asks through `transport.ask(key, v)`; my own question goes through `transport.ask(pageKey, v, { context })` (the return visit) instead of a snapshot of its own | `LANES` unchanged |
 
 Also: “for you” asks its three rooms one after another (each records its own product sort; three at once met one 503 on a fresh state). **`check-demo --config oh` 5 of 5 on the rig (9123, a fresh `.wrangler/state-p1b`, because `state-p1`'s ledger for the day had passed the report budget after the session's runs and beat 16's build answered 413): request level 191 of 191, DOM 329 of 329, no known item.** Twelve screenshots now: the eleven above retaken, and `P1-1440-11a-window-closes-tv-page.png`. For P2: the pdp-offers strip says the closed offers left “outranked on this answer”; “its window closed” would say why. The rig is stopped; both states are kept.
+
+### M3: the store's plumbing, and the director docked
+
+**Lane M3, builder, 2026-10-02, 14:57–18:05 EDT. The contract, `public/oh/oh-store.js` with its API written at the top, was published at 15:11 EDT, fourteen minutes in, every method working; M1 and M2 built against it from then (the header's search, cart and sign-in, the grids' filters and re-ask, the search route, the product page's Add to Cart with its options and add-ons, Find a Retailer). Built: the store (cart, navigation with the browser's Back, manual events, the re-ask, search, Find a Retailer, the sign-in from every header, the toast); the shared section's wiring; the phone shell's header; the director docked right and collapsible, as a kit option. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### The API, and what each method sends
+
+The whole contract is the header of `oh-store.js`. `oh.js` imports `store` once at the top, and the shared section binds it right after `createDemo` with the kit, the feed's readers and the shared openers (`store.bind(host)`), so every section shares one instance. Everything goes through the kit's transport with `X-Tenant: oh`; the store opens no door of its own, sorts nothing, does no arithmetic on a score and carries no credential (the request-level suite reads `oh-store.js` among the page's modules and passes all three).
+
+| Method | What it does | What goes on the wire |
+|---|---|---|
+| `store.visitor.ensure()` | the visitor on the page, minted now if none. The dispatcher calls it before every control, so the first click mints her and the load never does; concurrent calls share one mint | `POST /v1/oh/identity/session`, her consent, then `GET /oh/api/coldstart` (her region from the request, as beat 1 reads it) |
+| `store.events.send(type, attrs, { reask, note })` | the beat verbs' shapes: `product_view` with `{ sku }` sends the product's own attributes (`productAttrs`) and `view: 'page'`; the engine's first-class types (`add_to_cart`, `purchase`, `wishlist_add`, `content_click`) as given; any other name (`select`, `filter`, `search`, `compare`, `start_order`, `find_a_retailer`, `partner_pickup`, `retailer_referral`) as `type: 'custom'` with `data.event`, since the engine's type list is closed; `{ sku }` adds the product's attributes; a Session line in the machine | `POST /realtime/action` |
+| `store.events.weight(type)` | the published registry's weight for an action (0 moves no taste) | nothing |
+| `store.reask(pageKey?)` | the page's decided slots asked again through the sections' own question (`LANES.ask`, else `askPage`): slots, rails, before/now rows, receipts, meters, Why these. One at a time; a second call for the same page joins the first | the snapshot, `/sort` per rail, the receipt reads |
+| `store.nav.go(path)`, `back`, `restore`, `onRoute`, `parse`, `same`, `canonical`, `navPath`, `current` | the routes `/oh/`, `/oh/?view=tvs\|laundry\|kitchen\|offers`, `/oh/product?id=<sku>`, `/oh/?q=<text>` (search: K5's note, an address a reload serves; `/oh/search?q=` is read in the client and written back as `/oh/?q=`), `/oh/m`. A section's renderer `LANES.routes[name](route, opts)` when registered, else the shared `openPage` / `openProduct`. One history entry per place: a renderer's own push is kept and made canonical, and a restore replaces rather than pushes, so the browser's Back is one press per page. Every `[data-nav]` and `[data-open]` goes through it | what the page renderer sends (`page_view`, `product_view`); a restore sends no view event |
+| `store.cart.add(sku, { options, addOns, fromDecisionId, qty })` | a line, or one more of the same line. It refuses, with the reason on a toast, a product sold through retailers, one out of stock, and one without a price of ours | **`add_to_cart`, the order-start action** (weight 3, the `add_to_bag` reward): the product's attributes, `quantity`, `lineId`, `options`, `addOns`, and the decisions that led to it. `decisionId` is the one the ledger credits: `fromDecisionId`, else the clicked control's decided container, else the latest decided press that opened this product. It comes with that decision's `contentId`, `slot` and `customerContentId`, and `decisionIds` (all of them, newest first) |
+| `store.cart.remove`, `setQty`, `clear`, `lines`, `count`, `total`, `open`, `close`, `on` | persisted per visitor in `sessionStorage` (a line kept from an earlier visitor in the same tab keeps no decision credit); beat 1's arrival empties it. `total()` gives the package saving when the lines hold every member of a package in force that publishes a saving, and the pair saving when a washer the catalog's bundle offer names and a dryer from that washer's own companions are both in, at the offer's own figure. The drawer has quantities, remove, add-ons, savings, the total and Checkout; any `[data-cart-count]` shows the count | Checkout's sheet says what the demo records and nothing else. **Place the demo order** sends one `purchase` per line (`value` the line at the catalog's price, `orderTotal`, `orderSaving`, the line's decision); no payment, no address |
+| `store.search.index`, `match`, `query(text)` | the feed by name, SKU, type, category, subcategory, series, panel, finish, fuel and size band; every word must match. `query` returns the skus in `/sort`'s own order with the regional label (“leans with North Carolina’s sales · synthetic → warehouse”) | `custom` `search` `{ control, query, results, category }` (the category only when every result shares one), then `POST /sort` over the matches (at most 500, the engine's default weights or a published `search` rail's) |
+| `store.retailers.open(product, decision?)`, `store.retailers.pickup(product, decision?)` | the one Find a Retailer modal, for the decided module, the buy box and a manual press alike: **Buy directly** first (Add to Cart through the cart when sold here), Best Buy pickup when the product offers it, the online sellers, then the nearby stores in her region from the request. The list is D1's `display.retailers` on the where-to-buy piece in the catalog document the page loads (the group whose families hold the product's family), labelled on the modal as the demo's own list; the store's per-room list only when the piece has none for the product. A nearby store's distance shows only when the list carries one. `pickup` is the pickup module's own button: the same outcome as the modal's | `custom` `find_a_retailer` with the product's attributes. **Choose Best Buy pickup** sends `partner_pickup`; **Shop at …** sends `retailer_referral` with `where`. Per the ruling, both carry the product's attributes as the feed has them, its own `retailer` value kept, and `data.store` (`best-buy`, `costco`, …) beside `data.event`, which stays the channel. Each carries the decision that earned it: the one passed, else the where-to-buy decision on the page, else none, which the modal says. P3's section reads the day's baseline before the outcome and records it after (beat 16's facts, the report's "this visit", the module's own line) |
+| `store.signin.open()`, `account()`, `mount()` | P3's sign-in sheet from any page's header. `mount` makes sure the header has a sign-in control, a `form[data-store-search]` and a cart button with its count, and leaves a header marked `data-store-header="own"` alone | P3's `POST /oh/api/sign-in { account }` |
+| `store.ui.toast(text, tone)` | a line at the foot of the page for four seconds | nothing |
+| `store.trail.note`, `ledTo` | the dispatcher's record of presses inside decided containers, carried on the visitor, so it survives the sign-in's session swap | nothing |
+| `store.control(t)` | every `[data-act="store-…"]`: cart open, close, quantity, remove, checkout and place; `store-add`; `store-retailers` and the modal's buttons; `store-nav`; `store-signin` | as above |
+
+#### The shared section of `oh.js`, and the phone
+
+- The import, `LANES.routes`, `createDemo({ dock: { collapsed: true } })` and the bind.
+- `route()` writes the canonical address and replaces the entry when the place is the same. Before, a restore from Back pushed a second entry, so Back took two presses.
+- `restoreFromUrl` is `store.nav.restore()`.
+- `handleControl` mints on the first click and notes the trail. It hands `store-…` controls to the store, sends `[data-nav]`/`[data-open]` through `store.nav.go`, and sends the shared Add to Cart through `store.cart.add`.
+- The pre-arrival Before is named "home page" (S1's finding 7).
+- `SITE.copy.scoredSentence` and `demo.config.json`'s, on the coordinator's instruction, now read exactly “No census term enters any score, and none shaped this synthetic lean; the census is shown for context. The lean is the brand’s own sales, seeded here as synthetic data.”
+- `m.html` carries M1's header (the sign-in, the search form and the cart by the store's selectors). P3's inline sign-in markup and receipt strip there are now made on every shell by P3's code and `store.signin.mount`.
+
+#### The director, docked (a kit option; `director.js` and `kit.css` only)
+
+- **Option absent:** nothing changes (Vantage).
+- **Expanded, at 1180 px and wider:** with `{ collapsed: true }` (OH), the machine panel and the director bar share the right column. The bar sits at the column's foot; the machine above it is sized to the bar's own height.
+- **Collapsed:** both are put away. A 40 px rail on the right holds **Director** (open) and **Next** (the same press as the bar's Next). The site takes the whole page.
+- **Narrower than 1180 px:** collapsed is a corner pill; expanded is the kit's own layout.
+- **Opening it:**
+  - the presenter's key **D** (not in a text field, not with a modifier);
+  - the rail's own button;
+  - `?present=1` (`?present=0` collapses);
+  - `?debug`, unless `?present` says otherwise, because the suites as they stand read the machine panel and the director's sentence on every press.
+- **Closing it:** **Hide** in the bar, or D.
+- **Memory:** the state is kept in `sessionStorage` under `kit-dock:<tenant>`.
+- **Measured on a stranger's `/oh/`:**
+  - `kit-dock kit-dock--collapsed`, the machine and the bar not displayed, the rail 40×900 at the right edge, no overflow;
+  - D opens it (the machine 732 px tall above a 168 px bar); Hide closes it; both are remembered;
+  - typing D in the search box does nothing to it.
+
+#### Results
+
+| Check | Result |
+|---|---|
+| The contract | published 15:11 EDT (lane start 14:57) |
+| The manual session | below; every step as designed, 126 API calls all with `X-Tenant: oh`, none with Authorization, no script error |
+| `check-demo --config oh --base http://localhost:9131` | on a fresh state (`.wrangler/state-m3b`, `rig.mjs --prepare`, `seed.mjs --config oh --out <scratchpad>`, `region-seed.mjs` 51 of 51), the suites as they stood at 16:45 with S2's manual session landing in them. Passed: generated, typecheck and credentials. **DOM 452 of 456**: all sixteen beats land `done`; the machine panel and the director bar are on screen under `?debug`; on a stranger's load the director is collapsed to its rail. **Request level 199 of 217.** All 18 request-level failures and three of the four DOM failures are receipts that never come (“no record”, “0 receipt(s) read”), day-report counts that do not move, and 503s. On this machine at a load average of 30 to 45, the rig's queue consumer stops after a `learning_incomplete` warning, and `LearnStats.priorsFor` throws “Configuration publication authority unavailable” (P2's, P3's and S1's finding; Vantage RESUME finding 3). The fourth DOM failure is S2's boot check; see finding 3 |
+| Earlier on the same day's first state | request level 207 of 217 and DOM 450 of 456, the same classes. The DOM failures that were not the engine's are findings 1, 2 and 4 below |
+| Vantage, the docking held off | **request level 115 of 115, DOM 298 of 298** on my Vantage rig (9136, a fresh `.wrangler/state-m3v2`, `rig.mjs --prepare`, `seed-vantage.mjs` in place, `seed-vantage-region.mjs` 51 of 51), 17:12–17:25. Vantage passes no `dock`, so no class, rail or key handler is added, and every rule of the dock block is scoped to `body.kit-dock`. Earlier runs on the first state (`state-m3v`) gave 115, 114 and 106 and DOM 297 and 287, as the same engine stall and 503s set in under load; none was a layout check |
+
+#### The manual session (headless Chrome, a fresh profile, the fresh-state rig, a visitor's clicks only, read off the wire)
+
+| Step | Measured |
+|---|---|
+| boot `/oh/` | the published template (M1's), nothing decided, **no visitor, no mint**; the director collapsed to its rail; the one API call on load is `GET /oh/api/coldstart` |
+| first click: TVs in the header | **one** `identity/session` mint; `page_view tvs`; `/oh/?view=tvs` |
+| her homepage asked (`store.reask('home')`) | hero `hero-living-room`; tiles `tvs, laundry, cooking`; deals `nfl-gift-card, free-wall-mounting, range-microwave, laundry-pair`; receipts led by the region (“category tvs · type oled · type qned · region US-NC”) |
+| two TVs from the grid's own cards, Back between them | `product_view` OLED55B3PUA and OLED55B4PUA with their attributes; Back returned to `/oh/?view=tvs` in one press |
+| a select | `custom select { control: size, … }` with the TV's attributes |
+| search from the header, “front load washer” | `/oh/?q=front%20load%20washer`; `custom search { control, query, results: 54 }`; `POST /sort` over 54; the results in `/sort`'s order (WM3900HBA first, where the feed's first is WM1455HWA); “leans with North Carolina’s sales · synthetic → warehouse” on screen |
+| a washer from the results, then M2's Add to Cart | `add_to_cart` WM1455HWA (category washers, type front-load, quantity 1) with its decision; the cart holds 1 line at $1,149.00 and the badge reads 1; the drawer lists the line with its colour. In an earlier run, a washer plus its own dryer gave the pair saving, −$200.00 from `deal-laundry-pair` (total $1,658.00), and **Place the demo order** sent two `purchase` lines, one of them credited |
+| Find a Retailer on OLW480B, then Shop at Costco | the modal's order is Buy directly › Online › Nearby stores, with “A referral is not a sale”. On the wire: `find_a_retailer`, then `retailer_referral { partner: costco }` **credited to `mod-where-to-buy-retailer`'s decision in `pdp-modules`** |
+| home by the wordmark, then `store.reask('home')` | **all three decided slots moved for her**: hero `hero-nfl-gift-card`; tiles `tvs, laundry, audio`; deals `nfl-gift-card, laundry-pair, big-screens, wash1000`. The receipts now name her own clicks (“room living-room · category tvs · type oled · region US-NC”) |
+| Back ×3 | `OLW480B` › `WM1455HWA` › `/oh/?q=front%20load%20washer`, one press each |
+
+**A search address reloaded.** A reload or a direct load of `/oh/?q=front%20load%20washer` paints the results with nobody minted, in the site's own order, because M1's boot reads `store.nav.parse`. A search typed after the first click is in `/sort`'s order, and Back from it returns to the earlier search.
+
+**Signed in.** The sign-in from the phone's header opens P3's sheet. Signing in as Dana kept her cart and its decision credit.
+
+#### The ruling applied, one modal, and the Roadmap's source (17:30–18:05 EDT)
+
+On the coordinator's ruling on finding 1, Lane M2's note and D1's landing:
+
+- **The outcomes' shape** (`oh-store.js` 744–774: `outcome(event, t)`, the one sending function, with the send at 758 and the record at 761; `pickup` at 767). `partner_pickup` and `retailer_referral` carry the product's attributes as the feed has them, its own `retailer` value kept. The chosen store goes in `data.store` (`best-buy` for the pickup, the list's key for a referral), with `data.where` (`online` / `nearby`) on a referral. `data.event` stays the channel. `partner` is gone.
+- **One modal.** P3's own sheet and its referral are retired, and its retailer list is removed (`oh.js` 3760). The where-to-buy modules' buttons call the store:
+  - the pickup module's **Choose Best Buy pickup** is `store.retailers.pickup(product, its decision)` (`oh.js` 4027–4032);
+  - the retailer module's **Find a Retailer** is `store.retailers.open(product, its decision)`, and the buy box's is the same with no decision (`oh.js` 4034–4039);
+  - `creditOf` (4021) gives the module's decision in the store's shape;
+  - the dispatcher's `retailer-referral` case is gone (4163).
+  - The store's outcomes come back through P3's `beforeOutcome` (the day's baseline) and `recordOutcome` (4041; this visit's tally, beat 16's facts, the module's own line), bound in the shared section (427–428).
+  - The pickup module's own button records the pickup directly, as before, rather than opening the modal first, so beat 16's run is unchanged. A pickup pressed in the modal is credited to the pickup module's decision on the page (`oh-store.js` 723).
+- **D1's lists** (`oh-store.js` 676–705, `entryOf`, `retailerLists`; the modal line 736). The modal reads `display.retailers` from `/oh/catalog.json`, the document the page loads, not from the engine's answer. It picks the group whose `families` hold the product's family. It shows the piece's own source line up to its colon as the label: "The stores below are the demo's own list, not LG's data and not a live PriceSpider answer (TVs and audio)". The full source is the line's title, and `data-retailer-source="catalog"` marks it. The store's per-room list is used only when the piece has no group for the product (`data-retailer-source="store"`, said in words). `distanceMiles` is null in the data, so no distance is shown and none is invented.
+- **Measured on the wire** (my rig reseeded from `4e71874`, `--out`, 51 of 51):
+
+  | Press | Measured |
+  |---|---|
+  | S90TR's pickup module, its own button (beat 16's first press) | `partner_pickup`, `store: best-buy`, `retailer: ["lg-com","best-buy-pickup"]` (the feed's), credited to `mod-where-to-buy-pickup` in `pdp-modules`; the module reads "Best Buy pickup chosen … sent as partner_pickup with this module's decision (#1 on this page)" |
+  | OLW480B's retailer module, then Costco (beat 16's second) | the store's modal, D1's "TVs and audio" list (online Best Buy, Costco, ABC Warehouse, RC Willey; nearby Best Buy, Costco, Sam's Club, BJ's, Walmart, Micro Center), `retailer-costco` pressed; `retailer_referral`, `store: costco`, `where: online`, the feed's `retailer` kept, credited to `mod-where-to-buy-retailer`; the module reads "Referred to Costco … sent as retailer_referral with this module's decision (#1 on this page)" |
+  | WM6500HWA's buy box (M2's `store-retailers`), then a nearby Best Buy | D1's "Appliances" list; `retailer_referral`, `store: best-buy`, `where: nearby`, `retailer: ["lg-com","best-buy-pickup"]` (the feed's), credited to no decision, since none is decided on that page |
+
+  There was no script error.
+- **`find_a_retailer`, the same rule** (the coordinator's follow-up, 18:05). `oh-store.js` 742 (the `send('find_a_retailer', …)` call in `openRetailers`, with its comment on 741) now sends `{ sku, control }` only. The product's own `retailer` value stays as the feed has it, the channel is `data.event`, and no event overwrites a product attribute. There is no `data.where`: the modal opens on both lists, so where is not known yet. Measured on the wire:
+  - OLW480B: `retailer: ["find-a-retailer"]`, which is that product's own feed value;
+  - WM6500HWA: `["lg-com","best-buy-pickup"]`, the feed's;
+  - `control` is `where-to-buy` from the module and `buy-box` from the buy box.
+
+  S2's check expecting `retailer: 'find-a-retailer'` needs the new shape, as the coordinator has told S2. For about two minutes around 18:06 this line held a misplaced comment that made `oh-store.js` fail to parse in the browser (the store did not load). It is fixed and checked as a module, and the probe above ran clean on it. Any lane whose page load fell in that window should reload.
+- **The send stays in `outcome(event, t)`.** S2's source check reads the send inside the store's `outcome(event, t)`. I had moved it into a helper, and folded it back. The pickup module's `pickup()` sets the modal's product and decision and calls the same `outcome`, so there is one sending function.
+- **The Roadmap's source** (on the coordinator's instruction). `demo.config.json` `roadmap` and its copy in `oh.js` `SITE.roadmap` now hold what the walk uses today, word for word as M1's load-time correction (`oh.js` 2148–2156), so that correction is now a no-op and can be removed. Entries changed:
+  - **`eligibleWhen { regions, context }`** (built): the companions gate on `ctx.family`, not “ctx.anchor until complements lands”.
+  - **`learn.regional`** (built): “synthetic here and labelled synthetic → warehouse”.
+  - **`POST /sort`** (built), renamed **`POST /sort with the regional prior`**. It absorbs the former designed item “the regional prior on /sort”.
+  - **`complements`**: designed → **built**.
+  - **`partner_pickup and retailer_referral`**: designed → **built**.
+  - **`the regional prior on /sort`** (designed): removed, folded into the `/sort` entry.
+  - **`gclid on the entry contract`**: added as **designed**, the one item still open.
+  - `slot seeds` is unchanged.
+- **After the ruling, the unification and the Roadmap, on my rig** (the same fresh state, reseeded from `4e71874`):
+  - **OH DOM 463 of 463**: all sixteen beats `done`, beat 16 through the one modal, the referral check reading the product's own attributes and `data.store`, no known item.
+  - **OH request level 224 of 224.** The Roadmap source check now passes. One known item remains, not mine: the legal line's date, “1 October” against prices of 2 October, for the config's owner and M1.
+
+#### For the lead
+
+1. **Ruled and applied (above).** The two outcomes keep the product's `retailer` and carry `data.store`. Lane S2's checks assert the product's value plus `data.store`. `find_a_retailer` is open as noted.
+2. **The phone frame on `index.html` collapses `#site` to 20 px** (`m1-live shell--phone`).
+   - Beat 15's “the phone is on screen” and Compare's frames at 15 and 16 fail on it.
+   - Measured with and without the dock's class: the same 20 px, so this is M1's CSS.
+3. **S2's “no visitor is minted on load” sees a snapshot that is not the boot page's.**
+   - Measured alone, `/oh/` makes one API call before a click: `GET /oh/api/coldstart`.
+   - The snapshot under the `boot-store` press is most likely the phone shell's live arrival from the press before, still in flight (the phone mints on load by P3's design).
+   - S2 can tag the check's requests by document.
+4. **Search addresses.**
+   - The address is now `/oh/?q=<text>`. M1's `openSearch` still writes `${BASE}search?q=`; `route()` makes it canonical, but M1 can write `${BASE}?q=` itself.
+   - S2's search check expects `/oh/search?q=…`.
+5. **Where-to-buy lists: done.** D1's `display.retailers` groups are read first, labelled as the demo's own list; the store's list is the fallback (above). P3's `whereToBuyBody` builds no outcome of its own any more. Its module lines are rendered from the outcomes the store records. S2's known item for D1 and M3 can become a check: `data-retailer-source="catalog"` and the group's names.
+6. **The engine on `wrangler dev` under load** is the whole of the rest: receipts 202 until the reader gives up, and outcomes and adds that never reach the day's report. A rig restart helps briefly; at this machine's load it recurred within minutes on a fresh state.
+7. **Vantage's beat documents moved under me.** At 15:30 another lane seeded `public/vantage/beats` in place, a minute before my own seed. Later the files were returned to HEAD, which equals my snapshot. They match the snapshot at the end; see Files.
+
+#### Labels the store uses (for the switch to the kit's `public/demo-kit/store.js`)
+
+When OH moves to K5's kit store, `demo.config.json` needs a `labels` section with these, in lg.com's wording where the site has its own:
+
+| Area | Labels |
+|---|---|
+| header | “Sign in”, “Cart”, “Search”, the search placeholder “Search TVs, laundry, kitchen” |
+| cart | “Your cart”, “Your cart is empty”, “Your cart · N items”, “Subtotal”, “Add-ons”, “Package saving”, “Pair saving”, “Total”, “Checkout”, “Continue shopping”, “Remove”, “included” (a free add-on), “One fewer” / “One more” (the quantity buttons' names) |
+| checkout | “Checkout · a demonstration”, “What this demo records”, “Place the demo order”, “Back to the cart” |
+| Find a Retailer | “Find a Retailer”, “Where to buy the …”, “Buy directly”, “From OH.”, “Add to Cart”, “Pick up at Best Buy”, “Choose Best Buy pickup”, “Online”, “Nearby stores”, “Shop at …”, “in store near you · <region>, from the request”, “price and stock at the retailer”, the referral line (“A referral is not a sale …”) |
+| search sheet (when no section renders search) | “Search”, “N results for “…””, “Nothing in the feed matches “…””, “In the engine’s order, POST /sort over every match” |
+| toasts | “Added to your cart: …”; the three refusals (“sold through retailers, not here: Find a Retailer”, “out of stock here: Notify Me”, “has no price of ours”); “Best Buy pickup chosen for the …”; “Referred to …: a referral, not a sale”; “Demo order recorded: N lines, no payment taken” |
+| the retailer lists | D1's groups on the where-to-buy piece, with its source line as the label; the fallback per-room lists (`RETAILERS` in `oh-store.js`) and their label “the store’s own list for this room, until the catalog’s where-to-buy piece carries one for it” |
+| the director (kit) | “Director”, “Hide”, the Next arrow |
+
+#### Files
+
+| File | What I changed |
+|---|---|
+| `public/oh/oh-store.js` | new: the store and its contract |
+| `public/oh/oh.js` | the shared section: the import, `LANES.routes`, the dock option, the bind (with `beforeOutcome` and `outcome`), `route()`, `whereNow`, `restoreFromUrl`, `handleControl`, `SITE.copy.scoredSentence`. In P3's section, on the coordinator's instruction: its retailer list, `sendOutcome`, its sheet and `referral` retired; `pickup` and `findRetailer` call the store; `creditOf` and `recordOutcome` added; `roomOfProduct` (dead) removed |
+| `public/oh/demo.config.json` | `copy.scoredSentence` and `roadmap`, on the coordinator's instructions (the `SITE` copies in `oh.js` match) |
+| `public/oh/m.html` | the header, as M1's on `index.html`, and its comment |
+| `public/demo-kit/director.js` | `readFlags` `present`; the dock (`createDock`), behind `config.dock`; the rail's Next mirrored in `renderNext` |
+| `public/demo-kit/kit.css` | the dock block at the end |
+| this file | this section |
+
+**Seeds and restoration.**
+- **OH:** every seed went to my scratchpad with `--out`. `public/oh/beats/*.json` were hashed before my first seed, again after the lead's commit `730eaa3`, and again after D1's `4e71874`. They are at HEAD, 19 of 19 by hash.
+- **Vantage:** the 19 seed-written files (18 beat documents and `catalog.json`) were hashed at 15:28, equal to HEAD. My two seeds changed four of them (`11-two-weeks-pass`, `12-black-friday`, `anchor`, `open-catalog`). At 17:25 those four were copied back from the snapshot, and all 19 match it by hash; `public/vantage` is clean against HEAD.
+
+**Rigs.** OH on 9131 (inspector 9281) with `.wrangler/state-m3`, then `.wrangler/state-m3b` for the final run; Vantage on 9136 (9286) with `.wrangler/state-m3v`, then `.wrangler/state-m3v2`. Both rigs are stopped (the OH rig again at the end, after the ruling's runs), their ports are free, and the states are kept. The scratch session scripts are in my scratchpad (`m3-manual.mjs` and three probes); none is in the checkout.
+
+### M2: the product page in lg.com's anatomy
+
+**Lane M2, builder, 2026-10-02, 14:59–17:27 EDT. Built: the product page for every product on one template, top to bottom as lg.com's product pages run, with every control working by hand through M3's store; the decided modules kept as P2 left them, restyled in OH's tokens; R4's three rulings for my section (F1, F2, F7) and its copy finding (F9) built in; beats 5 and 9 in `beats.json` changed to match. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### What works by hand
+
+Checked in a fresh headless Chrome profile per run (the kit's `lib/cdp.mjs`), each control pressed with a real mouse down and up at its centre after scrolling it into view, and each press read back off the screen and off the wire. On the TV (OLED65C6PUA), the washer (WM6500HWA) and the range (LSGL6335X):
+
+| Control | What it does | Measured |
+|---|---|---|
+| Buy bar (`#buyBox`) | title, SKU, stars with the count, price with "$X OFF" and the struck list price, the financing line as the site shows it, Add to Cart / Notify Me / Find a Retailer as the feed says, Special Offers | off limits and marked so, nothing decided inside; its twin sticks under M1's header with the tabs once the bar scrolls away |
+| Tabs | Overview, Specifications, Features, Reviews, Q&A scroll to their sections and mark themselves; the current one follows the reader | each section lands under the sticky row |
+| Gallery | the accepted image (D2), else the name on a neutral tile; the feed's badges (an offer's badge only while that offer is in force); the heart | the heart sends `wishlist_add` |
+| Offer carousel | `pdp-offers`, decided, in the engine's order, under the gallery so nothing decided sits near the financing line; arrows and a count; a card opens its terms | the press is a decided click: one `content_click` with the card's decision |
+| Delivery and pickup | "Shipping to North Carolina" from the request (said again once the cold-start read lands on a direct load), the estimate, Best Buy pickup where the feed offers it, Find a Store | Find a Store opens the store's modal |
+| Size or colour tiles | the feed's variants at their own prices | one `select` (custom) with the variant's attributes and no `product_view`; the page becomes the variant at its price, its tile pressed; Back returns |
+| Services | Premium Care, TV set-up or installation, haul-away or move, at the prices the C6, WM6500HWA and LSGL6335X pages list (free wall mounting while the catalog's offer is in force); one per group or none | "Review your selections" totals the product and the services, with the savings |
+| Add to Cart | `store.cart.add(sku, { options, addOns, fromDecisionId })`, then `store.cart.open()` | `add_to_cart` with the product, its size or colour, the services and the page's decision ids (the decided press that led here first, then the offers, then the modules); the drawer opens on the right line |
+| Find a Retailer | the store's modal (`data-act="store-retailers"`): buy directly first, then pickup, then online, then nearby | `find_a_retailer` on opening; a store button sends `retailer_referral` |
+| A companion's card | opens its product page | a `content_click` credited to the module; Back returns |
+| Notify Me (out of stock) | a working button, the brand colour | custom `notify_me`; the toast says no email is asked for |
+
+#### Results
+
+| Check | Result |
+|---|---|
+| By hand (`scratchpad/m2-hand.mjs`: a fresh headless Chrome per run, real mouse presses, the wire read back), TV, washer and range, on the final code | **1440: 97 of 97 · 1366: 97 of 97 · 390: 94 of 94**: every control above, no horizontal overflow and no broken image before and after every press, no script error. The same run at 1440 and 1366 on a rig worn by four suite runs met five and two slow-engine misses (a Back pressed while the companion page was still asking); restarted, both were clean |
+| `check-demo --config oh --base http://localhost:9133`, run 2 (fresh `.wrangler/state-m2b`, rig restarted after the seeds) | generated, typecheck, credentials ✓; **request level 216 of 217** (beat 12’s control: two deals tied at 1.043, P1’s); **DOM 453 of 456**: the boot minted on load and the search route (M1, M3; both gone by run 3), and mine, the dryer lead naming /sort’s separating driver, fixed after this run |
+| run 3 (rig restarted) | **request level 217 of 217**; DOM 447 of 456: a receipt 503 at beat 3, the pin’s receipt at beat 12, and beat 16’s cascade from a 503 on `partner_pickup`: the local queue consumer stalled mid-run (its last batch at line 6,365 of 10,300 of the rig log, 284 “Configuration publication authority unavailable”) |
+| run 4 (rig restarted) | request level 205 of 217, every failure a ledger read (receipts, the packages’ records, the pin, the report’s counts: the consumer stalled from the start); DOM 452 of 456: the boot’s POST /sort on load (M1/M3) and beat 16’s report 503 |
+| The product page in those runs | **every product-page check green in runs 3 and 4**: request level beats 5–10 (the context hook, the buy box painted from the catalog alone, ctx.distance declared and no select, the dryers in /sort’s order) and the manual session’s add; DOM beats 5–10 (the dryer card claims no fuel of hers and names /sort’s reason, the size-up press sends no select and carries ctx.distance) and S2’s manual session on my page (a colour, Add to Cart with the page’s decisions, the drawer, the dryer from the decided module, Find a Retailer, Back twice) |
+| The never-ranks guard | my section’s seven sorts unchanged in comparator and function; no new sort, reversal or score arithmetic (`leadReasons` and `herFuel` pick their largest by reduce, an explanation, never an order of pieces) |
+
+#### R4's rulings, built in (the lines changed)
+
+- **F1, the dryer "in her fuel".** `fuelLead` no longer says "In her fuel" unless her profile carries a fuel value (`herFuel()`, her meters' own read, re-read after every ask by `refreshDryerCard`). It names what put POST /sort's first dryer ahead of the next, from /sort's own items (`leadReasons`: by dimension, the first's contributions less the second's): on the walk "sold here · in the 4-piece laundry set with it; she has shown no fuel yet, so none is claimed for her". The card's heading drops the catalog title's ", in your fuel" when she has none (`cardTitle`, also used by the before/now rows through `shownTitle` and by beat 5's facts). Every receipt now marks a driver her profile does not carry as "(the region’s lean)" (`herCarries`), so the dryer's receipt reads "fuel electric (the region’s lean)" instead of looking like hers. `beats.json` beat 5: the `will`, the `line` and the `after` say "the dryer that goes with it", the set price only when a set costs less, and the lead's reasons (`{{p2.dryer.lead}}`, `{{p2.dryer.why}}`, new facts).
+- **F2, the viewing distance.** `declareDistance` sends nothing for any product; her distance rides the next question as `ctx.distance` through `askContext` (TV pages only). The size-up card says "From 9 ft, your viewing distance, declared … by this card’s own rule, one size up is the …" and offers "Choose the 75″" (`size-up-pick`, `chooseSizeUp`): her own press sends the `select` with that size's attributes, and only then are her meters read before and after. `beats.json` beat 9: three declare lines (open, declare the distance as context, choose the size herself), the `will`, the `line` and the `after` follow, and the run gains the press `{ "click": "size-up-pick", "in": "mod-pdp-modules" }`.
+- **F7, the set price.** `shows(d, p)` keeps "The set price, when it is lower" off the page when no set it lists costs less than its pieces (`lowerSets`, `setFigures`); when it shows, it lists only the lower sets. The receipts keep the engine's positions; the before/now rows and beat 5's facts count what is on screen. On the walk's WM6500HWA neither set is lower ($3,406 and $3,456, each equal to its pieces), so the card is not shown.
+- **F9, copy.** The rules read "packaged with this range", not "LG packages"; "ThinQ smart features"; the badges "LG.com Exclusive" and "LG Online Exclusive" read "Online exclusive" and "5% Back MyLG Rewards" is left off; the services' note says "listed publicly", not lg.com. "LG Premium Care by Asurion" stays: it is the plan's own name, as the catalog piece titles it.
+
+#### Integration with the store (M3)
+
+Built against the contract at the head of `oh-store.js` from its landing (15:10), so no shim was needed: Add to Cart is `store.cart.add` then `store.cart.open`; Find a Retailer, Find a Store and the selections' Find a Retailer are the store's own `data-act="store-retailers"` controls; a variant is `store.events.send('select', …)` then `store.nav.go(…, { event: false })`, so the address bar, Back and the restore are the store's; the heart, Notify Me and her size choice send through `store.events.send`; the toasts are `store.ui.toast`. P3's where-to-buy module keeps its own `find-retailer` button and sheet, which beat 16 presses.
+
+#### For M1: the selectors
+
+The page's styles are one block, `P2_CSS`, in my section, injected once as `<style id="p2-style">` in whichever shell a product opens (P3's pattern), to be appended to `oh.css` verbatim and the injection then removed. New selectors, all in my families: `#view-product`, `.pdp-crumbs`, `.buybox.pdp-bar` and `.pdp-bar .bb-*`, `.bb-head`, `.bb-sku`, `.bb-pricebox`, `.bb-now`, `.bb-retail`, `.bb-affirm`, `.pdp-stars`, `.pdp-stick`, `.pdp-stick-bar`, `.pdp-tabs`, `.pdp-top`, `.pdp-left` (`.is-pinned`), `.pdp-gallery`, `.pdp-gmain`, `.pdp-gbadges`, `.pdp-gbadge`, `.pdp-wish`, `.pdp-offers`, `.pdp-onav`, `.pdp-oarrow`, `.pdp-otrack`, `.card.pdp-offer`, `.pdp-obadge`, `.pdp-oterms`, `.pdp-omore`, `.pdp-config`, `.pdp-cfg`, `.pdp-keyf`, `.pdp-ship-grid`, `.pdp-ok`, `.pdp-link`, `.pdp-fine`, `.bb-vars`, `.bb-var` (`-now`, `-off`), `.pdp-svcs`, `.pdp-svc` (`-l`, `-p`), `.pdp-free`, `.pdp-review`, `.pdp-rline` (`--svc`), `.pdp-rtotal`, `.pdp-rsave`, `.pdp-ractions`, `.pdp-cfgnote`, `.cards.pdp-mods`, `.card.pmod`, `.pmod-pick`, `.pdp-gone`, `.pdp-sec`, `.pdp-sechead`, `.pdp-specgrid`, `.pdp-specgroup`, `.pdp-fit-static`, `.pdp-feats`, `.pdp-feat`, `.pdp-rev`, `.pdp-rev-n`, `.pdp-qa-box`, with their `body.shell--phone` and 1100/900/640 px variants. They override, by specificity, M1's own `.buybox`, `.pdp-specs dl` and `.pdp-type` rules on this page only.
+
+#### For the lead
+
+1. **The local queue consumer stalls on `wrangler dev` under the suites’ load** (P2, P3 and S1 found it): runs 3 and 4 failed only on ledger reads and on two 503s; a restart clears it for a while. `check-demo` is therefore not 5 of 5 on my rig today; nothing it failed is on the product page.
+2. **D1, the dryer’s title.** `catalog.json` titles `mod-laundry-dryer` “The dryer that goes with it, in your fuel”. The page drops the clause when her profile holds no fuel (card, before/now rows, beat 5’s facts); the title is better neutral at the source.
+3. **D1 or E1, the set price.** On WM6500HWA `mod-laundry-pair-price` is decided first (0.902) while neither set is lower, so the page does not show it and the slot shows five. A catalog condition (a published “lower” flag the piece is eligible on) would keep the engine from spending a place on it.
+4. **M3, two Find a Retailer sheets.** The buy bar, Find a Store and the selections use the store’s modal; P3’s where-to-buy module still opens P3’s own sheet (`data-act="find-retailer"`, which beat 16 presses). Routing the module’s button to `store.retailers.open(sku, its decision)` would leave one modal.
+5. **M1**: append `P2_CSS` (the selectors above) to `oh.css`; then the injection in my section can go.
+6. **S2**: two new manual events and a mark to assert if wanted: Notify Me sends custom `notify_me` with the product’s attributes; the heart sends `wishlist_add`; a receipt driver her profile does not carry reads “(the region’s lean)”.
+7. **The anchor.** The committed beat documents are anchored at 2026-10-01T12:00Z; a fresh `--out` seed runs the rig 32 hours ahead of the documents the worker publishes. Beats 5–10 held; I note it for the lanes that measure windows.
+8. **Process notes, for the record.** At 15:20 I navigated the shared Browser pane’s existing tab (another lane’s, on 9131) to my rig before noticing; I put it back to its own address at once and worked in my own tab, now closed. A `ps` listing I ran in WSL printed my first rig’s per-launch `IDENTITY_SECRETS` into my own tool output (never to a file); that process was stopped minutes later and every later launch generated a new secret. One `rm -rf` of a scratch folder of mine that did not yet exist removed nothing.
+
+#### Files
+
+`public/oh/product.html` (the product view replaced by the template, the shell as it was: M1's code draws the header and footer on every shell), the P2 section of `public/oh/oh.js` (the anatomy, the controls, the styles, R4's rulings), `public/oh/beats.json` (beats 5 and 9 only, by R4's rulings through the coordinator), ten screenshots `docs/lg/lanes/shots/M2-1440-*.png` (the three buy bars, the size change on the TV and the colour change on the washer, the sticky bar over the specifications, the selections total, the cart drawer after an add, the retailer modal, the washer's decided modules), and this section.
+
+#### Rig, seeds and restoration
+
+- **Rig:** port 9133 (inspector 9283), first `.wrangler/state-m2` (`rig.mjs --prepare`), then a fresh `.wrangler/state-m2b` after the committed data change; both kept. Stopped at 17:27; ports 9133 and 9283 are free. Only my own dev server was ever stopped.
+- **Seeds:** the nineteen beat documents were hashed at 15:00. My first seed (`seed.mjs --config oh`, in place) rewrote four (`11-window-closes`, `13-three-weeks`, `anchor`, `open-catalog`); I put those four back from the snapshot the same minute (19 of 19 matched) and seeded with `--out` under my scratchpad from then on. After commit `730eaa3` regenerated the documents, I hashed them again (snapshot 2) and reseeded twice with `--out`; `region-seed.mjs` 51 of 51 each time. **The nineteen documents equal HEAD at the end, 19 of 19 by hash.**
+- **Not touched:** `index.html`, `grid.html`, `m.html`, `oh.css`, `oh-store.js`, the shared, P1 and P3 sections of `oh.js`, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`. No commit, deploy or push; no cloud resource; nothing sent to any hosted worker.
+
+### M1: the look, the boot page, the header, the room grids, search, the footer
+
+**Lane M1, builder, 2026-10-02, 14:58–19:05 EDT. Built on M3's store contract (`oh-store.js`, landed 15:11): LG's look in `oh.css`; the boot page as the published template in lg.com's anatomy, with no visitor minted on load; the store's header, pencil banner and footer on every shell; the room grids for TVs, laundry, the kitchen and offers with working filters, a sort control, the declared fit, result counts and the regional label; the search results in POST /sort's order. Every control on these pages works by hand and sends the beat verbs' events. Beats 1–4 and 11–14 still perform through the director. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### Results (rig 9132, `.wrangler/state-m1b`, inspector 9282, `rig.mjs --prepare`, seeded from `730eaa3`'s documents with `seed.mjs --config oh --out <scratchpad>` and `region-seed.mjs` 51 of 51)
+
+| Check | Result |
+|---|---|
+| `check-demo --config oh --base http://localhost:9132`, after the template order and the last fixes, 18:20–19:00 | generated ✓, typecheck ✓, credentials ✓ (1,958 files), **DOM 461 of 463**, **request level 217 of 223**. The DOM's two are engine 503s under load (a `custom` event in S2's manual session refused 503; beat 3's receipt read 503); S2's boot checks pass, among them "Recommended for you: 12 product(s)" and "no visitor is minted on load (1 API call on load: /oh/api/coldstart)". The request level's six are the ledger under load (beat 12's ranked receipts, the day report's outcomes and add_to_bag counts) and load no page. The run before, at 17:56 on the same rig, was **DOM 462 of 462** and request level 210 of 220 (K6's `/oh/nowhere` 403, the pair-price draft, a where-to-buy source check, beat 1's receipts). On this machine (load 18 to 39 on 24 cores, eight rigs) the engine answers 503s with `Configuration publication authority unavailable` and `learning_incomplete` |
+| M1's probe (`scratchpad/m1/probe.mjs`, fresh Chrome profiles): every M1 page at 1440, 1366 and 390 | the boot page, the TV, laundry, kitchen and offers grids and the search results at `/oh/?q=`: all `ready`, **no visitor on load, no horizontal overflow, no broken image, no script error**, at all three widths (21 of 21, and no script error at each width); before anyone arrives the TV, laundry and kitchen grids lead with the file’s declared best sellers in its order, labelled "best sellers · the site’s own order" (3 of 3) |
+| What the boot pages ask on load, off the wire | **only `GET /oh/api/coldstart`** (credential-free, for the ZIP chip): no session, no consent, no event, no snapshot, no /sort |
+| The manual path, by real mouse clicks and keystrokes at 1440 | **18 of 18**, twice: below |
+| The phone frame (index.html with beat 15's class, and m.html) | 410 px with a 10 px bezel, **390 px inside**, the homepage on screen, no overflow; m.html at 390: 390 wide, no overflow |
+
+**The manual path** (a fresh profile; each line is what was measured):
+
+1. The boot page is the published template, nothing decided, nobody minted: hero `hero-nfl-gift-card`; tiles `tile-tvs, tile-audio, tile-laundry`; deals `pin-micro-rgb-evo, deal-nfl-gift-card, deal-laundry-pair, deal-laundry-sets` (the catalog's order under the deals slot's own diversity rule); "Recommended for you" the products file's `template.recommended`, twelve in the file's order, labelled "best sellers · the site’s own order", each card "best seller N · the site’s own order" (checked against the file); 13 category icons; 4 showcase cards; the ZIP chip "North Carolina", from the request; cart 0.
+2. A room tile opens the TV grid; **that first click minted her** (one session, her consent, then `page_view`): "113 results · showing 24", "decided · POST /sort over 113 TVs", the lean label.
+3. The OLED filter: "47 results", the chip "OLED", every TV on screen an OLED; on the wire `custom filter { control: type, page: tvs, category: tvs, type: oled }`, then the grid asks again.
+4. Sort: price low to high sorts (999.99 ≤ 1,149.99 ≤ 1,199.99 …); Best match puts POST /sort's order back.
+5. A card opens its product page and sends `product_view`; the browser's Back returns to the grid with her filter still on.
+6. The header search, typed and submitted: "54 results for “front load washer”" at `/oh/?q=front%20load%20washer`, "decided · POST /sort over 54 products · leans with North Carolina’s sales · synthetic → warehouse"; on the wire `custom search { control, query, results: 54 }`.
+7. A card's Add to Cart: `add_to_cart` on the wire and the header's count 1; the cart icon opens the drawer with the line; Sign in opens the sign-in sheet.
+8. The wordmark goes home, and the homepage is now decided for her: tiles `tile-washtower, tile-tvs, tile-laundry` (she had added a WashTower), deals `deal-nfl-gift-card, deal-big-screens, deal-laundry-pair, deal-laundry-sets`, the rail "decided · POST /sort per room for its 4, then across the rooms", every card with its receipt.
+9. Laundry → Shop all laundry: "201 results", decided by POST /sort; the gas filter sends `custom filter { control: fuel, page: laundry, fuel: gas }`.
+10. Every API call carried `X-Tenant: oh` (80 calls); no script error. Events on the wire, in order: `page_view, custom:filter, product_view, custom:search, add_to_cart, page_view, page_view, custom:filter`.
+
+#### What is on the pages
+
+- **The look (§9.1).** The kit's tokens overridden in `oh.css`: page #FFFFFF, ink #1D1D1B, secondary #6B6B6B, panels #F5F5F5, lines #E6E6E6, brand #A50034, brand deep #8A0029; the kit's yellow accent and notice replaced; Inter; 4 px radii; a white 64 px sticky header. Four product cards across at 1440 and 1366 with the director on its rail, three beside the expanded director, two at a phone's width: the layout follows the site's own column (a size container), so the docked director never squeezes it. The product card is lg.com's: the image on the panel, badges, name, model number, stars and review count, the sale price bold, "$X OFF" in the brand colour, the struck list price, "Free delivery · est. <date>" (representative and the same for everyone, as the footer says) and "Pick up at Best Buy" where the feed says so, then Add to Cart (`store-add`), Find a Retailer (`store-retailers`) or "Out of stock", and the card's receipt line. A decided module carries a small "Decided for you · slot …" mark instead of the scaffold's red rule.
+- **The boot page (§9.2).** Before any visitor exists `/oh/` paints the published template: each slot's pieces from the opening catalog in force (live, in their window, in stock, no rule needing a context nobody gave), in the catalog's own order, under the slot's own diversity rule (from `beats/open-slots.json`), up to its take, each receipt saying "the published template · the catalog’s own order: nobody has arrived, nothing is decided yet". The anatomy: the pencil banner (the site's own promotions, each only while its piece is in force), the header, the 13 category icons, the continue hero (gated), the hero carousel (the slot's answer first, then the template's other heroes as static slides; it never rotates by itself), the service strip, "Shop top appliances and electronics" (the room tiles), "Discover OH. deals", "Shop with an OH. expert", "Recommended for you" (the products file's `template.recommended` until she arrives), the showcase tabs, "The benefits of buying at OH." and the footer. The before/now strips and the arrival line wait for a decided paint. A direct load of a grid or of the search results is the same: nothing decided, no visitor, the order the products file declares (D1's `template`: the TV grid its `gridDefaults.tvs`, laundry and the kitchen their room's `bestSellers`, offers and search every room's, room by room), then the rest in the feed's order, labelled "best sellers · the site’s own order". The lists are read from the file, never computed by the page; once she exists the rail and the grids go through POST /sort as before.
+- **The header (every shell).** Wordmark "OH." (home), TVs (the grid), Laundry and Kitchen (static mega menus: a group opens its grid with that filter, a product opens its page, "Shop all" opens the room's grid), Offers, Support (a sheet), the search box (`form[data-store-search]`), the ZIP chip (her region from the request, read once without a visitor; its sheet says no ZIP code is read), Sign in (`#signIn`), the cart icon with `[data-cart-count]`. `product.html` and `m.html` get the same header, pencil banner and footer at load (their `#signIn` is moved in with its wiring), so neither needs its markup changed.
+- **The grids (§9.3).** `/oh/?view=tvs|laundry|kitchen|offers` inside `index.html` (no `grid.html`), painted through `LANES.routes.grid`. Filters from the feed's attributes per room (type, screen size, capacity, fuel, finish, category, price band, Best Buy pickup, in stock, on sale) with counts that leave the group's own choice out, quick type icons, active-filter chips and Clear all; a filter she turns on sends `custom filter` with the dimension value and the grid asks again (taking one off sends nothing: it says nothing about her taste). Sort: Best match (POST /sort's order, the default), price both ways, customer rating; "47 results · showing 24" and Show more; her declared width on the TV grid (P1's, unchanged) and on the laundry and kitchen grids; the regional label from /sort's own answer.
+- **Search.** `/oh/?q=<text>` (M3's contract; the store reads an old `/oh/search?q=` link client-side): the store's index, `store.search.query` sends `custom search` and asks POST /sort over every match, and the page renders that order with its label, the filters and the sort.
+- **Sheets.** Support, delivery, returns, coverage, haul-away, chat with an expert and Best Buy pickup each open a sheet that says plainly what it is; the chat says it is not connected in a demonstration.
+
+#### P1's eight beats on the working pages
+
+Every press keeps its target: `nav-tvs` in `mainnav` goes through the store's navigation to the TV grid; `open-<sku>` in `rail-tv-grid` is the card itself; `nav-laundry` opens the Laundry menu and `menu-<sku>` in it opens the washer; `.mast a[data-ctl="home"]`, `#p1Fit [data-ctl="fit-58"]`, `continue-changes` and `#signIn` are where they were, and the strips, the arrival line, the receipts, the lean labels and the fit note keep their ids and their words. One robustness change: beat 12 reads the ranked deals' receipts up to three times when none has landed (the receipt route stops at a 503 under load); the sentence still comes only from the engine's own receipt.
+
+**The lines changed in `beats.json`** (beats 2, 3, 11 and 13 only):
+- **2, `will`:** “the hero, the deals and the rail answer X’s sales” → “what leans on the region answers X’s sales, and the page says which modules moved and which held”.
+- **2, `after`:** now measured: “On this answer **{{p1.home.moved}}** moved and {{p1.home.held}} held” (new facts `p1.home.moved` and `p1.home.held`, read off the before/now rows: the hero, the room tiles, the deals four, the rail across rooms).
+- **3, `after`:** “The homepage lg.com never changes, changing.” → “The step from one personalised module to a homepage that answers her, on the platform LG already runs.”
+- **11, `line`:** “an offer’s window closes, and a package loses a member to stock … both leave on the next decision” → “an offer’s window closes. On her TV page and on the homepage it leaves on the next decision, by the catalog’s own rules, and a package with a member out of stock is never shown as complete.”
+- **11, `after`:** “the defects lg.com shows today, fixed.” → “windows and stock kept by the engine, the next step on the platform LG already runs.”
+- **13, `declare`, `will`, `line`, `after`:** her dials are “projected” three weeks on (R4 F9); the clock note on the continue hero says the same.
+
+No card or renderer in the P1 section says “LG packages”; those lines are P2's (M2's).
+
+#### The coordinator's other items
+
+- **Roadmap (R4 F5).** M3 has corrected the source (`demo.config.json` and `SITE.roadmap`), so the P1 section's load-time correction is removed.
+- **The legal line (R4 F8).** Dated from the feed at load: the latest `asOf` of `products.json` (2026-10-01) and `specs.json` (2026-10-02), “as listed publicly on or before 2 October 2026”. Rendered, read after load in a fresh profile: `/oh/`, `/oh/?view=tvs`, `/oh/product?id=OLED65C6PUA` and `/oh/m` each show one footer line, “as listed publicly on or before 2 October 2026”. The footer M1 draws on the other shells is undated until the feed's date is read, so the config's typed date never shows. **Copies still saying 1 October, none of them M1's:** `SITE.brand.legal` in `oh.js`'s shared section and `brand.legal` in `demo.config.json` (M3 and the config's owner), and the static footers of `product.html` (M2) and `m.html` (M3), which M1's chrome replaces at load. `index.html`'s static footer says 2 October.
+- **The cold-start panel.** Its lean label is the seeded region's own: after the reseed from `730eaa3`, “North Carolina: synthetic home sales, fixed seeded lean (no census)”. Nothing in the P1 section prints a lean of its own. **For the lead:** the panel's scored sentence comes from `src/demos/oh.config.ts:82`, “… The census figure explains the lean; …”, which is no longer true now the lean has no census term.
+- **M2's styles.** `P2_CSS` is appended verbatim at the end of `oh.css` (151 entries), so it keeps the cascade position it had when injected. **M2 can drop the injection** (`p2Style()`); until then the rules apply twice, harmlessly.
+- **The phone frame (M3's finding).** `oh.css` makes the site a size container, which collapsed a shrink-wrapped site to its bezel inside the phone frame. The frame now has an explicit width: 410 px with a 10 px bezel, 390 inside, on index.html and m.html alike. Beat 15's phone and Compare at beats 15 and 16 pass.
+- **The search address** is written as `/oh/?q=` directly.
+
+#### For the lead
+
+1. **S2 has named the new sort** (`chosenOrder: sort(SORTS[key])`, the visitor's own choice on a grid's sort control; Best match is POST /sort's order and the default); the never-ranks guard passes with 14 sorts.
+2. **S2's “no visitor is minted on load” can read the previous shell's requests.** Traced (`scratchpad/m1/stray.mjs`): the phone shell shows the shared boot's `ready ·` before its own arrival finishes, so its `page_view`, snapshot, the four /sort of its rail and its reflex read can land after the suite moves on and be counted under `boot-store`. The boot pages themselves ask only `GET /oh/api/coldstart`. It failed in three of my six runs and passed in the last two; waiting for the shell's own ready line, or for the network to go quiet, removes the race.
+3. **A broken thumbnail at beat 13, twice in six runs.** `wm6700hwa.webp` (once with `27lx6tyga.webp`) counted broken among the deals strip's before thumbnails, which the kit's `deltas.js` redraws on every receipt refresh; the files serve 200 and no error event was recorded. The kit's thumbnails carry no fallback. Not seen in the last two runs.
+4. **`oh.js` is CRLF in the working tree.** All 4,374 line endings in `public/oh/oh.js` are CRLF now (HEAD's are LF): another lane's write converted it. My edits keep its endings; whoever commits it should normalise it.
+5. **The template order is data.** D1's `template` in `products.json` is read as the file gives it (`forYouPool`, `declaredList`, `templateOrder` in the P1 section: no sort, no score); the never-ranks guard reads the same 14 sorts.
+6. **A local rig secret reached my tool output.** Listing my rig's processes with their command lines printed the per-launch `IDENTITY_SECRETS` value that `rig.mjs` generates for that one local process. It was not written to any repository file. I stopped that rig at once; every later launch generated a new value, so the printed one signs nothing. Later listings print process ids only.
+
+#### Files
+
+`public/oh/index.html` (the store's anatomy; every id the beats and suites read kept), `public/oh/oh.css` (LG's look; P2's earlier block kept; M2's block appended), the P1 section of `public/oh/oh.js` (1,005 → 1,661 lines), `public/oh/beats.json` (beats 2, 3, 11 and 13's copy only), `docs/oh/OH-Demo-Design.md` (the page row and a decision row for the addresses), five screenshots `docs/lg/lanes/shots/M1-1440-boot-page.png` (the full page), `M1-1440-header.png`, `M1-1440-grid-filtered.png` (OLED, price low to high), `M1-1440-search-results.png`, `M1-390-boot-phone.png`, and this section. Not touched: `product.html`, `m.html`, `oh-store.js`, the shared, P2 and P3 sections, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`. No `grid.html`.
+
+**Seed and restore.** The nineteen beat documents were snapshotted by hash at 15:06, and again after `730eaa3` regenerated them. Every seed of mine went to the scratchpad with `--out`, so I never wrote `public/oh/beats/`; they equal HEAD (`4e71874` regenerated them again at 17:30). The rig is stopped; `.wrangler/state-m1` and `state-m1b` are kept.
+
+### S2: the manual session and the boot assertions; the sixteen beats on the working store
+
+**Lane S2, builder, 2026-10-02, 14:59–18:30 EDT.**
+
+Built, in both OH suites:
+- **The boot page as a store.** The published template is in every module, LG's look is read as computed style, and no visitor is minted on load.
+- **The manual session (DOM).** A visitor's hand presses only what is on screen, from the boot page to her moved homepage.
+- **Its request-level side.** The served template, and each manual event replayed in the store's own shape and measured at the engine.
+- **The coordinator's additions.** R4's rulings, the `730eaa3` data ruling, M3's alignments and K6's root check.
+
+**`check-demo --config oh` passed 5 of 5 at 17:56–18:04: request level 222 of 222, DOM 463 of 463.** The last two runs used M3's final `find_a_retailer` shape. Both suites' store checks passed in both, and request level was 223 of 223 in the first. Neither was clean, for engine reasons only: a 503 on beat 16's pickup, then the day report over its budget (413) on my state.
+
+Six proxy mutations were each caught by the check that names it.
+
+Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker. I wrote only my two suites and this section.
+
+#### Runs, with the counts, as the lanes landed
+
+**My rig.**
+- Port 9134, inspector 9284.
+- `rig.mjs --prepare` on `.wrangler/state-s2`, seeded once in place, then with `--out`.
+- From 16:58, a fresh `.wrangler/state-s2b`, because the first state's ledger consumer had stopped delivering on every run.
+- The request-level suite ran from Windows over loopback. The DOM suite ran from Windows in Chrome, with a fresh profile each run, at 1440×900, and every page was also read at 1366×768.
+
+| Time | What had landed | Request level | DOM |
+|---|---|---|---|
+| 15:00–15:12 | Baseline: S1's suites on the committed pages (M3's `oh-store.js` appeared mid-run) | 184 of 191 (7 failures, all the consumer stall) | **329 of 329** |
+| 15:27–15:34 | M3's contract and docking; M1's `index.html`; R4's checks added at the coordinator's request | 194 of 198. Failing: R4 F5 (two), F8, and the kit guard on `public/demo-kit/store.js` | 315 of 336. Every R4 check failed on the copy as it stood (F1, F2, F5, F7, F8), which proves them before the fixes. Beats 3–4 broke mid-landing |
+| 15:47–16:02 | `730eaa3` (reseeded with `--out`); M1's and M2's sections; the store section in both suites | 202 of 215, 4 known | 395 of 433, 3 known. The boot page passed in full; the session failed from its washer pick onward (since fixed) |
+| 16:04–16:19 | The session's measures corrected; the mutation series | | Store part alone (`--only store`): 109 of 114, then the control at 114 of 114 |
+| 16:26–16:38 | M3's search address moved to `/oh/?q=` | 206 of 217, 4 known (11 failures, the stall) | 454 of 456, 2 known |
+| 16:40–16:50 | `check-demo` run 1, on state-s2 | 207 of 217 (10 failures, the stall) | 453 of 456 (3 failures, engine 503s) |
+| 17:17–17:30 | `check-demo` run 2, on the fresh state-s2b | 216 of 220. Two failures from K6's config not yet applied; two from the stall | 453 of 456. A previous page's `/sort` was counted as a mint on load (since fixed) |
+| 17:31–17:35 | M3's alignments: outcomes, per-page attribution, the search address | | Store part 120 of 120; mutant X3 re-run and caught |
+| 17:37–17:48 | `check-demo` run 3: K6's config live; `4e71874` | 215 of 220, leading to four fixes (below) | 460 of 462 (engine 503s) |
+| **17:56–18:04** | **`check-demo` run 4** | **222 of 222**, 3 known | **463 of 463** |
+| 18:06–18:15 | `check-demo` run 5: M3's final `find_a_retailer` shape | **223 of 223** | 456 of 463. All seven failures at beat 16, after the engine refused the pickup with a 503 |
+| 18:17–18:26 | `check-demo` run 6 | 215 of 218 | 460 of 463. All failures were the day report answering 413 ("report too large for the window"); folding the closed hours did not help, because the open hour holds the runs |
+
+The four fixes after run 3:
+- the unknown-page probe goes out as a browser navigation;
+- P2's beat-5 checks accept the set-price card as a draft;
+- P3's code check reads the code where M3 moved it;
+- the where-to-buy lists are read in their new form.
+
+`check-demo`'s other three steps passed on every run: generated (through WSL), typecheck, and credentials (1,958–1,959 files, no finding).
+
+#### Mutations: each fails for what it names
+
+**How they were served.**
+- My scratch proxy on 127.0.0.1:9184 (`scratchpad/s2/proxy.mjs`) served the rig's bytes with one exact replacement in `/oh/oh.js`. It refused to serve unless the original text occurred exactly once.
+- The DOM suite's store part ran through it.
+
+**The checkout was never written.**
+- Each mutant's served original hashed equal to the checkout's `oh.js` at that moment: `94f93dd2…` for X1–X3, `5e630379…` for X4–X6. The change between them was another lane's edit.
+- X3 was re-run at 17:34 against the per-page attribution and was caught again.
+- The proxy is stopped.
+
+| Id | Mutation | Failed | Caught by |
+|---|---|---|---|
+| control | none | 0 of 114 | |
+| X1 | The cart adds the wrong SKU | 6 of 114 | “add_to_cart, the order-start action, carries the colour she chose: WM6500HWA — productId WM4000HWA”. Also the drawer's lines, the pair saving and the total |
+| X2 | A manual product view sends nothing | 3 of 114 | “its product_view carries the beat verbs’ attributes”, for both TVs and the washer: no product_view |
+| X3 | The boot page mints a visitor on load | 3 of 114, then 4 of 120 | “no visitor is minted on load”, and “the only API call the boot page makes on load is the cold-start region lookup — POST /v1/oh/identity/session ~ POST /realtime/session/preferences” |
+| X4 | The homepage does not re-ask after her session | 8 of 113 | “the homepage re-asks after her session: a snapshot for home after her last event — none”. The tiles, the four and the rail did not move, and no receipt named her clicks |
+| X5 | A filter that does not filter | 3 of 114 | “the filter filters: the grid counts the feed’s 47 priced OLEDs (113 → 113)”, and “the filtered grid is POST /sort’s order over the filtered TVs alone — 113 candidates”. The third failure, a `content_click` 503, is the engine's |
+| X6 | A room tile that does not navigate | 2 of 114 | “the tile goes to its room’s grid (?view=laundry) — /oh/ · home”, and “the press credits the tile” |
+
+#### What the suites now assert (new)
+
+**The boot page (DOM).** A stranger's plain `/oh/`, with storage cleared, loaded from `about:blank` after the wire has settled.
+- **Every module of lg.com's anatomy is on screen with real content:**
+  - the pencil banner;
+  - the header (OH., TVs, Laundry, Kitchen, Offers, Support, Sign in);
+  - the 13-icon category nav and the hero;
+  - the service strip (delivery, returns, coverage, haul-away, an expert);
+  - the room tiles (3) and the deals four;
+  - Shop with an expert;
+  - Recommended for you (at least 4 products, priced, images loaded);
+  - the showcase (both tabs), the benefits, and the footer.
+- **The decided slots show the published template**, none of it decided, in its exact order. The order is recomputed from the documents: the opening catalog's order, the first of each take in force with no eligibility rule, under the slot's diversity rule.
+- **LG's look, read as computed style:**
+  - a white page in Inter;
+  - the wordmark in #A50034 and a white header;
+  - the service strip on #F5F5F5;
+  - no yellow and no black bar anywhere;
+  - every labelled, enabled, filled button in the brand colour, with white text and a 4 px radius.
+- **The director** is collapsed to its rail.
+- **No visitor is minted.** The only API call the page's own load makes is the cold-start lookup: no session, consent, event, decision or `/sort` before the first click.
+- **No overflow and no broken image** at 1440 or at 1366.
+
+**The manual session (DOM).** Real CDP mouse presses, on elements that are on screen and uncovered at the point pressed. Typed text with Enter. Back uses the browser's own history.
+- **TVs from the header.** The first click mints her: one session and her consent, before her first event. `page_view {page: tvs}` is sent, and the grid is in `/sort`'s order.
+- **The OLED filter.** The grid's count becomes the number of priced OLEDs in the feed, and every card is one. A `custom filter` event names type oled, and `/sort` runs over the OLEDs alone.
+- **TV 1, Back, TV 2.** Each `product_view` carries every attribute `productAttrs` builds, with `view: page`.
+- **“front load washer” typed in the header.**
+  - The address becomes `/oh/?q=…`.
+  - Every result matches by the store's rule.
+  - A `custom search {control, query, results}` event is sent, `/sort` runs over every match, and the regional label is on screen.
+- **A washer in stock whose model comes in another colour.** The colour is chosen from the buy column, sending `select` with the variant's attributes.
+- **Add to Cart.**
+  - The header's count goes up by one.
+  - `add_to_cart` carries the chosen SKU's attributes and quantity 1. Its decision ids are all on that page's answer.
+  - The drawer opens on her line.
+- **The dryer from the washer page's decided “goes with it” module.** Its `content_click` credits the module. Add to Cart then carries that module's `decisionId`, `contentId`, slot and content id.
+- **The cart, opened from the header.**
+  - Two lines at the catalog's prices.
+  - The pair saving the catalog prices when the washer and its own dryer complete one, and none otherwise.
+  - A total equal to the lines less the saving.
+- **Find a Retailer.**
+  - The modal shows Buy directly, then Online, then Nearby stores in her region from the request.
+  - The lists equal the catalog piece's group for the product's family, and the modal says so.
+  - It says “a referral is not a sale”.
+  - `find_a_retailer` carries the product's own attributes and `control`.
+  - A seller pressed sends `retailer_referral` with the product's own attributes, `data.store` and `data.where`. It is credited to the where-to-buy decision on the page, or to none.
+- **Back twice.** Each press lands on exactly the previous history entry.
+- **Home, by the wordmark.**
+  - A snapshot for home comes after her last event, and the slots are in the engine's order.
+  - The room tiles' order, the deals four and Recommended for you have all moved from the template.
+  - Some decided cards' receipts name a value her own events carried, and that value is a driver of the engine's decision.
+- **Her first room tile.** It opens its room's grid, and the press is credited.
+- **The session as a whole.**
+  - One visitor for the whole session, and every event is one of the beat verbs' types.
+  - A direct load of `/oh/?q=…` renders its results with nobody minted until the first click.
+  - Every page is checked at 1440 and 1366, with LG's look on each.
+
+**Request level.**
+- **What is served.** The homepage carries the anatomy, and the service strip is served copy. Each home slot's template matches its take and the catalog's order, with a real title and subtitle on every piece. Loading `/oh/` sets no cookie.
+- **A fresh visitor's manual events**, replayed exactly as the store builds them and measured at the engine:
+  - the filter raises type oled on her profile before she opens anything;
+  - her product views put every room, category and type they carried on her profile;
+  - the search is `/sort` over every match, leaning with her region;
+  - the colour's `select` raises the variant's finish;
+  - Add to Cart, run after beat 16, moves her journey to the stage one cart add starts (“deciding”), and the day report counts it as `add_to_bag`, never as a purchase;
+  - Find a Retailer and a referral, in M3's shapes;
+  - every event is accepted.
+
+**R4, the data ruling, M3 and K6 (at the coordinator's request).**
+- **F1.** The dryer card claims a fuel as hers only when her profile carries one. With none, it names the driver that `/sort`'s own items say separated its first dryer from the second.
+- **F2.** The viewing distance sends no `select` for any product, and the next ask carries `ctx.distance`. The card says “declared”. Her size band and price tier hold until she chooses a size herself.
+- **F3 and F6.** After the final reset, the sign-in links a fresh identity carrying none of the walk's taste, and a retired session cannot sign in again.
+- **F5 and F8.** The Roadmap tab and the legal line say what is true on screen. Their sources are known items.
+- **F7.** The set-price card is absent while no set is lower (a draft since `4e71874`).
+- **`730eaa3`.**
+  - No regional driver names `priceTier` anywhere: across every engine answer the request-level suite reads, and every `/sort` answer on the DOM wire.
+  - The lean's label carries no census term.
+- **K6.** `/` answers 302 to `/oh/`, keeping its query. A browser navigation to an unknown page under `/oh/` answers 302 there too. An API path keeps its own answer. This holds on my rig, which `rig.mjs` provisions with the oh tenant alone.
+
+**Shells.** The laundry, kitchen and offers grids and the search page join every shell at 1440 and 1366, and `search.html` joins the served shells.
+
+#### Existing assertions changed
+
+Each claim is kept unless a ruling changed it.
+
+| Suite · where | Change | Why |
+|---|---|---|
+| DOM · beat 5 (S1, P2) | “… and the pair price” → the set-price card is required only when one of the washer's sets is lower, and asserted absent otherwise | R4 F7; `4e71874` |
+| DOM · `inEngineOrder` (S1) | The engine's order, less the set-price card exactly when no set of the product on screen is lower | R4 F7 |
+| Request · beat 5 (P2) | The set-price card is asserted not decided while the catalog in force holds it as a draft | `4e71874` |
+| DOM · beat 5 (P2) | “In her fuel: X leads” and “her own browsing outweighs” → the fuel claim is held to her profile, and the reason to `/sort`'s separating driver | R4 F1: the old check encoded the false sentence |
+| DOM · beat 9 (P2); Request · beat 9 (P2's replay) | “it moved her own meters” and the `select` replay → no `select`, `ctx.distance` on the next ask, readings held | R4 F2 |
+| Request · beat 5 (P2's info line) | → a measured check of `/sort`'s items and her fuel reading | R4 F1 |
+| Request · beat 16 (P3) | The where-to-buy code check reads `oh-store.js` (`outcome`, `send`, `decisionData`) and P3's delegation to it | M3 moved the outcomes into the store |
+| Request · never-ranks | `chosenOrder`'s `SORTS[key]` is named: her own choice on a grid's sort control, never the default | M1's sort control (design §9.3), read in the code |
+| Request · beat 5 (P2) | `renderBuyBox` is read whatever the line ending | `oh.js` is now served with CRLF |
+| DOM · `herCap` (S1) | Guarded for a page without `?debug` | The session loads a stranger's `/oh/` |
+
+#### Findings for the lead
+
+1. **The config's owner has three known items to clear.** These are request-level checks on the source; the DOM checks on what is shown pass. The source is `demo.config.json` and the `SITE` literal it writes into `oh.js`. It still:
+   - marks complements, the two outcomes and the regional prior as “designed”;
+   - names the gate `ctx.anchor`;
+   - dates prices 1 October, as do the shells' static footers.
+
+   M1 corrects both at runtime, which is why the DOM checks pass.
+2. **The kit guard caught “Find a Retailer” in `public/demo-kit/store.js`** (the kit's working-store file) at 15:27. It was neutral by the final runs.
+3. **M3, search.** “washer” matches 48 dishwashers and 25 kitchen packages, because the index matches inside words. The session types “front load washer” instead. A word-boundary match would fix it.
+4. **The engine on `wrangler dev`.** On most runs from 15:47 on `state-s2`, the ledger consumer delivered a handful of batches and then none.
+   - **The symptoms.** Receipts answered “no record” and the report's counts stayed flat. `/sort`, receipts and the report sometimes answered 503.
+   - **The error.** The log shows “Configuration publication authority unavailable” from `LearnStats.priorsFor` throughout. The throw is `required(ref)` in `readPinnedPublication` (`src/config/publication.ts:339`): OH's publication set carries no `priors` document.
+   - **What it is not.** It worsened with WSL's load (14 to 32, with six rigs up). It was not caused by the suites' report builds: moving them after beat 16 changed nothing (they stay there).
+   - **The workarounds.** A fresh state cleared it for runs 4 and 5. By run 6 that state's day had outgrown the report's budget (413), S1's finding 3 again.
+   - Wrangler also failed to start once (“socket hang up”) and started on retry.
+5. **Copy defects found and since fixed:**
+   - M2's beat-5 lead line named the drivers both dryers share, not “sold here”.
+   - Once, at 15:52, the phone at beat 15 rendered as a 20 px-wide frame.
+
+#### Files, rig and restoration
+
+- **My files.**
+  - `scripts/rehearse-oh-page.mjs`: 1,608 lines, sha256 `b4a05f4f7c16…`.
+  - `scripts/rehearse-oh-dom.mjs`: 1,936 lines, `dc341eebef04…`.
+  - This section.
+  - `scripts/demo-kit/configs/oh.json` is as the lead committed it in `730eaa3`; I did not edit it.
+- **Beat documents.**
+  - Snapshotted by hash at 14:59 (19 files).
+  - My one in-place seed, at 15:01, rewrote four. `730eaa3` (15:32) replaced those four with regenerated documents, so none of the nineteen holds my bytes.
+  - Every later seed of mine went to `--out` in the scratchpad.
+  - At the end, all 19 equal HEAD (`4e71874`) by hash.
+- **The rig and the proxy.** Both stopped; ports 9134, 9284 and 9184 are free. The states `.wrangler/state-s2` and `state-s2b` are kept. Scratch files (patches, proxy, mutants, logs and screenshots) are under the session scratchpad, in `s2/`.
+
+#### What remains
+
+- **A clean `check-demo` on M3's final shape.** It needs a third fresh state, because `state-s2b`'s day is over the report budget. Alternatively, a rig whose closed hours have folded.
+- **The three known items** above, for the config's owner.
+- **The engine's ledger stall on local rigs** (finding 4).
+- **The hosted run** of both suites, on the owner's go.

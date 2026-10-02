@@ -10,7 +10,7 @@
 | Queues | `events-oh` and `events-oh-dlq` |
 | Local port | `9120` |
 | The config | `public/oh/demo.config.json`, the one file an SE edits first; `scripts/demo-kit/configs/oh.json` is derived from it |
-| The page | `public/oh/index.html`, `product.html`, `m.html`, `oh.css`, `oh.js` on `public/demo-kit/` |
+| The page | `public/oh/index.html` (the homepage and the room grids `/oh/?view=tvs\|laundry\|kitchen\|offers`) (the search results at `/oh/?q=`, the store’s address), `product.html`, `m.html`, `oh.css`, `oh.js` and `oh-store.js` (the store: cart, navigation, events, search, Find a Retailer, sign-in) on `public/demo-kit/` |
 | The beats | `public/oh/beats.json` (the director's script) and `public/oh/beats/*.json` (the published documents) |
 | The server | `src/demos/oh.config.ts` (the constants) and `src/routes/oh.ts` (the kit's factories) |
 | The suites | `scripts/rehearse-oh-page.mjs` (request level) and `scripts/rehearse-oh-dom.mjs` (the real page) |
@@ -74,3 +74,4 @@ The windows are anchored to the seed's moment and the regional prior has a 24-ho
 | 2026-10-02 | Beat 2's contrast is New Jersey, else Texas: the two regions D1's region section rehearses verbatim | K4 |
 | 2026-10-02 | Addresses: the homepage `/oh/`, the TV grid `/oh/?view=tvs` (P1 may add `grid.html`), a product `/oh/product?id=<sku>`, the phone `/oh/m`. The design's path forms `/oh/tvs` and `/oh/p/<sku>` do not reach a shell: the assets binding answers an unknown navigation with the root page (Vantage, R1 N7) | K4 |
 | 2026-10-02 | The design's §4 heading says five acts; its table names eight (Arrival, Two rooms, The room completes, Curation, Windows, Three weeks later, One person, Best Buy counts). The config carries the table's eight; the lead rules if the five are wanted | K4, for the lead |
+| 2026-10-02 | The store (lane M1, design §9): the room grids live in `index.html` as views at `/oh/?view=tvs\|laundry\|kitchen\|offers` (no `grid.html`); the search results are at `/oh/?q=` (the store’s contract, lane M3), which the store also reads from an old `/oh/search?q=` link client-side. Before any visitor the rail and the grids show the products file’s own `template` (best sellers, declared by the merchandiser), then the rest in the feed’s order. Before any visitor exists every one of these pages is the published template, in the catalog's own order, and nothing mints a visitor on load | M1 |

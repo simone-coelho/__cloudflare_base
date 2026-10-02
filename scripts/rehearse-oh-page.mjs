@@ -37,6 +37,41 @@ const checks = createChecks({ infoIndent: 6 });
 const { ok, info } = checks;
 const client = createClient({ base, tenant: TENANT, source: SOURCE, assets: `/${SLUG}/`, api: API });
 const { asset, assetJson, navigate, call, demoRoute } = client;
+/**
+ * Every JSON answer of the engine this suite reads, swept for the regional prior (lane S2; the ruling of 730eaa3, which
+ * took priceTier off OH's regional allowlist): a regional block's dimensions (POST /sort's `regional`, a receipt's
+ * `explain.regional`), the cold-start lean's leaders and shares, and on POST /sort's items the regional drivers, which the
+ * engine emits one per touch the region shares (src/reflex/sortCandidates.ts), so an item can carry no more of them than
+ * of its own drivers on allowlisted dimensions. The sweep watches the fetches the kit's client makes; it decides nothing.
+ */
+const REGIONAL = { answers: 0, blocks: 0, items: 0, hits: [], allow: null };
+const fetch0 = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  const res = await fetch0(url, init);
+  try {
+    const u = new URL(String(url && url.url ? url.url : url));
+    if (/^\/(v1|sort|realtime|oh\/api)\b/.test(u.pathname) && /json/.test(res.headers.get('content-type') || '')) {
+      const body = await res.clone().json().catch(() => null);
+      if (body) { REGIONAL.answers += 1; sweepRegional(body, u.pathname); }
+    }
+  } catch { /* not an engine answer */ }
+  return res;
+};
+function sweepRegional(node, where, key = '') {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) { for (const x of node) sweepRegional(x, where, key); return; }
+  if ((key === 'regional' || key === 'lean') && (Array.isArray(node.dimensions) || node.leaders || node.share)) {
+    REGIONAL.blocks += 1;
+    const named = [...(node.dimensions || []), ...Object.keys(node.leaders || {}), ...Object.keys(node.share || {})];
+    if (named.includes('priceTier')) REGIONAL.hits.push(`${where} ${key}: ${named.filter((d) => d === 'priceTier').length ? 'priceTier' : ''}`);
+  }
+  if (where === '/sort' && key === 'items' && Array.isArray(node.drivers) && node.id !== undefined && node.drivers.some((d) => d && d.dim === 'regional') && REGIONAL.allow) {
+    REGIONAL.items += 1;
+    const regional = node.drivers.filter((d) => d.dim === 'regional').length, allowed = node.drivers.filter((d) => REGIONAL.allow.includes(d.dim)).length;
+    if (regional > allowed) REGIONAL.hits.push(`${where} item ${node.id}: ${regional} regional drivers for ${allowed} allowlisted touches`);
+  }
+  for (const [k, v] of Object.entries(node)) if (v && typeof v === 'object') sweepRegional(v, where, k);
+}
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname);
 const fmt = (list) => (list || []).map((d) => `${d.customerContentId}${d.strategy === 'tenant-pinned' ? '(pin)' : ''} ${Number(d.score || 0).toFixed(3)}`).join(' · ');
 const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -59,7 +94,8 @@ const SKU = demo.products.id || 'sku';
 const firstOf = (family, prefer) => (prefer && productList.find((p) => p[SKU] === prefer)) || productList.find((p) => p.family === family) || null;
 const PDP = { tv: firstOf('oled-tv'), washer: firstOf('front-load-washer', 'WM1455HWA'), range: firstOf('electric-range') };
 const shells = {};
-const SHELLS = [['home', ''], ...Object.entries(PDP).filter(([, p]) => p).map(([k, p]) => [`product-${k}`, `product?id=${encodeURIComponent(p[SKU])}`]), ['phone', 'm']];
+const SHELLS = [['home', ''], ...Object.entries(PDP).filter(([, p]) => p).map(([k, p]) => [`product-${k}`, `product?id=${encodeURIComponent(p[SKU])}`]), ['phone', 'm'],
+  ...(inCheckout(`public/${SLUG}/search.html`) ? [['search', 'search?q=oled']] : [])];   // S2: M1's search shell, served as a browser navigates
 for (const [key, path] of [...SHELLS, ['js', `${SLUG}.js`], ['css', `${SLUG}.css`]]) {
   const isPage = !['js', 'css'].includes(key);
   const res = isPage ? await navigate(path) : await asset(path);
@@ -73,6 +109,36 @@ ok('the home shell is the OH page', /data-entry="home"/.test(shells.home) && she
 ok(`the product shell boots into the product view, for the TV, the washer and the range (${Object.values(PDP).filter(Boolean).map((p) => p[SKU]).join(', ')})`,
   Object.keys(PDP).every((k) => PDP[k] && /data-entry="product"/.test(shells[`product-${k}`])));
 ok('the phone shell boots into the homepage at phone width', /data-entry="phone"/.test(shells.phone) && /shell--phone/.test(shells.phone));
+{
+  // The worker's root is the demo (lane K6, src/demos/kit/root.ts; docs/demo-kit/lanes/K6.md patch 2, widened by S2 at the
+  // coordinator's request): "/" answers 302 to /oh/ keeping its query string, never the repository's legacy dashboard; an
+  // unknown page under /oh/ answers 302 to /oh/ too; an API path keeps its own answer, known or unknown. It holds where the
+  // worker provisions oh alone, as the hosted worker and rig.mjs's rig do, and its config routes "/" to the worker first with
+  // no single-page fallback (K6's patch 1 to scripts/build-demo-worker-config.mjs and wrangler.oh.toml).
+  const manual = { redirect: 'manual', cache: 'no-store', headers: { Accept: 'text/html' } };
+  const root = await get(`${base}/?utm_source=s2-root`, manual);
+  const to = root.headers.get('location'), toU = to ? new URL(to, `${base}/`) : null;
+  // A browser's navigation, as K6's rule reads one (Sec-Fetch-Mode: navigate): Node's fetch sends "cors", so this goes
+  // through node:http, as the kit's navigate() does, and does not follow the redirect.
+  const { request: httpRequest } = await import(new URL(base).protocol === 'https:' ? 'node:https' : 'node:http');
+  const lost = await new Promise((resolve) => { const r = httpRequest(new URL(`${base}/${SLUG}/nowhere`), { method: 'GET', headers: { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Site': 'none', Accept: 'text/html,application/xhtml+xml', 'Cache-Control': 'no-store' } }, (res) => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location || null, arrayBuffer: async () => null }); });
+    r.on('error', () => resolve({ status: 0, location: null, arrayBuffer: async () => null })); r.end(); });
+  const lostTo = lost.location;
+  const apiH = { redirect: 'manual', cache: 'no-store', headers: { 'X-Tenant': TENANT, 'X-SDK-Key': 'demo-site', Accept: 'application/json' } };
+  const known = await get(`${base}${API}/coldstart`, apiH), unknownApi = await get(`${base}${API}/nowhere`, apiH);
+  for (const r of [root, known, unknownApi]) await r.arrayBuffer().catch(() => null);
+  const landed = await navigate('/');
+  const home = landed.ok ? await landed.text() : '';
+  const json = (r) => /json/.test(r.headers.get('content-type') || '');
+  ok(`the worker's root "/" redirects to /${SLUG}/ keeping its query, and a browser landing there gets the OH page`,
+    root.status === 302 && Boolean(toU) && toU.pathname === `/${SLUG}/` && toU.searchParams.get('utm_source') === 's2-root' && /data-entry="home"/.test(home),
+    `/?utm_source=s2-root → ${root.status}${to ? ` ${to}` : ''}${root.status === 200 ? ` (the root page: this worker provisions more than ${TENANT}, or its config does not route "/" to the worker first: K6's patch 1)` : ''}`);
+  ok(`an unknown page under /${SLUG}/, navigated to by a browser, redirects to /${SLUG}/ as well`, lost.status === 302 && Boolean(lostTo) && new URL(lostTo, `${base}/`).pathname === `/${SLUG}/`,
+    `/${SLUG}/nowhere → ${lost.status}${lostTo ? ` ${lostTo}` : ''}`);
+  ok('and an API path keeps its own answer: the cold-start read 200 JSON, an unknown API path its own refusal, never a redirect', known.status === 200 && json(known)
+    && unknownApi.status >= 400 && unknownApi.status < 500 && !unknownApi.headers.get('location') && json(unknownApi), `${API}/coldstart → ${known.status} · ${API}/nowhere → ${unknownApi.status}`);
+}
 {
   const kit = ['/demo-kit/tokens.css', '/demo-kit/kit.css', '/demo-kit/compare.css', `/${SLUG}/${SLUG}.css`];
   const all = pageShells.every((k) => kit.every((href) => shells[k].includes(`href="${href}"`)));
@@ -113,6 +179,31 @@ for (const [path, what] of LATER) {
   ok(`/${SLUG}/${path} → ${res.status} (${what})`, res.ok && text.length > 0, res.ok ? '' : 'in the checkout but not served: restart the rig, which lists public/ at its start');
 }
 // The images the data files name are swept at the end (imageSweep): hundreds of requests leave stale sockets behind.
+{
+  // R4 F5 and F8 (S2), read in what is served: the Roadmap the page renders (SITE.roadmap in oh.js) marks nothing the walk
+  // uses as designed; every legal line (SITE.brand.legal, demo.config.json, the shells' footer) names the date of the
+  // prices on screen: the overlay's (specs.json) when it changes any row's price, else the feed's own.
+  const road = Array.isArray(PAGE_SITE.roadmap) ? PAGE_SITE.roadmap : [];
+  const USED = [['complements', /\bcomplements\b/i], ['the two named outcomes', /partner_pickup|retailer_referral/i], ['the regional prior on /sort', /regional prior on \/sort/i]];
+  const wrong = road.filter(([status, name]) => /designed/i.test(status) && USED.some(([, re]) => re.test(name)));
+  checks.known('the Roadmap’s source (demo.config.json, written into oh.js as SITE.roadmap) marks none of what the walk uses as designed: complements, the two named outcomes, the regional prior on /sort', road.length > 0 && wrong.length === 0,
+    wrong.map(([s, n]) => `“${n}” ${s}`).join(' ~ ') || `${road.length} items`, 'the config’s owner: demo.config.json roadmap (the page’s Roadmap tab is corrected at runtime by M1; the DOM suite asserts the tab)');
+  checks.known('and the source names the companions’ gate as the walk sends it (ctx.family), not “ctx.anchor until complements lands”', !road.some((x) => /ctx\.anchor until complements lands/i.test(x.join(' '))),
+    (road.find((x) => /ctx\.anchor/i.test(x.join(' '))) || ['', '', 'no gate named'])[2].slice(0, 140), 'the config’s owner: demo.config.json roadmap');
+  const ov = (() => { try { return JSON.parse(laterDocs[overlayPath] || 'null'); } catch { return null; } })();
+  const ovRows = new Map((((ov && (ov.specs || ov.products || ov.rows)) || [])).filter((r) => r && r.sku).map((r) => [String(r.sku), r]));
+  const changed = productList.filter((p) => ovRows.has(String(p[SKU])) && ['salePrice', 'listPrice'].some((k) => ovRows.get(String(p[SKU]))[k] != null && Number(ovRows.get(String(p[SKU]))[k]) !== Number(p[k])));
+  const feedDate = String((productsDoc && productsDoc.asOf) || '').slice(0, 10), ovDate = String((ov && ov.asOf) || '').slice(0, 10);
+  const iso = changed.length && ovDate > feedDate ? ovDate : feedDate;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const long = iso ? `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}` : '';
+  const lines = [['oh.js SITE.brand.legal', (PAGE_SITE.brand || {}).legal], ['demo.config.json brand.legal', (demo.brand || {}).legal],
+    ...pageShells.map((k) => [`the ${k} shell’s footer`, ((/<p[^>]*\bid="footLegal"[^>]*>([\s\S]*?)<\/p>/.exec(shells[k] || '') || [])[1] || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || null])].filter(([, t]) => t);
+  const stale = lines.filter(([, t]) => !new RegExp(`(?<!\\d)${long}`).test(t));
+  checks.known(`every legal line’s source names the date of the prices on screen, ${long} (${changed.length} rows priced by specs.json of ${ovDate || '?'} over the feed of ${feedDate || '?'})`, Boolean(long) && lines.length > 0 && stale.length === 0,
+    stale.map(([w, t]) => `${w}: “${(/as listed[^;.]*/.exec(t) || [t.slice(0, 80)])[0]}”`).join(' ~ ') || `${lines.length} lines`,
+    'the config’s owner (demo.config.json brand.legal) and M1 (the shells’ static footer); the page dates the line from the feed at runtime and the DOM suite asserts what is on screen');
+}
 
 // ── No credential is served or committed, and the page holds none ───────────
 console.log('\n── No credential is served, embedded or committed');
@@ -240,6 +331,7 @@ console.log('\n── The page never ranks: its own code orders no piece and sco
     { fn: 'topOf', comparator: '(x, y) => y.a - x.a', why: 'her strongest lasting signals, named on the sign-in strip (P3): her vector, not a piece' },
     { fn: 'keysOf', comparator: '', why: 'a set of signals’ keys put in order to compare two sets (P3): not a piece' },
     { fn: 'receiptLine', comparator: '(a, b) => Number(b.a) * Number(b.weight) - Number(a.a) * Number(a.weight)', why: 'her two strongest drivers on a card’s receipt line: an explanation, not a piece' },
+    { fn: 'chosenOrder', comparator: 'SORTS[key]', why: 'her own choice on a grid’s sort control (price low to high or high to low, rating), the control design §9.3 asks for: never the default, Best match stays POST /sort’s order and each card keeps its engine rank (M1; read by S2)' },
   ];
   const ENGINE_ORDER = /^\(\s*([\w$]+)\s*,\s*([\w$]+)\s*\)\s*=>\s*(?:Number\()?\1\.(order|position)\)?\s*-\s*(?:Number\()?\2\.\3\)?$/;
   const vertical = [...pageModules].filter(([p]) => p.startsWith(`/${SLUG}/`));
@@ -416,6 +508,24 @@ const drivers = (d) => (d && d.explain && d.explain.drivers) || [];
 const companionsOf = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', 'mod-laundry-pair-price'];
 const widthNow = (x) => { const s = Number(x && x.width); if (Number.isFinite(s) && s > 0) return s; const f = Number(x && x.fits && x.fits.width); return Number.isFinite(f) && f > 0 ? f : null; };
 const transportJs = () => ([...pageModules].find(([p]) => /\/demo-kit\/transport\.js$/.test(p)) || [null, ''])[1];
+/**
+ * What put /sort's first ahead of its second, read off the answer's own items (lane S2, R4 F1): per dimension the
+ * contribution the first holds over the second (the regional prior as one dimension, 'regional'); the dimension with
+ * the largest lead, with the first's own value there. Null when the answer carries no items for them.
+ */
+function separating(answer, first, second) {
+  const items = (answer && answer.items) || [];
+  const of = (id) => items.find((x) => String(x.id) === String(id)) || null;
+  const a = of(first), b = of(second);
+  if (!a || !b) return null;
+  const byDim = (x) => { const m = new Map(), top = new Map();
+    for (const d of x.drivers || []) { const k = d.dim; m.set(k, (m.get(k) || 0) + Number(d.contribution || 0)); if (!top.has(k) || Number(d.contribution) > top.get(k).c) top.set(k, { c: Number(d.contribution), v: d.value }); }
+    return { m, top }; };
+  const A = byDim(a), B = byDim(b);
+  let best = null;
+  for (const [dim, v] of A.m) { const gap = v - (B.m.get(dim) || 0); if (!best || gap > best.gap) best = { dim, value: A.top.get(dim).v, gap: Number(gap.toFixed(3)) }; }
+  return best && best.gap > 0 ? best : null;
+}
 const imageIndex = (() => { try { const d = JSON.parse(laterDocs[`public/${SLUG}/img/index.json`] || laterDocs['img/index.json'] || 'null'); return (d && d.products) || null; } catch { return null; } })();
 
 // ── The homepage and the grid, as oh.js builds them (lane P1) ──
@@ -513,6 +623,16 @@ const OUTCOMES = {
     ok(`her region comes ${said}, nothing asserted`, Boolean(cold) && ((r.source === 'edge' && Boolean(r.key)) || (r.source === 'none' && cold.grain === 'national')),
       cold ? `${r.key || 'no key'} · ${cold.grain} · ${cold.census ? `${cold.census.label} $${cold.census.medianHouseholdIncomeUsd}` : 'no census'}` : 'no answer');
     ok('the panel says the sentence, verbatim', Boolean(cold) && cold.sentence === 'aggregate, never the individual; we curate, never price.', cold && cold.sentence);
+    {
+      // The ruling of 730eaa3 (S2): the lean is a fixed seeded lean per state, labelled synthetic, with no census term and no price tier.
+      const seededLabel = String(((lean && lean.seeded) || {}).label || '');
+      ok('the lean’s own label carries no census term: it is the brand’s seeded sales, not a mix tilted by income', Boolean(seededLabel) && !/census|income/i.test(seededLabel.replace(/\(no census\)/i, '')),
+        seededLabel || 'no seeded label');
+      const regAllow = (((anchor.learn || {}).regional || {}).dimensions) || [];
+      REGIONAL.allow = regAllow;
+      ok(`and no regional dimension is the price tier: the published allowlist (${regAllow.join(', ')}) and the lean’s leaders and shares`, regAllow.length > 0 && !regAllow.includes('priceTier')
+        && !Object.keys((lean && lean.leaders) || {}).includes('priceTier') && !Object.keys((lean && lean.share) || {}).includes('priceTier'), lean ? `leaders ${JSON.stringify(lean.leaders)}` : 'no lean');
+    }
     ok('the census is shown and never scored', Boolean(cold && cold.scored) && cold.scored.census === false && Boolean(cold.scored.sentence), cold && cold.scored && cold.scored.sentence);
     if (page.own) {
       ok(`the regional lean is in force for ${page.own}, labelled synthetic → warehouse`, Boolean(lean) && lean.inForce === true && lean.answered === page.own
@@ -721,8 +841,11 @@ const OUTCOMES = {
     const mods = s.slot('pdp-modules');
     info(`modules ${fmt(mods)} | offers ${fmt(s.slot('pdp-offers'))}`);
     ok(`the washer page is decided with ctx.anchor = ${p.sku} and ctx.family = ${p.family} asserted`, s.asked.anchor === p.sku && s.asked.family === p.family && mods.length > 0);
-    const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', 'mod-laundry-pair-price'];
-    ok('the room completes below the buy box: the dryer, the pedestal, the stacking kit and the pair price are decided', want.every((id) => ids(mods).includes(id)),
+    // The set-price card only where the catalog in force holds it live (4e71874 publishes it as a draft: no laundry set costs less).
+    const pairLive = (() => { const x = pieceById('mod-laundry-pair-price'); return Boolean(x) && (!x.lifecycle || x.lifecycle.status === 'live'); })();
+    const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', ...(pairLive ? ['mod-laundry-pair-price'] : [])];
+    if (!pairLive) ok('the set-price card is not decided: the catalog in force holds it as a draft, since no set costs less than its pieces', !ids(mods).includes('mod-laundry-pair-price'), ids(mods).join(', '));
+    ok(`the room completes below the buy box: the dryer, the pedestal, the stacking kit${pairLive ? ' and the pair price' : ''} are decided`, want.every((id) => ids(mods).includes(id)),
       want.filter((id) => !ids(mods).includes(id)).map((id) => `${id} missing`).join(', ') || ids(mods).join(', '));
     ok(`each is preferred because it completes ${p.sku}: the completes driver on every one`, want.every((id) => completesOf(mods.find((d) => d.customerContentId === id)) === p.sku),
       want.map((id) => `${id} ${completesOf(mods.find((d) => d.customerContentId === id)) || 'none'}`).join(' · '));
@@ -740,7 +863,20 @@ const OUTCOMES = {
       info(`dryers by POST /sort: ${order.ids.map((id) => `${id} ${(row(id).attributes || {}).fuel}`).join(' · ')} · regional ${JSON.stringify(order.regional)}`);
       const regionalOnAll = order.ids.length > 0 && Boolean(order.regional && order.regional.region === region);
       ok(`the dryers are ordered by POST /sort with ${region}’s sales in force on the answer, labelled`, regionalOnAll, `regional ${JSON.stringify(order.regional || {}).slice(0, 100)}`);
-      info(first ? `the first dryer is ${first.sku}, ${first.attributes.fuel}; ${region}’s sales lean ${leanFuel}${first.attributes.fuel === leanFuel ? '' : ': her own browsing outweighs the region here (the page must say so; the DOM suite reads it)'}` : 'no dryer order');
+      info(first ? `the first dryer is ${first.sku}, ${first.attributes.fuel}; ${region}’s sales lean ${leanFuel}` : 'no dryer order');
+      // R4 F1 (S2): a fuel is hers only when her own profile carries one; what put the first dryer first is read off /sort's
+      // own items, as the page asks it (the DOM suite holds the card to both).
+      const herFuel = Object.entries((await client.meters(her)).dims.fuel || {}).filter(([, a]) => Number(a) > 0);
+      const candidates = dryers.filter((id) => row(id)).map((id) => { const { productId, ...a } = productAttrs(row(id)); return { id, ...a }; });
+      const full = await call('/sort', { visitor: her, body: { userId: her.session.subject, sessionId: her.session.sessionId, candidates, ...(page.region ? { context: { region: page.region } } : {}) } });
+      const ord = full.ok && Array.isArray(full.body.order) ? full.body.order.map(String) : [];
+      const sep = separating(full.body, ord[0], ord[1]);
+      ok(`POST /sort says on its own items why its first dryer leads: ${sep ? `${sep.dim} ${sep.value}, +${sep.gap} over the second` : 'no driver'} (her own fuel reading: ${herFuel.length ? herFuel.map(([v, a]) => `${v} ${Number(a).toFixed(2)}`).join(', ') : 'none'})`,
+        Boolean(sep), `${ord.slice(0, 2).join(' over ')} · ${(full.body.items || []).length} items`);
+      if (!herFuel.length && first) info(`so no card may call the ${first.attributes.fuel} dryer “in her fuel”: her profile holds no fuel (the DOM suite reads the card against this)`);
+      const sets = ((p.companions || {}).packages || []).map(row).filter((x) => x && x.salePrice != null).map((x) => { const parts = String(x.sku).split('_').map(row);
+        const apart = parts.every((m) => m && m.salePrice != null) ? parts.reduce((n, m) => n + Number(m.salePrice), 0) : null; return { sku: x.sku, set: Number(x.salePrice), apart }; });
+      info(`${p.sku}’s sets against their pieces (R4 F7; the page shows the set-price card only when one is lower, the DOM suite reads it): ${sets.map((x) => `$${x.set} · apart $${x.apart}${x.apart !== null && x.set < x.apart ? ' lower' : ''}`).join(' · ')}`);
     }
     {
       // Fails closed: the same page asked without the anchor and the family completes nothing.
@@ -765,7 +901,7 @@ const OUTCOMES = {
         ok('the family alone opens the gate, and completes nothing: no decision carries a completes driver without the anchor',
           familyOnly.slot('pdp-modules').length > 0 && familyOnly.all.every((d) => !drivers(d).some((x) => x.dim === 'completes')), `${ofSlot(familyOnly).join(', ')}`);
         // The buy box is the catalog's: its renderer reads the product row and never a decision.
-        const m = /function renderBuyBox\(p\) \{([\s\S]*?)\n  \}\n/.exec(codeOnly(shells.js, 'js'));
+        const m = /function renderBuyBox\(p\) \{([\s\S]*?)\r?\n  \}\r?\n/.exec(codeOnly(shells.js, 'js'));   // S2: CRLF-tolerant (oh.js is served with CRLF since M1/M2 landed)
         ok('the buy box is painted from the catalog alone: its renderer reads no decision, no set and no receipt',
           Boolean(m) && !/state\.sets|bySlot|decision|receipt|\.score\b/.test(m[1]), m ? `${m[1].split('\n').length} lines read` : 'no renderBuyBox in /oh/oh.js');
     }
@@ -847,14 +983,16 @@ const OUTCOMES = {
     const up = sizeUp(p, WALK.distanceFt);
     ok(`from ${WALK.distanceFt} ft one size up is ${up ? `${up.sku} (${up.sizeInches}″, ${up.attributes.sizeBand}, ${up.attributes.priceTier})` : 'none'} by the piece’s own figures`, Boolean(up));
     if (up) {
+      // R4 F2 (S2, replacing “her answer moves size band and price tier on her meters”): her distance goes on the next ask as
+      // declared context, ctx.distance; no event is sent for a product she did not choose, so her readings hold.
       const before = await client.meters(her);
-      await client.sendCustom(her, 'select', productAttrs(up, { control: 'viewing-distance', distanceFt: WALK.distanceFt, declared: true }));
+      const s9 = await ask(her, 'product', { anchor: p.sku, family: p.family, distance: String(WALK.distanceFt) });
       const after = await client.meters(her);
       const a = (m, dim, v) => Number(((m.dims[dim] || {})[v]) || 0);
-      ok(`her answer moves size band and price tier on her meters: ${up.attributes.sizeBand} and ${up.attributes.priceTier} rise`,
-        a(after, 'sizeBand', up.attributes.sizeBand) > a(before, 'sizeBand', up.attributes.sizeBand) && a(after, 'priceTier', up.attributes.priceTier) > a(before, 'priceTier', up.attributes.priceTier),
-        `sizeBand ${a(before, 'sizeBand', up.attributes.sizeBand).toFixed(3)} → ${a(after, 'sizeBand', up.attributes.sizeBand).toFixed(3)} · priceTier ${a(before, 'priceTier', up.attributes.priceTier).toFixed(3)} → ${a(after, 'priceTier', up.attributes.priceTier).toFixed(3)}`);
-      last = await ask(her, 'product', { anchor: p.sku, family: p.family });
+      ok(`her distance goes on the next ask as declared context, ctx.distance = ${WALK.distanceFt}, and the page is decided with it`, s9.asked.distance === String(WALK.distanceFt) && s9.all.length > 0, `${s9.all.length} decided`);
+      const rose = ['sizeBand', 'priceTier'].flatMap((dim) => Object.keys({ ...(after.dims[dim] || {}) }).filter((v) => a(after, dim, v) > a(before, dim, v) + Math.max(0.02, a(before, dim, v) * 0.03)).map((v) => `${dim} ${v}`));
+      ok(`and a distance is not a choice: her size band and price tier hold (${up.attributes.sizeBand} ${a(before, 'sizeBand', up.attributes.sizeBand).toFixed(2)} → ${a(after, 'sizeBand', up.attributes.sizeBand).toFixed(2)})`, rose.length === 0, rose.join(', ') || 'nothing rose');
+      last = s9;
     }
     {
       // Lane P2's checks for this beat (P2 wrote them; S1 runs them after its own, in the beat's order).
@@ -1042,6 +1180,11 @@ const OUTCOMES = {
         r.headers.some(([k, v]) => k === 'cache-control' && /no-store/.test(v)) && r.headers.every(([, v]) => !/assertion|oh-demo-/i.test(v)), `${r.cookies.length} Set-Cookie`);
       const retired = await call('/realtime/reflex', { visitor: probe });
       ok(`the link retired her anonymous session: its old capability reads nothing now (${retired.status})`, retired.status === 401);
+      {
+        // R4 ruling 3 (F6, S2): the retired anonymous capability cannot sign in again, so a leaked one is never upgraded to the person.
+        const again = await p3SignIn(probe, { account });
+        ok(`and a retired session cannot sign in again: its old capability is refused (${again.status})`, [401, 403, 409].includes(again.status) && !(again.body && again.body.session), `${again.status}${again.body && again.body.error ? ` · ${String(again.body.error).slice(0, 80)}` : ''}`);
+      }
       // The engine's contract (src/routes/identity.test.ts, "the person is the sum"), through this route: a laptop with
       // taste and a phone with none, each signing in as the account, are one person carrying both.
       const laptop = await client.mintVisitor({}, 'P3 laptop');
@@ -1053,6 +1196,7 @@ const OUTCOMES = {
       const L = await p3SignIn(laptop, { account }), P = await p3SignIn(phone, { account });
       if (L.body && L.body.session) laptop.session = L.body.session;
       if (P.body && P.body.session) phone.session = P.body.session;
+      if (P.status === 200 && phone.session && phone.session.subject) P3STATE.person = phone.session.subject;   // S2: the walk's person, for the check after the final reset
       const after = lasting((await client.meters(phone)).dims);
       ok('every device that signs in as the account is one person: the probe’s, the laptop’s and the phone’s sessions name one recognised shopper',
         L.status === 200 && P.status === 200 && laptop.session.subject === phone.session.subject && ((r.body && r.body.session) || {}).subject === phone.session.subject && /^sh_/.test(phone.session.subject),
@@ -1124,9 +1268,13 @@ const OUTCOMES = {
       }
       // The page itself sends exactly this wire form (its where-to-buy code, P3's section of oh.js, comments stripped).
       const code = codeOnly(shells.js || '', 'js');
+      const storeCode = codeOnly(([...pageModules].find(([p]) => /\/oh\/oh-store\.js$/.test(p)) || [null, ''])[1], 'js');
+      // Since M3 landed, the outcomes are the store's: oh-store.js outcome() sends { sku, ...decisionData(at), store } through send(), which
+      // posts any name off the engine's closed type list through the kit's sendCustom; P3's module delegates to it (S2, read where it now lives).
       ok('the page’s own where-to-buy code posts type custom with data.event and the decision’s ids, through the kit’s send',
-        /transport\.send\('custom', data\)/.test(code) && /decisionId: at\.d\.decisionId, contentId: at\.d\.contentId, slot: at\.d\.slot/.test(code)
-          && /sendOutcome\('partner_pickup'/.test(code) && /sendOutcome\('retailer_referral'/.test(code));
+        /async function outcome\(event, t\)[\s\S]{0,1600}?send\(event, \{ sku: [^\n]*\.\.\.decisionData\(at\)/.test(storeCode) && /r = await t\.sendCustom\(name, data, v\)/.test(storeCode)
+          && /const decisionData = \(d\) => \(d && d\.decisionId \? \{ decisionId: d\.decisionId/.test(storeCode) && /store\.retailers\.pickup\(/.test(code) && /store\.retailers\.open\(/.test(code),
+        'oh-store.js outcome() · send() · decisionData; oh.js delegates to store.retailers');
       ok('and its sign-in leaves through the kit’s api door with { account } alone', /transport\.api\(SIGN_IN, \{ account: name \}, \{ visitor: v \}\)/.test(code));
     }
   },
@@ -1234,6 +1382,152 @@ const OUTCOMES = {
 };
 
 /** A beat's publish name, as beats.json templates it ({{beatNames.x}}), resolved through the page's own SITE.beatNames. */
+
+// ── Lane S2: the boot page and the working store, at request level (design §9.2, §9.3) ──
+// The boot page is served as the published template: lg.com's anatomy in the shell, and the slots' template order from the
+// opening catalog in force (the store's own rule, oh.js M1.template), each piece real copy. Then a visitor works the store
+// by hand, replayed here exactly as oh-store.js and the page's sections send it (its contract): the first click mints her;
+// the grid's page view; a filter (M1's filterAttrs); two TVs; a search with POST /sort over the store's matches; a washer;
+// a colour (M2's select with the variant's attributes); Add to Cart, the order-start action, with the decisions on the page;
+// Find a Retailer; a referral. Each event's shape is the beat verbs' (productAttrs; custom with its event named), and each
+// is measured at the engine: her profile holds every lasting value it carried, the cart add moves her to the stage a cart
+// add starts and the day report counts it as the add_to_bag reward, and the referral is a named outcome.
+const normS = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+/** The store's search rule (oh-store.js match): every word in the product's name, SKU, type, category, subcategory, series, panel, finish, fuel or size band; priced. */
+const storeMatch = (q) => { const words = normS(q).split(' ').filter(Boolean); return rowsAll.filter((p) => { const a = p.attributes || {};
+  const hay = ' ' + normS([p[SKU], p.name, a.type, a.category, a.subcategory, a.series, a.panel, a.finish, a.fuel, a.sizeBand].join(' ')) + ' ';
+  return words.every((w) => hay.includes(w) || (w.length > 3 && w.endsWith('s') && hay.includes(w.slice(0, -1)))); }).filter((p) => Number(p.salePrice) > 0); };
+const colourSibling = (p) => p && rowsAll.find((x) => x[SKU] !== p[SKU] && x.family === p.family && x.modelFamily && x.modelFamily === p.modelFamily && x.attributes && p.attributes
+  && x.attributes.finish && x.attributes.finish !== p.attributes.finish && x.cta === 'cart' && x.inStock !== false && Number(x.salePrice) > 0) || null;
+/** The store's template for a slot (oh.js M1.template): the opening catalog's order, the first take in force with no eligibility rule, under the slot's diversity. */
+function storeTemplate(slot, take, slotsDoc) {
+  const def = Object.values((slotsDoc && slotsDoc.pages) || {}).flat().find((s) => s.slot === slot) || {};
+  const div = def.diversity || null, counts = {}, out = [], now = Date.now();
+  for (const p of openCatalog.pieces || []) {
+    if (out.length >= take) break;
+    const w = p.window || {};
+    if (!(p.slotTypes || []).includes(slot) || (p.lifecycle && p.lifecycle.status && p.lifecycle.status !== 'live') || p.inStock === false || p.eligibleWhen
+      || (w.to && Date.parse(w.to) <= now) || (w.from && Date.parse(w.from) > now)) continue;
+    if (div && div.dimension) { const vals = ((p.tags || {})[div.dimension]) || []; if (vals.some((v) => (counts[v] || 0) >= Number(div.max))) continue; for (const v of vals) counts[v] = (counts[v] || 0) + 1; }
+    out.push(p);
+  }
+  return out;
+}
+const stageOf = (m) => String((m && m.stage && (m.stage.stage || m.stage.name || m.stage.current)) || (m && typeof m.stage === 'string' ? m.stage : '') || '');
+async function storeByHand() {
+  console.log('\n── The boot page, as served: the published template (S2)');
+  const homeShell = shells.home || '';
+  const ANATOMY = [['the pencil banner', /id="m1Pencil"/], ['the header’s category nav: TVs, Laundry, Kitchen, Offers, Support', /id="mainnav"[\s\S]*?>TVs<[\s\S]*?>Laundry<[\s\S]*?>Kitchen<[\s\S]*?>Offers<[\s\S]*?>Support</],
+    ['the search box', /<form[^>]*data-store-search/], ['Sign in', /id="signIn"/], ['the cart with its count', /data-act="store-cart-open"/], ['the 13-icon category nav', /id="m1Cats"/],
+    ['the hero', /id="slot-hero"/], ['the service strip', /class="svc-strip/], ['the room tiles', /id="slot-category-rail"/], ['the deals four', /id="slot-deals"/],
+    ['Shop with an expert', /class="m1-expert/], ['Recommended for you', /id="rail-for-you"/], ['the showcase tabs', /id="m1Showcase"/], ['the benefits', /class="m1-benefits/], ['the footer', /<footer[^>]*class="site-footer/]];
+  const missing = ANATOMY.filter(([, re]) => !re.test(homeShell));
+  ok(`the served homepage carries lg.com’s anatomy, every module of it (${ANATOMY.length})`, missing.length === 0, missing.map(([n]) => n).join(', ') || ANATOMY.map(([n]) => n.split(':')[0]).join(' · ').slice(0, 200));
+  const strip = (/class="svc-strip[\s\S]*?<\/div>/.exec(homeShell) || [''])[0].replace(/<[^>]+>/g, ' ');
+  const svcMissing = ['deliver', 'return', 'cover', 'haul', 'expert'].filter((w) => !new RegExp(w, 'i').test(strip));
+  ok('its service strip is real copy, served: delivery, returns, coverage, haul-away, an expert', svcMissing.length === 0, svcMissing.join(', ') || strip.replace(/\s+/g, ' ').trim().slice(0, 140));
+  const slotsDoc = (await assetJson('beats/open-slots.json')).publish.document;
+  for (const s of homeSlots.filter((x) => !x.gate && !x.gated && x.slot !== 'continue')) {
+    const list = storeTemplate(s.slot, s.take, slotsDoc);
+    const thin = list.filter((p) => !(String(p.title || '').trim().length >= 2 && String(p.subtitle || '').length > 10));
+    ok(`the template’s ${s.slot}: its take of ${s.take} from the opening catalog in force, in the catalog’s order, each piece real copy`, list.length === s.take && thin.length === 0,
+      `${list.map((p) => p.customerContentId).join(', ')}${thin.length ? ` · thin: ${thin.map((p) => p.customerContentId).join(', ')}` : ''}`);
+  }
+  {
+    const res = await get(`${base}/${SLUG}/`, { cache: 'no-store', headers: { Accept: 'text/html' } });
+    const cookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [res.headers.get('set-cookie')].filter(Boolean);
+    await res.arrayBuffer().catch(() => null);
+    ok('loading the boot page sets no cookie: nothing is minted by the page’s own request', res.ok && cookies.length === 0, `${res.status} · ${cookies.length} Set-Cookie`);
+  }
+
+  console.log('\n── The working store, by hand: each manual event as the store sends it, measured at the engine (S2)');
+  const hand = await client.mintVisitor({}, 'by hand');      // the first click: store.visitor.ensure → the kit's mint, with her consent
+  const sent = [];
+  const send = async (type, data, what) => { const r = await client.send(hand, type, data); sent.push({ type, data, what, status: r.status }); return r; };
+  const custom = (event, data, what) => send('custom', { event, ...data }, what);
+  const read = async () => (await client.meters(hand)).dims;
+  const a = (dims, dim, v) => Number(((dims[dim] || {})[v]) || 0);
+  await send('page_view', { page: 'tvs' }, 'the TVs grid');
+  await custom('filter', { control: 'type', page: 'tvs', category: 'tvs', type: 'oled' }, 'a filter: OLED');
+  const d1 = await read();
+  ok('her filter reaches the engine with what it carries: type oled rises on her own profile, before she opens anything', a(d1, 'type', 'oled') > 0, `type oled ${a(d1, 'type', 'oled').toFixed(3)}`);
+  const oled = gridPool().filter((p) => p.attributes.type === 'oled');
+  const g = await sortRail('tv-grid', oled, hand);
+  ok(`and the filtered grid is POST /sort over the ${oled.length} OLEDs alone`, g.ids.length > 1 && g.ids.every((id) => (row(id) || { attributes: {} }).attributes.type === 'oled'), g.ids.slice(0, 3).join(', '));
+  const tvs = g.ids.slice(0, 2).map(row).filter(Boolean);
+  for (const p of tvs) await send('product_view', productAttrs(p, { view: 'page' }), `the TV ${p[SKU]}`);
+  // As the DOM session types it (“washer” alone also matches the dishwashers, since the store's index matches inside words: M3).
+  const Q = 'front load washer', matches = storeMatch(Q), cats = [...new Set(matches.map((p) => p.attributes && p.attributes.category))];
+  await custom('search', { control: 'search', query: Q, results: matches.length, ...(cats.length === 1 ? { category: cats[0] } : {}) }, `a search: “${Q}”`);
+  const sr = await call('/sort', { visitor: hand, body: { userId: hand.session.subject, sessionId: hand.session.sessionId, weights: { affinity: 1 },
+    candidates: matches.slice(0, 500).map((p) => { const { productId, ...x } = productAttrs(p); return { id: productId, ...x }; }) } });
+  const order = sr.ok && Array.isArray(sr.body.order) ? sr.body.order.map(String) : [];
+  ok(`the search goes out as custom search { query, results: ${matches.length} } and its results are POST /sort’s order over every match, leaning with her region, labelled`,
+    order.length === Math.min(500, matches.length) && Boolean(sr.body.regional && sr.body.regional.region === ((((await client.coldstart(null)) || {}).region) || {}).key),`${order.length} ordered · regional ${JSON.stringify(sr.body.regional || null).slice(0, 80)}`);
+  const washer = order.map(row).find((p) => p && p.family === 'front-load-washer' && p.cta === 'cart' && p.inStock !== false && colourSibling(p)) || null;
+  const sibling = colourSibling(washer);
+  if (!washer || !sibling) { ok('the search offers a front-load washer sold here whose model comes in another colour', false, `${order.length} results`); return; }
+  await send('product_view', productAttrs(washer, { view: 'page' }), `the washer ${washer[SKU]}`);
+  const d2 = await read();
+  const views = [...tvs, washer];
+  const lastingOf = (p) => ['room', 'category', 'type'].map((dim) => [dim, p.attributes[dim]]).filter(([, v]) => typeof v === 'string');
+  const lost = views.flatMap((p) => lastingOf(p).filter(([dim, v]) => !(a(d2, dim, v) > 0)).map(([dim, v]) => `${p[SKU]} ${dim} ${v}`));
+  ok(`her product views reach the engine with their attributes: every room, category and type they carried is on her profile (${views.map((p) => p[SKU]).join(', ')})`, lost.length === 0,
+    lost.join(', ') || `room living-room ${a(d2, 'room', 'living-room').toFixed(2)} · laundry-room ${a(d2, 'room', 'laundry-room').toFixed(2)} · front-load ${a(d2, 'type', 'front-load').toFixed(2)}`);
+  const before = a(d2, 'finish', sibling.attributes.finish);
+  await custom('select', productAttrs(sibling, { control: 'colour', colour: sibling.attributes.finish, from: washer[SKU] }), `a colour: ${sibling[SKU]}`);
+  const d3 = await read();
+  ok(`her colour reaches the engine as a select with the variant’s attributes: finish ${sibling.attributes.finish} rises (${before.toFixed(2)} → ${a(d3, 'finish', sibling.attributes.finish).toFixed(2)})`,
+    a(d3, 'finish', sibling.attributes.finish) > before);
+  const s = await client.snapshot(hand, 'product', { anchor: sibling[SKU], family: sibling.family });
+  const onPage = [...s.slot('pdp-offers'), ...s.slot('pdp-modules')];
+  const lead = onPage[0] || null;
+  // The cart half runs after beat 16 (S2HAND below), so its two day-report builds stand beside beat 16's and no receipt of the
+  // walk waits behind one (on wrangler dev a report build or a publish in flight can throw “Configuration publication authority
+  // unavailable”: Vantage RESUME finding 3). It measures exactly what it measured before the walk.
+  S2HAND.finish = async () => {
+  console.log('\n── The working store, by hand: the cart, Find a Retailer and a referral, after the walk (S2)');
+  const stage0 = stageOf(await client.meters(hand));
+  const date = new Date().toISOString().slice(0, 10);
+  const rep = async () => (await demoRoute(`${API}/report`, { date, slot: 'pdp-modules', build: true })).report;
+  const bags = (r) => (((r || {}).visitorOutcomes || {}).arms || []).reduce((n, x) => n + (Number((x.byType || {}).add_to_bag) || 0), 0);
+  const buys = (r) => (((r || {}).visitorOutcomes || {}).arms || []).reduce((n, x) => n + (Number((x.byType || {}).purchase) || 0), 0);
+  const r0 = await rep().catch((error) => { info(`the day report did not build before the add: ${error.message}`); return null; });
+  const add = await send('add_to_cart', productAttrs(sibling, { quantity: 1, lineId: 's2-hand', options: { colour: sibling.attributes.finish },
+    ...(lead ? { decisionId: lead.decisionId, contentId: lead.contentId, slot: lead.slot, customerContentId: lead.customerContentId, decisionIds: onPage.map((d) => d.decisionId) } : {}) }), 'Add to Cart');
+  ok(`Add to Cart goes out as the order-start action, add_to_cart with the variant’s attributes and the decisions on its page (${onPage.length}), and the engine takes it`, add.ok && Boolean(lead), lead ? `credited to ${lead.customerContentId} (${lead.slot})` : 'no decision on the page');
+  const stage1 = stageOf(await client.meters(hand));
+  const journey = (((anchor.registry || {}).journey || {}).stages || []).find((x) => x.anyOf && Number(x.anyOf.cart_adds) >= 1);
+  ok(`and it is credited like a start: one cart add moves her to the stage a cart add starts, “${journey ? journey.stage : '?'}” (the registry’s journey)`, Boolean(journey) && stage1 === journey.stage, `${stage0 || 'none'} → ${stage1 || 'none'}`);
+  let r1 = null;
+  for (let i = 0; i < 6; i += 1) { await sleep(2500); r1 = await rep().catch(() => null); if (r1 && bags(r1) > bags(r0)) break; }
+  if (r1 && r1.hours && r1.hours.source === 'aggregates') info(`the report sums the folded hours: her add_to_bag appears once its hour has closed (now ${bags(r1)}, before ${bags(r0)})`);
+  else ok('and the day report counts it as the add_to_bag reward against her visit, never as a purchase', Boolean(r0 && r1) && bags(r1) >= bags(r0) + 1 && buys(r1) === buys(r0),
+    `add_to_bag ${bags(r0)} → ${bags(r1)} · purchase ${buys(r0)} → ${buys(r1)}`);
+  await custom('find_a_retailer', productAttrs(sibling, { control: 'buy-box' }), 'Find a Retailer');   // M3: the product's own retailer kept; the channel is data.event
+  const wtb = s.slot('pdp-modules').find((d) => d.customerContentId === 'mod-where-to-buy-retailer') || null;
+  const lists = displayOf('mod-where-to-buy-retailer').retailers || null;   // the display catalog's piece (the published one carries no display)
+  const rooms = [...new Set(productList.filter((p) => (p.cta === 'cart' || p.cta === 'retailer') && p.family).map((p) => p.family))];   // the families with a product page
+  const groupOf = (fam) => ((lists && lists.groups) || []).find((g) => (g.families || []).includes(fam)) || (lists && lists[fam]) || null;
+  const shortRooms = rooms.filter((f) => { const g = groupOf(f); return !(g && (g.online || []).length && (g.nearby || []).length); });
+  checks.known(`the Find a Retailer lists come from the catalog’s where-to-buy piece: online sellers and nearby stores for every product family the store sells (${rooms.length})`, shortRooms.length === 0,
+    `mod-where-to-buy-retailer carries no list for ${shortRooms.join(', ')}; the modal falls back to the store’s own list there`, 'D1 (catalog.json: display.retailers per room, design §9.3) and M3 (oh-store.js reads it when present)');
+  const storeJs = [...pageModules].find(([p]) => /\/oh\/oh-store\.js$/.test(p));
+  ok('and the store’s modal reads them from that piece when it carries them (oh-store.js retailerLists: display.retailers, per room)', Boolean(storeJs) && /customerContentId === RETAIL_CID[\s\S]{0,200}display\.retailers/.test(codeOnly(storeJs[1], 'js')), storeJs ? storeJs[0] : 'oh-store.js not loaded');
+  const partner = ((groupOf(sibling.family) || {}).online || [])[0];
+  // M3's shape: the product's own attributes as the feed has them (its retailer value kept), the store chosen in data.store, where online.
+  const slugOf = (x) => String(x || '').toLowerCase().normalize('NFKD').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const storeKey = Array.isArray(partner) ? String(partner[0]) : partner && typeof partner === 'object' ? String(partner.key || partner.id || slugOf(partner.name || partner.label)) : partner ? slugOf(partner) : 'home-depot';
+  await custom('retailer_referral', productAttrs(sibling, { store: storeKey, where: 'online',
+    ...(wtb ? { decisionId: wtb.decisionId, contentId: wtb.contentId, slot: wtb.slot, customerContentId: wtb.customerContentId } : {}) }), 'a referral');
+  ok(`every manual event reached the engine: ${sent.length} sent in the beat verbs’ shapes (${[...new Set(sent.map((x) => (x.type === 'custom' ? x.data.event : x.type)))].join(', ')})`, sent.every((x) => x.status === 200),
+    sent.filter((x) => x.status !== 200).map((x) => `${x.what} ${x.status}`).join(' · ') || 'all accepted');
+  info(wtb ? `the referral is credited to the where-to-buy decision on ${sibling[SKU]}’s page` : `no where-to-buy module is decided on ${sibling[SKU]}’s page for her, so the referral is credited to no decision (the modal says so)`);
+  };
+}
+/** The store section's cart half, set by storeByHand and run after beat 16 (lane S2). */
+const S2HAND = { finish: null };
+
 function SITE_BEAT(b, key) {
   const step = (b.run || []).find((s) => s.publish && s.publish !== 'reset');
   const raw = step && step.name;
@@ -1243,12 +1537,14 @@ function SITE_BEAT(b, key) {
 }
 
 try {
+  await storeByHand().catch((error) => checks.fail(`the working store, by hand, threw: ${error.message}`));
   for (const b of beatsDoc.beats) {
     console.log(`\n── ${b.no} · ${b.label}`);
     if (!built(b)) { open.push(`${b.no} (${laneOf(b)})`); info(`not built yet: its presses are ${laneOf(b)}’s to write in public/${SLUG}/beats.json; nothing is claimed for it`); continue; }
     if (!OUTCOMES[b.key]) { open.push(`${b.no} (S1: built, outcomes not yet written)`); info('built, and its outcomes are not yet in this suite: S1’s to write'); continue; }
     await OUTCOMES[b.key](b);
   }
+  if (S2HAND.finish) await S2HAND.finish().catch((error) => checks.fail(`the working store’s cart half threw: ${error.message}`));
 } catch (error) {
   checks.fail(`the walk threw: ${error.message}`);
 } finally {
@@ -1259,6 +1555,18 @@ try {
     const check = await client.mintVisitor(anchor.landing.entry, 'after the reset');
     const d = await client.snapshot(check, home.page, { region: page.region });
     ok('a new arrival opens with no pin in the four', d.slot('deals').every((x) => x.strategy !== 'tenant-pinned'), fmt(d.slot('deals')));
+    if (P3STATE.person && account) {
+      // R4 F3 (S2): after a reset the sign-in links a FRESH identity: the same name is a new person, carrying nothing of the
+      // walk's (the account the worker derives changes with the reset), so a showing never inherits a rehearsal.
+      const fresh = await client.mintVisitor({}, 'after the reset: a new browser');
+      const r = await p3SignIn(fresh, { account });
+      const subj = r.body && r.body.session ? r.body.session.subject : null;
+      if (subj) fresh.session = r.body.session;
+      const tail = (x) => (x ? `…${String(x).slice(-6)}` : 'none');
+      ok(`after a reset “${account}” links a fresh identity: a new person, not the walk’s (${tail(P3STATE.person)} → ${tail(subj)})`, r.status === 200 && Boolean(subj) && subj !== P3STATE.person, `${r.status}`);
+      const carried = subj ? lasting((await client.meters(fresh)).dims) : [];
+      ok('and that person carries none of the walk’s taste', Boolean(subj) && carried.length === 0, carried.join(', ') || 'nothing');
+    } else if (account) info('the walk signed nobody in on this rig, so the fresh identity after a reset is not asked');
     if (closedAt11.length) {
       const back = closedAt11.filter((x) => d.all.some((y) => y.customerContentId === x));
       ok(`and the offer beat 11 closed is back on the same page: its window is the opening catalog’s again (${closedAt11.join(', ')})`, back.length > 0, back.join(', ') || 'not back');
@@ -1290,6 +1598,9 @@ async function imageSweep() {
   } else info('no local image named by the data files yet (D2): the DOM suite still checks every image the page shows');
 }
 await imageSweep().catch((error) => checks.fail(`the image sweep threw: ${error.message}`));
+console.log('\n── The regional prior, everywhere this suite read it');
+ok(`no regional driver names priceTier anywhere: ${REGIONAL.answers} engine answers read, ${REGIONAL.blocks} regional blocks and leans, ${REGIONAL.items} /sort items with regional drivers`,
+  REGIONAL.answers > 0 && REGIONAL.blocks > 0 && REGIONAL.hits.length === 0, REGIONAL.hits.slice(0, 4).join(' ~ '));
 
 if (open.length) info(`beats still open: ${open.join(' · ')}`);
 if (client.transient.length) info(`refused once and asked again: ${client.transient.join(' · ')}`);

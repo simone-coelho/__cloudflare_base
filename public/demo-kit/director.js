@@ -43,9 +43,16 @@
 // note: [verb, what, detail] (the session line the verb writes). if: 'present' is about the element alone:
 // the selector's own template must still resolve.
 //
-// Also here: the query flags (?debug ?wait ?region ?metro ?fixtures ?exit), the presses and Next, the drawer of
-// all beats, the tools row (assert a region or an answer by hand; Capture, Compare and the vertical's compare
-// tools), the status line, and the keyboard (E explains; Escape closes).
+// Also here: the query flags (?debug ?wait ?region ?metro ?fixtures ?exit ?present), the presses and Next, the
+// drawer of all beats, the tools row (assert a region or an answer by hand; Capture, Compare and the vertical's
+// compare tools), the status line, and the keyboard (E explains; Escape closes; D docks, with config.dock).
+//
+// config.dock (optional, per demo; absent, nothing here changes): { collapsed } docks the presenter's tools, the
+// machine panel and the director bar, in one column on the right, and lets them collapse to a slim rail so the
+// site is the whole page. Collapsed by default when collapsed is true; expanded by the presenter's key (D), by
+// ?present=1 (?present=0 collapses), by the rail's own button, and under ?debug (a rehearsal is a presenter's
+// session) unless ?present says otherwise; the state is remembered in this tab (sessionStorage). The rail keeps
+// Next, so a beat can run with the tools put away. Its styles are kit.css's dock block.
 // No DOM or window access at import time.
 import { arr, esc, focusOn, num, sleep } from './util.js';
 
@@ -60,6 +67,8 @@ export function readFlags(search) {
     qs: QS, debug: QS.has('debug'), fixtures: QS.has('fixtures'), wait: num(QS.get('wait')) || 0,
     region, metro: QS.get('metro'), regionIgnored: QS.has('region') && !region ? String(QS.get('region')).slice(0, 16) : null,
     exit: QS.get('exit'),
+    // ?present=1 opens a docked director, ?present=0 collapses it (config.dock only); anything else says nothing.
+    present: QS.get('present') === '1' ? true : QS.get('present') === '0' ? false : null,
   };
 }
 
@@ -147,6 +156,53 @@ export function createDirector(k) {
     'assertRegion', 'assertIntent', 'compareTools', 'captureBtn']);
 
   const say = (t, tone) => { el.status.textContent = t; el.status.dataset.tone = tone || ''; };
+
+  // ── The dock (config.dock): the presenter's tools docked right, collapsible to a slim rail ──
+  const dock = cfg.dock ? createDock(cfg.dock) : null;
+  function createDock(opts) {
+    const body = document.body;
+    const bar = el.nextBeat.closest('.director');
+    const key = `kit-dock:${cfg.tenant || 'demo'}`;
+    const read = () => { try { return sessionStorage.getItem(key); } catch { return null; } };
+    const write = (v) => { try { sessionStorage.setItem(key, v); } catch { /* storage refused: the state lasts the page */ } };
+    body.classList.add('kit-dock');
+    body.insertAdjacentHTML('beforeend', '<div class="dock-rail" id="dockRail" role="group" aria-label="Director, collapsed">'
+      + '<button type="button" class="dock-open" id="dockOpen" aria-controls="machine" aria-expanded="false" title="Open the director (D)"><span class="dock-k">Director</span></button>'
+      + '<button type="button" class="dock-next" id="dockNext" title="Next beat"><span aria-hidden="true">&rarr;</span><span class="dock-n" id="dockNextNo"></span></button></div>');
+    const nav = bar ? bar.querySelector('.beatnav') : null;
+    if (nav) nav.insertAdjacentHTML('beforeend', '<button type="button" class="director-handle dock-hide" id="dockHide" aria-controls="machine" aria-expanded="true" title="Collapse to the rail (D)">Hide</button>');
+    const openBtn = document.getElementById('dockOpen'), hideBtn = document.getElementById('dockHide'), nextBtn = document.getElementById('dockNext');
+    let open = false;
+    function apply(to, remember) {
+      open = Boolean(to);
+      body.classList.toggle('kit-dock--collapsed', !open);
+      openBtn.setAttribute('aria-expanded', String(open));
+      if (hideBtn) hideBtn.setAttribute('aria-expanded', String(open));
+      if (remember) write(open ? 'open' : 'closed');
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fit); else fit();
+    }
+    // The machine column leaves room for the bar docked at its foot, whatever the bar's height.
+    function fit() { body.style.setProperty('--dock-bar-h', `${bar ? bar.offsetHeight : 0}px`); }
+    if (bar && typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(bar);
+    fit();
+    const stored = read();
+    const first = flags.present !== null ? flags.present : stored === 'open' ? true : stored === 'closed' ? false : flags.debug ? true : !opts.collapsed;
+    apply(first, flags.present !== null);
+    openBtn.addEventListener('click', () => apply(true, true));
+    if (hideBtn) hideBtn.addEventListener('click', () => apply(false, true));
+    nextBtn.addEventListener('click', () => { if (!state.busy && !el.nextBeat.disabled) el.nextBeat.click(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target || {};
+      if (/input|textarea|select/i.test(t.tagName || '') || t.isContentEditable) return;
+      apply(!open, true);
+    });
+    return {
+      isOpen: () => open, set: (to) => apply(to, true),
+      next(label, disabled) { const n = document.getElementById('dockNextNo'); if (n) n.textContent = label; nextBtn.disabled = Boolean(disabled); nextBtn.title = disabled ? 'The walkthrough is complete' : `Next: ${label}`; },
+    };
+  }
 
   // ── The hand ──────────────────────────────────────────────────────────────
   async function performClick(selector, missing) {
@@ -444,9 +500,10 @@ export function createDirector(k) {
   function renderNext() {
     const all = beats();
     const next = state.beat === null ? 0 : state.beat + 1;
-    if (next >= all.length) { el.nextBeat.disabled = true; el.nextLabel.textContent = 'the walkthrough is complete'; return; }
+    if (next >= all.length) { el.nextBeat.disabled = true; el.nextLabel.textContent = 'the walkthrough is complete'; if (dock) dock.next('', true); return; }
     el.nextBeat.disabled = false;
     el.nextLabel.textContent = `${all[next].no} · ${labelOf(all[next])}`;
+    if (dock) dock.next(String(all[next].no), false);
   }
   function closeDirector() {
     const bar = el.directorHandle.closest('.director');
@@ -571,5 +628,5 @@ export function createDirector(k) {
   });
 
   return { say, performClick, ctl, clickIf, pointAt, browserBack, setBeats, validate, beats, keys, labelOf, go, runBeat, sayAfter,
-    renderPresses, renderNext, renderAsserts, runSteps, render, value };
+    renderPresses, renderNext, renderAsserts, runSteps, render, value, dock };
 }

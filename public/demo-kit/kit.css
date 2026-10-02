@@ -395,3 +395,49 @@ code { font-family: var(--mono); font-size: .92em; }
 .delta-timer .tmr { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--on-dark); margin-right: 10px; letter-spacing: .02em; }
 .deltas li.delta-none, .deltas li.delta-engine, .deltas li.delta-hinge, .deltas li.delta-timer { display: block; }
 @media (max-width: 1380px) { .mtabs { padding: 0 4px; } .mtabs button { font-size: 10.5px; letter-spacing: -0.01em; padding-left: 0; padding-right: 0; } }
+
+/* ══ The dock (config.dock, director.js): the presenter's tools docked right, collapsible to a slim rail ═════
+ * Only a demo that asks for it gets body.kit-dock; without it nothing below applies. Wide (1180 and up): the
+ * machine and the director bar share the right column, the bar at its foot, and the site keeps the full height.
+ * Collapsed: both put away, a slim rail on the right with Open and Next, and the site is the whole page. Narrower,
+ * expanded is the kit's own layout (the bar at the foot, the machine under the site) and collapsed is a corner pill. */
+:root { --dock-rail-w: 40px; }
+@media (min-width: 1180px) {
+  body.kit-dock { --bar-h: 0px; }
+  body.kit-dock .director { left: auto; right: 0; width: var(--machine-w); border-left: 1px solid var(--m-bar); }
+  body.kit-dock .director-in { padding: 10px 14px 11px; }
+  body.kit-dock .beatline { flex-direction: column; align-items: stretch; gap: 8px; }
+  body.kit-dock .beatno { min-width: 0; flex-direction: row; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  body.kit-dock .engineline { font-size: 13px; max-height: 5.7em; overflow-y: auto; }
+  body.kit-dock .beatnav { flex-wrap: wrap; }
+  body.kit-dock .nextbeat { flex: 1 1 100%; max-width: none; }
+  body.kit-dock .nextbeat span { max-width: none; }
+  body.kit-dock .director.director--open .director-more { max-height: 46vh; }
+  body.kit-dock .legend { margin-left: 0; flex-wrap: wrap; }
+  body.kit-dock .machine { height: calc(100vh - var(--dock-bar-h, 0px)); }
+  body.kit-dock.kit-dock--collapsed { padding-right: var(--dock-rail-w); }
+  body.kit-dock.kit-dock--collapsed .sheet-back { right: var(--dock-rail-w); }
+}
+body.kit-dock.kit-dock--collapsed { --bar-h: 0px; }
+body.kit-dock.kit-dock--collapsed .shell { grid-template-columns: minmax(0, 1fr); }
+body.kit-dock.kit-dock--collapsed .machine, body.kit-dock.kit-dock--collapsed .director { display: none; }
+.dock-rail { display: none; }
+body.kit-dock.kit-dock--collapsed .dock-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; position: fixed; z-index: 85; top: 0; right: 0; bottom: 0;
+  width: var(--dock-rail-w); padding: 12px 0; background: var(--m-bar); border-left: 1px solid var(--m-bar-line);
+}
+.dock-open, .dock-next { font-family: var(--font); color: var(--m-on); cursor: pointer; border-radius: var(--radius-sm); }
+.dock-open { flex: 1 1 auto; min-height: 0; background: transparent; border: 1px solid var(--m-on-30); padding: 10px 0; width: 30px; }
+.dock-open:hover { border-color: var(--m-on-70); }
+.dock-k { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+.dock-next { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--brand); border: 0; width: 30px; padding: 8px 0; font-weight: 800; }
+.dock-next:hover { background: var(--brand-deep); }
+.dock-next:disabled { background: var(--m-disabled); color: var(--m-on-50); cursor: default; }
+.dock-n { font-family: var(--mono); font-size: 10px; font-weight: 600; }
+.dock-hide { margin-left: auto; }
+@media (max-width: 1179px) {
+  body.kit-dock.kit-dock--collapsed .dock-rail { top: auto; bottom: 12px; right: 12px; width: auto; flex-direction: row; padding: 6px; border: 0; border-radius: var(--radius-pill); box-shadow: 0 4px 14px var(--shade-28); }
+  body.kit-dock.kit-dock--collapsed .dock-open { width: auto; padding: 6px 10px; border-radius: var(--radius-pill); }
+  body.kit-dock.kit-dock--collapsed .dock-k { writing-mode: horizontal-tb; transform: none; }
+  body.kit-dock.kit-dock--collapsed .dock-next { width: auto; flex-direction: row; padding: 6px 10px; border-radius: var(--radius-pill); }
+}

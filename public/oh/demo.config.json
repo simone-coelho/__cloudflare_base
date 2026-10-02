@@ -10,7 +10,7 @@
     "wordmark": "OH.",
     "tagline": "Optimized Home",
     "title": "OH. | TVs, laundry and the kitchen",
-    "legal": "OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 1 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income."
+    "legal": "OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 2 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income."
   },
   "palette": {
     "brand": "#A50034",
@@ -351,17 +351,17 @@
   },
   "copy": {
     "coldStartSentence": "aggregate, never the individual; we curate, never price.",
-    "scoredSentence": "No census term enters any score. The census figure explains the lean; the lean is the brand’s own sales, seeded here as synthetic data.",
+    "scoredSentence": "No census term enters any score, and none shaped this synthetic lean; the census is shown for context. The lean is the brand’s own sales, seeded here as synthetic data.",
     "salesOf": "the brand’s"
   },
   "roadmap": [
-    ["built", "eligibleWhen { regions, context }", "A piece only where its rule admits it: companions on the product page gate on ctx.anchor until complements lands; a condition the request does not carry fails closed."],
+    ["built", "eligibleWhen { regions, context }", "A piece only where its rule admits it: the product page’s companions gate on ctx.family, the family of the product on the page; a condition the request does not carry fails closed."],
     ["built", "slot seeds", "The search term lifts the category it names, as context, never as evidence about her; the receipt itemises it."],
-    ["built", "learn.regional", "The brand’s own regional sales blended by λ = K / (K + Σa), giving way as her evidence grows."],
-    ["built", "POST /sort", "The rails over the products file; at an affinity weight of zero the site’s own order exactly."],
-    ["designed", "complements", "A piece names the products it completes, and a slot rule prefers it, itemised on the receipt (engine lane E1)."],
-    ["designed", "partner_pickup and retailer_referral", "Two named outcomes credited to the decision that earned them, counted in the day report (engine lane E1)."],
-    ["designed", "the regional prior on /sort", "The TV grid leans with the state, as the homepage already does (engine lane E1)."]
+    ["built", "learn.regional", "The brand’s regional sales, synthetic here and labelled synthetic → warehouse, blended by λ = K / (K + Σa), giving way as her evidence grows."],
+    ["built", "POST /sort with the regional prior", "The rails and every grid over the products file, leaning with the state under the allowlist and saying so on screen; at an affinity weight of zero the site’s own order exactly."],
+    ["built", "complements", "A piece names the products it completes; on that product’s page (ctx.anchor) the slot rule prefers it, itemised on the receipt as “Completes what she committed to”."],
+    ["built", "partner_pickup and retailer_referral", "Two named outcomes, credited to the decision that earned them and counted in the day report; a referral is never a sale."],
+    ["designed", "gclid on the entry contract", "The channel classification reads Google’s auto-tagged click as paid search; the entry contract does not carry gclid yet, so the walk lands on its search term."]
   ],
   "docs": { "dir": "docs/oh" }
 }

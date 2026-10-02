@@ -88,7 +88,7 @@
     "<b>Asserts</b> {{p1.contrastName || region.contrastName}} on the request, labelled: not observed. Of the configured contrast regions, the first whose sales lean differently from hers, read off the cold-start panel"
    ],
    "will": [
-    "A different state’s lean on the same stranger: the hero, the deals and the rail answer {{p1.contrastName || region.contrastName}}’s sales",
+    "A different state’s lean on the same stranger: what leans on the region answers {{p1.contrastName || region.contrastName}}’s sales, and the page says which modules moved and which held",
     "The Arrival panel and the rail’s label say the region is <b>asserted</b>, not observed; her meters do not move"
    ],
    "line": "The same stranger and the same page, in <b>{{p1.contrastName || region.contrastName}}</b>: asserted and labelled, never the opening default. Another state’s sales lean the page another way; the price is the same for everyone.",
@@ -116,7 +116,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.arrival.leans}}",
-    "line": "The same stranger and the same page, asserted in <b>{{p1.contrastName || region.contrastName}}</b>, never the opening default: <b>{{p1.arrival.sentence}}</b>{{#p1.home.lean}}, and the rail {{p1.home.lean}}{{/p1.home.lean}}. The price is the same for everyone."
+    "line": "The same stranger and the same page, asserted in <b>{{p1.contrastName || region.contrastName}}</b>, never the opening default: <b>{{p1.arrival.sentence}}</b>. On this answer {{#p1.home.moved}}<b>{{p1.home.moved}}</b> moved{{/p1.home.moved}}{{^p1.home.moved}}nothing on the page moved{{/p1.home.moved}}{{#p1.home.held}} and {{p1.home.held}} held{{/p1.home.held}}{{#p1.home.lean}}; the rail {{p1.home.lean}}{{/p1.home.lean}}. The price is the same for everyone."
    }
   },
   {
@@ -221,7 +221,7 @@
    ],
    "after": {
     "when": "{{p1.home.twoRooms}}",
-    "line": "Two TVs and a washer later the homepage follows <b>both rooms</b>: {{#p1.home.tilesMoved}}the room tiles reordered, {{/p1.home.tilesMoved}}Recommended for you holds <b>{{p1.home.rail}}</b>, and every card’s receipt names what carried it. The homepage lg.com never changes, changing."
+    "line": "Two TVs and a washer later the homepage follows <b>both rooms</b>: {{#p1.home.tilesMoved}}the room tiles reordered, {{/p1.home.tilesMoved}}Recommended for you holds <b>{{p1.home.rail}}</b>, and every card’s receipt names what carried it. The step from one personalised module to a homepage that answers her, on the platform LG already runs."
    }
   },
   {
@@ -271,13 +271,13 @@
     }
    ],
    "will": [
-    "Below the buy box, which nobody decides: <b>the dryer in her fuel</b>, the pedestal, the stacking kit and the pair price, each preferred because it completes {{p2.washer.sku}} (ctx.anchor), with the completes line on its receipt",
-    "Each card states its rule as our merchandiser’s, and lists its products in <b>POST /sort</b>’s order: the dryers lean with her state’s sales, labelled synthetic → warehouse"
+    "Below the buy box, which nobody decides: <b>the dryer that goes with it</b>, the pedestal and the stacking kit (the set price only when a set costs less than its pieces), each preferred because it completes {{p2.washer.sku}} (ctx.anchor), with the completes line on its receipt",
+    "Each card states its rule as our merchandiser’s and lists its products in <b>POST /sort</b>’s order, labelled with her state’s sales, synthetic → warehouse; the dryer card says what led and why from /sort’s own drivers, and names her fuel only when her profile holds one"
    ],
-   "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer in her fuel</b>, the pedestal, the stacking kit and the pair price, each a merchandiser’s rule with its receipt.",
+   "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer that goes with it</b>, the pedestal and the stacking kit, each a merchandiser’s rule with its receipt.",
    "after": {
     "when": "{{p2.onPage.completes}}",
-    "line": "The {{p2.washer.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, each receipt reading “Completes what she committed to”: {{p2.onPage.completing}}. The buy box above them is off limits, and says so."
+    "line": "The {{p2.washer.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, each receipt reading “Completes what she committed to”: {{p2.onPage.completing}}.{{#p2.dryer.lead}} The dryer card leads with the {{p2.dryer.lead}}, by POST /sort’s own drivers: {{p2.dryer.why}}.{{/p2.dryer.lead}} The buy box above them is off limits, and says so."
    },
    "run": [
     {
@@ -404,7 +404,8 @@
    "label": "QNED beside OLED, a size up",
    "declare": [
     "<b>Opens</b> the {{p2.qned.name}} page, with the OLED beside it",
-    "<b>Says</b> she sits {{p2.distanceFt}} ft away, in the size-up tool: her answer, declared"
+    "<b>Says</b> she sits {{p2.distanceFt}} ft away, in the size-up tool: her answer, declared, carried as context on the next question (ctx.distance), never as a choice of hers",
+    "<b>Chooses</b> the one size up herself, with the card’s own button: her choice, sent as select"
    ],
    "acts": [
     {
@@ -416,12 +417,12 @@
    ],
    "will": [
     "“For a bright room the QNED is the right choice; for a dark room this OLED is”, and <b>the price is the same for everyone</b>; nothing decided sits near the financing line",
-    "A size up from her distance: <b>size band and price tier</b> move on her meters"
+    "From her declared distance the card names one size up by its own rule; <b>size band and price tier</b> move on her meters only once she chooses it herself"
    ],
-   "line": "A QNED page with the OLED beside it, and a size up from her viewing distance: <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
+   "line": "A QNED page with the OLED beside it, and one size up from her declared viewing distance: when she chooses it herself, <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
    "after": {
     "when": "{{p2.sizeUp.name}}",
-    "line": "The QNED, with {{p2.compare.other || 'the OLED'}} beside it: “for a bright room the QNED is the right choice; for a dark room this OLED is.” From {{p2.distanceFt}} ft, one size up is the <b>{{p2.sizeUp.name}}</b> at {{p2.sizeUp.price}}{{#p2.sizeUp.moved}}, and her own meters moved: <b>{{p2.sizeUp.moved}}</b>{{/p2.sizeUp.moved}}. The price is the same for everyone."
+    "line": "The QNED, with {{p2.compare.other || 'the OLED'}} beside it: “for a bright room the QNED is the right choice; for a dark room this OLED is.” From {{p2.distanceFt}} ft, declared, the card names one size up, the <b>{{p2.sizeUp.name}}</b> at {{p2.sizeUp.price}}{{#p2.sizeUp.chosen}}; she chose it herself{{#p2.sizeUp.moved}}, and her own meters moved: <b>{{p2.sizeUp.moved}}</b>{{/p2.sizeUp.moved}}{{/p2.sizeUp.chosen}}. The price is the same for everyone."
    },
    "run": [
     {
@@ -437,6 +438,11 @@
      "select": "size-up-{{p2.distanceFt}}",
      "in": "mod-pdp-modules",
      "missing": "the engine did not decide the size-up module on this page, so there is nothing to press: the page never adds a module it was not given"
+    },
+    {
+     "click": "size-up-pick",
+     "in": "mod-pdp-modules",
+     "missing": "the size-up card names no larger size here, so there is nothing to choose: the page never chooses for her"
     }
    ]
   },
@@ -497,7 +503,7 @@
     "On her TV page the closed offers <b>leave on the next decision</b>: the gift card goes from its offers",
     "On the homepage the closed pieces can no longer be chosen, and a package with a member out of stock is <b>never shown as complete</b>: the page checks every answer and every recorded candidate of this visit for one"
    ],
-   "line": "The merchandiser’s day: an offer’s window closes, and a package loses a member to stock. On her TV page and on the homepage both leave on the next decision, by the catalog’s own rules.",
+   "line": "The merchandiser’s day: an offer’s window closes. On her TV page and on the homepage it leaves on the next decision, by the catalog’s own rules, and a package with a member out of stock is never shown as complete.",
    "run": [
     {
      "unless": "{{view.tvs}}",
@@ -566,7 +572,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.windows.closed}}",
-    "line": "The merchandiser’s day: {{#p1.windows.page}}on the {{p1.windows.pageName}} page <b>{{p1.windows.page}} offers left</b> with their windows on the next decision; {{/p1.windows.page}}<b>{{p1.windows.closed}} offers’ windows closed</b> in one publish{{#p1.windows.left}}, and {{p1.windows.left}} left her homepage{{/p1.windows.left}}; {{#p1.windows.held}}<b>{{p1.windows.held}} packages</b> with a member out of stock were never shown as complete. {{/p1.windows.held}}By the catalog’s own rules, on every surface: the defects lg.com shows today, fixed."
+    "line": "The merchandiser’s day: {{#p1.windows.page}}on the {{p1.windows.pageName}} page <b>{{p1.windows.page}} offers left</b> with their windows on the next decision; {{/p1.windows.page}}<b>{{p1.windows.closed}} offers’ windows closed</b> in one publish{{#p1.windows.left}}, and {{p1.windows.left}} left her homepage{{/p1.windows.left}}; {{#p1.windows.held}}<b>{{p1.windows.held}} packages</b> with a member out of stock were never shown as complete. {{/p1.windows.held}}By the catalog’s own rules, on every surface, at the next decision: windows and stock kept by the engine, the next step on the platform LG already runs."
    }
   },
   {
@@ -631,14 +637,14 @@
    "who": "engine",
    "label": "Three weeks later",
    "declare": [
-    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish, and her dials are read three weeks on by the published memory",
+    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish, and her dials are projected three weeks on by the published memory",
     "The return visit is <b>asserted</b> on the homepage from now on (ctx.visit = return), labelled: the same browser, the engine’s own clock real"
    ],
    "will": [
-    "Her dials, read three weeks on by the published memory, fade by their own evidence: the room with less behind it fades further",
+    "Her dials, projected three weeks on by the published memory, fade by their own evidence: the room with less behind it fades further",
     "The <b>continue hero</b> answers her return: her shortlist, what she opened on this device, nothing inferred"
    ],
-   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and her dials are read three weeks on by the published memory. The homepage <b>picks up where she left off</b>.",
+   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and her dials are projected three weeks on by the published memory. The homepage <b>picks up where she left off</b>.",
    "run": [
     {
      "unless": "{{view.home}}",
@@ -675,7 +681,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.clock.returned}}",
-    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish, and her dials read three weeks on by the published memory{{#p1.clock.laundryFaster}}: <b>laundry faded faster than TV</b>{{/p1.clock.laundryFaster}}{{^p1.clock.laundryFaster}}: {{p1.clock.faded || 'each room faded by its own evidence'}}{{/p1.clock.laundryFaster}}. The homepage <b>picks up where she left off</b>."
+    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish, and her dials projected three weeks on by the published memory{{#p1.clock.laundryFaster}}: <b>laundry faded faster than TV</b>{{/p1.clock.laundryFaster}}{{^p1.clock.laundryFaster}}: {{p1.clock.faded || 'each room faded by its own evidence'}}{{/p1.clock.laundryFaster}}. The homepage <b>picks up where she left off</b>."
    }
   },
   {

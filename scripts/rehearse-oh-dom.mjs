@@ -31,6 +31,7 @@ const arg = flagReader();
 const base = arg('--base', 'http://localhost:9120').replace(/\/+$/, '');
 const [WIDTH, HEIGHT] = parseSize(arg('--size', '1440x900'));
 const SHOTS = arg('--shots', null);
+const ONLY_STORE = arg('--only', null) === 'store';   // lane S2: the boot page and the manual session alone (mutation runs)
 const SLUG = 'oh', TENANT = 'oh', API = `/${SLUG}/api`, HOOK = '__oh';
 const SETTLE_MS = 1500;
 const SIZES = [[1440, 900], [1366, 768]];
@@ -49,6 +50,9 @@ const shot = screenshotter({ browser, dir: SHOTS, prefix: 'S1', width: WIDTH, in
 let press = 'boot';
 const wire = recordWire(browser, { api: apiPaths(API), keepBody: new RegExp(`^${API}/(beat|reset)$|^/realtime/action$|^/sort$`), pressNow: () => press });
 const { requests, refusedIn } = wire;
+/** Each request's document load (CDP loaderId): a page's own calls, told apart from a previous page's still in flight (lane S2). */
+const LOADER = new Map();
+browser.on('Network.requestWillBeSent', (e) => LOADER.set(e.requestId, e.loaderId));
 
 // ── What a person sees: computed style up the chain, and a real box ──────────
 function pageHelpers({ vis, txt, own, shown }) {
@@ -151,7 +155,55 @@ function pageHelpers({ vis, txt, own, shown }) {
   const loads = (src) => new Promise((r) => { const im = new Image(); const t = setTimeout(() => r({ src, ok: false, why: 'timed out' }), 15000);
     im.onload = () => { clearTimeout(t); r({ src, ok: im.naturalWidth > 0, why: im.naturalWidth > 0 ? '' : 'no pixels' }); }; im.onerror = () => { clearTimeout(t); r({ src, ok: false, why: 'error' }); }; im.src = src; });
   const pendingLoad = async () => Promise.all([...new Set(snapshot().pendingSrc)].map(loads));
-  window.__s1 = { vis, txt, snapshot, framePixels, scrollThrough, pendingLoad };
+  // ── Lane S2: the store as she sees it (oh-store.js's markup, its contract) and LG's look as computed style ──
+  const storeView = () => {
+    const sheetOn = vis('#sheetBack').ok && vis('#sheetBody').ok;
+    const body = document.getElementById('sheetBody');
+    const inSheet = (sel) => (sheetOn && body ? [...body.querySelectorAll(sel)].filter((e) => vis(e).ok) : []);
+    return {
+      address: location.pathname + location.search, view: (viewEl() || { dataset: {} }).dataset.page || null,
+      header: (() => { const h = document.querySelector('#site .site-header'); const b = h ? vis(h) : { ok: false };
+        return { ok: b.ok, h: b.h || 0, bg: h ? getComputedStyle(h).backgroundColor : '', text: b.ok ? txt(h).slice(0, 300) : '' }; })(),
+      cartCount: [...document.querySelectorAll('#site .site-header [data-cart-count]')].filter((e) => vis(e).ok).map(txt),
+      sheet: { open: sheetOn, title: sheetOn ? txt('#sheetTitle') : '', kicker: sheetOn ? txt(body.querySelector('.sk')) : '', text: sheetOn ? txt(body).slice(0, 900) : '' },
+      cart: { lines: inSheet('.st-line').map((l) => ({ line: l.dataset.line, name: txt(l.querySelector('.st-line-name')), sku: txt(l.querySelector('.st-line-sku')),
+        qty: txt(l.querySelector('[data-qty-of]')), price: own(l.querySelector('.st-line-price')), addOns: [...l.querySelectorAll('.st-line-add')].map(txt) })),
+        rows: inSheet('.srow').map((r) => [txt(r.firstElementChild), txt(r.lastElementChild)]), total: inSheet('[data-cart-total]').map(txt)[0] || '',
+        savings: inSheet('.st-saving').map(txt), checkout: inSheet('[data-act="store-cart-checkout"]').length },
+      retailers: { heads: inSheet('.st-h').map(txt), online: inSheet('[data-act="store-referral"][data-where="online"]').map((b) => b.dataset.retailerName),
+        nearby: inSheet('[data-act="store-referral"][data-where="nearby"]').map((b) => b.dataset.retailerName),
+        onlineKeys: inSheet('[data-act="store-referral"][data-where="online"]').map((b) => b.dataset.retailer),
+        source: (inSheet('[data-retailer-source]')[0] || { dataset: {} }).dataset.retailerSource || '',
+        nearbyLines: inSheet('.srow').filter((r) => r.querySelector('[data-where="nearby"]')).map(txt),
+        direct: inSheet('[data-act="store-retailer-buy"]').length, pickup: inSheet('[data-act="store-pickup"]').length, fine: inSheet('.st-fine').map(txt).join(' ') },
+      toast: vis('#storeToast').ok ? txt('#storeToast') : '',
+    };
+  };
+  /** LG's look (design §9.1), read as computed style over what a visitor sees of the site (the presenter's tools apart). */
+  const lookOf = () => {
+    const TOOLS = '.machine, #machine, .director, .pd-back, #cmp-back, #demo-cursor, .back-chip, .fixture-flag, #sheetBack > .sheet-x';
+    const parse = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c || ''); if (!m) return null; const [r, g, b, a = 1] = m[1].split(',').map((x) => Number(x.trim())); return { r, g, b, a }; };
+    const hsl = ({ r, g, b }) => { r /= 255; g /= 255; b /= 255; const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2; let h = 0, s = 0;
+      if (max !== min) { const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min); h = (max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60; } return { h, s, l }; };
+    const yellow = (c) => { const x = parse(c); if (!x || x.a < 0.3) return false; const { h, s, l } = hsl(x); return h >= 42 && h <= 72 && s >= 0.55 && l >= 0.35 && l <= 0.88; };
+    const nearBlack = (c) => { const x = parse(c); return Boolean(x && x.a >= 0.9 && x.r < 48 && x.g < 48 && x.b < 48); };
+    const light = (c) => { const x = parse(c); return !x || x.a < 0.15 || hsl(x).l >= 0.9; };
+    const name = (n) => (n.id ? '#' + n.id : n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className.trim() ? '.' + n.className.trim().split(/\s+/)[0] : ''));
+    const els = [...document.querySelectorAll('#site *, #sheetBack *')].filter((e) => !e.closest(TOOLS) && vis(e).ok);
+    const yellows = [], bars = [], fills = [];
+    for (const e of els) {
+      const cs = getComputedStyle(e);
+      for (const [k, c] of [['background', cs.backgroundColor], ['text', cs.color], ['border', cs.borderTopWidth !== '0px' ? cs.borderTopColor : '']]) if (yellow(c)) yellows.push(name(e) + ' ' + k + ' ' + c);
+      const r = e.getBoundingClientRect();
+      if (r.width >= innerWidth * 0.5 && r.height >= 16 && nearBlack(cs.backgroundColor)) bars.push(name(e) + ' ' + Math.round(r.width) + '×' + Math.round(r.height) + ' ' + cs.backgroundColor);
+      const isButton = e.matches('button, .btn, a.btn, [role="button"], input[type="submit"]') && !e.disabled && e.getAttribute('aria-disabled') !== 'true' && (txt(e).length >= 2 || (e.value || '').length >= 2);
+      if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius });
+    }
+    const wm = document.getElementById('wordmark');
+    return { yellows: [...new Set(yellows)], bars, fills, body: getComputedStyle(document.body).backgroundColor, font: getComputedStyle(document.body).fontFamily,
+      ink: getComputedStyle(document.querySelector('#site') || document.body).color, wordmark: wm ? { text: txt(wm), color: getComputedStyle(wm).color, shown: vis(wm).ok } : null };
+  };
+  window.__s1 = { vis, txt, snapshot, framePixels, scrollThrough, pendingLoad, store: storeView, look: lookOf };
   return true;
 }
 const rgb = (hex) => { const h = hex.replace('#', ''); const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; return `rgb(${[0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16)).join(', ')})`; };
@@ -205,7 +257,7 @@ const coldstart = async (region) => (await fetch(`${base}${API}/coldstart${regio
 
 /** The engine's answer behind the page on screen: the latest snapshot of this press for the view's page, read off the wire. */
 /** Her capability as the page holds it under ?debug (compared with the wire's X-Shopper-Session, never printed). */
-const herCap = () => evaluate(`(() => { const s = window.${HOOK}.state; const v = s && s.who ? s.visitors[s.who] : null; return v && v.session ? v.session.capability : null; })()`);
+const herCap = () => evaluate(`(() => { const s = window.${HOOK} && window.${HOOK}.state; const v = s && s.who ? s.visitors[s.who] : null; return v && v.session ? v.session.capability : null; })()`);
 async function engineAnswer(pressKey, pageKey) {
   const cap = await herCap();
   const list = [...requests.entries()].filter(([, r]) => r.press === pressKey && /\/decisions\/snapshot/.test(r.path) && r.status === 200
@@ -228,7 +280,9 @@ async function inEngineOrder(label, S, pressKey) {
   for (const s of decided) {
     const engine = answer.decisions.filter((d) => d.slot === s.slot).sort((a, b) => a.order - b.order);
     const shown = s.cards.map((c) => c.cid || CID.get(c.content) || c.content);
-    const want = engine.map((d) => d.customerContentId);
+    const onPage = new URLSearchParams(String(S.address).split('?')[1] || '').get('id');
+    const noLowerSet = s.slot === 'pdp-modules' && onPage && !setsOf(row(onPage)).some((x) => x.lower);   // R4 F7 (S2): the set-price card's own condition
+    const want = engine.map((d) => d.customerContentId).filter((cid) => !(noLowerSet && cid === 'mod-laundry-pair-price'));
     if (!sameJSON(shown, want)) wrong.push(`${s.slot}: on screen ${shown.join(', ')} · the engine ${want.join(', ')}`);
   }
   return ok(`${label}: the page renders the engine's answer in the engine's order, every decided slot on screen`, wrong.length === 0,
@@ -417,6 +471,608 @@ const p1Read = () => evaluate(P1R);
 const pieceRoom = (cid) => ((((openCatalog.pieces || []).find((p) => p.customerContentId === cid) || {}).tags || {}).room || [])[0] || null;
 const p1Width = (p) => { const s = Number(p && p.width); if (Number.isFinite(s) && s > 0) return s; const f = Number(p && p.fits && p.fits.width); return Number.isFinite(f) && f > 0 ? f : null; };
 
+// ── Lane S2: a visitor's hand (design §9.3, §9.4) ────────────────────────────
+// The manual session presses only what a visitor sees. An element is found on screen (computed visibility up the
+// chain and a real box), scrolled into view as a person scrolls, and must be the topmost thing under the point
+// pressed (nothing covers it); it then gets a real mouse press and release through the DevTools input domain, never
+// element.click(). Typing goes in as text input and an Enter key. Back is the browser's own history entry. Every claim
+// is read off the screen and off the wire, as the walk's are.
+const AIM = (sel, text, nth) => `(async () => {
+  const { vis, txt } = window.__s1;
+  const want = ${JSON.stringify(text ? String(text).toLowerCase() : null)};
+  const all = [...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => vis(e).ok && (!want || (txt(e) || e.getAttribute('aria-label') || '').toLowerCase().includes(want)));
+  const el = all[${Number(nth) || 0}] || null;
+  if (!el) return { ok: false, why: 'nothing on screen matches ' + ${JSON.stringify(sel)} + (want ? ' with “' + want + '”' : '') };
+  el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const r = el.getBoundingClientRect();
+  const x = Math.round(r.left + Math.min(r.width / 2, 24)), y = Math.round(r.top + r.height / 2);
+  const hit = document.elementFromPoint(x, y);
+  const covered = !(hit && (hit === el || el.contains(hit)));
+  const nm = (n) => (n ? (n.id ? '#' + n.id : n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className.trim() ? '.' + n.className.trim().split(/\\s+/)[0] : '')) : 'nothing');
+  return { ok: !covered, x, y, label: (txt(el) || el.getAttribute('aria-label') || el.value || el.tagName).slice(0, 80), why: covered ? 'covered by ' + nm(hit) : '' };
+})()`;
+/** The API requests still in flight (a receipt poll, an ask); settled is a quiet wire for a moment, then the helpers are checked. */
+async function settled(quietMs = 800, maxMs = 25000) {
+  const end = Date.now() + maxMs;
+  let calm = Date.now();
+  while (Date.now() < end) {
+    const busy = [...requests.values()].some((r) => r.status === null && !r.failed && Date.now() - r.at < 20000);
+    if (busy) calm = Date.now(); else if (Date.now() - calm >= quietMs) break;
+    await sleep(120);
+  }
+  // A same-document route keeps window.__s1; a full navigation (a link the store did not route) needs it again, and says so.
+  if (!(await evaluate('typeof window.__s1 === "object"').catch(() => false))) { S2.reloads.push(await evaluate('location.pathname + location.search').catch(() => '?')); await booted(); await evaluate(inPage(pageHelpers)); }
+}
+/** One press of a visitor's hand on what she sees: { ok, label } or { ok: false, why }. */
+async function hand(sel, { text, nth, settle = true } = {}) {
+  const a = await evaluate(AIM(sel, text, nth));
+  if (!a.ok) return a;
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: a.x, y: a.y });
+  await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: a.x, y: a.y, button: 'left', buttons: 1, clickCount: 1 });
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: a.x, y: a.y, button: 'left', buttons: 0, clickCount: 1 });
+  if (settle) await settled();
+  return a;
+}
+/** Typing into a field she can see: pressed first, then the text as input, then Enter. */
+async function typeIn(sel, text) {
+  const a = await hand(sel, { settle: false });
+  if (!a.ok) return a;
+  await evaluate(`(() => { const e = document.activeElement; if (e && 'value' in e) e.select && e.select(); })()`);
+  await cdp('Input.insertText', { text });
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\r' });
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
+  await settled();
+  return a;
+}
+/** The browser's own Back: the previous entry of its history, as the toolbar button goes there. */
+async function browserBack() {
+  const h = await cdp('Page.getNavigationHistory');
+  const prev = h.entries[h.currentIndex - 1];
+  if (!prev) return { ok: false, why: 'no earlier entry in the history' };
+  await cdp('Page.navigateToHistoryEntry', { entryId: prev.id });
+  await sleep(300);
+  await settled();
+  return { ok: true, url: prev.url };
+}
+const S2 = { reloads: [] };
+
+// ── Lane S2: R4's rulings, measured against her profile and the engine, never the page's sentence ──
+/** Her own reading of a dimension, from her profile as the page holds it (the meters' read): { value: a } with a > 0. */
+const herDim = (vec, dim) => Object.fromEntries(Object.entries((vec || {})[dim] || {}).filter(([, a]) => Number(a) > 0));
+const leading = (vals) => (Object.entries(vals || {}).sort((x, y) => Number(y[1]) - Number(x[1]))[0] || [null])[0];
+/**
+ * What put /sort's first ahead of its second, read off the answer's own items: per dimension the contribution the first
+ * holds over the second (the regional prior as one dimension, 'regional'); the dimension with the largest lead, with the
+ * first's own value there. Null when the answer carries no items for them.
+ */
+function separating(answer, first, second) {
+  const items = (answer && answer.items) || [];
+  const of = (id) => items.find((x) => String(x.id) === String(id)) || null;
+  const a = of(first), b = of(second);
+  if (!a || !b) return null;
+  const byDim = (x) => { const m = new Map(), top = new Map();
+    for (const d of x.drivers || []) { const k = d.dim; m.set(k, (m.get(k) || 0) + Number(d.contribution || 0)); if (!top.has(k) || Number(d.contribution) > top.get(k).c) top.set(k, { c: Number(d.contribution), v: d.value }); }
+    return { m, top }; };
+  const A = byDim(a), B = byDim(b);
+  let best = null;
+  for (const [dim, v] of A.m) { const gap = v - (B.m.get(dim) || 0); if (!best || gap > best.gap) best = { dim, value: A.top.get(dim).v, gap: Number(gap.toFixed(3)) }; }
+  return best && best.gap > 0 ? best : null;
+}
+/** How a card says a driver in words (the coordinator's list: sold here, pickup, completes her set), by dimension and value. */
+function driverWords(sep) {
+  if (!sep) return null;
+  if (sep.dim === 'retailer') return sep.value === 'best-buy-pickup' ? /pick ?up/i : sep.value === 'lg-com' ? /sold here|from oh\.|buy (it )?(directly|here)/i : new RegExp(String(sep.value).replace(/-/g, '[ -]'), 'i');
+  if (sep.dim === 'package') return /\bset\b|package/i;
+  if (sep.dim === 'regional') return /leans with/i;
+  return new RegExp(`\\b(${String(sep.value).replace(/-/g, '[ -]')}|${sep.dim})\\b`, 'i');
+}
+/** A washer's laundry sets with the set's price against the sum of its pieces' (the feed's own figures, as the page shows them). */
+const setsOf = (p) => ((p && p.companions && p.companions.packages) || []).map((sku) => row(sku)).filter((x) => x && x.salePrice != null).map((x) => {
+  const members = ((x.companions && x.companions.members) || String(x.sku).split('_')).map(row);
+  const apart = members.every((m) => m && m.salePrice != null) ? members.reduce((n, m) => n + Number(m.salePrice), 0) : null;
+  return { sku: x.sku, set: Number(x.salePrice), apart, lower: apart !== null && Number(x.salePrice) < apart - 0.005 };
+});
+/** The date of the prices the page shows: the overlay's (specs.json) when it changes any row's price, else the feed's own. */
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const longDate = (iso) => (iso ? `${Number(String(iso).slice(8, 10))} ${MONTHS[Number(String(iso).slice(5, 7)) - 1]} ${String(iso).slice(0, 4)}` : null);
+const priceDate = () => {
+  const changed = products.filter((p) => overlay.has(String(p.sku)) && ['salePrice', 'listPrice'].some((k) => overlay.get(String(p.sku))[k] != null && Number(overlay.get(String(p.sku))[k]) !== Number(p[k])));
+  const feed = String(productsDoc.asOf || '').slice(0, 10), over = String((specsDoc && specsDoc.asOf) || '').slice(0, 10);
+  return { iso: changed.length && over > feed ? over : feed, changed: changed.length, feed, over };
+};
+const namesDate = (line, iso) => Boolean(iso) && new RegExp(`(?<!\\d)${longDate(iso)}`).test(String(line || ''));
+const storeNow = () => evaluate('window.__s1.store()');
+const lookNow = () => evaluate('window.__s1.look()');
+const path = (u) => { try { const x = new URL(u, base); x.searchParams.delete('debug'); x.searchParams.delete('present'); return x.pathname + (x.searchParams.toString() ? `?${x.searchParams}` : ''); } catch { return String(u); } };
+/** The bodies of her events in a span of presses, off the wire: [{ type, data, cap }] in the order they left. */
+const eventsIn = (presses) => [...requests.values()].filter((r) => presses.includes(r.press) && r.path === '/realtime/action').map((r) => {
+  try { const b = JSON.parse(r.body); return { type: b.type, data: b.data || {}, cap: header(r, 'X-Shopper-Session'), status: r.status, source: b.source }; } catch { return null; } }).filter(Boolean);
+/** What productAttrs builds for a product (oh.js, from SITE.products.attributes): the beat verbs' attributes for it. */
+const PAGE_SITE = (() => { const m = /\bconst SITE = (\{[\s\S]*?\n\});/.exec(ohJs); try { return m ? JSON.parse(m[1]) : {}; } catch { return {}; } })();
+const attrsOf = (p) => { const map = ((PAGE_SITE.products || {}).attributes) || {}; const out = { productId: String(p.sku) };
+  for (const [k, pathTo] of Object.entries(map)) { const v = String(pathTo).split('.').reduce((o, x) => (o == null ? undefined : o[x]), p); if (v !== undefined && v !== null) out[k] = v; } return out; };
+/** Whether an event's data carries the beat verbs' attributes for the product: every one productAttrs builds, equal. */
+const carries = (data, p, over = {}) => { const want = { ...attrsOf(p), ...over }; const miss = Object.entries(want).filter(([k, v]) => JSON.stringify(data[k]) !== JSON.stringify(v)).map(([k]) => k); return { ok: miss.length === 0, miss }; };
+
+
+// ── Lane S2: the boot page and the manual session (design §9.1–§9.4) ─────────
+// Before anyone exists /oh/ is the published template: real content in every module of lg.com's anatomy, in LG's look,
+// and nothing on the wire that mints a visitor until the first click. Then a visitor works the site by hand, pressing
+// only what she sees: the TVs grid from the nav, a filter, two TVs, a search from the header, a washer, a colour, Add to
+// Cart, the dryer the washer's own decided module offers, the cart, Find a Retailer, Back twice, home. Each step is read
+// off the screen and off the wire: the address and the view, the events in the beat verbs' shapes, the cart's lines and
+// total, the modal's lists against the catalog, and at the end the homepage moved for her, with receipts naming her clicks.
+const BOOT_MODULES = [
+  ['the pencil banner', '#m1Pencil'], ['the header', '#site .site-header'], ['the category nav', '#m1Cats'], ['the hero', '#slot-hero'],
+  ['the service strip', '#view-home .svc-strip'], ['the room tiles', '#slot-category-rail'], ['the deals four', '#slot-deals'], ['Shop with an expert', '#view-home .m1-expert'],
+  ['Recommended for you', '#rail-for-you'], ['the showcase', '#m1Showcase'], ['the benefits', '#view-home .m1-benefits-wrap'], ['the footer', '#site footer.site-footer'],
+];
+const BOOT_READ = `(() => {
+  const { vis, txt } = window.__s1;
+  const imgs = (root) => [...root.querySelectorAll('img')].filter((i) => vis(i).ok).map((i) => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth > 0 }));
+  const outer = (root, sel) => [...root.querySelectorAll(sel)].filter((e) => vis(e).ok).filter((e) => { const up = e.parentElement && e.parentElement.closest(sel); return !up || !root.contains(up); });
+  const mod = (sel) => {
+    const el = document.querySelector(sel);
+    const b = el ? vis(el) : { ok: false, why: 'not in the page' };
+    if (!b.ok) return { ok: false, why: b.why, text: '', imgs: [], cards: [], products: [], items: 0 };
+    return { ok: true, h: b.h, bg: getComputedStyle(el).backgroundColor, text: txt(el).slice(0, 900), imgs: imgs(el),
+      cards: outer(el, '[data-cid]').map((c) => ({ cid: c.dataset.cid, decided: Boolean(c.dataset.opDecisionId), title: txt(c.querySelector('h1, h2, h3, h4, .title, .ptitle, .dtitle')) || '', text: txt(c).slice(0, 240) })),
+      products: outer(el, '[data-open]').map((c) => ({ sku: c.dataset.open, text: txt(c).slice(0, 240), img: imgs(c) })),
+      items: [...el.querySelectorAll('a, button, [role="tab"]')].filter((x) => vis(x).ok && (txt(x).length > 1 || x.getAttribute('aria-label'))).length };
+  };
+  return Object.fromEntries(${JSON.stringify(BOOT_MODULES)}.map(([n, s]) => [n, mod(s)]));
+})()`;
+/** Each module's claim of real content, as lg.com's anatomy carries it (design §9.2). */
+const titled = (m, n) => m.cards.length === n && m.cards.every((c) => c.title.trim().length >= 2 && c.text.length > c.title.length + 10);
+const BOOT_CLAIMS = {
+  'the pencil banner': (m) => m.text.length >= 20,
+  'the header': (m) => ['OH.', 'TVs', 'Laundry', 'Kitchen', 'Offers', 'Support', 'Sign in'].every((w) => has(m.text, w)),
+  'the category nav': (m) => m.items >= 13,
+  'the hero': (m) => m.cards.length >= 1 && m.cards[0].title.trim().length >= 2 && m.cards[0].text.length > m.cards[0].title.length + 10,
+  'the service strip': (m) => ['deliver', 'return', 'cover', 'haul', 'expert'].every((w) => has(m.text, w)),
+  'the room tiles': (m) => titled(m, 3),
+  'the deals four': (m) => titled(m, 4),
+  'Shop with an expert': (m) => has(m.text, 'expert') && m.text.length > 60,
+  'Recommended for you': (m) => m.products.length >= 4 && m.products.every((x) => /\$\d/.test(x.text) && x.img.some((i) => i.ok)),
+  'the showcase': (m) => has(m.text, 'appliances') && has(m.text, 'entertainment') && m.products.length + m.cards.length >= 1,
+  'the benefits': (m) => m.items >= 3,
+  'the footer': (m) => m.text.length > 200 && has(m.text, 'fictional'),
+};
+const SITE_TOOLS = (sel) => evaluate(`(() => ({ collapsed: document.body.classList.contains('kit-dock--collapsed'), rail: window.__s1.vis('#dockRail').ok, machine: window.__s1.vis('#machine').ok,
+  site: Math.round((document.getElementById('site') || document.body).getBoundingClientRect().width), vw: innerWidth }))()`);
+/** The opening catalog's pieces by content id, with whether each is in force for a slot now (live, in window, in stock, no context gate). */
+const OPEN_PIECES = new Map((openCatalog.pieces || []).map((p) => [p.customerContentId, p]));
+const inForceFor = (cid, slot) => { const p = OPEN_PIECES.get(cid); if (!p) return false; const w = p.window || {}, now = Date.now();
+  return (p.slotTypes || []).includes(slot) && (!p.lifecycle || p.lifecycle.status === 'live') && p.inStock !== false && (!w.to || Date.parse(w.to) > now) && (!w.from || Date.parse(w.from) <= now)
+    && !(p.eligibleWhen && p.eligibleWhen.context && Object.keys(p.eligibleWhen.context).length); };
+/**
+ * The published template of a slot, as the store builds it before anyone arrives (oh.js M1.template): the opening catalog's
+ * pieces in its own order, the first `take` that are live, inside their window, in stock and carry no eligibility rule, under
+ * the slot's own diversity rule from the opening slots. The boot page must show exactly these, in this order.
+ */
+const OPEN_SLOTS = (await getJson('beats/open-slots.json').catch(() => ({ publish: { document: { pages: {} } } }))).publish.document;
+function templateOf(slot, take) {
+  const def = Object.values(OPEN_SLOTS.pages || {}).flat().find((s) => s.slot === slot) || {};
+  const div = def.diversity || null, counts = {}, out = [], now = Date.now();
+  for (const p of openCatalog.pieces || []) {
+    if (out.length >= take) break;
+    const w = p.window || {};
+    if (!(p.slotTypes || []).includes(slot) || (p.lifecycle && p.lifecycle.status && p.lifecycle.status !== 'live') || p.inStock === false || p.eligibleWhen
+      || (w.to && Date.parse(w.to) <= now) || (w.from && Date.parse(w.from) > now)) continue;
+    if (div && div.dimension) { const vals = ((p.tags || {})[div.dimension]) || []; if (vals.some((v) => (counts[v] || 0) >= Number(div.max))) continue; for (const v of vals) counts[v] = (counts[v] || 0) + 1; }
+    out.push(p.customerContentId);
+  }
+  return out;
+}
+/** Each page of the session at 1440 and at 1366: no horizontal overflow, no broken image (scrolled through, lazy ones loaded apart). */
+async function pageAtBoth(label) {
+  const out = [];
+  for (const [w, h] of SIZES) {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false });
+    await sleep(400);
+    await imagesSettled();
+    const S = await snap();
+    const late = [...(await evaluate('window.__s1.pendingLoad()')).filter((x) => !x.ok).map((x) => `${x.src} (${x.why})`), ...(await imgErrors()).map((x) => `${x} (failed)`)];
+    out.push({ w, overflow: S.overflow, broken: [...S.broken, ...late], images: S.images });
+  }
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+  await sleep(250);
+  return ok(`${label}: no horizontal overflow and no broken image, at 1440 and at 1366`, out.every((x) => x.overflow <= 1 && x.broken.length === 0),
+    out.map((x) => `${x.w}: overflow ${x.overflow}px · ${x.images} image(s)${x.broken.length ? ` · broken ${x.broken.slice(0, 2).join(', ')}` : ''}`).join(' | '));
+}
+/** LG's look on the page now (design §9.1), as computed style: the checks every page of the session repeats. */
+async function lgLook(label, { full = false } = {}) {
+  const L = await lookNow();
+  const BRAND = [rgb('#A50034'), rgb('#8A0029')];
+  const brandFills = L.fills.filter((f) => BRAND.includes(f.bg)), other = L.fills.filter((f) => !BRAND.includes(f.bg));
+  ok(`${label}: no yellow anywhere and no black bar`, L.yellows.length === 0 && L.bars.length === 0, [...L.yellows.slice(0, 3), ...L.bars.slice(0, 3)].join(' ~ ') || 'none');
+  ok(`${label}: every filled button is the brand colour, white text, 4 px radius`, other.length === 0 && brandFills.every((f) => f.color === 'rgb(255, 255, 255)' && f.radius === '4px') && (!full || brandFills.length > 0),
+    other.length ? other.slice(0, 3).map((f) => `${f.el} “${f.text}” ${f.bg}`).join(' ~ ') : `${brandFills.length} brand button(s)${brandFills.filter((f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '4px').map((f) => ` · ${f.el} ${f.color} r${f.radius}`).join('')}`);
+  if (full) {
+    ok(`${label}: white, in Inter, the wordmark “OH.” in the brand colour #A50034`, L.body === 'rgb(255, 255, 255)' && /\bInter\b/.test(L.font) && Boolean(L.wordmark && L.wordmark.shown && L.wordmark.text === 'OH.' && L.wordmark.color === rgb('#A50034')),
+      `${L.body} · ${L.font.slice(0, 40)} · ${L.wordmark ? `${L.wordmark.text} ${L.wordmark.color}` : 'no wordmark'}`);
+  }
+  return L;
+}
+/** The decided answer for a page on a span of presses, off the wire (her own capability when known): the latest one. */
+async function answerIn(presses, pageKey, cap) {
+  const list = [...requests.entries()].filter(([, r]) => presses.includes(r.press) && /\/decisions\/snapshot/.test(r.path) && r.status === 200 && new URL(r.url).searchParams.get('page') === pageKey
+    && (!cap || header(r, 'X-Shopper-Session') === cap));
+  for (const [id, r] of list.reverse()) { try { const b = await cdp('Network.getResponseBody', { requestId: id }); const body = JSON.parse(b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body); if (Array.isArray(body.decisions)) return { body, url: new URL(r.url), at: r.at }; } catch { /* evicted */ } }
+  return null;
+}
+/** The latest /sort answer in a span of presses whose candidates hold every id given, off the wire. */
+async function sortIn(presses, idsShown, cap) {
+  const list = [...requests.entries()].filter(([, r]) => presses.includes(r.press) && r.path === '/sort' && r.status === 200 && (!cap || header(r, 'X-Shopper-Session') === cap)
+    && (() => { try { const c = new Set(JSON.parse(r.body).candidates.map((x) => String(x.id))); return idsShown.every((x) => c.has(String(x))); } catch { return false; } })());
+  for (const [id, r] of list.reverse()) { try { const b = await cdp('Network.getResponseBody', { requestId: id }); const body = JSON.parse(b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body); if (Array.isArray(body.order)) return { body, sent: JSON.parse(r.body) }; } catch { /* evicted */ } }
+  return null;
+}
+/** The store's search rule (oh-store.js match): every word in the product's name, SKU, type, category, subcategory, series, panel, finish, fuel or size band; priced. */
+const normS = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const storeMatch = (q) => { const words = normS(q).split(' ').filter(Boolean); return rowsAll.filter((p) => { const a = p.attributes || {};
+  const hay = ` ${normS([p.sku, p.name, a.type, a.category, a.subcategory, a.series, a.panel, a.finish, a.fuel, a.sizeBand].join(' '))} `;
+  return words.every((w) => hay.includes(w) || (w.length > 3 && w.endsWith('s') && hay.includes(w.slice(0, -1)))); }).filter((p) => Number(p.salePrice) > 0); };
+/** A washer sold here whose same model comes in another finish, sold here too: the colour she can change to. */
+const colourSibling = (p) => p && rowsAll.find((x) => x.sku !== p.sku && x.family === p.family && x.modelFamily && x.modelFamily === p.modelFamily && x.attributes && p.attributes
+  && x.attributes.finish && x.attributes.finish !== p.attributes.finish && x.cta === 'cart' && x.inStock !== false && Number(x.salePrice) > 0) || null;
+const dollars = (s) => { const m = /\$([\d,]+(?:\.\d{2})?)/.exec(String(s || '')); return m ? Number(m[1].replace(/,/g, '')) : null; };
+const words = (s) => String(s || '').replace(/-/g, ' ');
+
+/** The manual session: from the boot page on screen, by a visitor's hand only (design §9.4). */
+async function manualSession() {
+  console.log('\n── By hand: a visitor works the store, clicking only what she sees (S2)');
+  const HANDS = [];
+  const route = [];                                   // the address after each step that navigates, in order
+  const at = async () => { const s = await storeNow(); return { path: path(s.address), view: s.view }; };
+  const step = async (name, fn) => { press = `hand ${HANDS.length + 1} · ${name}`; HANDS.push(press); console.log(`   ─ ${name}`);
+    try { return await fn(); } catch (error) { checks.fail(`by hand, ${name}: the step threw: ${error.message}`); return null; } };
+  const pressed = (a, what) => ok(`${what}: pressed on screen${a && a.label ? ` (“${a.label.slice(0, 40)}”)` : ''}`, Boolean(a && a.ok), a ? a.why || '' : 'nothing to press');
+  const her = () => { const e = eventsIn(HANDS); return e.length ? e[e.length - 1].cap : null; };
+  const evts = (key) => eventsIn([key]);
+  const tvGrid = '#view-tvs #rail-tv-grid [data-open]';
+  const gridSkus = () => evaluate(`[...document.querySelectorAll(${JSON.stringify(tvGrid)})].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)`);
+  const S2S = { opened: [] };
+
+  // 1. The TVs grid, from the header's category nav: the first click mints her.
+  await step('the TVs grid from the nav', async () => {
+    const a = await hand('#site .site-header #mainnav [data-nav="tvs"]');
+    pressed(a, 'TVs in the header’s nav');
+    const k = press, w = await at(), calls = [...requests.values()].filter((r) => r.press === k);
+    route.push(w.path);
+    ok('the TVs grid is on screen at /oh/?view=tvs', w.view === 'tvs' && w.path === '/oh/?view=tvs', `${w.view} · ${w.path}`);
+    const sessions = calls.filter((r) => /\/identity\/session$/.test(r.path)), consent = calls.filter((r) => /\/session\/preferences$/.test(r.path));
+    const firstEvent = calls.find((r) => r.path === '/realtime/action');
+    ok('the first click mints her: one session and her consent on the wire, before her first event', sessions.length === 1 && consent.length === 1 && (!firstEvent || sessions[0].at <= firstEvent.at),
+      `${sessions.length} session · ${consent.length} consent`);
+    const pv = evts(k).filter((e) => e.type === 'page_view');
+    ok('and the grid sends her page view: page_view { page: tvs }', pv.some((e) => e.data.page === 'tvs'), pv.map((e) => JSON.stringify(e.data)).join(' · ') || 'none');
+    const shown = await gridSkus();
+    const sorted = await sortIn([k], shown.slice(0, 8));
+    ok(`the grid shows ${shown.length} TVs in POST /sort’s own order`, shown.length >= 8 && Boolean(sorted) && sameJSON(shown, sorted.body.order.map(String).filter((x) => shown.includes(x))), sorted ? sorted.body.order.slice(0, 4).join(', ') : 'no /sort answer for the grid on the wire');
+    S2S.gridBefore = shown;
+    await pageAtBoth('the TVs grid');
+    await lgLook('the TVs grid');
+  });
+
+  // 2. A filter: OLED, from the grid's own filters.
+  await step('a filter: OLED', async () => {
+    const before = await gridSkus();
+    const countOf = async () => { const m = /(\d[\d,]*)\s+results?/i.exec(await evaluate("window.__s1.txt('#m1Bar-tvs')")); return m ? Number(m[1].replace(/,/g, '')) : null; };
+    const n0 = await countOf();
+    const a = await hand('#view-tvs #m1Filters-tvs label, #view-tvs #m1Filters-tvs button, #view-tvs #m1Filters-tvs [role="checkbox"]', { text: 'OLED' });
+    pressed(a, 'OLED in the grid’s filters');
+    const k = press, shown = await gridSkus();
+    const off = shown.filter((sku) => { const p = row(sku); return !p || !/oled/.test(String(p.attributes && p.attributes.type)); });
+    const all = rowsAll.filter((p) => p.attributes && p.attributes.category === 'tvs' && /oled/.test(String(p.attributes.type)) && Number(p.salePrice) > 0);
+    const n1 = await countOf();
+    ok(`the filter filters: the grid counts the feed’s ${all.length} priced OLEDs (${n0} → ${n1}), and every TV on screen is an OLED`, shown.length > 0 && off.length === 0 && n1 === all.length && n0 !== null && n0 > n1,
+      off.slice(0, 4).join(', ') || `${shown.length} on screen: ${shown.slice(0, 3).join(', ')}`);
+    const count = await evaluate("window.__s1.txt('#m1Bar-tvs')");
+    info(`the toolbar says “${count.slice(0, 80)}” · the feed holds ${all.length} priced OLEDs`);
+    const f = evts(k).filter((e) => e.type === 'custom' && e.data.event === 'filter');
+    ok('the filter goes on the wire as the beat verbs send one: custom { event: filter, … } naming type oled', f.some((e) => /oled/.test(JSON.stringify(e.data))), f.map((e) => JSON.stringify(e.data).slice(0, 120)).join(' · ') || 'no filter event');
+    const re = await sortIn([k], shown.slice(0, 4));
+    ok('and the filtered grid is POST /sort’s order over the filtered TVs alone', Boolean(re) && re.sent.candidates.every((c) => /oled/.test(String(c.type))) && sameJSON(shown, re.body.order.map(String).filter((x) => shown.includes(x))),
+      re ? `${re.sent.candidates.length} candidates` : 'no /sort after the filter');
+  });
+
+  // 3. Two TVs: the first from the grid, the browser's Back, the next.
+  for (const n of [1, 2]) {
+    await step(`TV ${n} from the grid`, async () => {
+      const shown = await gridSkus();
+      const sku = shown.find((x) => !S2S.opened.includes(x));
+      const a = sku ? await hand(`${tvGrid}[data-open="${sku}"]`) : null;
+      pressed(a, `a TV card (${sku || 'none'})`);
+      const k = press, w = await at();
+      route.push(w.path);
+      ok(`its product page is on screen: /oh/product?id=${sku}`, w.view === 'product' && w.path === `/oh/product?id=${encodeURIComponent(sku)}` && has(await evaluate("window.__s1.txt('#buyBox')"), sku), `${w.view} · ${w.path}`);
+      const pv = evts(k).filter((e) => e.type === 'product_view' && String(e.data.productId) === sku);
+      const c = pv.length ? carries(pv[0].data, row(sku)) : { ok: false, miss: ['no product_view'] };
+      ok(`its product_view carries the beat verbs’ attributes for ${sku} (productAttrs, view: page)`, pv.length === 1 && c.ok && pv[0].data.view === 'page', c.miss.join(', ') || `${Object.keys(pv[0].data).length} fields`);
+      S2S.opened.push(sku);
+      if (n === 1) {
+        await pageAtBoth(`the TV page (${sku})`);
+        await lgLook('the TV page');
+        const b = await browserBack();
+        const back = await at();
+        route.push(back.path);
+        ok('the browser’s Back returns to the filtered grid', b.ok && back.view === 'tvs' && back.path.startsWith('/oh/?view=tvs'), `${back.view} · ${back.path}`);
+      }
+    });
+  }
+
+  // 4. A search from the header: "washer".
+  const Q = 'front load washer';
+  await step(`a search from the header: “${Q}”`, async () => {
+    const a = await typeIn('#site .site-header form[data-store-search] input[name="q"]', Q);
+    pressed(a, 'the header’s search box');
+    const k = press, w = await at();
+    route.push(w.path);
+    const shown = await evaluate("[...document.querySelectorAll('#view-search #rail-search-grid [data-open], #sheetBody .st-result[data-open]')].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)");
+    const match = storeMatch(Q).map((p) => p.sku);
+    ok(`the results are on screen at the store’s search address, /oh/?q=${Q}, every one a match for “${Q}” in the feed`, /^\/oh\/\?/.test(w.path) && w.view === 'search' && new URLSearchParams(w.path.split('?')[1] || '').get('q') === Q && shown.length > 0 && shown.every((x) => match.includes(x)), `${w.path} · ${shown.length} shown of ${match.length} matches`);
+    const s = evts(k).filter((e) => e.type === 'custom' && e.data.event === 'search');
+    ok(`the search goes on the wire as the beat verbs send one: custom { event: search, control: search, query: “${Q}”, results: ${match.length} }`, s.length === 1 && s[0].data.query === Q && s[0].data.control === 'search' && Number(s[0].data.results) === match.length,
+      s.map((e) => JSON.stringify(e.data).slice(0, 140)).join(' · ') || 'no search event');
+    const re = await sortIn([k], shown.slice(0, 6));
+    ok('the results are POST /sort’s own order over every match, with the regional label on screen', Boolean(re) && re.sent.candidates.length === Math.min(500, match.length) && sameJSON(shown, re.body.order.map(String).filter((x) => shown.includes(x)))
+      && /leans with .*synthetic → warehouse/.test(await evaluate("window.__s1.txt('#view-search') + ' ' + window.__s1.txt('#sheetBody')")), re ? `${re.sent.candidates.length} candidates · regional ${JSON.stringify(re.body.regional || null).slice(0, 60)}` : 'no /sort for the search');
+    S2S.results = shown;
+    await pageAtBoth('the search results');
+  });
+
+  // 5. A washer from the results, one whose model comes in another colour.
+  let washer = null, sibling = null;
+  await step('a washer from the results', async () => {
+    washer = (S2S.results || []).map(row).find((p) => p && p.family === 'front-load-washer' && p.cta === 'cart' && p.inStock !== false && colourSibling(p)) || null;
+    sibling = colourSibling(washer);
+    const a = washer ? await hand(`#view-search #rail-search-grid [data-open="${washer.sku}"], #sheetBody .st-result[data-open="${washer.sku}"]`) : null;
+    pressed(a, `the washer ${washer ? washer.sku : '(none in the results with a colour)'}`);
+    const k = press, w = await at();
+    route.push(w.path);
+    ok(`its product page is on screen: /oh/product?id=${washer && washer.sku}`, Boolean(washer) && w.view === 'product' && w.path === `/oh/product?id=${washer && washer.sku}`, `${w.view} · ${w.path}`);
+    const pv = evts(k).filter((e) => e.type === 'product_view' && washer && String(e.data.productId) === washer.sku);
+    ok('its product_view carries the beat verbs’ attributes', pv.length === 1 && carries(pv[0].data, washer).ok && pv[0].data.view === 'page', pv.length ? carries(pv[0].data, washer).miss.join(', ') : 'no product_view');
+    await pageAtBoth(`the washer page (${washer && washer.sku})`);
+    await lgLook('the washer page');
+  });
+
+  // 6. A colour: the same model in its other finish, from the buy box's own selector.
+  await step('a colour from the buy box', async () => {
+    const a = sibling ? await hand(`#view-product [data-act="pdp-variant"][data-sku="${sibling.sku}"], #view-product #bbOpts [data-open="${sibling.sku}"]`) : null;
+    pressed(a, `the colour “${sibling ? words(sibling.attributes.finish) : '?'}”`);
+    const k = press, w = await at(), box = await evaluate("window.__s1.txt('#buyBox')");
+    route.push(w.path);
+    ok(`the buy box shows ${sibling && sibling.sku} at its own price, ${sibling ? money(sibling.salePrice) : '?'}`, Boolean(sibling) && has(box, sibling.sku) && has(box, money(sibling.salePrice)), `${w.path} · ${box.slice(0, 120)}`);
+    const e = evts(k).filter((x) => sibling && String(x.data.productId) === sibling.sku && (x.type === 'product_view' || (x.type === 'custom' && x.data.event === 'select')));
+    ok(`the change goes on the wire in the beat verbs’ shape, carrying ${sibling && sibling.sku}’s attributes (a select, or the variant’s product_view)`, e.length > 0 && e.every((x) => carries(x.data, sibling).ok),
+      e.map((x) => `${x.type}${x.data.event ? `:${x.data.event}` : ''}`).join(', ') || 'nothing sent');
+  });
+
+  // 7. Add to Cart, from the buy box: the order-start action.
+  const cartCount = async () => { const c = (await storeNow()).cartCount; return c.length ? Number(c[0]) : null; };
+  await step('Add to Cart', async () => {
+    const n0 = await cartCount();
+    const a = await hand('#buyBox button, #buyBox [data-act]', { text: 'Add to Cart' });
+    pressed(a, 'Add to Cart in the buy box');
+    const k = press, n1 = await cartCount();
+    ok('the cart counts it in the header: one more', n0 !== null && n1 === n0 + 1, `${n0} → ${n1}`);
+    const add = evts(k).filter((e) => e.type === 'add_to_cart');
+    const c = add.length ? carries(add[0].data, sibling) : { ok: false, miss: ['no add_to_cart'] };
+    ok(`add_to_cart, the order-start action, carries the colour she chose: ${sibling && sibling.sku}, with its attributes and quantity 1`, add.length === 1 && c.ok && Number(add[0].data.quantity) === 1, add.length ? `productId ${add[0].data.productId}${c.miss.length ? ` · differs: ${c.miss.join(', ')}` : ''}` : 'none');
+    S2S.add1 = add[0] || null;
+    {
+      // The decisions it carries are the ones on this page (M2: the decided presses that led here, then the page's offers and modules).
+      const ans = await answerIn(HANDS, 'product', her());
+      const onPage = ans && ans.url.searchParams.get('ctx.anchor') === (sibling && sibling.sku) ? ans.body.decisions.map((d) => d.decisionId) : [];
+      const sent = add[0] ? [add[0].data.decisionId, ...(add[0].data.decisionIds || [])].filter(Boolean) : [];
+      ok('with the decision ids of what led her here: each one a decision on this page’s answer, the first credited', sent.length > 0 && sent.every((x) => onPage.includes(x)),
+        `${sent.length} sent · ${onPage.length} on the page’s answer`);
+    }
+    const D0 = await storeNow();
+    ok('and the cart drawer opens on her line', D0.sheet.open && D0.cart.lines.some((l) => has(l.sku, sibling && sibling.sku)), D0.sheet.title || 'no drawer');
+    if (D0.sheet.open) pressed(await hand('#sheetBody [data-act="store-cart-close"]', { text: 'Continue shopping' }), 'Continue shopping');
+    info(add[0] ? `its decisions: ${add[0].data.decisionId ? `decisionId …${String(add[0].data.decisionId).slice(-12)} (${add[0].data.customerContentId || ''})` : 'none: no decided press led to this washer (she came from search)'}` : '');
+  });
+
+  // 8. The dryer that goes with it, from the washer page's own decided module, then Add to Cart: credited to that module.
+  let dryer = null;
+  await step('the dryer the decided module offers, then Add to Cart', async () => {
+    const ans = await answerIn(HANDS, 'product', her());
+    const mod = ans && ans.body.decisions.find((d) => d.slot === 'pdp-modules' && d.customerContentId === 'mod-laundry-dryer' && ans.url.searchParams.get('ctx.anchor') === (sibling && sibling.sku));
+    const tile = await evaluate(`(() => { const m = document.querySelector('#slot-pdp-modules [data-cid="mod-laundry-dryer"]'); const t = m ? [...m.querySelectorAll('[data-open]')].find((x) => window.__s1.vis(x).ok) : null; return t ? t.dataset.open : null; })()`);
+    dryer = row(tile);
+    const a = tile ? await hand(`#slot-pdp-modules [data-cid="mod-laundry-dryer"] [data-open="${tile}"]`) : null;
+    pressed(a, `the dryer ${tile || '(none)'} in the decided “goes with it” module`);
+    const k1 = press, w = await at();
+    route.push(w.path);
+    ok(`the dryer’s page is on screen: /oh/product?id=${tile}`, Boolean(tile) && w.view === 'product' && w.path === `/oh/product?id=${tile}`, w.path);
+    const clicks = evts(k1).filter((e) => e.type === 'content_click' && mod && e.data.decisionId === mod.decisionId);
+    ok('the press credits the module: a content_click with the decision on screen', Boolean(mod) && clicks.length >= 1, mod ? `${clicks.length} content_click(s) for …${mod.decisionId.slice(-12)}` : 'the washer page’s answer on the wire decided no dryer module');
+    const n0 = await cartCount();
+    press = `hand ${HANDS.length + 1} · Add to Cart (the dryer)`; HANDS.push(press);
+    const b = await hand('#buyBox button, #buyBox [data-act]', { text: 'Add to Cart' });
+    pressed(b, 'Add to Cart on the dryer’s page');
+    const k2 = press, n1 = await cartCount();
+    ok('the cart counts it: one more', n0 !== null && n1 === n0 + 1, `${n0} → ${n1}`);
+    const add = evts(k2).filter((e) => e.type === 'add_to_cart');
+    ok(`add_to_cart carries the dryer’s attributes and the decision that led here: the module’s decisionId, contentId, slot and content id`, add.length === 1 && Boolean(dryer) && carries(add[0].data, dryer).ok && Boolean(mod)
+      && add[0].data.decisionId === mod.decisionId && add[0].data.contentId === mod.contentId && add[0].data.slot === 'pdp-modules' && add[0].data.customerContentId === 'mod-laundry-dryer' && (add[0].data.decisionIds || []).includes(mod.decisionId),
+      add.length ? `decisionId ${add[0].data.decisionId ? `…${String(add[0].data.decisionId).slice(-12)}` : 'none'} · ${add[0].data.customerContentId || ''} · ${(add[0].data.decisionIds || []).length} on the trail` : 'none');
+    S2S.add2 = add[0] || null; S2S.dryerDecision = mod || null;
+    if ((await storeNow()).sheet.open) pressed(await hand('#sheetBody [data-act="store-cart-close"]', { text: 'Continue shopping' }), 'Continue shopping');
+    await pageAtBoth(`the dryer page (${tile})`);
+  });
+
+  // 9. The cart: the lines, the pair saving the catalog prices, the total.
+  await step('the cart', async () => {
+    const a = await hand('#site .site-header [data-act="store-cart-open"]');
+    pressed(a, 'the cart in the header');
+    const C = (await storeNow()).cart;
+    const want = [sibling, dryer].filter(Boolean);
+    const lines = C.lines.map((l) => ({ sku: (/^([A-Z0-9_-]+)/.exec(l.sku) || [])[1], qty: Number(l.qty), price: dollars(l.price), name: l.name }));
+    ok(`the drawer lists her two lines, by name and SKU, one each, at the catalog’s prices: ${want.map((p) => `${p.sku} ${money(p.salePrice)}`).join(' and ')}`,
+      lines.length === want.length && want.every((p) => lines.some((l) => l.sku === p.sku && l.qty === 1 && l.price === Number(p.salePrice))), lines.map((l) => `${l.sku} ×${l.qty} ${l.price}`).join(' · ') || 'no line');
+    const sub = want.reduce((n, p) => n + Number(p.salePrice), 0);
+    const pair = (catalog.pieces || []).find((x) => x.display && x.display.badge === 'bundle' && (x.featuredProductIds || []).includes(sibling && sibling.sku) && ((x.tags || {}).category || []).includes('dryers')
+      && (!x.window || !x.window.to || Date.parse(x.window.to) > Date.now()));
+    const pairs = Boolean(pair && sibling && dryer && Object.values((sibling.companions || {}).dryers || {}).flat().includes(dryer.sku));
+    const saving = pairs ? dollars(`${(pair.display.grammar || {}).value || ''} ${pair.title}`) : 0;
+    ok(pairs ? `and the pair saving the catalog prices for a washer with its own dryer: ${money(saving)} (${pair.customerContentId})` : 'and no saving, since these lines complete no set the catalog prices lower',
+      pairs ? C.savings.some((s) => has(s, money(saving))) : C.savings.length === 0, C.savings.join(' · ').slice(0, 140) || 'no saving row');
+    ok(`the total is the lines less the saving: ${money(sub - saving)}`, dollars(C.total) === Number((sub - saving).toFixed(2)), `total on screen ${C.total || 'none'} · subtotal ${money(sub)}`);
+    await pageAtBoth('the cart drawer');
+    await lgLook('the cart drawer');
+    await shot('S2-09-cart');
+    const z = await hand('#sheetBody [data-act="store-cart-close"]', { text: 'Continue shopping' });
+    pressed(z, 'Continue shopping');
+  });
+
+  // 10. Find a Retailer, on the dryer's page: Buy directly first, then the online sellers and the nearby stores.
+  await step('Find a Retailer', async () => {
+    const a = await hand('#view-product [data-act="store-retailers"], #view-product [data-act="find-retailer"], #view-product button, #view-product a', { text: 'Find a Retailer' });
+    pressed(a, 'Find a Retailer');
+    const k = press, R = (await storeNow()).retailers, p = dryer;
+    const piece = (catalog.pieces || []).find((x) => x.customerContentId === 'mod-where-to-buy-retailer');
+    const own = piece && piece.display && piece.display.retailers;
+    const lists = own && p ? ((own.groups || []).find((g) => (g.families || []).includes(p.family)) || own[(p.attributes || {}).room] || own[(p.attributes || {}).category] || null) : null;
+    const names = (l) => (l || []).map((x) => (Array.isArray(x) ? x[1] : x && (x.name || x.label)) || String(x));
+    ok('the modal opens on “Buy directly” first, then the online sellers, then the nearby stores', R.heads.length >= 3 && /buy directly/i.test(R.heads[0]) && R.heads.some((h) => /online/i.test(h)) && R.heads.some((h) => /nearby/i.test(h))
+      && R.heads.findIndex((h) => /online/i.test(h)) < R.heads.findIndex((h) => /nearby/i.test(h)), R.heads.join(' › '));
+    ok('it lists the online sellers and the nearby stores, named, the nearby ones in her region from the request', R.online.length > 0 && R.nearby.length > 0 && R.nearbyLines.every((l) => /from the request/i.test(l)),
+      `online ${R.online.join(', ')} · nearby ${R.nearby.join(', ')}`);
+    if (lists) ok(`and the lists are the catalog’s where-to-buy piece’s, for ${lists.label || words((p.attributes || {}).room)}, and the modal says so`, R.source === 'catalog' && sameJSON(R.online, names(lists.online)) && sameJSON(R.nearby, names(lists.nearby)),
+      `catalog online ${names(lists.online).join(', ')} · nearby ${names(lists.nearby).join(', ')}`);
+    else checks.known('and the lists are the catalog’s where-to-buy piece’s', false, `mod-where-to-buy-retailer carries no display.retailers; the modal says its list is “${(/\(([^)]*)\)/.exec(R.fine) || [, 'unnamed'])[1]}”`,
+      'D1 (catalog.json: the where-to-buy piece’s lists per room, design §9.3) and M3 (oh-store.js falls back to its own list)');
+    ok('and says a referral is not a sale', /a referral is not a sale/i.test(R.fine), R.fine.slice(0, 120));
+    const f = evts(k).filter((e) => e.type === 'custom' && e.data.event === 'find_a_retailer');
+    ok('Find a Retailer goes on the wire as the store sends it: custom { event: find_a_retailer, control } with the product’s own attributes, none overwritten', f.length === 1 && carries(f[0].data, p).ok && ['buy-box', 'where-to-buy'].includes(f[0].data.control),
+      f.map((e) => JSON.stringify(e.data).slice(0, 120)).join(' · ') || 'none');
+    await pageAtBoth('the Find a Retailer modal');
+    await shot('S2-10-retailers');
+    // The custom outcome, pressed: the first online seller.
+    press = `hand ${HANDS.length + 1} · a seller`; HANDS.push(press);
+    const seller = R.online[0];
+    const b = seller ? await hand('#sheetBody [data-act="store-referral"][data-where="online"]', { nth: 0 }) : null;
+    pressed(b, `“Shop at ${seller || '?'}”`);
+    const ref = evts(press).filter((e) => e.type === 'custom' && e.data.event === 'retailer_referral');
+    const wtb = (await answerIn(HANDS, 'product', her()));
+    const dec = wtb && wtb.url.searchParams.get('ctx.anchor') === (p && p.sku) ? wtb.body.decisions.find((d) => d.customerContentId === 'mod-where-to-buy-retailer') : null;
+    ok(`the referral goes on the wire as the outcome: custom { event: retailer_referral } with the product’s own attributes (its retailer value kept), the store chosen in data.store (${R.onlineKeys[0] || '?'}), where online${dec ? ', credited to the where-to-buy decision on this page' : ', credited to no decision (none decided on this page)'}`,
+      ref.length === 1 && carries(ref[0].data, p).ok && ref[0].data.store === R.onlineKeys[0] && ref[0].data.where === 'online' && (dec ? ref[0].data.decisionId === dec.decisionId : !ref[0].data.decisionId), ref.length ? `partner ${ref[0].data.partner} · decision ${ref[0].data.decisionId ? `…${String(ref[0].data.decisionId).slice(-12)}` : 'none'}` : 'none');
+  });
+
+  // 11. Back twice, with the browser's own Back.
+  let pos = route.length - 1;
+  for (const n of [1, 2]) {
+    await step(`the browser’s Back (${n} of 2)`, async () => {
+      const was = await at();
+      const b = await browserBack();
+      const now = await at();
+      const want = route[pos - 1];
+      ok(`Back goes where she was before: ${want || '?'}`, b.ok && Boolean(want) && now.path === want && (now.view === 'product' ? has(await evaluate("window.__s1.txt('#buyBox')"), new URLSearchParams(now.path.split('?')[1] || '').get('id')) : true),
+        `${was.path} → ${now.path} (${now.view})`);
+      pos -= 1;
+    });
+  }
+
+  // 12. Home, by the wordmark: the homepage moved for her, with receipts naming her own clicks.
+  await step('home, by the wordmark', async () => {
+    const a = await hand('#site .site-header a.wordmark, #site .site-header [data-ctl="home"]');
+    pressed(a, 'the wordmark');
+    const k = press, w = await at();
+    ok('the homepage is on screen at /oh/', w.view === 'home' && w.path === '/oh/', `${w.view} · ${w.path}`);
+    await sleep(SETTLE_MS);
+    await settled();
+    const S = await snap();
+    const lastEvent = [...requests.values()].filter((r) => HANDS.includes(r.press) && r.path === '/realtime/action').reduce((m, r) => Math.max(m, r.at), 0);
+    const ans = await answerIn([k], 'home', her());
+    ok('the homepage re-asks after her session: a snapshot for home after her last event, with her own session', Boolean(ans) && ans.at >= lastEvent, ans ? 'asked' : 'no snapshot for home on this press');
+    await inEngineOrder('her homepage', S, k);
+    const now = { tiles: (S.slots.find((s) => s.slot === 'category-rail') || { cards: [] }).cards.map((c) => c.cid), deals: (S.slots.find((s) => s.slot === 'deals') || { cards: [] }).cards.map((c) => c.cid),
+      rail: ((S.railsOn || []).find((r) => r.rail === 'for-you') || { cards: [] }).cards.map((c) => String(c.sku)) };
+    const boot = S2.boot || { tiles: [], deals: [], rail: [] };
+    ok('the room tiles’ order moved for her from the template', now.tiles.length > 0 && !sameJSON(now.tiles, boot.tiles), `${boot.tiles.join(', ')} → ${now.tiles.join(', ')}`);
+    ok('the deals four moved for her', now.deals.length === 4 && !sameJSON(now.deals, boot.deals), `${boot.deals.join(', ')} → ${now.deals.join(', ')}`);
+    ok('Recommended for you moved for her', now.rail.length >= 4 && !sameJSON(now.rail, boot.rail.slice(0, now.rail.length)), `${boot.rail.slice(0, 4).join(', ')} → ${now.rail.slice(0, 4).join(', ')}`);
+    // Receipts naming her own clicks: a card's receipt on screen names a value her own events carried, and the engine's
+    // decision for that card holds it among its drivers.
+    const carried = new Set(eventsIn(HANDS).flatMap((e) => ['room', 'type', 'category', 'finish', 'series', 'fuel', 'sizeBand'].map((d) => e.data[d]).filter((v) => typeof v === 'string')));
+    const decided = ans ? ans.body.decisions : [];
+    const cards = await evaluate(`[...document.querySelectorAll('#view-home [data-op-decision-id]')].filter((e) => e.dataset.opDecisionId && window.__s1.vis(e).ok).map((e) => ({ id: e.dataset.opDecisionId, cid: e.dataset.cid, receipt: window.__s1.txt(e.querySelector('.receipt')) }))`);
+    const naming = cards.map((c) => { const d = decided.find((x) => x.decisionId === c.id); const own = ((d && d.explain && d.explain.drivers) || []).filter((x) => x.dim !== 'regional' && carried.has(String(x.value)));
+      return { cid: c.cid, named: own.filter((x) => has(c.receipt, x.value) || has(c.receipt, words(x.value))).map((x) => `${x.dim} ${x.value}`) }; }).filter((c) => c.named.length);
+    ok('with receipts naming her own clicks: decided cards whose receipt names a value her own events carried, a driver of the engine’s decision', naming.length > 0,
+      naming.slice(0, 4).map((c) => `${c.cid}: ${c.named.join(', ')}`).join(' · ') || `${cards.length} decided cards, her values ${[...carried].slice(0, 6).join(', ')}`);
+    await pageAtBoth('her homepage');
+    await lgLook('her homepage');
+    await shot('S2-12-home-moved');
+  });
+
+  // 13. A room tile on her homepage: the one the engine put first goes to its room's grid, and the press credits the tile.
+  await step('the first room tile on her homepage', async () => {
+    const tile = await evaluate("(() => { const t = [...document.querySelectorAll('#slot-category-rail [data-op-decision-id]')].find((e) => e.dataset.opDecisionId && window.__s1.vis(e).ok); return t ? { cid: t.dataset.cid, id: t.dataset.opDecisionId } : null; })()");
+    const piece = tile ? OPEN_PIECES.get(tile.cid) : null;
+    const cats = piece ? (((piece.display || {}).categories || []).length ? piece.display.categories : ((piece.tags || {}).category || [])) : [];
+    const room = piece ? (((piece.tags || {}).room || [])[0] || null) : null;
+    const want = room === 'laundry-room' ? '/oh/?view=laundry' : room === 'kitchen' ? '/oh/?view=kitchen' : cats.includes('tvs') ? '/oh/?view=tvs' : '/oh/search?q=';
+    const a = tile ? await hand(`#slot-category-rail [data-cid="${tile.cid}"] .p1-tile-hit, #slot-category-rail [data-cid="${tile.cid}"] button`) : null;
+    pressed(a, `the room tile ${tile ? tile.cid : '(none decided)'}`);
+    const k = press, w = await at();
+    const shown = await evaluate("[...document.querySelectorAll('#stage > .view:not([hidden]) .rail [data-open]')].filter((e) => window.__s1.vis(e).ok).length");
+    ok(`the tile goes to its room’s grid (${want.replace('/oh/', '')}), with products on screen`, Boolean(tile) && w.path.startsWith(want) && w.view !== 'home' && shown > 0, `${w.path} · ${w.view} · ${shown} products`);
+    const credit = evts(k).filter((e) => e.type === 'content_click' && tile && e.data.decisionId === tile.id);
+    ok('and the press credits the tile: a content_click with the decision on screen', credit.length === 1, `${credit.length} content_click(s)`);
+    await pageAtBoth(`the room grid from the tile (${w.path})`);
+  });
+
+  // The session as a whole: one visitor, and every event in the beat verbs' shapes.
+  {
+    const all = eventsIn(HANDS);
+    const caps = [...new Set(all.map((e) => e.cap))];
+    const mints = [...requests.values()].filter((r) => HANDS.includes(r.press) && /\/identity\/session$/.test(r.path));
+    ok(`one visitor for the whole session: one mint, every one of her ${all.length} events on one session, every one accepted`, mints.length === 1 && caps.length === 1 && all.every((e) => e.status === 200),
+      `${mints.length} mint(s) · ${caps.length} session(s) · refused ${all.filter((e) => e.status !== 200).map((e) => `${e.type} ${e.status}`).join(', ') || 'none'}`);
+    const SHAPES = new Set(['page_view', 'product_view', 'add_to_cart', 'content_click', 'custom']);
+    const odd = all.filter((e) => !SHAPES.has(e.type) || (e.type === 'custom' && !e.data.event));
+    ok('every manual action used the beat verbs’ types: page_view, product_view, add_to_cart, content_click, or custom with its event named', odd.length === 0, odd.map((e) => e.type).join(', ') || [...new Set(all.map((e) => (e.type === 'custom' ? `custom:${e.data.event}` : e.type)))].join(', '));
+    if (S2.reloads.length) info(`a full page load happened ${S2.reloads.length} time(s) in the session: ${S2.reloads.join(', ')}`);
+    S2.hands = HANDS;
+  }
+  {
+    // A direct load of a search address (M3's contract): /oh/?q=<text> in a fresh page renders the results with nobody
+    // minted, its only call the cold-start lookup; the first click (a result) mints her and opens that product.
+    console.log('   ─ a search address loaded directly');
+    await cdp('Page.navigate', { url: 'about:blank' });
+    await sleep(400);
+    await settled(500, 10000);
+    press = 'search-direct'; HANDS.push(press);
+    await cdp('Network.clearBrowserCookies');
+    await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+    const Q2 = 'front load washer';
+    const nav = await cdp('Page.navigate', { url: `${base}/${SLUG}/?q=${encodeURIComponent(Q2)}` });
+    await booted();
+    await evaluate(inPage(pageHelpers));
+    await sleep(1500);
+    const w = await at();
+    const shown = await evaluate("[...document.querySelectorAll('#view-search #rail-search-grid [data-open]')].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)");
+    const match = storeMatch(Q2).map((p) => p.sku);
+    ok(`a direct load of /oh/?q=${Q2} renders its results, every one a match in the feed`, w.view === 'search' && shown.length > 0 && shown.every((x) => match.includes(x)), `${w.path} · ${w.view} · ${shown.length} shown of ${match.length}`);
+    const calls = [...requests.entries()].filter(([id]) => LOADER.get(id) === nav.loaderId).map(([, r]) => r);
+    ok('with nobody minted: its only call on load is the cold-start lookup', calls.every((r) => r.path === `${API}/coldstart`), calls.map((r) => `${r.method} ${r.path}`).join(' ~ ') || 'none');
+    press = 'search-direct · first click'; HANDS.push(press);
+    const a = shown[0] ? await hand(`#view-search #rail-search-grid [data-open="${shown[0]}"]`) : null;
+    pressed(a, `the first result (${shown[0] || 'none'})`);
+    const minted = [...requests.values()].filter((r) => r.press === press && /\/identity\/session$/.test(r.path));
+    const w2 = await at();
+    ok('and the first click mints her and opens that product', minted.length === 1 && w2.view === 'product' && w2.path === `/oh/product?id=${shown[0]}`, `${minted.length} mint · ${w2.path}`);
+    await pageAtBoth('the search page, loaded directly');
+  }
+}
+
 // ── Compare (the kit's widget): real pixels on every press ───────────────────
 const INK_MIN = 0.05, DIFFER_MIN = 0.01;
 const pct = (x) => (x == null ? '?' : `${Math.round(x * 1000) / 10}%`);
@@ -461,10 +1117,13 @@ try {
   const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname);
   console.log(`\nOH DOM rehearsal against ${base} at ${WIDTH}×${HEIGHT} in ${CHROME.split(/[\\/]/).pop()}`);
 
+  shellsBlock: { if (ONLY_STORE) break shellsBlock;
   // ── Every shell at 1440 and 1366: no horizontal overflow, no broken image ──
   console.log('\n── Every shell, at 1440 and 1366');
   const SHELLS = [['the homepage', `${base}/${SLUG}/?debug=1`], ['the TV grid', `${base}/${SLUG}/?view=tvs&debug=1`],
     ...Object.entries(PDP).filter(([, p]) => p).map(([k, p]) => [`the ${k} page (${p.sku})`, `${base}/${SLUG}/product?id=${encodeURIComponent(p.sku)}&debug=1`]),
+    ['the laundry grid', `${base}/${SLUG}/?view=laundry&debug=1`], ['the kitchen grid', `${base}/${SLUG}/?view=kitchen&debug=1`], ['the offers grid', `${base}/${SLUG}/?view=offers&debug=1`],
+    ['the search page', `${base}/${SLUG}/?q=oled&debug=1`],   // S2: the store's own pages (M1)
     ['the phone', `${base}/${SLUG}/m?debug=1`]];
   for (const [w, h] of SIZES) {
     for (const [name, url] of SHELLS) {
@@ -481,7 +1140,62 @@ try {
       if (w === WIDTH && /product\?/.test(url) && name.startsWith('the washer')) await shot('00-washer-page');
     }
   }
+  }
 
+
+  // ── Lane S2: the boot page, before anyone exists (design §9.1, §9.2) ───────
+  console.log('\n── The boot page, before anyone exists: the published template, in LG’s look (S2)');
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(400);
+  await settled(500, 10000);                       // anything the previous page had in flight has landed
+  press = 'boot-store';
+  await cdp('Network.clearBrowserCookies');
+  await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+  const bootNav = await cdp('Page.navigate', { url: `${base}/${SLUG}/` });
+  const upBoot = await booted();
+  await evaluate(inPage(pageHelpers));
+  await sleep(2500);
+  await imagesSettled();
+  const BOOT = await evaluate(BOOT_READ);
+  ok('the stranger’s /oh/ boots as a store', upBoot && /^ready/.test((await snap()).status), (await snap()).status.slice(0, 120));
+  for (const [name] of BOOT_MODULES) {
+    const m = BOOT[name];
+    ok(`${name}: on screen with real content`, m.ok && BOOT_CLAIMS[name](m), m.ok ? `${m.cards.length ? `${m.cards.length} card(s): ${m.cards.map((c) => c.title || c.cid).join(' | ').slice(0, 140)}` : m.products.length ? `${m.products.length} product(s): ${m.products.slice(0, 3).map((x) => x.text.slice(0, 40)).join(' | ')}` : m.text.slice(0, 140)}` : m.why);
+  }
+  {
+    const slots = [['hero', 'the hero'], ['category-rail', 'the room tiles'], ['deals', 'the deals four']];
+    const bad = slots.flatMap(([slot, name]) => BOOT[name].cards.filter((c) => c.decided || !inForceFor(c.cid, slot)).map((c) => `${slot}: ${c.cid}${c.decided ? ' (decided)' : ' (not an opening piece in force for the slot)'}`));
+    ok('the decided slots show the published template: the opening catalog’s pieces in force for each slot, none of them decided', slots.every(([, n]) => BOOT[n].cards.length > 0) && bad.length === 0,
+      bad.join(' ~ ') || slots.map(([s, n]) => `${s} ${BOOT[n].cards.map((c) => c.cid).join(', ')}`).join(' · ').slice(0, 260));
+    const TAKE = Object.fromEntries((((demoConfig.pages || []).find((p) => p.entry === 'home') || {}).slots || []).map((s) => [s.slot, s.take]));
+    const order = slots.map(([slot, name]) => { const want = templateOf(slot, TAKE[slot] || 1), got = BOOT[name].cards.map((c) => c.cid).slice(0, want.length); return { slot, want, got, same: sameJSON(want, got) }; });
+    ok('in the template’s own order: the catalog’s order, the first of each slot’s take in force, under the slot’s diversity rule', order.every((x) => x.same && x.want.length > 0),
+      order.map((x) => `${x.slot} ${x.same ? x.got.join(', ') : `on screen ${x.got.join(', ')} · the template ${x.want.join(', ')}`}`).join(' · ').slice(0, 300));
+    S2.boot = { tiles: BOOT['the room tiles'].cards.map((c) => c.cid), deals: BOOT['the deals four'].cards.map((c) => c.cid), rail: BOOT['Recommended for you'].products.map((x) => x.sku), hero: BOOT['the hero'].cards.map((c) => c.cid) };
+  }
+  await lgLook('the boot page', { full: true });
+  {
+    const H = (await storeNow()).header;
+    ok('a white header with the category nav, the search box, Sign in and the cart with its count', H.ok && H.bg === 'rgb(255, 255, 255)' && (await storeNow()).cartCount.length > 0
+      && await evaluate("Boolean(document.querySelector('#site .site-header form[data-store-search] input[name=\"q\"]')) && window.__s1.vis('#site .site-header [data-act=\"store-cart-open\"]').ok"), `${H.bg} · ${H.h}px · cart ${(await storeNow()).cartCount.join(',') || 'no count'}`);
+    ok('the service strip sits on the panel colour, #F5F5F5', BOOT['the service strip'].bg === rgb('#F5F5F5'), BOOT['the service strip'].bg || 'not on screen');
+    const D = await SITE_TOOLS();
+    ok('the director is a presenter’s tool: on a stranger’s load it is collapsed to its slim rail, the machine panel put away', D.collapsed && D.rail && !D.machine, `collapsed ${D.collapsed} · rail ${D.rail} · machine ${D.machine} · the site ${D.site} of ${D.vw}px`);
+  }
+  {
+    const calls = [...requests.entries()].filter(([id]) => LOADER.get(id) === bootNav.loaderId).map(([, r]) => r);   // this page's own load (M3: a previous page's call in flight is not a mint)
+    ok(`the only API call the boot page makes on load is the cold-start region lookup (${calls.length})`, calls.every((r) => r.path === `${API}/coldstart`),
+      calls.map((r) => `${r.method} ${r.path}`).join(' ~ ') || 'none');
+    const minted = calls.filter((r) => /\/identity\/|\/session\/preferences$/.test(r.path) || ['/realtime/action', '/sort'].includes(r.path) || /\/decisions\/snapshot/.test(r.path));
+    ok('no visitor is minted on load: before the first click the wire holds no session, no consent, no event, no decision and no /sort', minted.length === 0,
+      minted.map((r) => `${r.method} ${r.path}`).join(' ~ ') || `${calls.length} API call(s) on load: ${[...new Set(calls.map((r) => r.path))].join(', ') || 'none'}`);
+  }
+  await pageAtBoth('the boot page');
+  await shot('S2-00-boot-store');
+  await manualSession();
+
+  walkBlock: { if (ONLY_STORE) { info('--only store: the walk is not run'); break walkBlock; }
   // ── The walk ───────────────────────────────────────────────────────────────
   const url = `${base}/${SLUG}/?debug=1`;
   console.log(`\n── The page loads: ${url}`);
@@ -497,6 +1211,23 @@ try {
   ok('the machine panel and the director bar are on screen', boot.machine && boot.director);
   ok('before anyone arrives, nothing on the page is decided', boot.slots.every((s) => s.cards.every((c) => !c.decided)), boot.slots.map((s) => `${s.slot} ${s.cards.length}`).join(' · '));
   ok('the director\'s opening sentence is on screen', boot.lineOk && boot.line.length > 10, boot.line.slice(0, 90));
+  {
+    // R4 F5 and F8 (S2): what the page says about itself is true. The Roadmap tab marks nothing the walk uses as designed,
+    // and the legal line names the date of the prices on screen (the overlay's when it changes any price, else the feed's).
+    const R = await evaluate(`(() => ({ road: [...document.querySelectorAll('#roadmap li')].map((li) => ({ status: ((li.querySelector('.dialflag') || {}).textContent || '').trim(), name: ((li.querySelector('b') || {}).textContent || '').trim(), text: li.textContent.replace(/\\s+/g, ' ') })),
+      legal: [...document.querySelectorAll('#footLegal, .foot-legal')].filter((x) => window.__s1.vis(x).ok).map((x) => window.__s1.txt(x)).join(' ') }))()`);
+    const USED = [['complements', /\bcomplements\b/i], ['the two named outcomes', /partner_pickup|retailer_referral/i], ['the regional prior on /sort', /regional prior on \/sort/i]];
+    const wrong = R.road.filter((x) => /designed/i.test(x.status) && USED.some(([, re]) => re.test(x.name)));
+    ok('the Roadmap tab marks none of what the walk uses as designed: complements, the two named outcomes, the regional prior on /sort', R.road.length > 0 && wrong.length === 0,
+      wrong.map((x) => `“${x.name}” ${x.status}`).join(' ~ ') || `${R.road.length} items · ${USED.map(([n, re]) => `${n}: ${(R.road.find((x) => re.test(x.name)) || { status: 'not listed' }).status}`).join(' · ')}`);
+    ok('and it names the companions’ gate as the walk sends it (ctx.family), not “ctx.anchor until complements lands”', !R.road.some((x) => /ctx\.anchor until complements lands/i.test(x.text)),
+      (R.road.find((x) => /ctx\.anchor/i.test(x.text)) || { text: 'no gate named' }).text.slice(0, 160));
+    const pd = priceDate();
+    await waitFor(`/(?<!\\d)${longDate(pd.iso)}/.test([...document.querySelectorAll('#footLegal')].map((x) => x.textContent).join(' '))`, 8000);
+    R.legal = await evaluate("[...document.querySelectorAll('#footLegal, .foot-legal')].filter((x) => window.__s1.vis(x).ok).map((x) => window.__s1.txt(x)).join(' ')");
+    ok(`the legal line names the date of the prices on screen: ${longDate(pd.iso)}`, namesDate(R.legal, pd.iso),
+      `${pd.changed} rows priced by specs.json (${pd.over}) over the feed (${pd.feed}) · “${(/as listed[^;.]*/.exec(R.legal) || [R.legal.slice(0, 90)])[0]}”`);
+  }
   {
     // Compare before any frame exists: the message, never nothing (the kit's rule), and the message closes.
     await evaluate("document.getElementById('compareBtn').click()");
@@ -527,6 +1258,15 @@ try {
         ok('the regional lean is labelled on screen: synthetic → warehouse', has(S.cold.text, 'synthetic → warehouse'), S.cold.text.slice(0, 160));
       }
       ok('the Arrival panel shows the census as shown, never scored', has(S.cold.text, 'never scored'));
+      {
+        // The ruling of 730eaa3 (S2): the lean is the brand's fixed seeded sales, labelled synthetic: no census term shaped it.
+        const cs = await coldstart(null);
+        const label = String((((cs || {}).lean || {}).seeded || {}).label || '');
+        ok('and its lean carries no census term: the brand’s seeded sales, not a mix tilted by census income', !/tilted by census|census income|mix tilted/i.test(S.cold.text)
+          && Boolean(label) && !/census|income/i.test(label.replace(/\(no census\)/i, '')), label || S.cold.text.slice(0, 120));
+        ok('and none of the lean the panel shows is a price tier', Boolean(cs && cs.lean) && !Object.keys(cs.lean.leaders || {}).includes('priceTier') && !Object.keys(cs.lean.share || {}).includes('priceTier'),
+          cs && cs.lean ? `leaders ${JSON.stringify(cs.lean.leaders)}` : 'no lean');
+      }
       const asked = [...requests.values()].filter((r) => r.press === i && /\/decisions\/snapshot/.test(r.path));
       ok('no snapshot of beat 1 asserted a region', asked.length > 0 && asked.every((r) => !/[?&]ctx\.region=/.test(r.url)), `${asked.length} snapshot(s)`);
       {
@@ -662,9 +1402,14 @@ try {
     'washer-page': async (S, i) => {
       const p = row(WALK.washer);
       productOnScreen(S, p);
-      const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', 'mod-laundry-pair-price'];
+      // R4 F7 (S2): the set-price card belongs on the page only when one of her washer's sets costs less than its pieces.
+      const sets = setsOf(p), lower = sets.some((x) => x.lower);
+      const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', ...(lower ? ['mod-laundry-pair-price'] : [])];
       const cards = want.map((id) => S.modules.find((m) => m.cid === id));
-      ok('below it the room completes, on screen: the dryer, the pedestal, the stacking kit and the pair price', cards.every(Boolean), S.modules.map((m) => m.cid).join(', '));
+      ok(`below it the room completes, on screen: the dryer, the pedestal, the stacking kit${lower ? ' and the set price' : ''}`, cards.every(Boolean), S.modules.map((m) => m.cid).join(', '));
+      ok(lower ? `the set-price card shows, since a set of ${p.sku}’s costs less than its pieces` : `the set-price card is absent: none of ${p.sku}’s sets costs less than its pieces (${sets.length} sets, the feed’s own figures)`,
+        lower ? S.modules.some((m) => m.cid === 'mod-laundry-pair-price') : !S.modules.some((m) => m.cid === 'mod-laundry-pair-price'),
+        sets.map((x) => `${x.sku.split('_').slice(1, 2).join('')} set $${x.set} · apart $${x.apart}`).join(' · ').slice(0, 220));
       ok(`each card’s receipt line reads “Completes what she committed to: ${p.sku}”`, cards.every((m) => m && has(m.receipt, `Completes what she committed to: ${p.sku}`)),
         cards.map((m) => (m ? `${m.cid}: ${m.receipt.slice(0, 90)}` : 'missing')).join(' ~ ').slice(0, 300));
       ok('and states its rule as the merchandiser’s: “Our merchandiser’s rule”', cards.every((m) => m && has(m.rule, 'Our merchandiser’s rule')), cards.map((m) => (m ? m.rule.slice(0, 60) : 'missing')).join(' ~ '));
@@ -686,8 +1431,8 @@ try {
         const asked = snapshotsOf(i).filter((q) => q.get('page') === 'product');
         ok(`it was decided with ctx.anchor = ${p.sku} and ctx.family = ${p.family}, through the kit’s context hook`, asked.length > 0 && asked.every((q) => q.get('ctx.anchor') === p.sku && q.get('ctx.family') === p.family),
           asked.map((q) => `anchor ${q.get('ctx.anchor')} family ${q.get('ctx.family')}`).join(' · '));
-        const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', 'mod-laundry-pair-price'];
-        ok(`the dryer, the pedestal, the stacking kit and the pair price are on screen, each decided, each receipt reading “Completes what she committed to: ${p.sku}”`,
+        const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', ...(setsOf(p).some((x) => x.lower) ? ['mod-laundry-pair-price'] : [])];   // R4 F7 (S2)
+        ok(`the dryer, the pedestal, the stacking kit${want.length === 4 ? ' and the set price' : ''} are on screen, each decided, each receipt reading “Completes what she committed to: ${p.sku}”`,
           want.every((cid) => completes(mod(R, cid), p.sku)), want.map((cid) => `${cid} ${mod(R, cid) ? (completes(mod(R, cid), p.sku) ? 'completes' : 'no completes line') : 'absent'}`).join(' · '));
         ok('each states its rule as our merchandiser’s, on the card', want.every((cid) => mod(R, cid) && /our merchandiser/i.test(mod(R, cid).rule)), want.filter((cid) => !(mod(R, cid) && /our merchandiser/i.test(mod(R, cid).rule))).join(', ') || 'all four');
         const dryer = mod(R, 'mod-laundry-dryer');
@@ -695,14 +1440,22 @@ try {
         if (sort && dryer && dryer.tiles.length) {
           // Her fuel is the engine's reading: the fuel of what POST /sort put first. The region's lean is said beside it, and
           // where her own browsing outweighs it (the sort's own drivers: sold here, the set she is in), the card says so.
+          // R4 F1 (S2, replacing “the lead line names the fuel POST /sort put first”): a fuel is hers only when HER PROFILE
+          // carries one. The card's claim is measured against her own reading and against what put the first dryer first on
+          // this press's /sort answer (its items' drivers), never against the card's own sentence.
           const first = D.row(dryer.tiles[0]), fuel = first && first.attributes.fuel;
-          ok(`the lead line names the fuel POST /sort put first: “In her fuel: ${fuel} leads”`, Boolean(fuel) && has(dryer.text, `In her fuel: ${fuel} leads`), `${first ? first.sku : 'none'} · ${dryer.text.slice(0, 160)}`);
-          if (sort.regional) {
-            const cs = await (await fetch(`${base}${API}/coldstart${sort.regional.asserted ? `?region=${sort.regional.region}` : ''}`, { headers: { 'X-Tenant': TENANT, 'X-SDK-Key': 'demo-site' } })).json().catch(() => null);
-            const lean = cs && cs.lean && cs.lean.leaders ? cs.lean.leaders.fuel : null;
-            ok(`and whose sales the order leans with, labelled synthetic → warehouse${lean && lean !== fuel ? `, saying ${sort.regional.region}’s sales lean ${lean} and her own browsing outweighs them here` : ''}`,
-              /leans with .*synthetic → warehouse/.test(dryer.text) && (!lean || lean === fuel || (has(dryer.text, `sales lean ${lean}`) && has(dryer.text, 'her own browsing outweighs'))), `lean ${lean} · first ${fuel}`);
-          }
+          const shown = S.modules.find((m) => m.cid === 'mod-laundry-dryer') || { title: '', lead: '' };
+          const hers = herDim(R.vector, 'fuel'), mine = leading(hers);
+          const said = /\bin (her|your) fuel\b/i.test(`${shown.title} ${shown.lead} ${dryer.text}`);
+          const named = (/\bin (?:her|your) fuel:?\s*(gas|electric|dual[- ]fuel|induction)/i.exec(`${shown.lead} ${dryer.text}`) || [])[1] || null;
+          ok(`the dryer card claims a fuel of hers only when her profile carries one (her fuel: ${mine || 'none'})`, !said || (Boolean(mine) && (!named || named.toLowerCase().replace(' ', '-') === mine)),
+            `${said ? `the card says “in her/your fuel”${named ? `: ${named}` : ''}` : 'no fuel claimed'} · her profile fuel ${JSON.stringify(hers)} · ${shown.title.slice(0, 60)}`);
+          const sep = separating(sort, dryer.tiles[0], dryer.tiles[1]);
+          const words = driverWords(sep);
+          if (!mine) ok(`with no fuel of hers, the card names POST /sort’s reason its first dryer leads: ${sep ? `${sep.dim} ${sep.value} (+${sep.gap} over the second)` : 'no driver read'}`,
+            Boolean(sep && words) && words.test(`${shown.lead} ${dryer.text}`), `${first ? `${first.sku} (${fuel})` : 'none'} · “${shown.lead.slice(0, 140)}”`);
+          else info(`her profile carries a fuel (${mine}); the first dryer leads on ${sep ? `${sep.dim} ${sep.value}` : 'no driver read'}`);
+          if (sort.regional) ok('and the order’s lean is labelled: “leans with … · synthetic → warehouse”', /leans with .*synthetic → warehouse/.test(dryer.text), dryer.text.slice(0, 160));
         }
       }
     },
@@ -792,6 +1545,7 @@ try {
       const up = size && size.tiles[0] ? row(size.tiles[0].sku) : null;
       ok(`from ${WALK.distanceFt} ft, declared, the size-up card names one size up: “one size up is the ${up ? up.name : '?'}”`, Boolean(size && up) && has(size.lead, `From ${WALK.distanceFt} ft`)
         && has(size.lead, 'one size up is the') && Number(up.sizeInches) > Number(p.sizeInches), size ? size.lead.slice(0, 160) : 'no size-up card');
+      ok('and the card says the distance is declared, by her', Boolean(size) && has(size.text, 'declared'), size ? size.text.slice(0, 160) : 'no size-up card');   // R4 F2 (S2)
       // Her dials moved by her answer are P2's check below, read from her profile (lastVector), not the panel's top eight.
       ok('the buy box says off limits; the price is the catalog’s, the same for everyone', has(S.buyBox.offlimits, 'Off limits') && has(S.buyBox.price, money(p.salePrice)), `${S.buyBox.price.slice(0, 60)} · catalog ${money(p.salePrice)}`);
       const first = S.modules.length ? Math.min(...S.modules.map((m) => m.top)) : null;
@@ -814,9 +1568,34 @@ try {
         const want = series.filter((x) => Number(x.sizeInches) > Number(p.sizeInches) && Number(x.sizeInches) >= d * 0.613 && Number(x.sizeInches) <= d * 0.833).sort((a, b) => Number(a.sizeInches) - Number(b.sizeInches))[0];
         ok(`her distance, ${D.walk.distanceFt} ft, is pressed in the size-up tool, and one size up is ${want ? want.sku : 'none'} by the piece’s own figures`,
           Boolean(up && want) && up.pressed.includes(`size-up-${D.walk.distanceFt}`) && up.tiles.includes(want.sku), up ? `${up.pressed.join(', ')} · ${up.tiles.join(', ')}` : 'absent');
-        const band = want && want.attributes.sizeBand;
-        ok(`and it moved her own meters: the sentence says what moved, and her profile holds ${band}`, Boolean(want) && /her own meters moved/.test(R.line) && R.line.includes(`size band ${band}`)
-          && Number(((R.vector.sizeBand || {})[band]) || 0) > 0, `${R.line.slice(-140)} · sizeBand ${band} ${Number(((R.vector.sizeBand || {})[band]) || 0).toFixed(2)}`);
+        // R4 F2 (S2, replacing “and it moved her own meters”): her distance is declared context, never a select for a product
+        // she did not choose. Read off this press's wire: the distance press, the next ask, and her readings before and after.
+        const dist = String(D.walk.distanceFt);
+        const reqs = [...requests.entries()].filter(([, r]) => r.press === i);
+        const body = (r) => { try { return JSON.parse(r.body); } catch { return null; } };
+        const asks = reqs.filter(([, r]) => /\/decisions\/snapshot/.test(r.path)).map(([, r]) => r);
+        const withDist = asks.find((r) => new URL(r.url).searchParams.get('ctx.distance') === dist) || null;
+        const evts = reqs.filter(([, r]) => r.path === '/realtime/action').map(([, r]) => ({ r, b: body(r) })).filter((x) => x.b);
+        const distEvt = evts.find((x) => x.b.data && (x.b.data.control === 'viewing-distance' || x.b.data.distanceFt !== undefined));
+        const pressAt = Math.min(withDist ? withDist.at : Infinity, distEvt ? distEvt.r.at : Infinity);
+        const choice = want ? evts.find((x) => x.r.at > pressAt && x.b.data && String(x.b.data.productId) === want.sku && (x.b.type === 'product_view' || x.b.data.control !== 'viewing-distance')) : null;
+        const selects = evts.filter((x) => x.r.at >= pressAt && (!choice || x.r.at < choice.r.at) && x.b.type === 'custom' && x.b.data && x.b.data.event === 'select' && x.b.data.productId);
+        ok(`pressing the viewing distance (${dist} ft) sends no select for any product`, pressAt < Infinity && selects.length === 0,
+          pressAt === Infinity ? 'no distance press read on this press’s wire' : selects.map((x) => `select ${x.b.data.productId} (${x.b.data.sizeBand || ''} ${x.b.data.priceTier || ''})`).join(' · ') || 'none');
+        ok(`and the next ask carries it as declared context: ctx.distance = ${dist}`, Boolean(withDist), withDist ? new URL(withDist.url).search.slice(0, 160) : `${asks.length} ask(s), none with ctx.distance`);
+        const reflexAt = async (pred) => { for (const [id, r] of [...reqs].reverse()) { if (r.path !== '/realtime/reflex' || r.status !== 200 || !pred(r)) continue;
+          try { const b = await cdp('Network.getResponseBody', { requestId: id }); const j = JSON.parse(b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body); return (j.affinity && j.affinity.dims) || {}; } catch { /* evicted */ } } return null; };
+        const before = pressAt < Infinity ? await reflexAt((r) => r.at < pressAt) : null;
+        const capNow = await herCap();
+        const nowRead = capNow ? await (await fetch(`${base}/realtime/reflex`, { headers: { 'X-Tenant': TENANT, 'X-SDK-Key': 'demo-site', 'X-Shopper-Session': capNow } })).json().catch(() => null) : null;
+        const after = nowRead && nowRead.affinity ? nowRead.affinity.dims || {} : null;
+        const held = (dim) => { const keys = new Set([...Object.keys((before || {})[dim] || {}), ...Object.keys((after || {})[dim] || {})]);
+          return [...keys].every((k) => { const x = Number(((before || {})[dim] || {})[k] || 0), y = Number(((after || {})[dim] || {})[k] || 0); return y <= x + Math.max(0.02, x * 0.03); }); };
+        const fmtDim = (m, dim) => Object.entries((m || {})[dim] || {}).map(([k, a]) => `${k} ${Number(a).toFixed(2)}`).join(', ') || 'none';
+        if (!choice) ok('her size band and price tier readings do not move on a distance: nothing rose until she chooses a size herself', Boolean(before && after) && held('sizeBand') && held('priceTier'),
+          before && after ? `size band ${fmtDim(before, 'sizeBand')} → ${fmtDim(after, 'sizeBand')} · price tier ${fmtDim(before, 'priceTier')} → ${fmtDim(after, 'priceTier')}` : 'no reading before the press, or none now');
+        else ok(`she chose the suggested ${want.sku} herself, and only then does her size band move: ${want.attributes.sizeBand}`, Boolean(after) && Number(((after.sizeBand || {})[want.attributes.sizeBand]) || 0) > Number((((before || {}).sizeBand || {})[want.attributes.sizeBand]) || 0),
+          `size band ${fmtDim(before, 'sizeBand')} → ${fmtDim(after, 'sizeBand')}`);
         const near = R.mods.filter((m) => /affirm|\bapr\b|financ|\/mo\b|per month/i.test(m.text)).map((m) => m.cid);
         ok('nothing decided sits near the financing line: no decided module speaks of financing, and the buy box holds no decision', near.length === 0 && R.buy.decidedInside === 0, near.join(', ') || 'none');
       }
@@ -1123,12 +1902,23 @@ try {
     S = await snap();
     snaps[i] = { ...snaps[i], after: S };
   }
+  }
 
   console.log('\n── The wire, for the whole walk');
   const { api } = auditWire(checks, wire, { tenant: TENANT });
-  checkDemoRouteBodies(checks, wire, { api: API });
+  if (!ONLY_STORE) checkDemoRouteBodies(checks, wire, { api: API });
   info(tallyWire(api, { tenant: TENANT }));
   checkScriptErrors(checks, wire);
+  {
+    // The ruling of 730eaa3 (S2): no regional block the page received names priceTier: every POST /sort answer on the wire.
+    const sorts = [...requests.entries()].filter(([, r]) => r.path === '/sort' && r.status === 200).slice(-120);
+    let read = 0; const hits = [];
+    for (const [id] of sorts) {
+      try { const b = await cdp('Network.getResponseBody', { requestId: id }); const body = JSON.parse(b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body); read += 1;
+        if (body.regional && (body.regional.dimensions || []).includes('priceTier')) hits.push(`/sort ${id}: regional.dimensions ${body.regional.dimensions.join(',')}`); } catch { /* evicted */ }
+    }
+    ok(`no regional block the page received names priceTier: ${read} POST /sort answers read off the wire`, read > 0 && hits.length === 0, hits.slice(0, 3).join(' ~ '));
+  }
 } catch (error) {
   checks.fail(`the walk threw at press ${press}: ${error.message}`);
 } finally {
