@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
+<title>What it is · Optimizely enablement</title>
+<!-- Built by enablement/render-pages.mjs from its source. Nothing inline: every style is in /site.css and the behavior in /site.js, which the page does not need in order to read in full. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+<header class="masthead">
+<div class="wrap masthead-inner">
+<p class="eyebrow">Internal · Optimizely</p>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is" aria-current="page">What it is</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/status">Status</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+</div>
+</header>
+<main id="main" class="wrap">
+<div class="piece-meta"><p class="reader-tag" data-reader="marketing">For marketing</p><p class="stamp">Updated October 2, 2026 · engine facts as of commit 8b4f74c</p></div>
+<article class="piece" data-source="docs/enablement/content/what-it-is.md">
+<h1 class="title"><span class="kicker"><span id="package-name">Behavioral Targeting and Intelligence</span>:</span> <span class="title-main">what it is</span></h1>
+<p class="reader-line">For marketing, writing about the engine for customers and the market.</p>
+<div class="rule"><p class="rule-label" data-chrome="rule label">The one rule</p><p class="rule-text"><strong>With consent, the engine remembers what each visitor is interested in, not who they are, and ranks your content by the rules your team publishes.</strong></p></div>
+<aside class="legend" aria-label="How to read the labels" data-chrome="legend"><p class="legend-text"><span class="chip chip-built">Built</span>: in the code and exercised. <span class="chip chip-designed">Designed</span>: in an architecture document, not in the code. <span class="chip chip-open">Open</span>: no decision yet.</p></aside>
+<section class="sec" aria-labelledby="what-it-is-not">
+<h2 id="what-it-is-not">What it is not</h2>
+<p>Three contrasts place it, each with a kind of system, never a product.</p>
+<p>It is not a recommendations engine that scores products from purchase history. It needs no purchase history: with consent, it starts from the first thing a visitor does, even as a stranger, and ranks the brand's own content for each place on a page.</p>
+<p>It is not a tool that places visitors into segments by rule. For each visitor, it keeps a graded interest in each thing they engage with, rising with what they do and fading with time. The brand's rules govern the page, not the person.</p>
+<p>It is not an AI model deciding in the moment. It calls no AI model to decide: each decision is arithmetic on the visitor's interests, their context and the brand's published settings, and every answer carries its reasons. Generative AI has a place, outside the decision; see <a href="#where-ai-and-credits-fit">Where AI and credits fit</a>.</p>
+</section>
+<section class="sec" aria-labelledby="how-it-works-in-five-steps">
+<h2 id="how-it-works-in-five-steps">How it works, in five steps</h2>
+<p>Follow one visitor through one session: before they arrive, as they browse, when they leave, and afterward. A dimension is something the brand scores on, such as category, color or price band; a dimension value is one entry on it, such as black.</p>
+<p class="step"><strong class="step-lead"><span class="step-num">1.</span> What is watched: nothing, until the visitor agrees.</strong> Before they arrive, the brand has published its content and its rules for each slot, a place on a page that the engine decides. When they arrive, nothing is watched until the site passes on their explicit consent choice; a missing or expired one counts as no. With consent, the engine notes what they view, save, buy or add to their cart.</p>
+<p class="step"><strong class="step-lead"><span class="step-num">2.</span> What is remembered: a graded interest in each value the visitor touches.</strong> When they view a black wool coat, their interests in coats, black and wool all grow, by as much as the brand says a view counts. Decisions read these interests, not a list of their clicks. Even an audience follows from these interests: a visitor joins at one line and leaves only below a lower one, so no one flickers in and out.</p>
+<p class="step"><strong class="step-lead"><span class="step-num">3.</span> How a decision is made: the brand's rules first, then the visitor's interests.</strong> Each time a page asks, the brand's rules come first: which pieces of content may show, by date, stock and region, and which a merchandiser has pinned. The rest are ranked by how well each piece's tags match the visitor's interests, weighted per slot: a piece tagged coats and black rises for this visitor. For a new visitor, the engine's cold start can use how they arrived, such as the campaign they clicked, and the regional prior: what visitors in the same region are interested in. The brand's own page renders the answer, and every answer carries its reasons.</p>
+<p class="step"><strong class="step-lead"><span class="step-num">4.</span> What fades, and when: every interest, at its own pace.</strong> When the visitor leaves, nothing more is added and their interests keep fading. Each dimension can have its own memory: 14 days by default, and at most 90. Time only lowers an interest; only what they do can raise it. For a live site, the memory is chosen with each customer.</p>
+<p class="step"><strong class="step-lead"><span class="step-num">5.</span> How it learns: it counts, and a person decides.</strong> With the visitor's consent, the engine counts what each piece earned, such as a click or a purchase, credited to the decision that showed it. Those counts move a slot's ranking only as far as its learning dial allows; only a person turns the dial, and it starts at zero. The learning is counting, not an AI model.</p>
+<p>Each step carries a verdict in one legend. <span class="chip chip-built">Built</span>: in the code and exercised. <span class="chip chip-designed">Designed</span>: in an architecture document, not in the code. <span class="chip chip-open">Open</span>: no decision yet.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Step</th><th scope="col">When</th><th scope="col">What happens</th><th scope="col" class="c-verdict">Verdict</th></tr></thead><tbody><tr class="v-built"><td data-label="Step">1. What is watched</td><td data-label="When">Before and on arrival</td><td data-label="What happens">Nothing, until the visitor makes an explicit choice</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="Step">2. What is remembered</td><td data-label="When">As the visitor browses</td><td data-label="What happens">A graded interest per dimension value</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="Step">3. How a decision is made</td><td data-label="When">Each time a page asks</td><td data-label="What happens">The brand's rules first, then the visitor's interests; every answer carries its reasons</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="Step">4. What fades, and when</td><td data-label="When">When the visitor leaves</td><td data-label="What happens">Every interest, on a memory set per dimension</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="Step">5. How it learns</td><td data-label="When">Afterward</td><td data-label="What happens">It counts, and moves nothing until a person raises the learning dial; the one exception is below</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr></tbody></table></div>
+<div class="exception"><p>The one exception to keep straight: on a customer's site, recording receipts and outcomes through the SDK, the engine's browser library, waits on a setting that needs retention periods the customer has approved, an open decision. The hosted demos record today.</p></div>
+</section>
+<section class="sec" aria-labelledby="where-ai-and-credits-fit">
+<h2 id="where-ai-and-credits-fit">Where AI and credits fit</h2>
+<p>The engine decides, and it calls no AI model to decide, so serving a page never spends an AI credit, however much traffic grows. AI work that people do, such as writing content, explaining results or analyzing them, is where credits belong, and Opal is that product; it is not connected to the engine today. The engine's own reasons for each decision are arithmetic it produces itself. How each line is metered and priced is monetization's decision and is still open.</p>
+<p>AI features a visitor uses directly, such as typed search, are separate and off by default. Tags for the brand's content can be proposed by the brand's own AI model, with a person approving each one, outside the decision; how that is billed is still open.</p>
+<p>The whole boundary is on the credits page, <a href="/credits">Where Opal and AI credits fit</a>.</p>
+<figure class="figure figure-switch" data-figure="before-during-after" data-switch="before during after" data-switch-label="Bring one part of the session forward" data-added="the session figure, by the coordinator's ruling of 2026-10-02">
+<p class="figure-lead" data-lead="figure lead">The figure follows one session in three parts, before, during and after, and shows where AI and credits apply in each, with each card&rsquo;s label.</p>
+<p class="figure-switch-help" data-lead="switch instructions" hidden>Choose before, during or after to bring that part forward; choose it again to see all three.</p>
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="968" viewBox="0 0 1100 968" role="img" aria-labelledby="bda-t bda-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="bda-t">One visitor's session: what happens before, during and after</title>
+  <desc id="bda-d">The rule: the engine decides, calling no AI model to decide and using no credits, which is Built; Opal creates and explains, and credits apply as documented, which is Open because Opal is not wired today. Before, the team's preparation: the team publishes the documents the engine follows, with no AI and no credits, Built; Opal drafts an audience, a test or a setting from plain words and a person approves, credits apply, Open and not wired today; a model on the customer's own key suggests tags for content and a person approves each one, credits not decided, Built and off by default. Credits follow the team's requests, not the traffic. During, the visit: the engine decides at the edge from the published rules, no AI and no credits, Built; interest, ranking and receipts are arithmetic, written as data, no AI and no credits, Built; the one exception is the optional AI features the visitor uses, typed search, an advisor and generated imagery, metered per use, with typed search Built and off by default and the advisor and imagery demo only. No page view uses a credit. After, the results: the engine credits and counts outcomes, and nothing moves until a person raises the learning dial, no AI and no credits, Built, and Open because nothing is recorded yet from the engine's browser script; the team reads the receipts and the day report in the console, no AI and no credits, Built; asking Opal to explain results or find patterns in them, credits apply, Open and not wired today. The learning costs no credits; asking Opal about it would. The credit line on each card follows the documented credit rule, which is Designed; the billing meter is Open.</desc>
+  <!-- Lane D1, drawn by hand, in the device of the Opal credits page (docs/enablement/research/S3-naming-and-narrative.md 2.3):
+       three parts of the visitor's session, a credit line in words on every card, the one exception flagged once.
+       Facts: S2-engine-facts.md 3.15, 4.1-4.6, 5.1-5.2, 6.1-6.3, 10.1, with docs/Opal-Credit-Boundary-Pricing-Guide.md 1-4 for the
+       credit rule, under S2's corrections (6.2: no Opal integration is wired; the guide's line on where Opal files audiences is not repeated).
+       Credit lines are words, never chips or bands (review R-F1), so the one legend stays Built, Designed, Open:
+       LF green = Built, light blue = Designed, dashed white = Open, as in the other two figures. -->
+  <rect x="0" y="0" width="1100" height="968" fill="#FFFFFF"/>
+
+  <text x="16" y="46" font-size="32" font-weight="700">One visitor's session: what happens before, during and after</text>
+
+  <!-- The rule, in two halves (S2 6.1, 6.2; pricing guide 1) -->
+  <g data-box="rule engine">
+    <rect x="16" y="66" width="529" height="74" rx="16" fill="#08251A"/>
+    <text x="36" y="97" font-size="24" font-weight="700" fill="#ABFF44">The engine decides.</text>
+    <text x="36" y="124" font-size="20" fill="#FFFFFF">Calls no AI model to decide; no credits.</text>
+    <g data-box="chip">
+      <rect x="455" y="81" width="70" height="28" rx="14" fill="#ABFF44"/>
+      <text x="490" y="101" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+    </g>
+  </g>
+  <g data-box="rule opal">
+    <rect x="555" y="66" width="529" height="74" rx="16" fill="#197050"/>
+    <text x="575" y="97" font-size="24" font-weight="700" fill="#FFFFFF">Opal creates and explains.</text>
+    <text x="575" y="124" font-size="20" fill="#FFFFFF">Credits apply, as documented.</text>
+    <g data-box="chip">
+      <rect x="992" y="78" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="1028" y="98" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="1064" y="128" font-size="18" fill="#FFFFFF" text-anchor="end">not wired today</text>
+  </g>
+
+  <!-- BEFORE: the team's preparation -->
+  <g data-box="column before">
+    <rect x="16" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="34" y="196" font-size="28" font-weight="700">Before</text>
+    <text x="34" y="224" font-size="20" fill="#197050">The team's preparation</text>
+
+    <!-- S2 4.1-4.6 -->
+    <g data-box="publishes">
+      <rect x="24" y="244" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="38" y="306" font-size="20">The team publishes the</text>
+      <text x="38" y="331" font-size="20">documents the engine follows.</text>
+      <g data-box="chip"><rect x="38" y="345" width="70" height="28" rx="14" fill="#ABFF44"/><text x="73" y="365" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.2 (not wired); pricing guide 2, BEFORE -->
+    <g data-box="opal drafts">
+      <rect x="24" y="397" width="330" height="166" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="427" font-size="19" font-weight="700">Credits apply</text>
+      <text x="38" y="459" font-size="20">Opal drafts an audience, a test</text>
+      <text x="38" y="484" font-size="20">or a setting from plain words;</text>
+      <text x="38" y="509" font-size="20">a person approves.</text>
+      <g data-box="chip"><rect x="38" y="523" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="74" y="543" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="120" y="543" font-size="18">not wired today</text>
+    </g>
+
+    <!-- S2 6.1 (design-time tagging, built locally, off by default); 6.3 (whether it is billed as credits: Open) -->
+    <g data-box="labels">
+      <rect x="24" y="575" width="330" height="166" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="605" font-size="19" font-weight="700">Credits not decided</text>
+      <text x="38" y="637" font-size="20">A model on the customer's own</text>
+      <text x="38" y="662" font-size="20">key suggests tags for content; a</text>
+      <text x="38" y="687" font-size="20">person approves each one.</text>
+      <g data-box="chip"><rect x="38" y="701" width="70" height="28" rx="14" fill="#ABFF44"/><text x="73" y="721" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <text x="118" y="721" font-size="18">off by default</text>
+    </g>
+
+    <text x="34" y="826" font-size="20" font-weight="700">Credits follow the team's</text>
+    <text x="34" y="852" font-size="20" font-weight="700">requests, not the traffic.</text>
+  </g>
+
+  <!-- DURING: the visit -->
+  <g data-box="column during">
+    <rect x="377" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="395" y="196" font-size="28" font-weight="700">During</text>
+    <text x="395" y="224" font-size="20" fill="#197050">The visit</text>
+
+    <!-- S2 1; 6.1 -->
+    <g data-box="decides">
+      <rect x="385" y="244" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="399" y="306" font-size="20">The engine decides at the edge,</text>
+      <text x="399" y="331" font-size="20">from the published rules.</text>
+      <g data-box="chip"><rect x="399" y="345" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="365" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.1 (the decision function is pure; the interest arithmetic calls no model); 6.2 (receipts produced as data) -->
+    <g data-box="arithmetic">
+      <rect x="385" y="397" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="427" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="399" y="459" font-size="20">Interest, ranking and receipts</text>
+      <text x="399" y="484" font-size="20">are arithmetic, written as data.</text>
+      <g data-box="chip"><rect x="399" y="498" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="518" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- The one exception, flagged once (S2 6.1, 6.3; pricing guide 2 DURING and 3 item 3) -->
+    <g data-box="exception tab">
+      <rect x="385" y="550" width="192" height="28" rx="14" fill="#08251A"/>
+      <text x="481" y="570" font-size="18" font-weight="700" fill="#FFFFFF" text-anchor="middle">The one exception</text>
+    </g>
+    <g data-box="ai features">
+      <rect x="385" y="586" width="330" height="186" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="616" font-size="19" font-weight="700">Metered per use</text>
+      <text x="399" y="648" font-size="20">Optional AI features the visitor</text>
+      <text x="399" y="673" font-size="20">uses: typed search, an advisor,</text>
+      <text x="399" y="698" font-size="20">generated imagery.</text>
+      <g data-box="chip"><rect x="399" y="712" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="732" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <text x="479" y="732" font-size="18">typed search, off by default</text>
+      <text x="399" y="760" font-size="18">the advisor and imagery: demo only</text>
+    </g>
+
+    <text x="395" y="826" font-size="20" font-weight="700">No page view uses a credit.</text>
+  </g>
+
+  <!-- AFTER: the results -->
+  <g data-box="column after">
+    <rect x="738" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="756" y="196" font-size="28" font-weight="700">After</text>
+    <text x="756" y="224" font-size="20" fill="#197050">The results</text>
+
+    <!-- S2 3.15, 5.1, 5.2; recording from the browser script: 3.15 with 10.2 "Durable recovery" -->
+    <g data-box="counts">
+      <rect x="746" y="244" width="330" height="226" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="760" y="306" font-size="20">The engine credits and counts</text>
+      <text x="760" y="331" font-size="20">outcomes; nothing moves until a</text>
+      <text x="760" y="356" font-size="20">person raises the learning dial.</text>
+      <g data-box="chip"><rect x="760" y="370" width="70" height="28" rx="14" fill="#ABFF44"/><text x="795" y="390" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <g data-box="chip"><rect x="760" y="408" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="796" y="428" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="842" y="428" font-size="18">nothing is recorded yet</text>
+      <text x="760" y="458" font-size="18">from the engine's browser script</text>
+    </g>
+
+    <!-- S2 3.14, 3.16, 4.5 -->
+    <g data-box="reads">
+      <rect x="746" y="482" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="512" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="760" y="544" font-size="20">The team reads the receipts and</text>
+      <text x="760" y="569" font-size="20">the day report in the console.</text>
+      <g data-box="chip"><rect x="760" y="583" width="70" height="28" rx="14" fill="#ABFF44"/><text x="795" y="603" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.2 (not wired); pricing guide 2, AFTER -->
+    <g data-box="asking opal">
+      <rect x="746" y="635" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="665" font-size="19" font-weight="700">Credits apply</text>
+      <text x="760" y="697" font-size="20">Asking Opal to explain results</text>
+      <text x="760" y="722" font-size="20">or find patterns in them.</text>
+      <g data-box="chip"><rect x="760" y="736" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="796" y="756" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="842" y="756" font-size="18">not wired today</text>
+    </g>
+
+    <text x="756" y="826" font-size="20" font-weight="700">The learning costs no credits;</text>
+    <text x="756" y="852" font-size="20" font-weight="700">asking Opal about it would.</text>
+  </g>
+
+  <!-- The package's one legend, and what the credit lines rest on (S2 6.3, 10.1) -->
+
+  <g data-box="chip">
+    <rect x="16" y="898" width="70" height="28" rx="14" fill="#ABFF44"/>
+    <text x="51" y="918" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+  </g>
+  <text x="94" y="918" font-size="19">in the code and exercised</text>
+  <g data-box="chip">
+    <rect x="333" y="898" width="110" height="28" rx="14" fill="#91DBDA"/>
+    <text x="388" y="918" font-size="18" font-weight="700" text-anchor="middle">Designed</text>
+  </g>
+  <text x="451" y="918" font-size="19">in an architecture document, not in the code</text>
+  <g data-box="chip">
+    <rect x="865" y="898" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="901" y="918" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+  </g>
+  <text x="945" y="918" font-size="19">no decision yet</text>
+  <text x="16" y="952" font-size="18" fill="#197050">The credit line on each card follows the documented credit rule, which is Designed; the billing meter is Open.</text>
+</svg></div>
+<figcaption>One visitor's session: what happens before, during and after</figcaption>
+</figure>
+</section>
+<section class="sec" aria-labelledby="what-is-true-today">
+<h2 id="what-is-true-today">What is true today</h2>
+<p>The engine's core is built and runs today; the path onto a customer's own site is where the open decisions sit. Two hosted demos run on today's engine, <a href="https://edge-platform-vantage.expedge.workers.dev/vantage/">Vantage</a> and <a href="https://edge-platform-top-offers.expedge.workers.dev/top-offers/">Top Offers</a>, and their regional data is synthetic and labeled. For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step. Describe what is built, call designed items designed, and promise nothing that is open. Two more limits: there is no native app SDK, and no speed, lift or revenue figure may be quoted, since none has been measured in a quotable way.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col" class="c-verdict">Verdict</th><th scope="col">What it covers</th></tr></thead><tbody><tr class="v-built"><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td><td data-label="What it covers">Consent gating; graded, fading interests, with entry and exit lines for audiences; the cold start, from how a visitor arrived and the regional prior; date, stock and region rules, pins, exclusions and the other merchandising controls; the order of whatever sits in a slot, a stack of page modules included; receipts; versioned settings changed without a software release, most of them in the operator console; product re-ranking, which reorders a product list that a commerce platform supplies; outcome counting and the day report; the learning dial; holdout groups that see the site's own defaults, for comparison; the sign-in merge of a visitor's interests</td></tr><tr class="v-designed"><td class="c-verdict" data-label="Verdict"><span class="chip chip-designed">Designed</span></td><td data-label="What it covers">Configuring a page's layout per context, such as by channel or visit; correcting what it learns for where on the page a piece was shown; matching content by meaning as well as by tags</td></tr><tr class="v-open"><td class="c-verdict" data-label="Verdict"><span class="chip chip-open">Open</span></td><td data-label="What it covers">A customer deployment's first configuration, and the live gates before going live; connections to Opal, ODP and Feature Experimentation; measurement on a customer's site, including recording through the SDK, retention periods and the experiment design; the commercial meter and its rates</td></tr></tbody></table></div>
+</section>
+<section class="sec" aria-labelledby="sentences-to-say">
+<h2 id="sentences-to-say">Sentences to say</h2>
+<ul class="say-list"><li>"Nothing is personalized or recorded until the visitor explicitly agrees."</li><li>"The engine calls no AI model to decide; every decision is arithmetic, and every answer carries its reasons."</li><li>"Interest builds with what a visitor does and fades with time, at a pace your team sets."</li><li>"Your rules decide what may show and what must; the engine ranks the rest for each visitor."</li><li>"Learning is built, and it changes nothing until a person raises the learning dial."</li></ul>
+</section>
+<section class="sec" aria-labelledby="sentences-never-to-say-and-what-to-say-instead">
+<h2 id="sentences-never-to-say-and-what-to-say-instead">Sentences never to say, and what to say instead</h2>
+<div class="tbl tbl-never"><table class="rt t-never"><thead><tr><th scope="col">Never say</th><th scope="col">Say instead</th></tr></thead><tbody><tr><td class="c-never" data-label="Never say">"It uses AI to personalize."; "AI-powered personalization"</td><td class="c-say" data-label="Say instead">"It personalizes by arithmetic on what each visitor does, by rules your team publishes."</td></tr><tr><td class="c-never" data-label="Never say">"It knows who the visitor is."</td><td class="c-say" data-label="Say instead">"It knows what a visitor is interested in, not who they are."</td></tr><tr><td class="c-never" data-label="Never say">Any speed figure, such as a decision time in milliseconds. None has been measured in a way that can be quoted.</td><td class="c-say" data-label="Say instead">"We quote no timing figure; timing is measured on the customer's own deployment."</td></tr><tr><td class="c-never" data-label="Never say">"It learns automatically."</td><td class="c-say" data-label="Say instead">"It learns only as far as your team allows: results move a ranking only when someone turns up the learning dial."</td></tr><tr><td class="c-never" data-label="Never say">"We don't use a model."</td><td class="c-say" data-label="Say instead">"It calls no AI model to decide."</td></tr><tr><td class="c-never" data-label="Never say">"It reads their mind", "it knows what they want"</td><td class="c-say" data-label="Say instead">"It counts what the visitor does."</td></tr><tr><td class="c-never" data-label="Never say">"One-to-one in real time"</td><td class="c-say" data-label="Say instead">"In the visitor's session, from their first event."</td></tr><tr><td class="c-never" data-label="Never say">"A recommendations engine"</td><td class="c-say" data-label="Say instead">"It ranks the brand's own content for each decided place on a page."</td></tr></tbody></table></div>
+</section>
+<section class="sec" aria-labelledby="questions-marketing-will-be-asked">
+<h2 id="questions-marketing-will-be-asked">Questions marketing will be asked</h2>
+<p class="qa"><strong class="qa-q">Is it private, and how does consent work?</strong> Nothing is personalized or recorded until the site passes the visitor's explicit consent choice. Without it, the visitor sees the site's own defaults. With consent, the engine keeps their interests under a random id, reads no device detail beyond the operating system family of the visitor's phone, and does no fingerprinting.</p>
+<p class="qa"><strong class="qa-q">Does it need to know who the visitor is?</strong> No: it works under a random id. At sign-in, the site's own systems sign a proof, and the engine joins the visitor's interests to their account under a one-way code, never the account id itself. Recognizing a returning stranger without sign-in is built, but off until the customer turns it on.</p>
+<p class="qa"><strong class="qa-q">Is it a black box?</strong> No. Every answer carries its reasons, and with the visitor's consent a receipt records what was served and why once recording is on. The settings that shape an answer are published, versioned documents the brand can read, change and roll back without a software release.</p>
+<p class="qa"><strong class="qa-q">Does it need our data warehouse?</strong> No. It decides from the site's own events, which must carry each product's details, and keeps its own records, which a warehouse can collect.</p>
+<p class="qa"><strong class="qa-q">Does it replace our recommendations?</strong> No. It ranks the brand's own content for each place on a page and can reorder a product list that a commerce platform supplies, but it picks no products from a catalog of its own.</p>
+<p class="qa"><strong class="qa-q">Does it depend on other Optimizely products?</strong> No. ODP, Feature Experimentation and Opal are not in the decision path, and none is connected to it today.</p>
+<p class="qa"><strong class="qa-q">What does the customer have to provide?</strong> Its content, tagged in the words the engine scores on; a map of its page slots, each with a default; site events that carry each product's details and each purchase; the visitor's consent choice; a signed proof at sign-in; and how long each kind of data is kept.</p>
+<p class="qa"><strong class="qa-q">How is it priced?</strong> See <a href="/credits">Where Opal and AI credits fit</a> and <a href="/selling-it">Selling it</a>, the account executive piece. The engine's own meter and rates are an open decision, so neither belongs in marketing copy yet.</p>
+</section>
+<section class="sec" aria-labelledby="see-also">
+<h2 id="see-also">See also</h2>
+<ul><li><a href="/selling-it">Selling it</a>, the piece for account executives.</li><li><a href="/how-it-works">How it works and where it runs</a>, the piece for solutions engineers.</li><li><a href="/credits">Where Opal and AI credits fit</a>, the standalone credits page.</li><li><a href="/glossary">Glossary</a>, the package's terms.</li><li><a href="/status">What is built, designed and open</a>, every capability with its verdict.</li></ul>
+</section>
+<div class="rule rule-close"><p class="rule-label" data-chrome="rule label">The one rule, again</p><p class="rule-text"><strong>With consent, the engine remembers what each visitor is interested in, not who they are, and ranks your content by the rules your team publishes.</strong></p></div>
+</article>
+</main>
+<footer class="foot">
+<div class="wrap">
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is" aria-current="page"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/status"><span class="pieces-name">What is built, designed and open</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo to show to whom</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
+</div>
+</footer>
+</body>
+</html>

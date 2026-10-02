@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
+<title>How it works and where it runs · Optimizely enablement</title>
+<!-- Built by enablement/render-pages.mjs from its source. Nothing inline: every style is in /site.css and the behavior in /site.js, which the page does not need in order to read in full. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+<header class="masthead">
+<div class="wrap masthead-inner">
+<p class="eyebrow">Internal · Optimizely</p>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works" aria-current="page">How it works</a></li><li><a href="/status">Status</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+</div>
+</header>
+<main id="main" class="wrap">
+<div class="piece-meta"><p class="reader-tag" data-reader="se">For solutions engineers</p><p class="stamp">Updated October 2, 2026 · engine facts as of commit 8b4f74c</p></div>
+<article class="piece" data-source="docs/enablement/content/how-it-works-and-where-it-runs.md">
+<h1 class="title"><span class="kicker"><span id="package-name">Behavioral Targeting and Intelligence</span>:</span> <span class="title-main">how it works and where it runs</span></h1>
+<p class="reader-line"><strong>For pre-sales solutions engineers.</strong> You explain the engine to a customer's technical team. You are at home with a diagram, an API call and a configuration document, and you bring an engineer when the conversation reaches the code. The walk comes first. Each walk section links to its detail, and each detail section links back.</p>
+<div class="rule"><p class="rule-label" data-chrome="rule label">The one rule</p><p class="rule-text"><strong>Every setting that can change an answer lives in a published, versioned document; the engine does the arithmetic at the edge, calls no AI model to decide, and shows its work on a receipt.</strong></p></div>
+<aside class="legend" aria-label="How to read the labels" data-chrome="legend"><p class="legend-text"><span class="chip chip-built">Built</span>: in the code and exercised. <span class="chip chip-designed">Designed</span>: in an architecture document, not in the code. <span class="chip chip-open">Open</span>: no decision yet.</p></aside>
+<p>Three labels mark every capability. <span class="chip chip-built">Built</span>: in the code and exercised. <span class="chip chip-designed">Designed</span>: in an architecture document, not in the code. <span class="chip chip-open">Open</span>: no decision yet. No latency or throughput figure appears here, and <a href="#b7-limits-are-budgets-in-the-code-and-no-timing-may-be-quoted">B.7</a> says why. Every word follows the <a href="/glossary">Glossary</a>.</p>
+<section class="sec sec-part" aria-labelledby="part-a-the-walk">
+<h2 id="part-a-the-walk" class="part">Part A. The walk</h2>
+</section>
+<section class="sec" aria-labelledby="a1-the-unit-of-state-is-the-dimension-value-not-the-click">
+<h2 id="a1-the-unit-of-state-is-the-dimension-value-not-the-click">A.1 The unit of state is the dimension value, not the click</h2>
+<p>A brand scores on dimensions it chooses, such as brand, category and price band; brand = samsung is one dimension value. For each consenting visitor, the engine keeps an interest in each value the visitor touches. The interest is graded, between 0 and just under 1. It fades: its evidence halves about every 9.7 days at the default memory. One product view can raise its brand, category and price band at once. Pieces of content carry tags in the same vocabulary, and a piece's base score adds up the visitor's interest in each tag, times the slot's weight for that dimension. The engine calls no AI model to decide.</p>
+<p>The figure follows one event to one decision.</p>
+<figure class="figure" data-figure="decision-path">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="912" viewBox="0 0 1100 912" role="img" aria-labelledby="path-t path-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="path-t">From an event to a decision</title>
+  <desc id="path-d">The steps, left to right, in a row for the visitor and a row for the slot. The visitor: identity and session, where each visitor gets an anonymous id and a signed session, governed by worker settings set by an engineer; the consent check, where without an explicit choice nothing is personalized or recorded, governed by the visitor's own choice; touches from the event, where the registry says which dimension values an event touches, and by how much; graded, fading interest, read for each value when the page asks, governed by the registry's memory settings; the regional prior, where a stranger leans on their region's interests, less as their own grow, governed by the learn document. The slot: gated candidates, so only pieces that may be served remain, live, in window, in stock and passing their own rule, governed by the catalog and the slots document; each piece's score, the sum of interest times the slot's weight over its tags, then adjustments, governed by the slots document; pins and the diversity cap, pinned pieces first, unscored, and the rest by score, capped where they share a value, governed by the slots document; the answer and its receipt, content ids in order with reasons while the receipt keeps the arithmetic, naming every document in force by revision; outcomes and the dial, credited and counted, moving nothing until a person raises the learning dial, governed by the learn document. Every step is Built. Open: with the engine's browser script nothing is recorded yet, because the switch it needs is off. No step here calls an AI model to decide.</desc>
+  <!-- Lane D1, drawn by hand. Facts: docs/enablement/research/S2-engine-facts.md (code at 8b4f74c), section 3 (3.1 to 3.15),
+       with 4.2, 4.6, 5.2, 6.1 and 10.2. Order follows S2: identity before consent (3.1, 3.2: the consent choice is bound to the
+       visitor's own session grant) and the regional prior before scoring (3.6, 3.7, 3.11: the score sums weight times the
+       blended interest). No number appears in the drawing, by the brief. Palette and conventions as in architecture.svg. -->
+  <defs>
+    <marker id="path-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="912" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">From an event to a decision</text>
+  <text x="20" y="80" font-size="20" fill="#197050">Every step is Built. In smaller type under each step: what governs it.</text>
+
+  <!-- Row one: the visitor -->
+  <text x="20" y="124" font-size="19" font-weight="700" fill="#197050">The visitor: who they are, and what interests them</text>
+
+  <!-- S2 3.1; 4.6 (identity settings need an engineer) -->
+  <g data-box="identity">
+    <rect x="20" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="20" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="34" y="172" font-size="22" font-weight="700">Identity and</text>
+    <text x="34" y="198" font-size="22" font-weight="700">session</text>
+    <text x="34" y="230" font-size="20">Each visitor gets</text>
+    <text x="34" y="255" font-size="20">an anonymous id</text>
+    <text x="34" y="280" font-size="20">and a signed</text>
+    <text x="34" y="305" font-size="20">session.</text>
+    <text x="34" y="370" font-size="18" font-weight="500" fill="#197050">Worker settings,</text>
+    <text x="34" y="392" font-size="18" font-weight="500" fill="#197050">set by an engineer</text>
+  </g>
+
+  <!-- S2 3.2 -->
+  <g data-box="consent">
+    <rect x="236" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="236" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="172" font-size="22" font-weight="700">The consent</text>
+    <text x="250" y="198" font-size="22" font-weight="700">check</text>
+    <text x="250" y="230" font-size="20">Without an</text>
+    <text x="250" y="255" font-size="20">explicit choice,</text>
+    <text x="250" y="280" font-size="20">nothing is</text>
+    <text x="250" y="305" font-size="20">personalized or</text>
+    <text x="250" y="330" font-size="20">recorded.</text>
+    <text x="250" y="370" font-size="18" font-weight="500" fill="#197050">The visitor's own</text>
+    <text x="250" y="392" font-size="18" font-weight="500" fill="#197050">choice</text>
+  </g>
+
+  <!-- S2 3.3 (weights, touch rules, event attributes, the vocabulary check); 4.2 -->
+  <g data-box="touches">
+    <rect x="452" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="452" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="172" font-size="22" font-weight="700">Touches from</text>
+    <text x="466" y="198" font-size="22" font-weight="700">the event</text>
+    <text x="466" y="230" font-size="20">The registry says</text>
+    <text x="466" y="255" font-size="20">which dimension</text>
+    <text x="466" y="280" font-size="20">values an event</text>
+    <text x="466" y="305" font-size="20">touches, and by</text>
+    <text x="466" y="330" font-size="20">how much.</text>
+    <text x="466" y="370" font-size="18" font-weight="500" fill="#197050">The registry</text>
+  </g>
+
+  <!-- S2 3.4 (graded, fading, computed when read); 3.7; 3.17 -->
+  <g data-box="interest">
+    <rect x="668" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="668" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="172" font-size="22" font-weight="700">Graded, fading</text>
+    <text x="682" y="198" font-size="22" font-weight="700">interest</text>
+    <text x="682" y="230" font-size="20">When the page</text>
+    <text x="682" y="255" font-size="20">asks: graded for</text>
+    <text x="682" y="280" font-size="20">each value, and</text>
+    <text x="682" y="305" font-size="20">fading with time.</text>
+    <text x="682" y="370" font-size="18" font-weight="500" fill="#197050">The registry's</text>
+    <text x="682" y="392" font-size="18" font-weight="500" fill="#197050">memory settings</text>
+  </g>
+
+  <!-- S2 3.6 (the blend; off without a regional block); 3.7 -->
+  <g data-box="regional prior">
+    <rect x="884" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="884" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="172" font-size="22" font-weight="700">The regional</text>
+    <text x="898" y="198" font-size="22" font-weight="700">prior</text>
+    <text x="898" y="230" font-size="20">A stranger leans</text>
+    <text x="898" y="255" font-size="20">on their region's</text>
+    <text x="898" y="280" font-size="20">interests, less as</text>
+    <text x="898" y="305" font-size="20">their own grow.</text>
+    <text x="898" y="370" font-size="18" font-weight="500" fill="#197050">The learn</text>
+    <text x="898" y="392" font-size="18" font-weight="500" fill="#197050">document</text>
+  </g>
+
+  <!-- The chain, then the return to row two -->
+  <g stroke="#08251A" stroke-width="3" fill="none">
+    <line x1="217" y1="185" x2="223" y2="185" marker-end="url(#path-head)"/>
+    <line x1="433" y1="185" x2="439" y2="185" marker-end="url(#path-head)"/>
+    <line x1="649" y1="185" x2="655" y2="185" marker-end="url(#path-head)"/>
+    <line x1="865" y1="185" x2="871" y2="185" marker-end="url(#path-head)"/>
+    <path d="M982,407 V428 H118 V464" stroke-linejoin="round" marker-end="url(#path-head)"/>
+    <line x1="217" y1="521" x2="223" y2="521" marker-end="url(#path-head)"/>
+    <line x1="433" y1="521" x2="439" y2="521" marker-end="url(#path-head)"/>
+    <line x1="649" y1="521" x2="655" y2="521" marker-end="url(#path-head)"/>
+    <line x1="865" y1="521" x2="871" y2="521" marker-end="url(#path-head)"/>
+  </g>
+
+  <!-- Row two: the slot -->
+  <text x="140" y="460" font-size="19" font-weight="700" fill="#197050">The slot: what may be served, in what order, and what is kept</text>
+
+  <!-- S2 3.9 (eligibility); 3.10 (off-limits, exclusions, allowed types) -->
+  <g data-box="gated">
+    <rect x="20" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="20" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="34" y="508" font-size="22" font-weight="700">Gated</text>
+    <text x="34" y="534" font-size="22" font-weight="700">candidates</text>
+    <text x="34" y="566" font-size="20">Only pieces that</text>
+    <text x="34" y="591" font-size="20">may be served:</text>
+    <text x="34" y="616" font-size="20">live, in window,</text>
+    <text x="34" y="641" font-size="20">in stock, passing</text>
+    <text x="34" y="666" font-size="20">their own rule.</text>
+    <text x="34" y="706" font-size="18" font-weight="500" fill="#197050">The catalog and</text>
+    <text x="34" y="728" font-size="18" font-weight="500" fill="#197050">the slots document</text>
+  </g>
+
+  <!-- S2 3.11 (the base sum, then completes, seeds, stage, freshness, fatigue, merchandising and the lift) -->
+  <g data-box="scored">
+    <rect x="236" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="236" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="508" font-size="22" font-weight="700">Each piece's</text>
+    <text x="250" y="534" font-size="22" font-weight="700">score</text>
+    <text x="250" y="566" font-size="20">The sum of</text>
+    <text x="250" y="591" font-size="20">interest × the</text>
+    <text x="250" y="616" font-size="20">slot's weight over</text>
+    <text x="250" y="641" font-size="20">its tags, then</text>
+    <text x="250" y="666" font-size="20">adjustments.</text>
+    <text x="250" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
+    <text x="250" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+  </g>
+
+  <!-- S2 3.10 (pins served first); 3.12 (sorted by score; the diversity cap) -->
+  <g data-box="pins">
+    <rect x="452" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="452" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="508" font-size="22" font-weight="700">Pins and the</text>
+    <text x="466" y="534" font-size="22" font-weight="700">diversity cap</text>
+    <text x="466" y="566" font-size="20">Pinned pieces</text>
+    <text x="466" y="591" font-size="20">first, unscored;</text>
+    <text x="466" y="616" font-size="20">the rest by score,</text>
+    <text x="466" y="641" font-size="20">capped where they</text>
+    <text x="466" y="666" font-size="20">share a value.</text>
+    <text x="466" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
+    <text x="466" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+  </g>
+
+  <!-- S2 3.14 (the receipt and what it names); 3.15 -->
+  <g data-box="answer">
+    <rect x="668" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="668" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="508" font-size="22" font-weight="700">Answer and</text>
+    <text x="682" y="534" font-size="22" font-weight="700">receipt</text>
+    <text x="682" y="566" font-size="20">Content ids in</text>
+    <text x="682" y="591" font-size="20">order, with</text>
+    <text x="682" y="616" font-size="20">reasons; the</text>
+    <text x="682" y="641" font-size="20">receipt keeps the</text>
+    <text x="682" y="666" font-size="20">arithmetic.</text>
+    <text x="682" y="706" font-size="18" font-weight="500" fill="#197050">Every document in</text>
+    <text x="682" y="728" font-size="18" font-weight="500" fill="#197050">force, by revision</text>
+  </g>
+
+  <!-- S2 3.13; 3.15 (outcomes and attribution); 5.2 (moves nothing until the dial is raised) -->
+  <g data-box="outcomes">
+    <rect x="884" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="884" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="508" font-size="22" font-weight="700">Outcomes and</text>
+    <text x="898" y="534" font-size="22" font-weight="700">the dial</text>
+    <text x="898" y="566" font-size="20">Credited and</text>
+    <text x="898" y="591" font-size="20">counted, moving</text>
+    <text x="898" y="616" font-size="20">nothing until a</text>
+    <text x="898" y="641" font-size="20">person raises the</text>
+    <text x="898" y="666" font-size="20">learning dial.</text>
+    <text x="898" y="706" font-size="18" font-weight="500" fill="#197050">The learn</text>
+    <text x="898" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+  </g>
+
+  <!-- The rule; the open point under the two steps it concerns (S2 3.15 with 10.2 "Durable recovery") -->
+  <g data-box="rule">
+    <rect x="20" y="760" width="628" height="46" rx="23" fill="#08251A"/>
+    <text x="334" y="790" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">No step here calls an AI model to decide.</text>
+  </g>
+  <g data-box="open recording">
+    <rect x="668" y="760" width="412" height="88" rx="12" fill="#E4F0DA"/>
+    <g data-box="chip">
+      <rect x="682" y="772" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="718" y="792" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="766" y="790" font-size="19">With the engine's browser</text>
+    <text x="766" y="814" font-size="19">script, nothing is recorded</text>
+    <text x="766" y="838" font-size="19">yet: the switch it needs is off.</text>
+  </g>
+
+  <!-- The one legend (common brief: Built, Designed, Open) -->
+  <g data-box="chip">
+    <rect x="20" y="868" width="70" height="28" rx="14" fill="#ABFF44"/>
+    <text x="55" y="888" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+  </g>
+  <text x="98" y="888" font-size="19">in the code and exercised</text>
+  <g data-box="chip">
+    <rect x="337" y="868" width="110" height="28" rx="14" fill="#91DBDA"/>
+    <text x="392" y="888" font-size="18" font-weight="700" text-anchor="middle">Designed</text>
+  </g>
+  <text x="455" y="888" font-size="19">in an architecture document, not in the code</text>
+  <g data-box="chip">
+    <rect x="869" y="868" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="905" y="888" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+  </g>
+  <text x="949" y="888" font-size="19">no decision yet</text>
+</svg></div>
+<figcaption>From an event to a decision</figcaption>
+</figure>
+<p class="navlink navlink-detail">The detail: <a href="#b1-the-decision-path-runs-in-a-fixed-order">B.1</a></p>
+</section>
+<section class="sec" aria-labelledby="a2-ten-steps-run-from-the-visitors-first-call-to-the-learning-dial">
+<h2 id="a2-ten-steps-run-from-the-visitors-first-call-to-the-learning-dial">A.2 Ten steps run from the visitor's first call to the learning dial</h2>
+<p>The steps follow the figure, in order.</p>
+<ol><li><strong>Identity and session.</strong> The visitor's first call gives them an anonymous id and a shopper capability, a signed pass for the session valid for at most 24 hours. At sign-in, the anonymous and known profiles merge.</li><li><strong>Consent checked.</strong> Nothing is personalized or recorded until the site passes the visitor's explicit choice. Without it, the site's defaults show.</li><li><strong>Touches from the event.</strong> An event names an action and carries the product's attributes. Each attribute the registry reads becomes a touch, weighted by the action.</li><li><strong>Interest is read.</strong> When the page asks, the visitor's interests are read as they stand at that moment.</li><li><strong>The regional prior.</strong> Where the brand turns it on, a stranger leans on their region's interests, less as their own grow. Demo regional data is synthetic, and labeled so.</li><li><strong>Candidates are gated.</strong> Only pieces that may be served remain: live, in their window, in stock, and passing their own rule. Pinned pieces are then reserved, before any scoring.</li><li><strong>Each piece is scored.</strong> Each piece that is not pinned is scored: the sum of interest times the slot's weight over the piece's tags, then a few published adjustments.</li><li><strong>Pins and the diversity cap.</strong> Pinned pieces come first, and are never scored. The rest follow by score, with a cap on pieces that share one value.</li><li><strong>The answer and the receipt.</strong> The page gets the brand's content ids in order, with reasons. The receipt keeps the arithmetic and names every document in force by revision. It is kept only with tracking consent, and the shipped SDK keeps none yet.</li><li><strong>Outcomes and the dial.</strong> Outcomes are credited and counted, and they move nothing until a person raises the learning dial (<a href="#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">A.5</a>).</li></ol>
+<p class="navlink navlink-detail">The detail: <a href="#b1-the-decision-path-runs-in-a-fixed-order">B.1</a> and <a href="#b3-the-receipt-shows-the-arithmetic-and-the-day-report-counts-outcomes">B.3</a></p>
+</section>
+<section class="sec" aria-labelledby="a3-it-runs-on-cloudflare-in-a-separate-deployment-for-each-customer">
+<h2 id="a3-it-runs-on-cloudflare-in-a-separate-deployment-for-each-customer">A.3 It runs on Cloudflare, in a separate deployment for each customer</h2>
+<p>The engine is one codebase that runs as a Cloudflare Worker: a program on Cloudflare's network, in the data center nearest the request. Each customer gets its own deployment for each environment, staging and production, each with its own storage. Inside a deployment, each brand is an isolated tenant. The table says what each box in the figure is.</p>
+<figure class="figure" data-figure="architecture">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1320" viewBox="0 0 1100 1320" role="img" aria-labelledby="arch-t arch-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="arch-t">Where the engine runs on Cloudflare</title>
+  <desc id="arch-d">The customer's site, in the visitor's browser, sends a consent choice, events and decision requests to the worker on Cloudflare's network, and receives the answer: the brand's own content ids in order, each with its reasons. The operator, in the console, publishes the documents and reads the receipts and the day report. The worker, the engine's code, runs at the edge, in the data center nearest the visitor. Kept by each worker: the visitor's objects (the visitor's consent choice and the pieces served to the visitor), the learning statistics (one per slot), the regional prior (one per region, with no visitor ids) and the queue to the ledger. Shared by the demo workers, while a customer's deployment has its own: the visitor's interest record in the key-value store (the session host, the shipped default), the published snapshots of the regional prior and the learned lift, file storage for the published documents, the ledger and the day reports, and the database for operator accounts or the demo datasets. Two points are open: with the engine's browser script nothing is recorded yet, and how a customer's own deployment gets its first documents is not decided. Nothing in this picture calls an AI model to decide.</desc>
+  <!-- Lane D1, drawn by hand. Facts: docs/enablement/research/S2-engine-facts.md (code at 8b4f74c): sections 0, 1, 2.1-2.7,
+       3.2, 3.14-3.16, 4.1-4.7, 6.1, 7.1, 8.1, 10.1-10.3. Palette: enablement/site/index.html (fir 08251A, light fir 197050,
+       LF green ABFF44, light blue 91DBDA, neutral 3 E4F0DA). Presentation attributes only: no style element or attribute,
+       no script and no external reference, so the site's content policy needs no change to show it. -->
+  <defs>
+    <marker id="arch-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+    <marker id="arch-tail" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M10,0 L0,5 L10,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="1320" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">Where the engine runs on Cloudflare</text>
+
+  <!-- Outside Cloudflare: the customer's site (S2 2.7 B1; 1, "the site paints"; 3.14, the page's own answer) -->
+  <g data-box="site">
+    <rect x="20" y="70" width="500" height="182" rx="16" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="42" y="104" font-size="23" font-weight="700">The customer's site</text>
+    <text x="42" y="136" font-size="20">The customer's page and the engine's script,</text>
+    <text x="42" y="163" font-size="20">in the visitor's browser. The page paints each</text>
+    <text x="42" y="190" font-size="20">answer: the brand's own content ids in order,</text>
+    <text x="42" y="217" font-size="20">each with its reasons.</text>
+  </g>
+
+  <!-- Outside Cloudflare: the operator, the console and its two outputs (S2 2.7 B5 and arrow 16; 3.14; 3.16; 4.5) -->
+  <g data-box="operator">
+    <rect x="560" y="70" width="520" height="182" rx="16" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="582" y="104" font-size="23" font-weight="700">The operator, in the console</text>
+    <text x="582" y="134" font-size="20">Publishes the documents and reads the outputs:</text>
+    <g data-box="receipt">
+      <path data-container="1" d="M582,148 h214 l16,16 v74 h-230 z" fill="#E4F0DA" stroke="#08251A" stroke-width="2"/>
+      <path d="M796,148 v16 h16" fill="none" stroke="#08251A" stroke-width="2"/>
+      <text x="598" y="174" font-size="21" font-weight="700">The receipt</text>
+      <text x="598" y="199" font-size="20">the arithmetic behind</text>
+      <text x="598" y="222" font-size="20">each served piece</text>
+    </g>
+    <g data-box="day report">
+      <path data-container="1" d="M828,148 h214 l16,16 v74 h-230 z" fill="#E4F0DA" stroke="#08251A" stroke-width="2"/>
+      <path d="M1042,148 v16 h16" fill="none" stroke="#08251A" stroke-width="2"/>
+      <text x="844" y="174" font-size="21" font-weight="700">The day report</text>
+      <text x="844" y="199" font-size="20">credited outcomes,</text>
+      <text x="844" y="222" font-size="20">slot by slot</text>
+    </g>
+  </g>
+
+  <!-- Cloudflare's network (S2 0, "Worker"; 2.1) -->
+  <g data-box="region">
+    <rect x="20" y="342" width="1060" height="836" rx="24" fill="#E4F0DA"/>
+    <text x="1064" y="374" font-size="22" font-weight="700" text-anchor="end">Cloudflare's network</text>
+  </g>
+
+  <!-- What crosses between the site, the operator and the worker (S2 2.7 arrows 2, 3, 7, 16, 17) -->
+  <g stroke="#08251A" stroke-width="3" fill="none">
+    <line x1="70" y1="252" x2="70" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="200" y1="252" x2="200" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="330" y1="252" x2="330" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="460" y1="390" x2="460" y2="264" marker-end="url(#arch-head)"/>
+    <line x1="620" y1="252" x2="620" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="820" y1="390" x2="820" y2="264" marker-end="url(#arch-head)"/>
+  </g>
+  <g font-size="19" font-weight="500">
+    <text x="80" y="282">a consent</text>
+    <text x="80" y="304">choice</text>
+    <text x="210" y="282">an event</text>
+    <text x="340" y="282">a decision</text>
+    <text x="340" y="304">request</text>
+    <text x="470" y="282">the answer</text>
+    <text x="630" y="282">a publish,</text>
+    <text x="630" y="304">a new revision</text>
+    <text x="830" y="282">receipts and</text>
+    <text x="830" y="304">the day report</text>
+  </g>
+
+  <!-- The worker, the engine's code, and its stem to the stores (S2 0; 2.1, the three entry points; 2.4; 3.2; 3.14-3.15) -->
+  <rect x="543" y="490" width="14" height="548" fill="#08251A"/>
+  <g data-box="worker">
+    <rect x="36" y="390" width="1028" height="108" rx="14" fill="#08251A"/>
+    <text x="58" y="426" font-size="23" font-weight="700" fill="#ABFF44">The worker: the engine's code</text>
+    <text x="58" y="456" font-size="20" fill="#FFFFFF">Runs at the edge: the data center nearest the visitor. Checks access and consent, updates their interest,</text>
+    <text x="58" y="482" font-size="20" fill="#FFFFFF">decides and keeps a receipt. The same code drains the queue into the ledger and runs the scheduled jobs.</text>
+  </g>
+
+  <!-- Kept by each worker: its object classes and its queue (S2 2.2 EVENT_QUEUE; 2.3 and its closing paragraph) -->
+  <g data-box="zone per worker">
+    <rect x="36" y="520" width="368" height="558" rx="18" fill="none" stroke="#197050" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="52" y="550" font-size="20" font-weight="700" fill="#197050">Kept by each worker</text>
+    <g data-box="visitor objects">
+      <rect x="48" y="590" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="620" font-size="23" font-weight="700">The visitor's objects</text>
+      <text x="66" y="647" font-size="20">Their consent choice, and the</text>
+      <text x="66" y="673" font-size="20">pieces served to them.</text>
+    </g>
+    <g data-box="learning statistics">
+      <rect x="48" y="715" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="745" font-size="23" font-weight="700">Learning statistics</text>
+      <text x="66" y="772" font-size="20">One per slot: pieces shown and</text>
+      <text x="66" y="798" font-size="20">outcomes credited, by context.</text>
+    </g>
+    <g data-box="regional prior">
+      <rect x="48" y="840" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="870" font-size="23" font-weight="700">The regional prior</text>
+      <text x="66" y="897" font-size="20">One per region: interest counts,</text>
+      <text x="66" y="923" font-size="20">with no visitor ids.</text>
+    </g>
+    <g data-box="queue">
+      <rect x="48" y="966" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="996" font-size="23" font-weight="700">Queue to the ledger</text>
+      <text x="66" y="1023" font-size="20">Receipts and outcomes, after the</text>
+      <text x="66" y="1049" font-size="20">answer, with tracking consent.</text>
+    </g>
+  </g>
+
+  <!-- Shared by the demo workers; a customer's deployment has its own (S2 2.2; 2.5 REFLEX_HOST; 4.3; 8.1) -->
+  <g data-box="zone shared">
+    <rect x="696" y="520" width="368" height="558" rx="18" fill="none" stroke="#197050" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="712" y="550" font-size="20" font-weight="700" fill="#197050">Shared by the demo workers</text>
+    <text x="712" y="574" font-size="19" fill="#197050">A customer's deployment has its own.</text>
+    <g data-box="interest record">
+      <rect x="708" y="590" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="620" font-size="23" font-weight="700">The visitor's interest</text>
+      <text x="726" y="647" font-size="20">In the key-value store (KV): the</text>
+      <text x="726" y="673" font-size="20">session host, the shipped default.</text>
+    </g>
+    <g data-box="snapshots">
+      <rect x="708" y="702" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="732" font-size="23" font-weight="700">Published snapshots</text>
+      <text x="726" y="759" font-size="20">Copies of the regional prior and</text>
+      <text x="726" y="785" font-size="20">the learned lift, published to KV.</text>
+    </g>
+    <g data-box="file storage">
+      <rect x="708" y="814" width="344" height="118" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="844" font-size="23" font-weight="700">File storage (R2)</text>
+      <text x="726" y="871" font-size="20">The published documents, every</text>
+      <text x="726" y="897" font-size="20">revision kept; the ledger; the</text>
+      <text x="726" y="923" font-size="20">day reports.</text>
+    </g>
+    <g data-box="database">
+      <rect x="708" y="946" width="344" height="118" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="976" font-size="23" font-weight="700">Database (D1)</text>
+      <text x="726" y="1003" font-size="20">On a customer's deployment:</text>
+      <text x="726" y="1029" font-size="20">operator accounts, audit trail.</text>
+      <text x="726" y="1055" font-size="20">Demo workers: demo datasets.</text>
+    </g>
+  </g>
+
+  <!-- What crosses between the worker and each store (S2 2.7 arrows 2, 4, 5, 8, 9, 10-12, 14-16) -->
+  <g stroke="#08251A" stroke-width="3" fill="none">
+    <line x1="404" y1="654" x2="531" y2="654" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="779" x2="404" y2="779" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="904" x2="404" y2="904" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="1030" x2="404" y2="1030" marker-end="url(#arch-head)"/>
+    <line x1="569" y1="654" x2="696" y2="654" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+    <line x1="708" y1="766" x2="569" y2="766" marker-end="url(#arch-head)"/>
+    <line x1="708" y1="842" x2="569" y2="842" marker-end="url(#arch-head)"/>
+    <line x1="557" y1="914" x2="696" y2="914" marker-end="url(#arch-head)"/>
+    <line x1="569" y1="1010" x2="696" y2="1010" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+  </g>
+  <g font-size="19" font-weight="500" text-anchor="middle">
+    <text x="468" y="624">consent;</text>
+    <text x="468" y="645">pieces served</text>
+    <text x="468" y="770">pieces shown</text>
+    <text x="468" y="874">each event's</text>
+    <text x="468" y="895">touches</text>
+    <text x="468" y="1000">receipts and</text>
+    <text x="468" y="1021">outcomes</text>
+    <text x="632" y="624">interest,</text>
+    <text x="632" y="645">read, updated</text>
+    <text x="632" y="757">snapshots</text>
+    <text x="632" y="833">documents</text>
+    <text x="632" y="884">the ledger,</text>
+    <text x="632" y="905">day reports</text>
+    <text x="632" y="980">operator</text>
+    <text x="632" y="1001">sign-in</text>
+  </g>
+
+  <!-- Two open points, inline (S2 3.15 with 10.2 "Durable recovery"; 4.7 with 10.2 "The tenant's first configuration" and 10.3) -->
+  <g data-box="open recording">
+    <rect x="36" y="1092" width="494" height="70" rx="12" fill="#FFFFFF"/>
+    <g data-box="chip">
+      <rect x="50" y="1104" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="86" y="1124" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="134" y="1121" font-size="19">With the engine's browser script, nothing is</text>
+    <text x="134" y="1145" font-size="19">recorded yet: the switch it needs is off.</text>
+  </g>
+  <g data-box="open documents">
+    <rect x="570" y="1092" width="494" height="70" rx="12" fill="#FFFFFF"/>
+    <g data-box="chip">
+      <rect x="584" y="1104" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="620" y="1124" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="668" y="1121" font-size="19">How a customer's own deployment gets</text>
+    <text x="668" y="1145" font-size="19">its first documents is not decided yet.</text>
+  </g>
+
+  <!-- The rule, and the one legend (common brief: Built, Designed, Open) -->
+  <g data-box="rule">
+    <rect x="20" y="1196" width="1060" height="44" rx="22" fill="#08251A"/>
+    <text x="550" y="1225" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">Nothing in this picture calls an AI model to decide.</text>
+  </g>
+  <g data-box="chip">
+    <rect x="20" y="1254" width="70" height="28" rx="14" fill="#ABFF44"/>
+    <text x="55" y="1274" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+  </g>
+  <text x="98" y="1274" font-size="19">in the code and exercised</text>
+  <g data-box="chip">
+    <rect x="337" y="1254" width="110" height="28" rx="14" fill="#91DBDA"/>
+    <text x="392" y="1274" font-size="18" font-weight="700" text-anchor="middle">Designed</text>
+  </g>
+  <text x="455" y="1274" font-size="19">in an architecture document, not in the code</text>
+  <g data-box="chip">
+    <rect x="869" y="1254" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="905" y="1274" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+  </g>
+  <text x="949" y="1274" font-size="19">no decision yet</text>
+  <text x="20" y="1306" font-size="19" fill="#197050">Every part of the engine drawn here is Built, except where a tag says Open.</text>
+</svg></div>
+<figcaption>Where the engine runs on Cloudflare</figcaption>
+</figure>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Box</th><th scope="col">What it is</th></tr></thead><tbody><tr><td data-label="Box">The customer's site</td><td data-label="What it is">The customer's page and the engine's script in the visitor's browser: it sends consent, events and decision requests, and paints each answer</td></tr><tr><td data-label="Box">The operator, in the console</td><td data-label="What it is">Publishes the documents, and reads the receipts and the day report</td></tr><tr><td data-label="Box">The Worker</td><td data-label="What it is">The engine's code: it checks access and consent, updates interest, decides and keeps a receipt, drains the queue into the ledger and runs the scheduled jobs</td></tr><tr><td data-label="Box">The visitor's objects</td><td data-label="What it is">The visitor's consent choice and the pieces served to them</td></tr><tr><td data-label="Box">Learning statistics</td><td data-label="What it is">Pieces shown and outcomes credited, by context, per tenant, brand and slot</td></tr><tr><td data-label="Box">The regional prior</td><td data-label="What it is">Interest counts per tenant and region, with no visitor ids</td></tr><tr><td data-label="Box">Queue to the ledger</td><td data-label="What it is">Receipts and outcomes, after the answer, with tracking consent</td></tr><tr><td data-label="Box">The visitor's interest (KV)</td><td data-label="What it is">The interest record in the key-value store: the session host, the shipped default</td></tr><tr><td data-label="Box">Published snapshots (KV)</td><td data-label="What it is">Copies of the regional prior and the learned lift</td></tr><tr><td data-label="Box">File storage (R2)</td><td data-label="What it is">The published documents with every revision, the ledger and the day reports</td></tr><tr><td data-label="Box">Database (D1)</td><td data-label="What it is">Operator accounts and the audit trail on a customer's deployment; demo datasets on the demo Workers</td></tr></tbody></table></div>
+<p>Each Worker has its own objects, learning statistics, regional prior and queue. The demo Workers share the four stores in the last rows and keep brands apart by a tenant prefix; a customer's deployment has its own. Keeping a visitor's interests in their own object instead is built, and held back by a known finding. Not drawn: the customer's backend, which signs the identity proof at sign-in; the content source that fills the catalog; the commerce platform, whose product lists the engine re-orders; monitoring; and outside services, which are off by default and never on the decision path.</p>
+<p class="navlink navlink-detail">The detail: <a href="#b4-a-customer-deployment-has-its-own-store-of-every-kind">B.4</a></p>
+</section>
+<section class="sec" aria-labelledby="a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">
+<h2 id="a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">A.4 Four published documents configure it, and changing them needs no deploy</h2>
+<p>Four published documents hold the settings. The registry says what is scored, what each action counts and how fast interest fades. The catalog lists the pieces and their tags. The slots document sets each slot's weights, pins and rules. The learn document holds the dials. Each save is validated whole and kept as a new revision, so a rollback is a new revision too. None of it needs a deploy.</p>
+<p>The console at <code>/console/</code> edits most settings and shows receipts, the day report and the history. Catalog content, arrival seeds and the shape of the dimensions go through the API instead. Worker settings need an engineer: tenants, site keys, allowed origins, secrets, retention and connectors. How a customer deployment gets its first configuration is open.</p>
+<p class="navlink navlink-detail">The detail: <a href="#b2-the-published-documents-hold-the-settings-an-operator-changes">B.2</a></p>
+</section>
+<section class="sec" aria-labelledby="a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">
+<h2 id="a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">A.5 Learning counts outcomes and moves nothing until the dial moves</h2>
+<p>With tracking consent, the engine records each decision it serves and each outcome that follows, such as a click or a purchase. It credits an outcome to the last decision for that piece in that session. From those counts it computes a lift for each piece in each context, held between half and double. The lift moves a score only through the learning dial, γ, set per slot. The dial stays at 0 until a person raises it. The day report is an attribution diagnostic, and it claims no lift.</p>
+<p>With the shipped SDK, learning records nothing yet. Its decisions are read-only offers, and recording needs the slot set to count rendered pieces, plus durable recovery, which every configuration in the repository holds off. The hosted demos record because their pages ask for decisions directly.</p>
+<p class="navlink navlink-detail">The detail: <a href="#b3-the-receipt-shows-the-arithmetic-and-the-day-report-counts-outcomes">B.3</a> and <a href="#b24-the-learn-document-holds-the-dials">B.2.4</a></p>
+</section>
+<section class="sec" aria-labelledby="a6-the-site-sends-events-and-paints-what-the-engine-returns">
+<h2 id="a6-the-site-sends-events-and-paints-what-the-engine-returns">A.6 The site sends events and paints what the engine returns</h2>
+<p>The site starts a session, passes the visitor's consent choice from its banner, sends events, and asks for a snapshot: the decisions for every slot on a page, in one call. The SDK, served by the engine, carries the session, the events and the decisions. The answer is the brand's own content ids with reasons, and the site always renders. If no answer arrives in time, the site's default renders. For product grids, the engine re-orders the commerce platform's list and never filters it. It holds no product catalog for a customer tenant, so product events build interest only when the registry reads their attributes and the events carry them.</p>
+<p>ODP (the Optimizely Data Platform), Feature Experimentation and Opal are not in the decision path, and none is connected to it on a customer deployment today. ODP and Feature Experimentation connections exist for the default demo tenant only, and the demos' Opal assistant is a stand-in. The documented rule is "The engine decides; Opal creates and explains."</p>
+<p class="navlink navlink-detail">The detail: <a href="#b5-integration-is-a-session-a-consent-choice-events-and-snapshots">B.5</a></p>
+</section>
+<section class="sec" aria-labelledby="a7-consent-comes-first-identities-are-pseudonymous-and-tenants-are-kept-apart">
+<h2 id="a7-consent-comes-first-identities-are-pseudonymous-and-tenants-are-kept-apart">A.7 Consent comes first, identities are pseudonymous, and tenants are kept apart</h2>
+<p>Tracking and personalization are two switches, off until the visitor chooses. Each choice lasts 30 days, and with tracking off nothing about the request is written. A visitor is a random id, carried in a shopper capability valid for at most 24 hours. A signed-in visitor is stored as a salted hash, never as the raw account id. The engine reads no device detail beyond the operating system family of the visitor's phone. A customer tenant's data sits under its own prefix, nothing pools across brands, and each customer has its own deployment. Every configuration in the repository enforces access. Retention is explicit per category, with no defaults, and the periods are open.</p>
+<p class="navlink navlink-detail">The detail: <a href="#b6-privacy-and-security-are-enforced-in-the-request-path">B.6</a></p>
+</section>
+<section class="sec" aria-labelledby="a8-every-claim-carries-a-label-built-designed-or-open">
+<h2 id="a8-every-claim-carries-a-label-built-designed-or-open">A.8 Every claim carries a label: built, designed or open</h2>
+<p class="lead-in"><span class="chip chip-built">Built</span>: the decision path with consent, tenancy and access; the order of whatever sits in a slot, page modules included; the documents and the console; receipts, and replay of one slot; attribution and the day report; learning with the dial at 0; product re-ranking. <span class="chip chip-designed">Designed</span>: position-bias correction, per-context layout configuration, and embeddings. <span class="chip chip-open">Open</span>: a customer deployment's first configuration; ODP and Feature Experimentation on a customer deployment; the retention periods; the production experiment; the production memory settings; the billing meter; timing on the target deployment. The one exception to keep straight: everything after the answer depends on recording, and with the SDK as shipped recording is not switched on yet (<a href="#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">A.5</a>).</p>
+<div class="tbl tbl-never"><table class="rt t-never"><thead><tr><th scope="col">Never say</th><th scope="col">Say instead</th></tr></thead><tbody><tr><td class="c-never" data-label="Never say">"We don't use a model."</td><td class="c-say" data-label="Say instead">"It calls no AI model to decide."</td></tr><tr><td class="c-never" data-label="Never say">"It can score with your own model."</td><td class="c-say" data-label="Say instead">"A customer's own model in the score is switched off by policy and not offered."</td></tr><tr><td class="c-never" data-label="Never say">"It decides in N milliseconds."</td><td class="c-say" data-label="Say instead">"We quote timing only from a measurement on your deployment."</td></tr><tr><td class="c-never" data-label="Never say">"It optimizes itself."</td><td class="c-say" data-label="Say instead">"Nothing learned moves a score until a person raises the learning dial. Automatic weight changes and Thompson sampling are switched off by policy and not offered."</td></tr><tr><td class="c-never" data-label="Never say">"It lifted conversion."</td><td class="c-say" data-label="Say instead">"The day report credits outcomes to decisions; it claims no lift."</td></tr><tr><td class="c-never" data-label="Never say">"The page rearranges itself."</td><td class="c-say" data-label="Say instead">"For each visitor, the engine orders whatever sits in a slot, including a stack of page modules, and shows why. Where each slot sits on the page stays the site's own template, and changing the layout by context is a designed next step."</td></tr><tr><td class="c-never" data-label="Never say">"Opal makes the decisions."</td><td class="c-say" data-label="Say instead">"The engine decides; Opal creates and explains. Opal is not connected to the engine today."</td></tr></tbody></table></div>
+<p class="navlink navlink-detail">The detail: <a href="#b8-ten-statuses-come-up-most-and-the-status-page-holds-the-rest">B.8</a> and <a href="#b7-limits-are-budgets-in-the-code-and-no-timing-may-be-quoted">B.7</a></p>
+</section>
+<section class="sec" aria-labelledby="where-ai-and-credits-fit">
+<h2 id="where-ai-and-credits-fit">Where AI and credits fit</h2>
+<p>The engine decides, and it calls no AI model to decide, so serving a page never spends an AI credit, however much traffic grows. AI work that people do, such as writing content, explaining results or analyzing them, is where credits belong, and Opal is that product; it is not connected to the engine today. The engine's own reasons for each decision are arithmetic it produces itself. How each line is metered and priced is monetization's decision and is still open.</p>
+<p>The whole boundary is on the credits page, <a href="/credits">Where Opal and AI credits fit</a>.</p>
+</section>
+<section class="sec sec-part" aria-labelledby="part-b-the-detail">
+<h2 id="part-b-the-detail" class="part">Part B. The detail</h2>
+<p>Every engine number here is a default or a limit in the code, not a measurement. "Fixed in code" means changing it needs a software release; the rest are published settings.</p>
+</section>
+<section class="sec" aria-labelledby="b1-the-decision-path-runs-in-a-fixed-order">
+<h2 id="b1-the-decision-path-runs-in-a-fixed-order">B.1 The decision path runs in a fixed order</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a1-the-unit-of-state-is-the-dimension-value-not-the-click">A.1</a> and <a href="#a2-ten-steps-run-from-the-visitors-first-call-to-the-learning-dial">A.2</a></p>
+<ol><li><strong>Identity.</strong> The first call mints <code>vis-&lt;uuid&gt;</code>, <code>s-&lt;uuid&gt;</code> and a shopper capability signed with HMAC-SHA-256, valid for at most 24 hours. The sign-in merge adds faded scores and unions audiences, so nothing is overridden.</li><li><strong>Consent.</strong> Personalization needs both switches. With either off, the defaults show and every receipt carries a note. Cookies and request hints can only refuse. A choice lasts 30 days, fixed in code.</li><li><strong>Touches.</strong> The action is <code>data.action</code>, else <code>data.eventName</code>, else <code>data.event</code>, else the event type. An action the registry does not name weighs 0. A customer tenant's events count only with <code>eventAttributes: event-when-unknown</code>; the default, <code>catalog-only</code>, counts nothing. Where the catalog names values on a dimension, an event value outside them builds nothing on it.</li><li><strong>Interest.</strong> The registry's defaults are τ 14 days (at most 90), K 1.8, an entry line of 0.6, an exit line of 0.45, a pruning floor of 0.0001 and 24 values per dimension; τ, K and both lines can each be set per dimension. With a view weighing 1, one view gives 0.357, two give 0.526, and three give 0.625, enough to join an audience. Time alone can take a visitor out of an audience, never put one in. The code calls the 14 days "a documented ENGINEERING default, not a customer calibration", and the production value is open.</li><li><strong>Journey stage.</strong> A visit ends after 30 idle minutes, fixed in code. The journey stage moves to considering, reported as thinking, at the third interaction, and to deciding at the first purchase, unless the registry's <code>journey</code> block says otherwise.</li><li><strong>Regional prior.</strong> Touches also count for the visitor's region, with no visitor id, on a 24-hour memory fixed in code. Shares are relative to each dimension's leader. The region answers once it has <code>minEvents</code> events, else its country, else everyone: the regional fallback. The compiled default is on, with kBlend 1 and minEvents 30, set in the learn document's <code>regional</code> block. An asserted region selects the prior only on the demo profile, with tracking consent, and the receipt says so.</li><li><strong>Eligibility.</strong> A piece must be <code>live</code>, inside its window, not <code>inStock: false</code>, and pass its <code>eligibleWhen</code> rule. Region rules match exactly or by country, and fail closed without a region.</li><li><strong>Controls and pins.</strong> Off limits, exclusions and allowed types act first. <code>pinnedPieceIds</code>, up to 50, is a required prefix served at score 0 and marked <code>tenant-pinned</code>. If one cannot be served, the whole slot serves nothing.</li><li><strong>Score.</strong> The base is below, with ω from 0 to 1. Then come, in order: the anchor product's complements, arrival seeds (the arrival channel, campaign term, referring network or operating system family), journey stage, freshness, fatigue, merchandising weights (held to half to double by default) and the lift. The external-model term is switched off by policy.</li><li><strong>Ranking.</strong> Pieces sort by score, then catalog order, then id, and the top ten are recorded. A diversity cap allows <code>max</code> pieces per value, and no piece repeats on a page. With no signal at all, the slot serves catalog order, labeled the default. A slot's pieces can be page modules, painted in the engine's order; where the slot sits is set by the page's template.</li><li><strong>After the answer.</strong> With tracking consent only, records go to the queue and file storage, the visitor's ring of recent decisions, and the slot's learning object. <a href="#b5-integration-is-a-session-a-consent-choice-events-and-snapshots">B.5</a> covers the SDK.</li></ol>
+<pre><code>event:  R ← R · e^(−Δt/τ) + w,  and the last touch becomes now
+read:   a = R / (R + K),  with R faded to now
+prior:  λ = kBlend / (kBlend + Σa);  ã = (1 − λ) · a + λ · share
+score:  B0 = Σ over the piece's tags of ω[slot, dimension] · ã(value)
+learn:  score_final = score · lift^γ</code></pre>
+<p>Σa adds all the visitor's interests, so a stranger has λ = 1 and is scored on their region's shares.</p>
+</section>
+<section class="sec" aria-labelledby="b2-the-published-documents-hold-the-settings-an-operator-changes">
+<h2 id="b2-the-published-documents-hold-the-settings-an-operator-changes">B.2 The published documents hold the settings an operator changes</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">A.4</a></p>
+<p>A tenant's published documents are kept in file storage as revisions that never change, alongside its imported priors. A save validates the whole document, returns every error, and records who changed it and why. It must carry <code>If-Match</code> and <code>Idempotency-Key</code>, so two people cannot overwrite each other. A document is at most 2 MiB. Each decision reads one coherent set of them, and no propagation time is promised. Operators hold a role per tenant and act with a 15-minute token renewed by a 7-day refresh, with optional single sign-on. A brand-new scope answers "uninitialized", and no customer route initializes it.</p>
+</section>
+<section class="sec" aria-labelledby="b21-the-registry-says-what-is-scored-and-how-fast-it-fades">
+<h2 id="b21-the-registry-says-what-is-scored-and-how-fast-it-fades">B.2.1 The registry says what is scored and how fast it fades</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">A.4</a></p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Field</th><th scope="col">What it sets</th><th scope="col">Changed in</th></tr></thead><tbody><tr><td data-label="Field"><code>dimensions</code></td><td data-label="What it sets">Key, source field, single or multiple values, band cuts, own τ, K and lines</td><td data-label="Changed in">Console for τ, K and lines; API for the rest</td></tr><tr><td data-label="Field"><code>weights</code></td><td data-label="What it sets">What each named action adds</td><td data-label="Changed in">Console</td></tr><tr><td data-label="Field"><code>tauMs</code>, <code>K</code>, <code>thetaIn</code>, <code>thetaOut</code>, <code>epsilon</code>, <code>maxValuesPerDim</code></td><td data-label="What it sets">Memory, half-strength point, entry and exit lines, pruning floor, values kept</td><td data-label="Changed in">Console</td></tr><tr><td data-label="Field"><code>eventAttributes</code></td><td data-label="What it sets"><code>catalog-only</code> or <code>event-when-unknown</code></td><td data-label="Changed in">API</td></tr><tr><td data-label="Field"><code>journey</code></td><td data-label="What it sets">The journey-stage thresholds</td><td data-label="Changed in">API</td></tr><tr><td data-label="Field"><code>continuity</code></td><td data-label="What it sets">Return recognition, off until published with a retention approval</td><td data-label="Changed in">API</td></tr></tbody></table></div>
+<p>The limits are 32 dimensions, 200 weights and 1,000 values per dimension. Every customer tenant needs its own registry, and counts exactly the weights it publishes.</p>
+</section>
+<section class="sec" aria-labelledby="b22-the-catalog-lists-the-pieces-and-their-tags">
+<h2 id="b22-the-catalog-lists-the-pieces-and-their-tags">B.2.2 The catalog lists the pieces and their tags</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">A.4</a></p>
+<p>A piece needs <code>id</code>, <code>customerContentId</code> (the brand's id, which the answer returns), <code>type</code>, <code>title</code>, <code>tags</code> and <code>slotTypes</code>. Optional fields set its <code>lifecycle</code> status, <code>window</code>, <code>eligibleWhen</code> rule, <code>merchandising</code> signals (season, promotion and margin, each 0 to 1), <code>journeyStageFit</code>, <code>freshnessDate</code>, <code>featuredProductIds</code>, <code>complements</code>, <code>inStock</code> and display fields. An operator imports the catalog as JSON or CSV, or pulls it from a JSON URL. No console screen edits it, and History can roll it back. Its tag values are the vocabulary events must match. It holds content, not products.</p>
+</section>
+<section class="sec" aria-labelledby="b23-the-slots-document-sets-each-slots-weights-and-rules">
+<h2 id="b23-the-slots-document-sets-each-slots-weights-and-rules">B.2.3 The slots document sets each slot's weights and rules</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a4-four-published-documents-configure-it-and-changing-them-needs-no-deploy">A.4</a></p>
+<p>Pages list their slots, and a slot name is unique across the brand's pages because each one is a learning object. A slot sets <code>take</code> (1 to 50), <code>weights</code> (ω per dimension), pins (up to 50), off limits, exclusions, allowed types, <code>stage</code>, <code>freshness</code>, <code>fatigue</code>, <code>complements</code>, <code>diversity</code>, <code>merchandising</code> and <code>seeds</code> (up to 100 rules). The console's Slot rules screen sets the take, pins, exclusions, weights, journey stage, freshness, fatigue, diversity and merchandising weights; arrival seeds go through the API. No slot setting changes the page's layout or where a slot sits; the page's template sets that. A pinned piece's receipt says "ranking never ran for this piece".</p>
+</section>
+<section class="sec" aria-labelledby="b24-the-learn-document-holds-the-dials">
+<h2 id="b24-the-learn-document-holds-the-dials">B.2.4 The learn document holds the dials</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">A.5</a></p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Block</th><th scope="col">Compiled default</th><th scope="col">Changed in</th></tr></thead><tbody><tr><td data-label="Block"><code>holdout</code>: share, arms, salt</td><td data-label="Compiled default">5% to <code>default</code></td><td data-label="Changed in">Console, Dials</td></tr><tr><td data-label="Block"><code>regional</code>: on, <code>kBlend</code>, <code>minEvents</code>, <code>dimensions</code></td><td data-label="Compiled default">On, 1, 30, every dimension</td><td data-label="Changed in">Dials; the dimension list by API</td></tr><tr><td data-label="Block"><code>policy</code>: attribution windows</td><td data-label="Compiled default">Same session, same piece, last decision; 30 minutes for click, dwell, video and custom outcomes, 6 hours for wishlist and add to cart, 7 days for purchase</td><td data-label="Changed in">Dials</td></tr><tr><td data-label="Block"><code>stats</code>: shrinkage strength n0, the counts' memory, the lift clamp, minimum exposures nMin</td><td data-label="Compiled default">30, 21 days, 0.5 to 2, 30</td><td data-label="Changed in">Dials</td></tr><tr><td data-label="Block">Per slot: <code>gamma</code>, reward, objective, measurement basis, exploration</td><td data-label="Compiled default">0, click, unit, <code>served</code>, off</td><td data-label="Changed in">Dials</td></tr><tr><td data-label="Block">Item controls: freeze, reject, reset</td><td data-label="Compiled default">None</td><td data-label="Changed in">What it has learned</td></tr></tbody></table></div>
+<p>The compiled default says "Every slot runs at γ = 0 (shadow)". The external-model and autonomy settings are switched off by policy, and inert.</p>
+</section>
+<section class="sec" aria-labelledby="b3-the-receipt-shows-the-arithmetic-and-the-day-report-counts-outcomes">
+<h2 id="b3-the-receipt-shows-the-arithmetic-and-the-day-report-counts-outcomes">B.3 The receipt shows the arithmetic, and the day report counts outcomes</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a2-ten-steps-run-from-the-visitors-first-call-to-the-learning-dial">A.2</a> and <a href="#a5-learning-counts-outcomes-and-moves-nothing-until-the-dial-moves">A.5</a></p>
+<p>A receipt is one record per served position.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Part</th><th scope="col">What it holds</th></tr></thead><tbody><tr><td data-label="Part">Who and when</td><td data-label="What it holds">Decision id, tenant, brand, visitor, session, identity anchor, time</td></tr><tr><td data-label="Part">Where</td><td data-label="What it holds">Page, slot, position, rank after pins, both content ids</td></tr><tr><td data-label="Part">Candidates</td><td data-label="What it holds">The top ten, with scores</td></tr><tr><td data-label="Part">Context</td><td data-label="What it holds">Arrival channel, visit band, region, leading interest and journey stage; the arm, the experiment, whether it explored, and the authority: engine, pin or default</td></tr><tr><td data-label="Part">Configuration</td><td data-label="What it holds">The revision of every document in force</td></tr><tr><td data-label="Part">Explain</td><td data-label="What it holds">Drivers, <code>score_base</code>, the regional block (λ, level, asserted, contribution), seeds, lift, <code>score_final</code>, a sentence per rule applied</td></tr><tr><td data-label="Part">Replay inputs</td><td data-label="What it holds">The visitor's vector as scored, regional shares, served counts</td></tr></tbody></table></div>
+<p>The drivers list only the four strongest tag terms; the rest sit inside <code>score_base</code>. For a stranger, a driver's interest is their region's share. A receipt never holds asserted conditions, the raw event history, the account id, the documents themselves, or candidates beyond ten. Operators read receipts through <code>/v1/{tenant}/visitors/{id}/receipts</code> and the console's "Why a shopper saw this". Replay is exact for one slot, never for a whole page. The page's own answer carries only the drivers and the diversity note.</p>
+<p>The day report covers one UTC day per tenant and brand. It is built at 03:00 UTC, retried every five minutes from folded hours, and shown in the console's Measurement view. It holds counts, policies, per-slot grids, exploration and holdout rows, visitor and named outcomes, and hour coverage. It labels itself <code>attribution_diagnostic</code>, with inference <code>unavailable</code> and experimental coverage <code>not_assessed</code>, and no window is narrower than a UTC day. Pickup and referral outcomes are credited like a click and never reported as a sale.</p>
+</section>
+<section class="sec" aria-labelledby="b4-a-customer-deployment-has-its-own-store-of-every-kind">
+<h2 id="b4-a-customer-deployment-has-its-own-store-of-every-kind">B.4 A customer deployment has its own store of every kind</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a3-it-runs-on-cloudflare-in-a-separate-deployment-for-each-customer">A.3</a></p>
+<p>KV is Cloudflare's key-value store: fast reads, with writes that take a short while to reach every location. R2 is its file storage and D1 its SQL database. A Durable Object, or object, is a small named program with its own storage, one per name, so it is the single writer for what it holds.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Binding</th><th scope="col">What it holds</th><th scope="col">Customer deployment</th><th scope="col">Demo Workers</th></tr></thead><tbody><tr><td data-label="Binding"><code>CACHE</code> (KV)</td><td data-label="What it holds">Regional and lift snapshots, audiences, monitor results</td><td data-label="Customer deployment">Its own</td><td data-label="Demo Workers">Shared</td></tr><tr><td data-label="Binding"><code>SESSIONS</code> (KV)</td><td data-label="What it holds">Visitor records with interests; identity links</td><td data-label="Customer deployment">Its own</td><td data-label="Demo Workers">Shared</td></tr><tr><td data-label="Binding"><code>STORAGE</code> (R2)</td><td data-label="What it holds">Published documents, the ledger, hour aggregates, day reports, lift archives, erasure markers</td><td data-label="Customer deployment">Its own</td><td data-label="Demo Workers">Shared</td></tr><tr><td data-label="Binding"><code>DB</code> (D1)</td><td data-label="What it holds">Operator accounts, sign-in sessions, grants per tenant, service credentials, audit, single sign-on links</td><td data-label="Customer deployment">Its own, product migrations only</td><td data-label="Demo Workers">Shared, with demo data</td></tr><tr><td data-label="Binding"><code>EVENT_QUEUE</code> (queue and dead-letter queue)</td><td data-label="What it holds">Ledger messages</td><td data-label="Customer deployment">Its own pair</td><td data-label="Demo Workers">Its own pair</td></tr><tr><td data-label="Binding"><code>ANALYTICS</code> (Analytics Engine)</td><td data-label="What it holds">Monitor points, when retention admits them</td><td data-label="Customer deployment">Its own</td><td data-label="Demo Workers">Shared</td></tr><tr><td data-label="Binding"><code>BROWSER</code> (Browser Rendering)</td><td data-label="What it holds">A screenshot route</td><td data-label="Customer deployment">Absent</td><td data-label="Demo Workers">Refused when enforced</td></tr><tr><td data-label="Binding"><code>ASSETS</code> (static files)</td><td data-label="What it holds">Pages, the SDK, the console</td><td data-label="Customer deployment">Console, SDK, sign-in files</td><td data-label="Demo Workers">Everything</td></tr><tr><td data-label="Binding"><code>ShopperReflex</code> (object per visitor)</td><td data-label="What it holds">Session grants and consent; on the object host, interests and exit alarms</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr><tr><td data-label="Binding"><code>PersonalizationWebSocket</code> (object per visitor)</td><td data-label="What it holds">The live socket on the session host</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr><tr><td data-label="Binding"><code>DecisionRing</code> (object per visitor)</td><td data-label="What it holds">The last 200 decisions within 7 days; outcome crediting</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr><tr><td data-label="Binding"><code>RegionTrend</code> (object per tenant and region)</td><td data-label="What it holds">Interest counts, no visitor ids</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr><tr><td data-label="Binding"><code>LearnStats</code> (object per tenant, brand and slot)</td><td data-label="What it holds">Exposure and success counts; lift snapshots</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr><tr><td data-label="Binding"><code>RateLimiter</code> (object per name)</td><td data-label="What it holds">Request counters, the sign-in budget</td><td data-label="Customer deployment">Present</td><td data-label="Demo Workers">Per Worker</td></tr></tbody></table></div>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Setting</th><th scope="col">What it does</th></tr></thead><tbody><tr><td data-label="Setting"><code>DEPLOYMENT_PROFILE=customer</code></td><td data-label="What it does">Only listed operations, the console and the SDK answer; no demo bindings or routes; declared tenants; operators from D1; never an asserted prior; needs enforced access</td></tr><tr><td data-label="Setting"><code>DEPLOYMENT_PROFILE=demo</code></td><td data-label="What it does">Every route; an asserted region may select the prior, labeled asserted</td></tr><tr><td data-label="Setting">Profile missing or misspelled</td><td data-label="What it does">Every entry point answers 503</td></tr><tr><td data-label="Setting"><code>AUTH_MODE=enforced</code></td><td data-label="What it does">Site key bound to the tenant, operator token and grant, origin allow-list; every configuration in the repository</td></tr><tr><td data-label="Setting"><code>AUTH_MODE=open</code></td><td data-label="What it does">Gates pass, shopper capability still required; the code's default, used by no configuration in the repository</td></tr><tr><td data-label="Setting"><code>REFLEX_HOST</code></td><td data-label="What it does"><code>session</code> everywhere; <code>do</code>, the visitor's own object, built and held back</td></tr></tbody></table></div>
+<p>A customer deployment omits the legacy and demo-only objects. Scheduled jobs run every five minutes (hour folds, report retries, the monitor, warehouse deliveries), hourly (the regional roll-up) and at 03:00 UTC (the day report and the erasure rewrite), over their own Worker's tenants, so no tenant may sit on two Workers that run them. Three demo Workers exist: a shared one with the older demos on a pinned build, and one each for Top Offers and Vantage on today's engine. Customer deployments change only through the deployment workflow.</p>
+</section>
+<section class="sec" aria-labelledby="b5-integration-is-a-session-a-consent-choice-events-and-snapshots">
+<h2 id="b5-integration-is-a-session-a-consent-choice-events-and-snapshots">B.5 Integration is a session, a consent choice, events and snapshots</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a6-the-site-sends-events-and-paints-what-the-engine-returns">A.6</a></p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Call</th><th scope="col">The site sends</th><th scope="col">It gets back</th></tr></thead><tbody><tr><td data-label="Call"><code>POST /v1/{tenant}/identity/session</code></td><td data-label="The site sends">Site key, <code>X-Tenant</code></td><td data-label="It gets back">A shopper capability, <code>vis-&lt;uuid&gt;</code>, <code>s-&lt;uuid&gt;</code></td></tr><tr><td data-label="Call"><code>POST /realtime/session/preferences</code></td><td data-label="The site sends">The visitor's consent choice, bound to their grant</td><td data-label="It gets back">The choice, stored in the visitor's object</td></tr><tr><td data-label="Call"><code>POST /realtime/action</code></td><td data-label="The site sends">One event, with <code>X-Shopper-Session</code>, site key, <code>X-Tenant</code></td><td data-label="It gets back">The product references it could not place</td></tr><tr><td data-label="Call"><code>GET</code> or <code>POST /v1/{tenant}/decisions/snapshot</code></td><td data-label="The site sends">Page, brand, channel, arrival, page instance; on <code>GET</code>, up to eight <code>ctx.&lt;name&gt;</code> conditions</td><td data-label="It gets back">Per slot, content ids, scores and drivers; document versions; consent and timing sources; experiment assignment</td></tr><tr><td data-label="Call"><code>POST /v1/{tenant}/identity/link</code></td><td data-label="The site sends">The backend's signature over tenant, visitor, account and expiry</td><td data-label="It gets back">The two profiles merge</td></tr><tr><td data-label="Call"><code>POST /sort</code></td><td data-label="The site sends">Up to 500 candidates with the registry's attribute fields</td><td data-label="It gets back">The same ids in the visitor's order, with drivers</td></tr><tr><td data-label="Call"><code>POST /content/catalog/import</code> or <code>/pull</code></td><td data-label="The site sends">JSON or CSV, or a URL, from an operator</td><td data-label="It gets back">A new catalog revision</td></tr><tr><td data-label="Call"><code>GET /v1/{tenant}/ledger/batches</code></td><td data-label="The site sends">A day</td><td data-label="It gets back">Its ledger objects, for a warehouse job</td></tr><tr><td data-label="Call"><code>POST /v1/{tenant}/identity/events</code></td><td data-label="The site sends">Up to 1,000 history rows, from an operator</td><td data-label="It gets back">Rows faded as late actions</td></tr></tbody></table></div>
+<p>An event carries its type, the visitor and session ids, the product id with the registry's attribute fields, arrival signals and a timestamp. The snapshot is never cached and is refused above 2 MiB, and its timing fields are not figures to quote. A <code>ctx</code> condition only gates the pieces whose rule names it. <code>/sort</code> never filters and uses no arrival seeds, merchandising weights, journey stage, learning or pins. It applies the regional prior only where the learn document lists regional dimensions, and at dial 0 it returns the platform's own order.</p>
+<p class="lead-in"><strong>The SDK</strong> is served at <code>/sdk/edge-personalization.js</code>, with an <code>.esm.js</code> twin: Core holds the shopper capability, sessions and transport, Emit sends events, and Listen receives decisions. It captures events through an explicit API, <code>data-op-*</code> attributes, a dataLayer adapter with GA4 names, and a renderer callback that acknowledges a paint. It has a listen-only mode, and <code>identify</code> and <code>logout</code>. If nothing arrives within <code>hydrateTimeoutMs</code>, the site's default renders.</p>
+<p class="lead-in"><strong>Why the SDK records nothing yet.</strong> It always sends a page instance, which makes its snapshot "a read-only offer: receiving or polling a choice creates no behavioral, ledger or learning exposure". A slot on the <code>served</code> basis then records nothing. A slot on the <code>rendered-v1</code> basis records when the page acknowledges the paint, but that needs durable recovery, which every configuration holds off. So recording needs the basis set to <code>rendered-v1</code> in the learn document and recovery switched on, and switching it on needs approved retention periods for its data first, and those are open. The hosted demos record because they call the snapshot with no page instance.</p>
+<p class="lead-in"><strong>What the customer provides.</strong> Each ask says what we need and what we use it for.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">What we need</th><th scope="col">What we use it for</th><th scope="col">Who provides it</th></tr></thead><tbody><tr><td data-label="What we need">The exact origins, scheme and host, that their pages call from, for staging and production</td><td data-label="What we use it for">The cross-origin allow-list</td><td data-label="Who provides it">The customer's platform team</td></tr><tr><td data-label="What we need">A site key per brand, or we mint one</td><td data-label="What we use it for">It identifies the site and binds the tenant on every call from its pages; it is not a secret</td><td data-label="Who provides it">Either</td></tr><tr><td data-label="What we need">The registry: the dimensions to score on, the field each one reads, how much each action counts, and the memory</td><td data-label="What we use it for">What the engine scores on, and how fast it forgets</td><td data-label="Who provides it">The customer, with Professional Services</td></tr><tr><td data-label="What we need">A content feed: each piece's own id, type, title, tags in the registry's vocabulary, slot types, render URL and windows</td><td data-label="What we use it for">The catalog the engine ranks</td><td data-label="Who provides it">The customer's content team</td></tr><tr><td data-label="What we need">A slot map: the pages, their slots and each slot's default</td><td data-label="What we use it for">The slots document; each default renders whenever the engine is silent</td><td data-label="Who provides it">The customer's front-end and merchandising owners</td></tr><tr><td data-label="What we need">Product events carrying the product id and the registry's attribute fields</td><td data-label="What we use it for">Building interest: the engine holds no product catalog for a customer, so an event without them builds nothing</td><td data-label="Who provides it">The customer's tag owner</td></tr><tr><td data-label="What we need">The conversion event: the order id, value, currency and items</td><td data-label="What we use it for">Outcomes for attribution and learning</td><td data-label="Who provides it">The customer's commerce and analytics owners</td></tr><tr><td data-label="What we need">An explicit consent choice, passed by the site from its consent banner</td><td data-label="What we use it for">Without it, nothing personalizes and nothing is recorded</td><td data-label="Who provides it">The customer's privacy owner</td></tr><tr><td data-label="What we need">A signed identity proof at sign-in, and the secret behind it</td><td data-label="What we use it for">Merging the anonymous and signed-in profiles</td><td data-label="Who provides it">The customer's backend</td></tr><tr><td data-label="What we need">Retention periods for each category of data</td><td data-label="What we use it for">Required before anything that depends on them is captured, recording included</td><td data-label="Who provides it">The customer's privacy owner</td></tr><tr><td data-label="What we need">A person who runs the connection check from inside their network</td><td data-label="What we use it for">Proving the network path from their side</td><td data-label="Who provides it">The customer</td></tr></tbody></table></div>
+<p>Optional: candidate product lists from the commerce platform, for product re-ranking; a catalog-search service and a model key, for typed search; and historical rows, which build interests as actions that arrived late.</p>
+</section>
+<section class="sec" aria-labelledby="b6-privacy-and-security-are-enforced-in-the-request-path">
+<h2 id="b6-privacy-and-security-are-enforced-in-the-request-path">B.6 Privacy and security are enforced in the request path</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a7-consent-comes-first-identities-are-pseudonymous-and-tenants-are-kept-apart">A.7</a></p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Area</th><th scope="col">As built</th><th scope="col">Where in the code (for engineers)</th></tr></thead><tbody><tr><td data-label="Area">Consent</td><td data-label="As built">Off until an explicit, scoped choice; two switches; 30 days; tracking off writes nothing</td><td data-label="Where in the code (for engineers)"><code>src/content/consent.ts</code></td></tr><tr><td data-label="Area">Visitor identity</td><td data-label="As built">Random ids in an HMAC-SHA-256 shopper capability valid at most 24 hours, required on every call from the visitor's browser; caller-chosen ids and old cookies confer nothing</td><td data-label="Where in the code (for engineers)"><code>src/identity/sessionCapability.ts</code></td></tr><tr><td data-label="Area">Signed-in identity</td><td data-label="As built"><code>sh_</code> plus a salted hash of the account id; the deployment workflow refuses a salt change</td><td data-label="Where in the code (for engineers)"><code>src/identity/shopperId.ts</code></td></tr><tr><td data-label="Area">Tenant isolation</td><td data-label="As built">Keys under <code>t:&lt;tenant&gt;:</code>, the default demo tenant aside; marker-carrying input refused; nothing pools across brands</td><td data-label="Where in the code (for engineers)"><code>src/tenancy/tenant.ts</code></td></tr><tr><td data-label="Area">Tenant selection</td><td data-label="As built">Path, <code>X-Tenant</code>, socket and host must agree on a provisioned tenant</td><td data-label="Where in the code (for engineers)"><code>src/tenancy/middleware.ts</code></td></tr><tr><td data-label="Area">Access</td><td data-label="As built">Site key identifies, not a secret; operator token and tenant grant, with a sign-in budget; origin allow-list; security headers</td><td data-label="Where in the code (for engineers)"><code>src/middleware/edgeAccess.ts</code>, <code>src/middleware/operatorAuth.ts</code></td></tr><tr><td data-label="Area">Stored, with consent</td><td data-label="As built">Pseudonymous ids, interests, visit counters, decision and outcome records, a typed behavior projection, counts with no identifiers</td><td data-label="Where in the code (for engineers)"><code>src/content/types.ts</code>, <code>src/ledger/behavior.ts</code></td></tr><tr><td data-label="Area">Never stored</td><td data-label="As built">Asserted conditions as evidence, the arrival beyond its channel and fired seeds, device detail beyond the operating system family of the visitor's phone, the raw account id, demo-page credentials</td><td data-label="Where in the code (for engineers)"><code>src/services/platform.ts</code>, <code>src/identity/shopperId.ts</code></td></tr><tr><td data-label="Area">Retention</td><td data-label="As built">Explicit per tenant and category; a missing category refuses capture; a session ends at the earlier of 30 days and its retention</td><td data-label="Where in the code (for engineers)"><code>src/retention.ts</code></td></tr><tr><td data-label="Area">Erasure</td><td data-label="As built">Bounded, resumable local steps, "not ... proof of physical/external erasure"; the visitor's records are hidden at once, and a nightly rewrite over a 90-day ledger window removes them</td><td data-label="Where in the code (for engineers)"><code>src/identity/erase.ts</code>, <code>src/ledger/erasure.ts</code></td></tr><tr><td data-label="Area">Logs</td><td data-label="As built">Persistent logs off everywhere; fixed phrases and counts</td><td data-label="Where in the code (for engineers)"><code>wrangler.toml</code></td></tr></tbody></table></div>
+<p>The screenshot route can run arbitrary JavaScript, so it needs a token and is refused under enforced access. Open: the retention periods, the disposition of history and physical erasure.</p>
+</section>
+<section class="sec" aria-labelledby="b7-limits-are-budgets-in-the-code-and-no-timing-may-be-quoted">
+<h2 id="b7-limits-are-budgets-in-the-code-and-no-timing-may-be-quoted">B.7 Limits are budgets in the code, and no timing may be quoted</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a8-every-claim-carries-a-label-built-designed-or-open">A.8</a></p>
+<p>Latency has been measured only on staging, on 2026-09-05, by a latency run from one machine at forty calls per row and by a load test, and neither has been repeated. By the latency run's own account, the decision step was not measurable at that resolution, a new visitor's first request was dominated by session storage work, and no pilot target was met on the first request that day. A deployed Worker's clock advances with I/O, not computation, so a pure scoring step can read zero without being free. What can be said is a count: per candidate, one lookup and multiply-add per tag value on a weighted dimension, a check per seed tag, up to three merchandising factors and one power. Any timing must come from a fresh run on the target deployment.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Area</th><th scope="col">Budget in the code</th></tr></thead><tbody><tr><td data-label="Area">Registry and documents</td><td data-label="Budget in the code">32 dimensions, 200 weights, 1,000 values per dimension; 2 MiB per document</td></tr><tr><td data-label="Area">Slots and rules</td><td data-label="Budget in the code">50 pieces, 50 pins, 1,000 exclusions, 100 seed rules; 64 regions and 8 conditions of 32 values per rule</td></tr><tr><td data-label="Area">Snapshot and sort</td><td data-label="Budget in the code">8 <code>ctx</code> conditions, an 8 KiB body, a 2 MiB answer; 500 sort candidates in a 2 MiB body</td></tr><tr><td data-label="Area">Learning and the day report</td><td data-label="Budget in the code">256 pieces per slot object; 50,000 records, 16 MiB of raw input, 800 objects and 6 policies per report</td></tr><tr><td data-label="Area">Queue and import</td><td data-label="Budget in the code">Batches of 100, concurrency 6, 2 retries, then the dead-letter queue; 1,000 history rows per request</td></tr></tbody></table></div>
+<p>These are application budgets, not measured capacity. The known findings are build items:</p>
+<ol><li>The object host stalls the ledger consumer under a burst of snapshots, so every configuration runs the session host.</li><li>The session host has rare slow reads.</li><li>Report builds can raise "Configuration publication authority unavailable" in the learning objects.</li><li>On the session host, an audience flag outlives its score until the visitor's next event; ranking reads the score.</li><li>The local session-host ledger consumer stalled twice after report builds; the cause is a hypothesis.</li><li>A busy hour can fail to fold without a logged cause, and the report lists it as missing.</li><li>Once, on a hosted demo, a receipt was written late after a report build.</li><li>An ineligible pinned piece empties its whole slot.</li><li>Every visitor's events feed the regional prior, rehearsals included.</li><li>The day report has no window under a UTC day, and nothing checks at publish that a listed regional dimension exists.</li></ol>
+<p>The architecture board's ruling on these findings is open. Not measured: the production memory on real traffic, ten thousand candidates, the object host under load, a first paint decided on a customer's own server, acceptance on a customer's browser, commerce platform, providers or warehouse, and cost on real traffic.</p>
+</section>
+<section class="sec" aria-labelledby="b8-ten-statuses-come-up-most-and-the-status-page-holds-the-rest">
+<h2 id="b8-ten-statuses-come-up-most-and-the-status-page-holds-the-rest">B.8 Ten statuses come up most, and the status page holds the rest</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#a8-every-claim-carries-a-label-built-designed-or-open">A.8</a></p>
+<p>These are the rows a solutions engineer is asked about most, worded as every piece in the package words them.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">What happens</th><th scope="col" class="c-verdict">Verdict</th></tr></thead><tbody><tr class="v-built"><td data-label="What happens">A stranger is served from their first event, on how they arrived: the campaign term, the channel, the referring network and the operating system family of their phone.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="What happens">Where the brand turns it on, a stranger leans on what their region is interested in, from the site's own events, until their own interests take over.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="What happens">A product list from the commerce platform is re-ranked by the visitor's interests, with nothing removed.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="What happens">The engine orders whatever sits in a slot for each visitor, a stack of page modules included, and shows why.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-designed"><td data-label="What happens">Configuring a page's layout per context, such as by channel or visit; where each slot sits on the page stays the site's own template.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-designed">Designed</span></td></tr><tr class="v-open"><td data-label="What happens">A first paint decided on the site's own server: a source module exists, and acceptance on a real site is the open part.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-open">Open</span></td></tr><tr class="v-built"><td data-label="What happens">A receipt records what was served and why; the brand's operators read it in the console, and replay is exact for one slot.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-built"><td data-label="What happens">Learning computes how much better each piece does in each context, and moves nothing until a person raises the learning dial.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-built">Built</span></td></tr><tr class="v-open"><td data-label="What happens">A customer deployment is set up by a workflow that stops before the tenant has its first configuration.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-open">Open</span></td></tr><tr class="v-open"><td data-label="What happens">Connecting ODP or Feature Experimentation to a customer deployment.</td><td class="c-verdict" data-label="Verdict"><span class="chip chip-open">Open</span></td></tr></tbody></table></div>
+<p>Every other row, the path to a customer deployment and the open decisions with their owners are on the status page, <a href="/status">What is built, designed and open</a>.</p>
+</section>
+<section class="sec" aria-labelledby="b9-a-worked-example-and-the-engineering-documents-go-deeper">
+<h2 id="b9-a-worked-example-and-the-engineering-documents-go-deeper">B.9 A worked example and the engineering documents go deeper</h2>
+<p class="navlink navlink-back">Back to the walk: <a href="#part-a-the-walk">Part A</a></p>
+<p>The worked example is the Vantage demo. Its interactive page, <em>How it works</em>, puts the constants on sliders: <a href="https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works">https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works</a>. The demo is at <a href="https://edge-platform-vantage.expedge.workers.dev/vantage/">https://edge-platform-vantage.expedge.workers.dev/vantage/</a>.</p>
+<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">For an engineer</th><th scope="col">What it covers</th></tr></thead><tbody><tr><td data-label="For an engineer">The integration kit under <code>docs/kit</code></td><td data-label="What it covers">The overview, the integration guide, the API reference and the staging connection check</td></tr><tr><td data-label="For an engineer"><code>docs/kit/03-payload-schemas.md</code></td><td data-label="What it covers">The payload schemas</td></tr><tr><td data-label="For an engineer">The SDK's notes under <code>src/sdk</code></td><td data-label="What it covers">The SDK</td></tr><tr><td data-label="For an engineer"><code>docs/deployment/01-deploy.md</code></td><td data-label="What it covers">The deployment workflow</td></tr><tr><td data-label="For an engineer"><code>docs/architecture/28-operator-surfaces-evaluation.md</code></td><td data-label="What it covers">The console's design</td></tr><tr><td data-label="For an engineer">The architecture documents under <code>docs/architecture</code></td><td data-label="What it covers">Learning, the audit of what is verified, and the rest of the design</td></tr></tbody></table></div>
+<p>These are internal engineering documents: never forward one to a customer.</p>
+</section>
+<div class="rule rule-close"><p class="rule-label" data-chrome="rule label">The one rule, again</p><p class="rule-text"><strong>Every setting that can change an answer lives in a published, versioned document; the engine does the arithmetic at the edge, calls no AI model to decide, and shows its work on a receipt.</strong></p></div>
+</article>
+</main>
+<footer class="foot">
+<div class="wrap">
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works" aria-current="page"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/status"><span class="pieces-name">What is built, designed and open</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo to show to whom</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
+</div>
+</footer>
+</body>
+</html>

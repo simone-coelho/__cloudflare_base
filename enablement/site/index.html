@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,78 +7,63 @@
 <meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
 <title>Optimizely enablement</title>
-<!-- Static page: no script, form, cookie or storage, and no request to any other address.
-     The inline style below is allowed by its SHA-256 in _headers. After editing the CSS, run
-     node enablement/check-site.mjs --hashes and paste the result into _headers. -->
+<!-- Built by enablement/render-pages.mjs from its source. Nothing inline: every style is in /site.css. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
-<style>
-:root{
-  /* The Optimizely palette, from the current green-led brand guidelines. */
-  --fir:#08251A;--mid-fir:#0D3A29;--light-fir:#197050;
-  --lf-green:#ABFF44;--grass:#7DDD3D;--light-blue:#91DBDA;
-  --neutral-3:#E4F0DA;--neutral-5:#C3CEAF;--white:#FFFFFF;
-  /* Roles, light. Dark overrides them below. */
-  --bg:var(--neutral-3);--surface:var(--white);--ink:var(--fir);--muted:var(--light-fir);
-  --chip-bg:var(--neutral-3);--chip-ink:var(--fir);
-  --radius:32px;
-  /* System stacks: the brand's sanctioned Roboto family is used where installed, nothing is fetched. */
-  --head:"Roboto Condensed",Roboto,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-  --body:Roboto,"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-  --mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  color-scheme:light dark;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:var(--fir);--surface:var(--mid-fir);--ink:var(--white);--muted:var(--neutral-5);--chip-bg:var(--fir);--chip-ink:var(--lf-green)}
-}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:400 1rem/1.3 var(--body)}
-.skip{position:absolute;left:16px;top:-64px;z-index:10;padding:10px 18px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;text-decoration:none}
-.skip:focus{top:16px;outline:3px solid var(--ink);outline-offset:3px}
-main{flex:1;width:100%;max-width:1040px;margin:0 auto;padding:clamp(40px,8vw,96px) clamp(16px,4vw,32px) 0}
-.eyebrow{display:inline-block;margin:0 0 20px;padding:6px 16px;border-radius:999px;background:var(--lf-green);color:var(--fir);font:700 .875rem/1.1 var(--body)}
-h1{margin:0 0 20px;font:900 clamp(1.75rem,8.5vw,4rem)/1.02 var(--head);letter-spacing:-.03em;overflow-wrap:break-word;text-wrap:balance}
-.lede{max-width:44rem;margin:0 0 24px;font-size:clamp(1.125rem,2.4vw,1.375rem);line-height:1.3;text-wrap:pretty}
-.signin{display:inline-block;max-width:100%;margin:0;padding:14px 24px;border-radius:var(--radius);background:var(--surface);font-size:.9375rem;line-height:1.3;text-wrap:pretty}
-.cards{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin:clamp(32px,6vw,56px) 0 0;padding:0;list-style:none}
-.card{display:flex;flex-direction:column;justify-content:space-between;gap:36px;min-height:200px;padding:28px;border-radius:var(--radius);background:var(--surface)}
-.num{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--fir);font:500 .875rem/1 var(--mono)}
-.card:nth-child(1) .num{background:var(--lf-green)}
-.card:nth-child(2) .num{background:var(--grass)}
-.card:nth-child(3) .num{background:var(--light-blue)}
-h2{margin:0;font:800 1.625rem/1.1 var(--head);letter-spacing:-.02em}
-.soon{display:inline-block;margin:14px 0 0;padding:6px 14px;border-radius:999px;background:var(--chip-bg);color:var(--chip-ink);font:400 .8125rem/1.2 var(--mono);letter-spacing:.03em}
-.foot{padding:48px 16px 32px;text-align:center;color:var(--muted);font:400 .8125rem/1.3 var(--mono);letter-spacing:.03em}
-.foot p{margin:0;text-wrap:balance}
-@media (min-width:880px){.cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}}
-@supports (corner-shape:squircle){.signin,.card{corner-shape:squircle}}
-</style>
+<link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the page</a>
-<main id="main">
-  <header>
-    <p class="eyebrow">Internal &middot; Optimizely</p>
-    <!-- The package name is written here and nowhere else in the site. Rename it by editing this one element. -->
-    <h1 id="package-name">Behavioural personalisation engine</h1>
-    <p class="lede">The enablement pages are being assembled, and they&rsquo;ll appear here.</p>
-    <p class="signin">This site is for Optimizely employees; a passphrase shared inside Optimizely opens it.</p>
-  </header>
-  <ul class="cards" role="list">
-    <li class="card">
-      <span class="num" aria-hidden="true">1</span>
-      <div><h2>For marketing</h2><p class="soon">Coming shortly</p></div>
-    </li>
-    <li class="card">
-      <span class="num" aria-hidden="true">2</span>
-      <div><h2>For account executives</h2><p class="soon">Coming shortly</p></div>
-    </li>
-    <li class="card">
-      <span class="num" aria-hidden="true">3</span>
-      <div><h2>For solutions engineers</h2><p class="soon">Coming shortly</p></div>
-    </li>
-  </ul>
+<header class="masthead">
+<div class="wrap masthead-inner">
+<p class="eyebrow">Internal · Optimizely</p>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/" aria-current="page">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/status">Status</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+</div>
+</header>
+<main id="main" class="wrap">
+<div class="piece-meta"><p class="stamp">Updated October 2, 2026 · engine facts as of commit 8b4f74c</p></div>
+<div class="hero" data-landing="the design document's section 3.2, with the lead's brief">
+<h1><span id="package-name">Behavioral Targeting and Intelligence</span></h1>
+<p class="lede" data-paragraph="C">A visitor's behavior sets their interests. The brand's team sets the rules. The engine ranks what is left, and gives its reasons.</p>
+<p class="signin">This site is for Optimizely employees; it opens with the passphrase you were given.</p>
+</div>
+<h2 class="landing-h2">Each page is written for one reader</h2>
+<ul class="cards">
+<li class="card">
+<span class="num" aria-hidden="true">1</span>
+<h3>For marketing</h3>
+<p class="card-rule" data-rule-of="docs/enablement/content/what-it-is.md">With consent, the engine remembers what each visitor is interested in, not who they are, and ranks your content by the rules your team publishes.</p>
+<p class="card-gives">What the engine does before, during and after a visitor's session, and the words to use about it.</p>
+<p class="card-link"><a href="/what-it-is">What it is</a></p>
+</li>
+<li class="card">
+<span class="num" aria-hidden="true">2</span>
+<h3>For account executives</h3>
+<p class="card-rule" data-rule-of="docs/enablement/content/selling-it.md">Sell what is built, label what is designed, and promise nothing that is open.</p>
+<p class="card-gives">What is built, designed and open, the questions customers ask, and the sentences to say and never to say.</p>
+<p class="card-link"><a href="/selling-it">Selling it</a></p>
+</li>
+<li class="card">
+<span class="num" aria-hidden="true">3</span>
+<h3>For solutions engineers</h3>
+<p class="card-rule" data-rule-of="docs/enablement/content/how-it-works-and-where-it-runs.md">Every setting that can change an answer lives in a published, versioned document; the engine does the arithmetic at the edge, calls no AI model to decide, and shows its work on a receipt.</p>
+<p class="card-gives">How a decision is made, where it runs on Cloudflare's network, and what a customer provides.</p>
+<p class="card-link"><a href="/how-it-works">How it works and where it runs</a></p>
+</li>
+</ul>
+<h2 class="landing-h2">Four references serve every reader</h2>
+<ul class="refs">
+<li class="ref"><a href="/status">What is built, designed and open</a><p>Every capability with its verdict, and every open decision with its owner.</p></li>
+<li class="ref"><a href="/credits">Where Opal and AI credits fit</a><p>Where AI and its cost live, and the sentences that settle the question.</p></li>
+<li class="ref"><a href="/glossary">Glossary</a><p>One word for each meaning, defined once.</p></li>
+<li class="ref"><a href="/demos">Demo map</a><p>Which demo to show, to whom, and what each one proves.</p></li>
+</ul>
+<div class="rule rule-close"><p class="rule-text" data-paragraph="C">A visitor's behavior sets their interests. The brand's team sets the rules. The engine ranks what is left, and gives its reasons.</p></div>
 </main>
-<footer class="foot"><p>Internal reference &middot; do not forward outside Optimizely</p></footer>
+<footer class="foot">
+<div class="wrap">
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/status"><span class="pieces-name">What is built, designed and open</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo to show to whom</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
+</div>
+</footer>
 </body>
 </html>

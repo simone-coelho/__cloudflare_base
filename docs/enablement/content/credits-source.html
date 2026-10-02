@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where Opal and AI Credits Fit, and Where They Never Do · Internal Reference</title>
+<!-- The corrected source of the credits page (lane P1, 2026-10-02, on the coordinator's ruling).
+     The page leadership saw is docs/enablement/research/opal-ai-credits-placement.source.html. This copy keeps its
+     structure, order, devices and voice, and changes only what conflicts with the facts sheet
+     (docs/enablement/research/S2-engine-facts.md) or the never-say list (BTI-Enablement-Design.md §4.9): false
+     statements become true ones with their label, illustrations are phrased as illustrations, and em-dashes and
+     British spellings go. Every change, with the section that required it, is listed in docs/enablement/lanes/P1.md.
+     The site's page enablement/site/credits.html is rendered from this file (node enablement/render-pages.mjs) and
+     compared with it (node enablement/render-check.mjs). It still opens on its own in a browser, as the original did.
+     The timeline's rows are the JSON in <script type="application/json" id="tl-data">: the page's own script reads it,
+     and the builder and the text check parse it as JSON, so nothing in this file is ever run by a tool. -->
+<style>
+  :root{
+    --paper:#f7f4ef;
+    --paper-2:#efe9e0;
+    --ink:#1a1a1a;
+    --ink-soft:#5a544c;
+    --ink-faint:#8a8175;
+    --line:#ddd5c9;
+    --line-soft:#e8e1d6;
+    --mag:#c2185b;          /* credits apply */
+    --mag-tint:#f7e3ec;
+    --mag-deep:#8e1145;
+    --slate:#5b6b7a;
+    --slate-tint:#e5e9ec;
+    --gold:#c99a3f;         /* the exception */
+    --gold-tint:#fbf1dc;
+    --gold-deep:#8a6516;
+    --teal:#1f7a6d;         /* deterministic engine / no credits */
+    --teal-tint:#dcefec;
+    --teal-deep:#125e53;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{animation-duration:.001s!important;transition-duration:.001s!important;}}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:940px;margin:0 auto;padding:0 26px 120px;}
+  .mono{font-family:var(--mono);}
+
+  /* ---------- masthead ---------- */
+  header.mast{padding:66px 0 30px;border-bottom:2px solid var(--ink);}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--mag);margin:0 0 20px;font-weight:600;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .eyebrow .int{background:var(--gold-tint);color:var(--gold-deep);border:1px solid rgba(201,154,63,.4);
+    padding:3px 10px;border-radius:4px;letter-spacing:.12em;}
+  h1{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(34px,5.6vw,58px);line-height:1.02;margin:0 0 20px;}
+  h1 .en{color:var(--teal);}
+  h1 .op{color:var(--mag);}
+  .dek{font-size:19px;color:var(--ink-soft);max-width:64ch;margin:0;}
+
+  /* the package's three labels, each with its word */
+  .lbl{display:inline-block;padding:0 8px;border-radius:20px;font-family:var(--mono);font-size:.78em;font-weight:700;
+    line-height:1.5;border:1.5px solid transparent;white-space:nowrap;}
+  .lbl.built{background:#ABFF44;color:#08251A;border-color:#ABFF44;}
+  .lbl.designed{background:#91DBDA;color:#08251A;border-color:#91DBDA;}
+  .lbl.open{background:transparent;color:var(--ink);border:1.5px dashed var(--ink);}
+
+  /* ---------- the one rule ---------- */
+  .rule{margin:48px 0;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper);
+    box-shadow:0 20px 50px -34px rgba(0,0,0,.4);}
+  .rule-head{background:var(--ink);color:var(--paper);padding:12px 22px;font-family:var(--mono);font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;}
+  .rule-body{padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);}
+  @media(max-width:640px){.rule-body{grid-template-columns:1fr;}}
+  .rule-half{background:#fff;padding:24px;}
+  .rule-half .rl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    margin-bottom:12px;font-weight:600;}
+  .rule-half.eng .rl{color:var(--teal);}
+  .rule-half.opal .rl{color:var(--mag);}
+  .rule-half .big{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:22px;
+    line-height:1.2;letter-spacing:-.01em;margin:0 0 10px;}
+  .rule-half p{margin:0;font-size:14.5px;color:var(--ink-soft);max-width:none;}
+  .rule-half .verdict{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-family:var(--mono);
+    font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;}
+  .rule-half.eng .verdict{background:var(--teal-tint);color:var(--teal);}
+  .rule-half.opal .verdict{background:var(--mag-tint);color:var(--mag-deep);}
+  .rule-note{padding:14px 26px;background:#fff;border-top:1px solid var(--line);font-family:"Helvetica Neue",Arial,sans-serif;
+    font-weight:700;font-size:16px;}
+  .rule-foot{padding:18px 26px;background:var(--paper-2);border-top:1px solid var(--line);font-size:15px;color:var(--ink-soft);}
+  .rule-foot b{color:var(--ink);}
+
+  /* ---------- sections ---------- */
+  section{margin:64px 0;}
+  .snum{font-family:var(--mono);font-size:12px;color:var(--mag);letter-spacing:.14em;font-weight:600;}
+  h2{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(25px,3.4vw,34px);line-height:1.1;margin:6px 0 18px;}
+  p{max-width:72ch;margin:0 0 18px;}
+  strong{font-weight:700;}
+  em{font-style:italic;}
+  .lead{color:var(--ink-soft);}
+
+  /* ================= SESSION TIMELINE WIDGET ================= */
+  .tl{border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper);margin:10px 0;
+    box-shadow:0 20px 50px -30px rgba(0,0,0,.4);}
+  .tl-legend{display:flex;gap:0;background:var(--paper-2);border-bottom:2px solid var(--ink);flex-wrap:wrap;}
+  .tl-legend .lg{display:flex;align-items:center;gap:8px;padding:12px 18px;font-family:var(--mono);
+    font-size:11px;color:var(--ink-soft);border-right:1px solid var(--line);}
+  .tl-legend .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+  .sw.c{background:var(--mag);} .sw.f{background:var(--teal);} .sw.w{background:var(--gold);}
+  .sw.n{background:transparent;border:1.5px dashed var(--ink-soft);}
+
+  .tl-phases{display:flex;background:var(--paper-2);border-bottom:2px solid var(--ink);}
+  .tl-phases button{flex:1;background:transparent;border:none;border-right:1px solid var(--line);
+    padding:16px 14px;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink-soft);transition:all .18s;}
+  .tl-phases button:last-child{border-right:none;}
+  .tl-phases button:hover{background:#fff;}
+  .tl-phases button.on{background:#fff;color:var(--ink);}
+  .tl-phases button.on.p-before{box-shadow:inset 0 -3px 0 var(--mag);}
+  .tl-phases button.on.p-during{box-shadow:inset 0 -3px 0 var(--teal);}
+  .tl-phases button.on.p-after{box-shadow:inset 0 -3px 0 var(--gold);}
+  .tl-phases button:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+  .tl-phases .pph{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:15px;display:block;}
+  .tl-phases .ppt{font-family:var(--mono);font-size:10px;letter-spacing:.04em;margin-top:5px;display:block;color:var(--ink-faint);}
+  .tl-phases .ppmeter{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:9.5px;font-weight:600;
+    padding:3px 8px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;}
+  .ppmeter.credit{background:var(--mag-tint);color:var(--mag-deep);}
+  .ppmeter.free{background:var(--teal-tint);color:var(--teal);}
+  .ppmeter.mixed{background:var(--gold-tint);color:var(--gold-deep);}
+
+  /* the band at the head of each part */
+  .tl-band{padding:16px 22px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+    display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line-soft);}
+  .tl-band .pill{font-weight:700;padding:5px 12px;border-radius:6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fff;}
+  .tl-band.before{background:var(--mag-tint);} .tl-band.before .pill{background:var(--mag);}
+  .tl-band.during{background:var(--teal-tint);} .tl-band.during .pill{background:var(--teal);}
+  .tl-band.after{background:var(--gold-tint);} .tl-band.after .pill{background:var(--gold);color:#3a2c08;}
+  .tl-band .bnote{color:var(--ink-soft);}
+
+  /* touchpoint rows */
+  .tp{display:grid;grid-template-columns:14px 1fr 128px;gap:0 16px;padding:16px 22px;
+    border-bottom:1px solid var(--line-soft);align-items:start;background:#fff;}
+  .tp:last-child{border-bottom:none;}
+  .tp .rail{width:14px;height:14px;border-radius:4px;margin-top:3px;}
+  .tp.credit .rail{background:var(--mag);}
+  .tp.free .rail{background:var(--teal);}
+  .tp.warn .rail{background:var(--gold);}
+  .tp.open .rail,.tp.off .rail{background:transparent;border:1.5px dashed var(--ink-soft);}
+  .tp .tpn{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:15px;margin:0 0 3px;}
+  .tp .tpd{font-size:13.5px;color:var(--ink-soft);line-height:1.45;}
+  .tp .verdict{font-family:var(--mono);font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;
+    text-align:center;white-space:nowrap;justify-self:end;line-height:1.3;}
+  .tp.credit .verdict{background:var(--mag-tint);color:var(--mag-deep);}
+  .tp.free .verdict{background:var(--teal-tint);color:var(--teal);}
+  .tp.warn .verdict{background:var(--gold-tint);color:var(--gold-deep);border:1px solid rgba(201,154,63,.45);}
+  .tp.open .verdict,.tp.off .verdict{background:transparent;color:var(--ink-soft);border:1.5px dashed var(--ink-soft);}
+  .tp .warnbadge{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold-deep);
+    border:1px solid rgba(201,154,63,.5);border-radius:4px;padding:1px 6px;margin-left:8px;letter-spacing:.06em;vertical-align:middle;}
+
+  .tl-takeaway{padding:18px 22px;background:var(--paper-2);border-top:1px solid var(--line);
+    font-size:14px;color:var(--ink-soft);display:flex;gap:10px;align-items:baseline;}
+  .tl-takeaway b{color:var(--ink);}
+  .tl-takeaway .arrow{color:var(--mag);}
+
+  .caption{font-size:14px;color:var(--ink-faint);margin:14px 0 0;max-width:74ch;}
+
+  /* ================= SCALING DIAGRAM ================= */
+  .scale{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0;}
+  @media(max-width:640px){.scale{grid-template-columns:1fr;}}
+  .scalecard{border:1px solid var(--line);border-radius:8px;background:#fff;padding:22px;position:relative;overflow:hidden;}
+  .scalecard h4{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:16px;margin:0 0 4px;}
+  .scalecard .axis{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-bottom:18px;letter-spacing:.03em;}
+  .graph{height:120px;position:relative;border-left:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:8px;}
+  .graph svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .scalecard .verdict{font-family:var(--mono);font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;display:inline-block;}
+  .scalecard.eng .verdict{background:var(--teal-tint);color:var(--teal);}
+  .scalecard.eng h4{color:var(--teal);}
+  .scalecard.opal .verdict{background:var(--mag-tint);color:var(--mag-deep);}
+  .scalecard.opal h4{color:var(--mag);}
+  .scalecard .sc-note{font-size:13px;color:var(--ink-soft);margin-top:10px;}
+
+  /* ================= THREE METERS ================= */
+  .meters{display:grid;grid-template-columns:1fr;gap:12px;margin:16px 0;}
+  .meter{border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden;display:grid;grid-template-columns:64px 1fr;}
+  .meter .mnum{background:var(--paper-2);display:grid;place-items:center;font-family:"Helvetica Neue",Arial,sans-serif;
+    font-weight:800;font-size:26px;color:var(--ink-faint);border-right:1px solid var(--line);}
+  .meter .mbody{padding:18px 22px;}
+  .meter .mname{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:17px;margin:0 0 4px;display:flex;
+    align-items:center;gap:10px;flex-wrap:wrap;}
+  .meter .scales{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;letter-spacing:.04em;}
+  .meter.m1 .scales{background:var(--teal-tint);color:var(--teal);}
+  .meter.m2 .scales{background:var(--mag-tint);color:var(--mag-deep);}
+  .meter.m3 .scales{background:var(--gold-tint);color:var(--gold-deep);}
+  .meter .mdesc{font-size:14px;color:var(--ink-soft);margin:0;max-width:none;}
+  .meter .mdesc b{color:var(--ink);}
+  .warnrow{border-left:4px solid var(--gold);background:var(--gold-tint);padding:16px 20px;border-radius:0 6px 6px 0;margin:16px 0;}
+  .warnrow p{margin:0;color:var(--ink);max-width:none;font-size:14.5px;}
+  .warnrow .wt{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold-deep);font-weight:700;margin-bottom:6px;}
+
+  /* ================= VERBATIM CARDS ================= */
+  .scripts{display:grid;grid-template-columns:1fr;gap:12px;margin:16px 0;}
+  .script{border:1px solid var(--line);border-radius:8px;background:#fff;padding:22px 24px;position:relative;}
+  .script .qmark{position:absolute;top:12px;right:18px;font-family:Georgia,serif;font-size:52px;color:var(--line);line-height:1;}
+  .script .slabel{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--mag);font-weight:600;margin-bottom:10px;}
+  .script p{margin:0;font-size:17px;line-height:1.45;color:var(--ink);font-style:italic;max-width:none;padding-right:40px;}
+  .script .key{font-style:normal;font-weight:700;color:var(--mag-deep);}
+
+  /* ---------- FAQ ---------- */
+  details{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#fff;overflow:hidden;}
+  details[open]{border-color:var(--mag);}
+  summary{cursor:pointer;padding:16px 20px;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;
+    font-size:15.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:"+";font-family:var(--mono);font-size:20px;color:var(--mag);}
+  details[open] summary::after{content:"\2212";}
+  summary:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+  .faq-body{padding:0 20px 18px;font-size:15px;color:var(--ink-soft);}
+  .faq-body p{max-width:none;margin:0;}
+
+  /* ---------- order form ---------- */
+  .order{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:16px 0;}
+  .order-row{display:grid;grid-template-columns:1fr auto;gap:16px;padding:15px 22px;border-bottom:1px solid var(--line-soft);
+    background:#fff;align-items:center;}
+  .order-head{display:flex;flex-wrap:wrap;gap:6px 28px;padding:10px 22px;background:var(--paper-2);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);}
+  .order-head span:last-child{margin-left:auto;}
+  .order-row:last-child{border-bottom:none;}
+  .order-row .oname{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:15px;}
+  .order-row .odesc{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .order-row .otag{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .otag.traffic{background:var(--teal-tint);color:var(--teal);}
+  .otag.team{background:var(--mag-tint);color:var(--mag-deep);}
+  .otag.adopt{background:var(--gold-tint);color:var(--gold-deep);}
+  .otag.own{background:var(--slate-tint);color:var(--slate);}
+
+  footer{margin-top:60px;padding-top:22px;border-top:2px solid var(--ink);
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em;line-height:1.8;}
+
+  @media(max-width:640px){
+    body{font-size:16px;}
+    .wrap{padding:0 18px 80px;}
+    .tl-phases{flex-direction:column;}
+    .tl-phases button{border-right:none;border-bottom:1px solid var(--line);}
+    .tp{grid-template-columns:14px 1fr;}
+    .tp .verdict{grid-column:2;justify-self:start;margin-top:8px;}
+    .meter{grid-template-columns:44px 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow"><span class="int">Internal only</span> AE · Pricing · Deal desk · Sales enablement</p>
+    <h1>Where <span class="op">Opal</span> and AI Credits Fit,<br>and Where They <span class="en">Never</span> Do</h1>
+    <p class="dek">The definitive map of which touchpoints consume token-based AI credits and which don't, so quotes are structured correctly and nobody promises, or fears, AI cost in the wrong place.</p>
+  </header>
+
+  <!-- THE ONE RULE -->
+  <div class="rule">
+    <div class="rule-head">The one rule: memorize this</div>
+    <div class="rule-body">
+      <div class="rule-half eng">
+        <div class="rl">During a shopper session</div>
+        <div class="big">The engine decides.</div>
+        <p>Scoring interest, picking content, ranking what each slot shows, giving the page its answer. Deterministic math on edge infrastructure.</p>
+        <span class="verdict">● No AI · no credits · ever</span>
+      </div>
+      <div class="rule-half opal">
+        <div class="rl">Setup &amp; insight</div>
+        <div class="big">Opal creates &amp; explains.</div>
+        <p>A person asks in natural language, or generative AI creates something: an audience, a test, a label, an image, an analysis.</p>
+        <span class="verdict">● That's Opal · credit-metered</span>
+      </div>
+    </div>
+    <div class="rule-note">Opal is not connected to the engine today.</div>
+    <div class="rule-foot">
+      The practical consequence: <b>AI credit consumption scales with the customer's team activity and feature adoption, never with shopper traffic.</b> Whether a site has one million sessions or ten million, its credit usage doesn't move.
+    </div>
+  </div>
+
+  <!-- ============ TIMELINE WIDGET ============ -->
+  <section id="timeline">
+    <p class="snum">01 · THE TOUCHPOINT MAP</p>
+    <h2>Walk one shopper session, start to finish.</h2>
+    <p>Every touchpoint in the offering lands in one of three parts of a shopper's session: before, during or after. <strong>Tap through them.</strong> The middle part, the live session itself, is the one AEs get asked about most, and it's almost entirely credit-free.</p>
+
+    <div class="tl">
+      <div class="tl-legend">
+        <span class="lg"><span class="sw c"></span> Credits apply</span>
+        <span class="lg"><span class="sw f"></span> Deterministic engine · no credits</span>
+        <span class="lg"><span class="sw w"></span> Conditional / exception</span>
+        <span class="lg"><span class="sw n"></span> Not decided or not offered</span>
+      </div>
+
+      <div class="tl-phases" id="tlPhases" role="tablist" aria-label="The three parts of the session">
+        <button class="on p-before" data-ph="before" role="tab" aria-selected="true">
+          <span class="pph">Before</span>
+          <span class="ppt">Setup &amp; authoring</span>
+          <span class="ppmeter credit">Credits apply</span>
+        </button>
+        <button class="p-during" data-ph="during" role="tab" aria-selected="false">
+          <span class="pph">During</span>
+          <span class="ppt">The live shopper session</span>
+          <span class="ppmeter free">No credits*</span>
+        </button>
+        <button class="p-after" data-ph="after" role="tab" aria-selected="false">
+          <span class="pph">After</span>
+          <span class="ppt">Analysis, learning &amp; insight</span>
+          <span class="ppmeter mixed">Mixed: read closely</span>
+        </button>
+      </div>
+
+      <div id="tlBand"></div>
+      <div id="tlRows" aria-live="polite"></div>
+      <div class="tl-takeaway" id="tlTake"></div>
+    </div>
+    <p class="caption">The single asterisk on "During" is the one thing to keep straight: optional shopper-facing AI features are the lone credit-consuming exception in the live path, and only if the customer licenses them. Everything else during a session is deterministic.</p>
+  </section>
+
+  <!-- ============ SCALING ============ -->
+  <section>
+    <p class="snum">02 · WHY THIS MATTERS FOR PRICING</p>
+    <h2>Credits scale with the team. The engine scales with traffic. Never cross the wires.</h2>
+    <p>This is the whole objection-killer. The moment credits appear to scale with traffic, a customer's finance team models worst-case AI cost against their traffic curve, and the deal stalls on a fear that isn't real.</p>
+
+    <div class="scale">
+      <div class="scalecard eng">
+        <h4>The engine</h4>
+        <div class="axis">cost ↑ as sessions ↑</div>
+        <div class="graph">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="0" y1="110" x2="190" y2="18" stroke="#1f7a6d" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="190" cy="18" r="4" fill="#1f7a6d"/>
+          </svg>
+        </div>
+        <span class="verdict">Scales with traffic</span>
+        <p class="sc-note">Platform fee + usage, priced per visitor / session: <span class="lbl designed">Designed</span>, a recommendation; its rates and the usage meter are <span class="lbl open">Open</span>. No AI cost inside it, by architecture.</p>
+      </div>
+      <div class="scalecard opal">
+        <h4>Opal / AI credits</h4>
+        <div class="axis">cost flat as sessions ↑</div>
+        <div class="graph">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="0" y1="70" x2="190" y2="70" stroke="#c2185b" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="190" cy="70" r="4" fill="#c2185b"/>
+          </svg>
+        </div>
+        <span class="verdict">Flat vs. traffic</span>
+        <p class="sc-note">Sized to the operator team: how often they author audiences, launch tests, ask questions.</p>
+      </div>
+    </div>
+    <p class="caption">Whether a site has one million sessions or ten million, the left line climbs and the right line doesn't move. That contrast is the cost-predictability selling point and the objection-killer in one picture.</p>
+  </section>
+
+  <!-- ============ THREE METERS ============ -->
+  <section>
+    <p class="snum">03 · STRUCTURING THE QUOTE</p>
+    <h2>Three revenue lines, three different meters.</h2>
+    <p>Keep them as separate lines. Each answers to a different driver, and blending them is where quotes go wrong.</p>
+
+    <div class="meters">
+      <div class="meter m1">
+        <div class="mnum">1</div>
+        <div class="mbody">
+          <div class="mname">The engine <span class="scales">Scales with traffic</span></div>
+          <p class="mdesc">Platform fee + usage, per monthly-tracked-visitor or per-1K-sessions: <span class="lbl designed">Designed</span>, a recommendation; its rates and the usage meter are <span class="lbl open">Open</span>. <b>No AI cost inside it, by architecture.</b></p>
+        </div>
+      </div>
+      <div class="meter m2">
+        <div class="mnum">2</div>
+        <div class="mbody">
+          <div class="mname">Opal credits <span class="scales">Scales with team activity</span></div>
+          <p class="mdesc">Credit packs sized to the operator team: merchandisers, analysts, how often they author and ask. <b>Authoring-heavy months (onboarding, campaign season) burn more; steady-state is modest.</b></p>
+        </div>
+      </div>
+      <div class="meter m3">
+        <div class="mnum">3</div>
+        <div class="mbody">
+          <div class="mname">Shopper-facing AI features <span class="scales">Scales with adoption</span></div>
+          <p class="mdesc">Optional add-on line: metered per invocation (searches, advisor conversations, new scenes generated), or bundled as an allowance. <b>Scales with feature adoption, not page views.</b> Typed search is <span class="lbl built">Built</span> and off by default; the advisor and scene generation are demo only.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="warnrow">
+      <p class="wt">The one thing never to do</p>
+      <p>Never blend lines 1 and 2 into one meter. The moment credits appear to scale with traffic, the customer's finance team will model worst-case AI costs against their traffic curve and the deal will stall on a fear that isn't real.</p>
+    </div>
+  </section>
+
+  <!-- ============ VERBATIM ============ -->
+  <section>
+    <p class="snum">04 · SAY THESE VERBATIM</p>
+    <h2>Three sentences that settle the AI-cost question.</h2>
+    <p class="lead">Each follows the documented credit rule, which is <span class="lbl designed">Designed</span>; the billing meter is <span class="lbl open">Open</span>.</p>
+    <div class="scripts">
+      <div class="script">
+        <div class="qmark">&ldquo;</div>
+        <div class="slabel">On traffic &amp; credits</div>
+        <p>Shopper traffic <span class="key">never</span> consumes AI credits: the decision path is deterministic math on edge infrastructure, priced as platform usage.</p>
+      </div>
+      <div class="script">
+        <div class="qmark">&ldquo;</div>
+        <div class="slabel">On what credits track</div>
+        <p>Credits scale with your <span class="key">team's</span> questions and creations, such as audiences, tests and analyses, not with your shoppers' clicks.</p>
+      </div>
+      <div class="script">
+        <div class="qmark">&ldquo;</div>
+        <div class="slabel">On the optional shopper AI features</div>
+        <p>The optional AI shopping features are metered <span class="key">only when a shopper actually uses them</span>, so you pay per use, not per view.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section>
+    <p class="snum">05 · QUICK FAQ</p>
+    <h2>The questions that come up on every deal.</h2>
+    <details><summary>If the engine is so smart, why doesn't it use AI credits?</summary><div class="faq-body"><p>Because it deliberately calls <em>no</em> AI model to decide: it's transparent scoring math. That's a feature (cost-predictability, explainability), not a limitation. It's the anti-black-box argument that wins engineering teams.</p></div></details>
+    <details><summary>Does the learning loop cost credits?</summary><div class="faq-body"><p>No. The learning, which content converts and for whom, is the engine's own statistics pipeline running on its own data. Asking Opal to <em>explain or analyze</em> those results is what costs credits, and Opal is not connected to the engine today.</p></div></details>
+    <details><summary>Is the content auto-tagging a recurring cost?</summary><div class="faq-body"><p>Per content batch: large at onboarding, a small trickle as new content arrives. Whether it is billed as credits is still open, so quote it with onboarding only once that is decided.</p></div></details>
+    <details><summary>What if the customer never buys Opal credits?</summary><div class="faq-body"><p>The engine runs fully without them: no decision calls an AI model, and the team reads receipts and the day report directly in the operator console. Opal is the natural-language accelerant and the transparency narrator, as designed: a strong attach, not a dependency.</p></div></details>
+    <details><summary>Which products are on the order form?</summary><div class="faq-body"><p>ODP (the customer data platform), Feature Experimentation (activation/testing), Opal credits (authoring + insight), the engine itself (the new offering line), and optional shopper AI features. ODP and Feature Experimentation have their own licenses and sit outside the decision path. See the map below.</p></div></details>
+  </section>
+
+  <!-- ============ ORDER FORM ============ -->
+  <section>
+    <p class="snum">06 · WHAT'S ON THE ORDER FORM</p>
+    <h2>The five lines, and what drives each.</h2>
+    <div class="order">
+      <div class="order-head"><span>Line</span> <span>What it is</span> <span>What drives it</span></div>
+      <div class="order-row">
+        <div><div class="oname">ODP</div><div class="odesc">The customer data platform: profiles, audiences, outcomes. Outside the decision path; connecting it to a customer deployment is <span class="lbl open">Open</span>.</div></div>
+        <span class="otag own">Own licensing</span>
+      </div>
+      <div class="order-row">
+        <div><div class="oname">Feature Experimentation</div><div class="odesc">Activation &amp; testing: flags, experiments, CMAB. Outside the decision path; connecting it to a customer deployment is <span class="lbl open">Open</span>.</div></div>
+        <span class="otag own">Own licensing</span>
+      </div>
+      <div class="order-row">
+        <div><div class="oname">The engine</div><div class="odesc">The new offering line: in-session interest scoring, content matching, the ranked answer. <span class="lbl designed">Designed</span> as a recommendation; its rates and usage meter are <span class="lbl open">Open</span>.</div></div>
+        <span class="otag traffic">Scales with traffic</span>
+      </div>
+      <div class="order-row">
+        <div><div class="oname">Opal credits</div><div class="odesc">Authoring + insight: the natural-language layer.</div></div>
+        <span class="otag team">Scales with team activity</span>
+      </div>
+      <div class="order-row">
+        <div><div class="oname">Shopper-facing AI features</div><div class="odesc">Optional: typed search, style advisor, scene generation. Typed search is <span class="lbl built">Built</span> and off by default; the advisor and scene generation are demo only.</div></div>
+        <span class="otag adopt">Scales with adoption</span>
+      </div>
+    </div>
+    <p class="caption">Three different meters across five lines. Each tag names its driver in words, the same words the meters above use.</p>
+  </section>
+
+  <footer>
+    INTERNAL REFERENCE · OPAL &amp; AI-CREDIT PLACEMENT · AE / PRICING / DEAL DESK<br>
+    THE ENGINE DECIDES · OPAL CREATES &amp; EXPLAINS · CREDITS FOLLOW THE TEAM, NOT THE TRAFFIC
+  </footer>
+
+</div>
+
+<script type="application/json" id="tl-data">
+{
+  "before": {
+    "band": "before",
+    "pill": "Before",
+    "note": "Setup &amp; authoring: this is design-time, and it's where credits legitimately live.",
+    "take": "<b>Credits belong here, and that's correct.</b> These are people creating things in natural language, or AI tagging content at design time: quote credits against onboarding and steady authoring. Opal is not connected to the engine today, and whether tagging is billed as credits is still open.",
+    "rows": [
+      {
+        "k": "open",
+        "n": "Design-time tagging of the content catalog",
+        "d": "The brand's own AI model, on its own key, reads the customer's content and suggests labels; a human approves each one. One-time per content batch, re-run when new content arrives. <span class='lbl built'>Built</span>, off by default.",
+        "v": "Credits<br>not decided"
+      },
+      {
+        "k": "credit",
+        "n": "Create audiences via natural language",
+        "d": "“Build me a high-intent evening-shopper audience” → Opal creates it, as designed. <span class='lbl open'>Open</span>: not wired to the engine today; the demos' stand-in creates audiences in Feature Experimentation, demo only.",
+        "v": "Credits<br>per request"
+      },
+      {
+        "k": "credit",
+        "n": "Create tests / experiments via natural language",
+        "d": "“Launch a test on the hero for this audience” → Opal creates it in Feature Experimentation, as designed. <span class='lbl open'>Open</span>: not wired to the engine today.",
+        "v": "Credits<br>per request"
+      },
+      {
+        "k": "credit",
+        "n": "Parameter / preset proposals",
+        "d": "“Fit my decay settings to my shoppers' actual behavior” → Opal proposes, human approves, as designed. <span class='lbl open'>Open</span>: not wired to the engine today.",
+        "v": "Credits<br>per request"
+      }
+    ]
+  },
+  "during": {
+    "band": "during",
+    "pill": "During",
+    "note": "The live shopper session: the part AEs get grilled on. Almost entirely credit-free.",
+    "take": "<b>No page view ever burns a credit.</b> The decision path is deterministic. The single exception is optional shopper-facing AI, and only if licensed, flagged below.",
+    "rows": [
+      {
+        "k": "free",
+        "n": "Live interest scoring &amp; audiences",
+        "d": "The interest thermometer; shoppers flowing in and out of audiences during their session.",
+        "v": "Never<br>deterministic"
+      },
+      {
+        "k": "free",
+        "n": "Content picks, product re-ranking, the ranked answer",
+        "d": "The engine choosing what each shopper sees in each slot, re-ranking a product list the commerce platform supplies, and answering the site, which renders it.",
+        "v": "Never"
+      },
+      {
+        "k": "free",
+        "n": "CMAB serving decisions",
+        "d": "The bandit allocating variations at serve time: Optimizely's CMAB, a Feature Experimentation capability outside the engine. Connecting Feature Experimentation to a customer deployment is <span class='lbl open'>Open</span>, and the CMAB screens in older demos simulate their results, demo only.",
+        "v": "No credits<br>FX licensing"
+      },
+      {
+        "k": "free",
+        "n": "ODP event ingest, seed, profile updates",
+        "d": "ODP's own work as events flow in, outside the decision: the decision reads no ODP data. An ODP loop runs for the default demo tenant only, demo only; connecting ODP to a customer deployment is <span class='lbl open'>Open</span>.",
+        "v": "No credits<br>ODP licensing"
+      },
+      {
+        "k": "free",
+        "n": "Receipts",
+        "d": "Every answer's “why,” generated as data by the engine; receipts are kept with the visitor's consent once recording is on.",
+        "v": "Never"
+      },
+      {
+        "k": "warn",
+        "n": "Optional shopper-facing AI features",
+        "d": "Typed search (“bags for a winter wedding”), style advisor chat, scene generation. Real generative calls, invoked by a shopper using the feature, and only if the customer licenses them. Typed search is <span class='lbl built'>Built</span> and off by default; the advisor and scene generation are demo only.",
+        "v": "Metered<br>per use",
+        "warn": true
+      }
+    ]
+  },
+  "after": {
+    "band": "after",
+    "pill": "After",
+    "note": "Analysis, learning &amp; insight: the part where deals get misquoted. Read each row.",
+    "take": "<b>The split here is subtle: the learning costs no credits, but asking Opal about it does.</b> The engine’s own statistics cost no credits; narrating, analyzing, or mining them through Opal is credit-metered, as designed, and Opal is not connected to the engine today.",
+    "rows": [
+      {
+        "k": "free",
+        "n": "The learning itself",
+        "d": "Which content converts, for whom: a deterministic statistics pipeline the engine runs on its own data.",
+        "v": "Never<br>the engine"
+      },
+      {
+        "k": "credit",
+        "n": "“How is it performing / why did shoppers see X”",
+        "d": "Opal narrates results and explains decisions in plain language, as designed. <span class='lbl open'>Open</span>: Opal is not connected to the engine today, and the engine's own reasons are arithmetic it produces itself.",
+        "v": "Credits<br>per ask"
+      },
+      {
+        "k": "credit",
+        "n": "Analytics through Opal",
+        "d": "Opal querying and analyzing warehouse &amp; analytics data, as designed. <span class='lbl open'>Open</span>: not connected to the engine today.",
+        "v": "Credits<br>per ask"
+      },
+      {
+        "k": "credit",
+        "n": "Audience discovery from analyzed data",
+        "d": "“What cohorts are forming in my data?” → Opal mines and proposes, as designed. <span class='lbl open'>Open</span>: not connected to the engine today.",
+        "v": "Credits<br>per ask"
+      },
+      {
+        "k": "off",
+        "n": "Discovery proposals from the engine",
+        "d": "“A tote-interest cohort is forming: want to activate it?” Proposals the engine raises on its own are switched off by policy and not offered.",
+        "v": "Not<br>offered"
+      }
+    ]
+  }
+}
+</script>
+<script>
+(function(){
+  "use strict";
+
+  var phases = JSON.parse(document.getElementById("tl-data").textContent);
+
+  var bandEl = document.getElementById("tlBand");
+  var rowsEl = document.getElementById("tlRows");
+  var takeEl = document.getElementById("tlTake");
+
+  function render(ph){
+    var d = phases[ph];
+    bandEl.innerHTML = '<div class="tl-band '+d.band+'"><span class="pill">'+d.pill+'</span><span class="bnote">'+d.note+'</span></div>';
+    var html = "";
+    d.rows.forEach(function(r){
+      html += '<div class="tp '+r.k+'">'+
+        '<span class="rail"></span>'+
+        '<div><div class="tpn">'+r.n+(r.warn?'<span class="warnbadge">exception</span>':'')+'</div>'+
+        '<div class="tpd">'+r.d+'</div></div>'+
+        '<div class="verdict">'+r.v+'</div>'+
+      '</div>';
+    });
+    rowsEl.innerHTML = html;
+    takeEl.innerHTML = '<span class="arrow">▶</span> <span>'+d.take+'</span>';
+  }
+
+  var btns = document.querySelectorAll("#tlPhases button");
+  btns.forEach(function(b){
+    b.addEventListener("click", function(){
+      btns.forEach(function(x){x.classList.remove("on");x.setAttribute("aria-selected","false");});
+      b.classList.add("on"); b.setAttribute("aria-selected","true");
+      render(b.getAttribute("data-ph"));
+    });
+  });
+  render("before");
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
+<title>Where Opal and AI Credits Fit, and Where They Never Do · Optimizely enablement</title>
+<!-- Built by enablement/render-pages.mjs from its source. Nothing inline: every style is in /site.css and the behavior in /site.js, which the page does not need in order to read in full. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+<header class="masthead">
+<div class="wrap masthead-inner">
+<p class="eyebrow">Internal · Optimizely</p>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/status">Status</a></li><li><a href="/credits" aria-current="page">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+</div>
+</header>
+<main id="main" class="wrap">
+<div class="piece-meta"><p class="reader-tag" data-reader="ae">For account executives</p><p class="stamp">Updated October 2, 2026 · engine facts as of commit 8b4f74c</p></div>
+<article class="piece piece-credits" data-source="docs/enablement/content/credits-source.html docs/enablement/content/credits.md">
+<header class="cr-mast">
+<p class="cr-eyebrow"><span class="cr-int">Internal only</span> AE · Pricing · Deal desk · Sales enablement</p>
+<h1 class="title cr-title"><span class="kicker" data-chrome="package name"><span id="package-name">Behavioral Targeting and Intelligence</span><span class="visually-hidden">: </span></span> <span class="title-main">Where <span class="cr-op">Opal</span> and AI Credits Fit, and Where They <span class="cr-en">Never</span> Do</span></h1>
+<p class="cr-dek">The definitive map of which touchpoints consume token-based AI credits and which don't, so quotes are structured correctly and nobody promises, or fears, AI cost in the wrong place.</p>
+</header>
+<div class="cr-rule">
+<p class="cr-rule-head">The one rule: memorize this</p>
+<div class="cr-rule-body">
+<div class="cr-half eng">
+<p class="cr-rl">During a shopper session</p>
+<p class="cr-big">The engine decides.</p>
+<p class="cr-hd">Scoring interest, picking content, ranking what each slot shows, giving the page its answer. Deterministic math on edge infrastructure.</p>
+<p class="cr-verdict"><strong>● No AI · no credits · ever</strong></p>
+</div>
+<div class="cr-half opal">
+<p class="cr-rl">Setup &amp; insight</p>
+<p class="cr-big">Opal creates &amp; explains.</p>
+<p class="cr-hd">A person asks in natural language, or generative AI creates something: an audience, a test, a label, an image, an analysis.</p>
+<p class="cr-verdict"><strong>● That's Opal · credit-metered</strong></p>
+</div>
+</div>
+<p class="cr-rule-note">Opal is not connected to the engine today.</p>
+<p class="cr-rule-foot">The practical consequence: <b>AI credit consumption scales with the customer's team activity and feature adoption, never with shopper traffic.</b> Whether a site has one million sessions or ten million, its credit usage doesn't move.</p>
+</div>
+<aside class="legend" aria-label="How to read the labels" data-chrome="legend"><p class="legend-text"><span class="chip chip-built">Built</span>: in the code and exercised. <span class="chip chip-designed">Designed</span>: in an architecture document, not in the code. <span class="chip chip-open">Open</span>: no decision yet.</p></aside>
+<section class="cr-section" id="timeline" aria-labelledby="cr-h-1">
+<p class="cr-snum">01 · THE TOUCHPOINT MAP</p>
+<h2 id="cr-h-1">Walk one shopper session, start to finish.</h2>
+<p>Every touchpoint in the offering lands in one of three parts of a shopper's session: before, during or after. <strong>Tap through them.</strong> The middle part, the live session itself, is the one AEs get asked about most, and it's almost entirely credit-free.</p>
+<div class="cr-tl" data-tabs data-tabs-label="The three parts of the session" data-tabs-class="cr-tl-tabs">
+<div class="cr-tl-legend">
+<span class="cr-lg"><strong>Credits apply</strong></span>
+<span class="cr-lg"><strong>Deterministic engine · no credits</strong></span>
+<span class="cr-lg"><strong>Conditional / exception</strong></span>
+<span class="cr-lg"><strong>Not decided or not offered</strong></span>
+</div>
+<section class="cr-tl-panel" id="tl-before" data-tab-panel data-tab-class="p-before">
+<h3 class="cr-tl-head" data-tab-label><span class="pph">Before</span> <span class="ppt">Setup &amp; authoring</span> <strong class="ppmeter">Credits apply</strong></h3>
+<div class="cr-band"><strong class="cr-pill">Before</strong> <span class="cr-bnote">Setup &amp; authoring: this is design-time, and it's where credits legitimately live.</span></div>
+<div class="cr-tp" data-kind="open"><div><p class="cr-tpn">Design-time tagging of the content catalog</p><p class="cr-tpd">The brand's own AI model, on its own key, reads the customer's content and suggests labels; a human approves each one. One-time per content batch, re-run when new content arrives. <span class="chip chip-built">Built</span>, off by default.</p></div><p class="cr-tpv"><strong>Credits<br>not decided</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">Create audiences via natural language</p><p class="cr-tpd">“Build me a high-intent evening-shopper audience” → Opal creates it, as designed. <span class="chip chip-open">Open</span>: not wired to the engine today; the demos' stand-in creates audiences in Feature Experimentation, demo only.</p></div><p class="cr-tpv"><strong>Credits<br>per request</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">Create tests / experiments via natural language</p><p class="cr-tpd">“Launch a test on the hero for this audience” → Opal creates it in Feature Experimentation, as designed. <span class="chip chip-open">Open</span>: not wired to the engine today.</p></div><p class="cr-tpv"><strong>Credits<br>per request</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">Parameter / preset proposals</p><p class="cr-tpd">“Fit my decay settings to my shoppers' actual behavior” → Opal proposes, human approves, as designed. <span class="chip chip-open">Open</span>: not wired to the engine today.</p></div><p class="cr-tpv"><strong>Credits<br>per request</strong></p></div>
+<p class="cr-take"><b>Credits belong here, and that's correct.</b> These are people creating things in natural language, or AI tagging content at design time: quote credits against onboarding and steady authoring. Opal is not connected to the engine today, and whether tagging is billed as credits is still open.</p>
+</section>
+<section class="cr-tl-panel" id="tl-during" data-tab-panel data-tab-class="p-during">
+<h3 class="cr-tl-head" data-tab-label><span class="pph">During</span> <span class="ppt">The live shopper session</span> <strong class="ppmeter">No credits*</strong></h3>
+<div class="cr-band"><strong class="cr-pill">During</strong> <span class="cr-bnote">The live shopper session: the part AEs get grilled on. Almost entirely credit-free.</span></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">Live interest scoring &amp; audiences</p><p class="cr-tpd">The interest thermometer; shoppers flowing in and out of audiences during their session.</p></div><p class="cr-tpv"><strong>Never<br>deterministic</strong></p></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">Content picks, product re-ranking, the ranked answer</p><p class="cr-tpd">The engine choosing what each shopper sees in each slot, re-ranking a product list the commerce platform supplies, and answering the site, which renders it.</p></div><p class="cr-tpv"><strong>Never</strong></p></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">CMAB serving decisions</p><p class="cr-tpd">The bandit allocating variations at serve time: Optimizely's CMAB, a Feature Experimentation capability outside the engine. Connecting Feature Experimentation to a customer deployment is <span class="chip chip-open">Open</span>, and the CMAB screens in older demos simulate their results, demo only.</p></div><p class="cr-tpv"><strong>No credits<br>FX licensing</strong></p></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">ODP event ingest, seed, profile updates</p><p class="cr-tpd">ODP's own work as events flow in, outside the decision: the decision reads no ODP data. An ODP loop runs for the default demo tenant only, demo only; connecting ODP to a customer deployment is <span class="chip chip-open">Open</span>.</p></div><p class="cr-tpv"><strong>No credits<br>ODP licensing</strong></p></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">Receipts</p><p class="cr-tpd">Every answer's “why,” generated as data by the engine; receipts are kept with the visitor's consent once recording is on.</p></div><p class="cr-tpv"><strong>Never</strong></p></div>
+<div class="cr-tp" data-kind="warn"><div><p class="cr-tpn">Optional shopper-facing AI features <strong class="cr-warnbadge">exception</strong></p><p class="cr-tpd">Typed search (“bags for a winter wedding”), style advisor chat, scene generation. Real generative calls, invoked by a shopper using the feature, and only if the customer licenses them. Typed search is <span class="chip chip-built">Built</span> and off by default; the advisor and scene generation are demo only.</p></div><p class="cr-tpv"><strong>Metered<br>per use</strong></p></div>
+<p class="cr-take"><b>No page view ever burns a credit.</b> The decision path is deterministic. The single exception is optional shopper-facing AI, and only if licensed, flagged below.</p>
+</section>
+<section class="cr-tl-panel" id="tl-after" data-tab-panel data-tab-class="p-after">
+<h3 class="cr-tl-head" data-tab-label><span class="pph">After</span> <span class="ppt">Analysis, learning &amp; insight</span> <strong class="ppmeter">Mixed: read closely</strong></h3>
+<div class="cr-band"><strong class="cr-pill">After</strong> <span class="cr-bnote">Analysis, learning &amp; insight: the part where deals get misquoted. Read each row.</span></div>
+<div class="cr-tp" data-kind="free"><div><p class="cr-tpn">The learning itself</p><p class="cr-tpd">Which content converts, for whom: a deterministic statistics pipeline the engine runs on its own data.</p></div><p class="cr-tpv"><strong>Never<br>the engine</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">“How is it performing / why did shoppers see X”</p><p class="cr-tpd">Opal narrates results and explains decisions in plain language, as designed. <span class="chip chip-open">Open</span>: Opal is not connected to the engine today, and the engine's own reasons are arithmetic it produces itself.</p></div><p class="cr-tpv"><strong>Credits<br>per ask</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">Analytics through Opal</p><p class="cr-tpd">Opal querying and analyzing warehouse &amp; analytics data, as designed. <span class="chip chip-open">Open</span>: not connected to the engine today.</p></div><p class="cr-tpv"><strong>Credits<br>per ask</strong></p></div>
+<div class="cr-tp" data-kind="credit"><div><p class="cr-tpn">Audience discovery from analyzed data</p><p class="cr-tpd">“What cohorts are forming in my data?” → Opal mines and proposes, as designed. <span class="chip chip-open">Open</span>: not connected to the engine today.</p></div><p class="cr-tpv"><strong>Credits<br>per ask</strong></p></div>
+<div class="cr-tp" data-kind="off"><div><p class="cr-tpn">Discovery proposals from the engine</p><p class="cr-tpd">“A tote-interest cohort is forming: want to activate it?” Proposals the engine raises on its own are switched off by policy and not offered.</p></div><p class="cr-tpv"><strong>Not<br>offered</strong></p></div>
+<p class="cr-take"><b>The split here is subtle: the learning costs no credits, but asking Opal about it does.</b> The engine’s own statistics cost no credits; narrating, analyzing, or mining them through Opal is credit-metered, as designed, and Opal is not connected to the engine today.</p>
+</section>
+</div>
+<p class="cr-caption">The single asterisk on "During" is the one thing to keep straight: optional shopper-facing AI features are the lone credit-consuming exception in the live path, and only if the customer licenses them. Everything else during a session is deterministic.</p>
+<figure class="figure" data-figure="before-during-after" data-added="the session figure, by the coordinator's ruling of 2026-10-02 (design section 3.6); credits.md carries it for Word">
+<p class="figure-lead" data-lead="figure lead">The same session as one figure, with each card&rsquo;s label: Built, Designed or Open.</p>
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="968" viewBox="0 0 1100 968" role="img" aria-labelledby="bda-t bda-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="bda-t">One visitor's session: what happens before, during and after</title>
+  <desc id="bda-d">The rule: the engine decides, calling no AI model to decide and using no credits, which is Built; Opal creates and explains, and credits apply as documented, which is Open because Opal is not wired today. Before, the team's preparation: the team publishes the documents the engine follows, with no AI and no credits, Built; Opal drafts an audience, a test or a setting from plain words and a person approves, credits apply, Open and not wired today; a model on the customer's own key suggests tags for content and a person approves each one, credits not decided, Built and off by default. Credits follow the team's requests, not the traffic. During, the visit: the engine decides at the edge from the published rules, no AI and no credits, Built; interest, ranking and receipts are arithmetic, written as data, no AI and no credits, Built; the one exception is the optional AI features the visitor uses, typed search, an advisor and generated imagery, metered per use, with typed search Built and off by default and the advisor and imagery demo only. No page view uses a credit. After, the results: the engine credits and counts outcomes, and nothing moves until a person raises the learning dial, no AI and no credits, Built, and Open because nothing is recorded yet from the engine's browser script; the team reads the receipts and the day report in the console, no AI and no credits, Built; asking Opal to explain results or find patterns in them, credits apply, Open and not wired today. The learning costs no credits; asking Opal about it would. The credit line on each card follows the documented credit rule, which is Designed; the billing meter is Open.</desc>
+  <!-- Lane D1, drawn by hand, in the device of the Opal credits page (docs/enablement/research/S3-naming-and-narrative.md 2.3):
+       three parts of the visitor's session, a credit line in words on every card, the one exception flagged once.
+       Facts: S2-engine-facts.md 3.15, 4.1-4.6, 5.1-5.2, 6.1-6.3, 10.1, with docs/Opal-Credit-Boundary-Pricing-Guide.md 1-4 for the
+       credit rule, under S2's corrections (6.2: no Opal integration is wired; the guide's line on where Opal files audiences is not repeated).
+       Credit lines are words, never chips or bands (review R-F1), so the one legend stays Built, Designed, Open:
+       LF green = Built, light blue = Designed, dashed white = Open, as in the other two figures. -->
+  <rect x="0" y="0" width="1100" height="968" fill="#FFFFFF"/>
+
+  <text x="16" y="46" font-size="32" font-weight="700">One visitor's session: what happens before, during and after</text>
+
+  <!-- The rule, in two halves (S2 6.1, 6.2; pricing guide 1) -->
+  <g data-box="rule engine">
+    <rect x="16" y="66" width="529" height="74" rx="16" fill="#08251A"/>
+    <text x="36" y="97" font-size="24" font-weight="700" fill="#ABFF44">The engine decides.</text>
+    <text x="36" y="124" font-size="20" fill="#FFFFFF">Calls no AI model to decide; no credits.</text>
+    <g data-box="chip">
+      <rect x="455" y="81" width="70" height="28" rx="14" fill="#ABFF44"/>
+      <text x="490" y="101" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+    </g>
+  </g>
+  <g data-box="rule opal">
+    <rect x="555" y="66" width="529" height="74" rx="16" fill="#197050"/>
+    <text x="575" y="97" font-size="24" font-weight="700" fill="#FFFFFF">Opal creates and explains.</text>
+    <text x="575" y="124" font-size="20" fill="#FFFFFF">Credits apply, as documented.</text>
+    <g data-box="chip">
+      <rect x="992" y="78" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="1028" y="98" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="1064" y="128" font-size="18" fill="#FFFFFF" text-anchor="end">not wired today</text>
+  </g>
+
+  <!-- BEFORE: the team's preparation -->
+  <g data-box="column before">
+    <rect x="16" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="34" y="196" font-size="28" font-weight="700">Before</text>
+    <text x="34" y="224" font-size="20" fill="#197050">The team's preparation</text>
+
+    <!-- S2 4.1-4.6 -->
+    <g data-box="publishes">
+      <rect x="24" y="244" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="38" y="306" font-size="20">The team publishes the</text>
+      <text x="38" y="331" font-size="20">documents the engine follows.</text>
+      <g data-box="chip"><rect x="38" y="345" width="70" height="28" rx="14" fill="#ABFF44"/><text x="73" y="365" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.2 (not wired); pricing guide 2, BEFORE -->
+    <g data-box="opal drafts">
+      <rect x="24" y="397" width="330" height="166" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="427" font-size="19" font-weight="700">Credits apply</text>
+      <text x="38" y="459" font-size="20">Opal drafts an audience, a test</text>
+      <text x="38" y="484" font-size="20">or a setting from plain words;</text>
+      <text x="38" y="509" font-size="20">a person approves.</text>
+      <g data-box="chip"><rect x="38" y="523" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="74" y="543" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="120" y="543" font-size="18">not wired today</text>
+    </g>
+
+    <!-- S2 6.1 (design-time tagging, built locally, off by default); 6.3 (whether it is billed as credits: Open) -->
+    <g data-box="labels">
+      <rect x="24" y="575" width="330" height="166" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="605" font-size="19" font-weight="700">Credits not decided</text>
+      <text x="38" y="637" font-size="20">A model on the customer's own</text>
+      <text x="38" y="662" font-size="20">key suggests tags for content; a</text>
+      <text x="38" y="687" font-size="20">person approves each one.</text>
+      <g data-box="chip"><rect x="38" y="701" width="70" height="28" rx="14" fill="#ABFF44"/><text x="73" y="721" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <text x="118" y="721" font-size="18">off by default</text>
+    </g>
+
+    <text x="34" y="826" font-size="20" font-weight="700">Credits follow the team's</text>
+    <text x="34" y="852" font-size="20" font-weight="700">requests, not the traffic.</text>
+  </g>
+
+  <!-- DURING: the visit -->
+  <g data-box="column during">
+    <rect x="377" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="395" y="196" font-size="28" font-weight="700">During</text>
+    <text x="395" y="224" font-size="20" fill="#197050">The visit</text>
+
+    <!-- S2 1; 6.1 -->
+    <g data-box="decides">
+      <rect x="385" y="244" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="399" y="306" font-size="20">The engine decides at the edge,</text>
+      <text x="399" y="331" font-size="20">from the published rules.</text>
+      <g data-box="chip"><rect x="399" y="345" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="365" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.1 (the decision function is pure; the interest arithmetic calls no model); 6.2 (receipts produced as data) -->
+    <g data-box="arithmetic">
+      <rect x="385" y="397" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="427" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="399" y="459" font-size="20">Interest, ranking and receipts</text>
+      <text x="399" y="484" font-size="20">are arithmetic, written as data.</text>
+      <g data-box="chip"><rect x="399" y="498" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="518" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- The one exception, flagged once (S2 6.1, 6.3; pricing guide 2 DURING and 3 item 3) -->
+    <g data-box="exception tab">
+      <rect x="385" y="550" width="192" height="28" rx="14" fill="#08251A"/>
+      <text x="481" y="570" font-size="18" font-weight="700" fill="#FFFFFF" text-anchor="middle">The one exception</text>
+    </g>
+    <g data-box="ai features">
+      <rect x="385" y="586" width="330" height="186" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="616" font-size="19" font-weight="700">Metered per use</text>
+      <text x="399" y="648" font-size="20">Optional AI features the visitor</text>
+      <text x="399" y="673" font-size="20">uses: typed search, an advisor,</text>
+      <text x="399" y="698" font-size="20">generated imagery.</text>
+      <g data-box="chip"><rect x="399" y="712" width="70" height="28" rx="14" fill="#ABFF44"/><text x="434" y="732" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <text x="479" y="732" font-size="18">typed search, off by default</text>
+      <text x="399" y="760" font-size="18">the advisor and imagery: demo only</text>
+    </g>
+
+    <text x="395" y="826" font-size="20" font-weight="700">No page view uses a credit.</text>
+  </g>
+
+  <!-- AFTER: the results -->
+  <g data-box="column after">
+    <rect x="738" y="160" width="346" height="716" rx="18" fill="#E4F0DA"/>
+    <text x="756" y="196" font-size="28" font-weight="700">After</text>
+    <text x="756" y="224" font-size="20" fill="#197050">The results</text>
+
+    <!-- S2 3.15, 5.1, 5.2; recording from the browser script: 3.15 with 10.2 "Durable recovery" -->
+    <g data-box="counts">
+      <rect x="746" y="244" width="330" height="226" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="274" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="760" y="306" font-size="20">The engine credits and counts</text>
+      <text x="760" y="331" font-size="20">outcomes; nothing moves until a</text>
+      <text x="760" y="356" font-size="20">person raises the learning dial.</text>
+      <g data-box="chip"><rect x="760" y="370" width="70" height="28" rx="14" fill="#ABFF44"/><text x="795" y="390" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+      <g data-box="chip"><rect x="760" y="408" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="796" y="428" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="842" y="428" font-size="18">nothing is recorded yet</text>
+      <text x="760" y="458" font-size="18">from the engine's browser script</text>
+    </g>
+
+    <!-- S2 3.14, 3.16, 4.5 -->
+    <g data-box="reads">
+      <rect x="746" y="482" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="512" font-size="19" font-weight="700">No AI · no credits</text>
+      <text x="760" y="544" font-size="20">The team reads the receipts and</text>
+      <text x="760" y="569" font-size="20">the day report in the console.</text>
+      <g data-box="chip"><rect x="760" y="583" width="70" height="28" rx="14" fill="#ABFF44"/><text x="795" y="603" font-size="18" font-weight="700" text-anchor="middle">Built</text></g>
+    </g>
+
+    <!-- S2 6.2 (not wired); pricing guide 2, AFTER -->
+    <g data-box="asking opal">
+      <rect x="746" y="635" width="330" height="141" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="665" font-size="19" font-weight="700">Credits apply</text>
+      <text x="760" y="697" font-size="20">Asking Opal to explain results</text>
+      <text x="760" y="722" font-size="20">or find patterns in them.</text>
+      <g data-box="chip"><rect x="760" y="736" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/><text x="796" y="756" font-size="18" font-weight="700" text-anchor="middle">Open</text></g>
+      <text x="842" y="756" font-size="18">not wired today</text>
+    </g>
+
+    <text x="756" y="826" font-size="20" font-weight="700">The learning costs no credits;</text>
+    <text x="756" y="852" font-size="20" font-weight="700">asking Opal about it would.</text>
+  </g>
+
+  <!-- The package's one legend, and what the credit lines rest on (S2 6.3, 10.1) -->
+
+  <g data-box="chip">
+    <rect x="16" y="898" width="70" height="28" rx="14" fill="#ABFF44"/>
+    <text x="51" y="918" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+  </g>
+  <text x="94" y="918" font-size="19">in the code and exercised</text>
+  <g data-box="chip">
+    <rect x="333" y="898" width="110" height="28" rx="14" fill="#91DBDA"/>
+    <text x="388" y="918" font-size="18" font-weight="700" text-anchor="middle">Designed</text>
+  </g>
+  <text x="451" y="918" font-size="19">in an architecture document, not in the code</text>
+  <g data-box="chip">
+    <rect x="865" y="898" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="901" y="918" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+  </g>
+  <text x="945" y="918" font-size="19">no decision yet</text>
+  <text x="16" y="952" font-size="18" fill="#197050">The credit line on each card follows the documented credit rule, which is Designed; the billing meter is Open.</text>
+</svg></div>
+<figcaption>One visitor's session: what happens before, during and after</figcaption>
+</figure>
+</section>
+<section class="cr-section" aria-labelledby="cr-h-2">
+<p class="cr-snum">02 · WHY THIS MATTERS FOR PRICING</p>
+<h2 id="cr-h-2">Credits scale with the team. The engine scales with traffic. Never cross the wires.</h2>
+<p>This is the whole objection-killer. The moment credits appear to scale with traffic, a customer's finance team models worst-case AI cost against their traffic curve, and the deal stalls on a fear that isn't real.</p>
+<div class="cr-scale">
+<div class="cr-scalecard eng">
+<h3>The engine</h3>
+<p class="cr-axis">cost ↑ as sessions ↑</p>
+<div class="cr-graph"><svg viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true" focusable="false"><line class="cr-g-line" x1="0" y1="110" x2="190" y2="18"/><circle class="cr-g-dot" cx="190" cy="18" r="4"/></svg></div>
+<p class="cr-sc-verdict"><strong>Scales with traffic</strong></p>
+<p class="cr-sc-note">Platform fee + usage, priced per visitor / session: <span class="chip chip-designed">Designed</span>, a recommendation; its rates and the usage meter are <span class="chip chip-open">Open</span>. No AI cost inside it, by architecture.</p>
+</div>
+<div class="cr-scalecard opal">
+<h3>Opal / AI credits</h3>
+<p class="cr-axis">cost flat as sessions ↑</p>
+<div class="cr-graph"><svg viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true" focusable="false"><line class="cr-g-line" x1="0" y1="70" x2="190" y2="70"/><circle class="cr-g-dot" cx="190" cy="70" r="4"/></svg></div>
+<p class="cr-sc-verdict"><strong>Flat vs. traffic</strong></p>
+<p class="cr-sc-note">Sized to the operator team: how often they author audiences, launch tests, ask questions.</p>
+</div>
+</div>
+<p class="cr-caption">Whether a site has one million sessions or ten million, the left line climbs and the right line doesn't move. That contrast is the cost-predictability selling point and the objection-killer in one picture.</p>
+</section>
+<section class="cr-section" aria-labelledby="cr-h-3">
+<p class="cr-snum">03 · STRUCTURING THE QUOTE</p>
+<h2 id="cr-h-3">Three revenue lines, three different meters.</h2>
+<p>Keep them as separate lines. Each answers to a different driver, and blending them is where quotes go wrong.</p>
+<div class="cr-meters">
+<div class="cr-meter m1">
+<p class="cr-mnum" aria-hidden="true">1</p>
+<div class="cr-mbody">
+<p class="cr-mname">The engine <strong class="cr-scales">Scales with traffic</strong></p>
+<p class="cr-mdesc">Platform fee + usage, per monthly-tracked-visitor or per-1K-sessions: <span class="chip chip-designed">Designed</span>, a recommendation; its rates and the usage meter are <span class="chip chip-open">Open</span>. <b>No AI cost inside it, by architecture.</b></p>
+</div>
+</div>
+<div class="cr-meter m2">
+<p class="cr-mnum" aria-hidden="true">2</p>
+<div class="cr-mbody">
+<p class="cr-mname">Opal credits <strong class="cr-scales">Scales with team activity</strong></p>
+<p class="cr-mdesc">Credit packs sized to the operator team: merchandisers, analysts, how often they author and ask. <b>Authoring-heavy months (onboarding, campaign season) burn more; steady-state is modest.</b></p>
+</div>
+</div>
+<div class="cr-meter m3">
+<p class="cr-mnum" aria-hidden="true">3</p>
+<div class="cr-mbody">
+<p class="cr-mname">Shopper-facing AI features <strong class="cr-scales">Scales with adoption</strong></p>
+<p class="cr-mdesc">Optional add-on line: metered per invocation (searches, advisor conversations, new scenes generated), or bundled as an allowance. <b>Scales with feature adoption, not page views.</b> Typed search is <span class="chip chip-built">Built</span> and off by default; the advisor and scene generation are demo only.</p>
+</div>
+</div>
+</div>
+<div class="cr-warnrow">
+<p class="cr-wt">The one thing never to do</p>
+<p>Never blend lines 1 and 2 into one meter. The moment credits appear to scale with traffic, the customer's finance team will model worst-case AI costs against their traffic curve and the deal will stall on a fear that isn't real.</p>
+</div>
+</section>
+<section class="cr-section" aria-labelledby="cr-h-4">
+<p class="cr-snum">04 · SAY THESE VERBATIM</p>
+<h2 id="cr-h-4">Three sentences that settle the AI-cost question.</h2>
+<p class="cr-lead">Each follows the documented credit rule, which is <span class="chip chip-designed">Designed</span>; the billing meter is <span class="chip chip-open">Open</span>.</p>
+<div class="cr-scripts">
+<div class="cr-script">
+<p class="cr-slabel">On traffic &amp; credits</p>
+<p class="cr-line">Shopper traffic <span class="cr-key">never</span> consumes AI credits: the decision path is deterministic math on edge infrastructure, priced as platform usage.</p>
+</div>
+<div class="cr-script">
+<p class="cr-slabel">On what credits track</p>
+<p class="cr-line">Credits scale with your <span class="cr-key">team's</span> questions and creations, such as audiences, tests and analyses, not with your shoppers' clicks.</p>
+</div>
+<div class="cr-script">
+<p class="cr-slabel">On the optional shopper AI features</p>
+<p class="cr-line">The optional AI shopping features are metered <span class="cr-key">only when a shopper actually uses them</span>, so you pay per use, not per view.</p>
+</div>
+</div>
+</section>
+<section class="cr-section cr-faq" aria-labelledby="cr-h-5">
+<p class="cr-snum">05 · QUICK FAQ</p>
+<h2 id="cr-h-5">The questions that come up on every deal.</h2>
+<p class="cr-faq-lead" data-lead="disclosures">Each question opens to its answer.</p>
+<details><summary>If the engine is so smart, why doesn't it use AI credits?</summary><div class="cr-faq-body"><p>Because it deliberately calls <em>no</em> AI model to decide: it's transparent scoring math. That's a feature (cost-predictability, explainability), not a limitation. It's the anti-black-box argument that wins engineering teams.</p></div></details>
+<details><summary>Does the learning loop cost credits?</summary><div class="cr-faq-body"><p>No. The learning, which content converts and for whom, is the engine's own statistics pipeline running on its own data. Asking Opal to <em>explain or analyze</em> those results is what costs credits, and Opal is not connected to the engine today.</p></div></details>
+<details><summary>Is the content auto-tagging a recurring cost?</summary><div class="cr-faq-body"><p>Per content batch: large at onboarding, a small trickle as new content arrives. Whether it is billed as credits is still open, so quote it with onboarding only once that is decided.</p></div></details>
+<details><summary>What if the customer never buys Opal credits?</summary><div class="cr-faq-body"><p>The engine runs fully without them: no decision calls an AI model, and the team reads receipts and the day report directly in the operator console. Opal is the natural-language accelerant and the transparency narrator, as designed: a strong attach, not a dependency.</p></div></details>
+<details><summary>Which products are on the order form?</summary><div class="cr-faq-body"><p>ODP (the customer data platform), Feature Experimentation (activation/testing), Opal credits (authoring + insight), the engine itself (the new offering line), and optional shopper AI features. ODP and Feature Experimentation have their own licenses and sit outside the decision path. See the map below.</p></div></details>
+</section>
+<section class="cr-section" aria-labelledby="cr-h-6">
+<p class="cr-snum">06 · WHAT'S ON THE ORDER FORM</p>
+<h2 id="cr-h-6">The five lines, and what drives each.</h2>
+<div class="cr-order">
+<div class="cr-order-head"><p>Line</p><p>What it is</p><p>What drives it</p></div>
+<div class="cr-order-row"><p class="cr-oname">ODP</p><p class="cr-odesc">The customer data platform: profiles, audiences, outcomes. Outside the decision path; connecting it to a customer deployment is <span class="chip chip-open">Open</span>.</p><p class="cr-otag" data-kind="own"><strong>Own licensing</strong></p></div>
+<div class="cr-order-row"><p class="cr-oname">Feature Experimentation</p><p class="cr-odesc">Activation &amp; testing: flags, experiments, CMAB. Outside the decision path; connecting it to a customer deployment is <span class="chip chip-open">Open</span>.</p><p class="cr-otag" data-kind="own"><strong>Own licensing</strong></p></div>
+<div class="cr-order-row"><p class="cr-oname">The engine</p><p class="cr-odesc">The new offering line: in-session interest scoring, content matching, the ranked answer. <span class="chip chip-designed">Designed</span> as a recommendation; its rates and usage meter are <span class="chip chip-open">Open</span>.</p><p class="cr-otag" data-kind="traffic"><strong>Scales with traffic</strong></p></div>
+<div class="cr-order-row"><p class="cr-oname">Opal credits</p><p class="cr-odesc">Authoring + insight: the natural-language layer.</p><p class="cr-otag" data-kind="team"><strong>Scales with team activity</strong></p></div>
+<div class="cr-order-row"><p class="cr-oname">Shopper-facing AI features</p><p class="cr-odesc">Optional: typed search, style advisor, scene generation. Typed search is <span class="chip chip-built">Built</span> and off by default; the advisor and scene generation are demo only.</p><p class="cr-otag" data-kind="adopt"><strong>Scales with adoption</strong></p></div>
+</div>
+<p class="cr-caption">Three different meters across five lines. Each tag names its driver in words, the same words the meters above use.</p>
+</section>
+<footer class="cr-colophon">
+<p>INTERNAL REFERENCE · OPAL &amp; AI-CREDIT PLACEMENT · AE / PRICING / DEAL DESK<br>
+<span class="cr-colophon-rule">THE ENGINE DECIDES · OPAL CREATES &amp; EXPLAINS · CREDITS FOLLOW THE TEAM, NOT THE TRAFFIC</span></p>
+</footer>
+</article>
+</main>
+<footer class="foot">
+<div class="wrap">
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/status"><span class="pieces-name">What is built, designed and open</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/credits" aria-current="page"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo to show to whom</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
+</div>
+</footer>
+</body>
+</html>

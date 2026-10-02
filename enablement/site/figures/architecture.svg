@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1320" viewBox="0 0 1100 1320" role="img" aria-labelledby="arch-t arch-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="arch-t">Where the engine runs on Cloudflare</title>
+  <desc id="arch-d">The customer's site, in the visitor's browser, sends a consent choice, events and decision requests to the worker on Cloudflare's network, and receives the answer: the brand's own content ids in order, each with its reasons. The operator, in the console, publishes the documents and reads the receipts and the day report. The worker, the engine's code, runs at the edge, in the data center nearest the visitor. Kept by each worker: the visitor's objects (the visitor's consent choice and the pieces served to the visitor), the learning statistics (one per slot), the regional prior (one per region, with no visitor ids) and the queue to the ledger. Shared by the demo workers, while a customer's deployment has its own: the visitor's interest record in the key-value store (the session host, the shipped default), the published snapshots of the regional prior and the learned lift, file storage for the published documents, the ledger and the day reports, and the database for operator accounts or the demo datasets. Two points are open: with the engine's browser script nothing is recorded yet, and how a customer's own deployment gets its first documents is not decided. Nothing in this picture calls an AI model to decide.</desc>
+  <!-- Lane D1, drawn by hand. Facts: docs/enablement/research/S2-engine-facts.md (code at 8b4f74c): sections 0, 1, 2.1-2.7,
+       3.2, 3.14-3.16, 4.1-4.7, 6.1, 7.1, 8.1, 10.1-10.3. Palette: enablement/site/index.html (fir 08251A, light fir 197050,
+       LF green ABFF44, light blue 91DBDA, neutral 3 E4F0DA). Presentation attributes only: no style element or attribute,
+       no script and no external reference, so the site's content policy needs no change to show it. -->
+  <defs>
+    <marker id="arch-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+    <marker id="arch-tail" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M10,0 L0,5 L10,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="1320" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">Where the engine runs on Cloudflare</text>
+
+  <!-- Outside Cloudflare: the customer's site (S2 2.7 B1; 1, "the site paints"; 3.14, the page's own answer) -->
+  <g data-box="site">
+    <rect x="20" y="70" width="500" height="182" rx="16" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="42" y="104" font-size="23" font-weight="700">The customer's site</text>
+    <text x="42" y="136" font-size="20">The customer's page and the engine's script,</text>
+    <text x="42" y="163" font-size="20">in the visitor's browser. The page paints each</text>
+    <text x="42" y="190" font-size="20">answer: the brand's own content ids in order,</text>
+    <text x="42" y="217" font-size="20">each with its reasons.</text>
+  </g>
+
+  <!-- Outside Cloudflare: the operator, the console and its two outputs (S2 2.7 B5 and arrow 16; 3.14; 3.16; 4.5) -->
+  <g data-box="operator">
+    <rect x="560" y="70" width="520" height="182" rx="16" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="582" y="104" font-size="23" font-weight="700">The operator, in the console</text>
+    <text x="582" y="134" font-size="20">Publishes the documents and reads the outputs:</text>
+    <g data-box="receipt">
+      <path data-container="1" d="M582,148 h214 l16,16 v74 h-230 z" fill="#E4F0DA" stroke="#08251A" stroke-width="2"/>
+      <path d="M796,148 v16 h16" fill="none" stroke="#08251A" stroke-width="2"/>
+      <text x="598" y="174" font-size="21" font-weight="700">The receipt</text>
+      <text x="598" y="199" font-size="20">the arithmetic behind</text>
+      <text x="598" y="222" font-size="20">each served piece</text>
+    </g>
+    <g data-box="day report">
+      <path data-container="1" d="M828,148 h214 l16,16 v74 h-230 z" fill="#E4F0DA" stroke="#08251A" stroke-width="2"/>
+      <path d="M1042,148 v16 h16" fill="none" stroke="#08251A" stroke-width="2"/>
+      <text x="844" y="174" font-size="21" font-weight="700">The day report</text>
+      <text x="844" y="199" font-size="20">credited outcomes,</text>
+      <text x="844" y="222" font-size="20">slot by slot</text>
+    </g>
+  </g>
+
+  <!-- Cloudflare's network (S2 0, "Worker"; 2.1) -->
+  <g data-box="region">
+    <rect x="20" y="342" width="1060" height="836" rx="24" fill="#E4F0DA"/>
+    <text x="1064" y="374" font-size="22" font-weight="700" text-anchor="end">Cloudflare's network</text>
+  </g>
+
+  <!-- What crosses between the site, the operator and the worker (S2 2.7 arrows 2, 3, 7, 16, 17) -->
+  <g stroke="#08251A" stroke-width="3" fill="none">
+    <line x1="70" y1="252" x2="70" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="200" y1="252" x2="200" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="330" y1="252" x2="330" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="460" y1="390" x2="460" y2="264" marker-end="url(#arch-head)"/>
+    <line x1="620" y1="252" x2="620" y2="378" marker-end="url(#arch-head)"/>
+    <line x1="820" y1="390" x2="820" y2="264" marker-end="url(#arch-head)"/>
+  </g>
+  <g font-size="19" font-weight="500">
+    <text x="80" y="282">a consent</text>
+    <text x="80" y="304">choice</text>
+    <text x="210" y="282">an event</text>
+    <text x="340" y="282">a decision</text>
+    <text x="340" y="304">request</text>
+    <text x="470" y="282">the answer</text>
+    <text x="630" y="282">a publish,</text>
+    <text x="630" y="304">a new revision</text>
+    <text x="830" y="282">receipts and</text>
+    <text x="830" y="304">the day report</text>
+  </g>
+
+  <!-- The worker, the engine's code, and its stem to the stores (S2 0; 2.1, the three entry points; 2.4; 3.2; 3.14-3.15) -->
+  <rect x="543" y="490" width="14" height="548" fill="#08251A"/>
+  <g data-box="worker">
+    <rect x="36" y="390" width="1028" height="108" rx="14" fill="#08251A"/>
+    <text x="58" y="426" font-size="23" font-weight="700" fill="#ABFF44">The worker: the engine's code</text>
+    <text x="58" y="456" font-size="20" fill="#FFFFFF">Runs at the edge: the data center nearest the visitor. Checks access and consent, updates their interest,</text>
+    <text x="58" y="482" font-size="20" fill="#FFFFFF">decides and keeps a receipt. The same code drains the queue into the ledger and runs the scheduled jobs.</text>
+  </g>
+
+  <!-- Kept by each worker: its object classes and its queue (S2 2.2 EVENT_QUEUE; 2.3 and its closing paragraph) -->
+  <g data-box="zone per worker">
+    <rect x="36" y="520" width="368" height="558" rx="18" fill="none" stroke="#197050" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="52" y="550" font-size="20" font-weight="700" fill="#197050">Kept by each worker</text>
+    <g data-box="visitor objects">
+      <rect x="48" y="590" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="620" font-size="23" font-weight="700">The visitor's objects</text>
+      <text x="66" y="647" font-size="20">Their consent choice, and the</text>
+      <text x="66" y="673" font-size="20">pieces served to them.</text>
+    </g>
+    <g data-box="learning statistics">
+      <rect x="48" y="715" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="745" font-size="23" font-weight="700">Learning statistics</text>
+      <text x="66" y="772" font-size="20">One per slot: pieces shown and</text>
+      <text x="66" y="798" font-size="20">outcomes credited, by context.</text>
+    </g>
+    <g data-box="regional prior">
+      <rect x="48" y="840" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="870" font-size="23" font-weight="700">The regional prior</text>
+      <text x="66" y="897" font-size="20">One per region: interest counts,</text>
+      <text x="66" y="923" font-size="20">with no visitor ids.</text>
+    </g>
+    <g data-box="queue">
+      <rect x="48" y="966" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="66" y="996" font-size="23" font-weight="700">Queue to the ledger</text>
+      <text x="66" y="1023" font-size="20">Receipts and outcomes, after the</text>
+      <text x="66" y="1049" font-size="20">answer, with tracking consent.</text>
+    </g>
+  </g>
+
+  <!-- Shared by the demo workers; a customer's deployment has its own (S2 2.2; 2.5 REFLEX_HOST; 4.3; 8.1) -->
+  <g data-box="zone shared">
+    <rect x="696" y="520" width="368" height="558" rx="18" fill="none" stroke="#197050" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="712" y="550" font-size="20" font-weight="700" fill="#197050">Shared by the demo workers</text>
+    <text x="712" y="574" font-size="19" fill="#197050">A customer's deployment has its own.</text>
+    <g data-box="interest record">
+      <rect x="708" y="590" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="620" font-size="23" font-weight="700">The visitor's interest</text>
+      <text x="726" y="647" font-size="20">In the key-value store (KV): the</text>
+      <text x="726" y="673" font-size="20">session host, the shipped default.</text>
+    </g>
+    <g data-box="snapshots">
+      <rect x="708" y="702" width="344" height="98" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="732" font-size="23" font-weight="700">Published snapshots</text>
+      <text x="726" y="759" font-size="20">Copies of the regional prior and</text>
+      <text x="726" y="785" font-size="20">the learned lift, published to KV.</text>
+    </g>
+    <g data-box="file storage">
+      <rect x="708" y="814" width="344" height="118" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="844" font-size="23" font-weight="700">File storage (R2)</text>
+      <text x="726" y="871" font-size="20">The published documents, every</text>
+      <text x="726" y="897" font-size="20">revision kept; the ledger; the</text>
+      <text x="726" y="923" font-size="20">day reports.</text>
+    </g>
+    <g data-box="database">
+      <rect x="708" y="946" width="344" height="118" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="726" y="976" font-size="23" font-weight="700">Database (D1)</text>
+      <text x="726" y="1003" font-size="20">On a customer's deployment:</text>
+      <text x="726" y="1029" font-size="20">operator accounts, audit trail.</text>
+      <text x="726" y="1055" font-size="20">Demo workers: demo datasets.</text>
+    </g>
+  </g>
+
+  <!-- What crosses between the worker and each store (S2 2.7 arrows 2, 4, 5, 8, 9, 10-12, 14-16) -->
+  <g stroke="#08251A" stroke-width="3" fill="none">
+    <line x1="404" y1="654" x2="531" y2="654" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="779" x2="404" y2="779" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="904" x2="404" y2="904" marker-end="url(#arch-head)"/>
+    <line x1="543" y1="1030" x2="404" y2="1030" marker-end="url(#arch-head)"/>
+    <line x1="569" y1="654" x2="696" y2="654" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+    <line x1="708" y1="766" x2="569" y2="766" marker-end="url(#arch-head)"/>
+    <line x1="708" y1="842" x2="569" y2="842" marker-end="url(#arch-head)"/>
+    <line x1="557" y1="914" x2="696" y2="914" marker-end="url(#arch-head)"/>
+    <line x1="569" y1="1010" x2="696" y2="1010" marker-start="url(#arch-tail)" marker-end="url(#arch-head)"/>
+  </g>
+  <g font-size="19" font-weight="500" text-anchor="middle">
+    <text x="468" y="624">consent;</text>
+    <text x="468" y="645">pieces served</text>
+    <text x="468" y="770">pieces shown</text>
+    <text x="468" y="874">each event's</text>
+    <text x="468" y="895">touches</text>
+    <text x="468" y="1000">receipts and</text>
+    <text x="468" y="1021">outcomes</text>
+    <text x="632" y="624">interest,</text>
+    <text x="632" y="645">read, updated</text>
+    <text x="632" y="757">snapshots</text>
+    <text x="632" y="833">documents</text>
+    <text x="632" y="884">the ledger,</text>
+    <text x="632" y="905">day reports</text>
+    <text x="632" y="980">operator</text>
+    <text x="632" y="1001">sign-in</text>
+  </g>
+
+  <!-- Two open points, inline (S2 3.15 with 10.2 "Durable recovery"; 4.7 with 10.2 "The tenant's first configuration" and 10.3) -->
+  <g data-box="open recording">
+    <rect x="36" y="1092" width="494" height="70" rx="12" fill="#FFFFFF"/>
+    <g data-box="chip">
+      <rect x="50" y="1104" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="86" y="1124" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="134" y="1121" font-size="19">With the engine's browser script, nothing is</text>
+    <text x="134" y="1145" font-size="19">recorded yet: the switch it needs is off.</text>
+  </g>
+  <g data-box="open documents">
+    <rect x="570" y="1092" width="494" height="70" rx="12" fill="#FFFFFF"/>
+    <g data-box="chip">
+      <rect x="584" y="1104" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="620" y="1124" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+    </g>
+    <text x="668" y="1121" font-size="19">How a customer's own deployment gets</text>
+    <text x="668" y="1145" font-size="19">its first documents is not decided yet.</text>
+  </g>
+
+  <!-- The rule, and the one legend (common brief: Built, Designed, Open) -->
+  <g data-box="rule">
+    <rect x="20" y="1196" width="1060" height="44" rx="22" fill="#08251A"/>
+    <text x="550" y="1225" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">Nothing in this picture calls an AI model to decide.</text>
+  </g>
+  <g data-box="chip">
+    <rect x="20" y="1254" width="70" height="28" rx="14" fill="#ABFF44"/>
+    <text x="55" y="1274" font-size="18" font-weight="700" text-anchor="middle">Built</text>
+  </g>
+  <text x="98" y="1274" font-size="19">in the code and exercised</text>
+  <g data-box="chip">
+    <rect x="337" y="1254" width="110" height="28" rx="14" fill="#91DBDA"/>
+    <text x="392" y="1274" font-size="18" font-weight="700" text-anchor="middle">Designed</text>
+  </g>
+  <text x="455" y="1274" font-size="19">in an architecture document, not in the code</text>
+  <g data-box="chip">
+    <rect x="869" y="1254" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="905" y="1274" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+  </g>
+  <text x="949" y="1274" font-size="19">no decision yet</text>
+  <text x="20" y="1306" font-size="19" fill="#197050">Every part of the engine drawn here is Built, except where a tag says Open.</text>
+</svg>
