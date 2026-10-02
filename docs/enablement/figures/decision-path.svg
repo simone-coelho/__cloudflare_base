@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="912" viewBox="0 0 1100 912" role="img" aria-labelledby="path-t path-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
   <title id="path-t">From an event to a decision</title>
-  <desc id="path-d">The steps, left to right, in a row for the visitor and a row for the slot. The visitor: identity and session, where each visitor gets an anonymous id and a signed session, governed by worker settings set by an engineer; the consent check, where without an explicit choice nothing is personalized or recorded, governed by the visitor's own choice; touches from the event, where the registry says which dimension values an event touches, and by how much; graded, fading interest, read for each value when the page asks, governed by the registry's memory settings; the regional prior, where a stranger leans on their region's interests, less as their own grow, governed by the learn document. The slot: gated candidates, so only pieces that may be served remain, live, in window, in stock and passing their own rule, governed by the catalog and the slots document; each piece's score, the sum of interest times the slot's weight over its tags, then adjustments, governed by the slots document; pins and the diversity cap, pinned pieces first and the rest by score with a cap on pieces that share a value, governed by the slots document; the answer and its receipt, content ids in order with reasons while the receipt keeps the arithmetic, naming every document in force by revision; outcomes and the dial, credited and counted, moving nothing until a person raises the learning dial, governed by the learn document. Every step is Built. Open: with the engine's browser script nothing is recorded yet, because the switch it needs is off. No step here calls an AI model to decide.</desc>
+  <desc id="path-d">The steps, left to right, in a row for the visitor and a row for the slot. The visitor: identity and session, where each visitor gets an anonymous id and a signed session, governed by worker settings set by an engineer; the consent check, where without an explicit choice nothing is personalized or recorded, governed by the visitor's own choice; touches from the event, where the registry says which dimension values an event touches, and by how much; graded, fading interest, read for each value when the page asks, governed by the registry's memory settings; the regional prior, where a stranger leans on their region's interests, less as their own grow, governed by the learn document. The slot: gated candidates, so only pieces that may be served remain, live, in window, in stock and passing their own rule, governed by the catalog and the slots document; each piece's score, the sum of interest times the slot's weight over its tags, then adjustments, governed by the slots document; pins and the diversity cap, pinned pieces first, unscored, and the rest by score, capped where they share a value, governed by the slots document; the answer and its receipt, content ids in order with reasons while the receipt keeps the arithmetic, naming every document in force by revision; outcomes and the dial, credited and counted, moving nothing until a person raises the learning dial, governed by the learn document. Every step is Built. Open: with the engine's browser script nothing is recorded yet, because the switch it needs is off. No step here calls an AI model to decide.</desc>
   <!-- Lane D1, drawn by hand. Facts: docs/enablement/research/S2-engine-facts.md (code at 8b4f74c), section 3 (3.1 to 3.15),
        with 4.2, 4.6, 5.2, 6.1 and 10.2. Order follows S2: identity before consent (3.1, 3.2: the consent choice is bound to the
        visitor's own session grant) and the regional prior before scoring (3.6, 3.7, 3.11: the score sums weight times the
@@ -20,9 +20,9 @@
 
   <!-- S2 3.1; 4.6 (identity settings need an engineer) -->
   <g data-box="identity">
-    <rect x="20" y="140" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M20,346 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="20" y="140" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <rect x="20" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="20" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
     <text x="34" y="172" font-size="22" font-weight="700">Identity and</text>
     <text x="34" y="198" font-size="22" font-weight="700">session</text>
     <text x="34" y="230" font-size="20">Each visitor gets</text>
@@ -35,76 +35,76 @@
 
   <!-- S2 3.2 -->
   <g data-box="consent">
-    <rect x="237" y="140" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M237,346 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="237" y="140" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="251" y="172" font-size="22" font-weight="700">The consent</text>
-    <text x="251" y="198" font-size="22" font-weight="700">check</text>
-    <text x="251" y="230" font-size="20">Without an</text>
-    <text x="251" y="255" font-size="20">explicit choice,</text>
-    <text x="251" y="280" font-size="20">nothing is</text>
-    <text x="251" y="305" font-size="20">personalized or</text>
-    <text x="251" y="330" font-size="20">recorded.</text>
-    <text x="251" y="370" font-size="18" font-weight="500" fill="#197050">The visitor's own</text>
-    <text x="251" y="392" font-size="18" font-weight="500" fill="#197050">choice</text>
+    <rect x="236" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="236" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="172" font-size="22" font-weight="700">The consent</text>
+    <text x="250" y="198" font-size="22" font-weight="700">check</text>
+    <text x="250" y="230" font-size="20">Without an</text>
+    <text x="250" y="255" font-size="20">explicit choice,</text>
+    <text x="250" y="280" font-size="20">nothing is</text>
+    <text x="250" y="305" font-size="20">personalized or</text>
+    <text x="250" y="330" font-size="20">recorded.</text>
+    <text x="250" y="370" font-size="18" font-weight="500" fill="#197050">The visitor's own</text>
+    <text x="250" y="392" font-size="18" font-weight="500" fill="#197050">choice</text>
   </g>
 
   <!-- S2 3.3 (weights, touch rules, event attributes, the vocabulary check); 4.2 -->
   <g data-box="touches">
-    <rect x="454" y="140" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M454,346 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="454" y="140" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="468" y="172" font-size="22" font-weight="700">Touches from</text>
-    <text x="468" y="198" font-size="22" font-weight="700">the event</text>
-    <text x="468" y="230" font-size="20">The registry says</text>
-    <text x="468" y="255" font-size="20">which dimension</text>
-    <text x="468" y="280" font-size="20">values an event</text>
-    <text x="468" y="305" font-size="20">touches, and by</text>
-    <text x="468" y="330" font-size="20">how much.</text>
-    <text x="468" y="370" font-size="18" font-weight="500" fill="#197050">The registry</text>
+    <rect x="452" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="452" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="172" font-size="22" font-weight="700">Touches from</text>
+    <text x="466" y="198" font-size="22" font-weight="700">the event</text>
+    <text x="466" y="230" font-size="20">The registry says</text>
+    <text x="466" y="255" font-size="20">which dimension</text>
+    <text x="466" y="280" font-size="20">values an event</text>
+    <text x="466" y="305" font-size="20">touches, and by</text>
+    <text x="466" y="330" font-size="20">how much.</text>
+    <text x="466" y="370" font-size="18" font-weight="500" fill="#197050">The registry</text>
   </g>
 
   <!-- S2 3.4 (graded, fading, computed when read); 3.7; 3.17 -->
   <g data-box="interest">
-    <rect x="671" y="140" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M671,346 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="671" y="140" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="685" y="172" font-size="22" font-weight="700">Graded, fading</text>
-    <text x="685" y="198" font-size="22" font-weight="700">interest</text>
-    <text x="685" y="230" font-size="20">When the page</text>
-    <text x="685" y="255" font-size="20">asks: graded for</text>
-    <text x="685" y="280" font-size="20">each value, and</text>
-    <text x="685" y="305" font-size="20">fading with time.</text>
-    <text x="685" y="370" font-size="18" font-weight="500" fill="#197050">The registry's</text>
-    <text x="685" y="392" font-size="18" font-weight="500" fill="#197050">memory settings</text>
+    <rect x="668" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="668" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="172" font-size="22" font-weight="700">Graded, fading</text>
+    <text x="682" y="198" font-size="22" font-weight="700">interest</text>
+    <text x="682" y="230" font-size="20">When the page</text>
+    <text x="682" y="255" font-size="20">asks: graded for</text>
+    <text x="682" y="280" font-size="20">each value, and</text>
+    <text x="682" y="305" font-size="20">fading with time.</text>
+    <text x="682" y="370" font-size="18" font-weight="500" fill="#197050">The registry's</text>
+    <text x="682" y="392" font-size="18" font-weight="500" fill="#197050">memory settings</text>
   </g>
 
   <!-- S2 3.6 (the blend; off without a regional block); 3.7 -->
   <g data-box="regional prior">
-    <rect x="888" y="140" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M888,346 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="888" y="140" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="902" y="172" font-size="22" font-weight="700">The regional</text>
-    <text x="902" y="198" font-size="22" font-weight="700">prior</text>
-    <text x="902" y="230" font-size="20">A stranger leans</text>
-    <text x="902" y="255" font-size="20">on their region's</text>
-    <text x="902" y="280" font-size="20">interests, less as</text>
-    <text x="902" y="305" font-size="20">their own grow.</text>
-    <text x="902" y="370" font-size="18" font-weight="500" fill="#197050">The learn</text>
-    <text x="902" y="392" font-size="18" font-weight="500" fill="#197050">document</text>
+    <rect x="884" y="140" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,346 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="884" y="140" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="172" font-size="22" font-weight="700">The regional</text>
+    <text x="898" y="198" font-size="22" font-weight="700">prior</text>
+    <text x="898" y="230" font-size="20">A stranger leans</text>
+    <text x="898" y="255" font-size="20">on their region's</text>
+    <text x="898" y="280" font-size="20">interests, less as</text>
+    <text x="898" y="305" font-size="20">their own grow.</text>
+    <text x="898" y="370" font-size="18" font-weight="500" fill="#197050">The learn</text>
+    <text x="898" y="392" font-size="18" font-weight="500" fill="#197050">document</text>
   </g>
 
   <!-- The chain, then the return to row two -->
   <g stroke="#08251A" stroke-width="3" fill="none">
-    <line x1="213" y1="185" x2="224" y2="185" marker-end="url(#path-head)"/>
-    <line x1="430" y1="185" x2="441" y2="185" marker-end="url(#path-head)"/>
-    <line x1="647" y1="185" x2="658" y2="185" marker-end="url(#path-head)"/>
-    <line x1="864" y1="185" x2="875" y2="185" marker-end="url(#path-head)"/>
-    <path d="M984,407 V428 H116 V464" stroke-linejoin="round" marker-end="url(#path-head)"/>
-    <line x1="213" y1="521" x2="224" y2="521" marker-end="url(#path-head)"/>
-    <line x1="430" y1="521" x2="441" y2="521" marker-end="url(#path-head)"/>
-    <line x1="647" y1="521" x2="658" y2="521" marker-end="url(#path-head)"/>
-    <line x1="864" y1="521" x2="875" y2="521" marker-end="url(#path-head)"/>
+    <line x1="217" y1="185" x2="223" y2="185" marker-end="url(#path-head)"/>
+    <line x1="433" y1="185" x2="439" y2="185" marker-end="url(#path-head)"/>
+    <line x1="649" y1="185" x2="655" y2="185" marker-end="url(#path-head)"/>
+    <line x1="865" y1="185" x2="871" y2="185" marker-end="url(#path-head)"/>
+    <path d="M982,407 V428 H118 V464" stroke-linejoin="round" marker-end="url(#path-head)"/>
+    <line x1="217" y1="521" x2="223" y2="521" marker-end="url(#path-head)"/>
+    <line x1="433" y1="521" x2="439" y2="521" marker-end="url(#path-head)"/>
+    <line x1="649" y1="521" x2="655" y2="521" marker-end="url(#path-head)"/>
+    <line x1="865" y1="521" x2="871" y2="521" marker-end="url(#path-head)"/>
   </g>
 
   <!-- Row two: the slot -->
@@ -112,9 +112,9 @@
 
   <!-- S2 3.9 (eligibility); 3.10 (off-limits, exclusions, allowed types) -->
   <g data-box="gated">
-    <rect x="20" y="476" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M20,682 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="20" y="476" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <rect x="20" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="20" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
     <text x="34" y="508" font-size="22" font-weight="700">Gated</text>
     <text x="34" y="534" font-size="22" font-weight="700">candidates</text>
     <text x="34" y="566" font-size="20">Only pieces that</text>
@@ -128,82 +128,82 @@
 
   <!-- S2 3.11 (the base sum, then completes, seeds, stage, freshness, fatigue, merchandising and the lift) -->
   <g data-box="scored">
-    <rect x="237" y="476" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M237,682 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="237" y="476" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="251" y="508" font-size="22" font-weight="700">Each piece's</text>
-    <text x="251" y="534" font-size="22" font-weight="700">score</text>
-    <text x="251" y="566" font-size="20">The sum of</text>
-    <text x="251" y="591" font-size="20">interest × the</text>
-    <text x="251" y="616" font-size="20">slot's weight over</text>
-    <text x="251" y="641" font-size="20">its tags, then</text>
-    <text x="251" y="666" font-size="20">adjustments.</text>
-    <text x="251" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
-    <text x="251" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+    <rect x="236" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="236" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="508" font-size="22" font-weight="700">Each piece's</text>
+    <text x="250" y="534" font-size="22" font-weight="700">score</text>
+    <text x="250" y="566" font-size="20">The sum of</text>
+    <text x="250" y="591" font-size="20">interest × the</text>
+    <text x="250" y="616" font-size="20">slot's weight over</text>
+    <text x="250" y="641" font-size="20">its tags, then</text>
+    <text x="250" y="666" font-size="20">adjustments.</text>
+    <text x="250" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
+    <text x="250" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
   </g>
 
   <!-- S2 3.10 (pins served first); 3.12 (sorted by score; the diversity cap) -->
   <g data-box="pins">
-    <rect x="454" y="476" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M454,682 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="454" y="476" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="468" y="508" font-size="22" font-weight="700">Pins and the</text>
-    <text x="468" y="534" font-size="22" font-weight="700">diversity cap</text>
-    <text x="468" y="566" font-size="20">Pinned pieces</text>
-    <text x="468" y="591" font-size="20">first; the rest by</text>
-    <text x="468" y="616" font-size="20">score, with a cap</text>
-    <text x="468" y="641" font-size="20">on pieces that</text>
-    <text x="468" y="666" font-size="20">share a value.</text>
-    <text x="468" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
-    <text x="468" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+    <rect x="452" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="452" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="508" font-size="22" font-weight="700">Pins and the</text>
+    <text x="466" y="534" font-size="22" font-weight="700">diversity cap</text>
+    <text x="466" y="566" font-size="20">Pinned pieces</text>
+    <text x="466" y="591" font-size="20">first, unscored;</text>
+    <text x="466" y="616" font-size="20">the rest by score,</text>
+    <text x="466" y="641" font-size="20">capped where they</text>
+    <text x="466" y="666" font-size="20">share a value.</text>
+    <text x="466" y="706" font-size="18" font-weight="500" fill="#197050">The slots</text>
+    <text x="466" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
   </g>
 
   <!-- S2 3.14 (the receipt and what it names); 3.15 -->
   <g data-box="answer">
-    <rect x="671" y="476" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M671,682 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="671" y="476" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="685" y="508" font-size="22" font-weight="700">Answer and</text>
-    <text x="685" y="534" font-size="22" font-weight="700">receipt</text>
-    <text x="685" y="566" font-size="20">Content ids in</text>
-    <text x="685" y="591" font-size="20">order, with</text>
-    <text x="685" y="616" font-size="20">reasons; the</text>
-    <text x="685" y="641" font-size="20">receipt keeps the</text>
-    <text x="685" y="666" font-size="20">arithmetic.</text>
-    <text x="685" y="706" font-size="18" font-weight="500" fill="#197050">Every document in</text>
-    <text x="685" y="728" font-size="18" font-weight="500" fill="#197050">force, by revision</text>
+    <rect x="668" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="668" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="508" font-size="22" font-weight="700">Answer and</text>
+    <text x="682" y="534" font-size="22" font-weight="700">receipt</text>
+    <text x="682" y="566" font-size="20">Content ids in</text>
+    <text x="682" y="591" font-size="20">order, with</text>
+    <text x="682" y="616" font-size="20">reasons; the</text>
+    <text x="682" y="641" font-size="20">receipt keeps the</text>
+    <text x="682" y="666" font-size="20">arithmetic.</text>
+    <text x="682" y="706" font-size="18" font-weight="500" fill="#197050">Every document in</text>
+    <text x="682" y="728" font-size="18" font-weight="500" fill="#197050">force, by revision</text>
   </g>
 
   <!-- S2 3.13; 3.15 (outcomes and attribution); 5.2 (moves nothing until the dial is raised) -->
   <g data-box="outcomes">
-    <rect x="888" y="476" width="192" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
-    <path d="M888,682 h192 v48 a12,12 0 0 1 -12,12 h-168 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
-    <rect x="888" y="476" width="192" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
-    <text x="902" y="508" font-size="22" font-weight="700">Outcomes and</text>
-    <text x="902" y="534" font-size="22" font-weight="700">the dial</text>
-    <text x="902" y="566" font-size="20">Credited and</text>
-    <text x="902" y="591" font-size="20">counted, moving</text>
-    <text x="902" y="616" font-size="20">nothing until a</text>
-    <text x="902" y="641" font-size="20">person raises the</text>
-    <text x="902" y="666" font-size="20">learning dial.</text>
-    <text x="902" y="706" font-size="18" font-weight="500" fill="#197050">The learn</text>
-    <text x="902" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
+    <rect x="884" y="476" width="196" height="266" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,682 h196 v48 a12,12 0 0 1 -12,12 h-172 a12,12 0 0 1 -12,-12 z" fill="#E4F0DA"/>
+    <rect x="884" y="476" width="196" height="266" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="508" font-size="22" font-weight="700">Outcomes and</text>
+    <text x="898" y="534" font-size="22" font-weight="700">the dial</text>
+    <text x="898" y="566" font-size="20">Credited and</text>
+    <text x="898" y="591" font-size="20">counted, moving</text>
+    <text x="898" y="616" font-size="20">nothing until a</text>
+    <text x="898" y="641" font-size="20">person raises the</text>
+    <text x="898" y="666" font-size="20">learning dial.</text>
+    <text x="898" y="706" font-size="18" font-weight="500" fill="#197050">The learn</text>
+    <text x="898" y="728" font-size="18" font-weight="500" fill="#197050">document</text>
   </g>
 
   <!-- The rule; the open point under the two steps it concerns (S2 3.15 with 10.2 "Durable recovery") -->
   <g data-box="rule">
-    <rect x="20" y="760" width="626" height="46" rx="23" fill="#08251A"/>
-    <text x="333" y="790" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">No step here calls an AI model to decide.</text>
+    <rect x="20" y="760" width="628" height="46" rx="23" fill="#08251A"/>
+    <text x="334" y="790" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">No step here calls an AI model to decide.</text>
   </g>
   <g data-box="open recording">
-    <rect x="671" y="760" width="409" height="88" rx="12" fill="#E4F0DA"/>
+    <rect x="668" y="760" width="412" height="88" rx="12" fill="#E4F0DA"/>
     <g data-box="chip">
-      <rect x="685" y="772" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
-      <text x="721" y="792" font-size="18" font-weight="700" text-anchor="middle">Open</text>
+      <rect x="682" y="772" width="72" height="28" rx="14" fill="#FFFFFF" stroke="#08251A" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="718" y="792" font-size="18" font-weight="700" text-anchor="middle">Open</text>
     </g>
-    <text x="769" y="790" font-size="19">With the engine's browser</text>
-    <text x="769" y="814" font-size="19">script, nothing is recorded</text>
-    <text x="769" y="838" font-size="19">yet: the switch it needs is off.</text>
+    <text x="766" y="790" font-size="19">With the engine's browser</text>
+    <text x="766" y="814" font-size="19">script, nothing is recorded</text>
+    <text x="766" y="838" font-size="19">yet: the switch it needs is off.</text>
   </g>
 
   <!-- The one legend (common brief: Built, Designed, Open) -->
