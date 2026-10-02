@@ -476,7 +476,7 @@
    "q1": 4021.75,
    "median": 4271.5,
    "q3": 4934.5,
-   "max": 6177
+   "max": 10196
   },
   "laundry-sets": {
    "n": 23,
@@ -560,6 +560,7 @@
    "inStock": true,
    "bestBuyPickup": true,
    "badges": [
+    "$200 NFL Shop eGift",
     "New"
    ],
    "family": "micro-rgb-tv",
@@ -607,6 +608,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "qned-tv",
    "attributes": {
     "category": "tvs",
@@ -693,15 +697,17 @@
    "nameSource": "derived from the SKU, the URL slug and the crawl's other rows (the crawl saw this product only as a card or a variant); replace with the product page's title when one is fetched",
    "url": "https://www.lg.com/us/tvs/lg-115qned92bu-qned-4k-tv",
    "image": null,
-   "salePrice": 3299.99,
-   "listPrice": 4499.9,
-   "rating": 4.5,
-   "reviews": 85,
-   "cta": "cart",
-   "inStock": true,
-   "bestBuyPickup": true,
+   "salePrice": 12999.99,
+   "listPrice": null,
+   "priceSource": "the product page, 2026-10-02 (public/oh/specs.json, Lane D2): the crawl row carried the 100QNED84BU card's price (review R4, F8)",
+   "rating": null,
+   "reviews": null,
+   "cta": "retailer",
+   "ctaSource": "the product page, 2026-10-02 (public/oh/specs.json); the crawl row's button was the 100QNED84BU card's",
+   "inStock": null,
+   "bestBuyPickup": false,
    "badges": [
-    "New"
+    "$200 NFL Shop eGift"
    ],
    "family": "qned-tv",
    "attributes": {
@@ -711,14 +717,13 @@
     "series": "qned92",
     "panel": "mini-led",
     "sizeBand": "83-and-up",
-    "priceTier": "best",
+    "priceTier": "flagship",
     "room": "living-room",
     "feature": [
      "bright-room"
     ],
     "retailer": [
-     "lg-com",
-     "best-buy-pickup"
+     "find-a-retailer"
     ]
    },
    "sizeInches": 115,
@@ -3500,6 +3505,7 @@
    "inStock": true,
    "bestBuyPickup": true,
    "badges": [
+    "$200 NFL Shop eGift",
     "New"
    ],
    "family": "micro-rgb-tv",
@@ -4687,6 +4693,7 @@
    "inStock": true,
    "bestBuyPickup": false,
    "badges": [
+    "$200 NFL Shop eGift",
     "New"
    ],
    "family": "uhd-tv",
@@ -5456,6 +5463,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$100 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -5560,6 +5570,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -5791,6 +5804,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$100 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -5955,6 +5971,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": false,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -6333,6 +6352,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -6484,6 +6506,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": true,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -6713,6 +6738,7 @@
    "inStock": true,
    "bestBuyPickup": false,
    "badges": [
+    "$200 NFL Shop eGift",
     "New"
    ],
    "family": "oled-tv",
@@ -7081,6 +7107,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": false,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -7185,6 +7214,9 @@
    "cta": "cart",
    "inStock": true,
    "bestBuyPickup": false,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -7332,6 +7364,9 @@
    "ctaSource": "card (Notify Me: sold here, out of stock)",
    "inStock": false,
    "bestBuyPickup": false,
+   "badges": [
+    "$200 NFL Shop eGift"
+   ],
    "family": "oled-tv",
    "attributes": {
     "category": "tvs",
@@ -29895,28 +29930,17 @@
    "nameSource": "derived from the SKU, the URL slug and the crawl's other rows (the crawl saw this product only as a card or a variant); replace with the product page's title when one is fetched",
    "url": "https://www.lg.com/us/kitchen-appliance-packages/lg-um22wzh98s-lsgu6339x-mheu1738x-sdnth981s",
    "image": null,
-   "salePrice": 5699,
-   "listPrice": 6399,
+   "salePrice": 10196,
+   "listPrice": 11796,
+   "priceSource": "the product page, 2026-10-02 (public/oh/specs.json, Lane D2): the crawl row carried the LPGU6319Y card's price (review R4, F8)",
    "rating": null,
-   "reviews": 0,
+   "reviews": null,
    "cta": "cart",
+   "ctaSource": "the product page, 2026-10-02 (public/oh/specs.json); the crawl row's button was the LPGU6319Y card's",
    "inStock": true,
    "bestBuyPickup": false,
    "badges": [
-    "Iconic Collection",
-    "New",
-    "1/4",
-    "Seamless Collection",
-    "Best Seller",
-    "1.0 cu.ft. Capacity",
-    "Detergent and Softener Dispensers",
-    "LG SIGNATURE 29\" Laundry Pedestal",
-    "1/5",
-    "Tailored Collection",
-    "Coming Soon",
-    "LG SIGNATURE Kitchen Packages",
-    "Gas Range",
-    "Induction Range"
+    "Iconic Collection"
    ],
    "family": "kitchen-package",
    "attributes": {
@@ -29945,7 +29969,7 @@
     ]
    },
    "memberSum": 10196,
-   "savings": 4497,
+   "savings": 0,
    "membersInStock": {
     "UM22WZH98S": true,
     "LSGU6339X": true,

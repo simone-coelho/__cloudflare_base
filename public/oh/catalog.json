@@ -99,6 +99,35 @@
    "title": "Score a $200 NFL Shop eGift Card with select TVs.",
    "subtitle": "On eligible OLED and QNED TVs; claim it within 30 days of purchase. Valid through 10/4/26.",
    "tags": {
+    "category": [
+     "tvs"
+    ],
+    "type": [
+     "micro-rgb",
+     "oled",
+     "qned",
+     "uhd"
+    ],
+    "series": [
+     "c6",
+     "g6",
+     "mrgb95",
+     "nu85",
+     "qned84",
+     "qned92",
+     "w6"
+    ],
+    "sizeBand": [
+     "55-64",
+     "65-74",
+     "75-82",
+     "83-and-up"
+    ],
+    "priceTier": [
+     "best",
+     "better",
+     "flagship"
+    ],
     "room": [
      "living-room"
     ],
@@ -122,6 +151,23 @@
    "merchandising": {
     "promotion": 1
    },
+   "featuredProductIds": [
+    "100MRGB95BU",
+    "100QNED84BU",
+    "115QNED92BU",
+    "75MRGB95BUA",
+    "98NU850BPUB",
+    "OLED55C6PUA",
+    "OLED55G6WUA",
+    "OLED65C6PUA",
+    "OLED65G6WUA",
+    "OLED77C6HUP",
+    "OLED77G6WUA",
+    "OLED77W6PUA",
+    "OLED83C6HUP",
+    "OLED83G6WUA",
+    "OLED97G6WUA"
+   ],
    "inStock": true,
    "display": {
     "cta": "Shop the TVs",
@@ -342,6 +388,13 @@
    ],
    "lifecycle": {
     "status": "live"
+   },
+   "eligibleWhen": {
+    "context": {
+     "visit": [
+      "return"
+     ]
+    }
    },
    "journeyStageFit": [
     "considering",
@@ -1059,6 +1112,35 @@
    "title": "Up to $200 NFL Shop eGift Card with select TVs",
    "subtitle": "Claim it within 30 days of purchase. Valid through 10/4/26.",
    "tags": {
+    "category": [
+     "tvs"
+    ],
+    "type": [
+     "micro-rgb",
+     "oled",
+     "qned",
+     "uhd"
+    ],
+    "series": [
+     "c6",
+     "g6",
+     "mrgb95",
+     "nu85",
+     "qned84",
+     "qned92",
+     "w6"
+    ],
+    "sizeBand": [
+     "55-64",
+     "65-74",
+     "75-82",
+     "83-and-up"
+    ],
+    "priceTier": [
+     "best",
+     "better",
+     "flagship"
+    ],
     "room": [
      "living-room"
     ],
@@ -1083,6 +1165,23 @@
    "merchandising": {
     "promotion": 1
    },
+   "featuredProductIds": [
+    "100MRGB95BU",
+    "100QNED84BU",
+    "115QNED92BU",
+    "75MRGB95BUA",
+    "98NU850BPUB",
+    "OLED55C6PUA",
+    "OLED55G6WUA",
+    "OLED65C6PUA",
+    "OLED65G6WUA",
+    "OLED77C6HUP",
+    "OLED77G6WUA",
+    "OLED77W6PUA",
+    "OLED83C6HUP",
+    "OLED83G6WUA",
+    "OLED97G6WUA"
+   ],
    "inStock": true,
    "display": {
     "order": 13,
@@ -1326,7 +1425,6 @@
      "g6",
      "mrgb95",
      "qned84",
-     "qned92",
      "w6"
     ],
     "sizeBand": [
@@ -1355,11 +1453,11 @@
     "75MRGB95BUA",
     "OLED77W6PUA",
     "100QNED84BU",
-    "115QNED92BU",
     "OLED77C6HUP",
     "100MRGB95BU",
     "OLED83C6HUP",
-    "OLED83G6WUA"
+    "OLED83G6WUA",
+    "OLED77G6WUA"
    ],
    "inStock": true,
    "display": {
@@ -3994,6 +4092,23 @@
      ]
     }
    },
+   "featuredProductIds": [
+    "100MRGB95BU",
+    "100QNED84BU",
+    "115QNED92BU",
+    "75MRGB95BUA",
+    "98NU850BPUB",
+    "OLED55C6PUA",
+    "OLED55G6WUA",
+    "OLED65C6PUA",
+    "OLED65G6WUA",
+    "OLED77C6HUP",
+    "OLED77G6WUA",
+    "OLED77W6PUA",
+    "OLED83C6HUP",
+    "OLED83G6WUA",
+    "OLED97G6WUA"
+   ],
    "inStock": true,
    "display": {
     "order": 52,

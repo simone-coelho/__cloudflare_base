@@ -25,14 +25,14 @@
       },
       "learn": {
         "file": "scripts/demo-kit/configs/oh/learn.json",
-        "about": "holdout 0 on stage, γ 0 and exploration off on every slot, the regional prior on category, type, sizeBand, priceTier, fuel"
+        "about": "holdout 0 on stage, γ 0 and exploration off on every slot, the regional prior on category, type, sizeBand, fuel"
       }
     },
     "notes": {
       "reflex": "OH registry, 16 dimensions: memory compressed for this room where the design says so; production runs days",
       "catalog": "OH opening catalog; windows anchored {{anchor}}",
       "slots": "OH opening slots: hero take 1; category-rail take 3; deals take 4; continue take 1; grid-promo take 1; pdp-modules take 6; pdp-offers take 2",
-      "learn": "holdout 0 on stage; γ 0; exploration off; the regional prior on category, type, sizeBand, priceTier, fuel"
+      "learn": "holdout 0 on stage; γ 0; exploration off; the regional prior on category, type, sizeBand, fuel"
     },
     "beats": {
       "dir": "public/oh/beats",

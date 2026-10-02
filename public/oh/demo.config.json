@@ -46,7 +46,7 @@
     { "key": "retailer", "tau": "60s", "multi": true, "values": ["best-buy-pickup", "find-a-retailer", "lg-com"] },
     { "key": "package", "multi": true, "values": ["kitchen-3-piece", "kitchen-4-piece", "laundry-4-piece"] }
   ],
-  "regional": { "dimensions": ["category", "type", "sizeBand", "priceTier", "fuel"] },
+  "regional": { "dimensions": ["category", "type", "sizeBand", "fuel"] },
   "pages": [
     {
       "key": "home", "page": "home", "entry": "home", "url": "/oh/", "shell": "index.html", "label": "Home",
@@ -332,16 +332,15 @@
   "imagery": { "manifest": "public/oh/img/MANIFEST.json", "config": "scripts/demo-kit/configs/oh/imagery.json" },
   "region": {
     "config": "scripts/demo-kit/configs/oh/region.json",
-    "dimensions": ["category", "type", "sizeBand", "priceTier", "fuel"],
+    "dimensions": ["category", "type", "sizeBand", "fuel"],
     "vocabulary": {
       "category": ["dishwashers", "dryers", "kitchen-packages", "laundry-accessories", "laundry-sets", "microwaves", "pedestals", "ranges", "refrigerators", "soundbars", "styler", "tv-mounts", "tvs", "washer-dryer-combos", "washers", "washtowers"],
       "type": ["3-piece", "4-piece", "all-in-one", "freestanding", "french-door", "front-control", "front-load", "hd", "home-theater", "lifestyle", "micro-rgb", "oled", "over-the-range", "pedestal-drawer", "pedestal-riser", "pedestal-washer", "qned", "rear-control", "slide-in", "sound-suite", "soundbar", "stacking-kit", "steam-closet", "top-control", "top-load", "uhd", "wall-mount", "washtower"],
       "sizeBand": ["24-inch", "30-inch", "42-54", "55-64", "65-74", "75-82", "83-and-up", "up-to-41"],
-      "priceTier": ["best", "better", "flagship", "good"],
       "fuel": ["dual-fuel", "electric", "gas", "induction"]
     },
     "contrast": ["US-NJ", "US-TX"],
-    "about": "Synthetic sales for every state over the five allowlisted dimensions, with the real regional fuel skew (gas cooking about 38% nationally, about 70% in California and New Jersey; dryers 80% electric): Lane D1's scripts/demo-kit/configs/oh/region.json is the source; this vocabulary is the seed door's closed list and must equal it"
+    "about": "Synthetic sales for every state over the four allowlisted dimensions (no priceTier, and no census income tilt: review R4's ruling F4, 2026-10-02), with the real regional fuel skew (gas cooking about 38% nationally, about 70% in California and New Jersey; dryers 80% electric) and a seeded, fixed type and size-band lean per state: Lane D1's scripts/demo-kit/configs/oh/region.json is the source; this vocabulary is the seed door's closed list and must equal it"
   },
   "asserted": { "intents": ["replace", "remodel", "new-home", "upgrade"], "context": ["region", "intent", "anchor", "family", "visit", "fit"] },
   "reportSlots": ["hero", "category-rail", "deals", "continue", "grid-promo", "pdp-modules", "pdp-offers"],

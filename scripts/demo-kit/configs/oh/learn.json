@@ -15,7 +15,6 @@
       "category",
       "type",
       "sizeBand",
-      "priceTier",
       "fuel"
     ]
   },
