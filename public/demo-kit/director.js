@@ -478,16 +478,18 @@ export function createDirector(k) {
     }
     el.engineLine.innerHTML = line;
     state.lineBeat = b;
-    if (cfg.beforeBeat) cfg.beforeBeat(b);
-    state.fixtureStep = b.key;
-    if (flags.fixtures) state.fixtureDone.add(b.key);
-    say('working…');
     // Every performed beat starts with a Before: the page as the room saw it when the press landed, cloned
     // before the beat acts. Its render waits until the beat has landed, so the beat's own motion is not held.
     k.compare.supersedeIdle();                     // a first-paint Before still waiting gives way to this one
     let landedNow = () => {};
     const landed = new Promise((r) => { landedNow = r; });
     await k.compare.takeBaseline('beat', () => landed).catch(() => null);
+    // Only now the vertical's own preparation (lane C2): its beforeBeat may hide what the room saw (Vantage's hides
+    // the rail's moved chips), and the Before above was cloned with it still on screen.
+    if (cfg.beforeBeat) cfg.beforeBeat(b);
+    state.fixtureStep = b.key;
+    if (flags.fixtures) state.fixtureDone.add(b.key);
+    say('working…');
     try {
       if (!T().cur() && !b.data.arrives) await T().ensureVisitor();
       await b.run();

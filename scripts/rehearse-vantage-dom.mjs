@@ -45,7 +45,11 @@
 // yet"), presses Compare while Fresh visitor runs (the tool's comparison stays,
 // and the overlay says why), opens Compare across two pages (the sentence under
 // it names both, never "Same page"), checks the "How it works" footer link on
-// both pages, and checks every beat request's body on the wire.
+// both pages, and checks every beat request's body on the wire. At beat 6, the
+// press after the exit minute, the Before must hold the rail's moved chips the
+// room saw (cloned before the beat's own preparation hides them), by their pixels
+// against the page's own render of them; when the rail held its order at beat 5,
+// two marker rows are planted in #railDeltas first, so the check always bites.
 //
 // A defect in another lane's file that this suite cannot repair is printed with
 // "!" on every run and named on the last line (docs/verizon/lanes/L5.md has the
@@ -450,6 +454,56 @@ const RACE_PRESS = `(() => {
   const arm = () => obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-op-decision-id'] });
   if (document.documentElement) arm(); else document.addEventListener('DOMContentLoaded', arm, { once: true });
 })();`;
+/**
+ * The rail's moved chips at the press after the exit minute (lane C2, R2 C1 Low 3). Runs in the page just before
+ * beat 6's press: the chips in #railDeltas as the room sees them (beat 5 draws them when its re-ask re-sorts the rail);
+ * when the rail held its order, two marker rows drawn as the page draws its own (the rail's first two phones, labelled
+ * as the suite's) and shown, so the press always starts with chips on screen. Returns their box inside #site, the
+ * page's height, and keeps a reference of them rendered by the page's own html2canvas, frozen as compare.js freezes.
+ */
+const CHIPS_BEFORE_PRESS = `(async () => {
+  const { vis } = window.__l5, rd = document.getElementById('railDeltas'), site = document.getElementById('site');
+  if (!rd || !site) return { on: false, why: 'no #railDeltas' };
+  let planted = false;
+  if (!vis(rd).ok || !rd.querySelector('li')) {
+    const names = [...document.querySelectorAll('#rail .pcard .pname')].slice(0, 2).map((x) => x.textContent.trim());
+    rd.innerHTML = names.map((n, i) => '<li><span class="sign sign--' + (i ? 'down' : 'up') + '">' + (i ? '↓' : '↑') + '</span><span><b>' + n
+      + '</b> <em>the DOM suite’s marker, ' + (i ? '1 → 2' : '2 → 1') + '</em></span></li>').join('');
+    rd.hidden = false; planted = true;
+  }
+  if (!vis(rd).ok) return { on: false, planted, why: 'the chips are not on screen' };
+  if (typeof window.html2canvas !== 'function') return { on: false, planted, why: 'the page has not loaded html2canvas' };
+  let bg = 'rgb(255, 255, 255)';
+  for (let n = rd; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor; if (c && c !== 'transparent' && !/^rgba\\((?:\\s*0\\s*,){3}\\s*0\\s*\\)$/.test(c)) { bg = c; break; } }
+  window.__c2chips = await window.html2canvas(rd, { backgroundColor: bg, scale: 1, logging: false, useCORS: true, windowWidth: innerWidth, windowHeight: innerHeight,
+    onclone: (doc) => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important;caret-color:transparent!important}'; doc.head.appendChild(st); } });
+  const r = rd.getBoundingClientRect(), s = site.getBoundingClientRect();
+  return { on: true, planted, rows: rd.querySelectorAll('li').length, box: { x: Math.round(r.left - s.left), y: Math.round(r.top - s.top), w: Math.round(r.width), h: Math.round(r.height) },
+    fullH: Math.round(s.height - (parseFloat(getComputedStyle(site).paddingBottom) || 0)) };
+})()`;
+/** With Compare open: the Before frame's pixels in the chips' box against that reference. inkMatch is the share of the
+    reference's own ink (its samples off its commonest colour) that the frame repeats within 48 per channel; differ the
+    share of all samples (every second pixel) that differ by more. */
+const CHIPS_IN_BEFORE = (box) => `(async () => {
+  const m = /url\\("?(.*?)"?\\)$/.exec(getComputedStyle(document.getElementById('cmp-before')).backgroundImage || '');
+  const ref = window.__c2chips;
+  if (!m || !ref) return { error: m ? 'no reference of the chips' : 'no Before frame on screen' };
+  const im = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = m[1]; });
+  if (!im) return { error: 'the Before frame did not load' };
+  const b = ${JSON.stringify(box)}, w = Math.min(b.w, ref.width), h = Math.min(b.h, ref.height);
+  const grab = (src, sx, sy) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(src, sx, sy, w, h, 0, 0, w, h); return g.getImageData(0, 0, w, h).data; };
+  const A = grab(ref, 0, 0), B = grab(im, b.x, b.y);
+  const key = (D, i) => ((D[i] >> 4) << 8) | ((D[i + 1] >> 4) << 4) | (D[i + 2] >> 4);
+  const count = new Map(); for (let i = 0; i < A.length; i += 4) count.set(key(A, i), (count.get(key(A, i)) || 0) + 1);
+  const ground = [...count].sort((p, q) => q[1] - p[1])[0][0];
+  let n = 0, tot = 0, ink = 0, hit = 0;
+  for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) {
+    const i = (y * w + x) * 4, d = Math.max(Math.abs(A[i] - B[i]), Math.abs(A[i + 1] - B[i + 1]), Math.abs(A[i + 2] - B[i + 2]));
+    tot += 1; if (d > 48) n += 1;
+    if (key(A, i) !== ground) { ink += 1; if (d <= 48) hit += 1; }
+  }
+  return { frameH: im.naturalHeight, differ: n / tot, inkRef: ink / tot, inkMatch: ink ? hit / ink : 0 };
+})()`;
 /** The footer's "How it works" link, as it is on screen (lane C2; R3 follow-up 3d): visible, and where it goes. */
 const FOOTER_LINK = `(() => { const a = [...document.querySelectorAll('footer a')].find((x) => x.textContent.trim() === 'How it works');
   const v = a ? window.__l5.vis(a) : { ok: false, why: 'no such link' }; return { ok: v.ok, why: v.why || '', path: a ? new URL(a.href).pathname : null }; })()`;
@@ -626,6 +680,9 @@ try {
   for (let i = 0; i < NO.length; i += 1) {
     press = i;
     console.log(`\n── ${NO[i]} · ${await evaluate(`(() => { const b = window.__vantage.beats()[${i}]; return typeof b.label === 'function' ? b.label() : b.label; })()`)}`);
+    // Beat 6 is the press after the exit minute: the room has the rail's moved chips in front of it as it presses
+    // (lane C2). Read once her receipts have stopped redrawing the page, so the box and the height hold to the clone.
+    const chipsAt = i === 5 ? await receiptsQuiet().then(() => evaluate(CHIPS_BEFORE_PRESS)) : null;
     const timer = pressTimer(), { t0 } = timer;
     const landed = await evaluate(`(async () => { const run = window.__vantage.go(${i}); if (run === undefined) return 'busy'; await run; return document.getElementById('status').textContent; })()`);
     timer.land();   // the press itself, from go() to its landing (the line's first figure adds the settle and the waits)
@@ -838,6 +895,21 @@ try {
       ok('at 10d her visitor is unchanged: the page’s current visitor is still her', her1.who === her0.who && has(her1.who, 'Shopper A') && sameVisitor(her0, her1), visitorLine(her1));
       askedAsHer = { press: i + 1, cap: herCaps.length === 1 ? herCaps[0] : null };
       press = i;
+    }
+
+    if (i === 5 && chipsAt) {
+      // Lane C2 (R2 C1 Low 3): a beat's Before is cloned as the press lands, BEFORE the vertical's beforeBeat runs;
+      // Vantage's hides #railDeltas. So beat 6's Before must hold the chips the room saw at the press: in the frame,
+      // where they stood, the pixels match the page's own render of them, and the frame is the page's full height.
+      await evaluate("document.getElementById('compareBtn').click()");
+      await waitFor(framesUp, 20000);
+      await sleep(300);
+      const R = chipsAt.on ? await evaluate(CHIPS_IN_BEFORE(chipsAt.box)) : { error: chipsAt.why };
+      await closeCompare();
+      const held = Boolean(chipsAt.on && R && !R.error && R.inkRef > 0.01 && R.inkMatch >= 0.9 && R.differ <= 0.02 && Math.abs(R.frameH - chipsAt.fullH) <= 3);
+      ok(`↳ ${NO[i]}: the Before taken as the press landed holds the rail’s moved chips the room saw, before the beat hid them: their pixels where they stood, and the page’s full height`, held,
+        `${chipsAt.planted ? `${chipsAt.rows || 0} marker row(s) planted in #railDeltas (the rail held its order at beat 5)` : `${chipsAt.rows} chip row(s) from beat 5`}`
+        + (R && !R.error ? ` · box ${chipsAt.box.w}×${chipsAt.box.h} at ${chipsAt.box.x},${chipsAt.box.y}: ink matched ${pct(R.inkMatch)}, differ ${pct(R.differ)} · frame ${R.frameH} px, the page ${chipsAt.fullH} px at the press` : ` · ${(R && R.error) || 'not read'}`));
     }
 
     if (i === 5 || i === 7) {
