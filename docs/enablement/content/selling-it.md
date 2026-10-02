@@ -2,7 +2,7 @@
 
 For account executives, who tell the story to a customer and answer what comes back.
 
-**Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
+> **Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
 
 ## Most visitors are strangers, and most buying happens before anyone knows them
 
@@ -14,7 +14,7 @@ The engine starts where those tools stop: with the stranger, on the first page.
 
 ## The engine is a personal stylist for every visitor, at internet scale
 
-Picture a personal stylist on the shop floor, one for every visitor. A good stylist reads the room before anyone speaks. They watch without interrogating. They rearrange the table as they learn what a person likes, and they pivot the moment attention moves. A luxury retailer's own brief asked for exactly this: "a site that feels like a stylist who remembers".
+Picture a personal stylist on the shop floor, one for every visitor. A good stylist reads the room before anyone speaks. They watch without interrogating. They rearrange the table as they learn what a person likes, and they pivot the moment attention moves. A luxury retailer's own brief asked for exactly this: "a site that feels like a stylist who remembers". One of our customers in luxury retail concluded that this capability did not exist off the shelf, and built it with us.
 
 That is the engine. It decides the page at the point in time, from what the visitor is doing now: which of the brand's content fills each place on the page, and in what order the page's sections appear.
 
@@ -135,4 +135,4 @@ Start a demo from where you are: the region on screen is the viewer's real one. 
 - The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.
 - Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side.
 
-**Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
+> **Sell a personal stylist for every visitor, show the receipt behind every decision, and leave the wheel with the brand.**
