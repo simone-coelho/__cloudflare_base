@@ -2,7 +2,7 @@
 
 For marketing: written for someone who has never seen the product and must explain it in their own words.
 
-**The engine is a personal stylist for every visitor, even a stranger: it arranges the page around what they are doing now, and your team keeps the last word.**
+> **The engine is a personal stylist for every visitor, even a stranger: it arranges the page around what they are doing now, and your team keeps the last word.**
 
 ## Most visitors are strangers, and tools made for known customers cannot see them
 
@@ -12,7 +12,7 @@ Tools made for known customers work from profiles and purchase histories, so in 
 
 ## The engine is a personal stylist for every visitor
 
-Think of a good stylist in a boutique. The same retailer described the site it wanted as "a site that feels like a stylist who remembers." The engine is that stylist, for every visitor at once, at internet scale.
+Think of a good stylist in a boutique. The same retailer described the site it wanted as "a site that feels like a stylist who remembers." It concluded that this capability did not exist off the shelf, and built it with us. The engine is that stylist, for every visitor at once, at internet scale.
 
 It reads the room: the first page already leans toward the visitor's region and the link they came from. It watches without interrogating: it asks nothing, needs no login and learns only from what the visitor does. It rearranges the table: the sections of the page, and the pieces inside them, move toward this visitor's interests. And it pivots when attention moves. Its memory is a row of buckets, one for each thing a visitor might care about.
 
@@ -112,4 +112,4 @@ All of it happens in the data center nearest the visitor, on Cloudflare's networ
 
 ---
 
-**The engine is a personal stylist for every visitor, even a stranger: it arranges the page around what they are doing now, and your team keeps the last word.**
+> **The engine is a personal stylist for every visitor, even a stranger: it arranges the page around what they are doing now, and your team keeps the last word.**
