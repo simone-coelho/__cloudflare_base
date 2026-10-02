@@ -543,6 +543,70 @@
    "namedOnly": 19
   }
  },
+ "template": {
+  "rule": "best sellers by review count, the site's own merchandising order, not personalised",
+  "how": "review count, then rating, highest first; one row per model (rows sharing a review pool count as one; a TV at 65 inches where that size qualifies, otherwise its lowest-priced row); only rows the page can show whole and sell here: an OH image, a price (specs.json's, as the page merges it), not Find a Retailer only, not out of stock. Data from the crawl's cards (reviews, ratings) and the product pages (price, button); the same for every visitor.",
+  "recommended": [
+   "OLED65B6GUA",
+   "27LX6TYGA",
+   "OLED65G6WUA",
+   "OLED65C6PUA",
+   "WM3400CW",
+   "WM4000HWA",
+   "DLEX4000W",
+   "WM6998HBA",
+   "LDFN4542D",
+   "LSGL6335X",
+   "MHEC1737F",
+   "LDTH7972S"
+  ],
+  "recommendedNote": "twelve for the boot page's \"Recommended for you\": the four best-selling TVs, then four laundry, then four kitchen",
+  "bestSellers": {
+   "living-room": [
+    "OLED65B6GUA",
+    "27LX6TYGA",
+    "OLED65G6WUA",
+    "OLED65C6PUA",
+    "S80TY",
+    "S70TR",
+    "SC9S",
+    "S90TY"
+   ],
+   "laundry-room": [
+    "WM3400CW",
+    "WM4000HWA",
+    "DLEX4000W",
+    "WM6998HBA",
+    "WKE100HWA",
+    "WKGX201HBA",
+    "WT6105CM",
+    "DLE7000W"
+   ],
+   "kitchen": [
+    "LDFN4542D",
+    "LSGL6335X",
+    "MHEC1737F",
+    "LDTH7972S",
+    "LDFC2423W",
+    "LSEL6333XE",
+    "MVEL2137F",
+    "LDNTH753S"
+   ]
+  },
+  "gridDefaults": {
+   "tvs": [
+    "OLED65B6GUA",
+    "27LX6TYGA",
+    "OLED65G6WUA",
+    "OLED65C6PUA",
+    "98NU850BPUB",
+    "100QNED84BU",
+    "55QNED75BUA",
+    "65LX7BPUA"
+   ]
+  },
+  "gridDefaultsNote": "the TV grid's order before any visitor exists: the eight best-selling TVs by the same rule (bestSellers.living-room also holds soundbars)"
+ },
  "products": [
   {
    "sku": "100MRGB95BU",
