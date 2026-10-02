@@ -120,20 +120,27 @@ That is the gate: the generated bundles, the app typecheck, the credential grep 
 
 ## 8. The deploy, on the owner's go
 
-Nothing below happens without the owner's explicit approval; each line is a cloud change. From a **clean worktree created by WSL git** of the exact commit (Windows git checks out CRLF and `check:generated` fails on that alone):
+Nothing here happens without the owner's explicit approval: every step after the first is a cloud change. One command runs the whole hosting sequence, from WSL at the repository root (`docs/demo-kit/lanes/H2.md` explains each step). Print it first, then run it:
 
-```text
-queues    npx wrangler queues create events-<slug> ; npx wrangler queues create events-<slug>-dlq
-secrets   npx wrangler secret put <NAME> --config wrangler.<slug>.toml   for TENANTS, SDK_KEYS, RETENTION, JWT_SECRET, IDENTITY_SALT
-          (before the first deploy, so the first version boots with TENANTS set)
-build     npm run check:generated
-          node scripts/build-demo-worker-config.mjs --name edge-platform-<slug> --queue events-<slug> --dev-port <port>
-deploy    npx wrangler deploy --config wrangler.<slug>.toml
-crons     npx wrangler triggers deploy --config wrangler.<slug>.toml   (a worker begun as a draft by secret put may not get them)
-seed      the morning routine, then verify through the APIs, never the pages
+```bash
+node scripts/demo-kit/host.mjs --config <slug> --dry-run                         # every step and command, values redacted; runs nothing
+node scripts/demo-kit/host.mjs --config <slug> --confirm edge-platform-<slug>    # all six steps, on the owner's go
 ```
 
-Record the version id wrangler prints in `docs/<slug>/RESUME-<slug>.md`.
+| Step | What it does |
+|---|---|
+| `preflight` | the bundles (`check:generated`), the app typecheck and the credential grep (`check-demo --skip suites`); `wrangler.<slug>.toml` byte-equal to the builder's output; the branch head mounts `/<slug>/api`. Before anything runs, it refuses the shared worker, a customer stamp and any worker or queue that is not this demo's own |
+| `secrets` | TENANTS, SDK_KEYS and RETENTION derived from `.dev.vars` the way the rig derives them, plus JWT_SECRET, IDENTITY_SALT and IDENTITY_SECRETS, generated with crypto. Each is piped into `wrangler secret put` through stdin, never shown: you see the names and sha256 prefixes only. They go in before the first deploy, so the first version boots with TENANTS set |
+| `database` | read-only: which committed migrations the shared database lacks, and whether `events-<slug>` and `events-<slug>-dlq` exist. For anything missing it prints the owner's commands (the scratch-copy recipe for a migration, `wrangler queues create` for a queue) and stops; afterwards, go on with `--from database` |
+| `deploy` | a clean worktree of the branch head made by WSL git under `/tmp` (Windows git checks out CRLF and `check:generated` fails on that alone), then `check:generated`, the builder, `wrangler deploy`, `wrangler triggers deploy` (a worker begun as a draft by `secret put` does not get its crons otherwise), and the worktree removed |
+| `seed` | in a fresh worktree of the head: the hosted seed with an operator token minted on the spot, **the redeploy a reseed always needs**, then the region seed |
+| `verify` | both suites against `https://edge-platform-<slug>.expedge.workers.dev`, through the APIs and the real page; then the URL |
+
+- **Before the first run**, the owner creates the two queues and, so the demo can be reseeded on later mornings, keeps the hosted signing secret: `echo "<SLUG>_REMOTE_JWT_SECRET=$(openssl rand -hex 32)" >> .dev.vars` (for OH, `OH_REMOTE_JWT_SECRET`; Vantage's is `VANTAGE_REMOTE_JWT_SECRET`). The command puts that secret as JWT_SECRET and mints from it. Without it, the secret it generates lasts only as long as the run.
+- **One step at a time:** `--step <name>`, or `--from <name>` for one step and the ones after it. On a worker that is already hosted, `--step secrets --only IDENTITY_SECRETS` adds one secret without rotating the rest (a new IDENTITY_SALT re-keys every earlier visitor id).
+- The command stops at the first failure and names the step. It never prints, logs or writes a secret or a token.
+- **Record the version id** it prints in `docs/<slug>/RESUME-<slug>.md`.
+- On a hosted demo, the morning routine (§9) is `node scripts/demo-kit/host.mjs --config <slug> --from seed --confirm edge-platform-<slug>`.
 
 ## 9. The morning routine (every rehearsal morning)
 
