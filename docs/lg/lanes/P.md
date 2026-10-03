@@ -2148,3 +2148,15 @@ The full report is `docs/lg/lanes/K8.md`. This lane carried out the coordinator'
    | `oh-store.js` | `112d7162…` |
 
    `public/vantage` is clean. Nothing is committed. Ready for the deploy.
+
+#### K8, third pass (the Learned tab's caption reads lane E6's open hours)
+
+- **The change.** `public/demo-kit/panels.js` +34 −2 against `49384bf5`, at 483–521: `utcClock`, `refusalWords`, `openHoursLine` and a read of `hours.open` in `reportWindowLine`.
+  - A current open hour "is counted through HH:MM UTC". There is no "five-minute fold": `through` can be the build's own refold (R7, the coordinator's wording touch).
+  - A refused one "is refused, <reason in words>", then either counted only through an earlier fold or not counted at all; it is never called current.
+  - With no `hours.open`, today's sentence is unchanged.
+- **Seen on E6's engine** (a rig from `cf-e6` at `d1f3b500`, port 9199, crons run by hand). The answer was `open: [{ hour: 21, status: "current", … }]`.
+  - E6's own caption said "… 21:00–22:00 UTC; the hour in progress is not in it until it closes".
+  - The changed caption says "the hour in progress (21:00 UTC) is counted through 21:26 UTC, and 00 … 20 UTC are not folded yet".
+- **Test.** A unit test of the caption through `renderReport` passes 8 of 8, rerun after the wording touch (hand-made current, refused and grace answers, plus E6's real one). The `panels.js` hash is `991d967a…`.
+- **Housekeeping.** That rig is stopped, the E6 worktree is clean, and nothing is committed. Details are in `K8.md`'s third pass.

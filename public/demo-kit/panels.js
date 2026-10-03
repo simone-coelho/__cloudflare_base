@@ -479,14 +479,46 @@ export function createPanels(k) {
     }
     renderReport(reports, date);
   }
+  /** A time as the report's hours are named: HH:MM UTC. */
+  const utcClock = (t) => { const d = new Date(t); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`; };
+  /** Why the engine refused an open hour's working fold, in words: its budget with the figures, or the conflicting stream. */
+  function refusalWords(r) {
+    const x = r || {}, words = (s) => String(s).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();
+    if (x.code === 'report_budget_exceeded') {
+      const unit = /Bytes$/.test(String(x.budget || '')) ? ' bytes' : '';
+      const n = (v) => (typeof v === 'number' ? `${v.toLocaleString('en-US')}${unit}` : '—');
+      return `over the report’s ${esc(words(x.budget || 'size'))} budget (${n(x.observed)} against ${n(x.limit)})`;
+    }
+    if (x.code === 'report_row_conflict') return `two different ${x.conflict && x.conflict.stream === 'outcome' ? 'outcome' : 'decision'} records under one id`;
+    const said = { hourly_fold_in_progress: 'its fold was still running', open_fold_deferred: 'its fold was put off', retention_unavailable: 'the retention policy could not be read',
+      report_input_invalid: 'the ledger held a record the report cannot read', report_unavailable: 'its working fold was unavailable' };
+    return said[x.code] || esc(words(x.code || 'no reason given'));
+  }
+  /**
+   * The open hours a report names (hours.open: { hour, status: 'current' | 'refused', through, refusal? }): the latest is
+   * the hour in progress, an earlier one the hour that just ended, not yet folded. A current one is counted through the
+   * moment its working fold read the ledger (through: a five-minute fold, or the build's own refold); a refused one is
+   * named as refused, with its reason, and counted only through an earlier fold that stands (through), or not at all.
+   */
+  function openHoursLine(open) {
+    const two = (n) => String(n).padStart(2, '0');
+    return open.map((o, i) => {
+      const which = i === open.length - 1 ? `the hour in progress (${two(o.hour)}:00 UTC)` : `the hour just ended (${two(o.hour)}:00 UTC, not folded yet)`;
+      if (o.status === 'current') return `${which} is counted${typeof o.through === 'number' ? ` through ${utcClock(o.through)}` : ''}`;
+      return `${which} is refused, ${refusalWords(o.refusal)}: ${typeof o.through === 'number' ? `counted only through ${utcClock(o.through)}, an earlier fold` : 'none of it is counted'}`;
+    }).join('; ');
+  }
   /** The report's own window, as the report states it: its UTC day, what it was read from, when it was built, what it holds. */
   function reportWindowLine(rep, date) {
     if (!rep) return `<p class="rep-window"><b>Window</b>the UTC day ${esc(date)}</p>`;
     const h = rep.hours || {}, c = rep.counts || {};
     const two = (n) => String(n).padStart(2, '0');
-    const built = arr(h.built), missing = arr(h.missing);
+    // The open hours, as an engine that sums them names them (hours.open, lane E6); an engine that names none sums none.
+    const open = Array.isArray(h.open) && h.open.length ? h.open.filter((o) => o && Number.isInteger(o.hour)).sort((p, q) => p.hour - q.hour) : null;
+    const built = arr(h.built).filter((x) => !(open || []).some((o) => o.hour === x)), missing = arr(h.missing);
+    const range = built.length ? ` ${two(Math.min(...built))}:00–${two(Math.max(...built) + 1)}:00 UTC` : '';
     const from = h.source === 'aggregates'
-      ? `summed from the folded hours${built.length ? ` ${two(Math.min(...built))}:00–${two(Math.max(...built) + 1)}:00 UTC` : ''}; the hour in progress is not in it until it closes${missing.length ? `, and ${missing.map(two).join(', ')} UTC ${missing.length === 1 ? 'is' : 'are'} not folded yet` : ''}`
+      ? `${open ? `${built.length ? `summed from the folded hours${range}; ` : ''}${openHoursLine(open)}` : `summed from the folded hours${range}; the hour in progress is not in it until it closes`}${missing.length ? `, and ${missing.map(two).join(', ')} UTC ${missing.length === 1 ? 'is' : 'are'} not folded yet` : ''}`
       : 'read from the ledger itself: everything recorded until it was built';
     const counts = [c.decisions, c.outcomes, c.visitors].every((n) => typeof n === 'number')
       ? ` · ${c.decisions.toLocaleString('en-US')} decisions, ${c.outcomes.toLocaleString('en-US')} outcomes, ${c.visitors.toLocaleString('en-US')} visitors` : '';
