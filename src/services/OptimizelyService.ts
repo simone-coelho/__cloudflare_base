@@ -14,8 +14,9 @@
  * the lite contract — only the import was wrong.
  */
 import optimizely from '@optimizely/optimizely-sdk/lite';
+import { HTTPException } from 'hono/http-exception';
 import type { Env } from '@/types/env';
-import { ownerEffect, ownerFetch, currentOwnerConsent, currentProfileBirth, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { ownerEffect, ownerFetch, currentOwnerConsent, currentProfileBirth, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { currentExternalRetention } from '@/identity/sessionAuthority';
 import { destinationRetentionCategory } from '@/retention';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
@@ -81,6 +82,34 @@ export interface EventTags {
   [key: string]: string | number | boolean;
 }
 
+/**
+ * Lane E4: what this isolate last learned about a tenant's datafile, and for how long it trusts it.
+ *
+ * `getConnectors` builds a `LiveDecisionProvider` per request, so `createFreshClient` used to fetch
+ * the datafile no-store on EVERY action that built an update, and the action waited for it; when the
+ * datafile failed, every such action waited for the failure, and `initialize()` (the feature-variable
+ * probes) waited for it a second time. Now:
+ *
+ *   • a fresh client is reused for FRESH_DATAFILE_MS. Freshness stays "within seconds" (doc 09 §6.1),
+ *     and the datafile webhook's refresh drops the remembered client at once;
+ *   • a failed fetch is remembered for FAILED_DATAFILE_MS, and every caller in that minute gets the
+ *     same failure at once and degrades exactly as it did after waiting for it.
+ *
+ * Remembered per backing KV binding (stable across owner fences, `ownerBindingIdentity`, and distinct
+ * per environment) and per the tenant's datafile identity (the key its KV copy lives under): a
+ * tenant's datafile, never a shopper's anything. An authority refusal raised while fetching (an owner
+ * fence's 401) is that request's own answer and is never remembered.
+ */
+export const FRESH_DATAFILE_MS = 10_000;
+export const FAILED_DATAFILE_MS = 60_000;
+export interface FreshClient { client: any; datafile: any; revision: string | null }
+interface Remembered { at: number; fresh?: FreshClient; failure?: unknown }
+let remembered = new WeakMap<object, Map<string, Remembered>>();
+/** Tests: forget everything this isolate remembers (the webhook's refresh forgets its own tenant). */
+export function forgetRememberedDatafiles(): void { remembered = new WeakMap(); }
+const within = (at: number, now: number, ms: number) => Number.isFinite(now) && now >= at && now - at < ms;
+const refusal = (error: unknown) => error instanceof HTTPException && error.status === 401;
+
 export class OptimizelyService {
   private env: Env;
   private optimizelyClient: any = null;
@@ -101,6 +130,23 @@ export class OptimizelyService {
     if (!configuration) throw new ConnectorConfigurationError();
     const sdkKey = connectorSecret(this.env, configuration.sdkKeyRef);
     return { sdkKey, datafileUrl: configuration.datafileUrl.replace('{sdkKey}', encodeURIComponent(sdkKey)), configuration };
+  }
+
+  /**
+   * Whether this tenant has a Feature Experimentation key at all: a configured `fx` connector (a
+   * customer tenant), or a real OPTIMIZELY_SDK_KEY (the legacy demo). Without one nothing is fetched.
+   */
+  hasFxKey(): boolean {
+    try { const { sdkKey } = this.settings(); return !!sdkKey && sdkKey !== 'your-sdk-key-here'; } catch { return false; }
+  }
+
+  /** Lane E4: this tenant's remembered datafile outcomes, or null where nothing can be remembered. */
+  private async memory(): Promise<{ map: Map<string, Remembered>; key: string } | null> {
+    const binding = ownerBindingIdentity(this.env.CACHE as unknown as object | undefined);
+    if (!binding) return null;
+    let map = remembered.get(binding);
+    if (!map) { map = new Map(); remembered.set(binding, map); }
+    return { map, key: `${await this.cacheKey()}|${this.settings().datafileUrl}` };
   }
 
   async externalIdentity(subject: string): Promise<string> {
@@ -218,13 +264,21 @@ export class OptimizelyService {
       }
 
       const datafileUrl = this.settings().datafileUrl;
+      // Lane E4: a fetch that failed in the last minute is not waited for again.
+      const memory = await this.memory(), held = memory?.map.get(memory.key);
+      if (held?.failure !== undefined && within(held.at, Date.now(), FAILED_DATAFILE_MS)) throw held.failure;
 
-      const response = await ownerFetch(datafileUrl, { redirect: 'error' });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch datafile: ${response.status} ${response.statusText}`);
+      let datafile: any;
+      try {
+        const response = await ownerFetch(datafileUrl, { redirect: 'error' });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch datafile: ${response.status} ${response.statusText}`);
+        }
+        datafile = this.validateDatafile(await response.json());
+      } catch (error) {
+        if (memory && !refusal(error)) memory.map.set(memory.key, { at: Date.now(), failure: error });
+        throw error;
       }
-
-      const datafile = this.validateDatafile(await response.json());
       
       await this.env.CACHE.put(cacheKey, JSON.stringify(datafile), {
         expirationTtl: 300,
@@ -247,8 +301,27 @@ export class OptimizelyService {
    *
    * The event dispatcher is a no-op: at the edge we only READ decisions here, so we
    * skip impression-event delivery (no waitUntil dependency, no extra latency).
+   *
+   * Lane E4: a client this isolate built in the last FRESH_DATAFILE_MS is reused, and a
+   * fetch that failed in the last FAILED_DATAFILE_MS fails again at once (see `remembered`).
+   * A tenant with no key still throws before anything is read or fetched.
    */
-  async createFreshClient(): Promise<{ client: any; datafile: any; revision: string | null }> {
+  async createFreshClient(): Promise<FreshClient> {
+    this.settings();
+    const memory = await this.memory(), held = memory?.map.get(memory.key), now = Date.now();
+    if (held?.fresh && within(held.at, now, FRESH_DATAFILE_MS)) return held.fresh;
+    if (held?.failure !== undefined && within(held.at, now, FAILED_DATAFILE_MS)) throw held.failure;
+    try {
+      const fresh = await this.fetchFreshClient();
+      memory?.map.set(memory.key, { at: Date.now(), fresh });
+      return fresh;
+    } catch (error) {
+      if (memory && !refusal(error)) memory.map.set(memory.key, { at: Date.now(), failure: error });
+      throw error;
+    }
+  }
+
+  private async fetchFreshClient(): Promise<FreshClient> {
     const url = this.settings().datafileUrl;
     // No-store freshness (doc 09 §6.1). NOTE: the standard `cache: 'no-store'` field
     // is NOT implemented by workerd (it throws "'cache' field ... is not implemented"),
@@ -297,6 +370,8 @@ export class OptimizelyService {
     if (!res.ok) throw new Error(`datafile fetch failed: ${res.status} ${res.statusText}`);
     const datafile = this.validateDatafile(await res.json());
     await this.env.CACHE.put(await this.cacheKey(), JSON.stringify(datafile), { expirationTtl: 86400 });
+    // Lane E4: the datafile changed; nothing this isolate remembers about it still holds.
+    const memory = await this.memory(); memory?.map.delete(memory.key);
     return {
       revision: datafile?.revision != null ? String(datafile.revision) : null,
       flags: Array.isArray(datafile?.featureFlags) ? datafile.featureFlags.length : 0,
@@ -554,7 +629,9 @@ export class OptimizelyService {
     try {
       const cacheKey = await this.cacheKey();
       await this.env.CACHE.delete(cacheKey);
-      
+      // Lane E4: an explicit refresh asks the network again, whatever was remembered.
+      const memory = await this.memory(); memory?.map.delete(memory.key);
+
       this.datafile = await this.fetchDatafile();
       this.initialized = false;
       await this.initialize();

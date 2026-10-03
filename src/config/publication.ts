@@ -299,19 +299,36 @@ export function invalidatePublicationCache(): void { cache.clear(); cacheBytes =
 function invalidateScope(storage: R2Bucket, scope: string): void { for (const entry of cache) if (entry.storage === storage && entry.scope === scope) remove(entry); cacheEpoch = {}; }
 async function invalidating<T>(storage: R2Bucket, scope: string, run: () => Promise<T>): Promise<T> { invalidateScope(storage, scope); try { return await run(); } finally { invalidateScope(storage, scope); } }
 /** One pin is shared by every dependent read in an operation. Administrative
- * callers opt out of the bounded serving cache; it never refreshes on failure. */
+ * callers opt out of the bounded serving cache; it never refreshes on failure.
+ *
+ * Lane E4: a serving read whose storage handle has no resident entry still reads
+ * and validates the head, every time, so a publication committed anywhere is
+ * honoured on the very next read. When the head's committed identity (revision and
+ * digest) is one this isolate already holds a set for, that set and the documents
+ * already read under it are used instead of reading them again: the identity is
+ * the digest of the sealed set, and the set and its documents are immutable and
+ * were validated against it when first read. This is what lets a shopper's owner
+ * operations share the cache, because every operation fences its bindings behind
+ * a handle of its own (`ownerEnvironment`): without it, each action read the head,
+ * the set and every document again. Nothing else changes: a head that cannot be
+ * read or does not validate refuses as before, and a new identity reads the set. */
 export async function pinPublication(env: Env, scope: string, servingCache = false): Promise<PublicationPin> {
   required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)); const storage = storageOf(env), started = Date.now(), epoch = cacheEpoch;
   for (const entry of cache) if (!fresh(entry.at, started)) remove(entry);
   if (servingCache) for (const entry of cache) if (entry.storage === storage && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
-  const value = freeze(await currentSet(storage, await requiredHead(storage, scope)));
-  const bytes = encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
+  const loaded = await requiredHead(storage, scope), committed = loaded.head.committed;
+  // The most recently used entry for this identity: each operation starts from the documents the
+  // one before it held and adds what it reads, so the newest holds the most.
+  let known: CacheEntry | undefined;
+  if (servingCache && committed) for (const e of cache) if (e.scope === scope && e.value.revision === committed.revision && e.value.digest === committed.digest) known = e;
+  const value = known ? known.value : freeze(await currentSet(storage, loaded));
+  const bytes = known ? known.bytes : encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
   if (servingCache && epoch === cacheEpoch && fresh(started, now) && bytes <= CACHE_BYTES) {
     const resident = [...cache].find(e => e.storage === storage && e.scope === scope);
     if (!resident || resident.at <= started && resident.value.revision <= value.revision) {
       if (resident) remove(resident);
       while (cache.size >= CACHE_ENTRIES || cacheBytes + bytes > CACHE_BYTES) remove(cache.values().next().value!);
-      cache.add({ storage, scope, at: started, bytes, value, documents: new Map() }); cacheBytes += bytes;
+      cache.add({ storage, scope, at: started, bytes, value, documents: new Map(known?.documents) }); cacheBytes += bytes;
     }
   }
   return value;
