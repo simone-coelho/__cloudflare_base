@@ -2168,3 +2168,18 @@ The full report is `docs/lg/lanes/K8.md`. This lane carried out the coordinator'
   - The hosted worker serves the `panels.js` committed in `eede991a`, which already prints a numeric `through`. So the answer behind the caption without a time had no numeric `through` at that moment.
   - The engine types `through` as number or null, and the demo route re-reads the stored report after a build.
 - **Tests.** 12 of 12 pass. Nothing is committed.
+
+#### K8, fifth pass (the explain card grows with its content: Meridian's rule)
+
+- **The change.** `public/demo-kit/kit.css` 283: `.pd-grid { … align-items: start; grid-auto-rows: minmax(0, auto); }`. It is Meridian's own rule (`meridian.css` 1061), in place of `align-items: stretch; grid-auto-rows: minmax(0, min(44vh, 460px))` from the Top Offers port (`82f41b8d`). Nothing else on the card changed.
+- **OH before beat 3** (beats 1 and 2, then Explain):
+
+  | Viewport | Before | After |
+  |---|---|---|
+  | 1440×900 | watch list 0 of 4 (squeezed to 24 px), arithmetic 7 of 11 | 4 of 4 and 11 of 11, the box 842 px, no scroll |
+  | 1920×1080 | 0 of 4, 9 of 11 | 4 of 4, 11 of 11 |
+
+- **Vantage before its beat 3:** the list goes from 3 of 5 to 5 of 5, in the same design.
+- **Shots:** `shots/K8-explain-{before,after}-{1440,1920}.png` and `K8-explain-{before,after}-vantage-1440.png`.
+- **Suites:** OH `--only store` **173 of 173**, Vantage DOM **298 of 298**.
+- **Rigs** are stopped, and nothing is committed.
