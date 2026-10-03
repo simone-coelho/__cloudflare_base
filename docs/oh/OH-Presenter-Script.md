@@ -52,7 +52,7 @@ Then click, in this order; each line is what the lanes measured by real clicks.
 | **Back** | One press per page, the grid's filter still on. | |
 | **Reload**, or the address in a new tab | The same visitor, with no identity call: the page reopens decided for them, the meters carry on, and the Session tab says "continued". A product page's reload is one more view. | "Still the same person: a reload, a new tab, Back or a typed address. Only a reset starts someone new." |
 | **Search:** "front load washer" | The search icon opens the field. "54 results for “front load washer”", in POST /sort's order with the lean's label; the search goes out as a signal. Open a washer. | "Search results come back in the engine's order, over every match." |
-| **The wordmark:** home | **The homepage has moved for the visitor**: the room tiles, the deals four and Recommended for you are decided ("decided · POST /sort per room for its 4, then across the rooms"), and the receipts name the visitor's own clicks. On the one-minute dial the page follows the last few clicks (hosted, 2026-10-03: three washers after two TVs led it with the laundry room). | "The page they left was the same for everyone. The page they came back to answers them, and every card says which click carried it. Memory here runs a minute so you can watch it move; production runs days." |
+| **The wordmark:** home | **The homepage has moved for the visitor**: the room tiles, the five deals and Recommended for you are decided ("decided · POST /sort per room for its 4, then across the rooms"), and the receipts name the visitor's own clicks. On the one-minute dial the page follows the last few clicks (hosted, 2026-10-03: three washers after two TVs led it with the laundry room). | "The page they left was the same for everyone. The page they came back to answers them, and every card says which click carried it. Memory here runs a minute so you can watch it move; production runs days." |
 | **Sign in** | The sheet, from any page's header, naming the fictional account Dana Whitfield: "Signed in, the devices you use are one profile, and only then: no device matching, ever." Signing in swaps the kept session for Dana's. | Show it and close it: the sign-in is beat 15's moment. |
 
 The Session tab lists every event the visitor sent. Then **Next** for beat 1.
@@ -96,9 +96,9 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 
 ### Beat 3. Two TVs, then a washer
 **Press:** Next. Back in the visitor's own region, through the store's own controls: the TV grid, the first TV it offers, Back, the next one, the Laundry menu's WM4000HWA, then home.
-**They see:** the meters rise; the room tiles reorder with the reason on the strip; the deals four hold both rooms; "Recommended for you holds living room 4 · laundry room 4" (lane run).
+**They see:** the meters rise; the room tiles reorder with the reason on the strip; the five deals hold both rooms by the slot’s own rule; "Recommended for you holds living room 4 · laundry room 4 · kitchen 4", rooms in the rail's order.
 **You say:**
-> "Two TVs, then a washer: the kind of clicks you just watched me make by hand, scripted so we can measure them. The meter is evidence over evidence plus 1.8: one product view reads 0.36, two about 0.53. The tiles reorder on the rooms, and Recommended for you holds both rooms rather than swapping wholesale to the last one. Every receipt names what carried the card."
+> "Two TVs, then a washer: the clicks I just made by hand, scripted so we can measure them. The meter is evidence over evidence plus 1.8: one product view reads 0.36, two about 0.53. The tiles reorder on the rooms, and Recommended for you keeps each room's four, never swapping wholesale. Every receipt names what carried the card."
 
 ### Beat 4. The fresh visitor beside them
 **Press:** Next: Compare → Fresh visitor on the homepage.
@@ -179,9 +179,9 @@ Say once: "Each of these is a real publish of your catalog or slots, as a mercha
 **Press:** Next. The slots publish with "New for 2026: Micro RGB evo." pinned into the deals.
 **They see:** the card in container 1, marked PINNED: "pinned by our merchandiser · container 1 for everyone · ranking skipped · without the pin the engine would have led with [a piece] (score …), container 2 now" (lane run: "A free Xbox controller with select TVs"; it varies with the walk).
 **You say:**
-> "Launch week: the merchandiser pins the Micro RGB evo for everyone. The receipt says ranking was skipped and names what the engine would have led with, so an instruction never passes for a decision. The other three are still ranked for this visitor."
+> "Launch week: the merchandiser pins the Micro RGB evo for everyone. The receipt says ranking was skipped and names what the engine would have led with, so an instruction never passes for a decision. The other four are still ranked for this visitor."
 
-**Caveat:** the Micro RGB evo card is in the catalog from the start, so the cold-open template showed it first; the pin makes it lead the decided page for everyone, with ranking skipped.
+**Caveat:** the Micro RGB evo card is in the catalog from the start, so the cold-open template showed it first; the pin makes it lead the decided page for everyone.
 
 ---
 
