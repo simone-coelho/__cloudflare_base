@@ -8,13 +8,13 @@ For account executives, who tell the story to a customer and answer what comes b
 
 Most of the people on a brand's site are strangers. They have not signed in, they have no profile, and many have never visited before. A great deal of buying happens in exactly that window, before anyone knows who the visitor is.
 
-Tools made for known customers are blind in that window. They wait for an email address, a login or a purchase history, and by then the visit is over. So teams write rules to fill the gap: one rule for visitors from paid social, another for the spring campaign, another for a region. The rules go stale the week a campaign ends. They multiply, because every new idea needs one more. And they fight, because nothing decides which rule wins when two apply. A luxury retailer's own brief said of its rule-based personalization: "It works, but it caps out."
+Tools made for known customers are blind in that window. They wait for an email address, a login or a purchase history, and by then the visit is over. So teams write rules to fill the gap: one rule for visitors from paid social, another for the spring campaign, another for a region. The rules go stale the week a campaign ends. They multiply, because every new idea needs one more. And they fight, because nothing decides which rule wins when two apply. One of our customers in luxury retail said of its rule-based personalization: "It works, but it caps out."
 
 The engine starts where those tools stop: with the stranger, on the first page.
 
 ## The engine is a personal stylist for every visitor, at internet scale
 
-Picture a personal stylist on the shop floor, one for every visitor. A good stylist reads the room before anyone speaks. They watch without interrogating. They rearrange the table as they learn what a person likes, and they pivot the moment attention moves. A luxury retailer's own brief asked for exactly this: "a site that feels like a stylist who remembers". One of our customers in luxury retail concluded that this capability did not exist off the shelf, and built it with us.
+Picture a personal stylist on the shop floor, one for every visitor. A good stylist reads the room before anyone speaks. They watch without interrogating. They rearrange the table as they learn what a person likes, and they pivot the moment attention moves. The same customer asked for exactly this: "a site that feels like a stylist who remembers". It concluded that this capability did not exist off the shelf, and chose to build it with us.
 
 That is the engine. It decides the page at the point in time, from what the visitor is doing now: which of the brand's content fills each place on the page, and in what order the page's sections appear.
 
@@ -36,7 +36,7 @@ The picture shows where that happens. The site talks to the engine on Cloudflare
 
 **The signal from another channel.** The visit often starts somewhere else. The link in an email, an ad, a social post or a partner's quiz carries a campaign term, and the engine reads it along with the channel, the referring network and the operating system family of the visitor's phone. Before the first click on the site, content that matches the campaign rises by a small weight the brand publishes, and the receipt shows exactly how much; then the visitor's own behavior takes over. Signals can also start work beside the page. When a product starts trending on social, Opal can propose a test on that signal and launch it through Feature Experimentation, a contextual bandit (CMAB) test included, with a person approving. ODP keeps the long memory: the interests and audiences the engine forms land there for the brand's other teams, and a known customer's history can arrive warm. When the visitor signs in, the brand's own server vouches for them, and everything they did as a stranger carries over to their known profile, with nothing overridden.
 
-**The catalog tagged by Opal.** A merchandiser loads a batch of new pieces that carry few tags. Opal proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one before anything reaches the site. The new pieces are ranked from the moment they go live, on their tags alone, with no history needed, and fresh pieces get a fair start. The same merchandiser asks Opal, in plain words, to create an audience, to explain why a hero did well with paid-social visitors, or to draft the next test. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. For shoppers, the brand can switch on optional AI add-ons with its credits: AI search that knows the visitor, a style concierge, and generated imagery of real products. Each is the brand's to use or not. The whole boundary is on the credits page, [Where Opal and AI credits fit](https://edge-platform-bti.expedge.workers.dev/credits).
+**The catalog tagged by Opal.** A merchandiser loads a batch of new pieces that carry few tags. Opal proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one before anything reaches the site. The new pieces are ranked from the moment they go live, on their tags alone, with no history needed, and fresh pieces get a fair start. The same merchandiser asks Opal, in plain words, to create an audience, to explain why a hero did well with paid-social visitors, or to draft the next test. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. For shoppers, the brand can switch on optional AI add-ons with its credits: AI search that knows the visitor, a style concierge, and generated imagery of real products. Each is the brand's to use or not. The whole boundary is on the credits page, [Where Opal and AI Credits Fit, and Where They Never Do](https://edge-platform-bti.expedge.workers.dev/credits).
 
 **The receipt read aloud.** A customer's analyst points at a card and asks why it is there. Read the receipt aloud. This piece is here because the visitor's interest in this maker, times the slot's weight for maker, plus their interest in this price band, times its weight, came to the highest total. The campaign they arrived on added a small, published amount, the spring promotion weight nudged it up, and nothing was pinned. It fits on the back of an envelope, and a person can recompute it by hand. Every decision and every override is written out this way, with the version of every setting in force, so "why did this visitor see this?" is a lookup, not an investigation. Given a decision's id, the engine can decide again from the recorded inputs and show that the answer matches. Every decision and every outcome lands in the brand's own warehouse, where its analysts read the results on their own numbers.
 
@@ -96,7 +96,7 @@ Each ask comes with its reason. Your solutions engineer covers the technical det
 | How long each category of data may be kept | Keeping data only as long as agreed | The privacy owner |
 | A destination in their warehouse | Landing every decision and outcome where their analysts work | The data team |
 
-Optional: product lists from the commerce platform, to reorder for each visitor; the brand's own AI model key, for AI search and tagging; starting beliefs from its analysts; the past behavior of known customers; and Opal credits for Opal's work and the AI add-ons.
+Optional: product lists from the commerce platform, to reorder for each visitor; a catalog-search service, for AI search; starting beliefs from its analysts; the past behavior of known customers; and Opal credits for Opal's work and the AI add-ons.
 
 ## Objections have short, true answers
 
@@ -120,7 +120,7 @@ A program lead at a luxury retailer once asked how a page could learn its order 
 
 ## Each hosted demo tells part of the story
 
-Start a demo from where you are: the region on screen is the viewer's real one. The [Demo map](https://edge-platform-bti.expedge.workers.dev/demos) has the full beats.
+Start a demo from where you are: the region on screen is the viewer's real one. [Which demo shows which story](https://edge-platform-bti.expedge.workers.dev/demos) has the full beats.
 
 | Demo and address | The scenes it shows | Keep in mind |
 |---|---|---|
