@@ -37,7 +37,8 @@
 .ae .ae-scene-c { max-width: none; margin: 0; font-size: .9375rem; line-height: 1.5; }
 @media (max-width: 520px) { .ae-fr { max-width: 360px; } }
 
-/* the frames' parts, shared by every frame and by the strips */
+/* the frames' parts, shared by every frame and by the strips. A frame is 200 units wide and shows at 220 pixels at
+   1366 and wider, so no text in a frame is under 10.2 units: at least 11.2 pixels (review round four, M4-6). */
 .ae-fr text { font-family: var(--body); }
 .fr-page { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
 .fr-sep { stroke: var(--line-soft); stroke-width: 1; }
@@ -48,15 +49,15 @@
 .fr-hot { fill: var(--tint); stroke: var(--light-fir); stroke-width: 1.4; }
 .fr-opal { fill: var(--surface-2); stroke: var(--light-fir); stroke-width: 1; stroke-dasharray: 3 2; }
 .fr-pin { fill: var(--light-blue); }
-.fr-pin-t { fill: var(--fir); font-size: 9px; font-weight: 700; }
+.fr-pin-t { fill: var(--fir); font-size: 10.4px; font-weight: 700; }
 .fr-gone { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2.5; }
 .fr-receipt { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 2; }
 .fr-rule { stroke: var(--line); stroke-width: 1; stroke-dasharray: 1.5 1.5; }
 .fr-skel { fill: var(--line-soft); }
 .fr-img { fill: var(--surface); stroke: var(--line-soft); stroke-width: 1; }
 .fr-sun { fill: var(--grass); }
-.fr-t { fill: var(--ink); font-size: 9px; font-weight: 700; }
-.fr-s { fill: var(--muted); font-size: 8.5px; }
+.fr-t { fill: var(--ink); font-size: 10.6px; font-weight: 700; }
+.fr-s { fill: var(--muted); font-size: 10.2px; }
 .fr-line { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 .fr-glyph { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fr-accent { stroke: var(--light-fir); }
@@ -78,7 +79,7 @@
 .fr-knob-on { fill: var(--fir); }
 .fr-knob-off { fill: var(--muted); }
 .fr-ask { fill: var(--lf-green); }
-.fr-ask-t { fill: var(--fir); font-size: 11px; font-weight: 800; }
+.fr-ask-t { fill: var(--fir); font-size: 12px; font-weight: 800; }
 .fr-track { stroke: var(--line); stroke-width: 3; stroke-linecap: round; }
 .fr-track-on { stroke: var(--light-fir); stroke-width: 3; stroke-linecap: round; }
 .fr-knob { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }

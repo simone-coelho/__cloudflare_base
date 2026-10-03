@@ -254,6 +254,8 @@
   const reduced = () => !!(motionQuery && motionQuery.matches);
   const SVGNS = 'http://www.w3.org/2000/svg';
   const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth'];
+  // A span of minutes is written as a word, so no timing figure appears beside the one performance sentence.
+  const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
 
   // ---------- small helpers ----------
   function el(tag, cls, text) {
@@ -292,6 +294,12 @@
     if (s.recs) return start ? 'The recommendations carousel' : 'the recommendations carousel';
     return !start && /^The /.test(s.title) ? `the ${s.title.slice(4)}` : s.title;
   };
+  // Bring a parent's children to the wanted list without moving a child that stays: a control keeps its focus when
+  // others appear or go beside it.
+  function syncChildren(parent, wanted) {
+    Array.prototype.slice.call(parent.children).forEach((n) => { if (wanted.indexOf(n) < 0) parent.removeChild(n); });
+    wanted.forEach((n, i) => { const at = parent.children[i]; if (at !== n) parent.insertBefore(n, at || null); });
+  }
   function restartAnimation(node, cls) {
     node.classList.remove(cls);
     void node.offsetWidth;
@@ -821,7 +829,7 @@
       else if (x.kind === 'fading') out.push({ time, sign: '−', text: 'Regional start, stepping back as the visitor’s own buckets fill.', fresh });
       else if (x.kind === 'look') out.push({ time, sign: '+', text: `${CARD[x.card].story ? 'Clicked a story' : 'Looked at'}: ${CARD[x.card].name}.`, fresh });
       else if (x.kind === 'released') out.push({ time, sign: '−', text: `Released from ${VALUE[x.v].word}: the bucket drained below its release line.`, fresh, kind: 'release' });
-      else if (x.kind === 'time') out.push({ time, sign: '', text: `${Math.round(x.t - x.from)} minutes with no clicks; the page is decided again.`, fresh });
+      else if (x.kind === 'time') out.push({ time, sign: '', text: `${COUNT_WORDS[Math.round(x.t - x.from)] || 'Some'} minutes with no clicks; the page is decided again.`, fresh });
       else if (x.kind === 'pin') out.push({ time, sign: 'pin', text: 'Pinned by a merchandiser: the partner spotlight, first. Ranking never ran for it.', fresh, kind: 'pin' });
     });
     return out;
@@ -914,9 +922,7 @@
     if (state.step === 5 && state.progress === 0) acts.push(pinBtn);
     if (state.step === 7) { holdBtn.textContent = state.holdoutView ? 'Show this visitor’s page' : 'Show the holdout’s page'; holdBtn.setAttribute('aria-pressed', state.holdoutView ? 'true' : 'false'); acts.push(holdBtn); }
     if (words.done && state.step < STEP_COUNT) acts.push(nextBtn);
-    // Re-insert the controls only when they change, so a control that has focus keeps it.
-    const now = Array.prototype.slice.call(callout.actions.children);
-    if (now.length !== acts.length || now.some((n, i) => n !== acts[i])) callout.actions.replaceChildren(...acts);
+    syncChildren(callout.actions, acts);
     passBtn.setAttribute('aria-disabled', state.busy ? 'true' : 'false');
     if (!s) { store.update(blankView(), !!o.animate); sideFor(null); return; }
     store.update(viewOf(s, !!o.marks), !!o.animate);
@@ -927,14 +933,15 @@
     liveEl.classList.toggle('is-learning', state.step === 7);
   }
 
+  // Picking a region keeps focus on the region button just chosen, so a keyboard reader goes on from there.
   function pickRegion(id) {
     if (state.step !== 1) return;
     clearTimers();
-    const first = !state.regionId;
     state.regionId = id;
     state.progress = 1;
     render({ animate: true, marks: true, freshFrom: 0 });
-    void first;
+    const chosen = picker.root.querySelector(`[data-region="${id}"]`);
+    if (chosen && doc.activeElement !== chosen && (!doc.activeElement || doc.activeElement === doc.body || picker.root.contains(doc.activeElement))) chosen.focus({ preventScroll: true });
   }
 
   // The step's action: the add, the look, the minutes, the pin, the story click.

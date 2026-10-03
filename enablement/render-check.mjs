@@ -106,7 +106,28 @@ const STATE_WORDS = [
   /\bbuild items?\b/i, /\broadmap\b/i, /\bremediation\b/i, /\brollout\b/i, /\bstage [1-4]\b/i, /\(stage\b/i, /\bphase [0-9]\b/i,
   // The preflight's seen-text rules (check-site.mjs, section 4b), word for word, so the two agree on every page.
   /\btoday\b/i, /\b(?<!journey[\s-])(?<!\.)stages?\b/i, /\bdemo[\s-]+only\b/i, /\bgeneration\s+[12]\b/i,
+  // Review round four, M4-9, the lead's list: a promise of later, a release word, and the label devices themselves.
+  /\bcoming\s+soon\b/i, /\bbeta\b/i, /\bpreview\b/i, /\bpills?\b/i, /\bchips?\b/i,
 ];
+// A whole element that reads only a label word is a label, wherever it sits (M4-9: a pill reading "Open" passed,
+// because "Open" counts as a state word only before a full stop or a colon).
+const LABEL_WORDS = new Set(['open', 'built', 'designed', 'coming soon', 'beta', 'preview']);
+// The timing scan (V2 section 3, widened by M4-9): a figure in milliseconds or seconds, anywhere but the one fixed
+// performance sentence; it stops speed claims. Minutes, hours and days are left out by the lead's ruling of
+// 2026-10-03: a figure in minutes is an attribution window or a visit gap, never a decision speed. A four-digit
+// number before "s" is a decade, not seconds, and is let through.
+const TIMING = /\b(\d[\d,.]*)\s*(ms|milliseconds?|s|secs?|seconds?)\b/gi;
+const isTiming = (m) => !(m[2].toLowerCase() === 's' && /^\d{4}$/.test(m[1]));
+// The customer, prospect, vendor and competitor names, read from enablement/name-patterns.txt (M4-9), so the check
+// names no one itself: each line a pattern matched as a whole word in any case, or, after "=", in its own case.
+const NAME_FILE = join(root, 'enablement', 'name-patterns.txt');
+const NAME_SCANS = (() => {
+  if (!existsSync(NAME_FILE)) return null;
+  const lines = readFileSync(NAME_FILE, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  const any = lines.filter((l) => !l.startsWith('='));
+  const own = lines.filter((l) => l.startsWith('=')).map((l) => l.slice(1));
+  return [any.length ? new RegExp(`\\b(?:${any.join('|')})\\b`, 'gi') : null, own.length ? new RegExp(`\\b(?:${own.join('|')})\\b`, 'g') : null].filter(Boolean);
+})();
 // Entries that name a retired state word to retire it, left out of the state-word scan (the coordinator's ruling of
 // 2026-10-02, with the preflight lane): the glossary's own Stage entry.
 const STATE_WORD_EXEMPT = new Map([['glossary.html', ['stage']]]);
@@ -163,10 +184,20 @@ const READER_WORDS = /\b(?:you|your|yours|yourself|yourselves)\b/gi;
 // A quoted interface label addressed to the shopper (data-ui-label) is left out of the reader scan; it holds a label,
 // at most this many words, never a sentence.
 const UI_LABEL_WORDS = 6;
-// The prose budget counts the text a block element holds itself, outside any block inside it.
-const PROSE_BLOCKS = new Set(['p', 'li', 'dd', 'dt', 'td', 'th', 'blockquote', 'figcaption', 'summary', 'div']);
-// Class names with these parts are refused on the hand-written pages (V3 section 5); chip and legend everywhere.
-const REFUSED_CLASS_PARTS = /(?:^|[-_])(?:chip|label|legend)(?:$|[-_])/i;
+// The prose budget counts the text every block element holds itself, outside any block inside it: paragraphs,
+// headings, list items, cells, figures, sections and the rest, so text in a heading or in a span inside a figure is
+// counted too (M4-9). Preformatted code is not prose and is left out. Each text element of an inline SVG counts too.
+const PROSE_BLOCKS = new Set([...['p', 'li', 'dd', 'dt', 'td', 'th', 'blockquote', 'figcaption', 'summary', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'figure', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main', 'details', 'caption', 'address', 'button', 'dl', 'ul', 'ol', 'table', 'tbody', 'thead', 'tfoot', 'tr', 'body']]);
+// Class names with these parts are refused on the hand-written pages (V3 section 5), plurals included (M4-9);
+// chip and legend, singular or plural, everywhere.
+const REFUSED_CLASS_PARTS = /(?:^|[-_])(?:chips?|labels?|legends?)(?:$|[-_])/i;
+// A data-visual element must draw (M4-9): it is, or holds, an svg, a table, an img or a figure, or holds an element
+// with no text of its own that the stylesheet draws (a bar, a box, a dot). A div of text alone is not a visual.
+const DRAWN_TAGS = new Set(['svg', 'table', 'img', 'figure']);
+const NOT_A_DRAWING = new Set(['br', 'wbr', 'hr', 'script', 'style', 'template', 'meta', 'link', 'source', 'title', 'desc']);
+// data-reader (M4-9) sits only on leaf blocks: an element with no block element inside it, never a section, the
+// article or any container; and no more than half of a hand-written page's words sit under it.
+const READER_SHARE = 0.5;
 const SHOT_LINE = /^!\[([^\]]*)\]\(\.\.\/figures\/shot-([a-z0-9-]+)\.png\)\s*$/;
 
 // ---------- HTML: a small tokenizer and tree, enough for these pages ----------
@@ -392,6 +423,36 @@ function ownText(node) {
   return s;
 }
 const wordCount = (s) => norm(s).split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+// Does a data-visual element draw? It is, or holds, an svg, a table, an img or a figure; or it, or an element inside
+// it, holds no text at all (a shape the stylesheet draws). Script, style and line breaks are not drawings.
+function drawsSomething(node) {
+  if (DRAWN_TAGS.has(node.tag) || find(node, (n) => DRAWN_TAGS.has(n.tag)).length) return true;
+  return find(node, (n) => !NOT_A_DRAWING.has(n.tag) && !norm(textOf(n))).length > 0;
+}
+// A leaf block holds no block element inside it.
+const isLeafBlock = (node) => !(node.children || []).some((c) => c.tag && (BLOCK.has(c.tag) || find(c, (n) => BLOCK.has(n.tag)).length));
+// The prose budget over a subtree: every block element's own text, and every text element of an inline SVG; code in
+// <pre> is not prose.
+function budgetHits(rootNode, budget) {
+  const hits = [];
+  (function walk(n) {
+    if (!n.tag || n.tag === 'pre' || n.tag === 'script' || n.tag === 'style' || n.tag === 'template') return;
+    if (n.tag === 'svg') {
+      for (const t of find(n, (x) => x.tag === 'text')) { const w = wordCount(textOf(t)); if (w > budget) hits.push({ tag: 'svg text', cls: '', words: w, text: norm(textOf(t)) }); }
+      return;
+    }
+    if (PROSE_BLOCKS.has(n.tag)) { const w = wordCount(ownText(n)); if (w > budget) hits.push({ tag: n.tag, cls: n.attrs.class || '', words: w, text: norm(ownText(n)) }); }
+    (n.children || []).forEach(walk);
+  })(rootNode);
+  return hits;
+}
+// Elements that read nothing but a label word, innermost only.
+const labelElements = (rootNode) => find(rootNode, (n) => {
+  if (n.tag === 'script' || n.tag === 'style' || n.tag === 'svg' || n.tag === 'title') return false;
+  const own = norm(blocksOf({ tag: '#root', attrs: {}, children: [n] }).join(' ')).toLowerCase().replace(/[.:]$/, '');
+  if (!LABEL_WORDS.has(own)) return false;
+  return !(n.children || []).some((c) => c.tag && norm(blocksOf({ tag: '#root', attrs: {}, children: [c] }).join(' ')).toLowerCase().replace(/[.:]$/, '') === own);
+});
 const hasAttrInside = (node, attr) => (node.attrs && attr in node.attrs) || find(node, (n) => attr in n.attrs).length > 0;
 const classTokens = (n) => ((n.attrs && n.attrs.class) || '').split(/\s+/).filter(Boolean);
 const where = (text, index, len) => text.slice(Math.max(0, index - 30), index + len + 30);
@@ -489,11 +550,14 @@ for (const [kind, name] of [['spine', 'spine.html'], ['compact', 'spine-compact.
   if (!partials[kind]) continue;
   const tree = partialTree(kind);
   for (const sec of find(tree, (n) => n.tag === 'section')) if (!hasAttrInside(sec, 'data-visual')) fail(`enablement/partials/${name}: a <section> without a data-visual element`, 'S1');
+  for (const v of find(tree, (n) => 'data-visual' in n.attrs)) if (!drawsSomething(v)) fail(`enablement/partials/${name}: the data-visual element "${v.attrs['data-visual'] || v.tag}" holds only text; a visual is, or holds, an svg, a table, an img, a figure or a drawn element`, 'S1');
   const heard = outsideReader({ tag: '#root', attrs: {}, children: tree.children });
   for (const m of heard.matchAll(READER_WORDS)) fail(`enablement/partials/${name}: "${m[0]}" in the spine ("${where(heard, m.index, m[0].length)}"); the spine addresses no one`, 'S1');
+  if (find(tree, (n) => 'data-reader' in n.attrs).length) fail(`enablement/partials/${name}: carries data-reader; the spine speaks to no one as reader`, 'S1');
   checkUiLabels(tree, `enablement/partials/${name}`, 'S1');
-  for (const n of find(tree, (x) => PROSE_BLOCKS.has(x.tag))) { const w = wordCount(ownText(n)); if (w > 60) fail(`enablement/partials/${name}: a <${n.tag}> of ${w} words, over the budget of 60`, 'S1'); }
+  for (const h of budgetHits(tree, 60)) fail(`enablement/partials/${name}: a <${h.tag}> of ${h.words} words, over the budget of 60`, 'S1');
   for (const n of find(tree, (x) => classTokens(x).some((c) => REFUSED_CLASS_PARTS.test(c)))) fail(`enablement/partials/${name}: the class "${classTokens(n).join(' ')}" uses a refused part (chip, label or legend)`, 'S1');
+  for (const n of labelElements(tree)) fail(`enablement/partials/${name}: an element reads only the label word "${norm(textOf(n))}"`, 'S1');
 }
 // The spines' own pictures for Word: each needs its data-shot element in its partial, holding its caption.
 const shotLines = (md) => md.split('\n').map((l) => SHOT_LINE.exec(l)).filter(Boolean).map((m) => ({ caption: mdInline(m[1]), name: m[2] }));
@@ -603,10 +667,11 @@ for (const file of pages) {
   const stamps = find(tree, (n) => /\bstamp\b/.test(n.attrs.class || ''));
   if (stamps.length !== 1 || norm(textOf(stamps[0])) !== STAMP) fail(`${file}: the stamp must read "${STAMP}" exactly, once (found ${stamps.map((x) => `"${norm(textOf(x))}"`).join(', ') || 'none'})`, file === 'how-it-works-interactive.html' ? 'S1' : undefined);
   // No label, chip or legend anywhere (LANE-BRIEF-V2): none on the page, and none in a figure it inlines.
-  const chipped = find(tree, (n) => /\b(?:chip|legend)\b/.test(n.attrs.class || '')).length;
+  const chipped = find(tree, (n) => /\b(?:chips?|legends?)\b/.test(n.attrs.class || '')).length;
   if (chipped) fail(`${file}: shows ${chipped} label chips or legends; LANE-BRIEF-V2 allows none`);
   const figureLabels = find(tree, (n) => n.tag === 'text' && /^(Built|Designed|Open)$/.test(norm(textOf(n))));
   if (figureLabels.length) fail(`${file}: an inlined figure shows ${figureLabels.length} labels (Built, Designed or Open); LANE-BRIEF-V2 allows none, so the figure needs its redraw`);
+  for (const n of labelElements(body)) fail(`${file}: an element reads only the label word "${norm(textOf(n))}" (a label, a chip or a pill; LANE-BRIEF-V2 allows none)`);
 
   // figures
   const onPage = find(tree, (n) => n.tag === 'figure' && n.attrs['data-figure']).map((f) => f.attrs['data-figure']);
@@ -643,6 +708,21 @@ for (const file of pages) {
       if (!hasAttrInside(sec, 'data-visual')) fail(`${file}: the <section> "${id}" holds no data-visual element (LANE-BRIEF-V3 section 5: every section pairs a visual with short text)`, lane);
       if (hw.shots && !hasAttrInside(sec, 'data-shot')) fail(`${file}: the <section> "${id}" holds no data-shot element (LANE-BRIEF-V3 section 5: every visual section of this page has a shot)`, lane);
     }
+    // every data-visual element draws (M4-9)
+    for (const v of find(body, (n) => 'data-visual' in n.attrs)) if (!drawsSomething(v)) fail(`${file}: the data-visual element ${v.tag}${v.attrs.class ? `.${v.attrs.class.split(/\s+/).join('.')}` : ''} holds only text; a visual is, or holds, an svg, a table, an img, a figure or a drawn element (review round four, M4-9)`, lane);
+    // data-reader only on leaf blocks, and over no more than half the page's words (M4-9)
+    for (const r of find(body, (n) => 'data-reader' in n.attrs)) {
+      if (['section', 'article', 'main', 'body'].includes(r.tag) || !isLeafBlock(r)) fail(`${file}: data-reader on a <${r.tag}${r.attrs.class ? ` class="${r.attrs.class}"` : ''}> that holds other blocks; only a leaf block (a paragraph, a heading, a list item or cell with no block inside) may carry it (review round four, M4-9)`, lane);
+    }
+    {
+      const article0 = find(tree, (n) => n.tag === 'article' && 'data-source' in n.attrs)[0];
+      if (article0) {
+        const total = wordCount(blocksOf(article0).join(' '));
+        const outermost = find(article0, (n) => 'data-reader' in n.attrs).filter((n, i, all) => !all.some((o) => o !== n && find(o, (x) => x === n).length));
+        const under = outermost.reduce((s, n) => s + wordCount(blocksOf(n).join(' ')), 0);
+        if (total && under / total > READER_SHARE) fail(`${file}: ${Math.round((100 * under) / total)}% of the article's words sit under data-reader; no more than half may (review round four, M4-9)`, lane);
+      }
+    }
     // the reader scan, on the page and on the strings its own script can write; a quoted interface label
     // (data-ui-label) is left out, and must stay a label
     const heard = outsideReader(tree);
@@ -653,11 +733,8 @@ for (const file of pages) {
       const strings = norm(scriptStrings(read(ownScript)));
       for (const m of strings.matchAll(READER_WORDS)) { fail(`${file}: its script ${file.replace(/\.html$/, '.js')} can write "${m[0]}" ("${where(strings, m.index, m[0].length)}"); the check cannot see where, so a script's strings say neither "you" nor "your"`, lane); readerHits.push(file); }
     }
-    // the prose budget
-    for (const n of find(body, (x) => PROSE_BLOCKS.has(x.tag))) {
-      const w = wordCount(ownText(n));
-      if (w > hw.budget) fail(`${file}: a <${n.tag}${n.attrs.class ? ` class="${n.attrs.class}"` : ''}> of ${w} words, over the budget of ${hw.budget}: "${norm(ownText(n)).slice(0, 70)}..."`, lane);
-    }
+    // the prose budget: every block's own text, headings, figures and SVG text included (M4-9)
+    for (const h of budgetHits(body, hw.budget)) fail(`${file}: a <${h.tag}${h.cls ? ` class="${h.cls}"` : ''}> of ${h.words} words, over the budget of ${hw.budget}: "${h.text.slice(0, 70)}..."`, lane);
     // class names
     for (const n of find(body, (x) => classTokens(x).some((c) => REFUSED_CLASS_PARTS.test(c)))) fail(`${file}: the class "${classTokens(n).join(' ')}" uses a refused part (chip, label or legend; LANE-BRIEF-V3 section 5)`, lane);
     // the spine's own files
@@ -710,9 +787,9 @@ for (const file of pages) {
     else if (!(stamped[kind].index > a0 && stamped[kind].index < a1)) fail(`${file}: the spine markers must sit inside the <article>`);
     else {
       // Story first (LANE-BRIEF-V3 section 7.1): the spine opens the piece, so before it the article holds the title
-      // and at most a line or two, never a section or a heading of the page's own.
+      // and at most a line or two, never a section, a heading or a picture of the page's own (M4-9).
       const before = html.slice(a0, stamped[kind].index).replace(/<!--[\s\S]*?-->/g, '');
-      if (/<(?:section|h[2-6])\b/i.test(before)) fail(`${file}: the spine must open the article (LANE-BRIEF-V3 section 7.1); a section or heading of the page comes before it`);
+      if (/<(?:section|h[2-6]|figure|svg|img|table|picture|canvas|video)\b|\sdata-(?:visual|shot)\b/i.test(before)) fail(`${file}: the spine must open the article (LANE-BRIEF-V3 section 7.1); a section, heading or picture of the page comes before it`);
       const cut = html.slice(a0, stamped[kind].index) + html.slice(stamped[kind].index + stamped[kind].length, a1 + '</article>'.length);
       compareTree = find(parseHtml(cut), (n) => n.tag === 'article')[0] || article;
       const same = partials[kind] && collapse(stamped[kind].inner) === collapse(partials[kind]);
@@ -772,15 +849,30 @@ for (const file of pages) {
 for (const p of missingPngs) notes.push(`${p} is not captured yet (lane W2 captures the shots from the built pages)`);
 
 // ---------- the scans ----------
+// The names come from enablement/name-patterns.txt, which the preflight reads too (check-site.mjs, section 4b), so the
+// two agree word for word; a missing file fails rather than scanning nothing.
+if (!NAME_SCANS || !NAME_SCANS.length) fail(`${NAME_FILE.replace(`${root}`, '').replace(/^[\\/]/, '').split('\\').join('/')} is missing or holds no pattern; the name scan cannot run`, 'S1');
 const SCANS = [
-  ['gendered pronouns', /\b(she|her|hers|he|him|his)\b/gi],
-  // The preflight's own list (check-site.mjs, section 4b), word for word: any case, as words.
-  ['customer names', /\b(?:tapestry|verizon|coach|qvc|mandeep|dynamic\s+yield)\b/gi],
-  ['timing figures beyond the fixed performance sentence', /\b\d[\d,.]*\s*(?:ms|milliseconds?)\b/gi],
+  ['gendered pronouns', [/\b(she|her|hers|he|him|his)\b/gi]],
+  ['customer, prospect, vendor and competitor names', NAME_SCANS || []],
+  ['timing figures beyond the fixed performance sentence', [TIMING]],
 ];
 const scanTexts = { ...pageText };
 for (const s of OWN_SOURCES) if (existsSync(join(root, s))) scanTexts[s] = norm(read(join(root, s)).replace(/<style\b[\s\S]*?<\/style>/gi, ' '));
-for (const [kind, , , source] of MARKERS) if (partials[kind]) scanTexts[`enablement/partials/${source}`] = norm(partials[kind]);
+// A partial is scanned as a page is: its text, its comments and the attributes a reader hears, never its markup (an
+// SVG path's numbers are not timing figures).
+const scanTextOf = (node) => {
+  const all = [];
+  (function walk(n) {
+    if (n.comment !== undefined) { all.push(n.comment); return; }
+    if (n.text !== undefined) { all.push(n.text); return; }
+    if (n.tag === 'script' || n.tag === 'style') return;
+    for (const k of ['aria-label', 'title', 'alt', 'data-label', 'data-added', 'data-lead', 'content']) if (n.attrs && n.attrs[k]) all.push(` ${n.attrs[k]} `);
+    (n.children || []).forEach(walk);
+  })(node);
+  return norm(all.join(' '));
+};
+for (const [kind, , , source] of MARKERS) if (partials[kind]) scanTexts[`enablement/partials/${source}`] = scanTextOf(partialTree(kind));
 const heardTexts = { ...heardText };
 for (const s of OWN_SOURCES) if (existsSync(join(root, s))) { try { heardTexts[s] = norm(s.endsWith('.html') ? htmlSource(join(root, s)).join(' ') : mdBlocks(read(join(root, s)), [], s).join(' ')); } catch (e) { fail(`scan: ${s} could not be read: ${e.message}`, 'S1'); } }
 for (const [kind, , , source] of MARKERS) if (partials[kind]) { const t = partialTree(kind); heardTexts[`enablement/partials/${source}`] = norm(`${blocksOf(t).join(' ')} ${find(t, (n) => n.tag === 'svg').map(textOf).join(' ')}`); }
@@ -791,12 +883,18 @@ for (const f of readdirSync(siteDir, { recursive: true }).map(String).filter((x)
 const laneOfScan = (file) => { const m = /([a-z0-9-]+)\.(?:html|js|css)$/.exec(file); return m && HAND_WRITTEN.has(`${m[1]}.html`) ? HAND_WRITTEN.get(`${m[1]}.html`).lane : file.includes('how-it-works-interactive') ? 'H1' : 'S1'; };
 const fixed = norm(FIXED_PERFORMANCE);
 const scanRows = [];
-for (const [label, re] of SCANS) {
+for (const [label, patterns] of SCANS) {
   const hits = [];
   const texts = label === 'gendered pronouns' ? { ...scanTexts, ...scriptTexts } : scanTexts;
   for (const [file, raw] of Object.entries(texts)) {
     const text = label.startsWith('timing') ? raw.split(fixed).join(' ') : raw;
-    for (const m of text.matchAll(re)) hits.push([file, `${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`]);
+    for (const re of patterns) {
+      re.lastIndex = 0;
+      for (const m of text.matchAll(re)) {
+        if (label.startsWith('timing') && !isTiming(m)) continue;
+        hits.push([file, `${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`]);
+      }
+    }
   }
   scanRows.push(`${label}: ${hits.length}`);
   for (const [file, h] of hits) fail(`scan, ${label}: ${h}`, laneOfScan(file));
@@ -818,7 +916,7 @@ for (const [label, re] of SCANS) {
 }
 // customer names in anything else that is served (the stylesheets, the scripts, the figure copies)
 const served = readdirSync(siteDir, { recursive: true }).map(String).filter((f) => /\.(css|js|svg)$/.test(f));
-for (const f of served) for (const m of read(join(siteDir, f)).matchAll(SCANS[1][1])) fail(`scan, customer names: enablement/site/${f}: "${m[0]}"`, laneOfScan(f));
+for (const f of served) for (const re of NAME_SCANS || []) for (const m of read(join(siteDir, f)).matchAll(re)) fail(`scan, customer, prospect, vendor and competitor names: enablement/site/${f}: "${m[0]}"`, laneOfScan(f));
 // The abbreviation the design keeps out of every piece's visible text (section 2); the site's host name carries
 // it, so a link shows a page's title and never the address. Case-sensitive, visible text only.
 {

@@ -16,6 +16,8 @@ A click on a product pours into the bucket for what it touches, such as knitwear
 
 Two sections trade places on the next page, and the receipt records the click.
 
+We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.
+
 ![One add to the bag, and Soft knits and Rain-ready layers trade places.](../figures/shot-tour-step-2.png)
 
 ## A second interest fills
@@ -30,7 +32,7 @@ The page leans on both: the first interest still leads, and the second one's sec
 
 Every bucket drains on its own, and nobody writes an expiration rule. Below its release line, the visitor is released from that interest, its section drops back, and the receipt records the release.
 
-This sample store keeps interest for 5 minutes so the tour can show it fade; each brand sets how long its buckets hold, and the engine's default is 14 days.
+This sample store keeps interest for five minutes so the tour can show it fade; each brand sets how long its buckets hold, and the engine's default is 14 days.
 
 ![Five minutes on, knitwear has drained below its release line, and Soft knits drops back behind Rain-ready layers.](../figures/shot-tour-step-4.png)
 

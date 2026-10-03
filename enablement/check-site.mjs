@@ -275,6 +275,16 @@ const scriptStrings = (js) => {
     .join(' \n ');
 };
 const cssContent = (css) => [...css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/content\s*:\s*("([^"]*)"|'([^']*)')/gi)].map((m) => m[2] ?? m[3]).join(' ');
+// The customer, prospect, vendor and competitor names (review round four, M4-9) come from enablement/name-patterns.txt,
+// outside the served folder, which the text check reads too, so the two agree and neither names anyone: each line a
+// pattern matched as a whole word in any case, or, after "=", in its own case only.
+const namePath = join(root, 'enablement', 'name-patterns.txt');
+const nameLines = existsSync(namePath) ? readFileSync(namePath, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#')) : [];
+check(nameLines.length > 0, `enablement/name-patterns.txt exists and holds the names the site never shows (${nameLines.length} patterns)`);
+const NAME_PATTERNS = [
+  nameLines.filter((l) => !l.startsWith('=')),
+  nameLines.filter((l) => l.startsWith('=')).map((l) => l.slice(1)),
+].map((list, i) => (list.length ? new RegExp(`\\b(?:${list.join('|')})\\b`, i ? 'g' : 'gi') : null)).filter(Boolean);
 const NEVER_SEEN = [
   [/\bdesigned\b/gi, '"designed"'],
   [/\b(?<!journey[\s-])(?<!\.)stages?\b/gi, '"stage"'],
@@ -282,7 +292,7 @@ const NEVER_SEEN = [
   [/\bdemo[\s-]+only\b/gi, '"demo only"'],
   [/\btoday\b/gi, '"today"'],
   [/\bnot\s+yet\b/gi, '"not yet"'],
-  [/\b(?:tapestry|verizon|coach|qvc|mandeep|dynamic\s+yield)\b/gi, 'a customer or competitor name'],
+  ...NAME_PATTERNS.map((re) => [re, 'a customer or competitor name']),
 ];
 const neverSeen = (text, except = null) => NEVER_SEEN.filter(([, what]) => what !== except)
   .flatMap(([re, what]) => [...text.matchAll(re)].map((m) => `${what} in "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).trim()}"`));

@@ -278,8 +278,29 @@
   .spine .spine-compact-arrow { transform: rotate(90deg); }
 }
 
-/* ---------- print: every picture still, at its end state ---------- */
+/* ---------- print: every picture still, at its end state, and ink on white in either scheme ----------
+   site.css resets its own tokens for print but not this file's, so a page printed from a dark-mode browser kept the
+   lime accent and printed "The engine" at 1.15 to 1 (review round four, M4-2). Every spine token is reset here, after
+   the dark block above so it wins in print whatever the scheme, and the story card prints white with ink text. */
 @media print {
+  :root {
+    --spine-accent: #197050;
+    --spine-accent-bg: #FFFFFF;
+    --spine-accent-line: #197050;
+    --spine-skel: #FFFFFF;
+    --spine-pin-bg: #FFFFFF;
+    --spine-pin-line: #8A5A00;
+    --spine-pin-ink: #6B4700;
+    --spine-story-ink: #000000;
+    --spine-story-line: #C9D3BE;
+    --spine-shadow: none;
+  }
+  .spine { color: #000000; }
+  .spine .spine-story-card { background: #FFFFFF; color: #000000; border: 1px solid #9AA88C; }
+  .spine .spine-kicker { color: #197050; }
+  .spine .spine-headline { color: #000000; }
+  .spine .spine-beat .spine-icon { color: #197050; }
+  .spine .spine-frame p::before { background: #FFFFFF; color: #000000; border: 1px solid #000000; }
   .spine .spine-play *, .spine .spine-play.spine-buckets * { animation: none !important; }
   .spine .spine-replay-row { display: none; }
   .spine .spine-block { margin-top: 18pt; }

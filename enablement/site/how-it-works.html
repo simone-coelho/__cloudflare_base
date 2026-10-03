@@ -147,8 +147,8 @@
 </section>
 </div>
 <!-- spine:end -->
-<section class="sec se-sec" aria-labelledby="why-customers-choose-it">
-<h2 id="why-customers-choose-it">Why customers choose it</h2>
+<section class="sec se-sec" aria-labelledby="customers-choose-it-for-different-reasons">
+<h2 id="customers-choose-it-for-different-reasons">Customers choose it for different reasons</h2>
 <figure class="se-reasons" data-visual="ten equal tiles, one reason each, unranked" data-shot="se-reasons">
 <figcaption class="se-reasons-lead">Each customer weighs these reasons differently.</figcaption>
 <ul class="se-tiles">
@@ -576,10 +576,10 @@
 </li>
 <li class="se-card" id="the-regional-prior" data-shot="se-instrument-prior">
 <h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span>The regional prior</span></h3>
-<div class="se-formulas"><p class="se-formula"><code>λ = k / (k + Σa)</code></p><p class="se-formula"><code>ã = (1 − λ) · a + λ · share</code></p></div>
+<div class="se-formulas"><p class="se-formula"><code>λ = k / (k + Σa), with k the blend constant</code></p><p class="se-formula"><code>ã = (1 − λ) · a + λ · share</code></p></div>
 <div class="se-card-art"><div class="se-draw"><svg viewBox="0 0 400 174" role="img" aria-label="Three bars, each the blend of the region's share and the visitor's own interest: a stranger, at a sum of 0, is all region, lambda 1; after one view, at 1.07, lambda is 0.48; after three views, at 2.13, lambda is 0.32." focusable="false"><rect x="104" y="14" width="284" height="34" rx="5" class="d-region"/><text x="8" y="29" class="d-t d-strong">Σa = 0</text><text x="8" y="46" class="d-t d-muted">a stranger</text><text x="114" y="37" class="d-t">region, λ = 1</text><rect x="104" y="70" width="137.1" height="34" rx="5" class="d-region"/><rect x="241.1" y="70" width="146.9" height="34" rx="5" class="d-fill"/><text x="8" y="85" class="d-t d-strong">Σa = 1.07</text><text x="8" y="102" class="d-t d-muted">one view</text><text x="114" y="93" class="d-t">λ = 0.48</text><text x="378" y="93" class="d-t d-on-fill" text-anchor="end">1 − λ = 0.52</text><rect x="104" y="126" width="90.6" height="34" rx="5" class="d-region"/><rect x="194.6" y="126" width="193.4" height="34" rx="5" class="d-fill"/><text x="8" y="141" class="d-t d-strong">Σa = 2.13</text><text x="8" y="158" class="d-t d-muted">three views</text><text x="114" y="149" class="d-t">λ = 0.32</text><text x="378" y="149" class="d-t d-on-fill" text-anchor="end">1 − λ = 0.68</text></svg></div>
 <p class="se-cap">The region’s share of the blend fades as the visitor’s own interests grow.</p></div>
-<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>A stranger has Σa = 0, so λ = 1 and each ã is the region’s share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.</p></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>The blend constant k is 1 by default. A stranger has Σa = 0, so λ = 1 and each ã is the region’s share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.</p><p class="se-note">Of the three tailored coats, two are premium and one is at the core price, so Σa = 0.625 + 0.625 + 0.526 + 0.357 = 2.13.</p></div>
 <div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>The region speaks for a stranger and steps back as the visitor’s own interests grow; its counts carry no visitor ids, and a thin region falls back to its country, then everyone.</p></div>
 </li>
 <li class="se-card" id="the-diversity-cap-and-the-pin" data-shot="se-instrument-cap-pin">

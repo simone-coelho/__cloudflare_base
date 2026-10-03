@@ -2,7 +2,7 @@
 
 **For solutions engineers.** The story first and why customers choose it, then one visitor walked through, the arithmetic as worked examples, learning and the receipt, where the engine runs and how it is configured, integration and privacy, and what a customer provides.
 
-## Why customers choose it
+## Customers choose it for different reasons
 
 ![Each customer weighs these reasons differently.](../figures/shot-se-reasons.png)
 
@@ -99,11 +99,13 @@ Every score follows one order:
 
 **The regional prior**
 
-`λ = k / (k + Σa)`
+`λ = k / (k + Σa), with k the blend constant`
 
 `ã = (1 − λ) · a + λ · share`
 
-A stranger has Σa = 0, so λ = 1 and each ã is the region's share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.
+The blend constant k is 1 by default. A stranger has Σa = 0, so λ = 1 and each ã is the region's share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.
+
+Of the three tailored coats, two are premium and one is at the core price, so Σa = 0.625 + 0.625 + 0.526 + 0.357 = 2.13.
 
 The region speaks for a stranger and steps back as the visitor's own interests grow; its counts carry no visitor ids, and a thin region falls back to its country, then everyone.
 

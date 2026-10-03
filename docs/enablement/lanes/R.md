@@ -924,3 +924,234 @@ RR3-1 to RR3-10 and RR3-13 are all in.
 - **Servers and Chrome.** Servers ran on ports 9461 to 9464 and exited by themselves. Every Chrome run was headless on its own profile in the scratchpad and closed with `Browser.close`.
 - **One probe crashed** on a malformed regular expression before it could close Chrome. I checked its debug port: nothing was listening, so nothing was left running.
 - **The live worker** behind the gate was out of scope and not checked.
+
+# Round four, 2026-10-03: version 3, the visual rebuild
+
+Under `LANE-BRIEF-V3.md` (the owner's three rules, the spine of §3, the pieces of §4, the tooling of §5, the gate of §7), the three approved mocks, `LANE-BRIEF-V2.md`, `LANE-BRIEF-COMMON.md`, the design's §9, the glossary, `../verizon/explainer/FACTS.md` and S2 for the constants, S4 for the quotations, and the six-slide visual brief. The lane notes S1, M2, T1, A1, G1 and W's version 3 section were read as claims and checked, never taken as evidence.
+
+**What was reviewed, and when.** The tree moved four times while I worked, so the scope is stated exactly:
+
+- **In full:** every page, partial, source, figure and tooling file as committed in `5083fab6` (10:19). The working tree equaled it when I began (10:29, checksums of all 137 files under `enablement/` and `docs/enablement/`).
+- **Two deltas** on the sellers' and engineers' pages:
+  - `3c3e5418` (10:56): one picture per instrument card; the objections as two pictures.
+  - `e82925bc` (11:12): instrument cards one per row; the objections' quote card as the section's first picture.
+
+  For each, I read the changed sources, reran the text check and the preflight, and reran the headless pass on the two pages from copies taken at about 11:05 and 11:18.
+- **The Word copies** as committed in `819c6d9c` (11:20), read part by part (byte-identical to the files I unzipped at 11:17). The builds of 10:56 to 11:01, which they replaced, were read too, and the differences are noted.
+- **The converter change** in `scripts/md2docx.mjs`, committed in `819c6d9c` under the lead's ruling.
+
+## R4.1 Verdicts
+
+| Item | Verdict | Findings |
+|---|---|---|
+| `/` (landing) | PASS | none |
+| `/what-it-is` | PASS | none |
+| `/see-it-work` | FAIL | B4-1; minor M4-1, M4-6, M4-7, M4-8 |
+| `/selling-it` (at `5083fab6`, `3c3e5418` and `e82925bc`) | PASS | minor M4-6 |
+| `/battlecard` | PASS | minor M4-2 |
+| `/how-it-works` (at `5083fab6`, `3c3e5418` and `e82925bc`) | PASS | minor M4-3, M4-4, M4-5 |
+| `/how-it-works-interactive`, `/credits`, `/glossary`, `/demos`, the 404 page | PASS (chrome re-stamped, content unchanged by V3 §4.6) | none new |
+| `enablement/partials/header.html`, `footer.html`, `spine.html`, `spine-compact.html` | PASS | none |
+| `content/spine.md`, `content/spine-compact.md` | PASS | none |
+| `content/what-it-is.md` | PASS | none |
+| `content/see-it-work.md` | FAIL | B4-1 |
+| `content/selling-it.md` | PASS | none |
+| `content/battlecard.md` | PASS | none |
+| `content/how-it-works-and-where-it-runs.md` | PASS | minor M4-3, M4-4, M4-5 |
+| `figures/se-signal-chain`, `se-learning-and-receipt`, `se-published-documents`, `se-integration` (SVG and PNG) | PASS | none |
+| `figures/architecture`, `decision-path` (reused, inlined verbatim) | PASS | none |
+| `figures/shot-*.png` (45 at `819c6d9c`) | PASS | none |
+| `enablement/render-pages.mjs` | PASS | none |
+| `enablement/render-check.mjs` | PASS | minor M4-9 (holes beyond V3 §5's letter) |
+| `enablement/check-site.mjs` | PASS | none |
+| `word/Enablement-What-It-Is-v3.0.docx` | PASS | none |
+| `word/Enablement-Selling-It-v3.0.docx` (the build of 11:16) | PASS | none (the build of 11:01 failed, R4.4, resolved) |
+| `word/Enablement-How-It-Works-and-Where-It-Runs-v3.0.docx` (the build of 11:16) | PASS | none |
+| `word/Enablement-Battlecard-v3.0.docx` | PASS | none |
+
+One blocking finding, which may be one ruling away from a pass (D1), and nine minor ones. Three earlier findings were resolved by the lanes and the lead during the round (R4.4).
+
+## R4.2 What I ran
+
+- **The three commands.**
+  - **The stamp.** `node enablement/render-pages.mjs --stamp` was not run on the tree: the permission classifier refused it as a possible write, and I write only this file. I ran the same step into scratch instead (`--stamp --out <scratch>`, which copies the served folder first): all eleven pages "already current" and "figure copies … none needed", so the step on the tree is a no-op at `5083fab6`. Checked by bytes (LF-normalized, the page's own `aria-current` aside), every header, footer, spine and compact block on all eleven pages is identical to its partial.
+  - **The text check.** `node enablement/render-check.mjs`: exit 0, "Every page says what its sources say. All checks passed.", at all three commits:
+    - at `5083fab6`: battlecard 78 and 78 sentences, what-it-is 136 and 158, see-it-work 37 and 37, selling-it 207 and 207, how-it-works 172 and 172; every scan 0, the reader scan 0;
+    - at `3c3e5418`: selling-it 209 and 209, how-it-works 175 and 175;
+    - at `e82925bc`: selling-it 210 and 210, how-it-works 175 and 175, and no picture left uncaptured.
+  - **The preflight.** `node enablement/check-site.mjs`: exit 0, 188 checks passed, at all three.
+- **Headless Chrome 153** over CDP, each run on its own scratch profile, closed with `Browser.close`, on copies of the served folder served with `_headers` the way the assets binding serves it:
+  - 66 loads (11 addresses, 1440×800, 1366×768 and 390×844, light and dark), scrolled through.
+  - Contrast: 44 loads under reduced motion, every HTML text by computed color and every inline SVG text against the pixels behind it in a full-page capture.
+  - 20 reduced-motion runs, 44 loads without script, 20 keyboard runs.
+  - 16 motion runs on the four full-spine pages, plus the marketing page's own pictures.
+  - The tour walked by keyboard only in both regions at 1366 and 390, and by mouse at 1440 dark.
+  - Six battlecard PDFs (Letter and A4; light, dark, and browser defaults) and a print-media contrast probe.
+  - For each delta: 12 loads, 8 contrast, 8 no-script, 8 reduced and 4 keyboard runs on the two pages.
+  - Every full page looked at, at 1440 and 390, light and dark, in pieces.
+- **Recomputation.** My own implementation of the tour's model, from FACTS §1 to §3 and S2 §3.4, §3.6 and §3.10 to §3.12 (not from `see-it-work.js`), against every step in both regions; the engineers' worked numbers by hand. The four new figures rendered afresh at device scale 2 and compared with their PNGs: the differences are scattered antialiasing, never more than 66 strongly different pixels in any 100-pixel square.
+- **Mutation proofs:** 30 cases on fresh scratch copies of `enablement/` and `docs/enablement/` (R4.5).
+- **Static scans** of 52 files: the five pages' sources, the partials, every served page, stylesheet, script and figure, and the three tooling files (pronouns, names, the abbreviation, dashes, label and state words, British spellings, timing figures, deprecated glossary words, first-person voice).
+- **The Word copies** unzipped into scratch and read part by part (R4.6).
+- **Quotations** checked against their source lines through S4 (R4.3, item 5).
+
+## R4.3 The gate, item by item
+
+1. **Rule 3, as the owner will read it.** Every section of the five pages is a picture, a flow, an instrument, a storyboard, cards, tiles or a table with short text beside it. I looked at each one as its reader would. The densest are the marketing page's twelve say and never-say pairs, the sellers' thirteen objection pairs and the thirteen capability cards under the pillars; all three are the card pairs and cards V3 §4 prescribes, not prose. No section reads as a paragraph wall. At `e82925bc` the engineers' instrument cards read as instruments: drawing on the left, formula, worked example and meaning on the right. Scripted parts: every `<section>` has a `data-visual` element, and no text block is over 60 words (over 120 on the engineers' page; the longest there is 78).
+2. **Story first.** The spine opens every piece, byte-identical to its partial, the compact one on the battlecard (R4.2). The spine's text equals V3 §3: all 46 quoted strings of §3 are in `spine.md` and the partial verbatim, "Play again" being chrome. The two recorded departures are as ruled: the carousel title "Recommended for you" carries `data-ui-label`, and the loop plays once and holds, with "Play again".
+3. **Third person.** No "you", "your", "yours" or "yourself" outside `[data-reader]` and `data-ui-label` on the five pages, by the text check and by my own browser scan of what each page shows and says aloud. The brand, its merchandisers and its systems are in the third person ("the brand's team", "the brand's carousel", "the pins for what the brand sells"). The only second person is inside the never-say quotations and the objections a customer asks ("Will it override our merchandisers?"), all inside `data-reader`.
+4. **The mocks.** Section order and kind of visual match mock 2's opening and list, mock 1's kinds and mock 3's three columns, with these departures, each recorded and ruled: the engineers' page adds "Why customers choose it" before its first section (the lead's ruling, `lanes/G1.md` §8); the marketing page ends with three link cards where V3 §4.1 names two and mock 2 names the tour and the battlecard (`lanes/M2.md` §8 item 1); the tour's first click is an add to the bag (`lanes/T1.md`, departure 2).
+5. **The material's law.**
+   - Present tense, no build-state, stage or label word, no chip or legend: clean on all five pages and their sources.
+   - The thirteen capabilities of V2 §2.3 are all on the marketing page, as cards under the four pillars, mapped as `lanes/M2.md` §3 says (each checked against design §4.2, K1 to K13). They are also on the sellers' and engineers' pages.
+   - The ten reasons, unranked, with "Each customer weighs these reasons differently.", are on the marketing page, the sellers' page, the battlecard and the engineers' page.
+   - The four fixed sentences: verbatim on the marketing page, the sellers' page, the battlecard and the engineers' page. The tour carries the recommendations and AI sentences (spine) and the learning sentence (step 7), but not the performance sentence (B4-1).
+   - No other performance or speed figure anywhere. What remains are constants (14 days, 9.96 days, 30 minutes for a click), the tour's declared 5-minute memory and clock, and "Live in two weeks" as a never-say.
+   - No customer, prospect or competitor name in any page, source, figure, script, comment, alt text, SVG text, file name or Word part (the tooling's own scan patterns name them, as before).
+   - Quotations by industry only, each the customer's own words, none with a gendered pronoun:
+     - "This capability doesn't exist off the shelf; we need to build it.": S4 8.30, `tapestry_requirements.txt:243`.
+     - "A site that feels like a stylist who remembers.": S4 8.33, line 126.
+     - "It works, but it caps out.": S4 8.32, line 103.
+     - "The differentiation opportunity is in content and experience.": S4 4.1, line 239.
+     - "It's snowing in the Pacific Northwest, we might want to display relevant content to those customers.": S4 1.13, `QVC-Use-Cases-and-Engine-Fit.md:59`.
+     - "How else would it learn? I don't understand.": S4 8.13, extraction line 604.
+     - The home-shopping question (S4 5.12) is a paraphrase without quotation marks.
+   - The pronoun scan is 0 everywhere. American English. No em-dash on the five pages or in their sources. Headings are statements but one (M4-3). The glossary's words are used; "segment" appears only in the spine's V3-verbatim contrast.
+6. **Honesty.**
+   - The tour's region is chosen on the page ("Pick where this visitor is"). No button is pressed and Next is disabled until the reader picks, and the receipt says "picked on this page".
+   - The store is called a sample, and its leans invented, on the page and in the callout. Nothing in the tour is called a demo or a customer.
+   - The 5-minute memory is said on the page beside the engine's 14-day default (step 4).
+   - My recomputation agrees with every step in both regions: the orders, the heroes, the levels with their entry and release, the region's share (62, 51, 66 and 60 percent), the release at 4:03 (0:30 plus 5 × ln(3/1.4727) = 3.558 minutes), the pin, and the holdout's page in the brand's own order with the pin kept. Every printed line of step 6's receipt recomputes: 1 ÷ 1.670 = 0.599; 0.401 × 0.514 + 0.599 × 0.75 = 0.655; 0.599; 0.063.
+   - The engineers' numbers equal FACTS and S2. One view gives 0.357, two 0.526, three 0.625. Entry needs R ≥ 2.7 and release comes below R = 1.4727, after 9.96 days. 3 × e^(−12/14) = 1.27, so coats reads 0.41, and evidence halves every 9.7 days. λ = 1/(1 + 1.07) = 0.48 and λ = 1/3.13 = 0.32. The coat story scores 0.46, then 0.52, then 0.572. On arrival the edit reads 0.56, 0.52, 0.36 (yielding to the cap) and 0.34; after the first view 0.374, 0.357 and 0.201. The receipt reads 0.200 + 0.114 + 0.060 = 0.374 with λ 0.483. Sixty against 720 is 6 × 10 against 6!. The blend constant is FACTS's kBlend at its compiled default of 1, kept apart from K. One example cannot be recomputed from the page as written (M4-4).
+7. **The look.** At 1440×800, 1366×768 and 390×844, light and dark:
+   - No horizontal overflow; no console message (the 404 page logs its own 404 status, as it must); only same-origin requests (the page, `site.css`, `spine.css`, its own stylesheet, `site.js`, `spine.js`, its own script); no policy report.
+   - Contrast: every HTML text at least 4.91 to 1 in light (the tour) and 5.54 in dark (the interactive page); every SVG text measured at least 5.12.
+   - The skip link is the first Tab stop on every page, and every control is reached by Tab.
+   - The watch-it loop waits while out of view, plays when it comes into view (the ring at about 1.2 s, the trade at 2.4 s, the receipt by 3.6 s), holds its end state, and replays by mouse and by Enter, on all four full-spine pages.
+   - Under reduced motion nothing runs, every picture shows its end state and "Play again" is hidden. Without script every page reads in full, the spine at its end state, the tour as its seven-frame storyboard.
+   - The tour is walkable by keyboard in both regions, and its callout and new receipt lines are polite live regions; but focus is lost after the region is picked (M4-1).
+   - The battlecard prints on one sheet on Letter and A4, light, dark and with the browser's default margins; printed from a dark-mode browser, three labels fall to 1.15 to 1 (M4-2).
+8. **The tooling.** The five kinds of mutation the brief names are each caught; the new checks do what V3 §5 says, and S1 widened several beyond its letter. A page can still pass them while failing rule 2 or rule 3 (R4.5, M4-9). None of the pages does.
+9. **Word.** Four copies, each opening with the spine, its sections as pictures with captions (one plain lead line before a picture where the design's rule 5 puts one, as the lead read it). Every picture is byte-identical to its repository PNG, the contents are linked, every internal link resolves, the version is "3.0", the names end `-v3.0.docx`, the three superseded v2.0 files are out of the folder and the glossary, credits and demo map v2.0 files are still there. The pronoun and name scans are 0 in every part. They were built with the converter as the lead ruled it changed, a link inside bold becoming a bold link and every heading keeping with the next; that is not the "unchanged converter" of V3 §7.6, but the change is the lead's ruling, recorded in `lanes/W.md` V3.10 and committed with the documents.
+10. **The two-minute test** (R4.7): passed by all four pages.
+
+## R4.4 Findings
+
+### Blocking
+
+- **B4-1. The tour lacks the performance sentence.** `docs/enablement/content/see-it-work.md` (no line holds it) and `enablement/site/see-it-work.html` (no step holds it; V2's tour carried it under the first-click scene, design §3.6). The gate as briefed asks for the four fixed sentences verbatim on every piece. V3 §4.2 names only the learning sentence for the tour, and the tour makes no speed claim, so this is the lead's call (D1). One line in step 2's text and the markdown, then the stamp and the text check, would pass it.
+
+### Minor
+
+- **M4-1. The tour drops keyboard focus after the region is picked.** `enablement/site/see-it-work.js`: `pickRegion()` (line 930) moves no focus, and `render()` re-inserts the picker with `callout.actions.replaceChildren(...)` (lines 912 and 919), which takes the focused button out of the document. Focus falls to the body; one Tab returns to the first region button and two more reach "Next step", in both regions at 1366 and 390. Every later action does land focus usefully, as `lanes/T1.md` says. Calling `focusNext()` from `pickRegion()`, or keeping the picker node in place, would fix it.
+- **M4-2. The battlecard printed from a dark-mode browser shows "The engine" at 1.15 to 1.** `enablement/site/spine.css:27` sets `--spine-accent` to lime under `prefers-color-scheme: dark`, and `:84` colors `.spine-who-engine` with it. Neither `spine.css:282` nor `battlecard.css:165` resets it for print, while the rest of the sheet prints light. The result is three lime labels on near-white in the compact rows (measured `rgb(171,255,68)` on `rgb(246,248,243)`). The other 121 texts measured on that printed sheet pass AA, and in a light-mode print every text is at least 5.65 to 1.
+- **M4-3. One heading is not a statement.** "Why customers choose it", `content/how-it-works-and-where-it-runs.md:5`, `how-it-works.html:151`, set by the lead's ruling. The other three pages say "Customers choose it for different reasons".
+- **M4-4. One worked number cannot be recomputed from the engineers' page.** Line numbers are at `e82925bc`. The prior card says "after three views, Σa = 2.13 and λ = 0.32" (`how-it-works-and-where-it-runs.md:106`), and the interest card says "The visitor views three tailored coats" (`:50`). A reader who takes all three as premium computes Σa = 3 × 0.625 = 1.875 and λ = 0.35. The 2.13 is right only with one coat at the core price (coats 0.625, tailored 0.625, premium 0.526, core 0.357), as version 2's walk said and this page no longer does. Name the price bands, or use 1.875 and 0.35.
+- **M4-5. Since `3c3e5418` the engineers' page uses k before it defines it.** The sentence naming "a blend constant k of 1" moved below the six cards (`:122` at `e82925bc`), so the prior card's `λ = k / (k + Σa)` (`:102`) meets k undefined. Design §3.0 item 8 asks for every instrument explained before it is shown.
+- **M4-6. Text inside drawn frames is small at desktop widths.** The sellers' storyboard frames set their 55 labels at 9.3 px at 1440 and 1366, and the tour's stills at 7.8 to 10 px. At 390 they read at 15.2 and 10.1 to 13 px. The captions carry the meaning, so this is legibility, not content.
+- **M4-7. The tour's target card pulses without end under motion.** `see-it-work.css:231` and `:233`, `tour-beckon … infinite`: a blinking box shadow with no pause other than acting on it (WCAG 2.2.2). It stops under reduced motion and when the reader acts.
+- **M4-8. The tour's store palette is a set of new tokens in `see-it-work.css:12` to `:29`, not in `spine.css`.** V3 §5: "a new token goes in `spine.css` under `:root`, with its dark value". They are scoped to the article and carry dark values, so the intent holds; `lanes/T1.md` does not record the departure.
+- **M4-9. `render-check.mjs` can be passed by a page that fails rule 2 or rule 3** (R4.5):
+  - `data-visual` is an attribute test (`hasAttrInside`, line 395, used at 643), so a `div` of text carrying it passes;
+  - `data-reader` exempts any subtree of any size (line 377), so the attribute on a section or the `<article>` silences the reader scan;
+  - the prose budget counts only `PROSE_BLOCKS` (line 167), so text in a heading or a `span` is not counted;
+  - `REFUSED_CLASS_PARTS` (line 169) misses "chips" or "labels";
+  - the state words find "Open" only before "." or ":" (line 103) and do not list "coming soon";
+  - story first refuses only a section or heading before the spine (line 715), not a picture;
+  - the timing scan finds milliseconds only (line 779), so "0.2 seconds" passes;
+  - the name scan lists six names (line 778).
+
+  No page exploits any of them now.
+
+### Resolved during the round
+
+- **Selling it's Word copy of 11:01 opened its objections section with four text blocks before its first picture.** These were the lead, the quote and its two lines, from `selling-it.md:73` to `:83` at `3c3e5418`; it was blocking under the gate's Word item, and lane W's check 17 failed it. `e82925bc` gave the quote card its own picture (`shot-ae-objections-quote.png`), and the build of 11:16 opens the section with one lead line and that picture. Committed in `819c6d9c`; rechecked.
+- **The engineers' instrument cards printed as tall pictures held to 8 in.** At first the six cards were one picture; then, at `3c3e5418`, each card was one but tall. Either way they made near-empty pages in the Word copy. Since `e82925bc` they sit one per row, and each prints at text width, 2.5 to 4.1 in tall. Word's pagination was not remeasured by me.
+- **The converter change was uncommitted when the copies were first built.** It is committed in `819c6d9c`, and the lead's ruling is recorded. It also settles lane W's finding of twelve links inside bold (`what-it-is.md:148` to `:150`, the demo cards of `selling-it.md`, `how-it-works-and-where-it-runs.md:206`): my reading of the copies shows them as hyperlinks with no markdown left.
+- **Two pictures named by no source, `shot-se-instruments.png` and `shot-ae-objections.png`,** are no longer in the folder.
+
+**Noted, not findings.**
+
+- The credits page still speaks to the reader as the brand ("your shoppers' clicks"), outside V3's scope (§4.6).
+- The interactive page shows a dash placeholder for a missing readout, unchanged since round three.
+- The luxury retailer's "It then chose to build the capability with us." was accepted in round three (RR3-1).
+- The quotations rest on the lead's ruling that V2 §4 is the owner's ruling S4's rule 3 asked for.
+- The marketing page carries about 2,000 visible words against the owner's earlier guidance of about 600, as the lead ruled (`lanes/M2.md` §8 item 7).
+
+## R4.5 The tooling, by mutation
+
+Each case ran on a fresh scratch copy of `enablement/` and `docs/enablement/` whose base passes both checks; a case is judged by the failures it adds.
+
+| # | Mutation | Expected | Result |
+|---|---|---|---|
+| 1 | A section of two paragraphs and no `data-visual` (what-it-is) | caught | caught: no `data-visual`, no `data-shot` |
+| 2 | "Your team" in a capability card | caught | caught |
+| 3 | "your team" in an `aria-label` (selling-it) | caught | caught |
+| 4 | "your carousel" in a string of `see-it-work.js` | caught | caught |
+| 5 | A 70-word `<p>` (selling-it) | caught | caught |
+| 6 | One word changed in the stamped spine | caught | caught |
+| 7 | A class added inside the stamped header | caught | caught |
+| 8 | The spine moved below the tour's first section | caught | caught |
+| 9 | `class="chip"` (battlecard) | caught | caught, twice |
+| 10 | A visible "Built" on a card | caught | caught |
+| 11 | The performance sentence reworded, page and markdown | caught | caught |
+| 12 | A gendered pronoun in a tour caption and markdown | caught | caught |
+| 13 | Five 100-word paragraphs in a `div` marked `data-visual` (engineers) | hole if it passes | passes |
+| 14 | "Your team" inside a section carrying `data-reader` | hole if it passes | passes |
+| 15 | "what you already have" with `data-reader` on the `<article>` | hole if it passes | passes |
+| 16 | The 70 words in a `<span>` inside the figure | hole if it passes | passes |
+| 17 | The 70 words in an `<h3>` (battlecard) | hole if it passes | passes |
+| 18 | Two adjacent 59-word paragraphs | by design | passes |
+| 19 | A picture placed between the h1 and the spine | hole if it passes | passes |
+| 20 | `class="chips"` | hole if it passes | passes |
+| 21 | A pill reading "Open", page and markdown | hole if it passes | passes |
+| 22 | A pill reading "Coming soon", page and markdown | hole if it passes | passes |
+| 23 | "It decides in 0.2 seconds." | hole if it passes | passes |
+| 24 | A customer's brand in a quote attribution, page and markdown | hole if it passes | passes |
+| 25 | A pill reading "Open", page only | caught | caught, by the text comparison alone |
+| 26 to 30 | `check-site.mjs`: `/spine.css` twice; `/spine.js` without `defer`; another page's stylesheet; a network call in `spine.js`; a `style` attribute | caught | all five caught |
+
+## R4.6 The Word copies
+
+As committed in `819c6d9c`:
+
+| Copy | Bytes, sha-256 (16) | Sections | Pictures, all byte-identical to the repository's | Contents and links | Version | Scans |
+|---|---|---|---|---|---|---|
+| What it is | 1,844,626, `8d6eb9a2e1da1b64` | the spine's 5, then 7 | 12 | 12 linked entries; 12 internal links, all resolve; 4 external | 3.0 on the cover and in the footer | 0 pronouns, 0 names, 0 dashes, no literal markdown, no visible host name |
+| Selling it | 2,709,590, `00e0fc150ef85471` | the spine's 5, then 7 | 14 | 12; 12, all resolve; 12 external | 3.0 | 0, 0, 0 |
+| How it works and where it runs | 3,953,750, `49382a0c7d8238fd` | the spine's 5, then 8 | 21 (15 captured, 6 drawn) | 13; 13, all resolve; 2 external | 3.0 | 0, 0, 0 |
+| Battlecard | 811,941, `adb51ecf0b260c27` | the short spine before the first section, then 6 | 7 | 6; 6, all resolve; 7 external | 3.0 | 0, 0, 0 |
+
+- **Order.** Each copy opens with its cover, the contents, the reader line, then the spine, then its sections, each opening with its picture and caption.
+- **Lead lines before a picture.** The spine's "Both engines on one page" opens with its 13-word lead, as `spine.md` orders it. The engineers' sections and the sellers' objections open with one lead line before the picture, as the design's rule 5 reads (the lead's ruling).
+- **"You" in the copies.** Only "Recommended for you" (the carousel's own title) and the never-say quotations, as on the pages.
+- **Headings.** Every heading keeps with the next paragraph.
+- **The folder.** The v2.0 copies of what it is, selling it and how it works are gone; the glossary, credits and demo map v2.0 files are in place.
+- **Not machine-verified:** Word's own pagination, a Ctrl+Click and Save as PDF, as in earlier rounds.
+
+## R4.7 The two-minute test
+
+Each, from what the page showed me and nothing else:
+
+- **What it is.** The engine follows what each visitor does on this visit and rearranges the brand's page around it, click by click, while the brand's team sets the rules, pins what it sold and can read a receipt for every decision. It differs because it decides from what the visitor is doing now rather than ranking past purchases, needs no segments or expiration rules because interest fills and drains like buckets, and calls no AI model to decide.
+- **See it work.** A stranger's first page leans toward what visitors in their region like; each action fills an interest bucket that reorders the page's sections, the bucket drains and releases on its own, a merchandiser's pin holds its place, and a receipt shows the arithmetic for every place. It differs because it reacts within the visit with arithmetic a person can recompute, and learning changes nothing until the brand turns the dial.
+- **Selling it.** The engine turns a stranger's first clicks into a page arranged around their interest, keeps the brand's gates and sold placements first and writes every decision on a receipt. A customer can measure strangers' conversion, rule upkeep, placements kept and lift against a holdout. It differs from recommendations, which rank the past, and from rules, which go stale, by deciding at the point in time; customers choose it for different reasons, and the seller listens for theirs.
+- **How it works and where it runs.** Each event adds its weight to the raw score of every dimension value it touches. Interest a = R/(R + 1.8) fades with τ, 14 days by default; a visitor joins at 0.60 and is released below 0.45; the region blends in by λ = k/(k + Σa). Each piece scores Σ ω × ã after gates and pins, with a cap per value, a receipt for every decision and learning held at γ = 0 until the brand turns it. It runs as one Worker per deployment at the edge, configured by four published, versioned documents, and calls no AI model to decide.
+
+All four pass. The marketing page tells it fastest, from the spine's first two blocks and the pillars.
+
+## R4.8 For the lead to decide
+
+1. **D1.** Whether the tour must carry the performance sentence (B4-1): add one line, as V2's tour did, or waive it, since V3 §4.2 does not ask for it.
+2. **D2.** Whether to close the check's holes now (M4-9). Closing them would mean bounding `data-reader` to a section or smaller, requiring a drawn element (SVG, image or table) inside a `data-visual` element, counting every element's own text in the budget, refusing class names that merely contain chip, label or legend, scanning for a whole element reading a label word, and widening the name list. They let a page pass while failing the owner's rules, though none does.
+3. **D3.** Whether V3 §7.6's "built by the unchanged converter" should now read as the converter at `819c6d9c`, so that the next build and the next review hold to the same rule.
+
+When resumed: B4-1 if the lead adds the line, and any of M4-1 to M4-8 the owners take up.
+
+## R4.9 Conduct
+
+- **What I wrote.** Only this section of this file. The checksums of all 137 files under `enablement/` and `docs/enablement/`, taken at 10:29, were compared again before writing. Every difference was made by other lanes and the lead: the commits `3c3e5418`, `e82925bc` and `819c6d9c`, and the files W wrote on the way to the last.
+- **Git and the tree.** No git command that changes anything. No install, deploy, delete or kill. The stamp was run only into scratch after the classifier refused it on the tree.
+- **Scratch.** Every copy, script, mutation tree, screenshot, PDF and unzipped document is in `scratchpad/r4/`. The mutation trees were made in new folders, so nothing needed deleting.
+- **Chrome.** Every Chrome run was headless on its own profile and closed with `Browser.close`. Two harness runs stopped early (a missing favicon in one server; a path the shell rewrote in another). I checked their debug ports afterwards: nothing was listening, so nothing was left running.
+- **Out of scope.** The live worker behind the gate was not checked.
