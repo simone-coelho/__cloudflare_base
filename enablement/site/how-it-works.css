@@ -33,22 +33,39 @@
 
 /* ---------- the instrument cards ---------- */
 .se-instruments { margin: 20px 0 8px; }
-.se-grid, .piece .se-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; margin: 0; padding: 0; list-style: none; }
-@media (min-width: 760px) { .se-grid, .piece .se-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* one card per row; inside a card, the parts stack on a phone and sit side by side, landscape, from 760 px up */
+.se-grid, .piece .se-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .piece .se-card {
-  display: flex; flex-direction: column; gap: 12px; max-width: none; margin: 0; padding: 20px 22px 22px; scroll-margin-top: 16px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+  grid-template-areas: "title" "formula" "art" "worked" "means" "order";
+  max-width: none; margin: 0; padding: 20px 22px 22px; scroll-margin-top: 16px;
   border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
 }
 .piece .se-card p { max-width: none; margin: 0; }
-.piece .se-card-title { display: flex; align-items: center; gap: 10px; margin: 0; font: 800 1.3rem/1.2 var(--head); letter-spacing: -.01em; }
+.piece .se-card-title { grid-area: title; display: flex; align-items: center; gap: 10px; margin: 0; font: 800 1.3rem/1.2 var(--head); letter-spacing: -.01em; }
+.se-formulas { grid-area: formula; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.se-card-art { grid-area: art; display: flex; flex-direction: column; gap: 6px; }
+.se-worked { grid-area: worked; }
+.se-means { grid-area: means; }
+.se-card-order { grid-area: order; }
+@media (min-width: 760px), print {
+  .piece .se-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-areas: "art title" "art formula" "art worked" "art means" "order order";
+    grid-template-rows: auto auto auto 1fr auto;
+    column-gap: 30px; row-gap: 12px; align-items: start;
+  }
+  .se-card-art { align-self: center; }
+  .piece .se-card-order .se-order { columns: 2; column-gap: 32px; }
+  .piece .se-card-order .se-order li { break-inside: avoid; }
+}
 .se-icon { flex: none; width: 24px; height: 24px; color: var(--light-fir); }
 .se-formula code {
   display: inline-block; padding: 7px 12px; border-radius: 10px; font: 600 1rem/1.45 var(--mono);
   background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--ink);
 }
-.piece .se-card .se-formula + .se-formula { margin-top: -6px; }
 .se-draw { margin: 2px 0; }
-.piece .se-card .se-cap { margin-top: -6px; color: var(--muted); font: 500 .875rem/1.45 var(--body); }
+.piece .se-card .se-cap { color: var(--muted); font: 500 .875rem/1.45 var(--body); }
 .se-draw svg { display: block; width: 100%; height: auto; overflow: visible; }
 .se-worked { padding: 12px 14px; border-radius: var(--radius-s); background: var(--tint); border: 1px solid var(--line-soft); }
 .se-part, .piece .se-part { margin: 0 0 4px; color: var(--muted); font: 700 .6875rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
@@ -146,6 +163,6 @@
 /* ---------- print ---------- */
 @media print {
   .piece .se-card, .se-sentence, .se-linkcard, .piece .se-steps li, .se-tbl, .piece .se-tile { break-inside: avoid; page-break-inside: avoid; }
-  .se-grid, .piece .se-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .se-grid, .piece .se-grid { grid-template-columns: minmax(0, 1fr); }
   .se-sentence { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

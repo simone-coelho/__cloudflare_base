@@ -74,6 +74,8 @@ Ask the question first; the number follows.
 
 Each objection comes with the sentence to say and the sentence never to say.
 
+![One customer's question shows how short a true answer can be.](../figures/shot-ae-objections-quote.png)
+
 > "How else would it learn? I don't understand."
 
 A program lead at a luxury retailer, on how a page could learn its order without versions to learn from.
