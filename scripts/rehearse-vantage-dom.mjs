@@ -257,7 +257,8 @@ const OUTCOMES = {
     ok('and says the sentence: aggregate, never the individual; we curate, never price', has(S.cold.text, 'Aggregate, never the individual; we curate, never price.'));
     ok('an asserted region is labelled "region asserted, not observed", never "geo real"', has(S.cold.text, 'region asserted, not observed') && !has(S.cold.text, 'geo real'));
     ok('and the panel names it the rehearsal override, never the default', has(S.cold.text, 'rehearsal override') && has(S.ctx, 'rehearsal override'), S.ctx);
-    ok('her own meters are empty: nothing about her is known yet', S.meters.length === 0 && has(S.vectorsText, 'No evidence of her own yet'));
+    // The kit's meters copy (public/demo-kit/panels.js) is going gender neutral (lane C3): “No evidence of her own yet” or “No evidence from the visitor yet”.
+    ok('her own meters are empty: nothing about her is known yet', S.meters.length === 0 && /No evidence (of her own|from the visitor) yet/i.test(S.vectorsText || ''), (S.vectorsText || '').slice(0, 120));
     // Lane V1: /sort leans with the region the four lean with, and the rail says so; the override is labelled asserted.
     ok('the rail says it leans with the override’s region, labelled: “leans with New York’s sales (asserted) · synthetic → warehouse”',
       S.rail.lean === 'leans with New York’s sales (asserted) · synthetic → warehouse', S.rail.lean || `no regional line · chip “${S.rail.chip}”`);
@@ -573,7 +574,8 @@ try {
     const asked = [...requests.values()].filter((r) => r.press === 'edge' && /\/decisions\/snapshot/.test(r.path));
     const panelReads = [...requests.values()].filter((r) => r.press === 'edge' && /\/vantage\/api\/coldstart/.test(r.path));
     ok('beat 1 lands without the override', landed === 'done', landed);
-    const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : has(S.cold.text, 'the edge located her') && has(S.cold.text, 'geo real'));
+    // The kit's panel copy is going gender neutral (lane C3): “the edge located her” or “the edge located the visitor”.
+    const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : (has(S.cold.text, 'the edge located her') || has(S.cold.text, 'the edge located the visitor')) && has(S.cold.text, 'geo real'));
     const none = has(S.cold.text, 'no region on this request') && has(S.cold.text, 'national');
     ok(`the panel says the region comes from the request${LOOPBACK ? ' (locally: as the runtime fills request.cf, not an edge)' : ''}, or that there is none`,
       S.cold.ok && (fromRequest || none) && !has(S.cold.text, 'asserted, not observed') && !has(S.cold.text, 'rehearsal override'), S.cold.text.slice(0, 220));

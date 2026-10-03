@@ -712,6 +712,58 @@ The page's styles are one block, `P2_CSS`, in my section, injected once as `<sty
 - **Rig:** stopped at 22:11, state kept.
 - **The injection removed (23:05).** M1 appended the second block to `oh.css` verbatim, so `P2_CSS`, `p2Style()` and its call in `ensureProductChrome` are gone from my section (`oh.js`: 3 lines in, 35 out; the section's header now says its styles live in `oh.css`). The page draws the same without them: 14 element boxes and 6 computed styles per page, on the TV, the washer and the range at 1440 and 390, equal before and after; by hand 1440: 97 of 97, 390: 94 of 94.
 
+### M2b: R5's second look on the product page
+
+**Lane M2b, builder, 2026-10-03, 02:33–04:15 EDT, in the control checkout's working tree over HEAD `e584287`, beside M1e and M3b, which were working in parallel. Built: at 390, the title block above the picture in lg.com's phone order; a gallery with a thumbnail for each of the product's pictures, at 1440 and at 390; at 1440, the sticky stack cut to 100 px. Every control M2 built still works by hand, and every manual event keeps its shape. Side-by-sides for the washer and a TV at 1440 and 390. Nothing committed, deployed or pushed. No cloud resource was touched, and nothing was sent to a hosted worker.**
+
+#### What changed, against R5's lines
+
+| R5's line | What I built | Measured |
+|---|---|---|
+| At 1440 the sticky stack is about 180 px against lg.com's 100 | **One row for the twin:** the title over the SKU, the price (the sale price beside "$X OFF" over the struck list price), the financing line in two short lines, and the button as the 44 px pill. The tabs are 42 px tall. `stickTop()` now reads the header where it actually is: the header's bottom edge while it sticks or is fixed and on screen, otherwise 0. So since M1e's header scrolls away, the row sits at 0. The twin's height also counts in the pinned gallery's offset | **100 px** at 1440 and at 1366 on the TV, the washer and the range (twin 57, tabs 42, one 1 px rule). It was 122 with M1e's header gone and about 180 with it sticky. lg.com today measures **163 px on the WM6500HWA and 158 on the OLED65C6PUA**: on these pages it sticks its whole buy bar, with the two buttons and a title that runs to two lines. R5's 100 was the WM3900HBA, which has no buttons in its bar. A tab press lands its section 12 px under the stack (specifications at 112 px) |
+| Gallery CLOSE: one picture; lg.com adds a thumbnail column and arrows | `picturesOf(p)` returns the product's pictures as the data has them: D2's accepted file, with D2's 840 px rendition of the same picture in `srcset` where D2 made one, or else the feed's own link. If neither exists, the gallery shows the name tile and no thumbnail. `renderGallery` draws one thumbnail button per picture, with the shown one pressed. At a desk the thumbnails are a 96 px column at the picture's left, and below 900 px a 52 px row under it. The main frame keeps M1's card and aspect. The badge moves right of the column. There are **no arrows**: with one picture there is nothing to step to, and a control that does nothing is not drawn. A thumbnail press (`pdp-thumb`, `showPicture`) shows its picture and sends nothing, since looking is not a taste | Every product has **one picture and one thumbnail**. D2 fetched one hero per product, so none is invented. On a 1440 screen the TV's main frame loads `oled65c6pua.840.webp` and its thumbnail the 420 px file. The thumbnail press sends 0 actions |
+| At 390 the picture comes before the title; lg.com puts the title first | The phone order (M2's second block, `@media (max-width:640px)`) is now lg.com's: the crumbs, then the tabs (sticky, flush under the crumbs band), then the title block (18/600 as lg.com's), then the gallery with its thumbnail row, then the offers and the buy column. The price and both buttons stay docked at the foot as M2 built them. At that width the Overview tab scrolls to the title block (`boxOf('pdpTop')` answers `#buyBox` when the overview's wrapper has no box) | Washer at 390: crumbs end at 246, tabs 246–288, title from 305, picture from 508, thumbnails at 818. lg.com: crumbs, tabs, title, picture, thumbnails, in that order |
+| Tabs CLOSE: five against seven | **Not changed.** Design §9.3 names five tabs. lg.com's "Limited Warranty & Support" and "Similar Products" would need sections the data does not have (see For the lead) | — |
+
+#### Results (rig 9133, `.wrangler/state-m2`, inspector 9283, seeded with `seed.mjs --config oh --out <scratchpad>`, which wrote reflex r4, catalog r11, slots r11 and learn r4; `region-seed.mjs` answered 51 of 51)
+
+| Check | Result |
+|---|---|
+| By hand (`scratchpad/m2b/m2b-hand.mjs`: M2's `m2-hand.mjs` plus M2b's checks; a fresh headless Chrome per run, real mouse presses, the wire read back), on the TV, the washer and the range, on the final code | **1440: 112 of 112 · 1366: 112 of 112 · 390: 106 of 106.** M2 had 97, 97 and 94. The new checks: one thumbnail per picture from the data and the shown one pressed; the column at a desk and the row below 900 px; lg.com's phone order at 390; a thumbnail press that sends nothing; at a desk a stack of 100 px or less with the twin's button at 44 px, and each section landing below the stack. One change to the check itself: it now waits 1.8 s after a tab press instead of 1.1 s. At 390 the specifications sit 8,000 px down a page 11,089 px long, and the smooth scroll takes about 1.25 s (measured), so the 1.1 s wait read the page mid-scroll; that is where the first 390 run's 10 failures came from. Two earlier 390 runs of the range alone each missed one press once (an offer card after the carousel, and the heart right after Back while the page was asking again); the next two runs were clean |
+| The shells load together (`scratchpad/m2b/loads.mjs`: a fresh profile per width, nothing clicked) | **21 of 21**: the homepage, the TVs grid, the laundry grid, the three product pages and `/oh/m`, each at 1440, 1366 and 390. Every load: no script error, no horizontal overflow, no broken image |
+| `node scripts/rehearse-oh-page.mjs --base http://localhost:9133` | **231 of 231** |
+| `node scripts/rehearse-oh-dom.mjs --base http://localhost:9133` | **492 of 498.** Beats 5 to 10 and every product-page check passed. **None of the six failures is mine:** |
+| | M1e's (in progress; S2 to follow): three "every filled button … 42 to 44 px tall" checks (the boot page, the TVs grid, her homepage) see the card's "Add to Cart" at 30 px, which is M1e's lg.com card button. **S2:** `scripts/rehearse-oh-dom.mjs` line 780, the `unlike` test, should accept 30 px for buttons inside `.m1-cardbtn` and keep 42–44 for every other button |
+| | M1e's (in progress; S2 to follow): "Recommended for you: on screen with real content" (`BOOT_CLAIMS`, line 725) fails since M1e made the rail a four-card carousel. All twelve cards are there with loaded images, but in each card the outermost `[data-open]` element now holds no price text: `/\$\d/` fails on all twelve, read on my rig. **S2** reads the card's price where M1e's card puts it, or M1e puts the price back inside the card's `[data-open]` |
+| | The engine's (two checks): the local engine answered 503 to two `POST /realtime/action` calls. One was a custom event in S2's manual session, whose body had passed the attribute check. The other was beat 11's press. The rig's log shows the two 503s and no page-side error. It is the same family as the receipt 503s at beat 16 that the suite already prints as a known `wrangler dev` defect |
+| Side-by-sides | Below |
+
+#### Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`
+
+Each page was loaded fresh with `?present=0` and nothing clicked. lg.com was read only: its privacy notice, chat and feedback tab were hidden by a style, and nothing was clicked or submitted.
+
+- `M2b-1440-washer.png` and `M2b-1440-tv.png` (WM6500HWA, OLED65C6PUA). Screen 1 shows the buy bar, the tabs and the gallery with its thumbnail column. Then, scrolled to y 1600, the sticky stack, captioned with both measures.
+- `M2b-390-washer.png` and `M2b-390-tv.png`. Screen 1 shows the crumbs, the tabs, the title block, the picture and the dock. Screen 2 shows the thumbnail row under the picture and the tabs stuck at the top (lg.com 40 px, OH 43).
+
+#### Line deltas
+
+- `public/oh/oh.js`, the P2 section only: 1,381 → 1,461 lines (+95, −15). The new code is `picturesOf`, `pictureHtml`, the gallery with thumbnails, `showPicture` and the `pdp-thumb` control; the one-row twin; `stickTop` reading the header where it is; `boxOf`'s phone overview; the twin's height in the pinned column's offset (`twinHeight`); and the section header's comment.
+- `public/oh/oh.css`, M2's two blocks only: 159 → 206 lines (+48, −1). The one edited line is the second block's phone order (tabs order 1, buy bar 2, gallery 3; the gallery's square aspect is gone). The rest is a new sub-block at the end of M2's second block: the twin's row, the tabs' height, the gallery grid and thumbnails, and the phone title. Nothing was appended anywhere else.
+- `public/oh/product.html`: unchanged. The gallery and the twin are drawn into its existing `#pdpGallery` and `#pdpStickBar`.
+
+#### For the lead
+
+1. **The tabs stay five.** lg.com's "Limited Warranty & Support" and "Similar Products" need content the data does not carry. The feed holds no warranty terms, and the nearest thing to "similar products" is the static type switch. Adding them is a design §9.3 change (a D1 source for warranty terms, then a tab to the type switch or a new section), for your call.
+2. **D2, more pictures.** For 193 products the feed's `image` link is a different LG picture from the one D2 accepted (LG's gallery-01 at its 350 px thumbnail rendition, against D2's gallery-02). D2's gate never checked it, so the gallery does not show it. If D2 fetches and gates more pictures per product (lg.com shows 360°, video and lifestyle frames), `picturesOf` reads them from D2's index entry with a few lines, and the thumbnails take them as they come.
+3. **S2:** the two lines above (780 and 725) for M1e's work. Three facts of mine to assert if wanted: at 1440 and 1366 `#pdpStick` stands at most 100 px once stuck; `#pdpGallery .pdp-gthumb` counts one per picture in `img/index.json` (one today); at 390 `#pdpTabs` ends above `#bbTitle`, which ends above `#pdpGallery`.
+4. **A note on the stuck row.** The row is in the page's flow, so when its twin appears on the way down the sections below move down 57 px in document terms. Chrome's scroll anchoring keeps a hand scroll steady, and a tab press already counts the twin through that shift. I left it in flow rather than overlaying it, so no section ever sits hidden under it.
+
+#### Rig, seeds and restoration
+
+- **Rig:** port 9133, inspector 9283, state `.wrangler/state-m2` (kept). Started from WSL with `rig.mjs`; no new file under `public/` from me, so no restart was needed. Stopped at the end with SIGINT to its own `rig.mjs` (PID 56702), which ends its wrangler and workerd; no other process was touched.
+- **Beat documents:** hashed at 02:35, before the seed. The seed wrote only to my scratchpad. **19 of 19 equal their hashes at the end.**
+- **Not touched:** the P1, shared and P3 sections of `oh.js`, M1's blocks of `oh.css`, `index.html`, `m.html`, `oh-store.js`, `panels.js`, `store.js`, `scripts/`, `src/`, every governance file. Other lanes' uncommitted lines are as they were. `compose.mjs` briefly wrote four `.html` working pages beside my shots under `docs/lg/lanes/shots/`. I moved them to my scratchpad within a minute (`mv`, not `rm`), and the script now writes them there.
+
 ### M1: the look, the boot page, the header, the room grids, search, the footer
 
 **Lane M1, builder, 2026-10-02, 14:58–19:05 EDT. Built on M3's store contract (`oh-store.js`, landed 15:11): LG's look in `oh.css`; the boot page as the published template in lg.com's anatomy, with no visitor minted on load; the store's header, pencil banner and footer on every shell; the room grids for TVs, laundry, the kitchen and offers with working filters, a sort control, the declared fit, result counts and the regional label; the search results in POST /sort's order. Every control on these pages works by hand and sends the beat verbs' events. Beats 1–4 and 11–14 still perform through the director. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
@@ -1325,6 +1377,29 @@ Each check accepts the old wording or C3's new wording, and still fails on any o
 
 Both rigs are stopped; ports 9134, 9284, 9184 and 9334 are free. The beat documents for both demos equal HEAD.
 
+#### Addendum, 02:05–02:46: lane C3's P1 wordings, and M3b's `kit.sendCustom`
+
+Each check accepts the old wording or C3's new one, with curly apostrophes as in the code, and fails on anything else. I tested each predicate on the old wording, the new wording and other wordings (including a straight apostrophe).
+
+- **DOM 2109–2111, beat 13.** “… the shopper’s room signals are gone within minutes”, or “her room signals”.
+- **DOM 2113.** “rests on the shopper’s shortlist and the decisions trail, not on their room dials”, or the earlier sentence.
+- **DOM 366 and 1797, Compare → Fresh visitor.** `/^(Her|The shopper’s) page · /i`.
+- **The fuel check.** Left as it was, at the coordinator's word: “in your fuel” is the only claim phrase.
+- **No change needed:** no check reads “Not seen yet”, “on your shortlist” or “since you looked”.
+- **Request 1299.** The store's `(t|kit).sendCustom(name, data, v)`.
+- **Request 1599 and 1601.** The product-event guard counts `kit.` calls as direct calls to the kit.
+- **Request 1263.** P3's beat-16 stranger is minted right after two report builds. On `state-s2d` the identity route answered 503 there twice running (the S2 section's finding 4). The suite now waits 3 s and asks once more, and says so on an information line. It fails exactly as before otherwise.
+
+**`check-demo` run 9, 02:30–02:45, on a fresh prepared state (`state-s2e`).**
+- Request level **231 of 231**, with the `sendCustom` check passing on today's `t.sendCustom`.
+- **DOM 497 of 498.** Beat 13 read the new sentence, Compare read “THE SHOPPER’S PAGE”, and the receipt lines read “Completes what was committed to”.
+- The one failure is the engine answering 503 to one of her `custom` events in the manual session.
+- Generated, typecheck and credentials passed.
+
+**Before it, on `state-s2d`:** request level 216 of 217 twice (the mint above), then 223 of 226, with the day report answering 413 (“too large for the window”), which also skipped the code check behind it. That is why run 9 used a fresh state.
+
+The rig is stopped; ports 9134, 9284, 9184 and 9334 are free. The beat documents equal HEAD.
+
 ### W1c: the presenter script for the live store (`cd3775e2` from `bbf8a9d`)
 
 **Lane W1c, writer, 2026-10-02 EDT. Revised `docs/oh/OH-Presenter-Script.md` for the store as it is live now. It was 5,869 words and is now 6,122. That is about 2% over the ~6,000 cap: the persistence and dial material is new, and the rest was cut to pay for it. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
@@ -1475,3 +1550,173 @@ Searched for every quotation in the script: `public/oh/beats.json`, `oh.js`, `oh
   - Line 78's Arrival line "North Carolina: synthetic home sales, fixed seeded lean (no census)" is the region seed's label, `scripts/demo-kit/configs/oh/region.json`, which `panels.js` 327 prints.
   - Line 69's "1 min memory" / "10 min memory" come from the registry, `public/oh/beats/anchor.json` (`room`), which `panels.js` 141 prints.
 - **Left as written.** Line 78's "census shown, not scored · synthetic → warehouse": the "·" stands for the tag chip, which `oh.js` 1285 draws as its own span. The words match.
+
+### M3b: the visitor kept at the mint; the panel drawn from the action's own answer
+
+**Lane M3b, builder, 2026-10-03, 00:40–03:45 EDT, on `docs/lg/lanes/M3b.md` and the coordinator's two additions.**
+- **Both findings are fixed** in `public/oh/oh-store.js` and `public/demo-kit/panels.js`. The coordinator's additions are in those two files and in the kit's `public/demo-kit/store.js`.
+- **Suites:** OH request level 231 of 231 and DOM 498 of 498. Vantage 115 of 115 and 298 of 298. Kit `store.test.mjs` 10 of 10.
+- Nothing committed, deployed or pushed. Nothing sent to a hosted worker. Every seed went to the scratchpad with `--out`.
+
+#### What the action's answer carries (checked before any change)
+
+- **The path is `update.data.affinity`, not `update.affinity`.**
+  - `POST /realtime/action` answers `{ success, message, update: { type, userId, data: { affinity: { dims, audiences, changed, odpConfirmed }, journeyStage, … } }, signals, sessionId, cookiesUpdated, behavior, consent }`.
+  - Both engine hosts build it the same way (`src/services/RealtimeSegmentEngine.ts` 698–720, `src/durable-objects/ShopperReflex.ts` `buildUpdate`), so the hosted answer has this shape too. I did not call the hosted worker.
+- **The dims are the profile read's own shape.** Both are the reflex core's `snapshot()` (`src/reflex/core.ts` 665): `{ category: { washers: 0.6874 }, … }`.
+  - Over ten Add to Cart answers, the answer's dims and a `GET /realtime/reflex` read just after held the same ten dimensions and the same values.
+  - They were 0.0005 to 0.0045 apart. That gap is the 60-second decay between the two moments.
+- **The engine sends `update` only when an audience or the stage moved.**
+  - A first Add to Cart crosses θin (0.36 → 0.69) and moves the stage, so its answer carries dims: 40 of 40 presses.
+  - A fresh visitor's first product view (0 → 0.36) moves neither. Its answer is "Action processed, no personalization changes needed", with no dims: 20 of 20 presses.
+  - So the brief's rule alone (nothing early without dims) would have left the first product view as slow as before. When the engine took an event but sent no state, the panel's own profile read now starts the moment the answer lands, beside the page's question rather than after it.
+  - A refused, buffered or dropped answer, or one without consent to personalize, gets no early draw and no early read.
+- **A defect this exposed.** `refreshSignals` read `answer.update.affinity`, which never exists, so the "just now" strip never drew its audience lines (M3's "entered the audience … on add_to_cart"). It now reads the right path, and they are drawn in M3's own words.
+
+#### Finding 1: she is kept the moment the mint answers
+
+- **`ensure()`** keeps her inside the mint's `.then`, before the cold-start read, and again after it. `persist` writes only a change.
+- **The kit's `ensureVisitor` is wrapped at the bind**, beside M3's `useVisitor` wrapper, and keeps visitor A the moment it answers.
+  - It covers the paths that mint without the store: a direct product address (`oh.js` `openProduct` calls `transport.ensureVisitor()`) and the director's first press.
+  - Three paths were already kept at once by M3's `useVisitor('A')` wrapper; I checked each: the arrival, the sign-in's swap and the phone's own arrival.
+  - `resume()` is unchanged.
+- **"The mint answers" means the kit's mint as a whole:** the session, then her consent (`POST /realtime/session/preferences`), which came 28 to 362 ms later on the rig. She is kept after her consent, never before it, because a visitor continued without the consent call would send events the engine refuses.
+
+**How it was measured.**
+- A scratch CDP script (`m3b/probe.mjs`), with a fresh profile and storage each round.
+- "Before" is C3's hand-back of the two files. A scratch proxy serves those two files in place of the checkout's, so "before" and "after" ran on one rig, alternating round by round.
+
+| A reload … | Before | After |
+|---|---|---|
+| of a direct product load (`/oh/product?id=WM4000HWA`), 200 ms after the mint answered | **0 of 5**: nothing kept at the reload; a new identity call; another subject | **5 of 5**: kept at the reload; the same subject; no identity call; the resume probe `GET /realtime/reflex` answered 200; "decided live for the same visitor as before" |
+| the same, 50 ms after | | **5 of 5** |
+| after a stranger's first click (TVs), 200 ms after the mint, with the cold-start answer held 1.2 s by the proxy (`--slow-coldstart`), as on the hosted worker | **0 of 3**: the reload is a stranger on the template | **3 of 3**: the same subject, no identity call |
+| the same with the rig's own cold start, which answers in tens of milliseconds, so the window cannot be hit locally | 3 of 3 | 3 of 3 |
+
+S2's persistence walk (a reload after "decided live") stays green in the DOM suite.
+
+#### Finding 2: the panel is drawn from the action's own answer
+
+- **`panels.js` `renderVectors(opts)`.**
+  - With `opts.dims` (checked for the per-dimension shape) it draws at once without a read. With `opts.early` it reads at once. Either is an early draw.
+  - An early draw keeps its baseline (the vector before the event) and what the answer said. The next plain call is the engine's read, which confirms it against the same baseline.
+  - So the moved rows stay marked, the "just now" strip keeps the event's trigger unless the read names its own, and the engine's reading is the last word on screen.
+  - Draws land in the order they start: a read that left before a later draw landed is not drawn over it.
+  - Without `dims` or `early`, a call is the read it always was. Vantage passes neither.
+- **`oh-store.js`.**
+  - **`refreshSignals(answer, type)`** draws the rows from the answer's dims as soon as it is called, then reads as before.
+    - The receipts, the who chip and the before/now strips stay on the read.
+    - An answer that lands while a read runs is drawn at once, and folded into one more read.
+    - Nothing is drawn early unless the answer is for the session on screen (`sessionId`).
+  - **The re-ask path (`opts.reask`)** draws from the answer before the page is asked again; when the answer has no dims, it starts her read instead. The re-ask's own read confirms it.
+  - **The page's own sends straight to the kit** get the same early draw: `oh.js`'s product view, page view and declared fit.
+    - They go through a wrapper on `transport.send` and `transport.sendCustom` at the bind, by hand only, never while a beat runs.
+    - The store's own events go out on the kit's sends as they were (`raw`) and draw in `send()`. So mutant X7 (`refreshSignals` removed) still leaves the panel undrawn after a manual add.
+
+**How it was timed.** From the real mouse press to the first change of the panel's dimension rows (a `MutationObserver` on `#vectors`). Ten presses each, a fresh visitor for each, with "before" and "after" alternating round by round through the proxy on one rig.
+
+**Add to Cart:** a direct load of `/oh/product?id=WM4000HWA`, settled, then the buy box's Add to Cart. Load average about 25.
+
+| | Before | After |
+|---|---|---|
+| press → first panel change, median (min–max) | **268 ms** (208–768) | **223 ms** (189–242) |
+| press → the action's answer, median | 228 ms | 221 ms |
+| answer → first panel change, median (min–max) | **44 ms** (36–530) | **2 ms** (1–2) |
+| the panel's rows at the engine's reading two seconds after the answer | 9 of 10 | 10 of 10 |
+| what the answer carried | dims, 10 dimensions, every press | the same |
+
+An earlier alternating run, at load average 29 to 30:
+- press → panel: 963 ms (351–1,273) before, 319 ms (255–1,256) after;
+- answer → panel: 634 ms (53–837) before, 2 ms (1–2) after.
+
+**A fresh visitor's first product view:** a stranger's `/oh/`, TVs from the header, settled, then the first TV card. Load average about 29.
+
+| | Before | After |
+|---|---|---|
+| press → first panel change, median (min–max) | **2,320 ms** (1,665–2,514) | **1,581 ms** (813–1,947) |
+| press → the action's answer, median | 788 ms | 723 ms |
+| answer → first panel change, median (min–max) | **1,492 ms** (694–1,877): the re-ask's snapshot and `/sort`, then the read | **730 ms** (282–1,190): one profile read, started at the answer |
+| at the engine's reading two seconds after the answer | 10 of 10 | 10 of 10 |
+| what the answer carried | no update, no dims, every press | the same |
+
+The press → answer leg is the same in both: the click, the route, the product's documents, the send and the engine. The engine's share of it is lane E4's.
+
+#### The coordinator's additions
+
+1. **`panels.js`, two strings,** found by their old text:
+   - Vantage's empty classic meters now read "No evidence from the visitor yet. The first paint is the region and the campaign, not the visitor."
+   - The cold-start panel's hosted source now reads "from the request: the edge located the visitor".
+2. **`visitor.forget()` in OH's store.**
+   - It now removes three things from both storage areas, whether or not anyone is on the page: the capability, the record, and the cart's key (`oh:store:cart:v1`, which holds every visitor's lines). It also empties the cart on screen.
+   - The cart's `save()` no longer writes an empty cart where none was kept. So `store.cart.clear()` after `forget()` (`oh.js` 347) cannot put the old visitor's key back.
+   - Measured with `m3b/forget.mjs`, starting from a cart line, the capability and the record all kept. "Forget this browser" leaves `localStorage` empty, `sessionStorage` holding `kit-dock:oh` alone, the cart badge at 0 and nobody on the page.
+   - The next first click is a new person with an empty cart. No script error.
+3. **The kit's `public/demo-kit/store.js` had no persistence at all:** no `resume`, `persist` or `forget`.
+   - It now has the three, working as OH's do:
+     - the SDK's key names, in both storage areas;
+     - the record, with its consent, owner and signed-in account (the kit's `v.linked`);
+     - the kit's `ensureVisitor` and `useVisitor('A')`, wrapped at the bind;
+     - the cart's key in `forget`, and the same empty-cart rule in `save()`;
+     - an optional `host.visitorFields()` for the vertical's own fields on a resumed visitor.
+   - The API test (`store.test.mjs` 118) then failed on parts OH gained after K5, all now added:
+     - `nav.same` and `nav.canonical`: OH's, on the kit's own `parse`;
+     - `retailers.pickup`: the pickup module's own button, at the product's first pickup partner in its lists.
+   - Logic only; no string in the file changed.
+   - `store.test.mjs` **10 of 10**. Every `scripts/demo-kit/lib/*.test.mjs`: **158 passed, 0 failed** (2 skipped).
+4. **`t.sendCustom`.** I briefly renamed the store's sends to `kit.sendCustom` (01:08–01:52). The request-level suite caught it at line 1294, and I restored the names. `send()` now takes `t = raw || T()`, so its three send lines read exactly as before and line 1294 passes. Nothing is left for S2.
+
+#### Suites, on my rigs (from WSL)
+
+| Run | Result |
+|---|---|
+| OH request level, fresh state `state-m3c` (prepared, seeded with `--out`, region seed 51 of 51) | **231 of 231** |
+| OH DOM full, `state-m3`, 02:01–02:25, on this lane's final files | **498 of 498**, 1 known item (receipt reads while a report builds: the engine on `wrangler dev`) |
+| OH DOM full, `state-m3c`, 03:00–03:25 | 494 of 498: see below |
+| OH DOM `--only store`, `state-m3c` | 148 of 152, the same four. With `oh.js`, `oh.css` and `index.html` as committed at `e584287`, served by the proxy beside this lane's files: **152 of 152** (151 of 152 on the first try: the engine's custom 503) |
+| Vantage request level (my Vantage rig: 9158, fresh `state-m3bv`, prepared, `seed-vantage.mjs --out`, region seed 51 of 51) | **115 of 115** |
+| Vantage DOM | **298 of 298** |
+| The pages at 1440 and 390: OH's `/oh/`, `/oh/?view=tvs`, a product and `/oh/m`; Vantage's `/vantage/` | they load, no script error, no horizontal overflow |
+
+**The four DOM failures on `state-m3c` are another lane's work in progress.** All four are in `oh.js` and `oh.css`, not in this lane's files:
+- "Recommended for you: on screen with real content";
+- "every filled button is lg.com's action red … a 32 px pill 42 to 44 px tall", on the boot page, the TVs grid and her homepage: the rail cards' Add to Cart is 30 px tall.
+
+Those files changed under lane M1e's uncommitted edits between my two DOM runs (`oh.css` at 02:57, `oh.js` at 03:01), and the files as committed pass.
+
+**Two request-level runs on `state-m3` failed on the state, not the code.** By then my probes had sent about 140 fresh visitors, most of them to washers from the local runtime's North Carolina.
+- The day report answered 413 ("report too large for the window"), S2's run-6 finding.
+- The "lg tvs" check found North Carolina's hero on laundry, because those visits had moved the region's live lean (S2's finding 3).
+- A fresh state gave 231 of 231. The request-level suite runs none of the page's code, and its source checks passed on every run.
+
+**An earlier DOM run** (00:57–01:20, before the coordinator's additions) gave 494 of 497. The three failures were C3's copy against older suite wording: "Her page" against "The shopper's page" in Compare, and two checks of beat 13's wording. All three pass now that S2 has widened those assertions.
+
+#### Files
+
+| File | Lines, against C3's hand-back | What |
+|---|---|---|
+| `public/oh/oh-store.js` | +82 −24 | `ensure()` keeps her at the mint; the bind wraps `ensureVisitor`, `send` and `sendCustom` (`raw` keeps the kit's own); `afterOf`, `forHer` and `drawEarly`; `refreshSignals` draws from the answer and reads `update.data.affinity`; the re-ask path's early draw; `forget()` clears the cart's storage and the cart on screen; `save()` writes no empty cart where none was kept; the contract's comments. No string changed |
+| `public/demo-kit/panels.js` | +38 −6 | `renderVectors`: `dims`, `early`, the order draws land in, and the baseline the confirming read diffs against; `dimsOf`; the header comment; the coordinator's two strings |
+| `public/demo-kit/store.js` | +125 −7 | `resume`, `persist`, `forget`, `kept` and `claimsOf`; `ensure()` keeps her at the mint; the bind's wrappers; `save()`'s empty-cart rule; `nav.same`, `nav.canonical` and `retailers.pickup`. No string changed |
+| `docs/lg/lanes/M3b.md`, this file | | the report |
+
+- **Against HEAD (`e584287`)**, the three files also carry C3's uncommitted string lines (11 in `oh-store.js` and `panels.js`, 1 in `store.js`), which the commit did not take.
+- **Final hashes:** `oh-store.js` `251e0935…`, `panels.js` `53a45189…`, `store.js` `d364b6de…`.
+- **Not touched:** `public/oh/oh.js`, `scripts/`, `src/`, `public/vantage/`, and any governance file. `oh.js`'s hash moved during the lane under other lanes' edits.
+- `public/oh/beats/` and `public/vantage/` are clean against HEAD.
+
+#### Left, and for the lead
+
+1. **The first product view still waits for one profile read after the answer:** 282–1,190 ms at load 29, tens of milliseconds when the rig is idle.
+   - The cause is the engine's answer, which carries no state when no audience or stage moves.
+   - The same holds for every event that crosses nothing: a second Add to Cart, most views and selects. Their panel moves on the read that starts at the answer, as before.
+   - For a draw at the answer on every event, the engine would return its affinity on every accepted action. That is lane E4's (`src/`): a small change to both hosts' answer.
+2. **The kit's store now persists, but two things are still missing for the kit's owner:**
+   - It does not redraw the panel after a manual event at all; OH's `refreshSignals`, M3's later fix, is not in it.
+   - The scaffold's page template (`scripts/demo-kit/templates/page.js.tpl`) does not call `store.visitor.resume()` at boot.
+3. **S2's mutant X7, if re-served from its patch.** The first lines of `refreshSignals`, which read the answer's path, changed. The call `await refreshSignals(r.body, …)` in `send()` is as it was.
+4. **The hosted worker carries none of this until the next deploy.**
+
+**Rigs and scratch files.**
+- The rigs and the scratch proxies are stopped. Ports 9131, 9281, 9158, 9308, 9185, 9192, 9193, 9194 and 9195 are free.
+- The states `state-m3`, `state-m3c` and `state-m3bv` are kept.
+- The scratch scripts (`probe.mjs`, `proxy.mjs`, `forget.mjs`, `look.mjs`, the patch scripts), the results as JSON and the suite logs are in the session scratchpad under `m3b/`.

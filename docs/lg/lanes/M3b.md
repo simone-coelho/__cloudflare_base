@@ -64,3 +64,50 @@ says how they run); the `dims` argument is optional and Vantage's calls do not p
   and the region seed); stop it when done without killing other processes.
 - Hand back a consistent state: both files parse (`node --check`), the pages load at 1440 and 390 with no script
   error, the counts above. Report the two timing tables, the files with line deltas, and anything left.
+
+## Report (builder, 2026-10-03, 00:40–03:45 EDT)
+
+The full report, with the method and the coordinator's two additions, is "### M3b" in `docs/lg/lanes/P.md`. In short:
+
+**The answer's shape.**
+- The state after the event is at `update.data.affinity.dims`, not `update.affinity`. Its shape equals `GET /realtime/reflex`'s `affinity.dims` (both are reflex `snapshot()`), and the values differ only by the decay between the two moments.
+- The engine sends `update` only when an audience or the stage moves. A first Add to Cart carries dims; a fresh visitor's first product view carries none.
+- So when an answer was taken but carries no dims, the panel's own read starts at the answer instead of after the page's question. A refused, buffered or dropped answer gets nothing early.
+
+**Finding 1: kept at the mint.** A reload 200 ms after the mint answered:
+
+| | Before | After |
+|---|---|---|
+| a direct product load | 0 of 5 continued her | **5 of 5**, no identity call (and 5 of 5 at 50 ms) |
+| a stranger's first click, with the cold start held 1.2 s as hosted | 0 of 3 | **3 of 3** |
+
+**Finding 2: the panel from the answer.** Press → first panel change, ten presses each, before and after alternating on one rig:
+
+| Add to Cart (load ~25) | Before | After |
+|---|---|---|
+| press → panel, median (min–max) | 268 ms (208–768) | **223 ms** (189–242) |
+| answer → panel, median (min–max) | 44 ms (36–530) | **2 ms** (1–2) |
+| at the engine's reading 2 s after the answer | 9 of 10 | 10 of 10 |
+
+| A fresh visitor's first product view (load ~29) | Before | After |
+|---|---|---|
+| press → panel, median (min–max) | 2,320 ms (1,665–2,514) | **1,581 ms** (813–1,947) |
+| answer → panel, median (min–max) | 1,492 ms (694–1,877) | **730 ms** (282–1,190): one read, as the answer carries no dims |
+| at the engine's reading 2 s after the answer | 10 of 10 | 10 of 10 |
+
+**Files**, with line deltas against C3's hand-back:
+- `public/oh/oh-store.js` +82 −24;
+- `public/demo-kit/panels.js` +38 −6, including the coordinator's two strings;
+- `public/demo-kit/store.js` +125 −7: persistence, `nav.same`, `nav.canonical` and `retailers.pickup`, on the coordinator's addition.
+
+**Counts:**
+- OH request level **231 of 231** (fresh state).
+- OH DOM **498 of 498** (02:01–02:25). A later run gave 494 of 498, whose four failures are lane M1e's in-progress `oh.js`/`oh.css` edits; with the committed page files, the store part is 152 of 152.
+- Vantage **115 of 115** and **298 of 298**.
+- Kit `store.test.mjs` **10 of 10**.
+
+**Left:**
+- An event that moves no audience or stage still waits for one profile read. Drawing at the answer for those needs the engine to return its affinity on every accepted action: lane E4.
+- The kit's store has no panel redraw after a manual event.
+- The kit's page template does not call `resume()` at boot.
+- The hosted worker carries none of this until the next deploy.
