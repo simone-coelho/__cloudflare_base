@@ -39,6 +39,16 @@
 //     operator token and re-enters the ordinary pipeline, so the same grant
 //     check, tenant binding, validation, publication concurrency and subject
 //     audit apply as for any other operator.
+//
+// A press that meets another publish on the tenant is not a failure of the
+// press (lane E3). A demo tenant's documents are one publication set, so any
+// other publish on it (a second tab, a double press, a reset, an operator)
+// that lands between a beat's read and its write, or still holds the set while
+// it finishes, refuses the beat with 409 `publication_conflict`. The beat then
+// waits, reads the base that is current, and publishes again on it, a bounded
+// number of times (CONFLICT_RETRY_MS). Every attempt is an ordinary conditional
+// publish of the worker's own document: nothing is forced, and every other
+// refusal answers at once.
 // ──────────────────────────────────────────────────────
 
 import { Hono, type Context } from 'hono';
@@ -83,6 +93,20 @@ const TOKEN_TTL_SECONDS = 60;
 
 /** How many receipts one press may ask for: a homepage is one hero and four deals. */
 const RECEIPTS_PER_REQUEST = 12;
+
+/**
+ * How long a beat waits after its publish meets another publish on the tenant's
+ * set, before it reads the base again and retries: three retries, about two
+ * seconds in all. Another writer's publish holds the set for one read and a few
+ * writes, so a conflict that outlasts this is not one that resolves by waiting,
+ * and the beat answers it (lane E3).
+ */
+export const CONFLICT_RETRY_MS: readonly number[] = Object.freeze([250, 600, 1150]);
+
+/** The engine's refusal of a publish whose base another publish has moved or still holds (src/config/publication.ts). */
+const CONFLICT_CODE = 'publication_conflict';
+
+const pause = (ms: number) => new Promise<void>((done) => { setTimeout(done, ms); });
 
 /** A beat name becomes an asset file name, so it stays a plain word. */
 const BEAT_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
@@ -156,7 +180,14 @@ export function demoActionRoutes(config: DemoActionConfig & { dispatch: Dispatch
     return next();
   });
 
-  /** One named beat, published exactly as the operator console would publish it. */
+  /**
+   * One named beat, published exactly as the operator console would publish it.
+   *
+   * A publish that meets another publish on the tenant's set (409
+   * `publication_conflict`) is tried again on the base that is current after a
+   * short wait, at most CONFLICT_RETRY_MS.length times; the answer then says how
+   * many retries it took (`retried`). Any other refusal answers at once.
+   */
   async function applyBeat(c: Context<Ctx>, name: string, note: string, token: string): Promise<Outcome> {
     const kind = beats[name]!;
     const origin = new URL(c.req.url).origin;
@@ -169,7 +200,26 @@ export function demoActionRoutes(config: DemoActionConfig & { dispatch: Dispatch
 
     const auth = { Authorization: `Bearer ${token}`, 'X-Tenant': tenant };
     const url = `${origin}/content/${kind}?scope=${tenant}`;
+    for (let retried = 0; ; retried++) {
+      const { outcome, conflict } = await publishOnce(c, { name, kind, url, auth, document, note });
+      if (!conflict || retried === CONFLICT_RETRY_MS.length) {
+        return retried ? { status: outcome.status, body: { ...outcome.body, retried } } : outcome;
+      }
+      const wait = CONFLICT_RETRY_MS[retried]!;
+      console.warn(`demo beat ${name}: another publish holds or moved the ${tenant} set; reading the base again in ${wait} ms (retry ${retried + 1} of ${CONFLICT_RETRY_MS.length})`);
+      await pause(wait);
+    }
+  }
 
+  /**
+   * One conditional publish of the beat's document: the base read now, then the
+   * write against it. `conflict` is the engine's 409 `publication_conflict`, the
+   * one refusal another publish on the set resolves.
+   */
+  async function publishOnce(c: Context<Ctx>, p: {
+    name: string; kind: BeatKind; url: string; auth: Record<string, string>; document: Record<string, unknown>; note: string;
+  }): Promise<{ outcome: Outcome; conflict: boolean }> {
+    const { name, kind, url, auth, document, note } = p;
     // Read the base first: a versioned publish is conditional on the revision
     // and publication digest it was authored against, exactly as the operator
     // console does it. This is an in-process dispatch, not a network call.
@@ -177,12 +227,12 @@ export function demoActionRoutes(config: DemoActionConfig & { dispatch: Dispatch
     const base = await read.json().catch(() => null) as
       { revision?: number; publication?: { revision: number; digest: string }; error?: string } | null;
     if (read.status === 401 || read.status === 403) {
-      return { status: 503, body: { ok: false, name, stage: 'read', status: read.status,
-        error: base?.error ?? `the demo operator has no grant on "${tenant}"` } };
+      return { conflict: false, outcome: { status: 503, body: { ok: false, name, stage: 'read', status: read.status,
+        error: base?.error ?? `the demo operator has no grant on "${tenant}"` } } };
     }
     if (!read.ok || !base?.publication) {
-      return { status: 503, body: { ok: false, name, stage: 'read', status: read.status,
-        error: base?.error ?? `no publication base for ${kind}; run /ops/demo-bootstrap` } };
+      return { conflict: false, outcome: { status: 503, body: { ok: false, name, stage: 'read', status: read.status,
+        error: base?.error ?? `no publication base for ${kind}; run /ops/demo-bootstrap` } } };
     }
 
     const write = await dispatch(new Request(url, {
@@ -196,12 +246,14 @@ export function demoActionRoutes(config: DemoActionConfig & { dispatch: Dispatch
       body: JSON.stringify({ document, note }),
     }), c.env, c.executionCtx);
 
-    const result = await write.json().catch(() => null) as { ok?: boolean; revision?: number; error?: string; errors?: unknown } | null;
+    const result = await write.json().catch(() => null) as
+      { ok?: boolean; revision?: number; error?: string; code?: string; errors?: unknown } | null;
     if (!write.ok || result?.ok !== true) {
-      return { status: 502, body: { ok: false, name, stage: 'write', status: write.status,
-        error: result?.error ?? `publishing ${kind} failed`, ...(result?.errors ? { errors: result.errors } : {}) } };
+      return { conflict: write.status === 409 && result?.code === CONFLICT_CODE, outcome: { status: 502, body: { ok: false, name, stage: 'write',
+        status: write.status, error: result?.error ?? `publishing ${kind} failed`, ...(typeof result?.code === 'string' ? { code: result.code } : {}),
+        ...(result?.errors ? { errors: result.errors } : {}) } } };
     }
-    return { status: 200, body: { ok: true, name, kind, revision: result.revision } };
+    return { conflict: false, outcome: { status: 200, body: { ok: true, name, kind, revision: result.revision } } };
   }
 
   routes.post('/beat', async (c) => {
