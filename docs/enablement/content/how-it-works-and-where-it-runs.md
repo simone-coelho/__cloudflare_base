@@ -1,6 +1,6 @@
 # Behavioral Targeting and Intelligence: how it works and where it runs
 
-**For solutions engineers.** The story comes first, in two pages; then one visitor walked through end to end, the mechanism and its arithmetic, the architecture on Cloudflare, configuration, integration, privacy and what a customer provides, each part of the story linked to its detail and back. The companion page, [How it works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works), puts the constants on sliders. Every word follows the [Glossary](https://edge-platform-bti.expedge.workers.dev/glossary).
+**For solutions engineers.** The story comes first, in two pages; then one visitor walked through end to end, the mechanism and its arithmetic, the architecture on Cloudflare, configuration, integration, privacy and what a customer provides, each part of the story linked to its detail and back. The companion page, [How it works, interactive](https://edge-platform-bti.expedge.workers.dev/how-it-works-interactive), puts the constants on sliders, and a live demo's [How it works](https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works) page is a worked example. Every word follows the [Glossary](https://edge-platform-bti.expedge.workers.dev/glossary).
 
 > **The engine decides each page at the point in time from what the visitor is doing now, under rules the brand publishes, and writes every decision out as arithmetic a person can recompute.**
 
