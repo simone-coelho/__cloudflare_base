@@ -10,7 +10,7 @@
     "key": "product",
     "file": "placeholder-product.svg"
   },
-  "manifestAbout": "Provenance and the defect-check verdict for every image under public/oh/img/. Products are written by scripts/demo-kit/fetch-imagery.mjs from scripts/demo-kit/configs/oh/imagery.json: LG's own product images from LG's media host, one hero per product, crop, scale and ground only. A verdict holds only for the sha256 it was given to; a changed file reads pending. \"unfetched\" lists the products without an image; they render placeholder-product.svg, a generated placeholder. index.json maps each sku to its entry. No OH page carries an LG mark of its own; LG's marks on its products are part of the product.",
+  "manifestAbout": "Provenance and the defect-check verdict for every image under public/oh/img/. Products are written by scripts/demo-kit/fetch-imagery.mjs from scripts/demo-kit/configs/oh/imagery.json: LG's own product images from LG's media host, one hero per product, crop, scale and ground only. \"large\" holds 840-pixel renditions of the products the campaign art places, from the same sources. \"art\" is Lane A1's. A verdict holds only for the sha256 it was given to; a changed file reads pending. \"unfetched\" lists the products without an image; they render placeholder-product.svg, a generated placeholder. index.json maps each sku to its entry. No OH page carries an LG mark of its own; LG's marks on its products are part of the product.",
   "views": {
     "pair": "LG's own product image, one hero per product, cut from its white studio ground",
     "compose": "not used by OH (one hero per product)"
@@ -15808,5 +15808,104 @@
       "page": null,
       "reason": "no product page URL in the taxonomy or in products.json"
     }
-  ]
+  ],
+  "large": {
+    "about": "The 840 renditions of the products Lane A1's campaign art places (scripts/demo-kit/configs/oh/art.json, public/oh/img/art/index.json), written by D2's scratchpad step with the kit's own pixel work (lib/imagery.mjs cutout and place) for the four TVs the art draws large (OLED77G6WUA, OLED65C6PUA, 75MRGB95BUA, 27LX6TYGA) from LG's zoom rendition of the same asset (ecomm-PDPGalleryZoom-1600x1062, keyed at the tolerance its own ground needs), for the rest from the same cached gallery rendition and key tolerance as the 420 file, at this config's render settings with size 840. Files products/<id>.840.webp|png|jpg; rows in MANIFEST.json section \"large\"; index.json offers them as products[sku].large. The kit's id rule allows no dot, so fetch-imagery.mjs does not write these; a kit rerun keeps them. gate holds each verdict, bound to the sha256 of the WebP reviewed.",
+    "size": 840,
+    "skus": [
+      "OLED77G6WUA",
+      "OLED65C6PUA",
+      "WM4000HWA",
+      "LSGL6335X",
+      "75MRGB95BUA",
+      "S90TY",
+      "M7-P4_H7_W7",
+      "27LX6TYGA",
+      "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "LDNPM654S",
+      "WM6700HWA",
+      "WKE100HWA"
+    ],
+    "gate": {
+      "oled77g6wua": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "037036aa2aeba0f6c82114734e1b646e0c4242cea5c9007e5e38dbfb8d771ef4",
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.89."
+      },
+      "oled65c6pua": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "2a9a393d072b126ca8631d98b034ec9210eaecf5f6213fb438f79ee87a453531",
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.91."
+      },
+      "wm4000hwa": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "da1fc48c84fd1a9a12dd0fec440153dab94ce61f4d67d272b183b859ba05190c",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.1x the source's pixels."
+      },
+      "lsgl6335x": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "c148c8dfb242b38d90ded82fb0b73cf7ee91a9ca4dcb6387ac6e7183d7045c09",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.09x the source's pixels."
+      },
+      "75mrgb95bua": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "241bac4bb6c68064dbd6ddf5ba466aa4c376bc25437cd9344c98e3a48bfcc4d4",
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.71."
+      },
+      "s90ty": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "797fde25822c07050c508674c0732a9291834a4193971c3ba8de89f5001954bd",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.04x the source's pixels. Accepted with a note: LG's own \"perfect match for LG OLED / QNED\" tag (and, on some, the Dolby Atmos mark) sits beside the product; the page has no other product image on white."
+      },
+      "m7-p4-h7-w7": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "e048892984d88a40d53c650ce74d26a643e9aa0b045e547009e721111bbfde30",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.14x the source's pixels. Accepted with a note: LG's own \"LG Sound Suite AI\" and \"Dolby Atmos FlexConnect\" logos sit beside the product; the page has no other product image on white (the rest are room scenes and infographics)."
+      },
+      "27lx6tyga": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "54c36587e38f463b4443701d788b005c938b5df08a5866b1f69b71fc1c67449e",
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.83."
+      },
+      "wm4000hwa-dlex4000w-wd300cw-wdp6w": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "ce485cc19e8fd89914914e2164e7834301904391996d36a74ac557c31d72d192",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.17x the source's pixels. Accepted with a note: LG's own composite of every member of the set, with LG's \"America's Most Reliable\" shield composited beside it; the page's other images show one member each, which would misstate what is sold."
+      },
+      "lf24z6530s-lsgl5833x-mvem1825f-adfd5448at": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "8f0c50a9dcd723d05b0b3fbce0a0b6524626bad4458bd90a69099a73d4ef08ee",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.08x the source's pixels. Accepted with a note: LG's own composite of every member of the package, with LG's \"America's Most Reliable\" shield composited beside it; the page's other images show one member each, which would misstate what is sold."
+      },
+      "ldnpm654s": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "f253a8eb65ca5b78f0a0025df4e64d620eb896fc1e7769c9467dfda5558a63b6",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.1x the source's pixels."
+      },
+      "wm6700hwa": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "936ddae8e23b9864b1d9996476b6f64a52d40b21d3a30717295dff8f44f1a7d6",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.11x the source's pixels."
+      },
+      "wke100hwa": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "sha": "4a1cc03388534326cc24513995c67f7eadc113448816925227ea7e3a4b6e3235",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.16x the source's pixels."
+      }
+    }
+  }
 }

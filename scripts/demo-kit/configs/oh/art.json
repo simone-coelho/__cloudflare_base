@@ -251,6 +251,14 @@
   },
   "maxUpscale": 1.5,
   "despeckBelow": 60,
+  "largeSource": {
+    "formats": [
+      "slide",
+      "banner"
+    ],
+    "aboveScale": 1,
+    "note": "Where D2 has an accepted 840 cutout (MANIFEST.json large), hero slides, room banners and any tile or tall tile that would scale the 420 cutout above 1.0x draw the 840 file instead, into the same box the 420 fit gives, so every zone holds. Pixel treatments are stated at the 420 scale and scaled with the file."
+  },
   "scenes": {
     "living-amber": {
       "summary": "dark living room at night, charcoal wall, amber stadium-light glow, low walnut console",
@@ -1194,22 +1202,22 @@
     "hero_nfl_gift_card/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "d4a810fc4104c4df45af16549df17239bd635227262fc8d081e74af0443b87e0",
-      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile.",
+      "sha": "18daf42412f1dcde343336d421f146ef3d7d9d364307961507982321d952eef7",
+      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "hero_living_room/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "245a9e82063baf8e08712dae8d72ea85e8f40d19ea6dd782e2660d2b42032320",
-      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile.",
+      "sha": "10f6409541729da67dcdb9ef2c27ec073f169e64222b644911112767082634d6",
+      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "hero_laundry_room/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "81351bc841912835a0a1cbe8f0ef0e71722c1a9b15b659f4306741d649d0a85c",
-      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
+      "sha": "e5c9a913fba88d2d0a3b3ecbf4adc85e37e632651cfa7656eac8e485a115b497",
+      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "laundry-evening--wide--b: cabinetry fills the product side"
       ]
@@ -1217,8 +1225,8 @@
     "hero_kitchen/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "2f4ff6bdf921fa54083782d2e3d90fdfdf8ed7f6896198f044258d8c8d0e20a1",
-      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
+      "sha": "e511f9fca86990c26dec6ff609996a07becf9ba7a00ce7e4052ad19f61846689",
+      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
       "rejected": [
         "kitchen-evening--wide--c: the kitchen run fills the product side"
       ]
@@ -1226,8 +1234,8 @@
     "pin_micro_rgb_evo/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "83d873915ca4dda12f2f8e22f6c9ed454b5be718905fe9fa16230bd503865a93",
-      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
+      "sha": "27cdeeebb141ff947109ee0ee68091eaf9b0be45d43fed0582e5f39ca7abeeb5",
+      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "pin_micro_rgb_evo/tile": {
@@ -1240,8 +1248,8 @@
     "pin_micro_rgb_evo/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "c06ee862952b9b1b62fa3db41af8026ffb02fa2f01860643ab6eb852dd5acdbf",
-      "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
+      "sha": "17b38d8c300a5e1dd8861a87bcc1c19eb88e947cc826db15da3eb8f8c6391d24",
+      "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "studio-rgb--tall--a: a hard grey band across the floor at two thirds of the height (in the first compose, replaced)",
         "studio-rgb--tall--b: the same band and a bright point light at the centre",
@@ -1267,15 +1275,15 @@
     "deal_nfl_gift_card/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "91fbd28f608166a372b05bcc47e4469279fe7f98fe187770b25a01115a76591b",
-      "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile.",
+      "sha": "b6bea62e6d5ae31ccfccb9785f4b87db63f43e0f7a352f1d9a628ad37156ce2b",
+      "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_matching_soundbar/tile": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "102160a7d2bb3ddadae76b7b55ec03dc173bb038095920467c39b4e496a206ad",
-      "note": "Espresso-panelled room, brass lamp at the left; the S90TY and its subwoofer on the oak console. LG's composited label erased from the ground; the white glow faded at the edge, no halo at 1:1. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.1:1 at the text zone's 90th percentile.",
+      "sha": "77a128a0b5b5b17b5dd033590c20637099b7f2789f3fd11c065d9b1a386c3ff3",
+      "note": "Espresso-panelled room, brass lamp at the left; the S90TY and its subwoofer on the oak console. LG's composited label erased from the ground; the white glow faded at the edge, no halo at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.1:1 at the text zone's 90th percentile.",
       "rejected": [
         "first compose: a white glow ring around the dark soundbar (LG's ground), fixed by the dark matte"
       ]
@@ -1283,8 +1291,8 @@
     "deal_matching_soundbar/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "c37e6465c5862c4cfc829671bc9625b5bb936919ae32a6a8bd6e82b3a43fc72c",
-      "note": "The S90TY and subwoofer on the backlit oak console; label erased, edge clean at 1:1. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile.",
+      "sha": "89de97e2b21e3963a7cd7cfd0b8005f5419f24359ec083d9ef670d4188d43e53",
+      "note": "The S90TY and subwoofer on the backlit oak console; label erased, edge clean at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_sound_suite_bundle/tile": {
@@ -1297,8 +1305,8 @@
     "deal_sound_suite_bundle/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "69dc99a7e677483eda7de91e40ba7f059cb97bca72822871ed2293fb57bf5e45",
-      "note": "The Sound Suite set on the oak console, lamp at the left; wordmarks erased, edges clean. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.1:1 at the text zone's 90th percentile.",
+      "sha": "1ebd55bbd1763b98288a30e3b141810a16c8302a3e4565a0be14320ed65c8352",
+      "note": "The Sound Suite set on the oak console, lamp at the left; wordmarks erased, edges clean. Product drawn from D2's 840-pixel cutout (products/m7-p4-h7-w7.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.1:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_free_wall_mounting/tile": {
@@ -1313,8 +1321,8 @@
     "deal_free_wall_mounting/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "b16c52f7580c1af2ca2a199e546e41ae699a20e07a090d71de9943a3b545dcb7",
-      "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile.",
+      "sha": "af0bfbc6c76aacbcca1b72f695a5dd05ef0f21b7b547ae8d35b0760abb261bc9",
+      "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_big_screens/tile": {
@@ -1329,8 +1337,8 @@
     "deal_big_screens/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "fe7974f21083efb49ae69ff40dee0eddadba9031c9a4e0886e04264510f2ee55",
-      "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+      "sha": "f966db57b894f33e01983f1482aa8e218ae2b30edf5590e1dba2efd961e9b79f",
+      "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "studio-burgundy--tall--b: a rectangular plinth at the right reads as an object"
       ]
@@ -1347,8 +1355,8 @@
     "deal_xbox_controller/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "24e27615f852cb43e0a0b810609dd8b6f3fccc51f1f3f19bab7c88409d596184",
-      "note": "Emerald-glow studio; the StanbyME on its stand with a faint floor reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile.",
+      "sha": "ef265a76d5efa8cb90f50dbb2b8b3b6bd0acda60575bf52735dc9c6d727fe00c",
+      "note": "Emerald-glow studio; the StanbyME on its stand with a faint floor reflection. Product drawn from D2's 840-pixel cutout (products/27lx6tyga.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_laundry_pair/tile": {
@@ -1361,8 +1369,8 @@
     "deal_laundry_pair/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "42120d7bb4907caf43aa420ba92ba8ad662cabd4de9cd203b83cd63aebf9c058",
-      "note": "Sage laundry room in warm light; the washer on the floor, the lower third darkened (scrim 0.85) because the floor is pale. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6:1 at the text zone's 90th percentile.",
+      "sha": "a28d2c435ffb0916e904749c0f2d89fcf1e7e2ac37a902087bae7c6f813a9db5",
+      "note": "Sage laundry room in warm light; the washer on the floor, the lower third darkened (scrim 0.85) because the floor is pale. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6:1 at the text zone's 90th percentile.",
       "rejected": [
         "laundry-evening--tall--a: a hard step from pale stone to a dark band across the floor"
       ]
@@ -1370,15 +1378,15 @@
     "deal_laundry_sets/tile": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "3d86e9041140cd6c541d8f6b47d2385189723bd143a5b1ce4cb73c05778554c5",
-      "note": "Burgundy panelled laundry room, brass rail with empty hangers; the washer, dryer and pedestals set. LG's shield erased from the ground. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.6:1 at the text zone's 90th percentile.",
+      "sha": "24df8a017cfa9798623777a6fe520ba7180052ddf3a23933d837aac52e727150",
+      "note": "Burgundy panelled laundry room, brass rail with empty hangers; the washer, dryer and pedestals set. LG's shield erased from the ground. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.6:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_laundry_sets/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "7a30d21878ea894edf8767509f45f2a24dadc7bcf7175bcfaf4a7e96c765e6ab",
-      "note": "Burgundy laundry room; the laundry set on the herringbone floor, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.2:1 at the text zone's 90th percentile.",
+      "sha": "907b204048743cccd9e336974815be9309a79e3a8c349e07240e1e462cdb4354",
+      "note": "Burgundy laundry room; the laundry set on the herringbone floor, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.2:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_range_microwave/tile": {
@@ -1391,8 +1399,8 @@
     "deal_range_microwave/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "d2f33e4aed1f9d73c97efa4785c471f77bdbe1c6ebc64c88b8ace46b176f875d",
-      "note": "Kitchen at night, warm-lit alcove; the range on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
+      "sha": "82411f0f64310b049fbc576bebe3dda37548b33f722bd260216d7dee7f946076",
+      "note": "Kitchen at night, warm-lit alcove; the range on the floor. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_kitchen_packages/tile": {
@@ -1405,8 +1413,8 @@
     "deal_kitchen_packages/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "baef67b2fce2acd4dd99591987d4a44cafa3fba4774b1399a9afe09d54b54e24",
-      "note": "Kitchen with a dark stone wall and pendant; the package on the oak floor, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.7:1 at the text zone's 90th percentile.",
+      "sha": "8b90949f20d5b62624cfb8e801cf335fe4eb41d1e3a967cd296b84a925077602",
+      "note": "Kitchen with a dark stone wall and pendant; the package on the oak floor, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.7:1 at the text zone's 90th percentile.",
       "rejected": [
         "kitchen-wide--tall--b, --c: a hard band across the floor"
       ]
@@ -1421,8 +1429,8 @@
     "deal_fridge_dishwasher/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "3d56c3e636b0fd0196f1d0b66cdc78a37a7c8a472c5f84b89c829c1b51b17c19",
-      "note": "Kitchen at night (kitchen-evening b, seamless floor); LDNPM654S in place of the badged LDNTH753S. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+      "sha": "965a67e6bc4807db650e0f50b98cf12dfbcfd22883051dc1f1eb2b7c98bd9d62",
+      "note": "Kitchen at night (kitchen-evening b, seamless floor); LDNPM654S in place of the badged LDNTH753S. Product drawn from D2's 840-pixel cutout (products/ldnpm654s.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "kitchen-wide--tall--b, --c: a hard band across the floor; this job moved to kitchen-evening b"
       ]
@@ -1439,8 +1447,8 @@
     "deal_thinq_warranty/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "1537ce60b7e1644fc62e93417b33ca67fdced7a180eda5eb19b3e0cadcf75c5c",
-      "note": "Re-rolled candidate d (seamless floor); the washer in the blue glow with a faint reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.4:1 at the text zone's 90th percentile.",
+      "sha": "f3cc41837d8c0d823395339e8e3dae230c8822344858830b0e1cda7f89705bc2",
+      "note": "Re-rolled candidate d (seamless floor); the washer in the blue glow with a faint reflection. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.5:1 at the text zone's 90th percentile.",
       "rejected": [
         "studio-charcoal--tall--a: the curved cyclorama edge reads as a band (in the first compose, replaced)",
         "studio-charcoal--tall--b, --c: a hard step across the floor"
@@ -1456,8 +1464,8 @@
     "deal_wash1000/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "f06a971c7cb3bcc57451bf7007f3435bb7104f8ec41c1a1dec4b5acd88d9aa50",
-      "note": "Burgundy laundry room; the WM6700HWA on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.6:1 at the text zone's 90th percentile.",
+      "sha": "6e1e8416245035b02469028d73d447769a97f49bb3f7cb4aa7c46f62e26c11f4",
+      "note": "Burgundy laundry room; the WM6700HWA on the floor. Product drawn from D2's 840-pixel cutout (products/wm6700hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.6:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "tile_tvs/tile": {
@@ -1470,8 +1478,8 @@
     "tile_audio/tile": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "66d9d14284b7c06786c8fc1998148ae7d1962648a6174f0b224fb30d15d7fd72",
-      "note": "Espresso-panelled room; the S90TY and subwoofer on the oak console; label erased, edge clean. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.5:1 at the text zone's 90th percentile.",
+      "sha": "56a933a0fb594317d3ffbe65450a7d7cc7173bd6ab53b0db7c154438b5d7ac8a",
+      "note": "Espresso-panelled room; the S90TY and subwoofer on the oak console; label erased, edge clean. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.5:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "tile_laundry/tile": {
@@ -1512,22 +1520,22 @@
     "room_living_room/banner": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "5050e52ad292355269de69cf053b2ceb75ca1ffb365813a1b27a995ffc620d05",
-      "note": "Amber living room cropped from the bottom of the frame; the C6 on its stand on the walnut console. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.8:1 at the text zone's 90th percentile.",
+      "sha": "98ce8910e5ec20bd5a3da5598c606bf5fa06879f0d45026f73106980edf47fdc",
+      "note": "Amber living room cropped from the bottom of the frame; the C6 on its stand on the walnut console. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.8:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "room_laundry_room/banner": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "5d0907951f75830d437668ffdfac8a98406a3ee59fcb7029da18413f8ed2076d",
-      "note": "Sage laundry room, warm glow at the right; the washer and dryer set on pedestals, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.4:1 at the text zone's 90th percentile.",
+      "sha": "4847e5251d32deb0ad19199a4293f4e82f359f07eaa00ae4462ae00a28b81505",
+      "note": "Sage laundry room, warm glow at the right; the washer and dryer set on pedestals, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.4:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "room_kitchen/banner": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "1ad713f3a22e9850b34fc873d58f59928b7fa7ad76c0ee42db49d4c63646130e",
-      "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
+      "sha": "53d5c1e538224cb2a340c7c88ce12a86e1d383def2c4862950c5108182607a7a",
+      "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
       "rejected": []
     }
   }

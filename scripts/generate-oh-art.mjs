@@ -42,7 +42,9 @@
 // they sit on the ground beside the product (whole detached parts inside a box, never the product), a stand
 // cropped for a wall-hung TV, the white glow around a dark body faded, ragged white ground under an appliance's
 // base cleared, detached specks removed, the edge pulled in one pixel. A product whose image carries a badge ON
-// the product is substituted from the same piece's featured list, and the row says so.
+// the product is substituted from the same piece's featured list, and the row says so. Where D2 has an accepted
+// 840 cutout (MANIFEST.json large), art.json's `largeSource` rule draws it instead (slides, banners, and any tile
+// that would scale the 420 cut above 1.0×), into the very box the 420 fit gives, so no zone moves.
 //
 // Opaque art carries no transparency, so the kit's transparent PNG is replaced by AVIF as the third encoding:
 // WebP (the src), AVIF and a JPEG fallback (a PNG of the 44 files measured 4.45 MB at the kit's 256 colours and
@@ -347,37 +349,60 @@ function defringe(data, W, H) {
   }
 }
 
+/** D2's 840 cutout of a product, when there is one and its own verdict is accept (MANIFEST.json, large). */
+function largeOf(sku) {
+  const entry = imageIndex()[sku];
+  if (!entry?.large?.webp) return null;
+  const id = `${entry.id}.840`;
+  const row = (readManifest(MANIFEST).large || []).find((r) => r.id === id);
+  if (!row || row.gate?.verdict !== 'accept') return null;
+  return { id, file: row.files.webp, row };
+}
+
 const cutCache = new Map();
-async function productCut(product) {
-  if (cutCache.has(product.ref)) return cutCache.get(product.ref);
+/**
+ * The product cut, from the 420 file or (large) D2's 840 file. Every pixel treatment is stated at the 420 scale
+ * and scaled by k = width / 420, so both sizes get the same cut; at k = 1 nothing differs from the 420 path.
+ */
+async function productCut(product, large = false) {
+  const cacheKey = `${product.ref}@${large ? 'large' : '420'}`;
+  if (cutCache.has(cacheKey)) return cutCache.get(cacheKey);
   const entry = imageIndex()[product.sku];
   if (!entry || entry.verdict !== 'accept') throw new Error(`no accepted product image for ${product.sku}`);
-  const file = join(IMG, 'products', `${entry.id}.webp`);
-  const source = readFileSync(file);
+  const big = large ? largeOf(product.sku) : null;
+  if (large && !big) throw new Error(`no accepted 840 image for ${product.sku}`);
+  const rel = big ? big.file : `products/${entry.id}.webp`;
+  const source = readFileSync(join(IMG, rel));
   const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height;
-  const erased = eraseInside(data, W, H, product.erase);
+  const k = W / (entry.size || 420);
+  const sc = (v) => Math.round(v * k);
+  const erased = eraseInside(data, W, H, product.erase.map((b) => b.map(sc)));
   let height = H;
   if (product.standCut) { height = panelBottom(data, W, H); for (let p = height * W; p < W * H; p += 1) data[p * 4 + 3] = 0; }
-  const matted = product.matte ? darkMatte(data, W, H, product.matte) : 0;
-  const based = product.trimBase ? trimBase(data, W, H, product.trimBase === true ? {} : product.trimBase) : 0;
-  defringe(data, W, H);
-  const specks = despeck(data, W, H, cfg.despeckBelow ?? 60);
+  const matte = product.matte ? { ...product.matte, band: sc(product.matte.band ?? 14) } : null;
+  const matted = matte ? darkMatte(data, W, H, matte) : 0;
+  const tb = product.trimBase === true ? {} : product.trimBase;
+  const based = product.trimBase ? trimBase(data, W, H, k === 1 ? tb : { ...tb, window: sc(tb.window ?? 16), tol: sc(tb.tol ?? 1) }) : 0;
+  for (let i = 0; i < Math.max(1, Math.round(k)); i += 1) defringe(data, W, H);
+  const specks = despeck(data, W, H, Math.round((cfg.despeckBelow ?? 60) * k * k));
   const trimmed = await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
   const cut = await sharp(trimmed).trim({ threshold: 1, background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer({ resolveWithObject: true });
   const out = { buf: cut.data, width: cut.info.width, height: cut.info.height,
-    source: { file: `products/${entry.id}.webp`, sha256: sha256(source), sku: product.sku, name: null },
+    source: { file: rel, sha256: sha256(source), sku: product.sku, size: W,
+      ...(big ? { large: true, sourcePixels: big.row.sources?.[0]?.pixels ?? null, rendition: big.row.sources?.[0]?.rendition ?? 'the same LG image as the 420 file, rendered larger' } : {}) },
     treatment: [
-      'cut from LG\'s own product image (D2: crop, scale and ground only)',
+      big ? `cut from D2's ${W}-pixel file of LG's own product image (${big.row.sources?.[0]?.rendition ? 'LG\'s zoom rendition, ' : 'LG\'s '}${big.row.sources?.[0]?.pixels ?? ''} source; crop, scale and ground only)`
+        : 'cut from LG\'s own product image (D2: crop, scale and ground only)',
       ...(erased ? product.notes.filter((n) => /erased/.test(n)) : []),
       ...(product.standCut ? ['the stand cropped off below the panel, for a wall-mounted TV'] : []),
       ...(matted ? ['the white glow LG\'s ground left around the dark body faded out at the edge'] : []),
       ...(based ? ['ragged near-white bits of LG\'s ground below the base line cleared (the feet kept)'] : []),
-      'edge pulled in by one pixel against the scene',
-      ...(specks ? [`${specks} detached speck${specks === 1 ? '' : 's'} under ${cfg.despeckBelow ?? 60} px removed`] : []),
+      k === 1 ? 'edge pulled in by one pixel against the scene' : 'edge pulled in by one 420-scale pixel against the scene',
+      ...(specks ? [`${specks} detached speck${specks === 1 ? '' : 's'} under ${Math.round((cfg.despeckBelow ?? 60) * k * k)} px removed`] : []),
       'scaled to the layout box with lanczos3',
     ] };
-  cutCache.set(product.ref, out);
+  cutCache.set(cacheKey, out);
   return out;
 }
 
@@ -412,12 +437,24 @@ function scrimSvg(s, W, H) {
 async function productLayers(job, W, H) {
   const product = productOf(job.product);
   if (!product) return { layers: [], placed: null, product: null, cut: null };
-  const cut = await productCut(product);
+  // The placement is fitted on the 420 cut, so the product box and every zone hold whichever file is drawn.
+  const fit = await productCut(product);
   const L = job.layout;
-  const s = Math.min((L.boxW * W) / cut.width, (L.boxH * H) / cut.height, cfg.maxUpscale);
-  const w = Math.round(cut.width * s), h = Math.round(cut.height * s);
-  let img = sharp(cut.buf).resize(w, h, { kernel: 'lanczos3' });
-  if (s > 1.05) img = img.sharpen({ sigma: 0.6 });
+  const s = Math.min((L.boxW * W) / fit.width, (L.boxH * H) / fit.height, cfg.maxUpscale);
+  const w = Math.round(fit.width * s), h = Math.round(fit.height * s);
+  const rule = cfg.largeSource;
+  const useLarge = Boolean(rule && (rule.formats.includes(job.format) || s > rule.aboveScale) && largeOf(product.sku));
+  const cut = useLarge ? await productCut(product, true) : fit;
+  const sDrawn = w / cut.width;
+  let img;
+  if (!useLarge) img = sharp(cut.buf).resize(w, h, { kernel: 'lanczos3' });
+  else {
+    // D2's 840 cut drawn into the same box; a cut whose shape differs by more than 1.5 % keeps its own shape, on the base.
+    const same = Math.abs((cut.width / cut.height) / (fit.width / fit.height) - 1) <= 0.015;
+    img = sharp(cut.buf).resize(w, h, same ? { kernel: 'lanczos3', fit: 'fill' }
+      : { kernel: 'lanczos3', fit: 'contain', position: 'bottom', background: { r: 0, g: 0, b: 0, alpha: 0 } });
+  }
+  if (sDrawn > 1.05) img = img.sharpen({ sigma: 0.6 });
   const pimg = await img.png().toBuffer();
   const cx = Math.round(L.cx * W), bottom = Math.round(L.bottom * H);
   const left = cx - Math.round(w / 2), top = bottom - h;
@@ -460,7 +497,7 @@ async function productLayers(job, W, H) {
   }
   const p = await clip(pimg, left, top);
   if (p) layers.push(p);
-  return { layers, product, cut, placed: { left, top, width: w, height: h, scale: Math.round(s * 100) / 100 } };
+  return { layers, product, cut, placed: { left, top, width: w, height: h, scale: Math.round(s * 100) / 100, ...(useLarge ? { drawnFrom: cut.source.size, drawnScale: Math.round(sDrawn * 100) / 100 } : {}) } };
 }
 
 /** The headline zone's light: relative luminance's mean and 90th percentile, and white type's contrast there. */
@@ -567,7 +604,7 @@ async function compose() {
     const room = cfg.rooms?.[job.piece] ?? null;
     const scene = cfg.scenes[job.scene];
     const sku = r.product?.sku ?? null;
-    const productText = sku ? ` + the product's own image ${sku}, demo use` : ' (no product by design: the page draws the shopper\'s own configuration)';
+    const productText = sku ? ` + the product's own image ${sku}${r.cut.source.large ? ` (D2's ${r.cut.source.size}-pixel cutout, ${r.cut.source.file})` : ''}, demo use` : ' (no product by design: the page draws the shopper\'s own configuration)';
     const provenance = generated ? `generated scene (${rolled?.model ?? MODEL}, ${scene.summary})${productText}` : `composed gradient (${scene.summary.split(',')[0]} colours)${productText}`;
     rows.push({
       key: job.key, piece: job.piece, kind: job.kind, format: job.format, title: piece?.title ?? room?.title ?? null,

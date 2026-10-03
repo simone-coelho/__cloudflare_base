@@ -24829,8 +24829,8 @@
   },
   "totals": {
     "files": 1947,
-    "bytes": 26005800,
-    "megabytes": 24.8,
+    "bytes": 25961869,
+    "megabytes": 24.76,
     "budgetMegabytes": 25
   },
   "unfetched": [
@@ -25012,7 +25012,7 @@
     },
     "text": "none baked in: headline, sub, badge and button are content the page draws over the art",
     "productLicence": "Each product is LG Electronics' own product image, as recorded for its file in this manifest's products section: demo use only, in an internal demo; provenance recorded.",
-    "bytes": 2218650,
+    "bytes": 2174719,
     "prompts": {
       "p-b547662726": "A dark, modern living room at night: charcoal plaster walls, a warm amber and ember-orange glow washing across the wall from the left as if from distant stadium floodlights through a window, a low dark walnut media console along the floor at the right. Wide banner framing: the left three fifths are calm, dark and simple (a plain, softly lit wall with no objects of interest), ready for a white headline; the right two fifths hold a large, empty stretch of charcoal wall above the low walnut media console, nothing hanging on the wall and nothing standing on the console, empty and softly lit. Photographic campaign image for a premium home-electronics and home-appliance store's homepage, in the family of a flagship electronics brand's own website banners: rich, dark, cinematic and uncluttered, with one soft colour glow. Straight-on, eye-level camera with a level horizon and one-point perspective; sharp focus; photographic realism; soft, believable light. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO signage, NO posters or artwork with writing, NO watermarks, NO people, NO hands, NO faces, NO pets. NO television, NO screen, NO monitor, NO speaker and NO appliance anywhere in the frame.",
       "p-f1b8c55c7a": "A calm, dark modern living room in the evening: deep navy-charcoal walls, a soft cool blue and violet ambient glow from hidden cove lighting, the edge of a dark boucle sofa in shadow at the far left foreground, a low matte-black media console at the right. Wide banner framing: the left three fifths are calm, dark and simple (a plain, softly lit wall with no objects of interest), ready for a white headline; the right two fifths hold a large, empty stretch of navy-charcoal wall above the low matte-black media console, nothing hanging on the wall and nothing standing on the console, empty and softly lit. Photographic campaign image for a premium home-electronics and home-appliance store's homepage, in the family of a flagship electronics brand's own website banners: rich, dark, cinematic and uncluttered, with one soft colour glow. Straight-on, eye-level camera with a level horizon and one-point perspective; sharp focus; photographic realism; soft, believable light. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO signage, NO posters or artwork with writing, NO watermarks, NO people, NO hands, NO faces, NO pets. NO television, NO screen, NO monitor, NO speaker and NO appliance anywhere in the frame.",
@@ -25060,13 +25060,13 @@
           "height": 640
         },
         "bytes": {
-          "webp": 30170,
-          "avif": 16626,
-          "jpg": 37541
+          "webp": 30518,
+          "avif": 15813,
+          "jpg": 37670
         },
-        "sha256": "d4a810fc4104c4df45af16549df17239bd635227262fc8d081e74af0443b87e0",
+        "sha256": "18daf42412f1dcde343336d421f146ef3d7d9d364307961507982321d952eef7",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED77G6WUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED77G6WUA (D2's 840-pixel cutout, products/oled77g6wua.840.webp), demo use",
         "scene": {
           "key": "living-amber",
           "summary": "dark living room at night, charcoal wall, amber stadium-light glow, low walnut console",
@@ -25079,8 +25079,8 @@
         "product": {
           "sku": "OLED77G6WUA",
           "name": "77 Inch Class LG OLED evo AI G6 4K Smart TV 2026",
-          "image": "products/oled77g6wua.webp",
-          "imageSha256": "39ec6f2322fd6656b2326887afda49adfbcaf5a5f94bd582c9ddf5c52e06abe1",
+          "image": "products/oled77g6wua.840.webp",
+          "imageSha256": "037036aa2aeba0f6c82114734e1b646e0c4242cea5c9007e5e38dbfb8d771ef4",
           "mount": "wall",
           "reflection": false,
           "placed": {
@@ -25088,12 +25088,13 @@
             "top": 48,
             "width": 475,
             "height": 358,
-            "scale": 1.28
+            "scale": 1.28,
+            "drawnFrom": 840,
+            "drawnScale": 0.64
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "1 detached speck under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25126,7 +25127,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile."
+          "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -25145,13 +25146,13 @@
           "height": 640
         },
         "bytes": {
-          "webp": 30318,
-          "avif": 15448,
-          "jpg": 34904
+          "webp": 30552,
+          "avif": 14495,
+          "jpg": 34573
         },
-        "sha256": "245a9e82063baf8e08712dae8d72ea85e8f40d19ea6dd782e2660d2b42032320",
+        "sha256": "10f6409541729da67dcdb9ef2c27ec073f169e64222b644911112767082634d6",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console) + the product's own image OLED65C6PUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console) + the product's own image OLED65C6PUA (D2's 840-pixel cutout, products/oled65c6pua.840.webp), demo use",
         "scene": {
           "key": "living-blue",
           "summary": "calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console",
@@ -25164,8 +25165,8 @@
         "product": {
           "sku": "OLED65C6PUA",
           "name": "65 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
-          "image": "products/oled65c6pua.webp",
-          "imageSha256": "499a52e8a7096dd8b5f1f8dc057c88d74da765d2659a51a98d9fc31fb4f1be27",
+          "image": "products/oled65c6pua.840.webp",
+          "imageSha256": "2a9a393d072b126ca8631d98b034ec9210eaecf5f6213fb438f79ee87a453531",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -25173,11 +25174,13 @@
             "top": 99,
             "width": 446,
             "height": 352,
-            "scale": 1.21
+            "scale": 1.21,
+            "drawnFrom": 840,
+            "drawnScale": 0.6
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25210,7 +25213,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile."
+          "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -25229,13 +25232,13 @@
           "height": 640
         },
         "bytes": {
-          "webp": 29736,
-          "avif": 17735,
-          "jpg": 35553
+          "webp": 28482,
+          "avif": 16395,
+          "jpg": 34352
         },
-        "sha256": "81351bc841912835a0a1cbe8f0ef0e71722c1a9b15b659f4306741d649d0a85c",
+        "sha256": "e5c9a913fba88d2d0a3b3ecbf4adc85e37e632651cfa7656eac8e485a115b497",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA (D2's 840-pixel cutout, products/wm4000hwa.840.webp), demo use",
         "scene": {
           "key": "laundry-evening",
           "summary": "refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor",
@@ -25248,8 +25251,8 @@
         "product": {
           "sku": "WM4000HWA",
           "name": "4.5 cu. ft. Front Load Washer (WM4000HWA)",
-          "image": "products/wm4000hwa.webp",
-          "imageSha256": "b0350eef83d43a5d1d88e4b6b5d235b3c2530a9754a9f297a3b5c1fbf48d5ac1",
+          "image": "products/wm4000hwa.840.webp",
+          "imageSha256": "da1fc48c84fd1a9a12dd0fec440153dab94ce61f4d67d272b183b859ba05190c",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -25257,12 +25260,14 @@
             "top": 128,
             "width": 303,
             "height": 435,
-            "scale": 1.18
+            "scale": 1.18,
+            "drawnFrom": 840,
+            "drawnScale": 0.59
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25295,7 +25300,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
+          "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
           "rejected": [
             "laundry-evening--wide--b: cabinetry fills the product side"
           ]
@@ -25317,13 +25322,13 @@
           "height": 640
         },
         "bytes": {
-          "webp": 30664,
-          "avif": 17696,
-          "jpg": 37313
+          "webp": 28334,
+          "avif": 16243,
+          "jpg": 36234
         },
-        "sha256": "2f4ff6bdf921fa54083782d2e3d90fdfdf8ed7f6896198f044258d8c8d0e20a1",
+        "sha256": "e511f9fca86990c26dec6ff609996a07becf9ba7a00ce7e4052ad19f61846689",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LSGL6335X, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LSGL6335X (D2's 840-pixel cutout, products/lsgl6335x.840.webp), demo use",
         "scene": {
           "key": "kitchen-evening",
           "summary": "modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow",
@@ -25336,8 +25341,8 @@
         "product": {
           "sku": "LSGL6335X",
           "name": "6.3 cu. ft. Gas Slide-in Range (LSGL6335X)",
-          "image": "products/lsgl6335x.webp",
-          "imageSha256": "644e54022dcf622d9c5b1b32842653310e22c3092144e3b3df87bd64dd90e4ea",
+          "image": "products/lsgl6335x.840.webp",
+          "imageSha256": "c148c8dfb242b38d90ded82fb0b73cf7ee91a9ca4dcb6387ac6e7183d7045c09",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -25345,12 +25350,14 @@
             "top": 147,
             "width": 376,
             "height": 448,
-            "scale": 1.21
+            "scale": 1.21,
+            "drawnFrom": 840,
+            "drawnScale": 0.61
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25383,7 +25390,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
+          "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
           "rejected": [
             "kitchen-evening--wide--c: the kitchen run fills the product side"
           ]
@@ -25405,13 +25412,13 @@
           "height": 640
         },
         "bytes": {
-          "webp": 38606,
-          "avif": 23957,
-          "jpg": 40287
+          "webp": 38250,
+          "avif": 22090,
+          "jpg": 39731
         },
-        "sha256": "83d873915ca4dda12f2f8e22f6c9ed454b5be718905fe9fa16230bd503865a93",
+        "sha256": "27cdeeebb141ff947109ee0ee68091eaf9b0be45d43fed0582e5f39ca7abeeb5",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, seamless black studio, soft red, green and blue glows, glossy black floor) + the product's own image 75MRGB95BUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, seamless black studio, soft red, green and blue glows, glossy black floor) + the product's own image 75MRGB95BUA (D2's 840-pixel cutout, products/75mrgb95bua.840.webp), demo use",
         "scene": {
           "key": "studio-rgb",
           "summary": "seamless black studio, soft red, green and blue glows, glossy black floor",
@@ -25424,8 +25431,8 @@
         "product": {
           "sku": "75MRGB95BUA",
           "name": "75 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
-          "image": "products/75mrgb95bua.webp",
-          "imageSha256": "d4f2287c4894c481ed2d8809f8cd8c3fab3b6c0d7ed8fc78ef20b3bcc9b4e883",
+          "image": "products/75mrgb95bua.840.webp",
+          "imageSha256": "241bac4bb6c68064dbd6ddf5ba466aa4c376bc25437cd9344c98e3a48bfcc4d4",
           "mount": "floor",
           "reflection": true,
           "placed": {
@@ -25433,12 +25440,13 @@
             "top": 128,
             "width": 474,
             "height": 384,
-            "scale": 1.28
+            "scale": 1.28,
+            "drawnFrom": 840,
+            "drawnScale": 0.64
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "1 detached speck under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25471,7 +25479,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile."
+          "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -25575,13 +25583,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 34522,
-          "avif": 22376,
-          "jpg": 34061
+          "webp": 33524,
+          "avif": 20384,
+          "jpg": 33221
         },
-        "sha256": "c06ee862952b9b1b62fa3db41af8026ffb02fa2f01860643ab6eb852dd5acdbf",
+        "sha256": "17b38d8c300a5e1dd8861a87bcc1c19eb88e947cc826db15da3eb8f8c6391d24",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, seamless black studio, soft red, green and blue glows, glossy black floor) + the product's own image 75MRGB95BUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, seamless black studio, soft red, green and blue glows, glossy black floor) + the product's own image 75MRGB95BUA (D2's 840-pixel cutout, products/75mrgb95bua.840.webp), demo use",
         "scene": {
           "key": "studio-rgb",
           "summary": "seamless black studio, soft red, green and blue glows, glossy black floor",
@@ -25594,8 +25602,8 @@
         "product": {
           "sku": "75MRGB95BUA",
           "name": "75 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
-          "image": "products/75mrgb95bua.webp",
-          "imageSha256": "d4f2287c4894c481ed2d8809f8cd8c3fab3b6c0d7ed8fc78ef20b3bcc9b4e883",
+          "image": "products/75mrgb95bua.840.webp",
+          "imageSha256": "241bac4bb6c68064dbd6ddf5ba466aa4c376bc25437cd9344c98e3a48bfcc4d4",
           "mount": "floor",
           "reflection": true,
           "placed": {
@@ -25603,12 +25611,13 @@
             "top": 172,
             "width": 445,
             "height": 361,
-            "scale": 1.2
+            "scale": 1.2,
+            "drawnFrom": 840,
+            "drawnScale": 0.6
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "1 detached speck under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25641,7 +25650,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
+          "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
           "rejected": [
             "studio-rgb--tall--a: a hard grey band across the floor at two thirds of the height (in the first compose, replaced)",
             "studio-rgb--tall--b: the same band and a bright point light at the centre",
@@ -25819,13 +25828,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 29428,
-          "avif": 16716,
-          "jpg": 34798
+          "webp": 29960,
+          "avif": 16024,
+          "jpg": 34797
         },
-        "sha256": "91fbd28f608166a372b05bcc47e4469279fe7f98fe187770b25a01115a76591b",
+        "sha256": "b6bea62e6d5ae31ccfccb9785f4b87db63f43e0f7a352f1d9a628ad37156ce2b",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED77G6WUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED77G6WUA (D2's 840-pixel cutout, products/oled77g6wua.840.webp), demo use",
         "scene": {
           "key": "living-amber",
           "summary": "dark living room at night, charcoal wall, amber stadium-light glow, low walnut console",
@@ -25838,8 +25847,8 @@
         "product": {
           "sku": "OLED77G6WUA",
           "name": "77 Inch Class LG OLED evo AI G6 4K Smart TV 2026",
-          "image": "products/oled77g6wua.webp",
-          "imageSha256": "39ec6f2322fd6656b2326887afda49adfbcaf5a5f94bd582c9ddf5c52e06abe1",
+          "image": "products/oled77g6wua.840.webp",
+          "imageSha256": "037036aa2aeba0f6c82114734e1b646e0c4242cea5c9007e5e38dbfb8d771ef4",
           "mount": "wall",
           "reflection": false,
           "placed": {
@@ -25847,12 +25856,13 @@
             "top": 153,
             "width": 504,
             "height": 380,
-            "scale": 1.36
+            "scale": 1.36,
+            "drawnFrom": 840,
+            "drawnScale": 0.68
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "1 detached speck under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25885,7 +25895,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile."
+          "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -25904,13 +25914,13 @@
           "height": 420
         },
         "bytes": {
-          "webp": 6964,
-          "avif": 3629,
-          "jpg": 9914
+          "webp": 6898,
+          "avif": 3571,
+          "jpg": 9923
         },
-        "sha256": "102160a7d2bb3ddadae76b7b55ec03dc173bb038095920467c39b4e496a206ad",
+        "sha256": "77a128a0b5b5b17b5dd033590c20637099b7f2789f3fd11c065d9b1a386c3ff3",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY (D2's 840-pixel cutout, products/s90ty.840.webp), demo use",
         "scene": {
           "key": "living-sound",
           "summary": "warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow",
@@ -25923,8 +25933,8 @@
         "product": {
           "sku": "S90TY",
           "name": "LG S90TY Soundbar",
-          "image": "products/s90ty.webp",
-          "imageSha256": "1e15dce1c425821d245a8865423226f9804be1280c3ff628981abf38fee9b27c",
+          "image": "products/s90ty.840.webp",
+          "imageSha256": "797fde25822c07050c508674c0732a9291834a4193971c3ba8de89f5001954bd",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -25932,13 +25942,15 @@
             "top": 91,
             "width": 331,
             "height": 195,
-            "scale": 1.05
+            "scale": 1.05,
+            "drawnFrom": 840,
+            "drawnScale": 0.53
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"perfect match for LG OLED evo\" label erased from the ground beside the product (whole connected parts inside the box only); the white glow around the dark body faded at the edge",
             "the white glow LG's ground left around the dark body faded out at the edge",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -25971,7 +25983,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Espresso-panelled room, brass lamp at the left; the S90TY and its subwoofer on the oak console. LG's composited label erased from the ground; the white glow faded at the edge, no halo at 1:1. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.1:1 at the text zone's 90th percentile.",
+          "note": "Espresso-panelled room, brass lamp at the left; the S90TY and its subwoofer on the oak console. LG's composited label erased from the ground; the white glow faded at the edge, no halo at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.1:1 at the text zone's 90th percentile.",
           "rejected": [
             "first compose: a white glow ring around the dark soundbar (LG's ground), fixed by the dark matte"
           ]
@@ -25993,13 +26005,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 16718,
-          "avif": 8027,
-          "jpg": 23507
+          "webp": 16664,
+          "avif": 7783,
+          "jpg": 23376
         },
-        "sha256": "c37e6465c5862c4cfc829671bc9625b5bb936919ae32a6a8bd6e82b3a43fc72c",
+        "sha256": "89de97e2b21e3963a7cd7cfd0b8005f5419f24359ec083d9ef670d4188d43e53",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY (D2's 840-pixel cutout, products/s90ty.840.webp), demo use",
         "scene": {
           "key": "living-sound",
           "summary": "warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow",
@@ -26012,8 +26024,8 @@
         "product": {
           "sku": "S90TY",
           "name": "LG S90TY Soundbar",
-          "image": "products/s90ty.webp",
-          "imageSha256": "1e15dce1c425821d245a8865423226f9804be1280c3ff628981abf38fee9b27c",
+          "image": "products/s90ty.840.webp",
+          "imageSha256": "797fde25822c07050c508674c0732a9291834a4193971c3ba8de89f5001954bd",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -26021,13 +26033,15 @@
             "top": 203,
             "width": 474,
             "height": 279,
-            "scale": 1.5
+            "scale": 1.5,
+            "drawnFrom": 840,
+            "drawnScale": 0.75
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"perfect match for LG OLED evo\" label erased from the ground beside the product (whole connected parts inside the box only); the white glow around the dark body faded at the edge",
             "the white glow LG's ground left around the dark body faded out at the edge",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26060,7 +26074,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "The S90TY and subwoofer on the backlit oak console; label erased, edge clean at 1:1. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile."
+          "note": "The S90TY and subwoofer on the backlit oak console; label erased, edge clean at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -26165,13 +26179,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 17626,
-          "avif": 10000,
-          "jpg": 22248
+          "webp": 17160,
+          "avif": 9416,
+          "jpg": 22099
         },
-        "sha256": "69dc99a7e677483eda7de91e40ba7f059cb97bca72822871ed2293fb57bf5e45",
+        "sha256": "1ebd55bbd1763b98288a30e3b141810a16c8302a3e4565a0be14320ed65c8352",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image M7-P4_H7_W7, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image M7-P4_H7_W7 (D2's 840-pixel cutout, products/m7-p4-h7-w7.840.webp), demo use",
         "scene": {
           "key": "living-sound",
           "summary": "warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow",
@@ -26184,8 +26198,8 @@
         "product": {
           "sku": "M7-P4_H7_W7",
           "name": "LG Sound Suite Immersive Quad Suite 7 Pro (M7-P4 + H7 + W7)",
-          "image": "products/m7-p4-h7-w7.webp",
-          "imageSha256": "433ea601cdb6a2027d9b86762de91d103325efbb430f754d478eddb812ae5414",
+          "image": "products/m7-p4-h7-w7.840.webp",
+          "imageSha256": "e048892984d88a40d53c650ce74d26a643e9aa0b045e547009e721111bbfde30",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -26193,13 +26207,16 @@
             "top": 262,
             "width": 475,
             "height": 245,
-            "scale": 1.32
+            "scale": 1.32,
+            "drawnFrom": 840,
+            "drawnScale": 0.66
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited series and audio-format wordmarks erased from the ground above and below the set (whole connected parts inside the boxes only); the white glow around the dark bodies faded at the edge",
             "the white glow LG's ground left around the dark body faded out at the edge",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
+            "1 detached speck under 240 px removed",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26232,7 +26249,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "The Sound Suite set on the oak console, lamp at the left; wordmarks erased, edges clean. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.1:1 at the text zone's 90th percentile."
+          "note": "The Sound Suite set on the oak console, lamp at the left; wordmarks erased, edges clean. Product drawn from D2's 840-pixel cutout (products/m7-p4-h7-w7.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.1:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -26339,13 +26356,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 26958,
-          "avif": 15609,
-          "jpg": 32824
+          "webp": 27802,
+          "avif": 14759,
+          "jpg": 33246
         },
-        "sha256": "b16c52f7580c1af2ca2a199e546e41ae699a20e07a090d71de9943a3b545dcb7",
+        "sha256": "af0bfbc6c76aacbcca1b72f695a5dd05ef0f21b7b547ae8d35b0760abb261bc9",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console) + the product's own image OLED65C6PUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console) + the product's own image OLED65C6PUA (D2's 840-pixel cutout, products/oled65c6pua.840.webp), demo use",
         "scene": {
           "key": "living-blue",
           "summary": "calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console",
@@ -26358,8 +26375,8 @@
         "product": {
           "sku": "OLED65C6PUA",
           "name": "65 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
-          "image": "products/oled65c6pua.webp",
-          "imageSha256": "499a52e8a7096dd8b5f1f8dc057c88d74da765d2659a51a98d9fc31fb4f1be27",
+          "image": "products/oled65c6pua.840.webp",
+          "imageSha256": "2a9a393d072b126ca8631d98b034ec9210eaecf5f6213fb438f79ee87a453531",
           "mount": "wall",
           "reflection": false,
           "placed": {
@@ -26367,12 +26384,14 @@
             "top": 172,
             "width": 491,
             "height": 344,
-            "scale": 1.33
+            "scale": 1.33,
+            "drawnFrom": 840,
+            "drawnScale": 0.67
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
             "the stand cropped off below the panel, for a wall-mounted TV",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26405,7 +26424,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile."
+          "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -26512,13 +26531,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 35888,
-          "avif": 23010,
-          "jpg": 36194
+          "webp": 35126,
+          "avif": 21097,
+          "jpg": 35396
         },
-        "sha256": "fe7974f21083efb49ae69ff40dee0eddadba9031c9a4e0886e04264510f2ee55",
+        "sha256": "f966db57b894f33e01983f1482aa8e218ae2b30edf5590e1dba2efd961e9b79f",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, seamless deep burgundy (#4a0a1e) studio, magenta-red glow, glossy dark floor) + the product's own image 75MRGB95BUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, seamless deep burgundy (#4a0a1e) studio, magenta-red glow, glossy dark floor) + the product's own image 75MRGB95BUA (D2's 840-pixel cutout, products/75mrgb95bua.840.webp), demo use",
         "scene": {
           "key": "studio-burgundy",
           "summary": "seamless deep burgundy (#4a0a1e) studio, magenta-red glow, glossy dark floor",
@@ -26531,8 +26550,8 @@
         "product": {
           "sku": "75MRGB95BUA",
           "name": "75 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
-          "image": "products/75mrgb95bua.webp",
-          "imageSha256": "d4f2287c4894c481ed2d8809f8cd8c3fab3b6c0d7ed8fc78ef20b3bcc9b4e883",
+          "image": "products/75mrgb95bua.840.webp",
+          "imageSha256": "241bac4bb6c68064dbd6ddf5ba466aa4c376bc25437cd9344c98e3a48bfcc4d4",
           "mount": "floor",
           "reflection": true,
           "placed": {
@@ -26540,12 +26559,13 @@
             "top": 207,
             "width": 445,
             "height": 361,
-            "scale": 1.2
+            "scale": 1.2,
+            "drawnFrom": 840,
+            "drawnScale": 0.6
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "1 detached speck under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26578,7 +26598,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+          "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
           "rejected": [
             "studio-burgundy--tall--b: a rectangular plinth at the right reads as an object"
           ]
@@ -26688,13 +26708,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 7746,
-          "avif": 3605,
-          "jpg": 12467
+          "webp": 7892,
+          "avif": 3481,
+          "jpg": 12142
         },
-        "sha256": "24e27615f852cb43e0a0b810609dd8b6f3fccc51f1f3f19bab7c88409d596184",
+        "sha256": "ef265a76d5efa8cb90f50dbb2b8b3b6bd0acda60575bf52735dc9c6d727fe00c",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, seamless near-black studio, soft emerald glow, satin black floor) + the product's own image 27LX6TYGA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, seamless near-black studio, soft emerald glow, satin black floor) + the product's own image 27LX6TYGA (D2's 840-pixel cutout, products/27lx6tyga.840.webp), demo use",
         "scene": {
           "key": "studio-green",
           "summary": "seamless near-black studio, soft emerald glow, satin black floor",
@@ -26707,8 +26727,8 @@
         "product": {
           "sku": "27LX6TYGA",
           "name": "27 Inch LG StanbyME Lifestyle Screen (27LX6TYGA)",
-          "image": "products/27lx6tyga.webp",
-          "imageSha256": "00d9bdca2e0b3946bf8ec36a58b0a06261570a78928594902ab66519e7421f28",
+          "image": "products/27lx6tyga.840.webp",
+          "imageSha256": "54c36587e38f463b4443701d788b005c938b5df08a5866b1f69b71fc1c67449e",
           "mount": "floor",
           "reflection": true,
           "placed": {
@@ -26716,12 +26736,13 @@
             "top": 52,
             "width": 151,
             "height": 516,
-            "scale": 1.39
+            "scale": 1.39,
+            "drawnFrom": 840,
+            "drawnScale": 0.72
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
-            "2 detached specks under 60 px removed",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26754,7 +26775,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Emerald-glow studio; the StanbyME on its stand with a faint floor reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile."
+          "note": "Emerald-glow studio; the StanbyME on its stand with a faint floor reflection. Product drawn from D2's 840-pixel cutout (products/27lx6tyga.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -26858,13 +26879,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 25532,
-          "avif": 15664,
-          "jpg": 32881
+          "webp": 24012,
+          "avif": 14280,
+          "jpg": 31642
         },
-        "sha256": "42120d7bb4907caf43aa420ba92ba8ad662cabd4de9cd203b83cd63aebf9c058",
+        "sha256": "a28d2c435ffb0916e904749c0f2d89fcf1e7e2ac37a902087bae7c6f813a9db5",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA (D2's 840-pixel cutout, products/wm4000hwa.840.webp), demo use",
         "scene": {
           "key": "laundry-evening",
           "summary": "refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor",
@@ -26877,8 +26898,8 @@
         "product": {
           "sku": "WM4000HWA",
           "name": "4.5 cu. ft. Front Load Washer (WM4000HWA)",
-          "image": "products/wm4000hwa.webp",
-          "imageSha256": "b0350eef83d43a5d1d88e4b6b5d235b3c2530a9754a9f297a3b5c1fbf48d5ac1",
+          "image": "products/wm4000hwa.840.webp",
+          "imageSha256": "da1fc48c84fd1a9a12dd0fec440153dab94ce61f4d67d272b183b859ba05190c",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -26886,12 +26907,14 @@
             "top": 189,
             "width": 276,
             "height": 396,
-            "scale": 1.07
+            "scale": 1.07,
+            "drawnFrom": 840,
+            "drawnScale": 0.54
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -26924,7 +26947,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Sage laundry room in warm light; the washer on the floor, the lower third darkened (scrim 0.85) because the floor is pale. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6:1 at the text zone's 90th percentile.",
+          "note": "Sage laundry room in warm light; the washer on the floor, the lower third darkened (scrim 0.85) because the floor is pale. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6:1 at the text zone's 90th percentile.",
           "rejected": [
             "laundry-evening--tall--a: a hard step from pale stone to a dark band across the floor"
           ]
@@ -26946,13 +26969,13 @@
           "height": 420
         },
         "bytes": {
-          "webp": 14332,
-          "avif": 9231,
-          "jpg": 17379
+          "webp": 12708,
+          "avif": 8008,
+          "jpg": 16566
         },
-        "sha256": "3d86e9041140cd6c541d8f6b47d2385189723bd143a5b1ce4cb73c05778554c5",
+        "sha256": "24df8a017cfa9798623777a6fe520ba7180052ddf3a23933d837aac52e727150",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W (D2's 840-pixel cutout, products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp), demo use",
         "scene": {
           "key": "laundry-burgundy",
           "summary": "boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow",
@@ -26965,8 +26988,8 @@
         "product": {
           "sku": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
           "name": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
-          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.webp",
-          "imageSha256": "d3ef97e45f51b6cf33f9901dce704fc84f9b5e9fdfd5ec9474e858804c07d909",
+          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp",
+          "imageSha256": "ce485cc19e8fd89914914e2164e7834301904391996d36a74ac557c31d72d192",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -26974,13 +26997,15 @@
             "top": 67,
             "width": 303,
             "height": 311,
-            "scale": 1.08
+            "scale": 1.08,
+            "drawnFrom": 840,
+            "drawnScale": 0.54
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"America's Most Reliable\" shield erased from the ground above the dryer (whole connected parts inside the box only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27013,7 +27038,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Burgundy panelled laundry room, brass rail with empty hangers; the washer, dryer and pedestals set. LG's shield erased from the ground. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.6:1 at the text zone's 90th percentile."
+          "note": "Burgundy panelled laundry room, brass rail with empty hangers; the washer, dryer and pedestals set. LG's shield erased from the ground. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.6:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -27032,13 +27057,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 25560,
-          "avif": 15369,
-          "jpg": 32433
+          "webp": 25578,
+          "avif": 14918,
+          "jpg": 31933
         },
-        "sha256": "7a30d21878ea894edf8767509f45f2a24dadc7bcf7175bcfaf4a7e96c765e6ab",
+        "sha256": "907b204048743cccd9e336974815be9309a79e3a8c349e07240e1e462cdb4354",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W (D2's 840-pixel cutout, products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp), demo use",
         "scene": {
           "key": "laundry-burgundy",
           "summary": "boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow",
@@ -27051,8 +27076,8 @@
         "product": {
           "sku": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
           "name": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
-          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.webp",
-          "imageSha256": "d3ef97e45f51b6cf33f9901dce704fc84f9b5e9fdfd5ec9474e858804c07d909",
+          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp",
+          "imageSha256": "ce485cc19e8fd89914914e2164e7834301904391996d36a74ac557c31d72d192",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -27060,13 +27085,15 @@
             "top": 155,
             "width": 420,
             "height": 430,
-            "scale": 1.5
+            "scale": 1.5,
+            "drawnFrom": 840,
+            "drawnScale": 0.75
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"America's Most Reliable\" shield erased from the ground above the dryer (whole connected parts inside the box only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27099,7 +27126,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Burgundy laundry room; the laundry set on the herringbone floor, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.2:1 at the text zone's 90th percentile."
+          "note": "Burgundy laundry room; the laundry set on the herringbone floor, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.2:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -27203,13 +27230,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 25048,
-          "avif": 15115,
-          "jpg": 30129
+          "webp": 23352,
+          "avif": 13586,
+          "jpg": 29136
         },
-        "sha256": "d2f33e4aed1f9d73c97efa4785c471f77bdbe1c6ebc64c88b8ace46b176f875d",
+        "sha256": "82411f0f64310b049fbc576bebe3dda37548b33f722bd260216d7dee7f946076",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LSGL6335X, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LSGL6335X (D2's 840-pixel cutout, products/lsgl6335x.840.webp), demo use",
         "scene": {
           "key": "kitchen-evening",
           "summary": "modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow",
@@ -27222,8 +27249,8 @@
         "product": {
           "sku": "LSGL6335X",
           "name": "6.3 cu. ft. Gas Slide-in Range (LSGL6335X)",
-          "image": "products/lsgl6335x.webp",
-          "imageSha256": "644e54022dcf622d9c5b1b32842653310e22c3092144e3b3df87bd64dd90e4ea",
+          "image": "products/lsgl6335x.840.webp",
+          "imageSha256": "c148c8dfb242b38d90ded82fb0b73cf7ee91a9ca4dcb6387ac6e7183d7045c09",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -27231,12 +27258,14 @@
             "top": 155,
             "width": 361,
             "height": 430,
-            "scale": 1.17
+            "scale": 1.17,
+            "drawnFrom": 840,
+            "drawnScale": 0.58
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27269,7 +27298,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Kitchen at night, warm-lit alcove; the range on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile."
+          "note": "Kitchen at night, warm-lit alcove; the range on the floor. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -27374,13 +27403,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 19654,
-          "avif": 11177,
-          "jpg": 27257
+          "webp": 18938,
+          "avif": 11050,
+          "jpg": 27157
         },
-        "sha256": "baef67b2fce2acd4dd99591987d4a44cafa3fba4774b1399a9afe09d54b54e24",
+        "sha256": "8b90949f20d5b62624cfb8e801cf335fe4eb41d1e3a967cd296b84a925077602",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, spacious kitchen in the evening, walnut and matte black cabinetry at the far left, long dark stone wall, pendant glow, oak floor) + the product's own image LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, spacious kitchen in the evening, walnut and matte black cabinetry at the far left, long dark stone wall, pendant glow, oak floor) + the product's own image LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT (D2's 840-pixel cutout, products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp), demo use",
         "scene": {
           "key": "kitchen-wide",
           "summary": "spacious kitchen in the evening, walnut and matte black cabinetry at the far left, long dark stone wall, pendant glow, oak floor",
@@ -27393,8 +27422,8 @@
         "product": {
           "sku": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
           "name": "Select 4-piece Kitchen Package with 24 cu. ft. Counter-depth Max Refrigerator, Slide-in Gas Range, Front Control Dishwasher and Microwave in Stainless Steel",
-          "image": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.webp",
-          "imageSha256": "94a1993162e964393c93dde3786e678ad9f62dd4913cbdac15f4f2125b77104d",
+          "image": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp",
+          "imageSha256": "8f0c50a9dcd723d05b0b3fbce0a0b6524626bad4458bd90a69099a73d4ef08ee",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -27402,13 +27431,16 @@
             "top": 206,
             "width": 554,
             "height": 396,
-            "scale": 1.5
+            "scale": 1.5,
+            "drawnFrom": 840,
+            "drawnScale": 0.75
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"America's Most Reliable\" shield erased from the ground above the dishwasher (whole connected parts inside the box only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
+            "1 detached speck under 240 px removed",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27441,7 +27473,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Kitchen with a dark stone wall and pendant; the package on the oak floor, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.7:1 at the text zone's 90th percentile.",
+          "note": "Kitchen with a dark stone wall and pendant; the package on the oak floor, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.7:1 at the text zone's 90th percentile.",
           "rejected": [
             "kitchen-wide--tall--b, --c: a hard band across the floor"
           ]
@@ -27550,13 +27582,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 14596,
-          "avif": 7790,
-          "jpg": 20320
+          "webp": 14340,
+          "avif": 7655,
+          "jpg": 20225
         },
-        "sha256": "3d56c3e636b0fd0196f1d0b66cdc78a37a7c8a472c5f84b89c829c1b51b17c19",
+        "sha256": "965a67e6bc4807db650e0f50b98cf12dfbcfd22883051dc1f1eb2b7c98bd9d62",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LDNPM654S, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LDNPM654S (D2's 840-pixel cutout, products/ldnpm654s.840.webp), demo use",
         "scene": {
           "key": "kitchen-evening",
           "summary": "modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow",
@@ -27569,8 +27601,8 @@
         "product": {
           "sku": "LDNPM654S",
           "name": "Top Control Dishwasher (LDNPM654S)",
-          "image": "products/ldnpm654s.webp",
-          "imageSha256": "3c98cedbd0e2b4d866b592704c4a4662094f2f33404b4dea0a6321ab4e4c5d45",
+          "image": "products/ldnpm654s.840.webp",
+          "imageSha256": "f253a8eb65ca5b78f0a0025df4e64d620eb896fc1e7769c9467dfda5558a63b6",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -27578,12 +27610,14 @@
             "top": 172,
             "width": 299,
             "height": 413,
-            "scale": 1.12
+            "scale": 1.12,
+            "drawnFrom": 840,
+            "drawnScale": 0.56
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ],
           "substituteFor": "LDNTH753S",
@@ -27618,7 +27652,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Kitchen at night (kitchen-evening b, seamless floor); LDNPM654S in place of the badged LDNTH753S. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+          "note": "Kitchen at night (kitchen-evening b, seamless floor); LDNPM654S in place of the badged LDNTH753S. Product drawn from D2's 840-pixel cutout (products/ldnpm654s.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
           "rejected": [
             "kitchen-wide--tall--b, --c: a hard band across the floor; this job moved to kitchen-evening b"
           ]
@@ -27728,13 +27762,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 15308,
-          "avif": 9585,
-          "jpg": 19552
+          "webp": 14020,
+          "avif": 8363,
+          "jpg": 18350
         },
-        "sha256": "1537ce60b7e1644fc62e93417b33ca67fdced7a180eda5eb19b3e0cadcf75c5c",
+        "sha256": "f3cc41837d8c0d823395339e8e3dae230c8822344858830b0e1cda7f89705bc2",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, seamless charcoal studio, soft cool blue glow, satin floor) + the product's own image WM4000HWA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, seamless charcoal studio, soft cool blue glow, satin floor) + the product's own image WM4000HWA (D2's 840-pixel cutout, products/wm4000hwa.840.webp), demo use",
         "scene": {
           "key": "studio-charcoal",
           "summary": "seamless charcoal studio, soft cool blue glow, satin floor",
@@ -27747,8 +27781,8 @@
         "product": {
           "sku": "WM4000HWA",
           "name": "4.5 cu. ft. Front Load Washer (WM4000HWA)",
-          "image": "products/wm4000hwa.webp",
-          "imageSha256": "b0350eef83d43a5d1d88e4b6b5d235b3c2530a9754a9f297a3b5c1fbf48d5ac1",
+          "image": "products/wm4000hwa.840.webp",
+          "imageSha256": "da1fc48c84fd1a9a12dd0fec440153dab94ce61f4d67d272b183b859ba05190c",
           "mount": "floor",
           "reflection": true,
           "placed": {
@@ -27756,12 +27790,14 @@
             "top": 155,
             "width": 299,
             "height": 430,
-            "scale": 1.17
+            "scale": 1.17,
+            "drawnFrom": 840,
+            "drawnScale": 0.58
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27788,13 +27824,13 @@
         "legibility": {
           "meanLuminance": 0.01,
           "p90Luminance": 0.028,
-          "whiteContrastAtP90": 13.4,
+          "whiteContrastAtP90": 13.5,
           "ink": "light"
         },
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Re-rolled candidate d (seamless floor); the washer in the blue glow with a faint reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.4:1 at the text zone's 90th percentile.",
+          "note": "Re-rolled candidate d (seamless floor); the washer in the blue glow with a faint reflection. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.5:1 at the text zone's 90th percentile.",
           "rejected": [
             "studio-charcoal--tall--a: the curved cyclorama edge reads as a band (in the first compose, replaced)",
             "studio-charcoal--tall--b, --c: a hard step across the floor"
@@ -27902,13 +27938,13 @@
           "height": 860
         },
         "bytes": {
-          "webp": 24492,
-          "avif": 14770,
-          "jpg": 30379
+          "webp": 22764,
+          "avif": 13486,
+          "jpg": 29504
         },
-        "sha256": "f06a971c7cb3bcc57451bf7007f3435bb7104f8ec41c1a1dec4b5acd88d9aa50",
+        "sha256": "6e1e8416245035b02469028d73d447769a97f49bb3f7cb4aa7c46f62e26c11f4",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM6700HWA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow) + the product's own image WM6700HWA (D2's 840-pixel cutout, products/wm6700hwa.840.webp), demo use",
         "scene": {
           "key": "laundry-burgundy",
           "summary": "boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow",
@@ -27921,8 +27957,8 @@
         "product": {
           "sku": "WM6700HWA",
           "name": "5.0 cu. ft. Front Load Washer (WM6700HWA)",
-          "image": "products/wm6700hwa.webp",
-          "imageSha256": "219bf9fd10bf45d10aa36857fcd7497a6c403a685cd81b472de906f9a5efa768",
+          "image": "products/wm6700hwa.840.webp",
+          "imageSha256": "936ddae8e23b9864b1d9996476b6f64a52d40b21d3a30717295dff8f44f1a7d6",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -27930,12 +27966,15 @@
             "top": 155,
             "width": 339,
             "height": 413,
-            "scale": 1.12
+            "scale": 1.12,
+            "drawnFrom": 840,
+            "drawnScale": 0.56
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
+            "3 detached specks under 240 px removed",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -27968,7 +28007,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Burgundy laundry room; the WM6700HWA on the floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.6:1 at the text zone's 90th percentile."
+          "note": "Burgundy laundry room; the WM6700HWA on the floor. Product drawn from D2's 840-pixel cutout (products/wm6700hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.6:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -28071,13 +28110,13 @@
           "height": 420
         },
         "bytes": {
-          "webp": 8508,
-          "avif": 4450,
-          "jpg": 11127
+          "webp": 8416,
+          "avif": 4424,
+          "jpg": 11130
         },
-        "sha256": "66d9d14284b7c06786c8fc1998148ae7d1962648a6174f0b224fb30d15d7fd72",
+        "sha256": "56a933a0fb594317d3ffbe65450a7d7cc7173bd6ab53b0db7c154438b5d7ac8a",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow) + the product's own image S90TY (D2's 840-pixel cutout, products/s90ty.840.webp), demo use",
         "scene": {
           "key": "living-sound",
           "summary": "warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow",
@@ -28090,8 +28129,8 @@
         "product": {
           "sku": "S90TY",
           "name": "LG S90TY Soundbar",
-          "image": "products/s90ty.webp",
-          "imageSha256": "1e15dce1c425821d245a8865423226f9804be1280c3ff628981abf38fee9b27c",
+          "image": "products/s90ty.840.webp",
+          "imageSha256": "797fde25822c07050c508674c0732a9291834a4193971c3ba8de89f5001954bd",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -28099,13 +28138,15 @@
             "top": 95,
             "width": 331,
             "height": 195,
-            "scale": 1.05
+            "scale": 1.05,
+            "drawnFrom": 840,
+            "drawnScale": 0.53
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"perfect match for LG OLED evo\" label erased from the ground beside the product (whole connected parts inside the box only); the white glow around the dark body faded at the edge",
             "the white glow LG's ground left around the dark body faded out at the edge",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -28138,7 +28179,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Espresso-panelled room; the S90TY and subwoofer on the oak console; label erased, edge clean. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.5:1 at the text zone's 90th percentile."
+          "note": "Espresso-panelled room; the S90TY and subwoofer on the oak console; label erased, edge clean. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.5:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -28585,13 +28626,13 @@
           "height": 360
         },
         "bytes": {
-          "webp": 17576,
-          "avif": 8928,
-          "jpg": 22641
+          "webp": 18188,
+          "avif": 9061,
+          "jpg": 22760
         },
-        "sha256": "5050e52ad292355269de69cf053b2ceb75ca1ffb365813a1b27a995ffc620d05",
+        "sha256": "98ce8910e5ec20bd5a3da5598c606bf5fa06879f0d45026f73106980edf47fdc",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED65C6PUA, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, dark living room at night, charcoal wall, amber stadium-light glow, low walnut console) + the product's own image OLED65C6PUA (D2's 840-pixel cutout, products/oled65c6pua.840.webp), demo use",
         "scene": {
           "key": "living-amber",
           "summary": "dark living room at night, charcoal wall, amber stadium-light glow, low walnut console",
@@ -28604,8 +28645,8 @@
         "product": {
           "sku": "OLED65C6PUA",
           "name": "65 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
-          "image": "products/oled65c6pua.webp",
-          "imageSha256": "499a52e8a7096dd8b5f1f8dc057c88d74da765d2659a51a98d9fc31fb4f1be27",
+          "image": "products/oled65c6pua.840.webp",
+          "imageSha256": "2a9a393d072b126ca8631d98b034ec9210eaecf5f6213fb438f79ee87a453531",
           "mount": "console",
           "reflection": false,
           "placed": {
@@ -28613,11 +28654,13 @@
             "top": 16,
             "width": 274,
             "height": 216,
-            "scale": 0.74
+            "scale": 0.74,
+            "drawnFrom": 840,
+            "drawnScale": 0.37
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
-            "edge pulled in by one pixel against the scene",
+            "cut from D2's 840-pixel file of LG's own product image (LG's zoom rendition, 1600x1062 source; crop, scale and ground only)",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -28645,7 +28688,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Amber living room cropped from the bottom of the frame; the C6 on its stand on the walnut console. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.8:1 at the text zone's 90th percentile."
+          "note": "Amber living room cropped from the bottom of the frame; the C6 on its stand on the walnut console. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.8:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -28664,13 +28707,13 @@
           "height": 360
         },
         "bytes": {
-          "webp": 13294,
-          "avif": 7289,
-          "jpg": 17373
+          "webp": 13748,
+          "avif": 7426,
+          "jpg": 17466
         },
-        "sha256": "5d0907951f75830d437668ffdfac8a98406a3ee59fcb7029da18413f8ed2076d",
+        "sha256": "4847e5251d32deb0ad19199a4293f4e82f359f07eaa00ae4462ae00a28b81505",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor) + the product's own image WM4000HWA_DLEX4000W_WD300CW_WDP6W (D2's 840-pixel cutout, products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp), demo use",
         "scene": {
           "key": "laundry-evening",
           "summary": "refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor",
@@ -28683,8 +28726,8 @@
         "product": {
           "sku": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
           "name": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
-          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.webp",
-          "imageSha256": "d3ef97e45f51b6cf33f9901dce704fc84f9b5e9fdfd5ec9474e858804c07d909",
+          "image": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp",
+          "imageSha256": "ce485cc19e8fd89914914e2164e7834301904391996d36a74ac557c31d72d192",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -28692,13 +28735,15 @@
             "top": 36,
             "width": 288,
             "height": 295,
-            "scale": 1.03
+            "scale": 1.03,
+            "drawnFrom": 840,
+            "drawnScale": 0.51
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"America's Most Reliable\" shield erased from the ground above the dryer (whole connected parts inside the box only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -28726,7 +28771,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Sage laundry room, warm glow at the right; the washer and dryer set on pedestals, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.4:1 at the text zone's 90th percentile."
+          "note": "Sage laundry room, warm glow at the right; the washer and dryer set on pedestals, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.4:1 at the text zone's 90th percentile."
         }
       },
       {
@@ -28745,13 +28790,13 @@
           "height": 360
         },
         "bytes": {
-          "webp": 17322,
-          "avif": 9327,
-          "jpg": 24514
+          "webp": 16668,
+          "avif": 8897,
+          "jpg": 24132
         },
-        "sha256": "1ad713f3a22e9850b34fc873d58f59928b7fa7ad76c0ee42db49d4c63646130e",
+        "sha256": "53d5c1e538224cb2a340c7c88ce12a86e1d383def2c4862950c5108182607a7a",
         "generated": true,
-        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT, demo use",
+        "provenance": "generated scene (gemini-3.1-flash-image, modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow) + the product's own image LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT (D2's 840-pixel cutout, products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp), demo use",
         "scene": {
           "key": "kitchen-evening",
           "summary": "modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow",
@@ -28764,8 +28809,8 @@
         "product": {
           "sku": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
           "name": "Select 4-piece Kitchen Package with 24 cu. ft. Counter-depth Max Refrigerator, Slide-in Gas Range, Front Control Dishwasher and Microwave in Stainless Steel",
-          "image": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.webp",
-          "imageSha256": "94a1993162e964393c93dde3786e678ad9f62dd4913cbdac15f4f2125b77104d",
+          "image": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp",
+          "imageSha256": "8f0c50a9dcd723d05b0b3fbce0a0b6524626bad4458bd90a69099a73d4ef08ee",
           "mount": "floor",
           "reflection": false,
           "placed": {
@@ -28773,13 +28818,16 @@
             "top": 36,
             "width": 424,
             "height": 302,
-            "scale": 1.15
+            "scale": 1.15,
+            "drawnFrom": 840,
+            "drawnScale": 0.57
           },
           "treatment": [
-            "cut from LG's own product image (D2: crop, scale and ground only)",
+            "cut from D2's 840-pixel file of LG's own product image (LG's 730x730 source; crop, scale and ground only)",
             "LG's composited \"America's Most Reliable\" shield erased from the ground above the dishwasher (whole connected parts inside the box only)",
             "ragged near-white bits of LG's ground below the base line cleared (the feet kept)",
-            "edge pulled in by one pixel against the scene",
+            "edge pulled in by one 420-scale pixel against the scene",
+            "1 detached speck under 240 px removed",
             "scaled to the layout box with lanczos3"
           ]
         },
@@ -28807,7 +28855,7 @@
         "gate": {
           "verdict": "accept",
           "checked": "2026-10-02",
-          "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile."
+          "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile."
         }
       }
     ]
