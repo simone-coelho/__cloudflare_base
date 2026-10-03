@@ -101,12 +101,6 @@
   /* ================= SESSION TIMELINE WIDGET ================= */
   .tl{border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper);margin:10px 0;
     box-shadow:0 20px 50px -30px rgba(0,0,0,.4);}
-  .tl-legend{display:flex;gap:0;background:var(--paper-2);border-bottom:2px solid var(--ink);flex-wrap:wrap;}
-  .tl-legend .lg{display:flex;align-items:center;gap:8px;padding:12px 18px;font-family:var(--mono);
-    font-size:11px;color:var(--ink-soft);border-right:1px solid var(--line);}
-  .tl-legend .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
-  .sw.c{background:var(--mag);} .sw.f{background:var(--teal);} .sw.w{background:var(--gold);}
-  .sw.n{background:transparent;border:1.5px dashed var(--ink-soft);}
 
   .tl-phases{display:flex;background:var(--paper-2);border-bottom:2px solid var(--ink);}
   .tl-phases button{flex:1;background:transparent;border:none;border-right:1px solid var(--line);
@@ -285,11 +279,6 @@
     <p>Every touchpoint in the offering lands in one of three parts of a shopper's session: before, during or after. <strong>Read each part in turn.</strong> The middle part, the live session itself, is the one AEs get asked about most, and it's almost entirely credit-free.</p>
 
     <div class="tl">
-      <div class="tl-legend">
-        <span class="lg"><span class="sw c"></span> Credits apply</span>
-        <span class="lg"><span class="sw f"></span> Deterministic engine · no credits</span>
-        <span class="lg"><span class="sw w"></span> Conditional / exception</span>
-      </div>
 
       <div class="tl-phases" id="tlPhases" role="tablist" aria-label="The three parts of the session">
         <button class="on p-before" data-ph="before" role="tab" aria-selected="true">

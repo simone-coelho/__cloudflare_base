@@ -22,10 +22,6 @@ The practical consequence: **AI credit consumption scales with the customer's te
 
 Every touchpoint in the offering lands in one of three parts of a shopper's session: before, during or after. **Read each part in turn.** The middle part, the live session itself, is the one AEs get asked about most, and it's almost entirely credit-free.
 
-- **Credits apply**
-- **Deterministic engine · no credits**
-- **Conditional / exception**
-
 **Before** Setup & authoring: this is design-time, and it's where credits legitimately live.
 
 | Before | Setup & authoring | Credits apply |

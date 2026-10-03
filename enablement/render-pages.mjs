@@ -455,7 +455,6 @@ const INLINE_CLASS = { key: 'cr-key', op: 'cr-op', en: 'cr-en', int: 'cr-int' };
 const INLINE_STRONG = { scales: 'cr-scales' };
 const ROW_KINDS = new Set(['credit', 'free', 'warn', 'open', 'off']);
 const TAG_KINDS = new Set(['traffic', 'team', 'adopt', 'own']);
-const SWATCHES = new Set(['c', 'f', 'w', 'n']);
 const METERS = new Set(['credit', 'free', 'mixed']);
 const crFail = (what) => { throw new Error(`${CREDITS_SRC}: ${what}`); };
 function inl(node, opts = {}) {
@@ -517,14 +516,9 @@ function crRule(el) {
   return out.join('\n');
 }
 function crTimeline(el, phases) {
-  const legend = child(el, (x) => has(x, 'tl-legend'), 'the timeline legend');
+  // Review round three, R3-13: no legend row, not even as words (LANE-BRIEF-V2 allows no legend on the site).
+  if (kidsOf(el).some((x) => has(x, 'tl-legend'))) crFail('a legend row in the timeline: LANE-BRIEF-V2 allows no legend on the site');
   const tabs = child(el, (x) => has(x, 'tl-phases'), 'the timeline tabs');
-  const items = kidsOf(legend).map((lg) => {
-    const sw = need(kidsOf(lg).find((x) => has(x, 'sw')), 'a legend swatch');
-    const k = classesOf(sw).find((x) => x !== 'sw');
-    if (!SWATCHES.has(k)) crFail(`a legend swatch the page does not know: ${k}`);
-    return `<span class="cr-lg"><strong>${esc(squash(textOf(lg)))}</strong></span>`;
-  });
   const panels = kidsOf(tabs).filter((b) => b.tag === 'button').map((b) => {
     const key = b.attrs['data-ph'];
     const ph = phases[key];
@@ -548,9 +542,6 @@ function crTimeline(el, phases) {
   });
   if (panels.length !== 3) crFail(`the timeline has ${panels.length} parts, not three`);
   return `<div class="cr-tl" data-tabs data-tabs-label="${attr(tabs.attrs['aria-label'] || 'The three parts of the session')}" data-tabs-class="cr-tl-tabs">
-<div class="cr-tl-legend">
-${items.join('\n')}
-</div>
 ${panels.join('\n')}
 </div>`;
 }

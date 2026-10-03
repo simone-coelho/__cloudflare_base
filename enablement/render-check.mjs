@@ -341,7 +341,7 @@ for (const file of pages) {
   const stamps = find(tree, (n) => /\bstamp\b/.test(n.attrs.class || ''));
   if (stamps.length !== 1 || norm(textOf(stamps[0])) !== STAMP) fail(`${file}: the stamp must read "${STAMP}" exactly, once (found ${stamps.map((x) => `"${norm(textOf(x))}"`).join(', ') || 'none'})`);
   // No label, chip or legend anywhere (LANE-BRIEF-V2): none on the page, and none in a figure it inlines.
-  const chipped = find(tree, (n) => /\b(?:chip|legend)\b/.test(n.attrs.class || '') && !/\bcr-tl-legend\b/.test(n.attrs.class || '')).length;
+  const chipped = find(tree, (n) => /\b(?:chip|legend)\b/.test(n.attrs.class || '')).length;
   if (chipped) fail(`${file}: shows ${chipped} label chips or legends; LANE-BRIEF-V2 allows none`);
   const figureLabels = find(tree, (n) => n.tag === 'text' && /^(Built|Designed|Open)$/.test(norm(textOf(n))));
   if (figureLabels.length) fail(`${file}: an inlined figure shows ${figureLabels.length} labels (Built, Designed or Open); LANE-BRIEF-V2 allows none, so the figure needs its redraw`);
