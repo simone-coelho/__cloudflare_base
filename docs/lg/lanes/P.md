@@ -879,6 +879,78 @@ Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`: `M1c-1440-home.png
 
 `public/oh/index.html` (three pagers), `public/oh/oh.css` (the M1c block before M2's first block; M2's second block appended at the end: 1,125 → 1,284 lines), the P1 section of `public/oh/oh.js` (1,789 → 1,866 lines: the play control, the pagers, the presenter flag, A1's `slide540` and narrow art, beat 13's clock note and receipt, the θin fix), `public/oh/beats.json` (beat 13's copy only), seven `M1c-*.png`. Not touched: A1's art, `product.html`, `m.html`, `oh-store.js`, the shared, P2 and P3 sections, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`, `public/oh/beats/` (every seed went to the scratchpad). The tenant is reset to its opening state, and the rig is stopped.
 
+### M1d: the rest of M1c's list, the kit's present option, and "Forget this browser"
+
+**Lane M1d, builder, 2026-10-02 23:30 to 2026-10-03 01:55 EDT. Every edit is whole: the three files and the P1 section load together at 1440 and 390 with no script error, on the working tree as it stood at each run. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### What is in
+
+- **The hero at 390 in lg.com's phone order.** The copy comes first: the kicker, the headline at 27/600, the sub (up to three lines) and the button as a full-width red pill. It sits on a light ground tinted for the slide's room: violet for the living room, blue-grey for laundry, warm for the kitchen, read from a new `data-room` on the slide. A1's art follows as a rounded 4:3 picture, with the product kept in the crop (`object-position` right, where A1 draws it). The badge sits on the art's corner and the receipt under the art. Every slide is as tall as the tallest. The curved white panel is not drawn at this width, because it is lg.com's desktop treatment. From 641 px up nothing changed: at 1440 the art fills the slide and the copy sits on the white curved panel at the left (measured: 64 px in, the art covering the slide).
+- **The service strip at 390, one item at a time.** The five items sit in a track, `#m1Svc`. Each is 86% wide with the next item peeking, and they snap. A "‹ n/N ›" pager sits on the band. It uses P1's own pager wiring (`PAGED`), the same grammar as the deals and Recommended for you. Paging is presentation only: no event and no visitor (the load and five presses on the pager send only the cold-start lookup). An item still opens its sheet. Wider than a phone the track draws no box (`display: contents`), so the strip is the same row of five as before. The page suite's served-strip regex still reads all five words, because the first `</div>` after `svc-strip` closes the track.
+- **The kit's `?present` option.**
+  - `director.js` `createDock` sets `body.kit-present` from `?present=1`.
+  - `kit.css` hides the collapsed rail at 640 px and under unless that class is on.
+  - Under the class, the bar's buttons wrap so Hide stays on screen. At 390, Hide had sat just past the right edge (x 390.6), so a presenter on a phone could not put the tools away.
+  - OH's two lines are gone: `m1-present` in the P1 section, and its rule in `oh.css`.
+  - HOWTO: one line, beside "The director docks".
+- **"Forget this browser"** (the coordinator's addition):
+  - `createDock` draws the control beside Hide only when the demo passes `dock.onForget`; without it, nothing is drawn.
+  - It carries no `data-act` and sits inside `.director`, so the page's dispatcher never sees it and pressing it mints nobody.
+  - It is disabled while it runs and refuses during a beat; the status line says which.
+  - OH passes it in the shared section's `createDemo` call (`oh.js` line 347, the one line the coordinator named): `onForget: () => { store.visitor.forget(); store.cart.clear(); location.assign('/oh/'); }`.
+  - The order matters: `forget()` removes the kept capability and record, but the visitor stays current in memory, so `cart.clear()` still saves the empty cart under that visitor's key before the reload.
+  - It is documented in the same HOWTO line as `?present`.
+
+#### Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`
+
+`M1d-390-home.png` and `M1d-390-service.png`. lg.com's side is the 390 capture M1c used (2026-10-02 19:38). OH was captured cold in a fresh profile, with nothing pressed.
+
+- **The hero.** It is in lg.com's order: the headline, the sub, the full-width pill, then the art as a rounded picture, then the controls. lg.com's art is bright; OH's is A1's dark room with the product small, so the picture reads quieter, as at 1440.
+- **The strip.** lg.com centres one item between two arrows in one slim row, about 44 px. OH shows one item with the next peeking and the pager under it on the band, about 88 px. That is the grammar the brief named; it is the CLOSE difference.
+
+#### Results
+
+The brief's rig is port 9132 on `.wrangler/state-m1b`. Its UTC day (2026-10-03, since 20:00 EDT) holds M1c's runs and mine and is over the day report's budget: `/oh/api/report` answers 413 "too large for the window". Folding the closed hours with the local cron at 01:01 did not relieve it, because the open hour holds the runs (S2's finding). So the suites also ran on a fresh state, `.wrangler/state-m1d`: `rig.mjs --prepare`, seeded with `--out` to the scratchpad, regions 51 of 51. These are the clean counts.
+
+| Check | Result |
+|---|---|
+| M1d's own check (fresh profiles, real CDP presses, 390 and 1440) | **21 of 21**, run twice, the second at the end on the final tree. At 390: the phone order, measured top to bottom (headline 246–311, sub 323–367, button 385–429, art 451–720 px); the button 358 px wide, `#EA1917`, 32 px radius; the art loaded with the badge on it; the copy `#111` on its room's tint; all five slides in order by the next arrow, art loaded. The strip shows one item with the next peeking, "1/5" on `#E6E1D8`; › walks 2/5 to 5/5 and then disables; ‹ steps back to 4/5; paging mints nobody; an item opens its sheet. No sideways scroll, no broken image, no script error. The kit at 390: a stranger has no pill and no `kit-present` (and no `m1-present`); `?present=1` sets the class and the tools are on screen; Hide under it leaves the pill on the page; `?present=0` collapses with no pill. At 1440: the strip is one row of five with no pager; the hero is as before; the rail is on the right without `?present`; the load makes only the cold-start lookup |
+| "Forget this browser", by hand (fresh profile) | **9 of 9** at 1440, run twice. **9 of 9** at 390, where the presenter's address `?present=1` keeps the tools. Steps: the TVs grid from the nav, a TV, then a TV sold here (100QNED84BU) and Add to Cart, which leaves readings (tv 0.73, qned 0.69) and one cart line, kept in this browser. A reload continues the same subject with the cart. The open director shows the control beside Hide, on screen. Pressing it reloads `/oh/` as the cold open: "ready · the published template", the heads reading "before anyone arrives", 0 kept keys in localStorage and sessionStorage, and only `GET /oh/api/coldstart` on that load (no identity call, no profile read, no event). The cart reads 0. The next click mints a new person (one identity call, a new subject, the cart still 0). No script error |
+| M1's probe (sizes and the manual path, fresh profiles; state-m1b, 00:15) | **44 of 44**: every page at 1440, 1366 and 390 ready, with no visitor on load, no overflow, no broken image and no script error, plus the manual path's steps |
+| DOM suite, full, fresh state (01:22–01:36; suite `5d524a04…`) | **496 of 498.** (1) "the tv page (42LX3QPUA) at 1366 … broken s70tr.webp, oled42c6pua.webp": transient. The rig served both 200/304, and four loads of that page at 1366 afterwards showed no broken image. It is M2's page, and M1d did not touch it. (2) "one visitor for the whole session … refused custom 503": one custom event answered 503 at `/realtime/action`, which is the engine's (S2's finding 4); the same check failed once on state-m1b. Every boot, store, 390, persistence, signals and beat check passed, beat 16's day report included |
+| DOM suite, `--only store`, fresh state (01:40–01:48) | **152 of 152** |
+| Request level, fresh state (01:37–01:40; suite `47a59a03…`) | **230 of 231.** The one failure is the suite's: `scripts/rehearse-oh-page.mjs` line 1294 matches `r = await t\.sendCustom\(name, data, v\)` in `oh-store.js`. Another lane's uncommitted edit (01:08, `oh-store.js` `f881e9ef…`) now reads `r = await kit.sendCustom(name, data, v)`. For S2 |
+| state-m1b, for the record | DOM full **495 of 498** (23:56–00:09; the Forget control landed mid-run): the three failures are the day report's 413 (beat 16's decision-service line, the Learned tab, the outcomes table). `--only store` **151 of 152** (23:47–23:55): the engine's custom 503. Request level **223 of 226**, twice (00:12 and 01:01, the second after the fold): the three failures are the 413 (the report builds ×2, and add_to_bag 0 → 0) |
+| Vantage, the dock options absent | My Vantage rig ran on 9138 with `.wrangler/state-m1dv`, a copy of M3's seeded `state-m3v2`, with no seed run. **Request level 115 of 115, DOM 298 of 298.** At 390 and 1440, with and without `?present=1`, Vantage's body carries no class and the page has no rail, Hide or Forget control. `public/vantage` is untouched (19 of 19 by hash) |
+| Kit tests (`config`, `credentials`, `demo-config`, `scaffold`, `store`) | **59 of 60.** The failure predates M1d: `store.test.mjs:118`, "store.visitor.forget (OH has it)". The kit's `store.js` has no `forget`, which OH's store gained in `bbf8a9d`. `public/demo-kit/store.js` is modified in the working tree by another lane |
+
+#### Left
+
+- **The day report's budget on a long-lived local state** (the engine finding already on the board): a rig's UTC day outgrows it after a few walks, and folding does not help while the open hour holds the runs.
+- **For S2:** the request-level suite's line 1294 should follow `oh-store.js`'s `kit.sendCustom` once that lane commits.
+- **The hero's arrows and dots are presentation only, as ruled (done, 02:20).** They are now `data-m1-step` and `data-m1-slide` on the pagers' own listener, and the dead `m1-slide` branch is gone from `M1.control`. By hand on a stranger at 1440 and 390 (**10 of 10**): next, next, prev, dot 4 and dot 1 move the slides 2, 3, 2, 4, 1 with nothing on the wire after the load and nothing kept; the slide's own button still goes through the dispatcher and brings a visitor; there is no script error. M1d's check was rerun after the change: 21 of 21.
+- **`store.cart.clear()` empties only the cart of the visitor on the page.** If "Forget this browser" is pressed when no visitor is current (for example after a load whose kept capability expired), lines kept under the visitor key stay in sessionStorage, and the next mint shows them as restored lines. M3 could add a store-wide clear to cover that case.
+- **At 1440 with the control present, Hide wraps to a third line** in the docked bar (Next; Explain, All beats, Forget this browser; Hide). That is legible; it is noted only so it is not read as a fault.
+- **Seen, not mine:** `/oh/m` loaded cold shows its modules as "Before anyone arrives nothing is decided. Press Next and a stranger lands." That is the phone shell's state before beat 15 (M3's and P3's).
+- **R5's second look** on the M1c and M1d side-by-sides is the lead's to open.
+
+#### Files
+
+| File | Change |
+|---|---|
+| `public/oh/index.html` | 509 → 512 lines (+4 −1): the strip's track and its pager |
+| `public/oh/oh.css` | 1,284 → 1,317 lines (+38 −5): the M1c header note; OH's present rule removed; the M1d block at the end of M1's blocks, before M2's first block, which is untouched as is M2's second |
+| `public/oh/oh.js`, P1 section | 1,865 lines either side (+15 −15): `m1Svc` in `PAGED`, `data-room` on the slide, OH's present line removed, the hero's arrows and dots on the pagers' listener with `M1.control`'s `m1-slide` branch removed |
+| `public/oh/oh.js`, shared section | line 347 only: `onForget`, as the coordinator authorized. M2's uncommitted P2 removal and the copy lane's uncommitted edits are untouched |
+| `public/demo-kit/director.js` | 632 → 647 lines (+16 −1) |
+| `public/demo-kit/kit.css` | 462 → 469 lines (+7) |
+| `docs/demo-kit/HOWTO.md` | +1 line |
+| this section, and two `M1d-*.png` | new |
+
+Not touched: `oh-store.js`, `product.html`, `m.html`, the P2 and P3 sections, `src/**`, `scripts/**`, `public/vantage/**`, and `public/oh/beats/` (19 of 19 equal at start and end by hash; every seed went to the scratchpad).
+
+Both rigs are stopped and ports 9132, 9282, 9138 and 9288 are free. The states `state-m1b`, `state-m1d` and `state-m1dv` are kept. The scratch scripts (`m1d-check.mjs`, `forget-check.mjs`, the probe, the shots and logs) are in the session scratchpad under `m1d/`.
+
 ### S2: the manual session and the boot assertions; the sixteen beats on the working store
 
 **Lane S2, builder, 2026-10-02, 14:59–18:30 EDT.**
@@ -1229,6 +1301,30 @@ Served by my proxy as before. Each mutant's served original hashed equal to the 
 - **The engine's 503 on `wrangler dev`** while a report builds (the S2 section’s finding 4, still printed as known).
 - **The full request-level and DOM runs against the hosted worker**, on the owner's go.
 
+#### Addendum, 00:35–02:05: the suites accept lane C3's gender-neutral copy
+
+Each check accepts the old wording or C3's new wording, and still fails on any other text. I tested each predicate on the old wording, the new wording and two others.
+
+- **`scripts/rehearse-oh-dom.mjs:1694`** (hosted branch): “the edge located her” or “the edge located the visitor”.
+- **`scripts/rehearse-vantage-dom.mjs:261`**: “No evidence of her own yet” or “No evidence from the visitor yet”.
+- **`scripts/rehearse-vantage-dom.mjs:578`** (hosted branch): “the edge located her” or “the edge located the visitor”, still with “geo real”.
+- **`scripts/rehearse-oh-dom.mjs:440`, `completesIn()`.** C3 had already changed `oh.js`'s receipt line to “Completes what was committed to: <sku>”, which broke 10 beat checks. The five checks that read it, and the helper `completes()`, now accept either wording, for the named product only.
+
+**Runs.**
+- **Vantage DOM: 298 of 298** (01:44–01:48), on my own rig: port 9184, `state-s2v`, prepared, seeded with `--out`, and the regional lean seeded for 51 regions. The meters read C3's new wording.
+- **OH DOM: 497 of 498** (01:48–02:02), on `state-s2d`. The one failure is the engine refusing two of her `custom` events with 503. The receipt lines read the new wording.
+- **Two OH runs did not count**, because C3's edits to `panels.js` and `oh-store.js` landed mid-run:
+  - the walk could not boot (01:06);
+  - a run hung in the shells (01:07). I closed its own Chrome through DevTools (`Browser.close`).
+- **Hosted branches.** Both hosted branches take the loopback path on a rig, so the predicate tests cover them.
+
+**Still asserting `her` wording in `oh.js`, for C3 to name the new strings:**
+- beat 13's “her room signals are gone within minutes” and “rests on her shortlist and the decisions trail, not on her room dials”;
+- Compare's “Her page · ” tag (DOM lines 366 and 1797);
+- the R4 check `/\bin (her|your) fuel\b/`, which must learn any new wording, or it passes vacuously.
+
+Both rigs are stopped; ports 9134, 9284, 9184 and 9334 are free. The beat documents for both demos equal HEAD.
+
 ### W1c: the presenter script for the live store (`cd3775e2` from `bbf8a9d`)
 
 **Lane W1c, writer, 2026-10-02 EDT. Revised `docs/oh/OH-Presenter-Script.md` for the store as it is live now. It was 5,869 words and is now 6,122. That is about 2% over the ~6,000 cap: the persistence and dial material is new, and the rest was cut to pay for it. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
@@ -1292,3 +1388,90 @@ The script is now **6,237 words** (6,122 before this pass). It is still over the
 - RESUME-oh.md's own "## The morning routine" section further down still lists the old manual commands (seed.mjs, wrangler deploy, region-seed.mjs). Only its status line was corrected.
 - The gendered on-screen copy (item 6) is unchanged.
 - Delete "(lands with the next deploy)" once Forget this browser is live.
+
+### C3: the on-screen copy is gender neutral (first pass)
+
+**Lane C3, copy, 2026-10-03, 00:05–01:20 EDT. The first pass is done. Strings only: 112 replacements in 8 files (`public/oh/beats.json` 55, the shared, P2 and P3 sections of `public/oh/oh.js` 34, `public/oh/demo.config.json` 3, `public/oh/oh-store.js` 2, and the kit: `panels.js` 9, `deltas.js` 6, `prove.js` 1, `store.js` 1). No logic, no comment, no line of another lane's touched. Nothing committed, deployed or pushed; no seed in place. The full table (file, line, old, new) and the detail are in [C3.md](C3.md), under "Report: first pass".**
+
+- **How it reads.**
+  - The walk's person is "the shopper" in the director's copy and "the visitor" in the kit's panels, receipts and Session lines; "they" after either.
+  - The product page speaks to the visitor as "you", as it already did ("your viewing distance", "wider than your space").
+  - Beat labels 4, 6, 10 and 14 take W1c's neutral script headings word for word: "The fresh visitor beside them", "A switch to a top-loader", "A closet width", "What changed in the meantime".
+  - The receipt line is "Completes what was committed to: &lt;sku&gt;".
+- **Sequencing.** `oh-store.js` and `panels.js` were handed back first (about 00:50, 11 lines, parsed); M3b owns them since. Two `panels.js` lines went to M3b on the coordinator's ruling: it changes them, with this exact wording, inside its own hand-back, and C3 does not touch `panels.js` again:
+  - 112 → 'No evidence from the visitor yet. The first paint is the region and the campaign, not the visitor.'
+  - 262 → 'from the request: the edge located the visitor'
+- **Sources.** `beats.json` is its own source. `SITE.roadmap` and `demo.config.json`'s `roadmap` changed together, word for word.
+- **Not changed, because no page shows it:**
+  - the beat documents' `press`, `label` and `sees` (their own source; 19 of 19 equal HEAD);
+  - `demo.config.json`'s beat copies, `memoryNote` and `signIn.about`;
+  - `catalog.json`'s `role` notes;
+  - `art.json`'s notes.
+- **Engine, not mine.** `src/learn/receipts.ts:127` still writes "Completes what she committed to" into the receipt route's `why`. OH's cards draw their own line, so it is not on OH's screen.
+- **Presenter script (for W1d).** It quotes the old wording at:
+  - 69: "Nothing in her profile moved on this one." → "Nothing in the profile moved on this one."
+  - 118: "Completes what she committed to: WM6500HWA (+0.6)" → "Completes what was committed to: …"; and "…; she has shown no fuel yet, so none is claimed for her." → "…; you have shown no fuel yet, so none is claimed for you."
+  - 274: Never say "In her fuel" → the card now says "in your fuel".
+  - 5: its note that quotes call the visitor "she".
+  - P1's copy, in the second pass: 105, 192, 200.
+- **Suite lines (S2's).** `rehearse-oh-dom.mjs` asserted "Completes what she committed to" at 1853, 1875, 1910, 1931 and 1955 and in the `completes` helper (438): 10 checks. S2 has widened the helper, and they pass. The held strings are at OH DOM 1694 and Vantage DOM 260 and 578, all widened by S2. For P1: OH DOM 366, 1797 and 2111.
+- **Counts on my rigs.** OH 9150 `state-c3`, Vantage 9151 `state-c3v`; both seeded with `--out`, 51 of 51 regions. Baseline before any edit, then after:
+  - OH request level: 231/231 → **231/231**.
+  - OH DOM: 498/498 → **488/498**. The 10 failures are the receipt wording on the suite as it stood. The re-run on S2's helper is **492/498**: those 10 pass, and the 6 left are M3b's in-flight edits to `oh-store.js` and `panels.js` (4 reload-persistence checks and a mid-edit `onScreen` redeclaration) plus one engine 503.
+  - Vantage request level: 115/115 → **115/115**.
+  - Vantage DOM: 298/298 → **298/298**.
+  - At 1440 and 390, `/oh/`, the washer page, the TV page and `/oh/m` load with no script error and no overflow.
+- **Second pass.** The P1 section of `oh.js` (about 35 on-screen strings: Compare's "Her page" set, "She had not seen it yet.", the continue hero, the shortlist, the clock-jump note, the filter, sort and space notes); and `director.js` (comments only today). Done; see "C3: second pass" below.
+- **Restoration.** Every beat document (OH 19, Vantage 19) equals HEAD by hash. Both rigs are stopped, ports free, states kept.
+
+### C3: second pass (the P1 section of `oh.js` and `director.js`)
+
+**Lane C3, copy, 2026-10-03, 01:30–02:25 EDT. Strings only: 39 replacements, 35 in the P1 section of `public/oh/oh.js` and 4 comments in `public/demo-kit/director.js`. No line another lane holds uncommitted was touched: M1d's carousel listener and dock options are as they were. `oh-store.js`, `panels.js` and the suites were not touched; `panels.js` 112 and 262 went to M3b with C3's wording. Nothing committed, deployed or pushed. The full table and the detail are in [C3.md](C3.md), under "Report: second pass".**
+
+- **For S2, verbatim** (curly ’ throughout):
+  - Beat 13's clock note: "her room signals are gone within minutes" → "the shopper’s room signals are gone within minutes".
+  - The continue hero's rest line: "rests on her shortlist and the decisions trail, not on her room dials" → "rests on the shopper’s shortlist and the decisions trail, not on their room dials".
+  - Compare's before tag: "Her page · …" → "The shopper’s page · …". The partner tag is unchanged: "A fresh visitor, same region · …".
+  - Fuel: unchanged. The claimed case is exactly "in your fuel"; no P1 string mentions fuel; no on-screen string says "her fuel".
+  - S2 had already widened DOM 366, 1797 and 2107–2113, and they pass on the new copy.
+- **How it reads.** The continue hero and What changed say "you" ("the shortlist is what you open", "8 on your shortlist", "since you looked"); the receipts say "the visitor"; Compare, the Session notes and the clock-jump note say "the shopper". The before/now ghost is "Not seen yet." P1 keeps only code comments and the `hers` identifier.
+- **Presenter script, for W1d:**
+  - 105: "Hers, on the left, is what her visit earned." → "The shopper’s, on the left, is what their visit earned."
+  - 192: "her room signals are gone within minutes" → "the shopper’s room signals are gone within minutes".
+  - 200: "8 on her shortlist" → "8 on your shortlist".
+- **Counts on my rigs** (OH 9150, Vantage 9151, kept states):
+  - OH request level: **231/231**.
+  - OH DOM: **497/498**. The one failure is the engine refusing one custom event with a 503 on `wrangler dev`, not copy. M3b's in-flight `oh-store.js` and `panels.js` were in the run.
+  - Vantage request level: **115/115**.
+  - Vantage DOM: **298/298**.
+- **Restoration.** Both rigs are stopped, ports free, states kept. All 38 beat documents equal HEAD. C3 holds nothing in the tree.
+
+### W1d: the presenter script quotes C3's copy
+
+**Lane W1d, writer, 2026-10-03 EDT. `docs/oh/OH-Presenter-Script.md` now quotes the screen as C3 left it: 13 lines changed, 6,237 words before, 6,228 now. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
+
+Searched for every quotation in the script: `public/oh/beats.json`, `oh.js`, `oh-store.js`, `index.html`, `catalog.json`, and the kit's `panels.js`, `deltas.js`, `director.js`, `store.js`, `prove.js`. Where the screen fills in a value, the quote was checked against its template; the value is the lane run's.
+
+| Line | Old | New |
+|---|---|---|
+| 5 | Quotes keep the screen's words, which call the visitor "she"; … | Quotes keep the screen's words; … |
+| 19 | **Forget this browser** (lands with the next deploy): | **Forget this browser**: (it ships with this script) |
+| 51 | "A referral is not a sale." | "A referral is not a sale". (the modal goes on with a colon; punctuation only) |
+| 69 | "Nothing in her profile moved on this one." | "Nothing in the profile moved on this one." |
+| 105 | "… Hers, on the left, is what her visit earned." | "… The shopper’s, on the left, is what their visit earned." |
+| 118 | "Completes what she committed to: WM6500HWA (+0.6)" | "Completes what was committed to: WM6500HWA (+0.6)" |
+| 118 | "…; she has shown no fuel yet, so none is claimed for her." | "…; you have shown no fuel yet, so none is claimed for you." |
+| 128 | "Withdrawn · not decided" | "withdrawn · not decided" (lower case on screen, `oh.js` 3387) |
+| 166 | Act 5. Windows: the merchandiser's day | Act 5. Windows (the director reads "Act 5 · Windows") |
+| 170 | Beat 11. An offer's window closes | Beat 11. An offer’s window closes (the label's own apostrophe) |
+| 180 | "… would have led with [a piece], container 2 now" | "… would have led with [a piece] (score …), container 2 now" (`oh.js` 787 prints the score) |
+| 192 | "… runs days) her room signals are gone within minutes …" | "… runs days) the shopper’s room signals are gone within minutes …" |
+| 200 | "8 on her shortlist · …" | "8 on your shortlist · …" |
+| 274 | Never say "In her fuel" | Never say "In your fuel" (the card's phrase, `oh.js` 3188) |
+
+- **Headings.** Beats 1–16 and acts 1–8 now equal the director's `label` and `acts` in `beats.json`, word for word.
+- **Gendered words.** None is left in the script, in its prose or its quotes.
+- **Not in the page files:**
+  - Line 78's Arrival line "North Carolina: synthetic home sales, fixed seeded lean (no census)" is the region seed's label, `scripts/demo-kit/configs/oh/region.json`, which `panels.js` 327 prints.
+  - Line 69's "1 min memory" / "10 min memory" come from the registry, `public/oh/beats/anchor.json` (`room`), which `panels.js` 141 prints.
+- **Left as written.** Line 78's "census shown, not scored · synthetic → warehouse": the "·" stands for the tag chip, which `oh.js` 1285 draws as its own span. The words match.

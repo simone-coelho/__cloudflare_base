@@ -38,7 +38,7 @@
    "label": "A stranger arrives from search",
    "declare": [
     "<b>Searches</b> “{{arrival.term}}” and lands on the homepage ({{arrival.entry}})",
-    "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted{{/region.override}}"
+    "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}The region comes <b>from the request</b>: the edge locates the visitor, and nothing is asserted{{/region.override}}"
    ],
    "acts": [
     {
@@ -46,12 +46,12 @@
     }
    ],
    "will": [
-    "The hero and the deals answer <b>the search and her region</b>: the campaign term seeds TV, her state’s sales lean the rest",
-    "<b>Recommended for you</b> and the TV grid lean with her state’s sales on POST /sort, and say so: “leans with her state’s sales · synthetic → warehouse”",
+    "The hero and the deals answer <b>the search and the visitor’s region</b>: the campaign term seeds TV, that state’s sales lean the rest",
+    "<b>Recommended for you</b> and the TV grid lean with the sales of the visitor’s state on POST /sort, and say so: “leans with that state’s sales · synthetic → warehouse”",
     "The Arrival panel names {{#region.override}}the override’s region, labelled as asserted{{/region.override}}{{^region.override}}the region <b>the edge located, from the request</b>{{/region.override}}, the census (shown, never scored) and the regional lean, labelled synthetic → warehouse",
-    "Her own meters are empty: nothing about <b>her</b> is known yet"
+    "The visitor’s own meters are empty: nothing about <b>them</b> is known yet"
    ],
-   "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where she is</b>: {{#region.override}}her region is a rehearsal override, labelled{{/region.override}}{{^region.override}}her region comes from the request{{/region.override}}{{#region.lean}}, and her state’s sales lean {{region.lean}}{{/region.lean}}. The census is shown, never scored; Compare sets the site’s own page beside it.",
+   "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where they are</b>: {{#region.override}}the region is a rehearsal override, labelled{{/region.override}}{{^region.override}}the region comes from the request{{/region.override}}{{#region.lean}}, and that state’s sales lean {{region.lean}}{{/region.lean}}. The census is shown, never scored; Compare sets the site’s own page beside it.",
    "run": [
     {
      "publish": "reset"
@@ -75,7 +75,7 @@
    ],
    "after": {
     "when": "{{p1.arrival.leans}}",
-    "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where she is</b>: <b>{{p1.arrival.sentence}}</b>. Her own meters are empty; Compare sets the site’s own page beside it."
+    "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where they are</b>: <b>{{p1.arrival.sentence}}</b>. Their own meters are empty; Compare sets the site’s own page beside it."
    }
   },
   {
@@ -85,11 +85,11 @@
    "who": "shopper",
    "label": "The same page, another state",
    "declare": [
-    "<b>Asserts</b> {{p1.contrastName || region.contrastName}} on the request, labelled: not observed. Of the configured contrast regions, the first whose sales lean differently from hers, read off the cold-start panel"
+    "<b>Asserts</b> {{p1.contrastName || region.contrastName}} on the request, labelled: not observed. Of the configured contrast regions, the first whose sales lean differently from the visitor’s own, read off the cold-start panel"
    ],
    "will": [
     "A different state’s lean on the same stranger: what leans on the region answers {{p1.contrastName || region.contrastName}}’s sales, and the page says which modules moved and which held",
-    "The Arrival panel and the rail’s label say the region is <b>asserted</b>, not observed; her meters do not move"
+    "The Arrival panel and the rail’s label say the region is <b>asserted</b>, not observed; the visitor’s meters do not move"
    ],
    "line": "The same stranger and the same page, in <b>{{p1.contrastName || region.contrastName}}</b>: asserted and labelled, never the opening default. Another state’s sales lean the page another way; the price is the same for everyone.",
    "run": [
@@ -128,17 +128,17 @@
    "declare": [
     {
      "when": "{{region.away}}",
-     "text": "<b>Back</b> in {{region.ownName}}, her own region ({{#region.override}}the rehearsal override, labelled{{/region.override}}{{^region.override}}from the request, nothing asserted{{/region.override}})"
+     "text": "<b>Back</b> in {{region.ownName}}, the visitor’s own region ({{#region.override}}the rehearsal override, labelled{{/region.override}}{{^region.override}}from the request, nothing asserted{{/region.override}})"
     },
-    "<b>Opens</b> the TV grid, the first TV it offers her, then the next one",
+    "<b>Opens</b> the TV grid, the first TV it offers, then the next one",
     "<b>Opens</b> the Laundry menu and the {{p1.washerName || 'front-load washer'}} page",
     "<b>Returns</b> to the homepage"
    ],
    "will": [
-    "<b>room</b> and <b>type</b> rise on her own meters: the living room and the laundry room, her TVs’ panel and a front-load",
-    "The room tiles reorder on her rooms; the deals four hold both rooms by the slot’s own rule; <b>Recommended for you</b> asks POST /sort for each room’s four, then across the rooms, so it balances them instead of swapping wholesale"
+    "<b>room</b> and <b>type</b> rise on the shopper’s own meters: the living room and the laundry room, the TVs’ panel and a front-load",
+    "The room tiles reorder on the shopper’s rooms; the deals four hold both rooms by the slot’s own rule; <b>Recommended for you</b> asks POST /sort for each room’s four, then across the rooms, so it balances them instead of swapping wholesale"
    ],
-   "line": "She opens two TVs, then a front-load washer, and the homepage changes with her, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
+   "line": "The shopper opens two TVs, then a front-load washer, and the homepage changes with them, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
    "run": [
     {
      "assert": {
@@ -221,7 +221,7 @@
    ],
    "after": {
     "when": "{{p1.home.twoRooms}}",
-    "line": "Two TVs and a washer later the homepage follows <b>both rooms</b>: {{#p1.home.tilesMoved}}the room tiles reordered, {{/p1.home.tilesMoved}}Recommended for you holds <b>{{p1.home.rail}}</b>, and every card’s receipt names what carried it. The step from one personalised module to a homepage that answers her, on the platform LG already runs."
+    "line": "Two TVs and a washer later the homepage follows <b>both rooms</b>: {{#p1.home.tilesMoved}}the room tiles reordered, {{/p1.home.tilesMoved}}Recommended for you holds <b>{{p1.home.rail}}</b>, and every card’s receipt names what carried it. The step from one personalised module to a homepage that answers the shopper, on the platform LG already runs."
    }
   },
   {
@@ -229,15 +229,15 @@
    "no": "4",
    "act": 2,
    "who": "shopper",
-   "label": "The fresh visitor beside her",
+   "label": "The fresh visitor beside them",
    "declare": [
-    "<b>Compare → Fresh visitor</b>: her homepage beside a stranger’s, asked in the same region with nothing sent"
+    "<b>Compare → Fresh visitor</b>: the shopper’s homepage beside a stranger’s, asked in the same region with nothing sent"
    ],
    "will": [
-    "Her page and a fresh visitor’s, side by side: the same region’s prior and the same catalog; only what her visit earned is different",
+    "The shopper’s page and a fresh visitor’s, side by side: the same region’s prior and the same catalog; only what the visit earned is different",
     "<b>What changed</b> sets the two answers behind the frames side by side, row by row"
    ],
-   "line": "Compare: her page against a stranger’s in the same region. The same catalog and the same public prices; only what she did is different.",
+   "line": "Compare: the shopper’s page against a stranger’s in the same region. The same catalog and the same public prices; only what the shopper did is different.",
    "run": [
     {
      "unless": "{{view.home}}",
@@ -263,7 +263,7 @@
    "who": "shopper",
    "label": "The washer page",
    "declare": [
-    "<b>Opens</b> the {{p2.washer.name}} page: through a link on screen when there is one, else from the address bar, as she would"
+    "<b>Opens</b> the {{p2.washer.name}} page: through a link on screen when there is one, else from the address bar, as a shopper would"
    ],
    "acts": [
     {
@@ -272,12 +272,12 @@
    ],
    "will": [
     "Below the buy box, which nobody decides: <b>the dryer that goes with it</b>, the pedestal and the stacking kit (the set price only when a set costs less than its pieces), each preferred because it completes {{p2.washer.sku}} (ctx.anchor), with the completes line on its receipt",
-    "Each card states its rule as our merchandiser’s and lists its products in <b>POST /sort</b>’s order, labelled with her state’s sales, synthetic → warehouse; the dryer card says what led and why from /sort’s own drivers, and names her fuel only when her profile holds one"
+    "Each card states its rule as our merchandiser’s and lists its products in <b>POST /sort</b>’s order, labelled with the sales of the shopper’s state, synthetic → warehouse; the dryer card says what led and why from /sort’s own drivers, and names the shopper’s fuel only when their profile holds one"
    ],
    "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer that goes with it</b>, the pedestal and the stacking kit, each a merchandiser’s rule with its receipt.",
    "after": {
     "when": "{{p2.onPage.completes}}",
-    "line": "The {{p2.washer.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, each receipt reading “Completes what she committed to”: {{p2.onPage.completing}}.{{#p2.dryer.lead}} The dryer card leads with the {{p2.dryer.lead}}, by POST /sort’s own drivers: {{p2.dryer.why}}.{{/p2.dryer.lead}} The buy box above them is off limits, and says so."
+    "line": "The {{p2.washer.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, each receipt reading “Completes what was committed to”: {{p2.onPage.completing}}.{{#p2.dryer.lead}} The dryer card leads with the {{p2.dryer.lead}}, by POST /sort’s own drivers: {{p2.dryer.why}}.{{/p2.dryer.lead}} The buy box above them is off limits, and says so."
    },
    "run": [
     {
@@ -296,7 +296,7 @@
    "no": "6",
    "act": 3,
    "who": "shopper",
-   "label": "She switches to a top-loader",
+   "label": "A switch to a top-loader",
    "declare": [
     "<b>Switches</b> to a top-load washer with the page’s own type switch: {{p2.topLoader.name}}, the top-loader that sells best at this price"
    ],
@@ -309,10 +309,10 @@
     "The pedestal leaves, and its card says why: <b>a top-loader has no pedestal</b>; the rule serves front-load pairs only, and the page now asserts ctx.family = top-load-washer",
     "The before/now strip names what left and why; the dryer stays, completing the new washer"
    ],
-   "line": "She switches to a top-loader and the pedestal leaves: <b>a rule withdrawing itself</b>, with its reason on the card.",
+   "line": "The shopper switches to a top-loader and the pedestal leaves: <b>a rule withdrawing itself</b>, with its reason on the card.",
    "after": {
     "when": "{{p2.withdrawn}}",
-    "line": "She switched to the {{p2.topLoader.name}}. <b>Withdrawn by their own rule: {{p2.withdrawn}}</b>. The card says why: {{p2.withdrawnWhy}}."
+    "line": "The shopper switched to the {{p2.topLoader.name}}. <b>Withdrawn by their own rule: {{p2.withdrawn}}</b>. The card says why: {{p2.withdrawnWhy}}."
    },
    "run": [
     {
@@ -404,8 +404,8 @@
    "label": "QNED beside OLED, a size up",
    "declare": [
     "<b>Opens</b> the {{p2.qned.name}} page, with the OLED beside it",
-    "<b>Says</b> she sits {{p2.distanceFt}} ft away, in the size-up tool: her answer, declared, carried as context on the next question (ctx.distance), never as a choice of hers",
-    "<b>Chooses</b> the one size up herself, with the card’s own button: her choice, sent as select"
+    "<b>Says</b> the shopper sits {{p2.distanceFt}} ft away, in the size-up tool: their answer, declared, carried as context on the next question (ctx.distance), never as a choice of theirs",
+    "<b>Chooses</b> the one size up with the card’s own button: the shopper’s own choice, sent as select"
    ],
    "acts": [
     {
@@ -417,12 +417,12 @@
    ],
    "will": [
     "“For a bright room the QNED is the right choice; for a dark room this OLED is”, and <b>the price is the same for everyone</b>; nothing decided sits near the financing line",
-    "From her declared distance the card names one size up by its own rule; <b>size band and price tier</b> move on her meters only once she chooses it herself"
+    "From the declared distance the card names one size up by its own rule; <b>size band and price tier</b> move on the shopper’s meters only once they choose it themselves"
    ],
-   "line": "A QNED page with the OLED beside it, and one size up from her declared viewing distance: when she chooses it herself, <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
+   "line": "A QNED page with the OLED beside it, and one size up from the declared viewing distance: when the shopper chooses it, <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
    "after": {
     "when": "{{p2.sizeUp.name}}",
-    "line": "The QNED, with {{p2.compare.other || 'the OLED'}} beside it: “for a bright room the QNED is the right choice; for a dark room this OLED is.” From {{p2.distanceFt}} ft, declared, the card names one size up, the <b>{{p2.sizeUp.name}}</b> at {{p2.sizeUp.price}}{{#p2.sizeUp.chosen}}; she chose it herself{{#p2.sizeUp.moved}}, and her own meters moved: <b>{{p2.sizeUp.moved}}</b>{{/p2.sizeUp.moved}}{{/p2.sizeUp.chosen}}. The price is the same for everyone."
+    "line": "The QNED, with {{p2.compare.other || 'the OLED'}} beside it: “for a bright room the QNED is the right choice; for a dark room this OLED is.” From {{p2.distanceFt}} ft, declared, the card names one size up, the <b>{{p2.sizeUp.name}}</b> at {{p2.sizeUp.price}}{{#p2.sizeUp.chosen}}; the shopper chose it themselves{{#p2.sizeUp.moved}}, and their own meters moved: <b>{{p2.sizeUp.moved}}</b>{{/p2.sizeUp.moved}}{{/p2.sizeUp.chosen}}. The price is the same for everyone."
    },
    "run": [
     {
@@ -442,7 +442,7 @@
     {
      "click": "size-up-pick",
      "in": "mod-pdp-modules",
-     "missing": "the size-up card names no larger size here, so there is nothing to choose: the page never chooses for her"
+     "missing": "the size-up card names no larger size here, so there is nothing to choose: the page never chooses for the shopper"
     }
    ]
   },
@@ -451,10 +451,10 @@
    "no": "10",
    "act": 4,
    "who": "shopper",
-   "label": "She enters a closet width",
+   "label": "A closet width",
    "declare": [
     "<b>Opens</b> the {{p2.washer.name}} page again",
-    "<b>Enters</b> the width of her laundry closet, {{p2.closet}} in: her measurement, declared, never inferred"
+    "<b>Enters</b> the width of the laundry closet, {{p2.closet}} in: the shopper’s measurement, declared, never inferred"
    ],
    "acts": [
     {
@@ -467,10 +467,10 @@
    "will": [
     "Models that do not fit drop out, and the page counts them: <b>hidden, wider than your space</b>; the next decision asserts ctx.fit, labelled declared"
    ],
-   "line": "She enters her closet’s width, and the models that would not fit drop out, counted on the page: <b>hidden, wider than your space</b>.",
+   "line": "The shopper enters the closet’s width, and the models that would not fit drop out, counted on the page: <b>hidden, wider than your space</b>.",
    "after": {
     "when": "{{p2.fit.width}}",
-    "line": "Her space is {{p2.fit.width}} in, declared: of the {{p2.fit.all}} {{p2.fit.kind}}, {{p2.fit.fits}} fit, and <b>hidden: {{p2.fit.hidden}} wider than your space</b>. Her measurement is hers, never inferred."
+    "line": "The space is {{p2.fit.width}} in, declared: of the {{p2.fit.all}} {{p2.fit.kind}}, {{p2.fit.fits}} fit, and <b>hidden: {{p2.fit.hidden}} wider than your space</b>. The measurement is the shopper’s own, never inferred."
    },
    "run": [
     {
@@ -495,15 +495,15 @@
    "who": "merch",
    "label": "An offer’s window closes",
    "declare": [
-    "<b>Opens</b> her {{p1.tvName || 'TV'}} page from the TV grid",
+    "<b>Opens</b> the {{p1.tvName || 'TV'}} page from the TV grid",
     "<b>Publishes</b> the catalog: the gift-card offer’s window has closed, with the offers that close with it, on the homepage and on every TV page",
     "<b>Returns</b> to the homepage: the packages with a member out of stock stay as the catalog publishes them, out of stock"
    ],
    "will": [
-    "On her TV page the closed offers <b>leave on the next decision</b>: the gift card goes from its offers",
+    "On the TV page the closed offers <b>leave on the next decision</b>: the gift card goes from its offers",
     "On the homepage the closed pieces can no longer be chosen, and a package with a member out of stock is <b>never shown as complete</b>: the page checks every answer and every recorded candidate of this visit for one"
    ],
-   "line": "The merchandiser’s day: an offer’s window closes. On her TV page and on the homepage it leaves on the next decision, by the catalog’s own rules, and a package with a member out of stock is never shown as complete.",
+   "line": "The merchandiser’s day: an offer’s window closes. On the shopper’s TV page and on the homepage it leaves on the next decision, by the catalog’s own rules, and a package with a member out of stock is never shown as complete.",
    "run": [
     {
      "unless": "{{view.tvs}}",
@@ -572,7 +572,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.windows.closed}}",
-    "line": "The merchandiser’s day: {{#p1.windows.page}}on the {{p1.windows.pageName}} page <b>{{p1.windows.page}} offers left</b> with their windows on the next decision; {{/p1.windows.page}}<b>{{p1.windows.closed}} offers’ windows closed</b> in one publish{{#p1.windows.left}}, and {{p1.windows.left}} left her homepage{{/p1.windows.left}}; {{#p1.windows.held}}<b>{{p1.windows.held}} packages</b> with a member out of stock were never shown as complete. {{/p1.windows.held}}By the catalog’s own rules, on every surface, at the next decision: windows and stock kept by the engine, the next step on the platform LG already runs."
+    "line": "The merchandiser’s day: {{#p1.windows.page}}on the {{p1.windows.pageName}} page <b>{{p1.windows.page}} offers left</b> with their windows on the next decision; {{/p1.windows.page}}<b>{{p1.windows.closed}} offers’ windows closed</b> in one publish{{#p1.windows.left}}, and {{p1.windows.left}} left the shopper’s homepage{{/p1.windows.left}}; {{#p1.windows.held}}<b>{{p1.windows.held}} packages</b> with a member out of stock were never shown as complete. {{/p1.windows.held}}By the catalog’s own rules, on every surface, at the next decision: windows and stock kept by the engine, the next step on the platform LG already runs."
    }
   },
   {
@@ -586,7 +586,7 @@
    ],
    "will": [
     "The pin takes <b>container 1</b> for everyone (a pin is a required prefix); its receipt reads <b>ranking skipped</b>",
-    "Its receipt names what the engine would have led with, read off a ranked decision’s own receipt; the other three are still ranked for her"
+    "Its receipt names what the engine would have led with, read off a ranked decision’s own receipt; the other three are still ranked for the shopper"
    ],
    "line": "The merchandiser pins a launch series. The pin leads, and its receipt says so: <b>the merchandiser outranks the engine, visibly</b>.",
    "run": [
@@ -637,14 +637,14 @@
    "who": "engine",
    "label": "Three weeks later",
    "declare": [
-    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish. On the demo’s dial her room signals are gone within minutes (production’s dial runs days: the published τ on room reads 60 days there)",
+    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish. On the demo’s dial the shopper’s room signals are gone within minutes (production’s dial runs days: the published τ on room reads 60 days there)",
     "The return visit is <b>asserted</b> on the homepage from now on (ctx.visit = return), labelled: the same browser, the engine’s own clock real"
    ],
    "will": [
-    "Her room signals fall below the entry threshold on the demo’s compressed dial: nothing of the rooms she browsed is left to lean the homepage",
-    "The <b>continue hero</b> answers her return, resting on her shortlist (what she opened on this device, nothing inferred) and the decisions trail; its receipt says production’s dial is days"
+    "The shopper’s room signals fall below the entry threshold on the demo’s compressed dial: nothing of the rooms they browsed is left to lean the homepage",
+    "The <b>continue hero</b> answers the shopper’s return, resting on their shortlist (what they opened on this device, nothing inferred) and the decisions trail; its receipt says production’s dial is days"
    ],
-   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and on the demo’s compressed dial her room signals are gone within minutes, below the entry threshold (production runs days; the published τ would read 60 days there). The homepage <b>picks up where she left off</b> from her shortlist and the decisions trail.",
+   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and on the demo’s compressed dial the shopper’s room signals are gone within minutes, below the entry threshold (production runs days; the published τ would read 60 days there). The homepage <b>picks up where they left off</b> from their shortlist and the decisions trail.",
    "run": [
     {
      "unless": "{{view.home}}",
@@ -681,7 +681,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.clock.returned}}",
-    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish{{#p1.clock.gone}}, and on the demo’s compressed dial her room signals faded below the entry threshold{{/p1.clock.gone}}. The homepage <b>picks up where she left off</b>, resting on her shortlist and the decisions trail."
+    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish{{#p1.clock.gone}}, and on the demo’s compressed dial the shopper’s room signals faded below the entry threshold{{/p1.clock.gone}}. The homepage <b>picks up where the shopper left off</b>, resting on their shortlist and the decisions trail."
    }
   },
   {
@@ -689,15 +689,15 @@
    "no": "14",
    "act": 6,
    "who": "shopper",
-   "label": "What changed while she was away",
+   "label": "What changed in the meantime",
    "declare": [
     "<b>Opens</b> “What changed while you were away” on the continue hero"
    ],
    "will": [
-    "Her shortlist’s deltas, read off the documents in force: the offers on each product that ended, the ones still running, a newer model where the feed lists one",
+    "The shortlist’s deltas, read off the documents in force: the offers on each product that ended, the ones still running, a newer model where the feed lists one",
     "The prices are the catalog’s, the same for everyone: they show as held unless the catalog’s own price moved"
    ],
-   "line": "What changed while she was away: the offers on her shortlist that ended and the ones still running, by the catalog’s own windows, and the prices, which are the catalog’s. The page says what changed; it never decides a price.",
+   "line": "What changed in the meantime: the offers on the shopper’s shortlist that ended and the ones still running, by the catalog’s own windows, and the prices, which are the catalog’s. The page says what changed; it never decides a price.",
    "run": [
     {
      "unless": "{{view.home}}",
@@ -722,7 +722,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.shortlist.line}}",
-    "line": "What changed while she was away, read off the documents in force: <b>{{p1.shortlist.line}}</b>. The page says what changed; the price itself is the catalog’s."
+    "line": "What changed in the meantime, read off the documents in force: <b>{{p1.shortlist.line}}</b>. The page says what changed; the price itself is the catalog’s."
    }
   },
   {
@@ -732,19 +732,19 @@
    "who": "shopper",
    "label": "The phone, then sign-in",
    "declare": [
-    "<b>Signs in</b> on her laptop as {{signIn.account}}, a fictional account: the worker mints the signed link{{#signIn.laptopLinked}} (signed in already: nothing to do){{/signIn.laptopLinked}}",
-    "<b>Opens</b> the site on her phone: a second device, a stranger to the engine, with her own region’s opening",
+    "<b>Signs in</b> on the laptop as {{signIn.account}}, a fictional account: the worker mints the signed link{{#signIn.laptopLinked}} (signed in already: nothing to do){{/signIn.laptopLinked}}",
+    "<b>Opens</b> the site on the shopper’s phone: a second device, a stranger to the engine, with their own region’s opening",
     "<b>Signs in</b> on the phone as {{signIn.account}}: the worker mints its link, and the page asks again"
    ],
    "will": [
-    "The phone’s first page is a stranger’s: her region and the catalog, nothing of hers",
-    "One request after its sign-in the same page answers with <b>the laptop’s taste</b>: her meters, the hero, the room tiles and the deals move",
-    "The receipt under the header reads “{{signIn.receipt}}”: linked when she signed in, with her consent, never by matching devices"
+    "The phone’s first page is a stranger’s: the region and the catalog, nothing of the shopper’s",
+    "One request after its sign-in the same page answers with <b>the laptop’s taste</b>: the meters, the hero, the room tiles and the deals move",
+    "The receipt under the header reads “{{signIn.receipt}}”: linked at sign-in, with the shopper’s consent, never by matching devices"
    ],
-   "line": "On her phone she is a stranger until she signs in as <b>{{signIn.account}}</b>: then the phone becomes the laptop’s taste in one request. Linked at sign-in and consented; no device matching.",
+   "line": "On the phone the shopper is a stranger until they sign in as <b>{{signIn.account}}</b>: then the phone becomes the laptop’s taste in one request. Linked at sign-in and consented; no device matching.",
    "after": {
     "when": "{{phone.signedIn}}",
-    "line": "Her phone, signed in as <b>{{signIn.account}}</b>, one request later: {{#phone.same}}the laptop’s three strongest signals lead here too, {{phone.top}}{{/phone.same}}{{^phone.same}}the person’s signals lead, {{phone.top}}{{/phone.same}}{{#phone.moved}}, and {{phone.moved}} of the page’s decided slots changed{{/phone.moved}}. {{signIn.receipt}}."
+    "line": "The phone, signed in as <b>{{signIn.account}}</b>, one request later: {{#phone.same}}the laptop’s three strongest signals lead here too, {{phone.top}}{{/phone.same}}{{^phone.same}}the person’s signals lead, {{phone.top}}{{/phone.same}}{{#phone.moved}}, and {{phone.moved}} of the page’s decided slots changed{{/phone.moved}}. {{signIn.receipt}}."
    },
    "run": [
     {
