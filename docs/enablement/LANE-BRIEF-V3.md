@@ -296,3 +296,95 @@ with these added, each checked by script where §5 says so:
    converter; a linked contents; every link resolving; named `-v3.0.docx`.
 7. **The look.** On the built files in headless Chrome: no horizontal overflow at the three widths, light and dark;
    WCAG AA contrast; no console message; same-origin requests only.
+
+## 8. Amendment, 2026-10-03: the tour as one player, and one full opening
+
+**Status.** The owner opened the deployed version 3 and found the tour unusable: Back and Next sat under the
+spine's "Now watch it" animation and looked attached to it; Next was greyed out until the reader scrolled a full
+screen down and acted in the store; three paragraphs pushed the store out of view. The owner also found the
+identical openings of What it is, See it work and Selling it repetitive. The owner approved the fix ("GO") as
+`mocks/04-tour-player-and-openings.html`. This section overrides §3's "every piece opens with the same four blocks",
+§4.2's page structure and §7.1 where they differ.
+
+### 8.1 The openings
+
+- **What it is** keeps the full spine, unchanged.
+- **Selling it** and **How it works** open with **the band**: one strip, the headline and three contrast cells in a
+  row at desktop widths (stacked on a phone), and a link to the full story. Its text of record is
+  `docs/enablement/content/spine-band.md`, verbatim:
+
+  ```
+  # Behavioral Targeting and Intelligence: the spine, one band
+
+  ![We built an engine that follows each visitor's interest in real time and decides the page at that point in time.](../figures/shot-spine-band.png)
+
+  We built an engine that follows each visitor's interest in real time and decides the page at that point in time.
+
+  **Beside a recommendations engine**
+
+  Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side.
+
+  **Instead of rules written in advance**
+
+  Interest fills with each action and drains on its own, like a bucket, so nobody writes segments or expiration rules.
+
+  **Unlike AI that decides**
+
+  The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.
+
+  [The full story, with the pictures, is on What it is.](https://edge-platform-bti.expedge.workers.dev/what-it-is)
+  ```
+
+  Marker pair `<!-- spine:band:start -->…<!-- spine:band:end -->`, partial `enablement/partials/spine-band.html`,
+  `data-shot="spine-band"`. The page's article names `spine-band.md` in place of `spine.md`.
+- **The battlecard** keeps the compact spine.
+- **See it work** carries no spine and no animation above the tour: its title, reader tag and one intro line, then
+  the player.
+
+### 8.2 The tour player (`/see-it-work`)
+
+1. **Intro line**, the only text above the player: "One visitor, seven moments, on a sample store: press Show me, or
+   click what is highlighted." (`data-reader`).
+2. **One player frame** (`section.tour-player`, `data-visual`) holds everything for a step: the bar, one explanation
+   line, the store on the left, the buckets, the lean bar and the receipt on the right. At 1366×768 and 1440×900 the
+   whole frame, bar to bottom, fits inside the window (height at most the window height less 24 px) with all six of
+   the store's sections visible without scrolling inside the frame (compact rows: a section title and its three
+   cards on one line each). When the reader presses any control, the frame is scrolled so its top meets the
+   window's top (instantly under reduced motion). The bar is `position: sticky; top: 0` while the frame is on screen,
+   so the controls never leave the window.
+3. **The bar**: Back (absent on step 1), "Step n of 7 · <step title>", seven dots, then the step's controls:
+   - step 1: "Pick where this visitor is:" and two buttons, Washington State and Florida. Nothing is pre-set. A pick
+     shows that region's first page; Next then appears beside the buttons, which stay switchable.
+   - steps 2 to 5: **Show me** and **Next**. Show me performs the step's action in front of the reader and stays on
+     the step; clicking the highlighted target in the store does the same. After the action, Show me disappears.
+     **Next is never disabled or greyed out**: pressed before the action, it performs the action, holds 1.2 seconds so
+     the result is seen (instant under reduced motion), then advances.
+   - step 6: Next. Step 7: **Start again**, which returns to step 1 with no region picked.
+4. **The target and its callout** are inside the store: the target card is outlined, pulses three times (none under
+   reduced motion), and carries its callout attached beside it, naming the action ("Add the cardigan to the bag, or
+   press Show me. Watch the top two sections."). The callout is `data-reader`.
+5. **The explanation line** under the bar: at most two short sentences and 45 words, plus the step's fixed sentence
+   where it has one, in smaller type. The four fixed sentences sit verbatim in the steps, since the tour no longer
+   carries the spine: performance in step 2; recommendations in step 3 (the second interest's section climbs past
+   the brand's recommendations carousel); AI in step 6 (the receipt); learning in step 7.
+6. **What changes is marked where it changes**: moved sections say "moved up", "moved down" or "pinned"; the bucket
+   fills or drains in view; the new receipt line appears at the top of the receipt and is announced (`aria-live`).
+7. **Phone (390×844)**: the bar sticks to the top of the window; store above, panel below; after each action the
+   changed section scrolls into view under the bar, and the callout stays with its target.
+8. **Keyboard and screen reader**: every control reachable by Tab in visual order (Back, the step's controls, the
+   target); after a step change focus moves to the bar's primary control; the step title and the result are
+   announced.
+9. **Without script**: the seven-frame storyboard, as now, each frame a still with its caption (`data-shot`
+   tour-step-1 to tour-step-7).
+10. **Unchanged**: the sample store, its products, tags and invented regional leans, the engine's arithmetic at its
+    defaults, the five-minute memory said on the page, the honesty rules (region chosen, never pre-set; nothing called
+    a demo or a customer).
+
+### 8.3 Acceptance, by a person and by script
+
+At 1366×768, 1440×900 and 390×844, light and dark: from the page's load, pressing only the bar's controls reaches step
+7 without scrolling the page by hand, and at the moment of every action the target, the section that moves, the
+bucket that changes and the new receipt line are all inside the window; the same walk clicking each target instead
+of Show me; Back from step 7 to step 1 restores each step's state exactly; Start again returns to a clean step 1. The
+lane records a screenshot of every step at each size and looks at every one. The lead walks it by hand before
+reporting it done.
