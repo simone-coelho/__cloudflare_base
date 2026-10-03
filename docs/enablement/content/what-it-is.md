@@ -12,11 +12,11 @@ Tools made for known customers work from profiles and purchase histories, so in 
 
 ## The engine is a personal stylist for every visitor
 
-Think of a good stylist in a boutique. The same retailer described the site it wanted as "a site that feels like a stylist who remembers." It concluded that this capability did not exist off the shelf, and built it with us. The engine is that stylist, for every visitor at once, at internet scale.
+Think of a good stylist in a boutique. The same retailer described the site it wanted as "a site that feels like a stylist who remembers." It concluded that this capability did not exist off the shelf, and chose to build it with us. The engine is that stylist, for every visitor at once, at internet scale.
 
 It reads the room: the first page already leans toward the visitor's region and the link they came from. It watches without interrogating: it asks nothing, needs no login and learns only from what the visitor does. It rearranges the table: the sections of the page, and the pieces inside them, move toward this visitor's interests. And it pivots when attention moves. Its memory is a row of buckets, one for each thing a visitor might care about.
 
-Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. The engine needs no purchase history, so it works for a visitor nobody has met, and it replaces no recommendations product. The recommendations carousel keeps choosing its products, while the engine decides where the carousel comes among the page's sections and what fills the places around it.
+Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. It is not a recommendations engine and does not replace one: it needs no purchase history, so it works for a visitor nobody has met. The recommendations carousel keeps choosing its products, while the engine decides where the carousel comes among the page's sections and what fills the places around it.
 
 ## Short scenes show what it does
 
@@ -24,7 +24,7 @@ Recommendations rank the past; the engine decides the page at the point in time,
 
 **A visitor drifts from coats to shoes.** Each thing a visitor might care about, such as coats, black or a price range, has its own bucket. Every action pours into the buckets it touches, a purchase more than a view, and merely seeing something pours nothing. Every bucket leaks on its own clock, and the fuller it is, the more the page leans toward it. Past a marked line the visitor counts as interested; below a lower line they are released. A bucket holds only so much, so one obsession never takes over the page. Our visitor looks at a few coats, then turns to shoes: the shoes bucket fills, the coats bucket drains, and the page follows. Later the coats interest drops below its line and is released, with no expiration rule written, and the receipt records the release like the entry.
 
-**A merchandiser pins the section they sold.** In launch week, the brand has promised a partner the top of the home page. The merchandiser pins that section, and it holds for every visitor. Below it, the engine orders the other sections by each visitor's interest: the recommendations carousel, the category grid, the reviews and a styling story. Reviews rise for a visitor close to buying, the styling story for one still browsing. Gates come first, removing anything out of stock or outside its dates. A home-shopping retailer asked, of a short-lived offer, whether to "reinforce it while it is live, or let the shopper drift". The engine allows both: a pin or a weight reinforces, the visitor's interest drifts, and a weight can only lean on interest the visitor has shown. The receipt marks the pin as an instruction, not a decision.
+**A merchandiser pins the section they sold.** In launch week, the brand has promised a partner the top of the home page. The merchandiser pins that section, and it holds for every visitor. Below it, the engine orders the other sections by each visitor's interest: the recommendations carousel, the category grid, the reviews and a styling story. Reviews rise for a visitor close to buying, the styling story for one still browsing. Gates come first, removing anything out of stock or outside its dates. A home-shopping retailer asked, of a short-lived offer, whether to reinforce it while it is live or let the shopper drift. The engine allows both: a pin or a weight reinforces, the visitor's interest drifts, and a weight can only lean on interest the visitor has shown. The receipt marks the pin as an instruction, not a decision.
 
 **A signal arrives from another channel.** Visitors click through from the brand's email, a social post or a partner's style quiz. Each link carries words the engine reads, such as the campaign term, and the first page leans toward them. When an outside signal arrives, such as a product taking off on social media, Opal can propose a test or a CMAB test on it in Feature Experimentation and launch it once a person approves. The interests and audiences the engine forms also flow to ODP for the brand's other teams, and no decision ever waits on it.
 
@@ -65,6 +65,7 @@ All of it happens in the data center nearest the visitor, on Cloudflare's networ
 - Its content feed, with its own ids and tags, which is what the engine places.
 - A map of its pages, with the site's default for each place, shown whenever the engine stays silent.
 - Its site's events, through one script or its existing data layer, which fill the buckets.
+- The visitor's consent choice, which the site passes from its consent banner and the engine follows.
 - A short signed proof from its own server at sign-in, to carry the visitor's interests into their known profile.
 - If it wants, what its analysts already know and its known customers' past behavior, so pages start warm, and its warehouse, ODP and Feature Experimentation.
 
@@ -80,7 +81,7 @@ All of it happens in the data center nearest the visitor, on Cloudflare's networ
 | Never say | Say instead |
 |---|---|
 | "AI-powered personalization", "the AI decides" | "The engine calls no AI model to decide." |
-| "We don't use a model" | "The engine calls no AI model to decide; Opal and the optional add-ons are where AI works." |
+| "We don't use a model" | "The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply." |
 | "A recommendations engine", "it replaces your recommendations" | "Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side." |
 | "It knows who the visitor is" | "It knows what the visitor is interested in, and who they are only once they sign in." |
 | "It reads their mind" | "It notices what the visitor does." |
@@ -104,10 +105,11 @@ All of it happens in the data center nearest the visitor, on Cloudflare's networ
 
 ## The other pages go deeper
 
+- [See it work](https://edge-platform-bti.expedge.workers.dev/see-it-work), the stylist's four moves on a page.
 - [Selling it](https://edge-platform-bti.expedge.workers.dev/selling-it), for account executives.
 - [How it works and where it runs](https://edge-platform-bti.expedge.workers.dev/how-it-works), for solutions engineers.
-- [Where Opal and AI credits fit](https://edge-platform-bti.expedge.workers.dev/credits), the credits page.
-- [Which demo to show to whom](https://edge-platform-bti.expedge.workers.dev/demos), the demo map.
+- [Where Opal and AI Credits Fit, and Where They Never Do](https://edge-platform-bti.expedge.workers.dev/credits), the credits page.
+- [Which demo shows which story](https://edge-platform-bti.expedge.workers.dev/demos), the demo map.
 - [Glossary](https://edge-platform-bti.expedge.workers.dev/glossary), the words we use.
 
 ---
