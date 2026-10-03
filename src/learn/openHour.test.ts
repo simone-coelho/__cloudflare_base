@@ -37,6 +37,8 @@ const cell = { channel: 'organic', visit_bucket: '1' as const, region: 'US-NC', 
 class FakeR2 {
   objects = new Map<string, string>();
   gets: string[] = [];
+  /** Every call: reads, writes, deletes and listings. */
+  calls = 0;
   /** Each read that asked for more than the key, with what it asked for. */
   getOptions: Array<[string, unknown]> = [];
   puts: string[] = [];
@@ -45,19 +47,22 @@ class FakeR2 {
   async put(key: string, body: string, options?: R2PutOptions): Promise<{ etag: string } | null> {
     const before = this.objects.get(key), onlyIf = options?.onlyIf as R2Conditional | undefined;
     const etag = before === undefined ? null : createHash('sha256').update(before).digest('hex');
+    this.calls++;
     if ((onlyIf?.etagMatches !== undefined && onlyIf.etagMatches !== etag) || (onlyIf?.etagDoesNotMatch === '*' && before !== undefined)) return null;
     this.objects.set(key, body); this.puts.push(key);
     return { etag: createHash('sha256').update(body).digest('hex') };
   }
   async get(key: string, options?: unknown) {
+    this.calls++;
     this.gets.push(key);
     if (options !== undefined) this.getOptions.push([key, options]);
     const v = this.objects.get(key); if (v === undefined) return null;
     const bytes = new TextEncoder().encode(v);
     return { etag: createHash('sha256').update(v).digest('hex'), size: bytes.length, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(bytes); c.close(); } }), text: async () => v, json: async () => JSON.parse(v) as unknown };
   }
-  async delete(key: string): Promise<void> { this.objects.delete(key); }
+  async delete(key: string): Promise<void> { this.calls++; this.objects.delete(key); }
   async list({ prefix, limit }: { prefix: string; limit?: number }) {
+    this.calls++;
     const keys = [...this.objects.keys()].filter((k) => k.startsWith(prefix)).sort().slice(0, limit ?? 1000);
     return { objects: keys.map((key) => this.listsIdentity
       ? { key, etag: createHash('sha256').update(this.objects.get(key)!).digest('hex'), size: new TextEncoder().encode(this.objects.get(key)!).length }
@@ -621,6 +626,27 @@ describe('lane E6, second build: budgets and cost', () => {
       .toEqual([[summary, { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } }]]);
     expect(counted.calls(), 'and every call is counted').toBeGreaterThanOrEqual(r2.gets.length);
     expect(counted.calls()).toBeGreaterThan(0);
+  });
+
+  it('counts the open hour\'s storage calls through the same wrapper: every call counted, each passed through whole', async () => {
+    const r2 = new FakeR2();
+    for (const [rows, batch] of BATCHES) write(r2, rows, batch);
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true });
+    await writeTombstone(r2 as never, TENANT, 'v5', 'test', T12 + 22 * MIN);
+    r2.calls = 0;
+    // A run that reads, writes, lists and deletes (the erasure prunes a segment): its count is every call storage saw.
+    const run = await foldOpenHours(r2 as never, TENANT, learn, T12 + 25 * MIN, { start: true, publish: true });
+    expect(run.pruned).toBe(1);
+    expect(run.calls).toBe(r2.calls);
+    // The wrapper it counts through, `countedStorage`, hands storage each call as it was made: a read that asks for a
+    // range asks storage for that range, and a delete is counted like any other call.
+    const meter = { calls: 0 }, { storage } = countedStorage(r2 as never, meter);
+    r2.getOptions = [];
+    const ranged = storage.get as (key: string, options?: unknown) => ReturnType<typeof storage.get>;
+    await ranged(openKey(TENANT, DATE, 12), { range: { offset: 0, length: 1024 } });
+    await storage.delete!(openKey(TENANT, DATE, 12));
+    expect(r2.getOptions).toEqual([[openKey(TENANT, DATE, 12), { range: { offset: 0, length: 1024 } }]]);
+    expect(meter.calls).toBe(2);
   });
 
   it('applies an erasure by the visitor it names, not by text: a short id leaves the copy whole', async () => {

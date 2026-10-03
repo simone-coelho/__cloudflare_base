@@ -52,21 +52,25 @@ export const MAX_HOUR_OBJECTS = 600;
 export const RUN_BUDGET = 700;
 /**
  * Lane E6: the five-minute run's storage, with every call made through it
- * counted, so the open hour's folds spend only what the catch-up left of
- * `RUN_BUDGET`. Each call reaches storage with its own arguments: the catch-up's
- * saved-summary read asks for its 64 KiB range (`readWindowSummary`) through it
- * exactly as it does without it.
+ * counted in `meter`, so the open hour's folds spend only what the catch-up left
+ * of `RUN_BUDGET`. It is the engine's one counting wrapper: the catch-up's calls
+ * are counted through it in `index.ts`, and `foldOpenHours` counts its own
+ * through it too. Each call reaches storage with its own arguments: the
+ * catch-up's saved-summary read asks for its 64 KiB range (`readWindowSummary`)
+ * through it exactly as it does without it, and so does any read that asks for
+ * more than its key.
  */
-export function countedStorage(storage: R2Agg): { storage: R2Agg; calls: () => number } {
-  let calls = 0;
-  const ranged = storage as R2Agg & { get(key: string, options?: unknown): ReturnType<R2Agg['get']> };
+export function countedStorage<T extends R2Agg & { delete?(key: string): Promise<unknown> }>(storage: T, meter = { calls: 0 }):
+  { storage: R2Agg & { delete?(key: string): Promise<unknown> }; calls: () => number } {
+  const ranged = storage as T & { get(key: string, options?: unknown): ReturnType<R2Agg['get']> };
   return {
     storage: {
-      get: (key: string, options?: unknown) => { calls++; return ranged.get(key, options); },
-      list: options => { calls++; return storage.list(options); },
-      put: (key, body, options) => { calls++; return storage.put(key, body, options); },
+      get: (key: string, options?: unknown) => { meter.calls++; return ranged.get(key, options); },
+      list: options => { meter.calls++; return storage.list(options); },
+      put: (key, body, options) => { meter.calls++; return storage.put(key, body, options); },
+      ...(typeof storage.delete === 'function' ? { delete: (key: string) => { meter.calls++; return storage.delete!(key); } } : {}),
     },
-    calls: () => calls,
+    calls: () => meter.calls,
   };
 }
 /**
@@ -2027,12 +2031,10 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
   let otherFailures = 0;
   for (const c of work) {
     if (built.length >= (opts.maxHours ?? 2) || budget <= 0) break;
-    let spent = 0;
-    const metered: R2Agg = {
-      get: key => { spent++; return r2.get(key); },
-      list: options => { spent++; return r2.list(options); },
-      put: (key, body, options) => { spent++; return r2.put(key, body, options); },
-    };
+    // This hour's calls, counted through the engine's one counting wrapper, which
+    // hands storage each call whole (lane E6).
+    const spent = { calls: 0 };
+    const metered: R2Agg = countedStorage(r2, spent).storage;
     try {
       // An hour that already has an aggregate is rebuilt only when that
       // aggregate no longer describes it; the probe is charged to this run's
@@ -2059,7 +2061,7 @@ export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now
       // Actual method calls include all shard/conditional/readback I/O; charge a
       // coordinator discovery per attempted hour conservatively. The existing
       // budget remains an admission boundary, not a bound on one started fold.
-      budget -= spent + 1;
+      budget -= spent.calls + 1;
     }
   }
   // The default 26-hour lookback spans at most three dates. Longer custom windows explicitly defer
@@ -2484,15 +2486,6 @@ const workingContent = (agg: unknown): string => {
   return JSON.stringify(rest);
 };
 
-/** Every storage call through `r2` is counted in `meter.calls`. */
-function metered(r2: R2Agg & { delete?(key: string): Promise<unknown> }, meter: { calls: number }): R2Agg & { delete?(key: string): Promise<unknown> } {
-  return {
-    get: key => { meter.calls++; return r2.get(key); },
-    list: options => { meter.calls++; return r2.list(options); },
-    put: (key, body, options) => { meter.calls++; return r2.put(key, body, options); },
-    ...(typeof r2.delete === 'function' ? { delete: (key: string) => { meter.calls++; return r2.delete!(key); } } : {}),
-  };
-}
 
 /**
  * The storage calls the job's folds would make, at most: the erasures and the
@@ -2551,7 +2544,8 @@ export async function foldOpenHours(r2: R2Agg & { delete?(key: string): Promise<
   if (opts.budget !== undefined && (!Number.isSafeInteger(opts.budget) || opts.budget < 0)) throw new ReportInputError();
   const options = buildOptions(opts), job = opts.start === true;
   const result: OpenHourResult = { folded: [], unchanged: [], failed: [], deferred: [], published: [], removed: 0, pruned: 0, calls: 0, views: [] };
-  const io = metered(r2, result);
+  // Every storage call of the run is counted in `result.calls`, each passed through whole (`countedStorage`).
+  const io = countedStorage(r2, result).storage;
   const stored = new Set(await listKeys(io, openPrefix(tenant)));
   const live = new Set(openHours(now).map(at => `${at.date}/${pad2(at.hour)}`));
   let targets: OpenTarget[] = [];
