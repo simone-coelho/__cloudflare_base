@@ -58,9 +58,10 @@ const RULED_FIGURES = new Map([
   ['what-it-is.html', ['before-during-after']],
   ['credits.html', ['before-during-after']],
 ]);
-// The two interactive pages, built by other lanes. Until their notes say what this check compares, such a page that
-// is present without an <article data-source> fails, naming the lane it waits for.
-const PENDING_PAGES = new Map([['see-it-work.html', 'lane M1'], ['how-it-works-interactive.html', 'lane H1']]);
+// Pages other lanes build, waiting for their notes before this check compares them: none. The two interactive pages
+// (lanes M1 and H1) are compared with their markdown like every piece. A page listed here and present without an
+// <article data-source> fails, naming the lane it waits for.
+const PENDING_PAGES = new Map();
 // LANE-BRIEF-V2 §3: the one performance sentence the material may carry; any other timing figure fails the scan.
 const FIXED_PERFORMANCE = 'We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.';
 // LANE-BRIEF-V2 §1: no build state, build plan, remediation, stage, rollout order, "designed", "not yet", "today
@@ -71,7 +72,12 @@ const STATE_WORDS = [
   /\bnot yet\b/i, /\bdemo only\b/i, /\bnot (?:wired|built|connected)\b/i, /\btoday's engine\b/i, /\bengine today\b/i,
   /\b(?:older|newer) (?:pipeline|build)\b/i, /\bolder demo pipeline\b/i, /\bGeneration [12]\b/i, /\bdemo seams?\b/i,
   /\bbuild items?\b/i, /\broadmap\b/i, /\bremediation\b/i, /\brollout\b/i, /\bstage [1-4]\b/i, /\(stage\b/i, /\bphase [0-9]\b/i,
+  // The preflight's seen-text rules (check-site.mjs, section 4b), word for word, so the two agree on every page.
+  /\btoday\b/i, /\b(?<!journey[\s-])(?<!\.)stages?\b/i, /\bdemo[\s-]+only\b/i, /\bgeneration\s+[12]\b/i,
 ];
+// Entries that name a retired state word to retire it, left out of the state-word scan (the coordinator's ruling of
+// 2026-10-02, with the preflight lane): the glossary's own Stage entry.
+const STATE_WORD_EXEMPT = new Map([['glossary.html', ['stage']]]);
 // The sources lane P1 writes, scanned with the pages.
 const OWN_SOURCES = ['docs/enablement/content/credits-source.html', 'docs/enablement/content/credits.md', 'docs/enablement/content/demos.md'];
 
@@ -300,10 +306,25 @@ for (const file of pages) {
   })(tree);
   pageText[file] = norm(all.join(' '));
   const visible = norm(blocksOf(body).join(' '));
-  const heard = [visible];
-  for (const svg of find(body, (n) => n.tag === 'svg')) heard.push(textOf(svg));
-  for (const n of find(body, (x) => x.attrs && (x.attrs['aria-label'] || x.attrs.title || x.attrs.alt))) heard.push(n.attrs['aria-label'] || n.attrs.title || n.attrs.alt);
-  heardText[file] = norm(heard.join(' '));
+  const heardOf = (b) => {
+    const heard = [norm(blocksOf(b).join(' '))];
+    for (const svg of find(b, (n) => n.tag === 'svg')) heard.push(textOf(svg));
+    for (const n of find(b, (x) => x.attrs && (x.attrs['aria-label'] || x.attrs.title || x.attrs.alt))) heard.push(n.attrs['aria-label'] || n.attrs.title || n.attrs.alt);
+    return norm(heard.join(' '));
+  };
+  heardText[file] = heardOf(body);
+  // The glossary's own entry for a retired state word names it, to retire it: that entry alone is left out of the
+  // state-word scan, on a separate copy of the page, so every other check still reads it.
+  if (STATE_WORD_EXEMPT.has(file)) {
+    const copy = find(parseHtml(read(join(siteDir, file))), (n) => n.tag === 'body')[0];
+    for (const id of STATE_WORD_EXEMPT.get(file)) {
+      const entries = find(copy, (n) => n.attrs.id === id);
+      if (!entries.length) fail(`${file}: the entry #${id} that the state-word scan leaves out is missing`);
+      for (const e of entries) e.children = [];
+      notes.push(`${file}: the entry #${id} names the retired word, to retire it; left out of the state-word scan`);
+    }
+    heardText[file] = heardOf(copy);
+  }
 
   // the chrome every page carries
   if (!visible.includes('Skip to the page')) fail(`${file}: no skip link`);
@@ -416,18 +437,33 @@ for (const file of pages) {
 // ---------- the scans ----------
 const SCANS = [
   ['gendered pronouns', /\b(she|her|hers|he|him|his)\b/gi],
-  ['customer names', /\b(tapestry|verizon|coach|qvc|mandeep)\b/gi],
+  // The preflight's own list (check-site.mjs, section 4b), word for word: any case, as words.
+  ['customer names', /\b(?:tapestry|verizon|coach|qvc|mandeep|dynamic\s+yield)\b/gi],
   ['timing figures beyond the fixed performance sentence', /\b\d[\d,.]*\s*(?:ms|milliseconds?)\b/gi],
 ];
 const scanTexts = { ...pageText };
 for (const s of OWN_SOURCES) if (existsSync(join(root, s))) scanTexts[s] = norm(read(join(root, s)).replace(/<style\b[\s\S]*?<\/style>/gi, ' '));
 const heardTexts = { ...heardText };
 for (const s of OWN_SOURCES) if (existsSync(join(root, s))) { try { heardTexts[s] = norm(s.endsWith('.html') ? htmlSource(join(root, s)).join(' ') : mdBlocks(read(join(root, s)), [], s).join(' ')); } catch (e) { fail(`scan: ${s} could not be read: ${e.message}`); } }
+// The strings each served script can put on a page, read the way the preflight reads them (check-site.mjs, section
+// 4b): comments removed, and a string that is one token with code punctuation (a class name, a selector, a path, a
+// key) skipped as code. The pronoun and state-word scans read them; customer names are scanned in the whole file below.
+const CODE_TOKEN = /^[\w$]*[-.#[\]/:][\w$.#[\]/:-]*$/;
+const scriptStrings = (js) => {
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\'"`])\/\/[^\n]*/g, (all, keep) => keep);
+  return [...code.matchAll(/'((?:\\.|[^'\\\n])*)'|"((?:\\.|[^"\\\n])*)"|`((?:\\.|[^`\\])*)`/g)]
+    .map((m) => m[1] ?? m[2] ?? (m[3] || '').replace(/\$\{[^}]*\}/g, ' '))
+    .filter((x) => !CODE_TOKEN.test(x.trim()))
+    .join(' \n ');
+};
+const scriptTexts = {};
+for (const f of readdirSync(siteDir, { recursive: true }).map(String).filter((x) => /\.js$/.test(x)).sort()) scriptTexts[`enablement/site/${f.replace(/\\/g, '/')}`] = norm(scriptStrings(read(join(siteDir, f))));
 const fixed = norm(FIXED_PERFORMANCE);
 const scanRows = [];
 for (const [label, re] of SCANS) {
   const hits = [];
-  for (const [file, raw] of Object.entries(scanTexts)) {
+  const texts = label === 'gendered pronouns' ? { ...scanTexts, ...scriptTexts } : scanTexts;
+  for (const [file, raw] of Object.entries(texts)) {
     const text = label.startsWith('timing') ? raw.split(fixed).join(' ') : raw;
     for (const m of text.matchAll(re)) hits.push(`${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`);
   }
@@ -437,7 +473,7 @@ for (const [label, re] of SCANS) {
 // State words (LANE-BRIEF-V2 §1), in what a reader sees or hears on each page and in the sources lane P1 writes.
 {
   const hits = [];
-  for (const [file, text] of Object.entries(heardTexts)) {
+  for (const [file, text] of Object.entries({ ...heardTexts, ...scriptTexts })) {
     for (const re of STATE_WORDS) {
       const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
       for (const m of text.matchAll(g)) hits.push(`${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`);
@@ -474,10 +510,11 @@ console.log(`render-check: ${siteAt > 0 ? siteDir : 'enablement/site'} against i
 console.log(line(['page', 'mode', 'source', 'source', 'missing', 'page', 'unexplained', 'marked']));
 console.log(line(['', '', '', 'sentences', '', 'sentences', '', 'additions']));
 for (const r of rows) console.log(line(r));
-console.log(`\nscans of ${Object.keys(scanTexts).length} files (every page, and the sources lane P1 writes): ${scanRows.join('; ')}`);
+console.log(`\nscans of ${Object.keys(scanTexts).length} files (every page, and the sources lane P1 writes), and of ${Object.keys(scriptTexts).length} served scripts' strings for pronouns and state words: ${scanRows.join('; ')}`);
 if (verbose) { console.log('\nmarked additions, never compared:'); for (const l of allowedLog) console.log(`  ${l}`); }
 else console.log(`marked additions: ${allowedLog.filter((l) => !l.startsWith('    ')).length} pages carry some (--verbose lists each)`);
 if (notes.length) { console.log('\nnotes:'); for (const n of [...new Set(notes)]) console.log(`  ${n}`); }
 if (problems.length) { console.log(`\n${problems.length} problem(s):`); for (const p of problems) console.log(`  FAIL ${p}`); }
 else console.log('\nEvery page says what its sources say. All checks passed.');
-process.exit(problems.length ? 1 : 0);
+// The verdict is the exit code, set without ending the process, so piped output is never cut short.
+process.exitCode = problems.length ? 1 : 0;
