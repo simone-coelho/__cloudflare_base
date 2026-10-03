@@ -116,6 +116,10 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Freshness.** A slot rule that favors newer pieces, with a boost that halves over a half-life the brand sets. The age is counted from the piece's freshness date, or else from the start of its window.
 
+## G
+
+**Gate.** A rule that removes what may not show before anything is ranked: a piece out of stock, outside its window or outside its region, or one the slot excludes. Gates run first, then pins, then ranking, and the receipt names which of the three decided each place. A pinned piece that a gate removes is simply not shown, and the rest of the slot ranks as usual.
+
 ## H
 
 **Half-life.** Deprecated as a name for the memory (τ), which is a time constant, not a half-life. The evidence behind an interest halves in about 0.69 times τ, about 9.7 days at the default memory of 14 days.
@@ -182,9 +186,9 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Piece.** One item of the brand's content in the catalog, such as a promotion, a banner or an article, named by the brand's own content id. The engine answers with these ids, and the site renders the pieces.
 
-**Pin.** The brand's instruction that named pieces fill a slot's first positions before any ranking, such as the placements the brand sells; the rest of the slot is still ranked. The receipt says ranking never ran for the pinned pieces.
+**Pin.** The brand's instruction that a named piece holds the place the brand sets in a slot, first or any other, before any ranking, such as a placement the brand sells; the rest of the slot is still ranked around it. A pinned piece that may not show, such as one out of stock, is simply not shown, and the rest of the slot ranks as usual. The receipt says ranking never ran for the pinned piece.
 
-**Placement.** A section of a page that a merchandiser sells or reserves, such as a spot a partner pays for or a funded campaign. The engine honors it through a pin, so it holds its place while the rest of the page is ranked, and the receipt says so.
+**Placement.** A section of a page that a merchandiser sells or reserves, such as a spot a partner pays for or a funded campaign. The engine honors it through a pin, so it holds the place the brand set while the rest is ranked around it, and the receipt says so.
 
 **Pooling levels.** How learning widens its evidence when a context has too little: from the full context through coarser ones to everyone, using the finest level with enough exposures. Older material calls this the pooling ladder.
 
@@ -232,7 +236,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **SDK.** The engine's browser library, served by the platform: it sends events, receives decisions and lets the site render its defaults when no decision arrives in time. There is no native app SDK; never sell one as available.
 
-**Seed.** A rule that uses how a visitor arrived, before they have shown any interest: the campaign term, the arrival channel, the referring network or the operating system family of their phone. A seed adds a fixed amount to matching pieces, so the visitor's own interests overtake it as those interests grow; seeds are published on the slots document.
+**Seed.** A rule that uses how a visitor arrived, before they have shown any interest: the campaign term, the arrival channel, the referring network or the operating system family of their phone. A seed adds an amount the brand publishes to matching pieces, lowered when the visitor's own audiences point elsewhere, and the visitor's own interests overtake it as they grow; seeds are published on the slots document.
 
 **Segment.** Deprecated: say audience.
 
