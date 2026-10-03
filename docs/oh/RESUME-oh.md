@@ -1,5 +1,7 @@
 # OH: resume state
 
+> **Status 2026-10-03, 03:20 UTC. Live: version `cd3775e2` from commit `bbf8a9d` at https://edge-platform-oh.expedge.workers.dev/oh/ — the visitor persists across page loads (localStorage under the SDK's key names, mirrored in sessionStorage; cleared by the reset; swapped at sign-in) and the director's panel, receipts and before/now strips redraw after every event the store sends; the registry's sixty-second dials on the page-driving dimensions are in force (reflex r7). Verified by hand on the live store: one subject across a direct load, a navigation and a reload, no identity call; an Add to Cart redraws the panel to the engine's reading the moment the action answers. Known on the hosted worker: `POST /realtime/action` answers in 1 to 2 seconds (a profile read in 0.2), so a click shows late by that much; lane E4 is fixing it in the engine (`docs/lg/lanes/E4.md`). Suites on a rig: request level 231 of 231, DOM 498 of 498 (S2, 2026-10-03). Open lanes: E4 (engine latency), M1d (390 hero copy, service strip, the kit's `?present` and "Forget this browser"), C3 (gender-neutral copy), M3b (keep the visitor at the mint; the panel from the action's answer), then R5's second look and W1d. Hosted verify on this version: request level 228 of 228, DOM 492 of 497 (the five are the suite's reload walk, with S2, and the action latency, with E4). Morning routine unchanged: `node scripts/demo-kit/host.mjs --config oh --step seed --confirm edge-platform-oh` then the same with `--step verify` (every step but preflight needs `--confirm` with the worker's name), from WSL.**
+
 > **Status 2026-10-02, 22:40 EDT. Live: the restyled working store, version `5e701b44` from `fa063e7` at https://edge-platform-oh.expedge.workers.dev/oh/ (TV grid `/oh/?view=tvs`, product `/oh/product?id=<sku>`, search `/oh/?q=`, phone `/oh/m`; the worker's root redirects to `/oh/`).** Deployed and reseeded by `host.mjs` (51 of 51 regions, no census term). Hosted suites on that version: **request level 221 of 221, DOM 466 of 466**. Independent visual review R5: PASS, every region CLOSE or MATCH beside lg.com at 1440 and 390; its CLOSE-to-MATCH list (lg.com's action red as a pill, a full-bleed hero with lighter weights, the 80 px header with icons, the charcoal top bar, phone carousels and a docked buy bar, a category pager) is the next pass. **Morning routine:** `host.mjs --config oh --step seed --confirm edge-platform-oh` then `--step verify`; the reset starts a new Dana. Design and decisions: `docs/lg/OH-Demo-Design.md`.
 
 
@@ -59,14 +61,14 @@ Run them one at a time: both publish into the one tenant, and each ends with the
 
 ## The morning routine
 
+One script runs the hosted sequence from a clean WSL worktree of the branch head and refuses the shared worker and the customer stamps; every step but preflight needs `--confirm` with the worker's name. From WSL at the repository root:
+
 ```bash
-npm run check:generated
-node scripts/build-demo-worker-config.mjs --name edge-platform-oh --queue events-oh --dev-port 9120
-node scripts/demo-kit/seed.mjs --config scripts/demo-kit/configs/oh.json --base https://edge-platform-oh.expedge.workers.dev --token <operator token>
-npx wrangler deploy --config wrangler.oh.toml        # the seed rewrote public/oh/beats/
-node scripts/demo-kit/region-seed.mjs --config scripts/demo-kit/configs/oh.json --base https://edge-platform-oh.expedge.workers.dev --token <operator token>
-node scripts/demo-kit/check-demo.mjs --config oh --base https://edge-platform-oh.expedge.workers.dev
+node scripts/demo-kit/host.mjs --config oh --step seed --confirm edge-platform-oh     # the hosted seed, the redeploy a reseed requires, the region seed (about 12 minutes)
+node scripts/demo-kit/host.mjs --config oh --step verify --confirm edge-platform-oh   # check-demo against the hosted worker: request level and DOM suites (about 20 minutes)
 ```
+
+After a code change: `node scripts/demo-kit/host.mjs --config oh --step preflight` (bundles, typecheck, the credential grep, the config byte-equal to the builder's, the head mounts `/oh/api`), then `node scripts/demo-kit/host.mjs --config oh --from deploy --confirm edge-platform-oh` (deploy, seed, redeploy, region seed, verify). Operator tokens are minted inside the script from the owner's `OH_REMOTE_JWT_SECRET` in `.dev.vars` and never printed. The old hand sequence (builder, `seed.mjs`, `wrangler deploy`, `region-seed.mjs`, `check-demo.mjs`) is what the script runs, in that order, and is not run by hand any more.
 
 **A reset starts a new Dana:** the sign-in links `oh-demo-dana-whitfield-<generation>`, the generation being the catalog revision the last reset published (beat 1, or a suite's closing reset), so one showing's laptop and phone are one fresh person and nobody from an earlier showing is in her (`src/routes/oh.ts`).
 

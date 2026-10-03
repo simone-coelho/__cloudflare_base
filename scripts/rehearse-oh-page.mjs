@@ -328,7 +328,7 @@ console.log('\n── The page never ranks: its own code orders no piece and sco
     { fn: 'sizeUpFor', comparator: '(a, b) => a.size - b.size', why: 'the size-up calculator: the next size up within her declared distance’s range, the piece’s own figures' },
     { fn: 'paintRail', comparator: '(a, b) => num(b.contribution) - num(a.contribution)', why: 'a product card’s strongest POST /sort driver, named on its rank line: the rail keeps /sort’s order' },
     { fn: 'snap', comparator: '(x, y) => y.a - x.a', why: 'her strongest signals for Compare’s What changed (P1’s snapshot hook): her vector, not a piece' },
-    { fn: 'topOf', comparator: '(x, y) => y.a - x.a', why: 'her strongest lasting signals, named on the sign-in strip (P3): her vector, not a piece' },
+    { fn: 'topOf', comparator: '(x, y) => y.a - x.a', why: 'her three strongest values across every dimension, named on the sign-in strip (P3): her vector, not a piece' },
     { fn: 'keysOf', comparator: '', why: 'a set of signals’ keys put in order to compare two sets (P3): not a piece' },
     { fn: 'receiptLine', comparator: '(a, b) => Number(b.a) * Number(b.weight) - Number(a.a) * Number(a.weight)', why: 'her two strongest drivers on a card’s receipt line: an explanation, not a piece' },
     { fn: 'chosenOrder', comparator: 'SORTS[key]', why: 'her own choice on a grid’s sort control (price low to high or high to low, rating), the control design §9.3 asks for: never the default, Best match stays POST /sort’s order and each card keeps its engine rank (M1; read by S2)' },
@@ -575,6 +575,10 @@ const leaders = async (region) => { const c = await client.coldstart(region); re
 const sig = (l) => `${(l || {}).type || ''}|${(l || {}).sizeBand || ''}`;
 const pieceRoom = (cid) => (((pieceById(cid) || {}).tags || {}).room || []);
 const firstIs = (sku, l) => { const p = row(sku); return Boolean(p && l && p.attributes.type === l.type && p.attributes.sizeBand === l.sizeBand); };
+/** What a region buys among the TVs the grid holds: its leading type and size band in the lean's shares, over the grid's own values. */
+const gridLead = async (region) => { const c = await client.coldstart(region); const s = c && c.lean && c.lean.inForce ? c.lean.share : null; if (!s) return null;
+  const pool = gridPool(); const top = (dim) => { const have = new Set(pool.map((p) => p.attributes[dim])); const best = Object.entries(s[dim] || {}).filter(([v]) => have.has(v)).sort((x, y) => y[1] - x[1])[0]; return best ? best[0] : null; };
+  return { type: top('type'), sizeBand: top('sizeBand') }; };
 
 // ── Lane P3's helpers for its checks (written by P3, integrated by S1 into the suite's order) ──
 //      through it, and the two outcomes credited to the decisions that earned them. Written by lane P3
@@ -586,8 +590,8 @@ const W = (() => { const all = [...String(shells.js || '').matchAll(/\bconst WAL
   for (const [, k, v] of String(m ? m[1] : '').matchAll(/([\w$]+):\s*('[^']*'|"[^"]*"|[\d.]+)/g)) out[k] = /^['"]/.test(v) ? v.slice(1, -1) : Number(v); return out; })();
 const reg = anchor.registry || {};
 const tau = (dim) => Number((((reg.dimensions || []).find((x) => x.key === dim)) || {}).tauMs) || Number(reg.tauMs) || 0;
-/** Every lasting signal (a day of memory or more) a profile holds, as dim:value. */
-const lasting = (dims) => Object.entries(dims || {}).filter(([dim]) => tau(dim) >= 86400000)
+/** Every signal a profile holds, across every dimension whatever its memory, as dim:value. */
+const heldSignals = (dims) => Object.entries(dims || {})
   .flatMap(([dim, vals]) => Object.entries(vals || {}).filter(([, a]) => Number(a) > 0).map(([value]) => `${dim}:${value}`));
 const json = (t) => { try { return JSON.parse(t); } catch { return null; } };
 /** The route as the page's api() door calls it, with the raw answer kept: its text and its headers, read whole. */
@@ -691,7 +695,7 @@ const OUTCOMES = {
     }
     {
       // Lane P1's checks for this beat (P1 wrote them; S1 runs them after its own, in the beat's order).
-      const lead = page.own ? await leaders(null) : null;
+      const lead = page.own ? await gridLead(null) : null;
       const grid = await sortRail('tv-grid', gridPool());
       const reg = grid.regional;
       ok(`the TV grid leans with ${page.own || 'the request'}’s sales from the first paint: POST /sort labels it ${page.own}, from the request, on the published allowlist (${regDims.join(', ')})`,
@@ -755,7 +759,7 @@ const OUTCOMES = {
         if (sig(await leaders(key)) !== sig(own)) { pick = key; break; }
       }
       pick = pick || firstOther;
-      const lead = await leaders(pick);
+      const lead = await gridLead(pick);
       ok(`beat 2’s region, as the page chooses it: ${pick}, the first configured contrast whose sales lean differently from ${page.own || 'hers'}`,
         Boolean(pick) && /p1Contrast/.test(JSON.stringify((beatsDoc.beats.find((x) => x.key === 'contrast') || {}).run || [])), `${sig(own)} → ${sig(lead)}`);
       page.region = pick;                                       // the walk follows the page's own assertion from here
@@ -1062,8 +1066,20 @@ const OUTCOMES = {
       const tv = fall('living-room'), laundry = fall('laundry-room');
       // What the page measures (the lead's alignment): each room's dial now and its projection three weeks on; a comparison is
       // claimed only when the two fades differ (the DOM suite reads the page's sentence against it).
-      ok(`her room dials are read, and the published memory (τ ${Math.round(tauOf('room') / 86400000)} days on room, K ${K}) projects each ${days} days on`, tv !== null && laundry !== null,
+      const tauLabel = (ms) => (ms < 120000 ? `${Math.round(ms / 1000)} seconds` : ms < 7200000 ? `${Math.round(ms / 60000)} minutes` : `${Math.round(ms / 86400000)} days`);
+      ok(`her room dials are read, and the published memory (τ ${tauLabel(tauOf('room'))} on room, K ${K}) projects each ${days} days on`, tv !== null && laundry !== null,
         `living room −${tv !== null ? Math.round(tv * 100) : '?'}% · laundry room −${laundry !== null ? Math.round(laundry * 100) : '?'}%${tv !== null && laundry !== null && Math.round(tv * 100) === Math.round(laundry * 100) ? ': the same fade, so no room is said to fade further' : ''}`);
+    }
+    if ((Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs) || 1209600000) < 3600000) {
+      // On the demo's dial beat 13 says her room signals are gone (every room below θin), so the continue hero rests on her
+      // shortlist and the decisions trail: projected here from her own meters at the engine, the page's arithmetic.
+      const K = Number(reg.K) || 1.8, t = days * 86400000, thetaIn = Number(reg.thetaIn) || 0.6;
+      const tauRoom = Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs);
+      const carry = (a) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauRoom); return r / (r + K); };
+      const rooms = Object.entries(m0.dims.room || {}).filter(([, a]) => Number(a) > 0);
+      const still = rooms.filter(([, a]) => carry(Number(a)) >= thetaIn);
+      ok(`on the demo’s dial every room she holds falls below the entry threshold (θin ${thetaIn.toFixed(2)}) ${days} days on, as beat 13 now says: the continue hero rests on her shortlist and the decisions trail`,
+        rooms.length > 0 && still.length === 0, rooms.map(([v, a]) => `${v} ${Number(a).toFixed(3)} → ${carry(Number(a)).toFixed(3)}`).join(' · ') || 'no room held');
     }
     last = back;
     {
@@ -1121,9 +1137,9 @@ const OUTCOMES = {
       ok(`and refuses a body that carries anything but the account (${extra.status}): no assertion crosses from the page`, extra.status === 400, (extra.body || {}).error);
     }
     const laptop = her;
-    const laptopTop = async (v) => { const m = await client.meters(v); const DAY = 86400000; const reg = anchor.registry || {};
-      const tau = (dim) => Number((((reg.dimensions || []).find((x) => x.key === dim)) || {}).tauMs) || Number(reg.tauMs) || 0;
-      return Object.entries(m.dims).filter(([dim]) => tau(dim) >= DAY).flatMap(([dim, vals]) => Object.entries(vals).map(([value, a]) => ({ dim, value, a: Number(a) }))).filter((x) => x.a > 0)
+    // Her three strongest values across every dimension, whatever its memory (P3's topOf, the strip's “strongest at sign-in”).
+    const laptopTop = async (v) => { const m = await client.meters(v);
+      return Object.entries(m.dims).flatMap(([dim, vals]) => Object.entries(vals).map(([value, a]) => ({ dim, value, a: Number(a) }))).filter((x) => x.a > 0)
         .sort((x, y) => y.a - x.a).slice(0, 3).map((x) => `${x.dim}:${x.value}`); };
     const signIn = async (v) => {
       const r = await call(SIGN, { visitor: v, body: { account } });
@@ -1147,12 +1163,15 @@ const OUTCOMES = {
     await client.send(phone, 'page_view', { page: home.page });
     const before = await client.snapshot(phone, home.page, {});
     const beforeTop = await laptopTop(phone);
-    ok('on her phone she is a stranger: none of the laptop’s taste', !want.some((x) => beforeTop.includes(x)), `${beforeTop.join(', ') || 'no taste'} · the laptop’s ${want.join(', ')}`);
+    ok('on her phone she is a stranger: none of the laptop’s taste (its three strongest values across every dimension)', want.length > 0 && !want.some((x) => beforeTop.includes(x)), `${beforeTop.join(', ') || 'no taste'} · the laptop’s ${want.join(', ')}`);
     const P = await signIn(phone);
     ok('the phone signs in as the same person', P.status === 200 && P.body.linked === true, `${P.status}`);
     const after = await client.snapshot(phone, home.page, {});
-    const afterTop = await laptopTop(phone);
-    ok('and in one request the phone carries the laptop’s taste: her strongest lasting signals, the same', JSON.stringify(afterTop) === JSON.stringify(want), `${afterTop.join(', ')} · the laptop’s ${want.join(', ')}`);
+    // Read at the same moment through both sessions, as the page reads them at the link (both now name the person).
+    const [afterTop, laptopNow] = await Promise.all([laptopTop(phone), laptopTop(laptop)]);
+    const sameSet = (x, y) => x.length > 0 && [...x].sort().join('|') === [...y].sort().join('|');
+    ok('and in one request the phone carries the laptop’s taste: her three strongest values across every dimension, read at the same moment through the phone’s and the laptop’s sessions, the same',
+      afterTop.length === 3 && sameSet(afterTop, laptopNow), `${afterTop.join(', ')} · the laptop’s ${laptopNow.join(', ')}`);
     const moved = ['hero', 'category-rail', 'deals'].filter((x) => JSON.stringify(ids(before.slot(x))) !== JSON.stringify(ids(after.slot(x))));
     ok('and the phone’s homepage answers as hers', moved.length > 0, moved.join(', ') || 'nothing moved');
     P3STATE.signedIn = true;
@@ -1189,20 +1208,20 @@ const OUTCOMES = {
       // taste and a phone with none, each signing in as the account, are one person carrying both.
       const laptop = await client.mintVisitor({}, 'P3 laptop');
       for (const sku of [W.tv, W.pickup, W.referral].filter(Boolean)) { const p = row(sku); if (p) await client.send(laptop, 'product_view', productAttrs(p, { view: 'page' })); }
-      const own = lasting((await client.meters(laptop)).dims);
+      const own = heldSignals((await client.meters(laptop)).dims);
       const phone = await client.mintVisitor({}, 'P3 phone');
       await client.send(phone, 'page_view', { page: home.page });
-      const before = lasting((await client.meters(phone)).dims);
+      const before = heldSignals((await client.meters(phone)).dims);
       const L = await p3SignIn(laptop, { account }), P = await p3SignIn(phone, { account });
       if (L.body && L.body.session) laptop.session = L.body.session;
       if (P.body && P.body.session) phone.session = P.body.session;
       if (P.status === 200 && phone.session && phone.session.subject) P3STATE.person = phone.session.subject;   // S2: the walk's person, for the check after the final reset
-      const after = lasting((await client.meters(phone)).dims);
+      const after = heldSignals((await client.meters(phone)).dims);
       ok('every device that signs in as the account is one person: the probe’s, the laptop’s and the phone’s sessions name one recognised shopper',
         L.status === 200 && P.status === 200 && laptop.session.subject === phone.session.subject && ((r.body && r.body.session) || {}).subject === phone.session.subject && /^sh_/.test(phone.session.subject),
         `${L.status} · ${P.status}`);
-      ok('and the phone carries what the laptop learned: every lasting signal of the laptop’s is in the phone’s profile now, none was before',
-        own.length > 0 && own.every((k) => after.includes(k)) && own.every((k) => !before.includes(k)), `${own.length} lasting signal(s) · before ${before.length} · after ${after.length}`);
+      ok('and the phone carries what the laptop learned: every signal of the laptop’s, across every dimension, is in the phone’s profile now, none was before',
+        own.length > 0 && own.every((k) => after.includes(k)) && own.every((k) => !before.includes(k)), `${own.length} signal(s) · before ${before.length} · after ${after.length}`);
     }
   },
   async 'best-buy-counts'(b) {
@@ -1458,7 +1477,25 @@ async function storeByHand() {
   for (const p of tvs) await send('product_view', productAttrs(p, { view: 'page' }), `the TV ${p[SKU]}`);
   // As the DOM session types it (“washer” alone also matches the dishwashers, since the store's index matches inside words: M3).
   const Q = 'front load washer', matches = storeMatch(Q), cats = [...new Set(matches.map((p) => p.attributes && p.attributes.category))];
+  const beforeSearch = await read();
   await custom('search', { control: 'search', query: Q, results: matches.length, ...(cats.length === 1 ? { category: cats[0] } : {}) }, `a search: “${Q}”`);
+  {
+    // By design (coordinator): a search whose results span several categories carries no category, and moves nothing on her profile.
+    const afterSearch = await read();
+    const rose = Object.entries(afterSearch).flatMap(([d, vals]) => Object.entries(vals || {}).filter(([v, x]) => Number(x) > Number(((beforeSearch[d] || {})[v]) || 0) + 0.004).map(([v]) => `${d} ${v}`));
+    ok(`a search whose results span several categories (${cats.length}) carries no category and moves nothing on her profile`, cats.length > 1 && rose.length === 0, rose.join(', ') || 'nothing rose');
+  }
+  {
+    // By design: notify_me has no published weight, so asking to be told of an out-of-stock product moves nothing.
+    const out = rowsAll.find((p) => p.cta === 'cart' && p.inStock === false && p.attributes && p.attributes.category === 'washers') || rowsAll.find((p) => p.inStock === false && p.attributes);
+    const w = ((anchor.registry || {}).weights || {}).notify_me;
+    const n0 = await read();
+    const nr = out ? await custom('notify_me', productAttrs(out, { control: 'buy-box' }), `Notify Me for ${out[SKU]}`) : null;
+    const n1 = await read();
+    const roseN = Object.entries(n1).flatMap(([d, vals]) => Object.entries(vals || {}).filter(([v, x]) => Number(x) > Number(((n0[d] || {})[v]) || 0) + 0.004).map(([v]) => `${d} ${v}`));
+    ok(`notify_me has no published weight and moves nothing: Notify Me for ${out ? out[SKU] : 'no out-of-stock product'} is accepted and raises no dimension of hers`, Boolean(out && nr && nr.ok) && !(Number(w) > 0) && roseN.length === 0,
+      `weight ${w === undefined ? 'none' : w} · rose: ${roseN.join(', ') || 'nothing'}`);
+  }
   const sr = await call('/sort', { visitor: hand, body: { userId: hand.session.subject, sessionId: hand.session.sessionId, weights: { affinity: 1 },
     candidates: matches.slice(0, 500).map((p) => { const { productId, ...x } = productAttrs(p); return { id: productId, ...x }; }) } });
   const order = sr.ok && Array.isArray(sr.body.order) ? sr.body.order.map(String) : [];
@@ -1479,6 +1516,37 @@ async function storeByHand() {
   const d3 = await read();
   ok(`her colour reaches the engine as a select with the variant’s attributes: finish ${sibling.attributes.finish} rises (${before.toFixed(2)} → ${a(d3, 'finish', sibling.attributes.finish).toFixed(2)})`,
     a(d3, 'finish', sibling.attributes.finish) > before);
+  {
+    console.log('\n── Her visitor, kept in this browser: a second load reuses the stored capability (S2)');
+    // Read where it is built: the boot calls store.visitor.resume() before anything mints, and resume() continues her from
+    // the capability kept under the SDK's own key, confirmed by her own profile read (/realtime/reflex), never an identity call.
+    const sj = [...pageModules].find(([p]) => /\/oh\/oh-store\.js$/.test(p));
+    const sc = codeOnly(sj ? sj[1] : '', 'js'), pc = codeOnly(shells.js || '', 'js');
+    const body = (code, head) => { const i = code.indexOf(head); if (i < 0) return ''; const end = /\r?\n\}\r?\n/g; end.lastIndex = i; const m = end.exec(code); return code.slice(i, m ? m.index : undefined); };
+    const res = body(sc, 'async function resume()'), keptFn = body(sc, 'function kept()'), persistFn = body(sc, 'function persist(');
+    const keys = /opt_shopper_session:/.test(sc) && /opt_shopper_visitor:/.test(sc) && /'localStorage'/.test(sc);
+    const resumes = /kept\(\)/.test(res) && /'\/realtime\/reflex'/.test(res) && !/identity\/session|\.ensure\(|mintVisitor\(|\bmint\(/.test(res);
+    const stores = /setItem\(capKey\(\), s\.capability\)/.test(persistFn) && /getItem\(capKey\(\)\)/.test(keptFn);
+    const bootAt = pc.indexOf('store.visitor.resume()'), productAt = pc.indexOf('await openProduct(id)', bootAt);
+    const why = [!keys && 'not kept under the SDK’s keys in localStorage', !resumes && 'resume() does not continue from the kept capability without an identity call',
+      !stores && 'persist()/kept() do not store and read the capability', !(bootAt > 0 && productAt > bootAt) && 'the boot does not resume before the direct product load'].filter(Boolean);
+    ok('a full load continues her from this browser, in the code: the boot calls store.visitor.resume() before the direct product load, and resume() reads the capability kept under the SDK’s key (localStorage) and confirms it with her own profile read, never an identity call',
+      why.length === 0, why.join(' ~ ') || (sj ? sj[0] : 'oh-store.js not loaded'));
+    // The second load, at the engine: a visitor rebuilt from what persist() keeps (the capability and her record), no mint.
+    const k = hand.session;
+    const second = { label: 'her second load', session: { capability: k.capability, tenant: TENANT, subject: k.subject, sessionId: k.sessionId, kind: k.kind, iat: k.iat, exp: k.exp }, entry: {} };
+    const r0 = await client.call('/realtime/reflex', { visitor: second });
+    const dims0 = (r0.body.affinity && r0.body.affinity.dims) || {};
+    const same = Object.entries(d3).every(([d, vals]) => Object.entries(vals || {}).every(([v, x]) => Math.abs(Number(x) - Number(((dims0[d] || {})[v]) || 0)) <= 0.02));
+    ok(`the stored capability is good for the next load: her own profile read answers ${r0.status} with the readings she left (${Object.keys(d3).length} dimensions), and it has more than a minute left`,
+      r0.ok && same && Number(k.exp) * 1000 > Date.now() + 60000, `${r0.status} · ${same ? 'the same readings' : 'other readings'} · exp in ${Math.round((Number(k.exp) * 1000 - Date.now()) / 60000)} min`);
+    const w0 = a(dims0, 'category', washer.attributes.category);
+    const pv = await client.send(second, 'product_view', productAttrs(washer, { view: 'page' }));
+    const dims1 = (await client.meters(hand)).dims;
+    const w1 = a(dims1, 'category', washer.attributes.category);
+    ok(`and an event on that load is hers: product_view of ${washer[SKU]} is accepted under the same visitor and her readings accumulate (category ${washer.attributes.category} ${w0.toFixed(2)} → ${w1.toFixed(2)}, read through her first load’s session)`,
+      pv.ok && w1 > w0 + 0.01, `${pv.status}`);
+  }
   const s = await client.snapshot(hand, 'product', { anchor: sibling[SKU], family: sibling.family });
   const onPage = [...s.slot('pdp-offers'), ...s.slot('pdp-modules')];
   const lead = onPage[0] || null;
@@ -1513,6 +1581,26 @@ async function storeByHand() {
   checks.known(`the Find a Retailer lists come from the catalog’s where-to-buy piece: online sellers and nearby stores for every product family the store sells (${rooms.length})`, shortRooms.length === 0,
     `mod-where-to-buy-retailer carries no list for ${shortRooms.join(', ')}; the modal falls back to the store’s own list there`, 'D1 (catalog.json: display.retailers per room, design §9.3) and M3 (oh-store.js reads it when present)');
   const storeJs = [...pageModules].find(([p]) => /\/oh\/oh-store\.js$/.test(p));
+  {
+    // The guard (coordinator, after the live defect): every event about a product goes out with the product's dimension
+    // attributes, as product_view does. Read where it is built: the store's send() joins productAttrs in each of its three
+    // branches whenever a product is named, and every call that sends an event about a product names it (sku), through the
+    // store, or passes productAttrs itself when it goes straight to the kit's transport.
+    const sc = codeOnly(storeJs ? storeJs[1] : '', 'js'), pc = codeOnly(shells.js || '', 'js');
+    const joins = [/data = p \? h\.productAttrs\(p, \{ view: 'page', \.\.\.rest \}\) : rest/, /data = p \? h\.productAttrs\(p, rest\) : rest/, /data = p \? h\.productAttrs\(p, more\) : more/].every((re) => re.test(sc));
+    const PRODUCT = ['add_to_cart', 'wishlist_add', 'purchase', 'select', 'compare', 'find_a_retailer', 'partner_pickup', 'retailer_referral', 'notify_me'];
+    const sites = [];
+    for (const [where, code] of [['oh-store.js', sc], ['oh.js', pc]]) {
+      for (const m of code.matchAll(/((?:store\.events\.|transport\.|\bt\.)?send(?:Custom)?)\(\s*(?:'([a-z_]+)'|(event))\s*,\s*([^\n]{0,140})/g)) {
+        if (m[2] && !PRODUCT.includes(m[2])) continue;
+        const direct = /^(transport\.|t\.)/.test(m[1]);
+        sites.push({ where, name: m[2] || 'an outcome (partner_pickup, retailer_referral)', ok: direct ? /^productAttrs\(/.test(m[4]) : /^\{\s*sku\b/.test(m[4]) });
+      }
+    }
+    const bad = sites.filter((x) => !x.ok);
+    ok(`every event about a product is built with the product's dimension attributes: the store's send() joins them in all three branches, and each of the ${sites.length} call sites names the product`,
+      joins && sites.length > 0 && bad.length === 0, bad.map((x) => `${x.where} ${x.name}`).join(' ~ ') || [...new Set(sites.map((x) => x.name))].join(', '));
+  }
   ok('and the store’s modal reads them from that piece when it carries them (oh-store.js retailerLists: display.retailers, per room)', Boolean(storeJs) && /customerContentId === RETAIL_CID[\s\S]{0,200}display\.retailers/.test(codeOnly(storeJs[1], 'js')), storeJs ? storeJs[0] : 'oh-store.js not loaded');
   const partner = ((groupOf(sibling.family) || {}).online || [])[0];
   // M3's shape: the product's own attributes as the feed has them (its retailer value kept), the store chosen in data.store, where online.
@@ -1564,7 +1652,7 @@ try {
       if (subj) fresh.session = r.body.session;
       const tail = (x) => (x ? `…${String(x).slice(-6)}` : 'none');
       ok(`after a reset “${account}” links a fresh identity: a new person, not the walk’s (${tail(P3STATE.person)} → ${tail(subj)})`, r.status === 200 && Boolean(subj) && subj !== P3STATE.person, `${r.status}`);
-      const carried = subj ? lasting((await client.meters(fresh)).dims) : [];
+      const carried = subj ? heldSignals((await client.meters(fresh)).dims) : [];
       ok('and that person carries none of the walk’s taste', Boolean(subj) && carried.length === 0, carried.join(', ') || 'nothing');
     } else if (account) info('the walk signed nobody in on this rig, so the fresh identity after a reset is not asked');
     if (closedAt11.length) {
