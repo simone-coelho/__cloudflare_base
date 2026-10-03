@@ -7,12 +7,15 @@
 //
 // No dependencies, changes nothing, deploys nothing. It proves from the files alone what the site
 // promises:
-//   - every page and file the site needs is there, and the served folder holds nothing else;
+//   - every page and file the site needs is there, no retired page is, and the served folder holds
+//     nothing else;
 //   - the policy in site/_headers is exactly the page policy: styles and scripts from this site only
 //     ('self'), images only as data: URIs, and a hash only for an inline style still in use;
-//   - a page loads nothing but /site.css and /site.js, runs no other script, and links out only to the
-//     site itself and the three demo workers; site.css and site.js load and store nothing;
+//   - a page loads nothing but /site.css, /site.js and its own stylesheet and script, and links out only
+//     to the site itself and the demo workers; no stylesheet or script the site serves loads or stores
+//     anything;
 //   - the package name is written once on every page, inside its h1, the same string everywhere;
+//   - what a reader sees holds no build-state word and no customer or competitor name (LANE-BRIEF-V2);
 //   - wrangler.enablement.toml names the gate (enablement/worker.mjs) in front of every request, with
 //     the ASSETS binding and no variable or credential, and nothing served or configured holds one;
 //   - the gate holds no secret and its unit tests pass;
@@ -34,16 +37,24 @@ const renderCheckPath = join(root, 'enablement', 'render-check.mjs');
 const renderPagesPath = join(root, 'enablement', 'render-pages.mjs');
 
 // The pages the site must have, beside E0's 404.html. Each <name>.html is served at /<name> (index at /).
-const PAGES = ['index', 'what-it-is', 'selling-it', 'how-it-works', 'status', 'credits', 'glossary', 'demos'];
-// The only script and the only stylesheet a page may load, written exactly so.
+const PAGES = ['index', 'what-it-is', 'selling-it', 'how-it-works', 'credits', 'glossary', 'demos', 'see-it-work', 'how-it-works-interactive'];
+// The interactive pages' own stylesheets and scripts (lanes M1 and H1, LANE-BRIEF-V2 §5).
+const OWN_FILES = ['see-it-work.css', 'see-it-work.js', 'how-it-works-interactive.css', 'how-it-works-interactive.js'];
+// Pages LANE-BRIEF-V2 retired: refused if they are still in the served folder.
+const RETIRED = ['status.html'];
+// The shared script and stylesheet, written exactly so. A page may also load its own, /<name>.js and
+// /<name>.css, in the same form, and nothing else.
 const SCRIPT_TAG = '<script src="/site.js" defer></script>';
 const STYLESHEET_TAG = '<link rel="stylesheet" href="/site.css">';
-// The only addresses an <a href> may name besides the site's own paths: the site and the three demo workers.
+const ownScriptTag = (name) => `<script src="/${name}.js" defer></script>`;
+const ownStylesheetTag = (name) => `<link rel="stylesheet" href="/${name}.css">`;
+// The only addresses an <a href> may name besides the site's own paths: the site and the demo workers.
 const LINK_HOSTS = new Set([
   'edge-platform-bti.expedge.workers.dev',
   'edge-platform.expedge.workers.dev',
   'edge-platform-top-offers.expedge.workers.dev',
   'edge-platform-vantage.expedge.workers.dev',
+  'edge-platform-oh.expedge.workers.dev',
 ]);
 // The page policy, exactly. Only style-src may add a hash, and only for an inline style still in use.
 const POLICY = {
@@ -83,16 +94,20 @@ if (process.argv.includes('--hashes')) {
 const problems = [];
 const check = (cond, what) => { console.log(`${cond ? 'ok   ' : 'FAIL '} ${what}`); if (!cond) problems.push(what); };
 
-// 1. The files that must exist, and nothing else in the served folder.
-for (const f of [...PAGES.map((p) => `${p}.html`), '404.html', '_headers', 'site.css', 'site.js']) check(existsSync(join(siteDir, f)), `enablement/site/${f} exists`);
+// 1. The files that must exist, no retired page, and nothing else in the served folder.
+for (const f of [...PAGES.map((p) => `${p}.html`), '404.html', '_headers', 'site.css', 'site.js', ...OWN_FILES]) check(existsSync(join(siteDir, f)), `enablement/site/${f} exists`);
+for (const f of RETIRED) check(!existsSync(join(siteDir, f)), `enablement/site/${f} is not served (retired by LANE-BRIEF-V2)`);
 const figureFiles = existsSync(figuresDir) ? readdirSync(figuresDir).filter((n) => n.toLowerCase().endsWith('.svg')).sort() : [];
 const staleFigures = figureFiles.filter((n) => existsSync(join(sourceFiguresDir, n)) && read(join(sourceFiguresDir, n)) !== read(join(figuresDir, n)));
 check(figureFiles.length > 0 && staleFigures.length === 0,
   `enablement/site/figures/ holds the figures, each the same as its source in docs/enablement/figures/ (${figureFiles.join(', ') || 'none'}${staleFigures.length ? `; differs: ${staleFigures.join(', ')}` : ''})`);
 for (const f of [renderCheckPath, renderPagesPath]) check(existsSync(f), `${rel(f)} exists`);
-const SERVED_SHAPE = /^(?:[a-z0-9-]+\.html|site\.css|site\.js|_headers|figures\/[a-z0-9-]+\.svg)$/;
-const strays = files.map((f) => relative(siteDir, f).split(sep).join('/')).filter((f) => !SERVED_SHAPE.test(f));
-check(strays.length === 0, `enablement/site/ holds only pages, site.css, site.js, figures/*.svg and _headers${strays.length ? ` (also: ${strays.join(', ')})` : ''}`);
+const servedNames = files.map((f) => relative(siteDir, f).split(sep).join('/'));
+const pageNames = new Set(servedNames.filter((f) => /^[a-z0-9-]+\.html$/.test(f)).map((f) => f.slice(0, -'.html'.length)));
+// A stylesheet or script is either the shared one (site) or a page's own (<name>.css, <name>.js beside <name>.html).
+const sharedOrOwn = (f) => { const m = /^([a-z0-9-]+)\.(?:css|js)$/.exec(f); return Boolean(m) && (m[1] === 'site' || pageNames.has(m[1])); };
+const strays = servedNames.filter((f) => !/^(?:[a-z0-9-]+\.html|_headers|figures\/[a-z0-9-]+\.svg)$/.test(f) && !sharedOrOwn(f));
+check(strays.length === 0, `enablement/site/ holds only pages, site.css, site.js, a page's own .css and .js, figures/*.svg and _headers${strays.length ? ` (also: ${strays.join(', ')})` : ''}`);
 
 // 2. The policy in _headers: one rule for every address, and exactly the page policy.
 const headersFile = join(siteDir, '_headers');
@@ -135,8 +150,9 @@ check(/no-store/i.test(headerValue('Cache-Control')) && /private/i.test(headerVa
 check(/max-age=\d{7,}/.test(headerValue('Strict-Transport-Security')), 'header: Strict-Transport-Security with a long max-age');
 check(/noindex/i.test(headerValue('X-Robots-Tag')), 'header: X-Robots-Tag noindex');
 
-// 3. A page runs no script but /site.js, loads nothing but /site.css and /site.js, and its links leave
-//    only for the site itself and the three demo workers. site.css and site.js load and store nothing.
+// 3. A page runs no script but /site.js and its own /<name>.js, loads no stylesheet but /site.css and its
+//    own /<name>.css, loads nothing from another address, and its links leave only for the site itself and
+//    the demo workers. No stylesheet or script the site serves loads or stores anything.
 const BANNED_TAG = /<(script|form|input|select|textarea|iframe|frame|object|embed|applet|base)\b/i;
 const SCHEME = /^\s*([a-z][a-z0-9+.-]*:|\/\/)/i;
 const ICON_TAG = /^<link rel="icon" href="data:image\/[^"]*">$/i;
@@ -162,12 +178,20 @@ const cssLoads = (css) => [...css.matchAll(/url\(\s*["']?([^)"']*)/gi)].map((m) 
 const cssLoadsSomething = (css) => cssLoads(css).length > 0 || /@import|@font-face/i.test(css);
 for (const p of pages) {
   const html = noComments(p.html);
-  const scriptTags = html.split(SCRIPT_TAG).length - 1;
-  check(scriptTags <= 1 && !BANNED_TAG.test(html.split(SCRIPT_TAG).join('')),
-    `${p.file}: no script but ${SCRIPT_TAG}, and no form, input, iframe, object, embed or base element`);
+  const name = p.file.split('/').pop().replace(/\.html$/, '');
+  const allowedScripts = [SCRIPT_TAG, ownScriptTag(name)];
+  const allowedStylesheets = [STYLESHEET_TAG, ownStylesheetTag(name)];
+  const repeatedScript = allowedScripts.some((t) => html.split(t).length - 1 > 1);
+  const rest = allowedScripts.reduce((text, t) => text.split(t).join(''), html);
+  check(!repeatedScript && !BANNED_TAG.test(rest),
+    `${p.file}: no script but /site.js and /${name}.js (each at most once, as <script src="..." defer></script>), and no form, input, iframe, object, embed or base element`);
   check(!/\son[a-z]+\s*=|\sstyle\s*=|javascript:|http-equiv\s*=/i.test(html), `${p.file}: no event handler, style attribute, javascript: URL or http-equiv`);
-  const badLinks = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]).filter((t) => t !== STYLESHEET_TAG && !ICON_TAG.test(t));
-  check(badLinks.length === 0, `${p.file}: the only link elements are the inline icon and ${STYLESHEET_TAG}`);
+  const linkTags = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
+  const badLinks = linkTags.filter((t) => !allowedStylesheets.includes(t) && !ICON_TAG.test(t));
+  const repeatedStylesheet = allowedStylesheets.some((t) => linkTags.filter((x) => x === t).length > 1);
+  check(badLinks.length === 0 && !repeatedStylesheet, `${p.file}: the only link elements are the inline icon, /site.css and /${name}.css (each at most once)`);
+  const absent = [...allowedScripts, ...allowedStylesheets].filter((t) => html.includes(t)).map((t) => t.match(/"\/([^"]+)"/)[1]).filter((f) => !existsSync(join(siteDir, f)));
+  check(absent.length === 0, `${p.file}: every stylesheet and script it loads is served${absent.length ? ` (missing ${absent.join(', ')})` : ''}`);
   const loadsOut = [];
   const linksOut = [];
   for (const m of html.matchAll(/<([a-zA-Z][\w:-]*)\b([^>]*)>/g)) {
@@ -185,21 +209,21 @@ for (const p of pages) {
   }
   check(loadsOut.length === 0 && !inlineStyles(p.html).some(cssLoadsSomething),
     `${p.file}: nothing is loaded from another address${loadsOut.length ? ` (found ${loadsOut[0]})` : ''}`);
-  check(linksOut.length === 0, `${p.file}: links leave only for the site itself and the three demo workers${linksOut.length ? ` (found ${linksOut[0]})` : ''}`);
+  check(linksOut.length === 0, `${p.file}: links leave only for the site itself and the demo workers (edge-platform, -top-offers, -vantage, -oh)${linksOut.length ? ` (found ${linksOut[0]})` : ''}`);
 }
-const siteCssPath = join(siteDir, 'site.css');
-const siteJsPath = join(siteDir, 'site.js');
-const siteCss = existsSync(siteCssPath) ? read(siteCssPath) : '';
-const siteJs = existsSync(siteJsPath) ? read(siteJsPath) : '';
-check(siteCss !== '' && !cssLoadsSomething(siteCss), 'site.css loads nothing: no url() but data:, no @import, no @font-face');
+const servedStylesheets = files.filter((f) => extname(f).toLowerCase() === '.css');
+const servedScripts = files.filter((f) => extname(f).toLowerCase() === '.js');
+for (const f of servedStylesheets) check(!cssLoadsSomething(read(f)), `${rel(f)} loads nothing: no url() but data:, no @import, no @font-face`);
 const SCRIPT_API = [
   [/\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|\bimport\s*\(/, 'a network call'],
   [/localStorage|sessionStorage|indexedDB|cookieStore|document\.cookie|\bcaches\./, 'storage'],
   [/\beval\s*\(|\bFunction\s*\(|set(?:Timeout|Interval)\s*\(\s*['"`]/, 'code built from a string'],
   [/innerHTML|outerHTML|insertAdjacentHTML|document\.write/, 'HTML written from a string'],
 ];
-const scriptHits = SCRIPT_API.filter(([re]) => re.test(siteJs)).map(([, what]) => what);
-check(siteJs !== '' && scriptHits.length === 0, `site.js makes no network call, uses no storage, builds no code or HTML from a string${scriptHits.length ? ` (found ${scriptHits.join(', ')})` : ''}`);
+for (const f of servedScripts) {
+  const scriptHits = SCRIPT_API.filter(([re]) => re.test(read(f))).map(([, what]) => what);
+  check(scriptHits.length === 0, `${rel(f)} makes no network call, uses no storage, builds no code or HTML from a string${scriptHits.length ? ` (found ${scriptHits.join(', ')})` : ''}`);
+}
 
 // 4. The package name: once on every page, inside its h1, the same string everywhere, nowhere else.
 const NAME_ELEMENT = /<(\w+)\b[^>]*\bid="package-name"[^>]*>([\s\S]*?)<\/\1>/;
@@ -219,6 +243,54 @@ for (const p of contentPages) {
 const otherServed = files.filter((f) => !contentPages.some((p) => p.file === rel(f)) && (TEXT.has(extname(f).toLowerCase()) || f.endsWith('_headers')));
 const nameElsewhere = packageName ? otherServed.filter((f) => noComments(read(f)).includes(packageName)).map(rel) : [];
 check(nameElsewhere.length === 0, `the package name is in no other served file (404.html, site.css, site.js, the figures, _headers)${nameElsewhere.length ? ` (found in ${nameElsewhere.join(', ')})` : ''}`);
+
+// 4b. What a reader sees (LANE-BRIEF-V2 §1 and §4): no build-state word and no customer or competitor name.
+//     Scanned: each served page's visible text (comments, scripts and styles removed; alt, title, aria-label
+//     and placeholder text kept), each figure's text, the strings a script can put on a page (comments
+//     removed), and CSS content strings. "journey stage" is allowed, and so is a configuration path such as
+//     pages.home[0].stage, which is code, not a stage. A script string that is one token with code
+//     punctuation (a class name such as sw-stage, a selector, a path, a key) is code and is skipped.
+const ENTITY = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const decode = (s) => s.replace(/&(?:#x([0-9a-f]+)|#(\d+)|([a-z]+));/gi, (all, h, d, n) => (h ? String.fromCodePoint(parseInt(h, 16)) : d ? String.fromCodePoint(Number(d)) : ENTITY[n.toLowerCase()] ?? all));
+const READER_ATTRS = /\s(?:alt|title|aria-label|aria-description|aria-roledescription|aria-valuetext|placeholder)\s*=\s*("([^"]*)"|'([^']*)')/gi;
+const seenText = (markup) => {
+  const bare = noComments(markup).replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ');
+  const spoken = [...bare.matchAll(READER_ATTRS)].map((m) => m[2] ?? m[3]);
+  return decode(`${bare.replace(/<[^>]*>/g, ' ')} ${spoken.join(' ')}`).replace(/\s+/g, ' ');
+};
+const CODE_TOKEN = /^[\w$]*[-.#[\]/:][\w$.#[\]/:-]*$/;
+const scriptStrings = (js) => {
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\'"`])\/\/[^\n]*/g, '$1');
+  return [...code.matchAll(/'((?:\\.|[^'\\\n])*)'|"((?:\\.|[^"\\\n])*)"|`((?:\\.|[^`\\])*)`/g)]
+    .map((m) => m[1] ?? m[2] ?? (m[3] || '').replace(/\$\{[^}]*\}/g, ' '))
+    .filter((s) => !CODE_TOKEN.test(s.trim()))
+    .join(' \n ');
+};
+const cssContent = (css) => [...css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/content\s*:\s*("([^"]*)"|'([^']*)')/gi)].map((m) => m[2] ?? m[3]).join(' ');
+const NEVER_SEEN = [
+  [/\bdesigned\b/gi, '"designed"'],
+  [/\b(?<!journey[\s-])(?<!\.)stages?\b/gi, '"stage"'],
+  [/\bgeneration\s+[12]\b/gi, '"Generation 1" or "Generation 2"'],
+  [/\bdemo[\s-]+only\b/gi, '"demo only"'],
+  [/\btoday\b/gi, '"today"'],
+  [/\bnot\s+yet\b/gi, '"not yet"'],
+  [/\b(?:tapestry|verizon|coach|qvc|mandeep|dynamic\s+yield)\b/gi, 'a customer or competitor name'],
+];
+const neverSeen = (text) => NEVER_SEEN.flatMap(([re, what]) => [...text.matchAll(re)].map((m) => `${what} in "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).trim()}"`));
+const SEEN_RULE = 'no "designed", "stage", "Generation 1/2", "demo only", "today", "not yet", customer or competitor name';
+for (const p of pages) {
+  const hits = neverSeen(seenText(p.html));
+  check(hits.length === 0, `${p.file}: what a reader sees has ${SEEN_RULE}${hits.length ? ` (${hits.length} found; first: ${hits.slice(0, 2).join('; ')})` : ''}`);
+}
+const shownElsewhere = [
+  ...files.filter((f) => extname(f).toLowerCase() === '.svg').map((f) => [f, seenText(read(f))]),
+  ...servedScripts.map((f) => [f, scriptStrings(read(f))]),
+  ...servedStylesheets.map((f) => [f, cssContent(read(f))]),
+];
+for (const [f, text] of shownElsewhere) {
+  const hits = neverSeen(text);
+  check(hits.length === 0, `${rel(f)}: what it can show has ${SEEN_RULE}${hits.length ? ` (${hits.length} found; first: ${hits.slice(0, 2).join('; ')})` : ''}`);
+}
 
 // 5. The worker config: the gate in front of the pages, one binding, no variable or credential.
 const configText = existsSync(configPath) ? read(configPath) : '';
@@ -308,7 +380,10 @@ if (tests.status !== 0) console.log((tests.stdout || '').split('\n').filter((l) 
 // 8. The text check: every page says what its source says (lane P1's enablement/render-check.mjs).
 const textCheck = existsSync(renderCheckPath) ? spawnSync(process.execPath, [renderCheckPath], { cwd: root, encoding: 'utf8', timeout: 120000 }) : null;
 const textLines = (textCheck?.stdout || '').split('\n').map((l) => l.trim()).filter(Boolean);
-const textSummary = textLines.find((l) => /^\d+ problem\(s\)|All checks passed/.test(l)) || (textCheck ? `exit ${textCheck.status}` : 'the file is missing');
+// The verdict is the exit code. The summary line is quoted when it arrived: render-check ends with
+// process.exit(), which can cut its output short on a pipe, so its full list is read by running it directly.
+const textSummary = textLines.find((l) => /^\d+ problem\(s\)|All checks passed/.test(l))
+  || (textCheck ? `exit ${textCheck.status}; its output was cut short, so run node enablement/render-check.mjs for the full list` : 'the file is missing');
 check(textCheck?.status === 0, `node enablement/render-check.mjs passes (${textSummary.replace(/:$/, '')})`);
 if (textCheck && textCheck.status !== 0) console.log(textLines.filter((l) => l.startsWith('FAIL')).slice(0, 24).map((l) => `      render-check: ${l}`).join('\n') || textCheck.stderr || String(textCheck.error));
 
