@@ -22,6 +22,12 @@
 //   titleOf(d)            a decision's title as the page shows it
 //   report                { slots(), labels(), row(slot, id) → { key, title }, attach: { slot, rows }, holdout(), theirs }
 //   roadmap               [[built | designed, name, sentence]]
+//   signals               optional { byDimension: true }: "What has been signalled" draws one row per dimension, every
+//                         one the registry names in its order, each with its leading value and score and the second
+//                         when one exists, under a "just now" strip naming what the last event changed (the vector's
+//                         diff, and the audiences the action's own answer reports entering or leaving). Without it, the
+//                         panel is the top eight values, exactly as before (Vantage).
+// renderVectors({ changed, trigger }) takes the action's own answer when the caller has one (affinity.changed, its trigger).
 // No DOM or window access at import time.
 import { arr, esc, fmt2, fmt3, hhmm, money0, num, sleep } from './util.js';
 
@@ -80,9 +86,9 @@ export function createPanels(k) {
   const leanShare = () => { const l = state.coldstart && state.coldstart.lean; return (l && (l.share || l.shares)) || {}; };
 
   // ── Her meters ────────────────────────────────────────────────────────────
-  async function renderVectors() {
+  async function renderVectors(opts = {}) {
     const v = T().cur();
-    if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; return; }
+    if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; if (byDimension()) justNow(null); return; }
     const { body } = await T().api('/realtime/reflex', undefined, { visitor: v });
     const dims = (body && body.affinity && body.affinity.dims) || {};
     if (body && body.journeyStage && body.journeyStage !== v.stage) { v.stage = body.journeyStage; if (v === T().cur()) renderWho(); }
@@ -96,6 +102,7 @@ export function createPanels(k) {
     const lean = leanShare();
     const leanOf = (dim, value) => { const d = lean[dim] || {}; return typeof d[value] === 'number' ? d[value] : null; };
     const th = thetaIn();
+    if (byDimension()) { renderDimensions(dims, prev, leanOf, th, opts); renderPrior(); return; }
     el.vectors.innerHTML = rows.length ? rows.slice(0, 8).map((r) => {
       const l = leanOf(r.dim, r.value);
       return `<div class="vecrow${state.fresh.has(`${r.dim}\u0000${r.value}`) ? ' vecrow--fresh' : ''}">
@@ -103,12 +110,81 @@ export function createPanels(k) {
         <div class="track"><span class="fill${r.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, r.a * 100)}%"></span>
           <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
     }).join('') : '<p class="m-empty">No evidence of her own yet. The first paint is the region and the campaign, not her.</p>';
+    renderPrior();
+  }
+  /** The line under the meters: the region's share of the blend, the registry's constants, the memory. */
+  function renderPrior() {
+    const th = thetaIn();
     const reg0 = cfg.regionalDriver ? cfg.regionalDriver() : null;
     el.priorLine.innerHTML = reg0
       ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as her own evidence grows. Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
       : `a = R / (R + K) with K = ${K()}, from the published registry. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`;
     const mem = memoryLine();
     if (mem) el.priorLine.insertAdjacentHTML('beforeend', `<span class="memline">${mem}</span>`);
+  }
+  // ── The by-dimension panel (config.signals.byDimension) ───────────────────
+  const byDimension = () => Boolean(cfg.signals && cfg.signals.byDimension);
+  /** Every dimension the registry names, in its order; one the vector carries that the registry does not list follows. */
+  function dimOrder(dims) {
+    const order = arr(reg().dimensions).map((d) => d && d.key).filter(Boolean);
+    const base = order.length ? order : Object.keys(DIM_LABEL);
+    return [...base, ...Object.keys(dims || {}).filter((d) => !base.includes(d))];
+  }
+  /** A dimension's values with evidence, strongest first: the panel's leading value and its second. */
+  const valuesOf = (vals) => Object.entries(vals || {}).map(([value, a]) => ({ value, a: num(a) || 0 })).filter((x) => x.a > 0).sort((x, y) => y.a - x.a);
+  function renderDimensions(dims, prev, leanOf, th, opts) {
+    const order = dimOrder(dims);
+    el.vectors.classList.add('vectors--dims');
+    el.vectors.innerHTML = order.map((dim) => {
+      const [first, second] = valuesOf(dims[dim]);
+      const label = `${esc(DIM_LABEL[dim] || dim)}${roomOf(dim) ? ` · ${esc(roomOf(dim))} memory` : ''}`;
+      if (!first) return `<div class="vecrow vecrow--none" data-dim="${esc(dim)}"><div class="vectop"><span>—<em>${label}</em></span><b>0.00</b></div><div class="track"></div></div>`;
+      const l = leanOf(dim, first.value);
+      const fresh = state.fresh.has(`${dim}\u0000${first.value}`) || (second && state.fresh.has(`${dim}\u0000${second.value}`));
+      return `<div class="vecrow${fresh ? ' vecrow--fresh' : ''}" data-dim="${esc(dim)}">
+        <div class="vectop"><span>${esc(first.value)}<em>${label}</em>${second ? `<i class="vec2" title="the second value of ${esc(DIM_LABEL[dim] || dim)}">${esc(second.value)} ${second.a.toFixed(2)}</i>` : ''}</span><b class="${first.a >= th ? 'over' : ''}">${first.a.toFixed(2)}</b></div>
+        <div class="track"><span class="fill${first.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, first.a * 100)}%"></span>
+          <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
+    }).join('');
+    justNow({ dims, prev, order, opts });
+  }
+  /**
+   * The "just now" strip above the panel: what the last event changed, read off the vector before and after (a value new
+   * to her, one that rose or fell, and whether it now leads or comes second in its dimension, "entered the panel"), and
+   * the audiences the action's own answer reports entering or leaving, with its trigger. An event that moved nothing says
+   * so; a read with no event and no change leaves the strip as it was.
+   */
+  function justNow(x) {
+    let box = document.getElementById('justNow');
+    if (!box && el.vectors.parentElement) { el.vectors.insertAdjacentHTML('beforebegin', '<div class="justnow" id="justNow" aria-live="polite"></div>'); box = document.getElementById('justNow'); }
+    if (!box) return;
+    if (!x) { box.innerHTML = ''; box.hidden = true; return; }
+    const { dims, prev, order, opts } = x;
+    const shown = (vector, dim) => valuesOf(vector[dim]).slice(0, 2).map((y) => y.value);
+    const moved = [];
+    for (const dim of order) {
+      const now = dims[dim] || {}, was = prev[dim] || {};
+      for (const value of new Set([...Object.keys(now), ...Object.keys(was)])) {
+        const a = num(now[value]) || 0, b = num(was[value]) || 0;
+        if (Math.abs(a - b) <= 0.004) continue;
+        const entered = shown(dims, dim).includes(value) && !shown(prev, dim).includes(value);
+        moved.push({ dim, value, a, b, d: Math.abs(a - b), entered });
+      }
+    }
+    moved.sort((p, q) => q.d - p.d);
+    // A read that follows a navigation or a page's own question with nothing new keeps the strip: it says what the last
+    // event did until another event, or another change, replaces it.
+    if (!moved.length && !arr(opts && opts.changed).length && !(opts && opts.trigger)) return;
+    const lines = moved.slice(0, 6).map((m) => `<li><b>${esc(m.value)}</b> · ${esc(DIM_LABEL[m.dim] || m.dim)} ${m.a.toFixed(2)} <em>${m.a <= 0 ? 'left her profile'
+      : m.entered ? 'entered the panel' : m.b <= 0 ? 'new' : `was ${m.b.toFixed(2)}`}</em></li>`);
+    if (moved.length > 6) lines.push(`<li class="jn-more">and ${moved.length - 6} more</li>`);
+    for (const c of arr(opts && opts.changed)) {
+      if (!c || !c.dim) continue;
+      lines.push(`<li class="jn-aud"><b>${esc(c.value)}</b> · ${esc(DIM_LABEL[c.dim] || c.dim)} <em>${c.direction === 'exit' ? 'left' : 'entered'} the audience${c.audience ? ` ${esc(c.audience)}` : ''}${c.trigger ? ` on ${esc(c.trigger)}` : ''}</em></li>`);
+    }
+    const trigger = opts && opts.trigger ? ` · ${esc(opts.trigger)}` : '';
+    box.innerHTML = `<p class="jn-k">Just now${trigger}</p>${lines.length ? `<ul>${lines.join('')}</ul>` : '<p class="jn-none">Nothing in her profile moved on this one.</p>'}`;
+    box.hidden = false;
   }
   /** The registry's per-dimension memory, as the vertical labels it: compressed for this room, days in production. */
   const memoryDims = () => arr(cfg.memoryDims ? cfg.memoryDims() : []).filter((d) => d.compressed);

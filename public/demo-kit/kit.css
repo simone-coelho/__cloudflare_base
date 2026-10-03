@@ -441,3 +441,22 @@ body.kit-dock.kit-dock--collapsed .dock-rail {
   body.kit-dock.kit-dock--collapsed .dock-k { writing-mode: horizontal-tb; transform: none; }
   body.kit-dock.kit-dock--collapsed .dock-next { width: auto; flex-direction: row; padding: 6px 10px; border-radius: var(--radius-pill); }
 }
+
+/* ══ The by-dimension signals panel (config.signals.byDimension, panels.js): one compact row per dimension ══ */
+.vectors--dims { gap: 3px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.vectors--dims .vecrow { gap: 2px; }
+.vectors--dims .vectop { font-size: 11.5px; }
+.vectors--dims .vectop span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vectors--dims .vec2 { font-style: normal; font-family: var(--mono); font-size: 9.5px; color: var(--m-dim); margin-left: 8px; }
+.vectors--dims .track { height: 4px; }
+.vectors--dims .vecrow--none .vectop span, .vectors--dims .vecrow--none .vectop b { color: var(--m-dim); }
+@media (max-height: 860px) { .vectors--dims .vecrow:nth-child(n+7) { display: grid; } }
+.justnow { margin: 0 0 8px; padding: 6px 9px 7px; border-left: 3px solid var(--m-red); background: var(--m-card); }
+.justnow[hidden] { display: none; }
+.justnow .jn-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--m-muted); margin-bottom: 3px; }
+.justnow ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.justnow li { font-size: 11.5px; color: var(--m-text); line-height: 1.35; }
+.justnow li b { color: var(--m-on); font-weight: 600; }
+.justnow li em { font-style: normal; color: var(--m-green); font-family: var(--mono); font-size: 10px; margin-left: 4px; }
+.justnow .jn-aud em { color: var(--accent); }
+.justnow .jn-none, .justnow .jn-more { font-size: 11px; color: var(--m-dim); }

@@ -363,7 +363,7 @@ Also: “for you” asks its three rooms one after another (each records its own
 
 ### M3: the store's plumbing, and the director docked
 
-**Lane M3, builder, 2026-10-02, 14:57–18:05 EDT. The contract, `public/oh/oh-store.js` with its API written at the top, was published at 15:11 EDT, fourteen minutes in, every method working; M1 and M2 built against it from then (the header's search, cart and sign-in, the grids' filters and re-ask, the search route, the product page's Add to Cart with its options and add-ons, Find a Retailer). Built: the store (cart, navigation with the browser's Back, manual events, the re-ask, search, Find a Retailer, the sign-in from every header, the toast); the shared section's wiring; the phone shell's header; the director docked right and collapsible, as a kit option. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+**Lane M3, builder, 2026-10-02, 14:57–22:42 EDT. The contract, `public/oh/oh-store.js` with its API written at the top, was published at 15:11 EDT, fourteen minutes in, every method working; M1 and M2 built against it from then (the header's search, cart and sign-in, the grids' filters and re-ask, the search route, the product page's Add to Cart with its options and add-ons, Find a Retailer). Built: the store (cart, navigation with the browser's Back, manual events, the re-ask, search, Find a Retailer, the sign-in from every header, the toast); the shared section's wiring; the phone shell's header; the director docked right and collapsible, as a kit option. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
 
 #### The API, and what each method sends
 
@@ -484,9 +484,93 @@ On the coordinator's ruling on finding 1, Lane M2's note and D1's landing:
   - **OH DOM 463 of 463**: all sixteen beats `done`, beat 16 through the one modal, the referral check reading the product's own attributes and `data.store`, no known item.
   - **OH request level 224 of 224.** The Roadmap source check now passes. One known item remains, not mine: the legal line's date, “1 October” against prices of 2 October, for the config's owner and M1.
 
+#### The signals follow her own clicks, and the panel shows every dimension (18:10–22:15 EDT)
+
+On the coordinator's defect report from the live store (a manual add left the director's panel at 0.36 while her profile was at 0.69) and the follow-up on the panel:
+
+- **The cause.** The store's events always carried the product's attributes: `productAttrs(p)` under the event's own fields (`oh-store.js` `send`), as the live request body showed. The fault was the redraw. The panel, the receipts and the before/now strips were redrawn only by a director's press or a page's own question, so a manual event that asks no page left them at the earlier reading.
+- **Every send that lands now redraws them** (`oh-store.js`):
+  - 300: `send` calls `refreshSignals(answer, type)`, unless the caller asked for a re-ask, which redraws them itself.
+  - 312–339: `refreshSignals` reads her profile again (`panels.renderVectors`, `GET /realtime/reflex`), then redraws the who chip and Why these (`renderWho`, `renderWhy`), then the before/now strips on the page on screen (`deltas.render` for each `LANES.rows` strip that is on screen, never while a beat runs). Calls that land while one runs fold into one more read.
+  - 315: the action's own answer (`update.affinity.changed`) and the event's name go to the "just now" strip.
+- **The guard** (`oh-store.js` 279–284). An event about a product carries `productAttrs(p)`, with the event's fields winning. A sku the feed does not hold is sent with its `productId` only, and the Session panel and the console say "sent without its attributes, so no dimension moves".
+- **The panel, by dimension.** This is a kit option, `config.signals.byDimension`, on for OH (`oh.js` 350) and off for Vantage, whose panel is unchanged (`panels.js` 25, 89–177; `kit.css` 445–461):
+  - one compact row per dimension, all sixteen in the registry's order, each with its leading value and score (bar, threshold tick, the region's lean mark) and the second value and score when one exists;
+  - a dimension with no evidence shows "—";
+  - the list scrolls inside the card;
+  - above it, a **"just now" strip** names what the last event changed, from the vector's diff: "entered the panel" (now leading or second), "new", or "was 0.36". It also names the audiences the action's answer reports entering or leaving. An event that moved nothing says so, and a quiet read after a navigation leaves the strip as it was.
+  - The prior line under the meters moved into `renderPrior` (116), used by both layouts.
+- **Measured on my rig** (`.wrangler/state-m3b`, reseeded from `8e691b4` with `--out`; a fresh Chrome; no press and no navigation after the first step; the panel's rows read as drawn):
+
+  | Event | Before | After, and when |
+  |---|---|---|
+  | open WM4000HWA (a navigation) | empty | category washers, subcategory front-load-washers, type front-load, series 4000-series, capacity standard, finish white, price tier better, room laundry-room, package laundry-4-piece, retailer best-buy-pickup (2nd lg-com): **0.36** each |
+  | **Add to Cart** (M2's button) | those ten at **0.36** | the same ten at **0.69**, **266 ms** after the press (919 ms on an earlier run); the strip reads “Just now · add_to_cart · washers · category 0.69 was 0.36 …” |
+  | select, finish black-steel (WM4000HBA) | washers 0.69 … | finish white 0.69 **(2nd black-steel 0.53)**, category, type, series, room, package 0.77; redrawn in 428 ms |
+  | filter, type oled on TVs (no re-ask) | category washers 0.77, type front-load 0.77 | category washers 0.77 **(2nd tvs 0.53)**, type front-load 0.77 **(2nd oled 0.53)**; 205 ms |
+  | search “soundbar” (one category in its results, so it carries `category: soundbars`) | — | strip “soundbars · category 0.45 entered the panel” (search weighs 1.5: 1.5 / 3.3) |
+  | search “dishwasher” (results in more than one category, so it carries none) | — | nothing moves, and the strip says so: the store never infers a category |
+  | wishlist_add (OLED65C6PUA) | — | tvs 0.69 2nd, panel oled-evo, size 65-74, series c6 and seven more rise; 352 ms |
+  | notify_me | — | nothing moves: the published registry gives notify_me no weight |
+  | ten TV views, then one washer view | category tvs 0.85 alone | category tvs 0.85 **(2nd washers 0.36)**; strip “washers · category 0.36 entered the panel”, then “4000-series · series 0.36 entered the panel”, “standard · capacitytier 0.36 entered the panel”, … |
+
+- **On the wire.** Every product event carried every attribute the feed has for its product, with the event's own fields after them: `add_to_cart` (plus `quantity, lineId, options, decisionId, decisionIds`), `select`, `wishlist_add`, `notify_me` and `product_view`. The two outcomes and `find_a_retailer` were measured earlier the same way. There was no script error.
+- **Vantage, the panel option off:** **DOM 298 of 298 and request level 115 of 115** on my Vantage rig (`state-m3v2`, seeded in place, 22:03). Its 19 seed-written files were put back by hash afterwards (four changed, all 19 match HEAD); `public/vantage` is clean.
+- **For S2.** The OH panel's rows are now per dimension (`.vecrow[data-dim]`): `.vectop span` holds the leading value, `.vectop em` the dimension, `.vectop b` the score, and `.vec2` the second value. A value that is neither leading nor second is not drawn, so a check of a carried value reads the profile, as beat 9's already does, or the strip (`#justNow`).
+
+#### One visitor per browser across full loads (22:20–22:42 EDT)
+
+The lead reproduced a defect on the live store (`e18b989f`): every full load (a direct address, a reload, Back after a full navigation, a new tab) minted a new visitor, because the page kept nothing of her between loads.
+
+**What is kept, and where** (`oh-store.js` 254–331). The engine's shopper capability is the engine's own 24-hour bearer (`SHOPPER_MAX_AGE`; the record measured `exp − iat = 24 h`). It is kept as the SDK keeps it, under the SDK's own key from `public/sdk/edge-personalization.js`: `opt_shopper_session:<encodeURIComponent(origin)>:<tenant>`, the SDK's endpoint defaulting to this origin. Beside it, `opt_shopper_visitor:<origin>:<tenant>` holds the record:
+- the tenant, the visitor id (`subject`), the session id, `kind`, `iat`, `exp`, `grantId` and `authorityEpoch`;
+- her consent as granted at the mint (a recognized session's own answer after the sign-in);
+- the cart's owner id, so the cart keeps its decision credit across loads;
+- the fictional account she signed in as.
+
+Both keys go in `localStorage` with a `sessionStorage` mirror. Nothing secret is written: the capability is her own token, signed by the engine, the thing the SDK stores. No operator credential and no identity secret ever reaches the page.
+
+**How it works:**
+- **`resume()`** (311–330) runs first in the boot (`oh.js` 4431).
+  - It reads the kept pair from either area (`kept()`, 291–309). The pair counts only when it is for this tenant, names the same visitor and session as the capability's own claims, is anonymous or recognized, and has more than a minute left.
+  - It builds visitor A from the pair, with no identity call and no new consent.
+  - One read of her own profile (`GET /realtime/reflex`, her capability) confirms the engine still holds the session. A 401 or 403 forgets the pair, and the page is a stranger's.
+  - The Session panel says "continued · the same visitor as before … no identity call and no new consent".
+- **The boot** (`oh.js` 4429–4450).
+  - A product address continues her into `openProduct`, whose `product_view` adds to her profile.
+  - Home, a grid by its view, a search or the phone go through `store.nav.go` to her own decided page, not the stranger's template.
+  - With nothing kept, the boot is unchanged: the template, and the first click mints.
+  - After the entry, whatever visitor the load minted is kept (4450).
+- **`persist(v)`** (270–285) keeps visitor A only; the phone in beat 15 and the fresh visitor for Compare are never kept. It runs:
+  - from `ensure()` (240, 248: the first click's mint);
+  - from the transport's `useVisitor('A')`, wrapped at the bind (1038): the director's arrival, back to the laptop, and the sign-in's session swap, which stores the recognized session and the account;
+  - from the boot.
+- **`forget()`** (286–289) runs on the demo's reset (`oh.js` 367, the `published('reset')` hook). A reset starts a new person, and beat 1's arrival then mints and keeps the new one.
+
+**Measured on my rig** (`.wrangler/state-m3b`; a fresh Chrome profile; full loads by address, not client navigation):
+
+| Load | Visitor | Mints so far | category washers · type front-load · room laundry-room | Note |
+|---|---|---|---|---|
+| `/oh/product?id=WM4000HWA` | `vis-d83f9bb1…` (new) | 1 | **0.36** · 0.36 · 0.36 | the pair kept: capability `ss1.…` (420 chars), lifetime 24 h, consent tracking and personalization on |
+| `/oh/product?id=WM6500HWA` | `vis-d83f9bb1…`, continued | 1 | **0.53** · 0.53 · 0.53 | |
+| `/oh/product?id=WM5500HWA` | `vis-d83f9bb1…`, continued | 1 | **0.63** · 0.63 · 0.63 | |
+| reload | `vis-d83f9bb1…`, continued | 1 | **0.69** · 0.69 · 0.69 | the reload is a fourth view |
+| a new tab (a browser target, so no copied `sessionStorage`), `/oh/` | `vis-d83f9bb1…`, continued | 1 | 0.69 · 0.69 · 0.69 | her decided homepage: "ready · decided for her, the same visitor as before on this browser" |
+| after `forget()`, a full load | `vis-4e425990…` (new) | 2 | 0.36 · 0.36 · 0.36 | nothing was kept before the load |
+
+The sign-in is kept too. A visitor who signs in as Dana and reloads keeps `sh_d382…`, `recognized`, "Hi, Dana" and the strip "Signed in as Dana Whitfield · linked at sign-in · consented · no device matching". There was no script error.
+
+**The OH DOM suite as it stands now:** 480 of 494. All sixteen beats land `done`. The failures:
+- **12 are S2's stranger checks.** S2's sections run one after another in one Chrome profile: the shells, the boot store, the manual session, the 0.36 / 0.53 / 0.63 check, then the walk. Each now finds the visitor the previous section kept, which is the requested behaviour. Examples: "no visitor is minted on load" sees `GET /realtime/reflex`, `POST /realtime/action` and so on; "the first click mints her" sees 0 sessions; the accumulation check reads 0.85 → 0.86 → 0.87. Each section that must start as a stranger needs `Storage.clearDataForOrigin` with local storage before its first load, as the boot-store section already does.
+- **1 is a receipt read answered 400 at beat 1.** The page continued a kept visitor at load and was reading her receipts when the beat reset the tenant. It goes away when the walk starts from a cleared profile.
+- **2 at beat 15 are not this change.** The phone's "the laptop's three strongest lasting signals" are empty because P3's `topOf` counts only dimensions remembered a day or more, and D1's compression has moved the demo's memory to minutes. P3's filter needs D1's new memory or a different cut.
+- **The request-level suite** reads no storage and is unaffected by this change.
+
+**Not done here:** the hosted worker carries none of this until the next deploy.
+
 #### For the lead
 
-1. **Ruled and applied (above).** The two outcomes keep the product's `retailer` and carry `data.store`. Lane S2's checks assert the product's value plus `data.store`. `find_a_retailer` is open as noted.
+1. **Ruled and applied (above).** The two outcomes keep the product's `retailer` and carry `data.store`. Lane S2's checks assert the product's value plus `data.store`. `find_a_retailer` follows the same rule since 18:05 (above).
 2. **The phone frame on `index.html` collapses `#site` to 20 px** (`m1-live shell--phone`).
    - Beat 15's “the phone is on screen” and Compare's frames at 15 and 16 fail on it.
    - Measured with and without the dock's class: the same 20 px, so this is M1's CSS.
@@ -525,7 +609,8 @@ When OH moves to K5's kit store, `demo.config.json` needs a `labels` section wit
 | `public/oh/demo.config.json` | `copy.scoredSentence` and `roadmap`, on the coordinator's instructions (the `SITE` copies in `oh.js` match) |
 | `public/oh/m.html` | the header, as M1's on `index.html`, and its comment |
 | `public/demo-kit/director.js` | `readFlags` `present`; the dock (`createDock`), behind `config.dock`; the rail's Next mirrored in `renderNext` |
-| `public/demo-kit/kit.css` | the dock block at the end |
+| `public/demo-kit/kit.css` | the dock block, and the by-dimension panel and the "just now" strip (445–461), at the end |
+| `public/demo-kit/panels.js` | the by-dimension panel and the "just now" strip behind `config.signals.byDimension`; `renderVectors(opts)`; the prior line as `renderPrior` |
 | this file | this section |
 
 **Seeds and restoration.**
@@ -602,6 +687,29 @@ The page's styles are one block, `P2_CSS`, in my section, injected once as `<sty
 - **Rig:** port 9133 (inspector 9283), first `.wrangler/state-m2` (`rig.mjs --prepare`), then a fresh `.wrangler/state-m2b` after the committed data change; both kept. Stopped at 17:27; ports 9133 and 9283 are free. Only my own dev server was ever stopped.
 - **Seeds:** the nineteen beat documents were hashed at 15:00. My first seed (`seed.mjs --config oh`, in place) rewrote four (`11-window-closes`, `13-three-weeks`, `anchor`, `open-catalog`); I put those four back from the snapshot the same minute (19 of 19 matched) and seeded with `--out` under my scratchpad from then on. After commit `730eaa3` regenerated the documents, I hashed them again (snapshot 2) and reseeded twice with `--out`; `region-seed.mjs` 51 of 51 each time. **The nineteen documents equal HEAD at the end, 19 of 19 by hash.**
 - **Not touched:** `index.html`, `grid.html`, `m.html`, `oh.css`, `oh-store.js`, the shared, P1 and P3 sections of `oh.js`, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`. No commit, deploy or push; no cloud resource; nothing sent to any hosted worker.
+
+#### M2b: R5's three product-page rulings (21:35–22:15 EDT)
+
+| Ruling | What changed | Measured |
+|---|---|---|
+| At 390 the buy bar docks to the bottom; the picture comes first and large | `renderBuyBox` wraps the price block, the financing line and the two buttons in `.bb-dock` (the same `#bbPrice`, `#bbFin` and `#bbAdd`; still inside `#buyBox`, still nothing decided inside). At the room's widths `.bb-dock` is `display: contents`, so the bar is as before. At 640 px and below it is fixed to the foot as lg.com's: the price with "$X OFF" over the struck price at the left, the financing line at the right, Special Offers then Add to Cart below. It sits above the presenter's bar when that is open (`--dock-bar-h`) and under the sheets, which cover it. The view lays out lg.com's order there: the picture first and square, then the title and the off-limits line, the tabs (sticky, one line), the offers and the buy column (`.pdp-top` and `.pdp-left` become `display: contents`, with `order`). The tabs find the overview's own box when its wrapper has none (`boxOf`) | by hand at 390: every control, the dock's Add to Cart and Find a Retailer pressed, nothing covering them; no overflow |
+| "Add LG Premium Care by Asurion" → "Premium Care by Asurion" | the three service groups' titles, and the line's short name "Premium Care" in Review your selections and in the cart | on screen and in `add_to_cart`'s add-ons |
+| lg.com's action red `#EA1917` as a 32 px pill on every button; the logo colour off buttons | no styles of my own: every button on the page is the shared `.btn--brand` or `.btn--line`, which M1c's block makes the red pill, and M1c's `--brand` inside `#site` turns the page's "$X OFF", badges, tab underline and savings red. The injected block now carries only the dock and the phone order (`P2_CSS`); my first block lives in `oh.css` verbatim (M1 appended it), so it is no longer injected | DOM suite: "every filled button is lg.com's action red #EA1917, white text, a 32 px pill" and "every “$X OFF” is in the action red" ✓ on the washer page |
+
+**Runs on my rig** (9133, `.wrangler/state-m2b`, reseeded with `--out` from the documents served at 21:40; the rig restarted before the suite):
+- **By hand** (a fresh headless Chrome per run, real presses, the wire read back), TV, washer and range: **1440: 97 of 97 · 1366: 97 of 97 · 390: 94 of 94**. Before the last 390 run the check waited 0.9 s for the retailer sheet to finish sliding in before pressing a seller; the earlier press had landed mid-slide.
+- **DOM suite, beats 5 to 10: 138 checks, none failing** (the dryer card claims no fuel of hers and names /sort's reason; "9 ft" sends no select and carries `ctx.distance = 9`; the buy box off limits with the financing line in it; nothing decided near it). The whole run: 461 of 482. None of the 21 failures is on the product page:
+  - two of S2's new "the panel follows it by itself within two seconds" checks, in the suite's uncommitted work: each reports "no such event on the wire" for the colour and the add, while the run's own wire checks show both sent (`custom:select`, `add_to_cart`);
+  - beat 12's pin receipt;
+  - beat 13 and the beats after it, which stop on a script error in P1's section: `Cannot access 'thetaIn' before initialization` (`oh.js` 1642, used before its `const` at 1645);
+  - beat 16's report 503.
+- **Screenshots** retaken, the director collapsed as a visitor sees it: the ten `M2-1440-*.png` under the same names, and six new at 390: `M2-390-tv-buy-bar.png`, `M2-390-washer-buy-bar.png`, `M2-390-range-buy-bar.png` (the picture first, the dock at the foot), `M2-390-washer-selections.png` (Premium Care by Asurion, the sticky tabs, the dock), `M2-390-tv-cart.png` and `M2-390-washer-retailer-modal.png` (the sheets over the dock).
+- **For the lead:**
+  - P1's beat 13 error above.
+  - `catalog.json`'s `mod-protection` still titles the decided card "LG Premium Care by Asurion" (D1's piece, not OH chrome of mine).
+  - `P2_CSS` (the dock and the phone order) is ready to be appended to `oh.css` verbatim; after that the injection can go.
+- **Beat documents:** I hashed them at 21:40 and seeded only with `--out`. At 21:51:35 another session rewrote all nineteen in place. They now equal HEAD; only `anchor.json` differs from my 21:40 hash. I wrote none of them.
+- **Rig:** stopped at 22:11, state kept.
 
 ### M1: the look, the boot page, the header, the room grids, search, the footer
 
@@ -729,6 +837,46 @@ No card or renderer in the P1 section says “LG packages”; those lines are P2
 #### Files
 
 `public/oh/index.html` (the homepage order; the grids' title rows, the room banners, the TV grid's promotion above its type row), `public/oh/oh.css` (the M1b block before M2's appended block: 1,003 → 1,125 lines), the P1 section of `public/oh/oh.js` (1,661 → 1,789 lines: A1's index reader, the badge zones, the hero carousel, the room tiles, the deals bento, the banners, the card, the continue hero's art), seven side-by-sides `docs/lg/lanes/shots/M1b-*.png`, M1's five `M1-*.png` refreshed, and this section. Not touched: A1's art and `scripts/generate-oh-art.mjs`, `product.html`, `m.html`, `oh-store.js`, the shared, P2 and P3 sections, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`, `public/oh/beats/` (no seed this lane; they equal HEAD). The rig is stopped; `.wrangler/state-m1b` is kept, its tenant reset to the opening state.
+
+### M1c: R5's list as ruled (first pass, handed back for the deploy)
+
+**Lane M1c, builder, 2026-10-02, 21:40–22:48 EDT. Stopped at a consistent point on the coordinator's word: every edit is whole, the three files and the P1 section load together at 1440 and 390 with no script error. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### What is in
+
+- **The action colour.** lg.com's red `#EA1917` as a 32 px pill, 44 px tall (outlined ones 42), on every button in `#site` and `#sheetBack`, and on every "$X OFF" (the store's tokens are scoped to `#site` and `#sheetBack`, so `:root`'s `--brand` stays `#A50034` for the kit and S2's token check). `#A50034` is on the wordmark alone (header and footer). The deals' tile buttons and the banners' buttons are the same red pills. The expert band is charcoal `#333` (lg.com's is black; charcoal stays clear of the no-black-bar rule).
+- **The hero.** Full-bleed slides, `clamp(440px, 37.5cqw, 560px)` tall (525 at 1440 with the director's rail), on A1's `slide540` (b36098c; the 640 files untouched); the headline 40 px at 600; lg.com's progress bars, a play/pause and the arrows on the art, bottom-left on the white panel. The slides advance only after play is pressed, and a new answer stops them; play and the pagers are presentation only (no event, no visitor). Banner, bento, room-tile, expert and continue headlines at 600.
+- **The header.** 80 px; 18 px nav at desk widths; the region as a chip ("North Carolina", the truck icon; "Delivering to" kept for screen readers); search as an icon that opens into a 340 px field on press (the store's own `form[data-store-search]`, so search works exactly as before); Sign in as an account icon (its text kept, so the header still reads "Sign in"); the cart icon. The promo line charcoal `#333`, 40 px, white type.
+- **At 390.** The header scrolls away; on the grids a slim type row (pills with a small picture) sticks at the top; the deals and Recommended for you are one-at-a-time carousels, the next item peeking, with a "‹ n/N ›" pager under each; the deals tabs and the showcase tabs scroll on one line; the wide bento tile takes its tall art there (`<source media>`); the hero's product kept in the phone crop.
+- **The category row.** Six tiles a view at 1440 (236 px tall, 136 px pictures), four on a tablet, two on a phone, with a "‹ 1/3 ›" pager instead of a clipped ninth.
+- **The director's pill.** Off a phone's page (viewport ≤ 640) unless the address says `?present=1`: the P1 section sets `body.m1-present` from the address, and `oh.css` hides `body.kit-dock.kit-dock--collapsed:not(.m1-present) .dock-rail` at that width. **For the kit (not edited):** the natural home is `public/demo-kit/director.js` `createDock` (next to `apply(first, …)`, line 190): `body.classList.toggle('kit-present', flags.present === true)`, with `kit.css`'s phone block hiding the collapsed rail unless `.kit-present`, as a `config.dock` option. OH's two lines can then go.
+- **Beat 13 on the demo's compressed dial** (the coordinator's ruling and its correction: the page-driving dimensions run at τ 60 seconds). The clock note reads τ and θin from the registry: "On the demo’s dial (τ 60 seconds on room, K 1.8; production’s dial runs days) her room signals are gone within minutes: living room 0.621 → 0.000 (−100%) · laundry room 0.593 → 0.000 (−100%) · kitchen 0.189 → 0.000 (−100%); every room below the entry threshold (θin 0.60). So the continue hero rests on her shortlist and the decisions trail, not on her room dials." It names a room that faded further only when the readings differ. The continue hero's receipt adds "it rests on her shortlist (what she opened on this device) and the decisions trail: on the demo’s dial her room signals are gone within minutes; production’s dial is days". New facts `p1.clock.gone` and `p1.clock.fast`. **Lines changed in `beats.json`, beat 13 only:** `declare[0]` "… every window moves back {{clock.days}} days in one publish. On the demo’s dial her room signals are gone within minutes (production’s dial runs days: the published τ on room reads 60 days there)"; `will[0]` "Her room signals fall below the entry threshold on the demo’s compressed dial: nothing of the rooms she browsed is left to lean the homepage"; `will[1]` "The continue hero answers her return, resting on her shortlist (what she opened on this device, nothing inferred) and the decisions trail; its receipt says production’s dial is days"; `line` "… on the demo’s compressed dial her room signals are gone within minutes, below the entry threshold (production runs days; the published τ would read 60 days there). The homepage picks up where she left off from her shortlist and the decisions trail."; `after.line` "… every window moved back {{clock.days}} days in one publish{{#p1.clock.gone}}, and on the demo’s compressed dial her room signals faded below the entry threshold{{/p1.clock.gone}}. The homepage picks up where she left off, resting on her shortlist and the decisions trail." The labelled clock jump stays; beat 14 is unchanged.
+- **The `thetaIn` error** ("Cannot access 'thetaIn' before initialization", which stopped every beat from 13 on) is fixed: θin and the fast-dial flag are declared with the memory, before their first use.
+- **M2's second block** (P2_CSS: the buy bar's dock and lg.com's phone order) is appended verbatim at the end of `oh.css` under its own heading, after M2's first block. **M2 can drop the injection** (`p2Style()`).
+
+#### Results (rig 9132, `.wrangler/state-m1b`, reseeded from the committed documents with `--out` to the scratchpad, regions 51 of 51; restarted for A1's new files)
+
+| Check | Result |
+|---|---|
+| M1's probe (sizes and the manual path, fresh profiles) | **44 of 44**: every page at 1440, 1366 and 390 ready, no visitor on load, no overflow, no broken image, no script error; the manual path's eighteen steps, the header search typed and submitted through the icon |
+| Every filled button and every "$X OFF" (S2's collector, 7 states: boot, TVs grid, TV page, cart drawer, washer page, retailers modal, sign-in sheet) | all action red, white, 32 px pills 42 to 44 px tall (29, 16, 2, 3, 2, 2, 30 buttons); no "$X OFF" off-colour; the wordmark `#A50034` |
+| The DOM suite, alone, on the final files (S2's working-tree version) | **472 of 494.** Every M1c check passes: the look on the boot page, the TVs grid, both product pages, the cart and her homepage (action red pills, "$X OFF" red, the charcoal bar allowed, #F0ECE4 and Figtree, the wordmark); the header (81 px, the search box, Sign in, the cart); the service band; at 390 the pill, machine and director off screen, no sideways scroll, the deals (1/4) and Recommended (1/8) carousels with pagers that work by hand, and `?present=1` showing the tools; beat 13 (the continue hero, its receipt, the labelled jump, the dials before and after, the projection, no comparative claim); no script error. **The 22 that fail are outside M1c:** the boot page restoring a visitor on load in the suite's tab (S2's note at line 56: M3's store now mirrors her kept visitor in the tab's sessionStorage, which `Storage.clearDataForOrigin` leaves; my fresh-profile probe sees only `GET /oh/api/coldstart`), the signals walk's readings (the 60-second memory), beat 1's receipt read (400), beat 16's partner_pickup (503), the phone's meters after sign-in, the referral and the day report |
+| `check-demo` before that (20 minutes earlier, the same files) | generated ✓, typecheck ✓, credentials ✓ (2,148 files), request level 223 of 224 ("the phone carries what the laptop learned": 0 lasting signals, the 60-second memory), DOM 463 of 488. That run also had the director bar off screen through the walk and one "Identifier 'stored' has already been declared" page error; neither reproduced in the rerun, and replaying the suite's order by hand shows the director on screen at 1440 |
+
+Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`: `M1c-1440-home.png`, `M1c-1440-home-deals.png`, `M1c-1440-tvs.png`, `M1c-1440-product.png`, `M1c-390-home.png`, `M1c-390-tvs.png`, `M1c-390-product.png`.
+
+**The hero at full bleed reads quieter than lg.com's** (`M1c-1440-home.png`): A1's smaller product sits in the right third against a wide dark wall, where lg.com's slide is bright and busy. Not enlarged, as ruled.
+
+#### Still to do in M1c (after the deploy)
+
+1. The hero's copy above the picture at 390 (lg.com's phone order; OH still puts the picture first).
+2. The service strip as one item at a time with arrows at 390.
+3. The kit's own `?present` option (above), then OH's two lines removed.
+4. A clean DOM run once S2's suite and M3's store settle, and R5's look again on the M1c side-by-sides.
+
+#### Files
+
+`public/oh/index.html` (three pagers), `public/oh/oh.css` (the M1c block before M2's first block; M2's second block appended at the end: 1,125 → 1,284 lines), the P1 section of `public/oh/oh.js` (1,789 → 1,866 lines: the play control, the pagers, the presenter flag, A1's `slide540` and narrow art, beat 13's clock note and receipt, the θin fix), `public/oh/beats.json` (beat 13's copy only), seven `M1c-*.png`. Not touched: A1's art, `product.html`, `m.html`, `oh-store.js`, the shared, P2 and P3 sections, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`, `public/oh/beats/` (every seed went to the scratchpad). The tenant is reset to its opening state, and the rig is stopped.
 
 ### S2: the manual session and the boot assertions; the sixteen beats on the working store
 

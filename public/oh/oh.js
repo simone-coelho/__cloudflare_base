@@ -345,6 +345,9 @@ import { store } from '/oh/oh-store.js';
     // The director docked right, collapsed to a slim rail by default so the site is the store (design §9.1); the
     // presenter's key (D) or ?present=1 opens it, and it remembers its state in this tab (kit option, lane M3).
     dock: { collapsed: true },
+    // "What has been signalled": one row per dimension in the registry's order, its leading value and the second, under a
+    // "just now" strip of what the last event changed (kit option, lane M3), so a new line's first signals show at once.
+    signals: { byDimension: true },
     state: { view: null, viewPage: null, productId: null, sets: {}, pieces: new Map(), engine: null, products: [], productById: new Map(), anchor: {} },
     // The transport: her own fields on a new visitor; nothing asserted as her intent until she or the presenter says so.
     visitor: () => ({ cart: 0 }),
@@ -360,7 +363,8 @@ import { store } from '/oh/oh-store.js';
     beforeBeat: (b) => LANES.beforeBeat.forEach((f) => f(b)),
     compareTools: LANES.compareTools,
     publishing: async (kind, name) => { if (kind === 'catalog') await useCatalog(name); },
-    published: async (kind) => { if (kind === 'reset') await useCatalog('open-catalog'); },
+    // A reset starts a new person (the sign-in ruling): what this browser kept of her goes with it (M3).
+    published: async (kind) => { if (kind === 'reset') { store.visitor.forget(); await useCatalog('open-catalog'); } },
     beatFailed: (m) => engineDown(m),
     assertRegions: () => [null, ...contrastList(), ...(flags.region && !contrastList().includes(flags.region) ? [flags.region] : [])],
     // The panels: the set on screen, the registry's memory, names, Why these, the report.
@@ -823,7 +827,7 @@ import { store } from '/oh/oh-store.js';
     const roomOfPiece = (piece) => arr(piece && piece.tags && piece.tags.room)[0] || (arr(piece && piece.tags && piece.tags.category).includes('tvs') ? 'living-room' : 'living-room');
     const KICKER = { 'living-room': 'TV & audio', 'laundry-room': 'Laundry', kitchen: 'Kitchen' };
     /** A1's formats by the page's roles: a hero is a slide (1440×640); tall (720×860), tile (720×420), banner (1440×360). */
-    const ART_ROLE = { hero: 'slide' };
+    const ART_ROLE = { hero: ['slide540', 'slide'] };   // the full-bleed hero is 1440×540 (A1's slide540); the 640 slide where a piece has none
     const VIEW_OF_ROOM = { 'living-room': 'tvs', 'laundry-room': 'laundry', kitchen: 'kitchen' };
     /** The room's own art piece (A1's index maps a grid's view to it): the banners. */
     const roomArtKey = (room) => { const r = S.art && S.art.rooms; return r ? r[VIEW_OF_ROOM[room] || room] || null : null; };
@@ -832,7 +836,7 @@ import { store } from '/oh/oh-store.js';
       const idx = S.art;
       if (!idx) return null;
       const book = idx.pieces || idx.art || idx.items || idx;
-      const roles = [...new Set([ART_ROLE[role] || role, role])];
+      const roles = [...new Set([...arr(ART_ROLE[role] || role), role])];
       for (const key of arr(keys)) {
         const e = key && book[key];
         if (!e) continue;
@@ -846,12 +850,12 @@ import { store } from '/oh/oh-store.js';
       return null;
     }
     /** The picture for A1's art: AVIF first, the WebP as the src; dark type where A1 measured the art light. */
-    const artPicture = (art, name) => `<span class="m1-scene m1-scene--art${art.ink === 'dark' ? ' m1-ink-dark' : ''}"><picture>${art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc(art.src)}" alt="" decoding="async" data-p1-name="${esc(name)}"></picture></span>`;
+    const artPicture = (art, name, narrow) => `<span class="m1-scene m1-scene--art${art.ink === 'dark' ? ' m1-ink-dark' : ''}"><picture>${narrow ? `${narrow.avif ? `<source media="(max-width: 640px)" type="image/avif" srcset="${esc(narrow.avif)}">` : ''}<source media="(max-width: 640px)" srcset="${esc(narrow.src)}">` : ''}${art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc(art.src)}" alt="" decoding="async" data-p1-name="${esc(name)}"></picture></span>`;
     /** A piece's picture for a role: A1's art when it exists, else a dark scene in its room's colours with the product on it. */
-    function sceneHtml(piece, cid, role) {
+    function sceneHtml(piece, cid, role, narrowRole) {
       const room = roomOfPiece(piece), prod = productOfPiece(piece, cid);
       const art = artSrc([cid, piece.id, role === 'banner' ? roomArtKey(room) : null], role);
-      if (art) return artPicture(art, bare(piece.title || cid));
+      if (art) return artPicture(art, bare(piece.title || cid), narrowRole ? artSrc([cid, piece.id], narrowRole) : null);
       return `<span class="m1-scene m1-scene--${esc(room)}" data-art="placeholder">${prod ? artHtml(prod, 'p1-art--scene') : ''}</span>`;
     }
     /** The art's zones for a piece in a role (A1 records them per file), or null without art. */
@@ -865,6 +869,73 @@ import { store } from '/oh/oh-store.js';
       const y = bz[1] + bz[3] > 1 ? `bottom:${pc(1 - bz[3])};top:auto` : `top:${pc(bz[1])};bottom:auto`;
       return ` style="${x};${y}" data-zone="badge"`;
     }
+    // ── The hero's play control (lg.com's pause): the slides advance only after a press; a new answer stops them ──
+    const HERO_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>';
+    const HERO_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 5.5h3v13h-3zM13.5 5.5h3v13h-3z" fill="currentColor"/></svg>';
+    let heroTimer = null;
+    /** Puts slide `to` on screen (the same move as the arrows and the bars). */
+    function heroGo(to) {
+      const track = $('m1HeroTrack');
+      const slides = track ? [...track.querySelectorAll('.m1-slide:not(.m1-slide--clone)')] : [];
+      if (!slides.length) return;
+      S.slide = ((to % slides.length) + slides.length) % slides.length;
+      track.style.setProperty('--i', String(slides.length > 1 ? S.slide + 1 : 0));
+      for (const b of document.querySelectorAll('#slot-hero .m1-dot')) b.setAttribute('aria-current', String(num(b.dataset.to) === S.slide));
+    }
+    function heroPlay(on) {
+      if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
+      if (on) heroTimer = setInterval(() => heroGo(S.slide + 1), 6000);
+      const btn = document.querySelector('#slot-hero [data-m1-play]'), car = document.querySelector('#slot-hero .m1-carousel');
+      if (btn) { btn.setAttribute('aria-pressed', String(Boolean(heroTimer))); btn.setAttribute('aria-label', heroTimer ? 'Pause the slides' : 'Play the slides'); btn.innerHTML = heroTimer ? HERO_PAUSE : HERO_PLAY; }
+      if (car) car.classList.toggle('m1-car--playing', Boolean(heroTimer));
+    }
+
+    // ── The pagers: the category row, and at phone width the deals and Recommended for you, one view at a time ──
+    //    Paging scrolls what is already on the page, in the order it came: no event, no visitor, nothing reordered.
+    const PAGED = ['m1Cats', 'slot-deals', 'rail-for-you'];
+    function pagerGeo(box) {
+      const kids = [...box.children].filter((c) => c.getBoundingClientRect().width > 0);
+      if (kids.length < 2) return { kids, step: Math.max(1, box.clientWidth), per: 1 };
+      const r0 = kids[0].getBoundingClientRect(), r1 = kids[1].getBoundingClientRect();
+      const step = Math.max(1, r1.left - r0.left);
+      return { kids, step, per: Math.max(1, Math.round((box.clientWidth + (step - r0.width)) / step)) };
+    }
+    function pagerSync(id) {
+      const box = $(id), pg = document.querySelector(`.m1-pager[data-pager-for="${id}"]`);
+      if (!box || !pg) return;
+      const { kids, step, per } = pagerGeo(box);
+      const pages = Math.max(1, Math.ceil(kids.length / per)), max = box.scrollWidth - box.clientWidth;
+      const at = max <= 1 ? 1 : box.scrollLeft >= max - 2 ? pages : Math.min(pages, Math.floor(box.scrollLeft / (step * per) + 0.5) + 1);
+      const n = pg.querySelector('.m1-pg-n');
+      if (n && n.textContent !== `${at}/${pages}`) n.textContent = `${at}/${pages}`;
+      const [prev, next] = pg.querySelectorAll('[data-m1-page]');
+      if (prev) prev.disabled = at <= 1;
+      if (next) next.disabled = at >= pages;
+      pg.classList.toggle('m1-pager--one', pages <= 1);
+    }
+    function pagersWire() {
+      if (S.pagersWired) return;
+      S.pagersWired = true;
+      for (const id of PAGED) {
+        const box = $(id);
+        if (!box) continue;
+        box.addEventListener('scroll', () => requestAnimationFrame(() => pagerSync(id)), { passive: true });
+        if (typeof ResizeObserver === 'function') new ResizeObserver(() => pagerSync(id)).observe(box);
+      }
+      document.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('[data-m1-page], [data-m1-play]') : null;
+        if (!btn) return;
+        e.preventDefault();
+        if (btn.hasAttribute('data-m1-play')) { heroPlay(!heroTimer); return; }
+        const pg = btn.closest('.m1-pager'), box = pg ? $(pg.dataset.pagerFor) : null;
+        if (!box) return;
+        const { step, per } = pagerGeo(box);
+        box.scrollBy({ left: num(btn.dataset.m1Page) * step * per, behavior: 'smooth' });
+      });
+      // The presenter's flag: at a phone's width the collapsed director's pill shows only under ?present=1.
+      try { document.body.classList.toggle('m1-present', new URLSearchParams(location.search).get('present') === '1'); } catch { /* no address: no flag */ }
+    }
+
     /** A grid's own banner (static, the same for everyone): the room's art from A1, else a dark scene with its products. */
     function roomBanner(view) {
       const box = $(`m1BannerArt-${view}`);
@@ -896,6 +967,7 @@ import { store } from '/oh/oh-store.js';
     function renderHero(slot, decisions) {
       const box = $(`slot-${slot.slot}`);
       if (!box) return;
+      heroPlay(false);                                   // a new answer stops the slides: the decided slide is the one on screen
       const d = decisions[0];
       const entered = !S.quiet && !S.restoring && !S.tpl && Boolean(d && S.home.heroWas && S.home.heroWas !== d.customerContentId);
       if (!S.quiet && !S.restoring && !S.tpl) { S.home.heroPrev = S.home.heroWas; S.home.heroWas = d ? d.customerContentId : null; }
@@ -910,6 +982,7 @@ import { store } from '/oh/oh-store.js';
         `<div class="m1-slide m1-slide--clone" aria-hidden="true" inert>${cloneOf(slides[0]).replace(/^<div class="m1-slide"[^>]*>|<\/div>$/g, '')}</div>`] : slides;
       box.innerHTML = `<div class="m1-carousel"><div class="m1-hero-bleed"><div class="m1-hero-track" id="m1HeroTrack" style="--i:${n > 1 ? 1 : 0}">${track.join('')}</div></div>
         ${n > 1 ? `<div class="m1-car-ctl"><div class="m1-dots">${Array.from({ length: n }, (_, i) => `<button type="button" class="m1-dot" data-act="m1-slide" data-to="${i}" data-ctl="hero-dot-${i + 1}" aria-label="Slide ${i + 1} of ${n}" aria-current="${i === 0}"></button>`).join('')}</div>
+          <button type="button" class="m1-car-arrow m1-car-play" data-m1-play aria-pressed="false" aria-label="Play the slides">${HERO_PLAY}</button>
           <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="-1" data-ctl="hero-prev" aria-label="Previous slide">&lsaquo;</button>
           <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="1" data-ctl="hero-next" aria-label="Next slide">&rsaquo;</button></div>` : ''}</div>`;
       M1.heads();
@@ -951,7 +1024,7 @@ import { store } from '/oh/oh-store.js';
     function dealHtml(d, i, mv) {
       const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
       return `<article class="card p1-deal p1-deal--${i}${d.strategy === 'tenant-pinned' ? ' p1-deal--pinned' : ''}"${decided(d)}>${deltas.chipHtml(mv)}
-        <div class="p1-deal-tile">${sceneHtml(piece, d.customerContentId, i === 3 ? 'tile' : 'tall')}${disp.badge ? `<span class="p1-badge"${badgePos(zonesOf(piece, d.customerContentId, i === 3 ? 'tile' : 'tall'))}>${esc(disp.badge)}</span>` : ''}
+        <div class="p1-deal-tile">${sceneHtml(piece, d.customerContentId, i === 3 ? 'tile' : 'tall', i === 3 ? 'tall' : null)}${disp.badge ? `<span class="p1-badge"${badgePos(zonesOf(piece, d.customerContentId, i === 3 ? 'tile' : 'tall'))}>${esc(disp.badge)}</span>` : ''}
           <div class="p1-deal-body"><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
             ${g.value || g.consideration ? `<p class="p1-fine">${esc([g.value, g.consideration].filter(Boolean).join(' · '))}</p>` : ''}</div>
           <button type="button" class="m1-tile-go" ${target(piece, d.customerContentId)} data-ctl="deal-${i + 1}" aria-label="${esc(disp.cta || 'Shop the deal')}"><span>${esc(disp.cta || 'Shop the deal')}</span> &rsaquo;</button></div>
@@ -982,8 +1055,10 @@ import { store } from '/oh/oh-store.js';
     function continueReceipt(d) {
       const rec = recOf(d), ex = (rec && rec.explain) || {};
       const visit = S.returned ? 'ctx.visit = return, asserted for the clock jump (labelled)' : 'the return visit';
+      const rests = S.clock && (S.clock.gone || !arr(S.clock.rooms).length)
+        ? `it rests on her shortlist (what she opened on this device) and the decisions trail${S.clock.fast ? ': on the demo’s dial her room signals are gone within minutes; production’s dial is days' : ''}` : null;
       return [`${visit} · ${d.strategy === 'default' ? 'the only eligible piece: nothing in her profile scores it' : `score <b>${fmt3(d.score)}</b>`}`,
-        ex.stage && ex.stage.sentence ? esc(ex.stage.sentence) : null].filter(Boolean).join(' · ');
+        rests, ex.stage && ex.stage.sentence ? esc(ex.stage.sentence) : null].filter(Boolean).join(' · ');
     }
 
     // ── The grid's promotion, take 1: a wide banner over the room's art, the copy the piece's own ──
@@ -1545,8 +1620,11 @@ import { store } from '/oh/oh-store.js';
     }
     /**
      * Beat 13: three weeks later, labelled. The windows moved back in the publish; her dials, the engine's own read now,
-     * are carried three weeks on by the published memory (a = R / (R + K), R decaying by e^(−t/τ) per dimension), and
-     * the return visit is asserted on every homepage question from here on. The engine's own clock stays real.
+     * are carried three weeks on by the registry's memory (a = R / (R + K), R decaying by e^(−t/τ) per dimension), and
+     * the return visit is asserted on every homepage question from here on. The engine's own clock stays real. The demo's
+     * dial is compressed (τ in seconds on the page-driving dimensions; production runs days): read off the registry, so
+     * when her room signals are gone below the entry threshold θin the note says so, and the continue hero rests on her
+     * shortlist and the decisions trail.
      */
     async function clockJump(args) {
       const days = num(args && args.days) || (SITE.clockJump && SITE.clockJump.days) || 21;
@@ -1556,19 +1634,26 @@ import { store } from '/oh/oh-store.js';
       const K = num(reg.K) || 1.8, base = num(reg.tauMs) || 1209600000, t = days * 86400000;
       const tauOf = (dim) => { const d = arr(reg.dimensions).find((x) => x.key === dim); return num(d && d.tauMs) || base; };
       const carry = (a, dim) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauOf(dim)); return r / (r + K); };
+      const thetaIn = num(reg.thetaIn) || 0.6;                                // the entry threshold, the registry's own
+      const fast = tauOf('room') < 3600000;                                   // the demo's compressed dial: seconds or minutes, not days
       const read = (dim, value) => { const a = num(((before[dim] || {})[value]) || 0); return { dim, value, b: a, a: carry(a, dim), tau: tauOf(dim) }; };
       const rooms = ['living-room', 'laundry-room', 'kitchen'].map((x) => read('room', x)).filter((r) => r.b > 0);
       const fall = (r) => (r.b > 0 ? (r.b - r.a) / r.b : 0);
       const tv = rooms.find((r) => r.value === 'living-room'), laundry = rooms.find((r) => r.value === 'laundry-room');
-      const laundryFaster = Boolean(tv && laundry && fall(laundry) > fall(tv));
+      const pctFall = (r) => Math.round(fall(r) * 100);
+      const laundryFaster = Boolean(tv && laundry && pctFall(laundry) > pctFall(tv));   // a room "faded faster" only when the readings differ
+      const below = rooms.filter((r) => r.a < thetaIn), gone = rooms.length > 0 && below.length === rooms.length;
       const cats = ['tvs', 'washers'].map((x) => read('category', x)).filter((r) => r.b > 0);
-      const dayLabel = (ms) => `${Math.round(ms / 86400000)} days`;
+      const dayLabel = (ms) => (ms < 120000 ? `${Math.round(ms / 1000)} seconds` : ms < 7200000 ? `${Math.round(ms / 60000)} minutes` : `${Math.round(ms / 86400000)} days`);
       const row = (r) => `${esc(ROOM[r.value] || r.value)} ${fmt3(r.b)} → <b>${fmt3(r.a)}</b> (−${Math.round(fall(r) * 100)}%)`;   // three places, so the arithmetic can be checked by hand
       const most = rooms.reduce((m, r) => (!m || fall(r) > fall(m) ? r : m), null);   // the dial that fell furthest, named in the sentence
-      const faded = most ? `the ${ROOM[most.value] || most.value} faded furthest (−${Math.round(fall(most) * 100)}%), ${rooms.filter((r) => r !== most).map((r) => `the ${ROOM[r.value] || r.value} −${Math.round(fall(r) * 100)}%`).join(', ') || 'the only room she had'}` : null;
-      S.clock = { days, rooms, laundryFaster, faded, head: `${days} days later · a labelled clock jump`,
-        html: `${rooms.length ? `Her room dials, projected three weeks on by the published memory (τ ${dayLabel(tauOf('room'))} on room, K ${K}): ${rooms.map(row).join(' · ')}.` : 'She had no room dial to carry: nothing about her to fade.'}`
-          + `${tv && laundry ? ` ${laundryFaster ? '<b>Laundry faded faster than TV</b>: less evidence fades further on the same memory.' : 'Laundry did not fade faster than TV on these dials.'}` : ''}`
+      const differ = new Set(rooms.map(pctFall)).size > 1;
+      const faded = most && differ ? `the ${ROOM[most.value] || most.value} faded furthest (−${Math.round(fall(most) * 100)}%), ${rooms.filter((r) => r !== most).map((r) => `the ${ROOM[r.value] || r.value} −${Math.round(fall(r) * 100)}%`).join(', ') || 'the only room she had'}` : null;
+      S.clock = { days, rooms, laundryFaster, faded, gone, fast, head: `${days} days later · a labelled clock jump`,
+        html: `${rooms.length ? `${fast ? `On the demo’s dial (τ ${dayLabel(tauOf('room'))} on room, K ${K}; production’s dial runs days) her room signals are gone within minutes` : `Her room dials, carried ${days} days on by the published memory (τ ${dayLabel(tauOf('room'))} on room, K ${K})`}: ${rooms.map(row).join(' · ')}; `
+          + `${gone ? `every room below the entry threshold (θin ${fmt2(thetaIn)})` : `${rooms.length - below.length} of ${rooms.length} still at or above the entry threshold (θin ${fmt2(thetaIn)})`}.` : 'She had no room dial to carry: nothing about her to fade.'}`
+          + `${tv && laundry && differ ? ` ${laundryFaster ? '<b>Laundry faded faster than TV</b>: less evidence fades further on the same memory.' : '<b>The living room faded faster than laundry</b> on these dials.'}` : ''}`
+          + `${gone || !rooms.length ? ' So the continue hero rests on <b>her shortlist and the decisions trail</b>, not on her room dials.' : ''}`
           + `${cats.length ? ` Category, a ${dayLabel(tauOf('category'))} memory: ${cats.map((r) => `${esc(r.value)} ${fmt2(r.b)} → ${fmt2(r.a)}`).join(' · ')}.` : ''}`
           + ' The catalog’s windows moved back in one publish; the engine decides on its own clock, which is real, so the meters beside the page show her dials as it holds them.' };
       S.returned = true;
@@ -1576,7 +1661,7 @@ import { store } from '/oh/oh-store.js';
       await ask(homeKey());
       S.lead = `<li class="delta-engine"><span class="hk">${esc(S.clock.head)}</span>${S.clock.html}</li>`;
       if (rowFor('deals')) deltas.render('deals');
-      panels.note('engine', 'Three weeks on, by the published memory', stripTags(S.clock.html).slice(0, 170));
+      panels.note('engine', S.clock.fast ? 'Three weeks on, on the demo’s dial (production’s runs days)' : 'Three weeks on, by the published memory', stripTags(S.clock.html).slice(0, 170));
       director.sayAfter();
     }
 
@@ -1661,7 +1746,7 @@ import { store } from '/oh/oh-store.js';
         windows: { page: S.windows ? S.windows.page : null, pageName: S.windows ? S.windows.pageName : null, closed: S.windows ? S.windows.rows.length : null, left: S.windows ? S.windows.left : null, still: S.windows ? S.windows.still : null,
           held: S.held ? S.held.packages.length : null, heldShown: S.held ? S.held.appeared : null },
         pin: { title: S.pin ? S.pin.title : null, would: S.pin ? S.pin.would : null, nowAt: S.pin ? S.pin.nowAt : null },
-        clock: { laundryFaster: S.clock ? S.clock.laundryFaster : null, faded: S.clock ? S.clock.faded : null, returned: S.returned || null },
+        clock: { laundryFaster: S.clock ? S.clock.laundryFaster : null, faded: S.clock ? S.clock.faded : null, gone: S.clock ? S.clock.gone : null, fast: S.clock ? S.clock.fast : null, returned: S.returned || null },
         shortlist: { count: ch.count || null, line: ch.line, ended: ch.ended || null },
       };
     }
@@ -2068,6 +2153,7 @@ import { store } from '/oh/oh-store.js';
        * arrives" while nobody has. Read off the page: a slot's container carrying a decision id, a rail's /sort answer.
        */
       function heads() {
+        for (const id of PAGED) pagerSync(id);
         const someone = Boolean(transport.cur());
         for (const mod of document.querySelectorAll('#stage .module[data-slot], #stage .module[data-rail]')) {
           const tag = mod.querySelector('.module-where .m1-for');
@@ -2211,13 +2297,7 @@ import { store } from '/oh/oh-store.js';
         if (act === 'm1-tab') { S.tab = d.tab === 'entertainment' ? 'entertainment' : 'appliances'; showcase(); return true; }
         if (act === 'm1-promo') return promo(d.cid);
         if (act === 'm1-slide') {
-          const track = $('m1HeroTrack');
-          const slides = track ? [...track.querySelectorAll('.m1-slide:not(.m1-slide--clone)')] : [];
-          if (!slides.length) return true;
-          const to = d.to !== undefined ? num(d.to) : S.slide + (num(d.step) || 1);
-          S.slide = ((to % slides.length) + slides.length) % slides.length;
-          track.style.setProperty('--i', String(slides.length > 1 ? S.slide + 1 : 0));
-          for (const b of document.querySelectorAll('#slot-hero .m1-dot')) b.setAttribute('aria-current', String(num(b.dataset.to) === S.slide));
+          heroGo(d.to !== undefined ? num(d.to) : S.slide + (num(d.step) || 1));
           return true;
         }
         return undefined;
@@ -2283,6 +2363,7 @@ import { store } from '/oh/oh-store.js';
       } catch (error) { say(String(error.message || error), 'bad'); }
     });
     M1.shell();                                       // the store's header, pencil banner and footer at once, on every shell
+    pagersWire();                                     // the carousels' pagers and the hero's play control (no event, no visitor)
     return { paintRail, homeRows, freshVisitor, state: S };
   })();
   /** The before/now rows of the homepage (P2's merge, rows: () => ({ ...homeRows(), ...productRows() }), reads this). */
@@ -2356,13 +2437,13 @@ import { store } from '/oh/oh-store.js';
    */
   const P2_SERVICES = {
     tv: { seen: 'OLED65C6PUA', groups: [
-      { id: 'protection', title: 'Add LG Premium Care by Asurion', short: 'LG Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
+      { id: 'protection', title: 'Premium Care by Asurion', short: 'Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
         opts: [['care-1y', '1-Year Additional Protection', 129.99, null], ['care-2y', '2-Year Additional Protection', 179.99, null], ['care-3y', '3-Year Additional Protection', 249.99, null]] },
       { id: 'setup', title: 'Add TV Setup', short: 'TV setup', note: 'Wall mounting is by Angi; the mount itself is sold separately unless the TV includes one.',
         opts: [['setup-stand', 'TV Stand Setup', 0, null], ['setup-wall', 'Wall Mounting by Angi', 164.99, null, 'offer-tv-free-mounting']] },
     ] },
     laundry: { seen: 'WM6500HWA', groups: [
-      { id: 'protection', title: 'Add LG Premium Care by Asurion', short: 'LG Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
+      { id: 'protection', title: 'Premium Care by Asurion', short: 'Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
         opts: [['care-1y', '1-Year Additional Protection', 9.99, 64.99], ['care-2y', '2-Year Additional Protection', 39.99, 94.99], ['care-3y', '3-Year Additional Protection', 69.99, 124.99]] },
       { id: 'install', title: 'Add Professional Installation', short: 'Installation', note: 'Hook-up and levelling by a professional installer; we contact you to schedule it.',
         opts: [['install', 'Install Appliance', 29.99, null]] },
@@ -2370,7 +2451,7 @@ import { store } from '/oh/oh-store.js';
         opts: [['haul-away', 'Haul Away', 25, 50], ['move-rooms', 'Move Rooms', 25, null]] },
     ] },
     kitchen: { seen: 'LSGL6335X', groups: [
-      { id: 'protection', title: 'Add LG Premium Care by Asurion', short: 'LG Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
+      { id: 'protection', title: 'Premium Care by Asurion', short: 'Premium Care', note: 'Adds to the manufacturer’s limited warranty. Not available in Florida.',
         opts: [['care-1y', '1-Year Additional Protection', 9.99, 89.99], ['care-2y', '2-Year Additional Protection', 39.99, 119.99], ['care-3y', '3-Year Additional Protection', 69.99, 149.99]] },
       { id: 'install', title: 'Add Professional Installation', short: 'Installation', note: 'Hard-wiring, water-line extensions and propane conversion are not included.',
         opts: [['install', 'Install Appliance', 69.99, null]] },
@@ -2488,172 +2569,30 @@ import { store } from '/oh/oh-store.js';
   }
 
   // ── The page's own styles: the pdp-, bb-, pmod, ptile, fit- and cmp2 families, in OH's tokens (oh.css is M1's) ──
-  // One block, injected once in whichever shell a product page opens (P3's section does the same for its pieces),
-  // so a direct load, a walk from the homepage and the phone paint the same page. Written to be appended verbatim
-  // to oh.css by its owner; until then it lives here.
+  // The page's first block now lives in oh.css, appended there verbatim by M1 ("lane M2's block"). What follows is
+  // only what came after it (R5's rulings, lane M2b), injected once in whichever shell a product page opens, to be
+  // appended to oh.css the same way; then this injection can go. The buttons are the shared .btn classes and the
+  // action colour is M1c's (--brand is lg.com's red inside #site): the page adds neither of its own.
   const P2_CSS = [
-    '#view-product{gap:28px}',
-    '#view-product section,#view-product .pdp-top{scroll-margin-top:calc(var(--pdp-stick-top,65px) + 116px)}',
-    // the breadcrumb
-    '.pdp-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px;color:var(--muted);margin-bottom:-10px}',
-    '.pdp-crumbs button{border:0;background:none;padding:0;font:inherit;color:var(--ink);cursor:pointer}',
-    '.pdp-crumbs button:hover{text-decoration:underline;text-underline-offset:2px}',
-    '.pdp-crumbs [aria-current]{color:var(--muted)}',
-    // the buy bar: the buy box, off limits to the engine
-    '.buybox.pdp-bar{border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;display:grid;grid-template-columns:minmax(0,1fr) auto 200px;gap:10px 32px;align-items:center}',
-    '.pdp-bar .bb-head{display:grid;gap:6px;min-width:0}',
-    '.pdp-bar .bb-title{font-size:22px;line-height:1.3;font-weight:700;letter-spacing:-.01em;color:var(--ink)}',
-    '.bb-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;font-size:13px;color:var(--muted)}',
-    '.bb-sku{font-weight:600;color:var(--ink);letter-spacing:.01em}',
-    '.bb-pricebox{display:grid;gap:6px;justify-items:end;text-align:right;min-width:0;max-width:340px}',
-    '.pdp-bar .bb-price{justify-content:flex-end;gap:2px 10px;font-size:28px;line-height:1.15}',
-    '.bb-price .bb-now{font-weight:700}',
-    '.bb-price .off{font-size:13px;font-weight:700;color:var(--brand)}',
-    '.bb-price .was{font-size:14px;font-weight:400;color:var(--muted)}',
-    '.bb-price .bb-retail{font-size:18px;font-weight:600}',
-    '.pdp-bar .bb-fin,.pdp-stick-bar .bb-fin{justify-content:flex-end;font-size:12.5px;gap:4px 10px}',
-    '.bb-fin .bb-affirm{font-weight:700;letter-spacing:-.01em}',
-    '.pdp-bar .bb-actions{margin-top:0;display:grid;gap:8px;min-width:200px}',
-    '.pdp-bar .bb-actions .btn,.pdp-stick-bar .btn{width:100%}',
-    '.buybox.pdp-bar .offlimits{grid-column:1/-1;background:none;padding:0;font-size:11.5px;color:var(--muted)}',
-    '.buybox.pdp-bar .offlimits b{font-size:10px}',
-    '.pdp-stars{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}',
-    '.pdp-stars i{font-style:normal;letter-spacing:1px;background:linear-gradient(90deg,var(--ink) var(--pct),var(--line-2) var(--pct));-webkit-background-clip:text;background-clip:text;color:transparent}',
-    '.pdp-stars em{font-style:normal;color:var(--muted);text-decoration:underline;text-underline-offset:2px}',
-    // the sticky twin and the tabs
-    '.pdp-stick{position:sticky;top:var(--pdp-stick-top,65px);z-index:30;background:var(--paper);border-bottom:1px solid var(--line);margin-top:-14px}',
-    '.pdp-stick-bar{display:none;grid-template-columns:minmax(0,1fr) auto auto;gap:24px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}',
-    '.pdp-stick.is-stuck .pdp-stick-bar{display:grid}',
-    '.pdp-stick-bar .bb-head{display:grid;gap:2px;min-width:0}',
-    '.pdp-stick-bar .bb-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.pdp-stick-bar .bb-sku{font-size:12px}',
-    '.pdp-stick-bar .bb-pricebox{gap:2px}',
-    '.pdp-stick-bar .bb-price{font-size:20px;justify-content:flex-end;gap:2px 8px}',
-    '.pdp-stick-bar .bb-actions{display:flex;gap:8px;margin:0}',
-    '.pdp-tabs{display:flex;gap:30px;overflow-x:auto;scrollbar-width:none}',
-    '.pdp-tabs::-webkit-scrollbar{display:none}',
-    '.pdp-tabs button{flex:none;border:0;background:none;font:inherit;font-size:14.5px;font-weight:600;color:var(--muted);padding:14px 0 12px;cursor:pointer;box-shadow:inset 0 -2px 0 transparent}',
-    '.pdp-tabs button:hover{color:var(--ink)}',
-    '.pdp-tabs button[aria-current="true"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--brand)}',
-    // the gallery and the offer carousel
-    '.pdp-top{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:44px;align-items:start}',
-    '.pdp-left{display:grid;gap:28px;min-width:0}',
-    '.pdp-left.is-pinned{position:sticky;top:calc(var(--pdp-stick-top,65px) + var(--pdp-stick-h,50px) + 16px)}',
-    '.pdp-gallery{position:relative;background:var(--soft);border-radius:var(--radius);aspect-ratio:1/1;max-height:540px;display:grid;place-items:center;overflow:hidden}',
-    '.pdp-gmain{width:100%;height:100%;display:grid;place-items:center}',
-    '.pdp-gmain img{width:80%;height:80%;object-fit:contain;mix-blend-mode:multiply}',
-    '.pdp-gmain .ph-tile{width:62%;height:auto;aspect-ratio:1;font-size:15px;background:var(--soft-2)}',
-    '.pdp-gbadges{position:absolute;top:16px;left:16px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 90px)}',
-    '.pdp-gbadge{font-size:12px;font-weight:600;color:var(--brand);background:var(--paper);border:1px solid var(--brand-glow-2);border-radius:var(--radius-sm);padding:2px 8px}',
-    '.pdp-wish{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;border:1px solid var(--line-2);background:var(--paper);display:grid;place-items:center;cursor:pointer;color:var(--ink)}',
-    '.pdp-wish svg{width:20px;height:20px}',
-    '.pdp-wish[aria-pressed="true"]{color:var(--brand);border-color:var(--brand)}',
-    '.pdp-wish[aria-pressed="true"] path{fill:currentColor}',
-    '.pdp-gnote{position:absolute;left:16px;right:16px;bottom:12px;font-size:11.5px;color:var(--muted)}',
-    '.pdp-offers .module-head{align-items:center;margin-bottom:12px}',
-    '.pdp-offers .module-head h2{font-size:20px}',
-    '.pdp-onav{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex:none}',
-    '.pdp-oarrow{width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);background:var(--paper);cursor:pointer;font-size:18px;line-height:1;color:var(--ink)}',
-    '.pdp-oarrow:disabled{opacity:.35;cursor:default}',
-    '.pdp-otrack{display:grid;grid-auto-flow:column;grid-auto-columns:100%;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}',
-    '.pdp-otrack::-webkit-scrollbar{display:none}',
-    '.pdp-otrack>.slot-wait,.pdp-otrack>.slot-empty{padding:16px 0}',
-    '.card.pdp-offer{scroll-snap-align:start;background:var(--brand-wash);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px 14px;gap:7px;min-height:136px;cursor:pointer}',
-    '.pdp-obadge{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--on-dark);background:var(--brand);border-radius:var(--radius-sm);padding:2px 8px}',
-    '.card.pdp-offer h3{font-size:16px;line-height:1.35;padding-right:0}',
-    '.card.pdp-offer p{font-size:13.5px;color:var(--ink)}',
-    '.card.pdp-offer .pdp-oterms{font-size:12.5px;color:var(--muted)}',
-    '.pdp-omore{font-size:13px;font-weight:600;color:var(--brand);text-decoration:underline;text-underline-offset:2px}',
-    // the buy column
-    '.pdp-config{display:grid;min-width:0}',
-    '.pdp-cfg{padding:22px 0;border-top:1px solid var(--line);display:grid;gap:12px;min-width:0}',
-    '.pdp-cfg:first-child{border-top:0;padding-top:0}',
-    '.pdp-cfg h3{font-size:16px;font-weight:700;color:var(--ink)}',
-    '.pdp-cfg h3 b{font-weight:700;text-decoration:underline;text-underline-offset:3px}',
-    '.pdp-keyf ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px;line-height:1.45;color:var(--ink)}',
-    '.pdp-ship-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}',
-    '.pdp-ship-grid>div{display:grid;gap:5px;align-content:start;font-size:13.5px;line-height:1.45;color:var(--ink);min-width:0}',
-    '.pdp-ship-grid b{display:inline-flex;align-items:center;gap:8px;font-size:14px}',
-    '.pdp-ship-grid svg{width:20px;height:20px;flex:none}',
-    '.pdp-ok{color:#1F7A3A}',
-    '.pdp-link{justify-self:start;border:0;background:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:2px;cursor:pointer}',
-    '.pdp-fine{font-size:12px;line-height:1.5;color:var(--muted)}',
-    '.bb-vars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}',
-    '.bb-var{display:grid;gap:2px;align-content:start;text-align:left;border:1px solid var(--line-2);border-radius:var(--radius);background:var(--paper);padding:12px 14px;cursor:pointer;font:inherit;color:var(--ink);min-width:0}',
-    '.bb-var:hover{border-color:var(--ink)}',
-    '.bb-var b{font-size:16px}',
-    '.bb-var .bb-var-now{font-size:14px;font-weight:700}',
-    '.bb-var .bb-var-off{font-size:12px;font-weight:700;color:var(--brand)}',
-    '.bb-var s{font-size:12px;color:var(--muted)}',
-    '.bb-var[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}',
-    '.bb-var.clicked,.pdp-svc.clicked{box-shadow:0 0 0 3px var(--brand-glow-2)}',
-    '.pdp-svcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}',
-    '.pdp-svc{position:relative;display:grid;gap:4px;align-content:start;text-align:left;border:1px solid var(--line-2);border-radius:var(--radius);background:var(--paper);padding:12px 42px 12px 14px;cursor:pointer;font:inherit;color:var(--ink);min-width:0;min-height:72px}',
-    '.pdp-svc:hover{border-color:var(--ink)}',
-    '.pdp-svc .pdp-svc-l{font-size:13.5px;font-weight:600;line-height:1.3}',
-    '.pdp-svc .pdp-svc-p{font-size:13.5px;font-weight:700}',
-    '.pdp-svc .pdp-svc-p s{font-size:12px;font-weight:400;color:var(--muted);margin-left:4px}',
-    '.pdp-svc .pdp-free{color:var(--brand)}',
-    '.pdp-svc i{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;font-style:normal;font-size:14px;line-height:1}',
-    '.pdp-svc[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}',
-    '.pdp-svc[aria-pressed="true"] i{background:var(--ink);color:var(--paper)}',
-    '.pdp-review{background:var(--soft);border-radius:var(--radius);padding:20px;display:grid;gap:10px;margin-top:4px}',
-    '.pdp-review h3{font-size:18px;font-weight:700}',
-    '.pdp-rline{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:14px;color:var(--ink)}',
-    '.pdp-rline span{min-width:0;overflow-wrap:anywhere}',
-    '.pdp-rline b{white-space:nowrap}',
-    '.pdp-rline--svc{font-size:13.5px;color:var(--muted)}',
-    '.pdp-rline--svc b{color:var(--ink);font-weight:600}',
-    '.pdp-rtotal{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line-2);padding-top:12px;font-size:16px;font-weight:700}',
-    '.pdp-rsave{display:flex;justify-content:space-between;gap:16px;font-size:14px;font-weight:600;color:var(--brand)}',
-    '.pdp-ractions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:6px}',
-    '.pdp-ractions .btn{width:100%}',
-    '.pdp-cfgnote{padding-top:14px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:12px;color:var(--muted)}',
-    // the decided modules, the type switch
-    '.pdp-type{padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
-    '.cards.pdp-mods{grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:20px;align-items:start}',
-    '.card.pmod{border:1px solid var(--line);border-radius:var(--radius);padding:20px 20px 16px;gap:10px;background:var(--paper);cursor:default}',
-    '.pmod-head h3{font-size:17px;line-height:1.3}',
-    '.card.pmod .receipt{border-top:1px solid var(--line);padding-top:8px}',
-    '.pmod-pick{justify-self:start;align-self:flex-start}',
-    '.ptiles{gap:12px;grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}',
-    '.ptile{padding:10px 10px 12px;gap:5px}',
-    '.ptile:hover{border-color:var(--ink)}',
-    '.ptile img{mix-blend-mode:multiply}',
-    '.ptile .pname{font-size:12.5px;line-height:1.35;font-weight:500;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
-    '.ptile .pprice{font-size:14px}',
-    '.pdp-gone{display:grid;gap:12px}',
-    '.pdp-gone:empty{display:none}',
-    // the specs, the features, the reviews, the questions
-    '.pdp-sec{border-top:1px solid var(--line);padding-top:28px;display:grid;gap:18px;min-width:0}',
-    '.pdp-sechead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}',
-    '.pdp-sechead h2{font-size:24px;font-weight:700;letter-spacing:-.015em}',
-    '.pdp-specgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 48px}',
-    '.pdp-specgroup{display:grid;gap:8px;padding:14px 0;border-bottom:1px solid var(--line);align-content:start;min-width:0}',
-    '.pdp-specgroup h3{font-size:15px;font-weight:700}',
-    '.pdp-specs .pdp-specgroup dl{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:6px 16px}',
-    '.pdp-specs dd{overflow-wrap:anywhere}',
-    '.pdp-fit-static{display:grid;gap:10px;background:var(--soft);border-radius:var(--radius);padding:18px 20px}',
-    '.pdp-fit-static h3{font-size:16px}',
-    '.pdp-feats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}',
-    '.pdp-feat{background:var(--soft);border-radius:var(--radius);padding:18px;display:grid;gap:6px;align-content:start;font-size:14.5px;font-weight:700;color:var(--ink);min-width:0}',
-    '.pdp-feat span{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.45}',
-    '.pdp-rev{display:flex;align-items:center;gap:14px 22px;flex-wrap:wrap}',
-    '.pdp-rev-n{font-size:46px;line-height:1;font-weight:700;color:var(--ink)}',
-    '.pdp-rev .pdp-stars{font-size:15px;cursor:default}',
-    '.pdp-rev .pdp-stars i{font-size:22px}',
-    '.pdp-qa-box{background:var(--soft);border-radius:var(--radius);padding:18px 20px;display:grid;gap:8px;font-size:14px;line-height:1.5;color:var(--ink)}',
-    // narrower than the room's screens: one column, never a horizontal scroll
-    '@media (max-width:1100px){.pdp-svcs{grid-template-columns:repeat(2,minmax(0,1fr))}.pdp-feats{grid-template-columns:repeat(3,minmax(0,1fr))}.pdp-top{gap:32px}}',
-    '@media (max-width:900px){.buybox.pdp-bar{grid-template-columns:minmax(0,1fr);gap:12px}.bb-pricebox{justify-items:start;text-align:left}.pdp-bar .bb-price,.pdp-bar .bb-fin{justify-content:flex-start}'
-      + '.pdp-bar .bb-actions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}.pdp-stick{position:static;margin-top:-10px}.pdp-stick-bar{display:none!important}'
-      + '.pdp-top{grid-template-columns:minmax(0,1fr);gap:24px}.pdp-specgrid{grid-template-columns:minmax(0,1fr)}.pdp-feats{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '@media (max-width:640px){.pdp-bar .bb-title{font-size:20px}.pdp-bar .bb-price{font-size:24px}.bb-vars,.pdp-svcs{grid-template-columns:repeat(2,minmax(0,1fr))}.pdp-ship-grid{grid-template-columns:minmax(0,1fr)}'
-      + '.pdp-tabs{gap:20px}.cards.pdp-mods{grid-template-columns:minmax(0,1fr)}.card.pmod{padding:16px}.ptiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pdp-feats{grid-template-columns:minmax(0,1fr)}.cmp2{grid-template-columns:minmax(0,1fr)}}',
-    'body.shell--phone .buybox.pdp-bar{grid-template-columns:minmax(0,1fr);gap:12px}body.shell--phone .bb-pricebox{justify-items:start;text-align:left}body.shell--phone .pdp-bar .bb-price,body.shell--phone .pdp-bar .bb-fin{justify-content:flex-start}',
-    'body.shell--phone .pdp-bar .bb-actions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}body.shell--phone .pdp-stick{position:static}body.shell--phone .pdp-stick-bar{display:none!important}',
-    'body.shell--phone .pdp-top,body.shell--phone .pdp-specgrid,body.shell--phone .cards.pdp-mods,body.shell--phone .pdp-ship-grid,body.shell--phone .pdp-feats{grid-template-columns:minmax(0,1fr)}',
-    'body.shell--phone .bb-vars,body.shell--phone .pdp-svcs,body.shell--phone .ptiles{grid-template-columns:repeat(2,minmax(0,1fr))}body.shell--phone .pdp-bar .bb-title{font-size:20px}',
+    // The buy bar's dock: at the room's widths its price and buttons are the bar's own columns, as before.
+    '.bb-dock{display:contents}',
+    // At a phone's width, lg.com's order: the picture first and large, then the buy box, the tabs (sticky, one line),
+    // the offers and the buy column; the price, the financing line and the two buttons dock to the bottom of the screen
+    // (above the presenter's director bar when it is open at the foot; under the sheets, which cover it).
+    '@media (max-width:640px){'
+      + '#view-product .pdp-top,#view-product .pdp-left{display:contents}'
+      + '#view-product>*{order:10}#view-product>.offlimits-note,#view-product>.pdp-crumbs{order:0}'
+      + '#view-product .pdp-gallery{order:1;aspect-ratio:1/1;max-height:none}#view-product .pdp-gmain img{width:90%;height:90%}'
+      + '#view-product>#buyBox{order:2}#view-product>.pdp-stick{order:3;position:sticky;margin-top:-14px}#view-product .pdp-offers{order:4}#view-product .pdp-config{order:5}'
+      + '#view-product .bb-dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14)}'
+      + 'body.kit-dock:not(.kit-dock--collapsed) #view-product .bb-dock{bottom:var(--dock-bar-h,0px)}body:not(.kit-dock) #view-product .bb-dock{bottom:var(--bar-h,0px)}'
+      + '#view-product .bb-dock .bb-pricebox{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;max-width:none;text-align:left}'
+      + '#view-product .pdp-bar .bb-dock .bb-price{justify-content:start;flex:none}#view-product .pdp-bar .bb-dock .bb-price .bb-now{font-size:24px}'
+      + '#view-product .pdp-bar .bb-dock .bb-fin{justify-content:flex-end;text-align:right;font-size:11.5px;line-height:1.35;min-width:0}'
+      + '#view-product .pdp-bar .bb-dock .bb-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;margin:0}'
+      + '#view-product .bb-dock .bb-actions [data-ctl="special-offers"]{order:-1}'
+      + 'body:has(#view-product:not([hidden])) .site{padding-bottom:150px}'
+      + '}',
   ].join('\n');
   function p2Style() {
     if ($('p2-style')) return;
@@ -2708,13 +2647,19 @@ import { store } from '/oh/oh-store.js';
     if (view) view.style.setProperty('--pdp-stick-top', `${top}px`);
     return top;
   }
+  /** A section's own box: at a phone's width the overview's wrapper lays out its children directly (display: contents), so its first child stands for it. */
+  function boxOf(id) {
+    let n = $(id);
+    while (n && !n.getClientRects().length && n.firstElementChild) n = n.firstElementChild;
+    return n;
+  }
   /** The tab of the section in view (the last section whose top has passed the sticky row), marked current. */
   function spyTabs() {
     const view = $('view-product');
     if (!view || view.hidden) return;
     const line = stickTop() + (($('pdpStick') || {}).offsetHeight || 0) + 24;
     let at = P2_TABS[0][2];
-    for (const [, , to] of P2_TABS) { const n = $(to); if (n && n.getBoundingClientRect().top <= line) at = to; }
+    for (const [, , to] of P2_TABS) { const n = boxOf(to); if (n && n.getBoundingClientRect().top <= line) at = to; }
     for (const b of document.querySelectorAll('#pdpTabs [data-to]')) { const on = String(b.dataset.to === at); if (b.getAttribute('aria-current') !== on) b.setAttribute('aria-current', on); }
   }
   /** The twin shows once the buy bar has scrolled up under the header, never beside it; the tabs follow the reader. */
@@ -2824,8 +2769,8 @@ import { store } from '/oh/oh-store.js';
     if (crumbs) crumbs.innerHTML = crumbsHtml(p);
     box.innerHTML = `<div class="bb-head"><h1 class="bb-title" id="bbTitle">${esc(titleOfProduct(p))}</h1>`
       + `<p class="bb-meta" id="bbMeta"><span class="bb-sku">${esc(p ? idOf(p) : '')}</span>${starsHtml(p)}</p></div>`
-      + `<div class="bb-pricebox"><div class="bb-price" id="bbPrice">${priceHtml(p)}</div>${fin ? finHtml(fin, 'bbFin') : ''}</div>`
-      + `<div class="bb-actions">${ctaHtml(p, 'bar')}<button type="button" class="btn btn--line" data-act="pdp-tab" data-to="mod-pdp-offers" data-ctl="special-offers">Special Offers</button></div>`
+      + `<div class="bb-dock"><div class="bb-pricebox"><div class="bb-price" id="bbPrice">${priceHtml(p)}</div>${fin ? finHtml(fin, 'bbFin') : ''}</div>`
+      + `<div class="bb-actions">${ctaHtml(p, 'bar')}<button type="button" class="btn btn--line" data-act="pdp-tab" data-to="mod-pdp-offers" data-ctl="special-offers">Special Offers</button></div></div>`
       + `<p class="offlimits"><b>Off limits</b> the title, the price, the ${v.label === 'Size' ? 'sizes' : 'colours'}, the button and the financing line are the catalog’s, the same for everyone · never decided, never personalised</p>`;
     const twin = $('pdpStickBar');
     if (twin) {
@@ -3701,7 +3646,7 @@ import { store } from '/oh/oh-store.js';
   }
   /** A tab, or Special Offers: the section scrolls in under the sticky row. */
   function scrollToSection(to) {
-    const node = $(to);
+    const node = boxOf(to);
     if (!node) return;
     const top = node.getBoundingClientRect().top + window.scrollY - stickTop() - (($('pdpStick') || {}).offsetHeight || 0) - 12;
     try { window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); } catch { window.scrollTo(0, Math.max(0, top)); }
@@ -3920,15 +3865,18 @@ import { store } from '/oh/oh-store.js';
       const d = arr(reg.dimensions).find((x) => x.key === dim);
       return Number(d && d.tauMs) || Number(reg.tauMs) || 0;
     }
-    /** Her strongest signals; taste is the long memory (a day or more), not the minute's intent (retailer, content type, price tier). */
-    function topOf(dims, n = 3, taste = true) {
+    /**
+     * Her three strongest values across every dimension, whatever its memory, read from her profile at one moment (the
+     * link's): the demo's registry runs the page-driving dimensions in seconds and minutes, so a cut by memory length
+     * would leave nothing to show.
+     */
+    function topOf(dims, n = 3) {
       const rows = [];
-      for (const [dim, values] of Object.entries(dims || {})) {
-        if (taste && tauOf(dim) < 86400000) continue;
-        for (const [value, a] of Object.entries(values || {})) if (Number(a) > 0) rows.push({ dim, value, a: Number(a) });
-      }
+      for (const [dim, values] of Object.entries(dims || {})) for (const [value, a] of Object.entries(values || {})) if (Number(a) > 0) rows.push({ dim, value, a: Number(a) });
       return rows.sort((x, y) => y.a - x.a).slice(0, n);
     }
+    /** What the strip says of memory when what it names is compressed for the room (under a day here); production runs days. */
+    const memoryNote = (list) => (arr(list).some((x) => tauOf(x.dim) < 86400000) ? ' · memory compressed for the room; production runs days' : '');
     const keysOf = (list) => arr(list).map((x) => `${x.dim}\u0000${x.value}`).sort().join('|');
     /** What a page showed in its decided slots, slot by slot, for "the same page, before and after she signed in". */
     function shownOn(key) {
@@ -4039,16 +3987,20 @@ import { store } from '/oh/oh-store.js';
       panels.renderWho();
       renderSignedIn();
       if (isPhone) S.phoneBefore = shownOn(state.viewPage);
+      // Her profile at the moment of the link, before anything else is asked; on the phone, the laptop's beside it at the
+      // same moment (both sessions now name the person). Strongest values across every dimension, whatever their memory.
+      const laptopNow = isPhone && S.laptop && state.visitors[S.laptop] ? state.visitors[S.laptop] : null;
+      const [atLink, laptopAtLink] = await Promise.all([reflexOf(v).then((d) => topOf(d)), laptopNow ? reflexOf(laptopNow).then((d) => topOf(d)) : Promise.resolve(null)]);
       if (state.viewPage) await askPage(state.viewPage);   // one request: the page asks again, as the person
-      const after = topOf(await reflexOf(v));
-      const gained = after.filter((x) => !before.some((y) => y.dim === x.dim && y.value === x.value));
+      const gained = atLink.filter((x) => !before.some((y) => y.dim === x.dim && y.value === x.value));
       if (isPhone) {
         S.phoneAfter = shownOn(state.viewPage);
-        S.phoneTop = after;
-        S.same = Boolean(S.laptopTop && S.laptopTop.length && keysOf(after) === keysOf(S.laptopTop));
+        S.phoneTop = atLink;
+        if (laptopAtLink) S.laptopTop = laptopAtLink;
+        S.same = Boolean(laptopAtLink && laptopAtLink.length && keysOf(atLink) === keysOf(laptopAtLink));
         S.moved = S.phoneBefore && S.phoneAfter ? Object.keys(S.phoneAfter).filter((k) => S.phoneAfter[k] !== S.phoneBefore[k]).length : null;
-        v.p3.linked.taste = after.length ? `her laptop’s taste, now on this phone: ${tops(after)}` : 'nothing from another device yet';
-      } else if (gained.length) v.p3.linked.taste = `from her other signed-in devices: ${tops(gained)}`;
+        v.p3.linked.taste = atLink.length ? `strongest at sign-in: ${tops(atLink)}${memoryNote(atLink)}` : 'nothing from another device yet';
+      } else if (gained.length) v.p3.linked.taste = `strongest at sign-in: ${tops(gained)}${memoryNote(gained)}`;
       renderSignedIn();
       panels.renderWho();
       director.sayAfter();
@@ -4481,17 +4433,28 @@ import { store } from '/oh/oh-store.js';
       const loaded = ['anchor', 'beats', 'products'].map((k) => `${k}: ${state.sources[k] || 'missing'}`).join(' · ');
       say(`ready · ${loaded} · registry: ${state.sources.registry}`, 'good');
       demo.compare.prefetch();
+      // Her visitor from this browser, continued (M3): a full load, a reload, a new tab or Back after a full navigation is
+      // the same person, with no identity call and no new consent; nothing kept, the page is a stranger's.
+      const back = await store.visitor.resume().catch(() => null);
+      const failed = (error) => { engineDown(String(error.message || error)); say(String(error.message || error), 'bad'); };
       // A direct load of the product page is a real arrival on it: a visitor, the product, and the live answer.
       if (ENTRY === 'product') {
         const id = new URLSearchParams(location.search).get('id');
         await openProduct(id).then(() => panels.loadColdStart())
-          .then(() => say('ready · this product page was decided live for a direct visitor; Next starts the walkthrough', 'good'))
-          .catch((error) => { engineDown(String(error.message || error)); say(String(error.message || error), 'bad'); });
+          .then(() => say(back ? 'ready · this product page was decided live for her, the same visitor as before on this browser; Next starts the walkthrough'
+            : 'ready · this product page was decided live for a direct visitor; Next starts the walkthrough', 'good'))
+          .catch(failed);
       } else if (ENTRY === 'grid') {
-        await restoreFromUrl().catch((error) => { engineDown(String(error.message || error)); say(String(error.message || error), 'bad'); });
+        await restoreFromUrl().catch(failed);
+      } else if (back) {
+        // Home, a grid by its view, a search or the phone: her own page, decided for her, not the stranger's template.
+        await panels.loadColdStart().then(() => store.nav.go(location.pathname + location.search, { dispatched: true }))
+          .then(() => say('ready · decided for her, the same visitor as before on this browser; Next starts the walkthrough', 'good'))
+          .catch(failed);
       } else if (ENTRY === 'phone') {
-        await phoneArrival().catch((error) => { engineDown(String(error.message || error)); say(String(error.message || error), 'bad'); });   // P3: a stranger on the phone
+        await phoneArrival().catch(failed);   // P3: a stranger on the phone
       }
+      store.visitor.persist(transport.cur());   // a visitor this load minted (a direct product address, the phone) is kept for the next
       // The sections' own boot steps (a direct load of the grid, the static menus), in order.
       for (const step of LANES.boot) await step(ENTRY);
     } catch (error) {

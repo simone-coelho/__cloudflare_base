@@ -912,7 +912,7 @@ body { font-size: 16px; color: #111; }
   #slot-hero .p1-hero-copy { top: auto; bottom: 48px; transform: none; left: 22px; right: 22px; width: auto; }
   #slot-hero .p1-hero h3 { font-size: 30px; }
   #slot-hero .p1-hero:has(.m1-scene--art)::before, .m1-banner:has(.m1-scene--art)::before { left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: 58%; border-radius: 50% 50% 0 0 / 28px 28px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
-  #slot-hero .p1-hero:has(.m1-scene--art) .m1-scene--art img, .m1-banner:has(.m1-scene--art) .m1-scene--art img { height: 46%; object-position: 78% 50%; }
+  #slot-hero .p1-hero:has(.m1-scene--art) .m1-scene--art img, .m1-banner:has(.m1-scene--art) .m1-scene--art img { height: 46%; object-position: 100% 50%; }   /* A1 draws the product on the right: keep it in the phone crop */
   #slot-continue .p1-continue:has(.m1-scene--art) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "list" "clock" "ctas" "rec"; padding: 28px 20px 14px; }
   #slot-continue .p1-continue:has(.m1-scene--art)::before { left: -30%; width: 160%; top: -10%; height: 70%; border-radius: 0 0 50% 50% / 0 0 40px 40px; }
   #slot-continue .p1-continue:has(.m1-scene--art) .p1-receipt { max-width: none; color: rgba(255, 255, 255, .7); }
@@ -967,6 +967,160 @@ body { font-size: 16px; color: #111; }
   .pcard .pprice, .p1-pcard .pprice { font-size: 20px; column-gap: 6px; }
   .m1-cardbtn .btn, .m1-cardbtn .btn--sm { height: 40px; font-size: 13.5px; }
   .m1-tile-go span { max-width: 96px; }
+}
+
+/* ══ M1c: R5's list as the lead ruled it (2026-10-02) ═══════════════════════════════════════════════════════════════
+ * lg.com's action red #EA1917 as a 32 px pill, 42 to 44 px tall, on every button and every "$X OFF"; LG's logo colour
+ * #A50034 on the wordmark alone. The hero full-bleed (1440 × 540), its headline at 600, lg.com's progress bars, play and
+ * arrows on the art; lighter banner and bento headlines. The header 80 px with 18 px nav and icons (search opens as a
+ * field on press; the region stays as a chip); the promo line charcoal with white type. At 390 the header scrolls away
+ * and a slim type row sticks on the grids; the deals and Recommended for you go one at a time with a pager; the tab rows
+ * scroll on one line. The category row six larger tiles a view, with a pager. The collapsed director's pill off a
+ * phone's page unless ?present=1. */
+:root { --m1-head: 80px; }
+#site, #sheetBack {
+  --brand: #EA1917; --brand-deep: #C41412; --accent: #EA1917;
+  --brand-glow: rgba(234, 25, 23, .7); --brand-glow-2: rgba(234, 25, 23, .45); --brand-glow-0: rgba(234, 25, 23, 0);
+  --brand-wash: #FDECEC; --pd-fixture: #FDECEC; --pd-fixture-ink: #B3120F;
+}
+.wm, #site .wm { color: #A50034; }                      /* the logo's colour: the wordmark, and nothing else */
+
+/* Every button: lg.com's pill; the filled ones its action red, 44 px; the outlined ones 42 px */
+#site .btn, #sheetBack .btn { border-radius: 32px; }
+#site .btn--brand, #sheetBack .btn--brand { background: #EA1917; color: #fff; height: 44px; min-height: 44px; padding-top: 0; padding-bottom: 0; }
+#site .btn--brand:hover, #sheetBack .btn--brand:hover { background: #C41412; }
+#site .btn--line, #sheetBack .btn--line { min-height: 42px; padding-top: 0; padding-bottom: 0; }
+#site .m1-cardbtn .btn { height: 44px; }
+#site .m1-tile-go { height: 44px; border-radius: 32px; background: #EA1917; color: #fff; box-shadow: none; }
+#site .m1-tile-go:hover { background: #C41412; }
+#site .m1-banner-copy .btn, #site .m1-banner-copy .p1-promo-cta { border-radius: 32px; background: #EA1917; }
+#site .m1-banner-copy .btn:hover, #site .m1-banner-copy .p1-promo-cta:hover { background: #C41412; }
+.pprice .m1-off, .m1-was .m1-off { color: #EA1917; }
+.m1-expert-art .m1-expert-mark { background: #EA1917; }
+#view-home .m1-expert { background-color: #333333; background-image: none; }    /* lg.com's band is black; charcoal stays clear of the no-black-bar rule */
+
+/* The promo line: charcoal, white type */
+.m1-pencil { background: #333333; color: #FFFFFF; }
+.m1-pencil-in { height: 40px; }
+.m1-pencil-msg button { color: #FFFFFF; }
+.m1-pencil-nav, .m1-pencil-nav button { color: #FFFFFF; }
+.m1-pencil-nav button:hover { background: rgba(255, 255, 255, .14); }
+
+/* The header: 80 px, 18 px nav; at a desk the region chip, then icons for search (a field on press), account and cart */
+.mainnav button { font-weight: 500; }
+#signIn, .u-sign { font-size: 0; gap: 0; width: 44px; height: 44px; justify-content: center; padding: 0; }
+#signIn::before { width: 26px; height: 26px; background-size: 26px; }
+.m1-zip .m1-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.m1-zip b { font-size: 16px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.m1-zip svg { width: 26px; height: 26px; }
+.m1-zip { display: inline-flex; }
+.m1-icon-btn svg { width: 28px; height: 28px; }
+@container site (min-width: 1241px) { .mainnav button { font-size: 18px; padding: 0 16px; } }
+@container site (min-width: 861px) {
+  .m1-right { display: contents; }
+  .m1-zip { order: 3; margin-left: auto; display: inline-flex; }
+  .m1-search { order: 4; margin-left: 0; position: relative; width: 44px; height: 44px; flex: none; border: 0; background: transparent; overflow: visible; }
+  #signIn { order: 5; }
+  .m1-right .m1-icon-btn { order: 6; }
+  .m1-search input { position: absolute; z-index: 6; right: 0; top: 0; width: 44px; height: 44px; padding: 0 0 0 44px; border: 1px solid transparent; border-radius: 22px; cursor: pointer;
+    color: transparent; background: transparent no-repeat 10px center / 24px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111111' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5 20 20'/%3E%3C/svg%3E");
+    transition: width .2s ease, background-color .2s ease; font-size: 15px; }
+  .m1-search input::placeholder { color: transparent; }
+  .m1-search input::-webkit-search-cancel-button { display: none; }
+  .m1-search button { display: none; }
+  .m1-search:focus-within input { width: 340px; padding-right: 16px; cursor: text; color: #111; background-color: #FFFFFF; border-color: var(--m1-rule); box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
+  .m1-search:focus-within input::placeholder { color: #767676; }
+  .m1-search:focus-within input::-webkit-search-cancel-button { display: initial; }
+}
+
+/* The hero: full-bleed slides; the progress bars, play and arrows on the art; the headline at 600 */
+#mod-hero { padding-top: 0; }
+.m1-hero-track { --sw: 100cqw; --gap: 0px; }
+#slot-hero .p1-hero { border-radius: 0; }
+.m1-carousel { position: relative; }
+.m1-dot { width: 72px; height: 3px; border-radius: 2px; background: rgba(0, 0, 0, .18) !important; position: relative; overflow: hidden; }
+.m1-dot[aria-current="true"] { width: 72px; background: rgba(0, 0, 0, .18) !important; }
+.m1-dot[aria-current="true"]::after { content: ''; position: absolute; inset: 0; background: #111; }
+.m1-car--playing .m1-dot[aria-current="true"]::after { animation: m1-fill 6s linear forwards; transform-origin: left center; }
+@keyframes m1-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.m1-car-arrow { width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(17, 17, 17, .72) !important; color: #fff; box-shadow: none !important; font-size: 20px; line-height: 1; display: inline-grid; place-items: center; cursor: pointer; }
+.m1-car-arrow:hover { background: #111 !important; }
+.m1-car-play svg { width: 16px; height: 16px; }
+.m1-car-ctl { gap: 8px; }
+.m1-dots { gap: 8px; margin-right: 12px; }
+#slot-hero .p1-hero h3 { font-weight: 600; letter-spacing: -0.015em; }
+@container site (min-width: 861px) {
+  #slot-hero .p1-hero { aspect-ratio: auto; height: clamp(440px, 37.5cqw, 560px); min-height: 0; }
+  #slot-hero .p1-hero-copy { left: 64px; width: min(560px, 44%); top: 45%; }
+  #slot-hero .p1-hero h3 { font-size: 40px; line-height: 1.14; }
+  #slot-hero .p1-receipt, #slot-hero .p1-hero:has(.m1-scene--art) .p1-receipt { left: 64px; right: 52%; bottom: 72px; }
+  .m1-car-ctl { position: absolute; z-index: 4; left: 64px; bottom: 26px; margin: 0; justify-content: flex-start; }
+  #view-home .svc-strip { margin-top: -80px; }
+}
+
+/* Lighter headlines on the banners, the bento, the room tiles, the expert band and the continue hero */
+.m1-banner-copy h2, .m1-banner-copy h3, #slot-grid-promo .m1-banner-copy h3 { font-weight: 600; letter-spacing: -0.015em; }
+.p1-deal-body h3, .p1-deal--0 .p1-deal-body h3 { font-weight: 600; }
+.p1-tile-hit h3 { font-weight: 600; }
+#view-home .m1-expert h2 { font-weight: 600; }
+#slot-continue .p1-continue h3 { font-weight: 600; }
+
+/* The category row: six larger tiles a view, a pager under it (four a view on a tablet, two on a phone) */
+.m1-cats { display: grid; grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: calc((100% - 5 * 16px) / 6); gap: 16px; justify-content: start;
+  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 0 8px; }
+.m1-cats::-webkit-scrollbar { display: none; }
+.m1-cat { width: auto; height: 236px; flex: none; scroll-snap-align: start; padding: 24px 12px 16px; gap: 16px; }
+.p1-art--cat { width: 136px; }
+.m1-cat span:last-child { font-size: 16.5px; font-weight: 500; }
+.m1-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; font-size: 16px; color: #111; }
+.m1-pager--one { visibility: hidden; }
+.m1-pg { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: #111; font: inherit; font-size: 26px; line-height: 1; cursor: pointer; }
+.m1-pg:hover:not(:disabled) { background: rgba(0, 0, 0, .06); }
+.m1-pg:disabled { color: #B5AFA4; cursor: default; }
+.m1-pg-n { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+#mod-deals .m1-pager, #mod-for-you .m1-pager { display: none; }
+
+@container site (max-width: 1060px) {
+  .m1-cats { grid-auto-columns: calc((100% - 3 * 14px) / 4); gap: 14px; }
+  #slot-hero .p1-hero-copy, #slot-hero .p1-receipt, .m1-car-ctl { left: 40px; }
+}
+@container site (max-width: 860px) {
+  .m1-car-ctl { position: static; justify-content: center; margin-top: 14px; }
+  #view-home .svc-strip { margin-top: -42px; }
+}
+@container site (max-width: 640px) {
+  /* The hero's controls fit a phone: shorter bars */
+  .m1-dot, .m1-dot[aria-current="true"] { width: 34px; }
+  .m1-dots { margin-right: 4px; }
+  /* The header scrolls away; a slim type row sticks on the grids */
+  .site-header { position: relative; }
+  .view--grid .m1-quick { position: sticky; top: 0; z-index: 20; flex-wrap: nowrap; justify-content: flex-start; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -16px; padding: 8px 16px; background: var(--m1-page); border-bottom: 1px solid var(--m1-rule); }
+  .view--grid .m1-quick::-webkit-scrollbar { display: none; }
+  .view--grid .m1-quick button { width: auto; flex: none; flex-direction: row; gap: 8px; padding: 3px 14px 3px 3px; border: 1px solid var(--m1-rule); border-radius: 22px; background: #FFFFFF; }
+  .view--grid .m1-quick .p1-art--quick { width: 34px; }
+  .view--grid .m1-quick button span:last-child { font-size: 14px; white-space: nowrap; }
+  .view--grid .m1-quick button[aria-pressed="true"] { border-color: #111; }
+  .view--grid .m1-quick button[aria-pressed="true"] .p1-art { box-shadow: none; }
+  /* The category row: two a view */
+  .m1-cats { grid-auto-columns: calc((100% - 12px) / 2); gap: 12px; }
+  .m1-cat { height: 196px; padding: 18px 10px 12px; }
+  .p1-art--cat { width: 112px; }
+  /* The deals and Recommended for you: one at a time, the next peeking, a pager under them */
+  #slot-deals.cards, #rail-for-you { display: flex; grid-template-columns: none; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+  #slot-deals.cards::-webkit-scrollbar, #rail-for-you::-webkit-scrollbar { display: none; }
+  #slot-deals .p1-deal, #rail-for-you > * { flex: 0 0 86%; min-width: 0; scroll-snap-align: start; }
+  #slot-deals .p1-deal--0 .p1-deal-tile, #slot-deals .p1-deal-tile { min-height: 440px; }
+  #mod-deals .m1-pager, #mod-for-you .m1-pager { display: flex; }
+  /* The tab rows: one line that scrolls */
+  .m1-deal-tabs, .m1-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; gap: 4px 24px; max-width: 100%; }
+  .m1-deal-tabs::-webkit-scrollbar, .m1-tabs::-webkit-scrollbar { display: none; }
+  .m1-deal-tab, .m1-tabs button { flex: none; white-space: nowrap; }
+}
+
+/* The collapsed director's pill stays off a phone's page unless the address asks for the presenter (?present=1) */
+@media (max-width: 640px) {
+  body.kit-dock.kit-dock--collapsed:not(.m1-present) .dock-rail { display: none; }
 }
 
 /* ══ The product page in lg.com’s anatomy: lane M2’s block (P2_CSS in oh.js), appended verbatim at the end of this sheet
@@ -1123,3 +1277,8 @@ body.shell--phone .buybox.pdp-bar{grid-template-columns:minmax(0,1fr);gap:12px}b
 body.shell--phone .pdp-bar .bb-actions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}body.shell--phone .pdp-stick{position:static}body.shell--phone .pdp-stick-bar{display:none!important}
 body.shell--phone .pdp-top,body.shell--phone .pdp-specgrid,body.shell--phone .cards.pdp-mods,body.shell--phone .pdp-ship-grid,body.shell--phone .pdp-feats{grid-template-columns:minmax(0,1fr)}
 body.shell--phone .bb-vars,body.shell--phone .pdp-svcs,body.shell--phone .ptiles{grid-template-columns:repeat(2,minmax(0,1fr))}body.shell--phone .pdp-bar .bb-title{font-size:20px}
+
+/* ══ The product page, lane M2's second block (P2_CSS in oh.js: the buy bar's dock and lg.com's phone order, R5's
+ * rulings, lane M2b), appended verbatim after its first block; once M2 drops its injection (p2Style()) this is the one copy. ══ */
+.bb-dock{display:contents}
+@media (max-width:640px){#view-product .pdp-top,#view-product .pdp-left{display:contents}#view-product>*{order:10}#view-product>.offlimits-note,#view-product>.pdp-crumbs{order:0}#view-product .pdp-gallery{order:1;aspect-ratio:1/1;max-height:none}#view-product .pdp-gmain img{width:90%;height:90%}#view-product>#buyBox{order:2}#view-product>.pdp-stick{order:3;position:sticky;margin-top:-14px}#view-product .pdp-offers{order:4}#view-product .pdp-config{order:5}#view-product .bb-dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14)}body.kit-dock:not(.kit-dock--collapsed) #view-product .bb-dock{bottom:var(--dock-bar-h,0px)}body:not(.kit-dock) #view-product .bb-dock{bottom:var(--bar-h,0px)}#view-product .bb-dock .bb-pricebox{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;max-width:none;text-align:left}#view-product .pdp-bar .bb-dock .bb-price{justify-content:start;flex:none}#view-product .pdp-bar .bb-dock .bb-price .bb-now{font-size:24px}#view-product .pdp-bar .bb-dock .bb-fin{justify-content:flex-end;text-align:right;font-size:11.5px;line-height:1.35;min-width:0}#view-product .pdp-bar .bb-dock .bb-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;margin:0}#view-product .bb-dock .bb-actions [data-ctl="special-offers"]{order:-1}body:has(#view-product:not([hidden])) .site{padding-bottom:150px}}

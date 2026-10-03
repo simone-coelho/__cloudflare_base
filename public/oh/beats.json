@@ -637,14 +637,14 @@
    "who": "engine",
    "label": "Three weeks later",
    "declare": [
-    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish, and her dials are projected three weeks on by the published memory",
+    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish. On the demo’s dial her room signals are gone within minutes (production’s dial runs days: the published τ on room reads 60 days there)",
     "The return visit is <b>asserted</b> on the homepage from now on (ctx.visit = return), labelled: the same browser, the engine’s own clock real"
    ],
    "will": [
-    "Her dials, projected three weeks on by the published memory, fade by their own evidence: the room with less behind it fades further",
-    "The <b>continue hero</b> answers her return: her shortlist, what she opened on this device, nothing inferred"
+    "Her room signals fall below the entry threshold on the demo’s compressed dial: nothing of the rooms she browsed is left to lean the homepage",
+    "The <b>continue hero</b> answers her return, resting on her shortlist (what she opened on this device, nothing inferred) and the decisions trail; its receipt says production’s dial is days"
    ],
-   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and her dials are projected three weeks on by the published memory. The homepage <b>picks up where she left off</b>.",
+   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and on the demo’s compressed dial her room signals are gone within minutes, below the entry threshold (production runs days; the published τ would read 60 days there). The homepage <b>picks up where she left off</b> from her shortlist and the decisions trail.",
    "run": [
     {
      "unless": "{{view.home}}",
@@ -681,7 +681,7 @@
    "acts": [],
    "after": {
     "when": "{{p1.clock.returned}}",
-    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish, and her dials projected three weeks on by the published memory{{#p1.clock.laundryFaster}}: <b>laundry faded faster than TV</b>{{/p1.clock.laundryFaster}}{{^p1.clock.laundryFaster}}: {{p1.clock.faded || 'each room faded by its own evidence'}}{{/p1.clock.laundryFaster}}. The homepage <b>picks up where she left off</b>."
+    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish{{#p1.clock.gone}}, and on the demo’s compressed dial her room signals faded below the entry threshold{{/p1.clock.gone}}. The homepage <b>picks up where she left off</b>, resting on her shortlist and the decisions trail."
    }
   },
   {

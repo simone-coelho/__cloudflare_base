@@ -18,6 +18,12 @@
  *                       before every control, so the first click mints her and the load never does (the boot page is
  *                       the published template, M1's). Concurrent calls share one mint.
  *   current()         → the visitor or null.
+ *   resume()          → Promise<visitor | null>. oh.js's boot calls it first: her visitor kept in this browser, continued
+ *                       with no identity call and no new consent (localStorage, the SDK's key opt_shopper_session:<origin>
+ *                       :<tenant> for the capability and opt_shopper_visitor:<origin>:<tenant> for the record, with a
+ *                       sessionStorage mirror); null when nothing valid is kept or the engine refuses the session.
+ *   persist(v)        keeps visitor A (the boot, the first click's mint, the arrival, the sign-in's swap call it).
+ *   forget()          the demo's reset: a new person from the next mint.
  *
  * store.events
  *   send(type, attrs = {}, opts = {}) → Promise<{ ok, status, body } | null>   (null: nobody on the page yet)
@@ -32,6 +38,10 @@
  *                     list is closed (src/events/actionTypes.ts), so a manual action maps to one of its types or to
  *                     custom with data.event, never to a new type.
  *     opts.reask      true (the page on screen) or a page key: store.reask after the send.
+ *     After every send that lands, her profile is read again and "What has been signalled", the who chip, Why these
+ *     and the before/now strips on screen are redrawn at once (refreshSignals), as after a director's press; with
+ *     opts.reask the re-ask does it. An event about a product always carries productAttrs(p) under its own fields; a
+ *     sku the feed does not hold is sent with its id only, and the Session panel says so.
  *     opts.note       [verb, what, detail]: the machine's Session line (a default line is written otherwise).
  *   weight(type)      → the published registry's weight for that action (anchor.json registry.weights); 0 = no taste.
  *
@@ -227,18 +237,98 @@ const decisionData = (d) => (d && d.decisionId ? { decisionId: d.decisionId, ...
 let minting = null;
 async function ensure() {
   const t = T();
-  if (t.cur()) return own(t.cur());
+  if (t.cur()) { persist(t.cur()); return own(t.cur()); }
   if (!minting) {
     minting = t.ensureVisitor()
       // Her arrival, as beat 1 reads it: the region from the request (never asserted), the brand's lean there, the census shown.
       .then(async (v) => { try { await P().loadColdStart(); } catch { /* the panel says what it could not read */ } return v; })
       .finally(() => { minting = null; });
   }
-  return own(await minting);
+  const v = own(await minting);
+  persist(v);
+  return v;
 }
 /** The store's own fields on a visitor (carried over when the sign-in swaps her session: the page spreads the visitor). */
 function own(v) { if (v && !v.ohStore) v.ohStore = { id: uid().slice(0, 16), trail: [] }; return v; }
-const visitor = { ensure, current: () => (H ? T().cur() : null) };
+
+// ── Her visitor, kept in this browser: a full load continues the same person ──
+// The engine's shopper capability (its own 24-hour bearer, SHOPPER_MAX_AGE in src/identity/sessionCapability.ts) is
+// kept as the SDK keeps it, under the SDK's own key (public/sdk/edge-personalization.js: opt_shopper_session:<endpoint>
+// :<tenant>, the endpoint being this origin), in localStorage, with a sessionStorage mirror. Beside it, under the SDK's
+// family of names, the record of who she is: tenant, visitor id (subject), session id, kind, the claims' times and grant,
+// her consent, the cart's owner id and the fictional account she signed in as. Nothing else, and no secret: the
+// capability is her own token, signed by the engine, the same thing the SDK stores.
+const CAPABILITY = /^ss1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const capKey = () => `opt_shopper_session:${encodeURIComponent(location.origin)}:${encodeURIComponent(need().site.tenant)}`;
+const recKey = () => `opt_shopper_visitor:${encodeURIComponent(location.origin)}:${encodeURIComponent(need().site.tenant)}`;
+const areas = () => ['localStorage', 'sessionStorage'].map((n) => { try { return window[n]; } catch { return null; } }).filter(Boolean);
+/** The capability's own claims (its payload is the engine's signed JSON; read here only to match the record). */
+function claimsOf(cap) {
+  try { return JSON.parse(atob(cap.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }
+}
+/** Keep her (visitor A, this browser's own; a second device or a fresh visitor for Compare is never kept). */
+function persist(v) {
+  if (!H || !v || v.key !== 'A' || !v.session || !CAPABILITY.test(String(v.session.capability || ''))) return false;
+  const s = v.session, linked = v.p3 && v.p3.linked;
+  const rec = { version: 1, tenant: need().site.tenant, subject: s.subject, sessionId: s.sessionId, kind: s.kind, grantId: s.grantId || null,
+    authorityEpoch: s.authorityEpoch || null, iat: s.iat, exp: s.exp,
+    // Her consent as granted at the mint (the kit's mint refuses a visitor without it); a recognized session's own
+    // answer says it after the sign-in. A fresh anonymous session's consent field predates the grant, so it is not read.
+    consent: { tracking: true, personalization: s.kind === 'recognized' && s.consent && typeof s.consent.personalization === 'boolean' ? s.consent.personalization : true },
+    owner: own(v).ohStore.id, linked: linked ? { account: linked.account, consented: linked.consented, receipt: linked.receipt } : null };
+  const text = JSON.stringify(rec);
+  for (const area of areas()) {
+    try { if (area.getItem(capKey()) !== s.capability || area.getItem(recKey()) !== text) { area.setItem(capKey(), s.capability); area.setItem(recKey(), text); } } catch { /* storage refused */ }
+  }
+  return true;
+}
+/** The demo's reset starts a new person: what this browser kept of her goes. */
+function forget() {
+  if (!H) return;
+  for (const area of areas()) { try { area.removeItem(capKey()); area.removeItem(recKey()); } catch { /* storage refused */ } }
+}
+/** What this browser kept, when it is for this tenant, names the same visitor as its capability, and has a minute left. */
+function kept() {
+  for (const area of areas()) {
+    try {
+      const cap = area.getItem(capKey()), rec = JSON.parse(area.getItem(recKey()) || 'null');
+      if (!cap || !CAPABILITY.test(cap) || !rec || rec.version !== 1 || rec.tenant !== need().site.tenant) continue;
+      if (!['anonymous', 'recognized'].includes(rec.kind) || typeof rec.subject !== 'string' || typeof rec.sessionId !== 'string') continue;
+      if (!Number.isSafeInteger(rec.exp) || rec.exp * 1000 <= Date.now() + 60000) continue;
+      const c = claimsOf(cap);
+      if (!c || c.tenant !== rec.tenant || c.subject !== rec.subject || c.sessionId !== rec.sessionId || c.exp !== rec.exp) continue;
+      return { cap, rec };
+    } catch { /* this area's copy is unreadable: the other may serve */ }
+  }
+  return null;
+}
+/**
+ * On a page load: her visitor from this browser, continued, with no identity call and no new consent, so the next
+ * action is the same person and the panel reads her accumulated profile. One read of her own profile (GET
+ * /realtime/reflex, her capability, not an identity call) confirms the engine still knows the session; refused (a
+ * reset, an expiry, another state), what was kept is forgotten and the page is a stranger's until her first click.
+ */
+async function resume() {
+  const t = T();
+  if (t.cur()) return t.cur();
+  const got = kept();
+  if (!got) return null;
+  const { cap, rec } = got;
+  const session = { capability: cap, tenant: rec.tenant, subject: rec.subject, sessionId: rec.sessionId, kind: rec.kind,
+    ...(rec.grantId ? { grantId: rec.grantId } : {}), ...(rec.authorityEpoch ? { authorityEpoch: rec.authorityEpoch } : {}), iat: rec.iat, exp: rec.exp,
+    ...(rec.kind === 'recognized' ? { consent: rec.consent } : {}) };
+  const v = { key: 'A', label: 'Shopper A', session, entry: t.landingEntry(), journey: [], cart: 0, intent: t.defaultIntent(), vector: {},
+    ohStore: { id: rec.owner || uid().slice(0, 16), trail: [] }, continued: true,
+    ...(rec.linked ? { p3: { linked: { ...rec.linked, at: Date.now(), taste: null } } } : {}) };
+  const probe = await t.api('/realtime/reflex', undefined, { visitor: v });
+  if (probe.status === 401 || probe.status === 403) { forget(); return null; }
+  S().visitors.A = v;
+  t.useVisitor('A');
+  note('continued', `Shopper A, from this browser (${rec.subject.slice(-8)})`,
+    `the same visitor as before: her session kept in this browser, no identity call and no new consent · ${rec.kind} · until ${new Date(rec.exp * 1000).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' })}`);
+  return v;
+}
+const visitor = { ensure, current: () => (H ? T().cur() : null), resume, persist, forget };
 
 // ── The decisions that led somewhere: decided presses, by the product they opened ─
 const trail = {
@@ -270,6 +360,13 @@ async function send(type, attrs = {}, opts = {}) {
   if (!v) return null;
   const { sku, ...rest } = attrs || {};
   const p = sku != null ? h.productOf(sku) : (type === 'product_view' && rest.productId ? h.productOf(rest.productId) : null);
+  // The guard: an event about a product carries the product's attributes (productAttrs, exactly as product_view does),
+  // with the event's own fields over them. A sku the feed does not hold cannot: it goes with its id and says so.
+  if (sku != null && !p) {
+    rest.productId = String(sku);
+    console.warn(`oh-store: ${type} about ${sku}, a sku the feed does not hold: sent without the product's attributes`);
+    note('warned', `${type} · ${sku}`, 'not in the feed: sent with its id and without its attributes, so no dimension moves');
+  }
   let r, data;
   if (type === 'product_view') { data = p ? h.productAttrs(p, { view: 'page', ...rest }) : rest; r = await t.send('product_view', data, v); }
   else if (FIRST_CLASS.has(type)) { data = p ? h.productAttrs(p, rest) : rest; r = await t.send(type, data, v); }
@@ -285,8 +382,45 @@ async function send(type, attrs = {}, opts = {}) {
     note(verb, what, detail);
   }
   eventsBus.emit('sent', { type, data, ok: Boolean(r && r.ok) });
-  if (opts.reask) await reask(opts.reask === true ? undefined : opts.reask);
+  if (opts.reask) await reask(opts.reask === true ? undefined : opts.reask);   // the re-ask redraws the signals itself
+  else if (r && r.ok) await refreshSignals(r.body, type === 'custom' ? rest.event : type);
   return r;
+}
+/**
+ * After an event the store sent (a manual add, select, filter, search, wishlist, outcome): her profile read again
+ * (GET /realtime/reflex, through the kit's panels) and what shows it redrawn, the moment it lands, with no press and no
+ * navigation: "What has been signalled" (the meters, the moved rows marked fresh), the who chip and her stage, Why
+ * these (the receipts of the set on screen), and the before/now strips on the page, whose quiet line names her
+ * strongest signal. The decided slots are not asked again here: store.reask does that, on navigation or when a
+ * caller asks for it. Calls that land while one runs are folded into one more read.
+ */
+let refreshing = null, refreshAgain = false, lastAnswer = null;
+function refreshSignals(answer, type) {
+  // The action's own answer: the audiences it reports entering or leaving and its trigger, for the "just now" strip.
+  // POST /realtime/action answers { update: { affinity: { dims, changed, … } } }; the event's own name is the trigger.
+  const aff = (answer && ((answer.update && answer.update.affinity) || answer.affinity)) || null;
+  lastAnswer = { changed: aff && Array.isArray(aff.changed) ? aff.changed : [], trigger: type || null };
+  if (refreshing) { refreshAgain = true; return refreshing; }
+  refreshing = (async () => {
+    do {
+      refreshAgain = false;
+      try {
+        const said = lastAnswer;
+        await P().renderVectors(said || {});
+        P().renderWho();
+        P().renderWhy();
+        if (!S().busy) {
+          const rows = need().lanes.rows || {};
+          for (const [slot, R] of Object.entries(rows)) {
+            const strip = R && R.deltas;
+            if (!strip || !strip.isConnected || !strip.offsetParent) continue;   // only the strips on the page on screen
+            try { need().demo.deltas.render(slot); } catch { /* a strip with nothing to compare yet */ }
+          }
+        }
+      } catch (error) { console.warn('oh-store: the signals could not be read again', error); }
+    } while (refreshAgain);
+  })().finally(() => { refreshing = null; });
+  return refreshing;
 }
 const eventsBus = emitter();
 const events = { send, weight, on: (e, fn) => eventsBus.on(e, fn) };
@@ -900,6 +1034,8 @@ function bind(host) {
   if (H) throw new Error('oh-store: bound twice');
   H = host;
   if (!H.lanes.routes) H.lanes.routes = {};
+  const t = T(), useVisitor = t.useVisitor;
+  t.useVisitor = (key) => { useVisitor(key); if (key === 'A') persist(t.cur()); };
   // A new walk (beat 1's arrival) is a new stranger: her cart starts empty.
   H.lanes.beforeBeat.push((b) => { if (b && b.data && b.data.arrives) clearAll(); });
   style();
