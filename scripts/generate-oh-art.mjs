@@ -7,7 +7,10 @@
 // cutout in public/oh/img/products/, so nothing on the art is a model's guess at a product. The page draws
 // the headline, the sub, the badge and the button over the art: nothing is baked in.
 //
-//   art/slide/<piece>.{webp,avif,jpg}    1440×640  hero slides (the six hero pieces)
+//   art/slide/<piece>.{webp,avif,jpg}    1440×640  hero slides (the six hero pieces), the carousel layout
+//   art/slide540/<piece>.{webp,avif,jpg} 1440×540  the same six cut from the 1440×640 frame, for the full-bleed hero
+//                                        (a format with `from` is cut from that format's frame; `layout.shrink` draws
+//                                        the product at a fraction of its fitted box, toward its right edge, same base)
 //   art/tile/<piece>.{webp,avif,jpg}     720×420   deal tiles (the fourteen deals pieces) and the seven room tiles
 //   art/tall/<piece>.{webp,avif,jpg}     720×860   the deals pieces' tall variant, for the bento's tall positions
 //   art/banner/<room>.{webp,avif,jpg}    1440×360  the three room banners (living room, laundry room, kitchen)
@@ -51,7 +54,7 @@
 // 2.86 MB at D2's 48, either past the 25 MB budget's headroom). Shared pieces come from scripts/demo-kit/lib/imagery.mjs (sharp on
 // first use, sha256, the manifest's read and write with its totals, the verdict bound to a sha256); no change
 // to the library. On a Windows checkout whose node_modules carries the Linux sharp binary, run it under WSL.
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,21 +85,32 @@ const TODAY = new Date().toISOString().slice(0, 10);
 export function jobsOf(conf = cfg) {
   const turn = new Map();
   const jobs = [];
+  const made = new Map();
   for (const piece of conf.pieces) {
-    for (const [format, over] of Object.entries(piece.formats)) {
+    for (const [format, own] of Object.entries(piece.formats)) {
       const f = conf.formats[format];
+      if (f.from) {
+        // Cut from the frame of another format: the same scene, product and layout, cropped to this height.
+        const baseJob = made.get(`${piece.id}/${f.from}`);
+        if (!baseJob) throw new Error(`${piece.id}/${format} is cut from ${f.from}, which the piece does not have`);
+        jobs.push({ ...baseJob, key: `${piece.id}/${format}`, format, derived: f.from, cropTop: own.cropTop ?? null });
+        continue;
+      }
+      const over = own;
       const scene = over.scene || piece.scene;
       const group = `${scene}--${f.aspect}`;
       const n = turn.get(group) ?? 0;
       turn.set(group, n + 1);
       const mount = over.mount || piece.mount || 'floor';
-      jobs.push({
+      const job = {
         key: `${piece.id}/${format}`, piece: piece.id, kind: piece.kind, format, scene, aspect: f.aspect, group,
         pick: over.pick || LETTERS[n], product: piece.product ?? null, mount,
         reflection: over.reflection ?? piece.reflection ?? false,
         layout: { ...(conf.layouts[format]?.[mount] ?? {}), ...(over.layout ?? {}) },
         scrim: { ...f.scrim, ...(over.scrim ?? {}) }, position: over.position || 'centre', note: piece.note || null,
-      });
+      };
+      jobs.push(job);
+      made.set(job.key, job);
     }
   }
   return jobs;
@@ -105,7 +119,7 @@ export function jobsOf(conf = cfg) {
 /** How many candidates each scene and aspect needs: one per job that uses it, plus one spare. */
 export function needs(conf = cfg) {
   const out = new Map();
-  for (const j of jobsOf(conf)) out.set(j.group, (out.get(j.group) ?? 0) + 1);
+  for (const j of jobsOf(conf)) if (!j.derived) out.set(j.group, (out.get(j.group) ?? 0) + 1);
   for (const [k, v] of out) out.set(k, v + 1);
   return out;
 }
@@ -441,7 +455,10 @@ async function productLayers(job, W, H) {
   const fit = await productCut(product);
   const L = job.layout;
   const s = Math.min((L.boxW * W) / fit.width, (L.boxH * H) / fit.height, cfg.maxUpscale);
-  const w = Math.round(fit.width * s), h = Math.round(fit.height * s);
+  // shrink (R5's ruling on panel marks): the fitted box scaled down, keeping its right edge and its base.
+  const shrink = L.shrink ?? 1;
+  const w0 = Math.round(fit.width * s);
+  const w = Math.round(fit.width * s * shrink), h = Math.round(fit.height * s * shrink);
   const rule = cfg.largeSource;
   const useLarge = Boolean(rule && (rule.formats.includes(job.format) || s > rule.aboveScale) && largeOf(product.sku));
   const cut = useLarge ? await productCut(product, true) : fit;
@@ -456,8 +473,10 @@ async function productLayers(job, W, H) {
   }
   if (sDrawn > 1.05) img = img.sharpen({ sigma: 0.6 });
   const pimg = await img.png().toBuffer();
-  const cx = Math.round(L.cx * W), bottom = Math.round(L.bottom * H);
-  const left = cx - Math.round(w / 2), top = bottom - h;
+  const bottom = Math.round(L.bottom * H);
+  const fittedLeft = Math.round(L.cx * W) - Math.round(w0 / 2);
+  const left = shrink === 1 ? fittedLeft : fittedLeft + w0 - w, top = bottom - h;
+  const cx = left + Math.round(w / 2);
   const layers = [];
   const clip = async (buf, x, y) => {
     // Keep every layer inside the frame (sharp refuses an overlay that runs off the canvas).
@@ -497,7 +516,7 @@ async function productLayers(job, W, H) {
   }
   const p = await clip(pimg, left, top);
   if (p) layers.push(p);
-  return { layers, product, cut, placed: { left, top, width: w, height: h, scale: Math.round(s * 100) / 100, ...(useLarge ? { drawnFrom: cut.source.size, drawnScale: Math.round(sDrawn * 100) / 100 } : {}) } };
+  return { layers, product, cut, placed: { left, top, width: w, height: h, scale: Math.round(s * shrink * 100) / 100, ...(shrink !== 1 ? { shrink, fittedScale: Math.round(s * 100) / 100 } : {}), ...(useLarge ? { drawnFrom: cut.source.size, drawnScale: Math.round(sDrawn * 100) / 100 } : {}) } };
 }
 
 /** The headline zone's light: relative luminance's mean and 90th percentile, and white type's contrast there. */
@@ -517,14 +536,34 @@ async function legibility(buf, zone, W, H) {
 }
 
 /** The placed product as fractions of the frame, and the first of the format's badge zones it leaves clear. */
-function zonesOf(f, placed) {
+function zonesOf(f, placed, prefer = null) {
   const box = placed ? [placed.left / f.width, placed.top / f.height, (placed.left + placed.width) / f.width, (placed.top + placed.height) / f.height].map((v) => Math.round(v * 1000) / 1000) : null;
   const clear = (z) => !box || z[2] <= box[0] - 0.01 || z[0] >= box[2] + 0.01 || z[3] <= box[1] - 0.01 || z[1] >= box[3] + 0.01;
-  return { text: f.textZone, product: box ?? f.productZone, badge: (f.badgeZones || []).find(clear) ?? null };
+  const kept = prefer && (f.badgeZones || []).some((z) => JSON.stringify(z) === JSON.stringify(prefer)) && clear(prefer) ? prefer : null;
+  return { text: f.textZone, product: box ?? f.productZone, badge: kept ?? (f.badgeZones || []).find(clear) ?? null };
+}
+
+const encodings = () => ['webp', 'avif', ...(cfg.encode.jpg ? ['jpg'] : [])];
+
+async function encode(raw) {
+  return { webp: await sharp(raw).webp(cfg.encode.webp).toBuffer(), avif: await sharp(raw).avif(cfg.encode.avif).toBuffer(),
+    ...(cfg.encode.jpg ? { jpg: await sharp(raw).jpeg(cfg.encode.jpg).toBuffer() } : {}) };
 }
 
 async function composeJob(job, srcFile) {
   const f = cfg.formats[job.format];
+  if (job.derived) {
+    // The base format's frame, cropped to this height: the product keeps its size and its place on the scene. The
+    // crop keeps a margin of floor under the product (and its shadow) and takes the rest from the top.
+    const base = await composeJob({ ...job, format: job.derived, derived: null }, srcFile);
+    const cut = base.H - f.height;
+    const margin = Math.round(f.height * (f.baseMargin ?? 0.075));
+    const auto = base.placed ? Math.min(cut, Math.max(0, base.placed.top + base.placed.height + margin - f.height)) : Math.round(cut / 2);
+    const y0 = job.cropTop ?? auto;
+    const raw = await sharp(base.raw).extract({ left: 0, top: y0, width: f.width, height: f.height }).png().toBuffer();
+    const placed = base.placed ? { ...base.placed, top: base.placed.top - y0, croppedFrom: { format: job.derived, top: y0 } } : null;
+    return { W: f.width, H: f.height, raw, ...(await encode(raw)), product: base.product, cut: base.cut, placed, legibility: await legibility(raw, f.textZone, f.width, f.height) };
+  }
   const W = f.width, H = f.height;
   const base = srcFile ? await sharp(srcFile).resize(W, H, { fit: 'cover', position: job.position }).toBuffer()
     : await sharp(gradientSvg(cfg.scenes[job.scene].gradient, W, H)).png().toBuffer();
@@ -532,10 +571,7 @@ async function composeJob(job, srcFile) {
   const { layers, product, cut, placed } = await productLayers(job, W, H);
   // Scrim first, then the product, so the product stays at full brightness in its own zone.
   const raw = await sharp(base).composite([...(scrim ? [{ input: scrim }] : []), ...layers]).removeAlpha().png().toBuffer();
-  const webp = await sharp(raw).webp(cfg.encode.webp).toBuffer();
-  const avif = await sharp(raw).avif(cfg.encode.avif).toBuffer();
-  const jpg = await sharp(raw).jpeg(cfg.encode.jpg).toBuffer();
-  return { W, H, raw, webp, avif, jpg, product, cut, placed, legibility: await legibility(raw, f.textZone, W, H) };
+  return { W, H, raw, ...(await encode(raw)), product, cut, placed, legibility: await legibility(raw, f.textZone, W, H) };
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -587,7 +623,7 @@ async function compose() {
   for (const job of jobsOf()) {
     const f = cfg.formats[job.format];
     const src = gradientAll ? null : candidateFile(job.group, job.pick);
-    const out = { webp: join(IMG, rel(job.format, job.piece, 'webp')), avif: join(IMG, rel(job.format, job.piece, 'avif')), jpg: join(IMG, rel(job.format, job.piece, 'jpg')) };
+    const out = Object.fromEntries(encodings().map((e) => [e, join(IMG, rel(job.format, job.piece, e))]));
     const committed = Object.values(out).every((p) => existsSync(p)) && previous.has(job.key);
     if (!gradientAll && !existsSync(src) && committed) {
       // No candidate here: the reviewed files stay exactly as they are, and so does their row.
@@ -599,7 +635,9 @@ async function compose() {
     const rolled = generated ? rolledWith(job.group, job.pick) : null;
     const r = await composeJob(job, generated ? src : null);
     mkdirSync(join(ART, job.format), { recursive: true });
-    writeFileSync(out.webp, r.webp); writeFileSync(out.avif, r.avif); writeFileSync(out.jpg, r.jpg);
+    for (const e of encodings()) writeFileSync(out[e], r[e]);
+    const stale = join(IMG, rel(job.format, job.piece, 'jpg'));
+    if (!cfg.encode.jpg && existsSync(stale)) unlinkSync(stale);
     const piece = pieces.get(job.piece) ?? null;
     const room = cfg.rooms?.[job.piece] ?? null;
     const scene = cfg.scenes[job.scene];
@@ -608,16 +646,17 @@ async function compose() {
     const provenance = generated ? `generated scene (${rolled?.model ?? MODEL}, ${scene.summary})${productText}` : `composed gradient (${scene.summary.split(',')[0]} colours)${productText}`;
     rows.push({
       key: job.key, piece: job.piece, kind: job.kind, format: job.format, title: piece?.title ?? room?.title ?? null,
-      files: { webp: rel(job.format, job.piece, 'webp'), avif: rel(job.format, job.piece, 'avif'), jpg: rel(job.format, job.piece, 'jpg') },
-      size: { width: r.W, height: r.H }, bytes: { webp: r.webp.length, avif: r.avif.length, jpg: r.jpg.length }, sha256: sha256(r.webp),
+      files: Object.fromEntries(encodings().map((e) => [e, rel(job.format, job.piece, e)])),
+      size: { width: r.W, height: r.H }, bytes: Object.fromEntries(encodings().map((e) => [e, r[e].length])), sha256: sha256(r.webp),
       generated, provenance,
       scene: { key: job.scene, summary: scene.summary, ...(generated ? { model: rolled?.model ?? MODEL, candidate: `${job.group}--${job.pick}`, aspect: rolled?.ratio ?? cfg.aspects[job.aspect].ratio, prompt: promptId(rolled?.prompt ?? promptOf(job.scene, job.aspect)),...(rolled?.rolled ? { rolled: rolled.rolled.slice(0, 10) } : {}) } : { method: 'composed gradient, sharp (SVG radial glow, floor and vignette)' }) },
       product: sku ? { sku, name: nameOf(sku), image: r.cut.source.file, imageSha256: r.cut.source.sha256, mount: job.mount, reflection: job.reflection,
         placed: r.placed, treatment: r.cut.treatment, ...(r.product.substitute ? { substituteFor: r.product.substitute.lead, why: r.product.substitute.why } : {}) } : null,
       ...(job.note ? { note: job.note } : {}),
-      zones: zonesOf(f, r.placed), legibility: r.legibility,
+      ...(job.derived ? { cutFrom: `${job.piece}/${job.derived}` } : {}),
+      zones: zonesOf(f, r.placed, previous.get(job.key)?.zones?.badge ?? null), legibility: r.legibility,
     });
-    console.log(`  ${job.key} ← ${generated ? `${job.group}--${job.pick}` : 'gradient'}${sku ? ` + ${sku}` : ''}  webp ${Math.round(r.webp.length / 1024)}KB avif ${Math.round(r.avif.length / 1024)}KB jpg ${Math.round(r.jpg.length / 1024)}KB  white ${r.legibility.whiteContrastAtP90}:1`);
+    console.log(`  ${job.key} ← ${generated ? `${job.group}--${job.pick}` : 'gradient'}${sku ? ` + ${sku}` : ''}  webp ${Math.round(r.webp.length / 1024)}KB avif ${Math.round(r.avif.length / 1024)}KB${r.jpg ? ` jpg ${Math.round(r.jpg.length / 1024)}KB` : ''}  white ${r.legibility.whiteContrastAtP90}:1`);
   }
   // The verdict is re-read on every run and holds only for the exact WebP it was given to.
   for (const row of rows) {
@@ -625,11 +664,11 @@ async function compose() {
     row.gate = g ? { verdict: g.verdict, checked: g.checked, note: g.note, ...(g.rejected?.length ? { rejected: g.rejected } : {}) }
       : { verdict: 'pending', note: 'not yet checked by eye for this exact file' };
   }
-  const bytes = rows.reduce((n, r) => n + r.bytes.webp + r.bytes.avif + r.bytes.jpg, 0);
+  const bytes = rows.reduce((n, r) => n + Object.values(r.bytes).reduce((a, b) => a + b, 0), 0);
   manifest.art = {
-    about: 'OH campaign art (Lane A1), written by scripts/generate-oh-art.mjs from scripts/demo-kit/configs/oh/art.json. Each file is a generated scene (no product, no text, no marks) with the piece\'s lead product placed on it from LG\'s own cutout in products/, or a composed gradient where no scene was generated; provenance per row, each scene\'s exact prompt once under prompts by the id its row names. Three encodings: WebP (the src), AVIF and a JPEG fallback; opaque art carries no transparency, so the kit\'s transparent PNG is not made. The verdict holds only for the sha256 of the exact WebP reviewed. art/index.json maps each piece to its files.',
+    about: `OH campaign art (Lane A1), written by scripts/generate-oh-art.mjs from scripts/demo-kit/configs/oh/art.json. Each file is a generated scene (no product, no text, no marks) with the piece\'s lead product placed on it from LG\'s own cutout in products/, or a composed gradient where no scene was generated; provenance per row, each scene\'s exact prompt once under prompts by the id its row names. ${cfg.encode.jpg ? 'Three encodings: WebP (the src), AVIF and a JPEG fallback' : 'Two encodings: WebP (the src) and AVIF; the JPEG fallback was dropped to keep the image payload under the 25 MB budget when the 1440x540 slides were added (the page draws src and avif only)'}; opaque art carries no transparency, so the kit\'s transparent PNG is not made. The verdict holds only for the sha256 of the exact WebP reviewed. art/index.json maps each piece to its files.`,
     generator: 'scripts/generate-oh-art.mjs', config: 'scripts/demo-kit/configs/oh/art.json', model: MODEL, credential: keyPresent ? 'GEMINI_API_KEY (by name, from the environment or .dev.vars)' : 'none present',
-    counts: { files: rows.length, encodings: rows.length * 3, byFormat: Object.fromEntries(Object.keys(cfg.formats).map((k) => [k, rows.filter((r) => r.format === k).length])),
+    counts: { files: rows.length, encodings: rows.reduce((n, r) => n + Object.keys(r.files).length, 0), byFormat: Object.fromEntries(Object.keys(cfg.formats).map((k) => [k, rows.filter((r) => r.format === k).length])),
       generated: rows.filter((r) => r.generated).length, gradient: rows.filter((r) => !r.generated).length,
       verdicts: rows.reduce((m, r) => ({ ...m, [r.gate.verdict]: (m[r.gate.verdict] ?? 0) + 1 }), {}) },
     text: 'none baked in: headline, sub, badge and button are content the page draws over the art',
@@ -640,21 +679,21 @@ async function compose() {
   };
   writeIndex(rows);
   writeManifest(MANIFEST, manifest, { dir: IMG, budgetMegabytes: cfg.budgetMegabytes });
-  console.log(`art: ${rows.length} files × 3 encodings, ${(bytes / 1048576).toFixed(2)} MB; image payload ${manifest.totals.megabytes} MB of ${cfg.budgetMegabytes}`);
+  console.log(`art: ${rows.length} files × ${encodings().length} encodings, ${(bytes / 1048576).toFixed(2)} MB; image payload ${manifest.totals.megabytes} MB of ${cfg.budgetMegabytes}`);
 }
 
 function writeIndex(rows) {
   const pieces = {};
   for (const r of rows) {
     const entry = pieces[r.piece] ??= { kind: r.kind, title: r.title, product: r.product?.sku ?? null };
-    entry[r.format] = { src: `/oh/img/${r.files.webp}`, webp: `/oh/img/${r.files.webp}`, avif: `/oh/img/${r.files.avif}`, jpg: `/oh/img/${r.files.jpg}`,
+    entry[r.format] = { src: `/oh/img/${r.files.webp}`, ...Object.fromEntries(Object.entries(r.files).map(([e, p]) => [e, `/oh/img/${p}`])),
       width: r.size.width, height: r.size.height, ink: r.legibility.ink === 'dark' ? 'dark' : 'light', zones: r.zones, verdict: r.gate.verdict };
   }
   const index = {
-    about: 'OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): white type in the format\'s text zone, a badge in its badge zone, never over the product zone. src is the WebP; avif and jpg are the same picture for <picture> sources and the fallback. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product\'s box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper\'s own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.',
+    about: `OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): white type in the format\'s text zone, a badge in its badge zone, never over the product zone. src is the WebP; avif is the same picture for a <picture> source.${cfg.encode.jpg ? ' jpg is the fallback.' : ''} Hero pieces carry two slides: slide (1440x640, the carousel layout) and slide540 (1440x540, the full-bleed hero), the same scene and product, slide540 cut from slide's frame. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product\'s box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper\'s own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.`,
     manifest: '/oh/img/MANIFEST.json',
     formats: Object.fromEntries(Object.entries(cfg.formats).map(([k, f]) => [k, { width: f.width, height: f.height, textZone: f.textZone, productZone: f.productZone, badgeZones: f.badgeZones,
-      use: { slide: 'hero carousel slides', tile: 'deal bento tiles and room tiles', tall: 'the deal bento\'s tall positions', banner: 'room grid banners' }[k] }])),
+      ...(f.from ? { cutFrom: f.from } : {}), use: { slide: 'hero carousel slides, 1440x640 (the carousel layout)', slide540: 'the full-bleed hero, 1440x540', tile: 'deal bento tiles and room tiles', tall: 'the deal bento\'s tall positions', banner: 'room grid banners' }[k] }])),
     rooms: Object.fromEntries(Object.entries(cfg.rooms).map(([id, r]) => [r.view, id])),
     pieces,
   };

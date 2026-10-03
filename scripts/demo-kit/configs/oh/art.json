@@ -60,6 +60,50 @@
         "reach": 0.66
       }
     },
+    "slide540": {
+      "width": 1440,
+      "height": 540,
+      "from": "slide",
+      "aspect": "wide",
+      "baseMargin": 0.075,
+      "textZone": [
+        0.04,
+        0.18,
+        0.56,
+        0.82
+      ],
+      "productZone": [
+        0.6,
+        0.06,
+        0.98,
+        0.97
+      ],
+      "badgeZones": [
+        [
+          0.82,
+          0.04,
+          0.98,
+          0.18
+        ],
+        [
+          0.6,
+          0.04,
+          0.76,
+          0.18
+        ],
+        [
+          0.82,
+          0.8,
+          0.98,
+          0.94
+        ]
+      ],
+      "scrim": {
+        "kind": "left",
+        "strength": 0.5,
+        "reach": 0.66
+      }
+    },
     "tile": {
       "width": 720,
       "height": 420,
@@ -544,9 +588,11 @@
             "cx": 0.765,
             "bottom": 0.635,
             "boxW": 0.38,
-            "boxH": 0.56
+            "boxH": 0.56,
+            "shrink": 0.46
           }
-        }
+        },
+        "slide540": {}
       }
     },
     {
@@ -562,9 +608,11 @@
             "cx": 0.77,
             "bottom": 0.705,
             "boxW": 0.36,
-            "boxH": 0.55
+            "boxH": 0.55,
+            "shrink": 0.48
           }
-        }
+        },
+        "slide540": {}
       }
     },
     {
@@ -580,9 +628,11 @@
             "cx": 0.78,
             "bottom": 0.88,
             "boxW": 0.36,
-            "boxH": 0.68
+            "boxH": 0.68,
+            "shrink": 0.75
           }
-        }
+        },
+        "slide540": {}
       }
     },
     {
@@ -598,9 +648,11 @@
             "cx": 0.79,
             "bottom": 0.93,
             "boxW": 0.36,
-            "boxH": 0.7
+            "boxH": 0.7,
+            "shrink": 0.75
           }
-        }
+        },
+        "slide540": {}
       }
     },
     {
@@ -617,9 +669,11 @@
             "cx": 0.77,
             "bottom": 0.8,
             "boxW": 0.38,
-            "boxH": 0.6
+            "boxH": 0.6,
+            "shrink": 0.46
           }
         },
+        "slide540": {},
         "tile": {
           "pick": "a",
           "layout": {
@@ -635,7 +689,8 @@
             "cx": 0.56,
             "bottom": 0.62,
             "boxW": 0.84,
-            "boxH": 0.42
+            "boxH": 0.42,
+            "shrink": 0.52
           }
         }
       }
@@ -649,7 +704,8 @@
       "formats": {
         "slide": {
           "pick": "a"
-        }
+        },
+        "slide540": {}
       }
     },
     {
@@ -674,7 +730,8 @@
             "cx": 0.6,
             "bottom": 0.62,
             "boxW": 0.7,
-            "boxH": 0.46
+            "boxH": 0.46,
+            "shrink": 0.44
           }
         }
       }
@@ -755,7 +812,8 @@
             "cx": 0.62,
             "bottom": 0.6,
             "boxW": 0.7,
-            "boxH": 0.4
+            "boxH": 0.4,
+            "shrink": 0.47
           }
         }
       }
@@ -783,7 +841,8 @@
             "cx": 0.5,
             "bottom": 0.66,
             "boxW": 0.8,
-            "boxH": 0.42
+            "boxH": 0.42,
+            "shrink": 0.52
           }
         }
       }
@@ -1202,40 +1261,75 @@
     "hero_nfl_gift_card/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "18daf42412f1dcde343336d421f146ef3d7d9d364307961507982321d952eef7",
-      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile.",
+      "sha": "2a890bb51704952d9dd1ee03dd71d9f21a906cbf06056c08d55996b320a7b3d3",
+      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_nfl_gift_card/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "d3f9db426aff43aaf955d51613321ed1495f3acc9bee31df297ec45bde9ea92a",
+      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Cut from hero_nfl_gift_card/slide's frame at 1440x540 (from row 0 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.2:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "hero_living_room/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "10f6409541729da67dcdb9ef2c27ec073f169e64222b644911112767082634d6",
-      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile.",
+      "sha": "b12fe93fde49ee4ad638abb1730131999f7c1b2c74d13a2bae3cedd121b47da8",
+      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. R5's ruling: the product at 0.48 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_living_room/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7418acf8bff98d4834a2cffccc67798661e1b504d18dc54c53cbab4ab8fe62fd",
+      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Cut from hero_living_room/slide's frame at 1440x540 (from row 0 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.48 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.4:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "hero_laundry_room/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "e5c9a913fba88d2d0a3b3ecbf4adc85e37e632651cfa7656eac8e485a115b497",
-      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
+      "sha": "3a9e2937639c9cb1d38b1fdf69b9e06a363f50418938fefdad9cfb470c320853",
+      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "laundry-evening--wide--b: cabinetry fills the product side"
       ]
     },
+    "hero_laundry_room/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "c2003e6bfc3586b6c585852f3e007a4d13a3dd2b0c3d1443bf423feb2c94ca9c",
+      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Cut from hero_laundry_room/slide's frame at 1440x540 (from row 64 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
     "hero_kitchen/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "e511f9fca86990c26dec6ff609996a07becf9ba7a00ce7e4052ad19f61846689",
-      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
+      "sha": "f22fc357b2c7987d1443f76e61f9afacec85dd97ffae4f28f0d02eda47ecf8f8",
+      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
       "rejected": [
         "kitchen-evening--wide--c: the kitchen run fills the product side"
       ]
     },
+    "hero_kitchen/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7f4142a1c72caf0df119dd367a1f47b1fd69931ffaf42c0441f47d6fce6491a6",
+      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Cut from hero_kitchen/slide's frame at 1440x540 (from row 96 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.7:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
     "pin_micro_rgb_evo/slide": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "27cdeeebb141ff947109ee0ee68091eaf9b0be45d43fed0582e5f39ca7abeeb5",
-      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
+      "sha": "0f21b2fa1544e7ff96a2db8def4ac8ae9fcfefaf3c2d7cf52446c7e9f84d4a1b",
+      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "pin_micro_rgb_evo/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7ab5cf0a63e0ddf6aec3bc692695e452020069409a4431706ddca1c13cbe969c",
+      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Cut from pin_micro_rgb_evo/slide's frame at 1440x540 (from row 13 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "pin_micro_rgb_evo/tile": {
@@ -1248,8 +1342,8 @@
     "pin_micro_rgb_evo/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "17b38d8c300a5e1dd8861a87bcc1c19eb88e947cc826db15da3eb8f8c6391d24",
-      "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
+      "sha": "2c433c7bfb83e20ed9682f3c8425bd773131ce57f973fc24117463516c87f0c4",
+      "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. R5's ruling: the product at 0.52 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
       "rejected": [
         "studio-rgb--tall--a: a hard grey band across the floor at two thirds of the height (in the first compose, replaced)",
         "studio-rgb--tall--b: the same band and a bright point light at the centre",
@@ -1261,6 +1355,13 @@
       "checked": "2026-10-02",
       "sha": "c23af0f4d9708d2c6c279748aba353b4703a5a9562e10698076e635cef72ce56",
       "note": "Charcoal studio with a cool blue glow and an empty product zone by design: the page draws her own configuration there. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.8:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_continue/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "a5ecf041c625f37a261ece98ac3582eb8d918e2e55451701ef04096c9d49d7fe",
+      "note": "Charcoal studio with a cool blue glow and an empty product zone by design: the page draws her own configuration there. Cut from hero_continue/slide's frame at 1440x540, for M1c's full-bleed hero: the same scene, product and size. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.3:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_nfl_gift_card/tile": {
@@ -1275,8 +1376,8 @@
     "deal_nfl_gift_card/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "b6bea62e6d5ae31ccfccb9785f4b87db63f43e0f7a352f1d9a628ad37156ce2b",
-      "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile.",
+      "sha": "0792af7c6f3924e9dd25616ce0e447535cb8bc4f5ece97db75aa5c4be301cd3a",
+      "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. R5's ruling: the product at 0.44 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 16.2 px as shown), 0.75 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_matching_soundbar/tile": {
@@ -1321,8 +1422,8 @@
     "deal_free_wall_mounting/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "af0bfbc6c76aacbcca1b72f695a5dd05ef0f21b7b547ae8d35b0760abb261bc9",
-      "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile.",
+      "sha": "4ebdfeab67c1af013d1a48777d13037950d13a8ffa574ae816e710e5705474c2",
+      "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. R5's ruling: the product at 0.47 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile.",
       "rejected": []
     },
     "deal_big_screens/tile": {
@@ -1337,8 +1438,8 @@
     "deal_big_screens/tall": {
       "verdict": "accept",
       "checked": "2026-10-02",
-      "sha": "f966db57b894f33e01983f1482aa8e218ae2b30edf5590e1dba2efd961e9b79f",
-      "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+      "sha": "b79dd53ba42063a2b164c19d15b3009851bbfb4c1f5f8ba008c3e066b054c605",
+      "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. R5's ruling: the product at 0.52 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18:1 at the text zone's 90th percentile.",
       "rejected": [
         "studio-burgundy--tall--b: a rectangular plinth at the right reads as an object"
       ]
@@ -1538,5 +1639,12 @@
       "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
       "rejected": []
     }
+  },
+  "panelMarkRule": {
+    "ruling": "R5 (2026-10-02): a TV's own panel mark must be visibly smaller than the page's OH. wordmark (30 px Inter 800, cap about 21.8 px).",
+    "target": "the panel mark's cap height at about 0.8 of the wordmark's cap (17.4 px) at the art's display size: slides 1:1 at 1440, tall tiles at 688/720 in the bento",
+    "measured": "cap heights before the ruling: slides 36-38 px, tall tiles 33-39 px shown; 0.75 of the size left them at 27-29 px, still larger than the wordmark, so each TV's shrink is set from its own measurement",
+    "nonTv": "the washer and range hero slides shrink 0.75 with the others, as ruled; they carry no panel mark",
+    "anchor": "the fitted box shrinks toward its own right edge on the same base, so the product keeps its place on the console or floor and the left of the frame stays calm"
   }
 }
