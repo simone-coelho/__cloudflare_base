@@ -1460,6 +1460,63 @@ The base is `272ede8`; every lane's working-tree pages are in, with M1e's three 
 
 **Housekeeping.** The rig is stopped; ports 9134, 9284 and 9184 are free. The only beat documents that differ from HEAD are M1e's `open-slots.json` and `12-pin-launch.json`, not mine.
 
+#### Addendum, 10:20–11:55: the panel checks read K8's restored classic panel (`49384bf5`)
+
+**The ruling.** OH's engine panel is back to the kit's classic panel, as Vantage shows it:
+- the eight strongest values as meters;
+- Meridian's audience chips under them;
+- the five tabs, with the Session list.
+
+The one-row-per-dimension mode and the "Just now" strip are gone, so every check that read them now reads the classic panel. The suite is `scripts/rehearse-oh-dom.mjs` at 2,571 lines, committed in `49384bf5`.
+
+**The classic read and its rules (595–690).**
+- **`CLASSIC_READ`** reads what is drawn, by text content:
+  - the meters (`#vectors .vecrow`: the value, the dimension label, the reading, `--fresh`);
+  - the chips (`#audChips .audchip`, with `data-aud`, `--new` and `--gone`) and the `#audHead` caption;
+  - the Session list (`#journey li`);
+  - the page's vector.
+- **`metersAgainst`:** the meters are the engine's eight strongest readings, in order, and each reads its own value's.
+- **`audiencesAgainst`:** the chips (leaving ones aside) are the audiences the engine holds, with journey-stage audiences left out, as the panel does. Each audience the event's answer reports entering is a chip marked new; none it reports leaving is still in; and the caption counts them on the event's name.
+- **`sessionNames`:** the Session list's last lines name the event. For a view, that is the product's name as the page writes it, or its SKU; otherwise, the event's own name.
+- **`classicAfter`:** waits two seconds from the event's answer for all three to hold, reading the engine again each time, because an audience can leave on its own.
+
+**Where they are asserted.**
+- **The colour and Add to Cart (692–715, called at 1051 and 1068).** Each asserts four things:
+  - the meters, plus the page's vector and every meter the event carried, against the engine;
+  - the Session line;
+  - the audience set;
+  - the marks.
+
+  X7 (no redraw) fails the first at 1068, the line that was 979 before this pass.
+- **One click registers at once (1401).** The meters are the engine's eight, and the first view's room reads the one-touch reading in the vector, and on its meter when it is among the eight. After one view a dozen values tie, so the room may not be among them.
+- **After one washer following the TVs (1429).**
+  - The meters are the engine's eight; the washers meter, when shown, is marked as just moved.
+  - The page's vector reads category tvs above washers, as the engine does.
+  - The Session line and the chips are checked.
+  - This replaces the per-dimension "tvs leading, washers second" and "just now names washers · category".
+- **Three washers after two TVs (1457).** Washers sits above tvs, and laundry-room above living-room, by row order within the eight (or the lower one gone from them). When the leader is not among the eight, the page's vector at the engine's values decides. The engine holds the same order.
+- **The persistence walk (1519–1531, the check at 1553).** Washers · category is read on its meter, else in the page's vector, and the meters are the engine's eight on every load.
+
+**The trial and the finding (10:31–10:39, on K8's tree before its commit).**
+- **`--only store` gave 172 of 173.** The one failure was the page's:
+  - a product opened from a grid goes out through the store's bind over the kit's send (`oh-store.js` 1095–1096), which called `drawEarly(r, null, who)`;
+  - so the answer's audience records were never applied;
+  - the two audiences it entered showed as chips, unmarked, under “Audiences · 2 in”.
+- **K8's second pass passes the event's name** (`drawEarly(r, type, who)`). On it the caption reads “+2 −0 on product_view”, with both chips marked.
+
+**The counted run, on a fresh prepared state.** `state-s2h` was seeded with `--out` (`seed-out-i`) and the regional lean seeded for 51 regions. The tree was `49384bf5` with no page file of ours, and the page files hashed the same before and after.
+- **`check-demo` run 11 (11:16–11:32).** Generated, typecheck and credentials passed (3,255 files). Request level **231 of 231**.
+  - DOM: **517 of 518**. The one failure is a receipt read at press 3 answering 503 (`POST /oh/api/receipt → 503`): the engine on `wrangler dev`, the S2 section's finding 4, not a page or suite line.
+  - Every classic-panel check passed. Two of the measures:
+    - Add to Cart: the meters, the vector and the engine all at 0.76; the Session line “added · 5.0 cu. ft. Front Load Washer (WM6500HWA) · add_to_cart, the order-start action, …”; the caption “Audiences · 13 in · +2 −0 on add_to_cart”.
+    - The persistence walk: the readings 0.35 → 0.52 → 0.61.
+- **`--only store` (11:33–11:40): 173 of 173.**
+- **X7 through the proxy (11:43–11:51).** X7 (the panel not redrawn after a manual event) failed **4 of 173**, among them the add-to-cart check at 1068: “engine 0.76 · vector 0.62 · meter 0.62”. The chips also stayed at the last view’s “Audiences · 11 in · +1 −0 on product_view” after the colour and after Add to Cart, while the engine held 13. Its served original hashed equal to the checkout’s `oh-store.js` (`aeb04ca8…`).
+
+**Port 9184.** My proxy could not listen on 9184: the bind answered `EADDRINUSE` while neither Windows nor WSL showed a listener there. X7 ran on 9185 instead, which no lane claims.
+
+**Housekeeping.** The rig is stopped; ports 9134, 9284 and 9185 are free. The beat documents equal HEAD.
+
 ### W1c: the presenter script for the live store (`cd3775e2` from `bbf8a9d`)
 
 **Lane W1c, writer, 2026-10-02 EDT. Revised `docs/oh/OH-Presenter-Script.md` for the store as it is live now. It was 5,869 words and is now 6,122. That is about 2% over the ~6,000 cap: the persistence and dial material is new, and the rest was cut to pay for it. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
