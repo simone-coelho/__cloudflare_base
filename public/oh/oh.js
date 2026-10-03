@@ -276,12 +276,12 @@ import { store } from '/oh/oh-store.js';
     [
       "built",
       "slot seeds",
-      "The search term lifts the category it names, as context, never as evidence about her; the receipt itemises it."
+      "The search term lifts the category it names, as context, never as evidence about the visitor; the receipt itemises it."
     ],
     [
       "built",
       "learn.regional",
-      "The brand’s regional sales, synthetic here and labelled synthetic → warehouse, blended by λ = K / (K + Σa), giving way as her evidence grows."
+      "The brand’s regional sales, synthetic here and labelled synthetic → warehouse, blended by λ = K / (K + Σa), giving way as the visitor’s evidence grows."
     ],
     [
       "built",
@@ -291,7 +291,7 @@ import { store } from '/oh/oh-store.js';
     [
       "built",
       "complements",
-      "A piece names the products it completes; on that product’s page (ctx.anchor) the slot rule prefers it, itemised on the receipt as “Completes what she committed to”."
+      "A piece names the products it completes; on that product’s page (ctx.anchor) the slot rule prefers it, itemised on the receipt as “Completes what was committed to”."
     ],
     [
       "built",
@@ -344,7 +344,7 @@ import { store } from '/oh/oh-store.js';
     debugName: '__oh', intents: SITE.intents, roadmap: SITE.roadmap,
     // The director docked right, collapsed to a slim rail by default so the site is the store (design §9.1); the
     // presenter's key (D) or ?present=1 opens it, and it remembers its state in this tab (kit option, lane M3).
-    dock: { collapsed: true },
+    dock: { collapsed: true, onForget: () => { store.visitor.forget(); store.cart.clear(); location.assign('/oh/'); } },   // "Forget this browser": back to the cold open (M1d)
     // "What has been signalled": one row per dimension in the registry's order, its leading value and the second, under a
     // "just now" strip of what the last event changed (kit option, lane M3), so a new line's first signals show at once.
     signals: { byDimension: true },
@@ -687,7 +687,7 @@ import { store } from '/oh/oh-store.js';
       for (const [slot, cap] of [['category-rail', 'The tiles before this press'], ['deals', 'What was on screen before this press']]) {
         const box = $(`slot-${slot}`);
         if (box && !$(`p1Ghosts-${slot}`)) box.insertAdjacentHTML('beforebegin', `<section class="changes p1-changes" id="p1Changes-${slot}" aria-live="polite">
-          <div class="changes-before"><span class="changes-cap">${esc(cap)}</span><div class="ghosts" id="p1Ghosts-${slot}"><span class="ghost-empty">She had not seen it yet.</span></div></div>
+          <div class="changes-before"><span class="changes-cap">${esc(cap)}</span><div class="ghosts" id="p1Ghosts-${slot}"><span class="ghost-empty">Not seen yet.</span></div></div>
           <div class="changes-what"><span class="changes-cap">What changed</span><ul class="deltas" id="p1Deltas-${slot}"><li class="delta-none">Press a beat to begin.</li></ul></div></section>
           <section class="beforerow" id="p1Before-${slot}" hidden><p class="rowlabel">What was on screen before this press</p><div class="p1-before-cards" id="p1BeforeCards-${slot}"></div></section>
           <p class="rowlabel rowlabel--now" id="p1NowLabel-${slot}" hidden>What is on screen now</p>`);
@@ -774,7 +774,7 @@ import { store } from '/oh/oh-store.js';
       if (d.strategy === 'tenant-pinned') return pinReceipt(d, i);
       if (d.strategy === 'template') return `the published template · ${d.slot === 'deals' ? 'container' : 'position'} ${i + 1} · the catalog’s own order: nobody has arrived, nothing is decided yet`;
       const rec = recOf(d), ex = (rec && rec.explain) || {};
-      const parts = [d.strategy === 'default' ? `container ${i + 1} · the catalog’s order: nothing in her profile scores it` : `rank <b>${i + 1}</b> · score <b>${fmt3(d.score)}</b>`];
+      const parts = [d.strategy === 'default' ? `container ${i + 1} · the catalog’s order: nothing in the profile scores it` : `rank <b>${i + 1}</b> · score <b>${fmt3(d.score)}</b>`];
       const drv = panels.driverSummary(d, 3);
       if (drv) parts.push(drv);
       if (ex.contextual && num(ex.contextual.applied) > 0) parts.push(panels.seedLabel(ex.contextual, true));
@@ -880,7 +880,7 @@ import { store } from '/oh/oh-store.js';
       if (!slides.length) return;
       S.slide = ((to % slides.length) + slides.length) % slides.length;
       track.style.setProperty('--i', String(slides.length > 1 ? S.slide + 1 : 0));
-      for (const b of document.querySelectorAll('#slot-hero .m1-dot')) b.setAttribute('aria-current', String(num(b.dataset.to) === S.slide));
+      for (const b of document.querySelectorAll('#slot-hero .m1-dot')) b.setAttribute('aria-current', String(num(b.dataset.m1Slide) === S.slide));
     }
     function heroPlay(on) {
       if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
@@ -890,9 +890,11 @@ import { store } from '/oh/oh-store.js';
       if (car) car.classList.toggle('m1-car--playing', Boolean(heroTimer));
     }
 
-    // ── The pagers: the category row, and at phone width the deals and Recommended for you, one view at a time ──
-    //    Paging scrolls what is already on the page, in the order it came: no event, no visitor, nothing reordered.
-    const PAGED = ['m1Cats', 'slot-deals', 'rail-for-you'];
+    // ── The pagers: the category row, and at phone width the service strip, the deals and Recommended for you, one ──
+    //    view at a time. Paging scrolls what is already on the page, in the order it came: no event, no visitor, nothing
+    //    reordered. The hero's arrows and dots are the same kind of control (the lead's ruling): a slide change mints nobody
+    //    and sends nothing; only a press on the slide's own content goes through the click dispatcher.
+    const PAGED = ['m1Cats', 'm1Svc', 'slot-deals', 'rail-for-you'];
     function pagerGeo(box) {
       const kids = [...box.children].filter((c) => c.getBoundingClientRect().width > 0);
       if (kids.length < 2) return { kids, step: Math.max(1, box.clientWidth), per: 1 };
@@ -923,17 +925,18 @@ import { store } from '/oh/oh-store.js';
         if (typeof ResizeObserver === 'function') new ResizeObserver(() => pagerSync(id)).observe(box);
       }
       document.addEventListener('click', (e) => {
-        const btn = e.target && e.target.closest ? e.target.closest('[data-m1-page], [data-m1-play]') : null;
+        const btn = e.target && e.target.closest ? e.target.closest('[data-m1-page], [data-m1-play], [data-m1-slide], [data-m1-step]') : null;
         if (!btn) return;
         e.preventDefault();
         if (btn.hasAttribute('data-m1-play')) { heroPlay(!heroTimer); return; }
+        if (btn.hasAttribute('data-m1-slide')) { heroGo(num(btn.dataset.m1Slide)); return; }
+        if (btn.hasAttribute('data-m1-step')) { heroGo(S.slide + (num(btn.dataset.m1Step) || 1)); return; }
         const pg = btn.closest('.m1-pager'), box = pg ? $(pg.dataset.pagerFor) : null;
         if (!box) return;
         const { step, per } = pagerGeo(box);
         box.scrollBy({ left: num(btn.dataset.m1Page) * step * per, behavior: 'smooth' });
       });
-      // The presenter's flag: at a phone's width the collapsed director's pill shows only under ?present=1.
-      try { document.body.classList.toggle('m1-present', new URLSearchParams(location.search).get('present') === '1'); } catch { /* no address: no flag */ }
+      // (At a phone's width the collapsed director's pill is the kit's to hide: director.js sets body.kit-present from ?present=1.)
     }
 
     /** A grid's own banner (static, the same for everyone): the room's art from A1, else a dark scene with its products. */
@@ -957,7 +960,8 @@ import { store } from '/oh/oh-store.js';
       const kicker = d.strategy === 'tenant-pinned' ? 'Pinned by our merchandiser' : (KICKER[roomOfPiece(piece)] || 'New');
       const badge = d.strategy === 'tenant-pinned' ? 'Pinned' : g.ends || (/^new for/i.test(piece.title || '') ? 'New for 2026' : '');
       const attrs = decidedSlide ? decided(d) : '';
-      return `<div class="m1-slide" data-slide="${i}"><article class="card p1-hero${entered ? ' p1-entered' : ''}${decidedSlide ? '' : ' m1-static-slide'}"${attrs}>${entered ? '<span class="delta-chip delta-chip--in">new</span>' : ''}
+      // data-room tints the slide's copy panel at a phone's width (oh.css, M1d), where lg.com sets the copy above the art.
+      return `<div class="m1-slide" data-slide="${i}"><article class="card p1-hero${entered ? ' p1-entered' : ''}${decidedSlide ? '' : ' m1-static-slide'}" data-room="${esc(roomOfPiece(piece))}"${attrs}>${entered ? '<span class="delta-chip delta-chip--in">new</span>' : ''}
         ${sceneHtml(piece, d.customerContentId, 'hero')}
         <div class="p1-hero-copy"><p class="p1-kicker">${esc(kicker)}</p><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-hero-sub">${esc(piece.subtitle)}</p>` : ''}
           <div class="p1-ctas"><button type="button" class="btn btn--brand" ${target(piece, d.customerContentId)} data-ctl="${decidedSlide ? 'hero-cta' : `hero-cta-${i + 1}`}">${esc(disp.cta || 'Shop now')}</button></div></div>
@@ -981,10 +985,10 @@ import { store } from '/oh/oh-store.js';
       const track = n > 1 ? [`<div class="m1-slide m1-slide--clone" aria-hidden="true" inert>${cloneOf(slides[n - 1]).replace(/^<div class="m1-slide"[^>]*>|<\/div>$/g, '')}</div>`, ...slides,
         `<div class="m1-slide m1-slide--clone" aria-hidden="true" inert>${cloneOf(slides[0]).replace(/^<div class="m1-slide"[^>]*>|<\/div>$/g, '')}</div>`] : slides;
       box.innerHTML = `<div class="m1-carousel"><div class="m1-hero-bleed"><div class="m1-hero-track" id="m1HeroTrack" style="--i:${n > 1 ? 1 : 0}">${track.join('')}</div></div>
-        ${n > 1 ? `<div class="m1-car-ctl"><div class="m1-dots">${Array.from({ length: n }, (_, i) => `<button type="button" class="m1-dot" data-act="m1-slide" data-to="${i}" data-ctl="hero-dot-${i + 1}" aria-label="Slide ${i + 1} of ${n}" aria-current="${i === 0}"></button>`).join('')}</div>
+        ${n > 1 ? `<div class="m1-car-ctl"><div class="m1-dots">${Array.from({ length: n }, (_, i) => `<button type="button" class="m1-dot" data-m1-slide="${i}" data-ctl="hero-dot-${i + 1}" aria-label="Slide ${i + 1} of ${n}" aria-current="${i === 0}"></button>`).join('')}</div>
           <button type="button" class="m1-car-arrow m1-car-play" data-m1-play aria-pressed="false" aria-label="Play the slides">${HERO_PLAY}</button>
-          <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="-1" data-ctl="hero-prev" aria-label="Previous slide">&lsaquo;</button>
-          <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="1" data-ctl="hero-next" aria-label="Next slide">&rsaquo;</button></div>` : ''}</div>`;
+          <button type="button" class="m1-car-arrow" data-m1-step="-1" data-ctl="hero-prev" aria-label="Previous slide">&lsaquo;</button>
+          <button type="button" class="m1-car-arrow" data-m1-step="1" data-ctl="hero-next" aria-label="Next slide">&rsaquo;</button></div>` : ''}</div>`;
       M1.heads();
     }
 
@@ -1046,7 +1050,7 @@ import { store } from '/oh/oh-store.js';
         <div class="p1-cont-head"><p class="p1-kicker">${S.returned ? 'A return visit, asserted for the clock jump' : 'A return visit'}</p><h3>${esc(piece.title || 'Pick up where you left off.')}</h3>
           <p class="p1-hero-sub">Your shortlist is what you opened on this device, nothing inferred, kept for the window we publish, with your consent.</p></div>
         <div class="p1-shortlist">${list.map((s, i) => { const p = productOf(s.id); return p ? `<button type="button" class="p1-short" data-open="${esc(s.id)}" data-ctl="short-${i + 1}">${artHtml(p, 'p1-art--short')}<span><b>${esc(productName(p))}</b><em>${money(priceNum(p))}</em></span></button>` : ''; }).join('')
-          || '<p class="slot-empty">Nothing opened on this device yet: the shortlist is what she opens.</p>'}</div>
+          || '<p class="slot-empty">Nothing opened on this device yet: the shortlist is what you open.</p>'}</div>
         ${clock}
         <div class="p1-ctas"><button type="button" class="btn btn--brand" data-act="p1-changes" data-ctl="continue-changes">What changed while you were away</button></div>
         <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${continueReceipt(d)}</p></article>`;
@@ -1056,8 +1060,8 @@ import { store } from '/oh/oh-store.js';
       const rec = recOf(d), ex = (rec && rec.explain) || {};
       const visit = S.returned ? 'ctx.visit = return, asserted for the clock jump (labelled)' : 'the return visit';
       const rests = S.clock && (S.clock.gone || !arr(S.clock.rooms).length)
-        ? `it rests on her shortlist (what she opened on this device) and the decisions trail${S.clock.fast ? ': on the demo’s dial her room signals are gone within minutes; production’s dial is days' : ''}` : null;
-      return [`${visit} · ${d.strategy === 'default' ? 'the only eligible piece: nothing in her profile scores it' : `score <b>${fmt3(d.score)}</b>`}`,
+        ? `it rests on the visitor’s shortlist (what they opened on this device) and the decisions trail${S.clock.fast ? ': on the demo’s dial their room signals are gone within minutes; production’s dial is days' : ''}` : null;
+      return [`${visit} · ${d.strategy === 'default' ? 'the only eligible piece: nothing in the profile scores it' : `score <b>${fmt3(d.score)}</b>`}`,
         rests, ex.stage && ex.stage.sentence ? esc(ex.stage.sentence) : null].filter(Boolean).join(' · ');
     }
 
@@ -1190,7 +1194,7 @@ import { store } from '/oh/oh-store.js';
       const prev = R.prevOrder && !chosen ? (view ? M1.bestOrder({ order: R.prevOrder }, pool).slice(0, G.show) : shownOrder(rail, { order: R.prevOrder, pool })) : null;
       if (chip) {
         chip.textContent = R.status === 'sorted' ? `decided · POST /sort ${view ? `over ${pool.length} ${view === GRID ? 'TVs' : 'products'}` : `per room for its ${PER_ROOM}, then across the rooms`}${chosen ? ' · shown in the order you chose' : ''}`
-          : R.status === 'no-capture' ? 'the site’s own order · /sort answers once she has a captured event'
+          : R.status === 'no-capture' ? 'the site’s own order · /sort answers once the visitor has a captured event'
             : R.status === 'down' ? `the site’s own order · /sort did not answer (${R.error})` : declared ? 'best sellers · the site’s own order' : 'the site’s own order · no visitor yet';
         chip.classList.toggle('p1-chip-live', R.status === 'sorted');
       }
@@ -1325,7 +1329,7 @@ import { store } from '/oh/oh-store.js';
         set: () => S.home.set,
         mode: 'ghosts', before: $(`p1Ghosts-${slot}`), deltas: $(`p1Deltas-${slot}`), unit, pins: true, swaps: false, leftFirst: true,
         opening: { sign: '·', cls: 'in', what: slot === 'deals' ? 'The opening four' : 'The opening tiles', why: transport.cur() && transport.cur().fresh ? 'a fresh visitor: nothing sent' : 'the first decision this visitor was served' },
-        emptyBefore: 'She had not seen it yet.',
+        emptyBefore: 'Not seen yet.',
         left: (b, i) => `left ${unit} ${i + 1} · ${wentWhy(b.id)}`,
         lead: () => (slot === 'deals' && S.lead && !S.quiet ? S.lead : '') + (slot === 'deals' && !S.quiet ? (deltas.superseded('deals') || '') : ''),
         held: { title: (d) => (pieceOf(d) || {}).title || d.customerContentId, index: (d) => transport.bySlot(S.home.set, slot).indexOf(d) },
@@ -1394,13 +1398,13 @@ import { store } from '/oh/oh-store.js';
       const ended = c.reduce((n, x) => n + x.ended.length, 0), running = c.reduce((n, x) => n + x.running.length, 0);
       const newer = c.filter((x) => x.newer);
       return { count: c.length, ended, running, moved: moved.length, newer: newer.length,
-        line: c.length ? [`${c.length} on her shortlist`, ended ? `${ended} offer${ended === 1 ? '' : 's'} on it ended` : 'no offer on it ended',
+        line: c.length ? [`${c.length} on your shortlist`, ended ? `${ended} offer${ended === 1 ? '' : 's'} on it ended` : 'no offer on it ended',
           running ? `${running} still running` : null, moved.length ? `${moved.length} price${moved.length === 1 ? '' : 's'} moved` : 'every price held, the catalog’s',
           newer.length ? `a newer model listed for ${newer.length}` : null].filter(Boolean).join(' · ') : null };
     }
     function openChanges() {
       const c = changes();
-      const when = S.clock ? `${S.clock.days} days later, by the labelled clock jump` : 'since she looked';
+      const when = S.clock ? `${S.clock.days} days later, by the labelled clock jump` : 'since you looked';
       const body = c.map(({ p, priceThen, priceNow, ended, running, started, newer }) => `<div class="p1-chg">
           ${artHtml(p, 'p1-art--chg')}<div><h3>${esc(productName(p))}</h3>
           <p class="srow"><span>Price</span><b>${priceThen !== null && priceNow !== null && priceThen !== priceNow ? `${money(priceThen)} → ${money(priceNow)}` : `${money(priceNow)}, held`}</b></p>
@@ -1411,7 +1415,7 @@ import { store } from '/oh/oh-store.js';
           <button type="button" class="btn btn--line btn--sm" data-open="${esc(idOf(p))}" data-ctl="chg-${esc(idOf(p))}">Open it again</button></div></div>`).join('');
       sheets.open('changes', `<p class="sk">Your shortlist · ${esc(when)}</p><h2>What changed while you were away</h2>
         <p>Read off the documents in force: the offers that ended and the ones still running, by the catalog’s own windows; the prices are the catalog’s, the same for everyone, and nothing here decides one.</p>
-        ${body || '<p class="slot-empty">Nothing on her shortlist yet: it is what she opens.</p>'}`);
+        ${body || '<p class="slot-empty">Nothing on your shortlist yet: it is what you open.</p>'}`);
     }
 
     // ── The controls this section owns ──────────────────────────────────────
@@ -1433,12 +1437,12 @@ import { store } from '/oh/oh-store.js';
         const raw = t.dataset.fit !== undefined ? t.dataset.fit : ($(view === GRID ? 'p1FitWidth' : `m1FitWidth-${view}`) || {}).value;
         const w = num(raw);
         G.fit = Number.isFinite(w) && w >= (view === GRID ? 20 : 18) && w <= 140 ? Math.round(w * 2) / 2 : null;
-        panels.note('declared', G.fit ? `her space: ${G.fit} in wide` : 'her space: cleared', 'a measurement she gave: declared, never inferred');
+        panels.note('declared', G.fit ? `the space: ${G.fit} in wide` : 'the space: cleared', 'a measurement the shopper gave: declared, never inferred');
         const rail = view === GRID ? railsOf(GRID)[0] : gridRail(view);
         if (rail) await sortAndPaint(view, rail, transport.cur());
         return true;
       }
-      if (t.dataset.act === 'p1-changes') { openChanges(); panels.note('opened', 'What changed while she was away', 'her shortlist, read off the documents in force'); return true; }
+      if (t.dataset.act === 'p1-changes') { openChanges(); panels.note('opened', 'What changed in the meantime', 'the shopper’s shortlist, read off the documents in force'); return true; }
       if (t.dataset.act && t.dataset.act.startsWith('m1-')) return M1.control(t);
       return undefined;
     }
@@ -1475,23 +1479,23 @@ import { store } from '/oh/oh-store.js';
       try { m = await demo.compare.load(); } catch (error) { say(`Compare could not load the compare kit: ${String(error.message || error)}`, 'bad'); return; }
       const ext = (LANES.hooks.fresh || {})[state.viewPage] || null;   // another section's page: its own ask and quiet paint
       const key = ext ? state.viewPage : state.viewPage && own(state.viewPage) && [HOME, GRID].includes(own(state.viewPage).key) ? state.viewPage : null;
-      const title = ext ? (ext.title || 'Her page, and a fresh visitor’s') : key === GRID ? 'Her TV grid, and a fresh visitor’s' : 'Her homepage, and a fresh visitor’s';
+      const title = ext ? (ext.title || 'The shopper’s page, and a fresh visitor’s') : key === GRID ? 'The shopper’s TV grid, and a fresh visitor’s' : 'The shopper’s homepage, and a fresh visitor’s';
       if (!transport.cur() || !key) {
-        m.showMessage({ title, heading: 'No shopper on the homepage or the grid yet:', text: 'Fresh visitor sets a stranger’s homepage or TV grid beside hers. Bring her in with Next, then press it again.' });
-        throw new Error('open the homepage or the TV grid with her first: Compare puts a fresh visitor beside her there');
+        m.showMessage({ title, heading: 'No shopper on the homepage or the grid yet:', text: 'Fresh visitor sets a stranger’s homepage or TV grid beside the shopper’s. Bring the shopper in with Next, then press it again.' });
+        throw new Error('open the homepage or the TV grid with the shopper first: Compare puts a fresh visitor beside them there');
       }
       const wasBusy = state.busy;
       state.busy = true;
       demo.compare.supersede();
       say('a fresh visitor is asking…');
-      const keys = ['Her page', 'A fresh visitor, same region'];
-      m.showWaiting({ title, heading: 'Her page, then a fresh visitor’s', text: 'The same region, nothing sent.' });
+      const keys = ['The shopper’s page', 'A fresh visitor, same region'];
+      m.showWaiting({ title, heading: 'The shopper’s page, then a fresh visitor’s', text: 'The same region, nothing sent.' });
       let restore = null;
       try {
         await demo.compare.takeBaseline('tool');
         const f = await transport.mintVisitor('F', transport.directEntry(), 'Fresh visitor');
         f.fresh = true;
-        panels.note('compared', 'A fresh visitor beside her', 'direct · consent granted · no event sent · the same region · her page is not asked again');
+        panels.note('compared', 'A fresh visitor beside the shopper', 'direct · consent granted · no event sent · the same region · the shopper’s page is not asked again');
         if (ext) {
           const set = await ext.ask(f);
           restore = await ext.paint(f, set);
@@ -1508,10 +1512,10 @@ import { store } from '/oh/oh-store.js';
         await theirs.cloned;
         restore(); restore = null;
         await m.openCompare($('site'), { now: theirs, title, tags: { before: keys[0], now: keys[1] },
-          foot: 'Same page, same moment, same region, same catalog and the same public prices. The fresh visitor arrived direct and has sent nothing: the region’s prior alone. Hers, on the left, is what her visit earned.',
+          foot: 'Same page, same moment, same region, same catalog and the same public prices. The fresh visitor arrived direct and has sent nothing: the region’s prior alone. The shopper’s, on the left, is what their visit earned.',
           details: (bf, nf) => demo.compare.columns(bf.meta && bf.meta.snap, nf.meta && nf.meta.snap, keys),
-          sameNote: 'Her page and the fresh visitor’s are the same: nothing she has done weighs on it yet.',
-          nearNote: 'Her page and the fresh visitor’s differ only in small print: What changed has the answers behind both.' });
+          sameNote: 'The shopper’s page and the fresh visitor’s are the same: nothing they have done weighs on it yet.',
+          nearNote: 'The shopper’s page and the fresh visitor’s differ only in small print: What changed has the answers behind both.' });
         say('done', 'good');
       } catch (error) {
         say(String(error.message || error), 'bad');
@@ -1581,7 +1585,7 @@ import { store } from '/oh/oh-store.js';
       const held = piecesNow().filter((p) => p.type === 'package' && p.inStock === false).map((p) => ({ id: p.id, title: bare(p.title),
         members: arr(p.featuredProductIds).map(productOf).filter((m) => m && m.inStock === false).map((m) => idOf(m)), appeared: seen.has(p.id) }));
       S.held = { packages: held, decisions, candidates, appeared: held.filter((h) => h.appeared).length };
-      const rowText = (r) => `<b>${esc(r.title)}</b> <em>${r.still ? 'still answered: the window did not hold' : r.was === 'shown' ? `left ${r.slots.join(' and ')} on this decision` : r.was === 'page' ? 'left her TV page’s offers, above' : r.was === 'candidate' ? 'left the candidates on this decision' : 'was not in front of her; it can no longer be chosen'}</em>`;
+      const rowText = (r) => `<b>${esc(r.title)}</b> <em>${r.still ? 'still answered: the window did not hold' : r.was === 'shown' ? `left ${r.slots.join(' and ')} on this decision` : r.was === 'page' ? 'left the TV page’s offers, above' : r.was === 'candidate' ? 'left the candidates on this decision' : 'was not in front of the shopper; it can no longer be chosen'}</em>`;
       const pk = held.map((h) => `<b>${esc(h.title)}</b> <em>(${h.members.length ? `${esc(h.members.join(', '))} out of stock` : 'out of stock'})</em>`).join('; ');
       const pageLine = S.pageWin && (S.pageWin.left.length || S.pageWin.still.length) ? `On the ${esc(S.pageWin.name)} page: ${S.pageWin.left.length ? `<b>${S.pageWin.left.map(esc).join('</b>; <b>')}</b> left its offers on the next decision` : ''}${S.pageWin.still.length ? `${S.pageWin.left.length ? '; ' : ''}${S.pageWin.still.map(esc).join('; ')} still answered: the window did not hold` : ''}. ` : '';
       S.lead = `<li class="delta-engine"><span class="hk">The catalog’s own windows and stock, on the next decision</span>${pageLine}`
@@ -1648,14 +1652,14 @@ import { store } from '/oh/oh-store.js';
       const row = (r) => `${esc(ROOM[r.value] || r.value)} ${fmt3(r.b)} → <b>${fmt3(r.a)}</b> (−${Math.round(fall(r) * 100)}%)`;   // three places, so the arithmetic can be checked by hand
       const most = rooms.reduce((m, r) => (!m || fall(r) > fall(m) ? r : m), null);   // the dial that fell furthest, named in the sentence
       const differ = new Set(rooms.map(pctFall)).size > 1;
-      const faded = most && differ ? `the ${ROOM[most.value] || most.value} faded furthest (−${Math.round(fall(most) * 100)}%), ${rooms.filter((r) => r !== most).map((r) => `the ${ROOM[r.value] || r.value} −${Math.round(fall(r) * 100)}%`).join(', ') || 'the only room she had'}` : null;
+      const faded = most && differ ? `the ${ROOM[most.value] || most.value} faded furthest (−${Math.round(fall(most) * 100)}%), ${rooms.filter((r) => r !== most).map((r) => `the ${ROOM[r.value] || r.value} −${Math.round(fall(r) * 100)}%`).join(', ') || 'the only room the shopper had'}` : null;
       S.clock = { days, rooms, laundryFaster, faded, gone, fast, head: `${days} days later · a labelled clock jump`,
-        html: `${rooms.length ? `${fast ? `On the demo’s dial (τ ${dayLabel(tauOf('room'))} on room, K ${K}; production’s dial runs days) her room signals are gone within minutes` : `Her room dials, carried ${days} days on by the published memory (τ ${dayLabel(tauOf('room'))} on room, K ${K})`}: ${rooms.map(row).join(' · ')}; `
-          + `${gone ? `every room below the entry threshold (θin ${fmt2(thetaIn)})` : `${rooms.length - below.length} of ${rooms.length} still at or above the entry threshold (θin ${fmt2(thetaIn)})`}.` : 'She had no room dial to carry: nothing about her to fade.'}`
+        html: `${rooms.length ? `${fast ? `On the demo’s dial (τ ${dayLabel(tauOf('room'))} on room, K ${K}; production’s dial runs days) the shopper’s room signals are gone within minutes` : `The shopper’s room dials, carried ${days} days on by the published memory (τ ${dayLabel(tauOf('room'))} on room, K ${K})`}: ${rooms.map(row).join(' · ')}; `
+          + `${gone ? `every room below the entry threshold (θin ${fmt2(thetaIn)})` : `${rooms.length - below.length} of ${rooms.length} still at or above the entry threshold (θin ${fmt2(thetaIn)})`}.` : 'The shopper had no room dial to carry: nothing about them to fade.'}`
           + `${tv && laundry && differ ? ` ${laundryFaster ? '<b>Laundry faded faster than TV</b>: less evidence fades further on the same memory.' : '<b>The living room faded faster than laundry</b> on these dials.'}` : ''}`
-          + `${gone || !rooms.length ? ' So the continue hero rests on <b>her shortlist and the decisions trail</b>, not on her room dials.' : ''}`
+          + `${gone || !rooms.length ? ' So the continue hero rests on <b>the shopper’s shortlist and the decisions trail</b>, not on their room dials.' : ''}`
           + `${cats.length ? ` Category, a ${dayLabel(tauOf('category'))} memory: ${cats.map((r) => `${esc(r.value)} ${fmt2(r.b)} → ${fmt2(r.a)}`).join(' · ')}.` : ''}`
-          + ' The catalog’s windows moved back in one publish; the engine decides on its own clock, which is real, so the meters beside the page show her dials as it holds them.' };
+          + ' The catalog’s windows moved back in one publish; the engine decides on its own clock, which is real, so the meters beside the page show the shopper’s dials as it holds them.' };
       S.returned = true;
       panels.note('asserted', 'ctx.visit = return', `the clock jump: ${days} days later, labelled · a return visit in the same browser, asserted on the homepage`);
       await ask(homeKey());
@@ -2258,8 +2262,8 @@ import { store } from '/oh/oh-store.js';
           G.show = 24;
           await paintRail(gridRail(view));          // at once: the last answer's order over what her filters leave
           const label = dim === 'price' ? (optionsOf(view, 'price').find(([k]) => k === val) || [val, val])[1] : word(val);
-          if (on) await store.events.send('filter', filterAttrs(view, dim, val), { reask: view, note: ['filtered', `${GROUP[dim] || dim}: ${label}`, 'her own filter · custom filter, the beat verbs’ shape · the grid asks again'] });
-          else { panels.note('filtered', `${GROUP[dim] || dim}: ${label} removed`, 'her filter taken off · no event: removing one says nothing about her taste'); await store.reask(view); }
+          if (on) await store.events.send('filter', filterAttrs(view, dim, val), { reask: view, note: ['filtered', `${GROUP[dim] || dim}: ${label}`, 'the shopper’s own filter · custom filter, the beat verbs’ shape · the grid asks again'] });
+          else { panels.note('filtered', `${GROUP[dim] || dim}: ${label} removed`, 'the filter taken off · no event: removing one says nothing about the shopper’s taste'); await store.reask(view); }
           return true;
         }
         if (act === 'm1-filter-clear') {
@@ -2267,7 +2271,7 @@ import { store } from '/oh/oh-store.js';
           if (!isGrid(view)) return true;
           await store.visitor.ensure();
           gs(view).f = {}; gs(view).show = 24;
-          panels.note('filtered', 'every filter cleared', 'no event: clearing says nothing about her taste');
+          panels.note('filtered', 'every filter cleared', 'no event: clearing says nothing about the shopper’s taste');
           await paintRail(gridRail(view));
           await store.reask(view);
           return true;
@@ -2286,7 +2290,7 @@ import { store } from '/oh/oh-store.js';
           if (!isGrid(view) || !SORT_LABEL[d.sort]) return true;
           gs(view).sort = d.sort;
           closeSorts();
-          panels.note('sorted', sortLabel(d.sort), d.sort === 'best' ? 'Best match: POST /sort’s order for her' : 'her own choice of order on the sort control: the page orders by it, the engine’s order stays on each card');
+          panels.note('sorted', sortLabel(d.sort), d.sort === 'best' ? 'Best match: POST /sort’s order for the shopper' : 'the shopper’s own choice of order on the sort control: the page orders by it, the engine’s order stays on each card');
           await paintRail(gridRail(view));
           return true;
         }
@@ -2296,10 +2300,6 @@ import { store } from '/oh/oh-store.js';
         if (act === 'm1-pencil') { S.pencil += num(d.step) || 1; pencil(); return true; }
         if (act === 'm1-tab') { S.tab = d.tab === 'entertainment' ? 'entertainment' : 'appliances'; showcase(); return true; }
         if (act === 'm1-promo') return promo(d.cid);
-        if (act === 'm1-slide') {
-          heroGo(d.to !== undefined ? num(d.to) : S.slide + (num(d.step) || 1));
-          return true;
-        }
         return undefined;
       }
 
@@ -2321,7 +2321,7 @@ import { store } from '/oh/oh-store.js';
     store.nav.onRoute((r) => { closeMenus(); M1.markNav(r && (r.view || (r.name === 'search' ? 'search' : r.name))); });
     Object.assign(LANES.render, { hero: renderHero, 'category-rail': renderTiles, deals: renderDeals, continue: renderContinue, 'grid-promo': renderGridPromo });
     Object.assign(LANES.verbs, { freshVisitor: () => freshVisitor(), p1Mark: () => mark(), p1Windows: () => windows(), p1PageWindows: () => pageWindows(), p1Pin: () => pin(), p1ClockJump: (a) => clockJump(a),
-      p1Changes: () => { openChanges(); panels.note('opened', 'What changed while she was away', 'her shortlist, read off the documents in force'); },
+      p1Changes: () => { openChanges(); panels.note('opened', 'What changed in the meantime', 'the shopper’s shortlist, read off the documents in force'); },
       p1AfterChanges: () => director.sayAfter(), p1Contrast: () => contrastNow() });
     LANES.controls.push(control);
     LANES.compareTools.push(['fresh', 'Fresh visitor', () => { void freshVisitor().catch(() => { /* said on the status line */ }); }]);
@@ -2406,8 +2406,8 @@ import { store } from '/oh/oh-store.js';
   // The page asks through the kit's context hook (transport.ask(key, v, { context })): ctx.anchor = the sku and
   // ctx.family = the row's family, and ctx.fit = her declared width once she has entered one. It never ranks: the
   // modules come in the engine's order, the products inside every module in POST /sort's order (one call per page
-  // view), and her declared width filters, labelled declared, never inferred. Its few styles are its own (p2Style):
-  // the pdp-, bb-, pmod, ptile, fit- and cmp2 families, in OH's tokens; oh.css is M1's.
+  // view), and her declared width filters, labelled declared, never inferred. Its styles, the pdp-, bb-, pmod, ptile,
+  // fit- and cmp2 families in OH's tokens, live in oh.css (M1's), where M1 appended both of the page's blocks verbatim.
 
   /**
    * The walk's products (beats 5–10), each chosen for what its data can show. WM6500HWA: the front-load washer
@@ -2568,37 +2568,6 @@ import { store } from '/oh/oh-store.js';
       + `${tag ? `<span class="ptag">${esc(tag)}</span>` : ''}</button>`;
   }
 
-  // ── The page's own styles: the pdp-, bb-, pmod, ptile, fit- and cmp2 families, in OH's tokens (oh.css is M1's) ──
-  // The page's first block now lives in oh.css, appended there verbatim by M1 ("lane M2's block"). What follows is
-  // only what came after it (R5's rulings, lane M2b), injected once in whichever shell a product page opens, to be
-  // appended to oh.css the same way; then this injection can go. The buttons are the shared .btn classes and the
-  // action colour is M1c's (--brand is lg.com's red inside #site): the page adds neither of its own.
-  const P2_CSS = [
-    // The buy bar's dock: at the room's widths its price and buttons are the bar's own columns, as before.
-    '.bb-dock{display:contents}',
-    // At a phone's width, lg.com's order: the picture first and large, then the buy box, the tabs (sticky, one line),
-    // the offers and the buy column; the price, the financing line and the two buttons dock to the bottom of the screen
-    // (above the presenter's director bar when it is open at the foot; under the sheets, which cover it).
-    '@media (max-width:640px){'
-      + '#view-product .pdp-top,#view-product .pdp-left{display:contents}'
-      + '#view-product>*{order:10}#view-product>.offlimits-note,#view-product>.pdp-crumbs{order:0}'
-      + '#view-product .pdp-gallery{order:1;aspect-ratio:1/1;max-height:none}#view-product .pdp-gmain img{width:90%;height:90%}'
-      + '#view-product>#buyBox{order:2}#view-product>.pdp-stick{order:3;position:sticky;margin-top:-14px}#view-product .pdp-offers{order:4}#view-product .pdp-config{order:5}'
-      + '#view-product .bb-dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14)}'
-      + 'body.kit-dock:not(.kit-dock--collapsed) #view-product .bb-dock{bottom:var(--dock-bar-h,0px)}body:not(.kit-dock) #view-product .bb-dock{bottom:var(--bar-h,0px)}'
-      + '#view-product .bb-dock .bb-pricebox{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;max-width:none;text-align:left}'
-      + '#view-product .pdp-bar .bb-dock .bb-price{justify-content:start;flex:none}#view-product .pdp-bar .bb-dock .bb-price .bb-now{font-size:24px}'
-      + '#view-product .pdp-bar .bb-dock .bb-fin{justify-content:flex-end;text-align:right;font-size:11.5px;line-height:1.35;min-width:0}'
-      + '#view-product .pdp-bar .bb-dock .bb-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;margin:0}'
-      + '#view-product .bb-dock .bb-actions [data-ctl="special-offers"]{order:-1}'
-      + 'body:has(#view-product:not([hidden])) .site{padding-bottom:150px}'
-      + '}',
-  ].join('\n');
-  function p2Style() {
-    if ($('p2-style')) return;
-    document.head.insertAdjacentHTML('beforeend', `<style id="p2-style">${P2_CSS}</style>`);
-  }
-
   // ── The view, one template in every shell ──────────────────────────────────
   /** A before/now strip for a decided slot (the kit's deltas.js fills it). */
   const changesHtml = (slot) => `<section class="changes" id="changes-${slot}" aria-live="polite"><div class="changes-before"><span class="changes-cap">What was on screen before this press</span>`
@@ -2628,12 +2597,11 @@ import { store } from '/oh/oh-store.js';
       + '<section class="pdp-sec static" id="pdpReviews" aria-label="Reviews"></section>'
       + '<section class="pdp-sec static" id="pdpQa" aria-label="Questions and answers"></section>';
   }
-  /** The chrome a product page needs, made once in whichever shell it opens: the template, the styles, the sticky bar. */
+  /** The chrome a product page needs, made once in whichever shell it opens: the template and the sticky bar (its styles are oh.css's). */
   function ensureProductChrome() {
     const view = $('view-product');
     if (!view) return;
     if (!$('pdpTop')) view.innerHTML = productViewHtml();   // index.html and m.html carry the earlier anatomy: one template everywhere
-    p2Style();
     wireStick();
     const track = $('slot-pdp-offers');
     if (track && !track.dataset.p2) { track.dataset.p2 = '1'; track.addEventListener('scroll', () => syncOffers(), { passive: true }); }
@@ -3217,7 +3185,7 @@ import { store } from '/oh/oh-store.js';
     const fuel = attrOf(first, 'fuel'), hers = herFuel();
     const lean = state.coldstart && state.coldstart.lean && state.coldstart.lean.leaders ? state.coldstart.lean.leaders.fuel : null;
     const r = P2.sort && P2.sort.regional, where = r && r.region ? (US[r.region] || r.region) : null;
-    const fuelSaid = hers ? (hers === fuel ? `; in her fuel: ${words(hers)}` : `; her own browsing leans ${words(hers)}`) : '; she has shown no fuel yet, so none is claimed for her';
+    const fuelSaid = hers ? (hers === fuel ? `; in your fuel: ${words(hers)}` : `; your own browsing leans ${words(hers)}`) : '; you have shown no fuel yet, so none is claimed for you';
     const regionSaid = lean && where ? ` ${where}’s sales lean ${words(lean)} (synthetic → warehouse).` : '';
     return `<p class="pmod-lead" data-p2-lead="dryers">The <b>${esc(nameOf(first))}</b>${fuel ? ` (${esc(words(fuel))})` : ''} leads, by POST /sort over the ${esc(what)} of this series`
       + `${why.length ? `, ahead of the next on: ${esc(why.join(' · '))}` : ''}${esc(fuelSaid)}.${esc(regionSaid)}</p>`;
@@ -3315,7 +3283,7 @@ import { store } from '/oh/oh-store.js';
     // Her distance is a declared context (ctx.distance on the next question), never a choice of hers: the card names one
     // size up by its own rule, and only her own press on "Choose" sends a select for that size (R4 F2).
     const chosen = Boolean(r && r.up && P2.sizeUp && P2.sizeUp.chosen && P2.sizeUp.sku === idOf(r.up));
-    const says = !r ? '<p class="pmod-rule">Her viewing distance is hers to give: declared, never inferred.</p>'
+    const says = !r ? '<p class="pmod-rule">Your viewing distance is yours to give: declared, never inferred.</p>'
       : r.up ? `<p class="pmod-lead">From <b>${esc(r.ft)} ft</b>, your viewing distance, declared, sizes from ${Math.ceil(r.lo)} to ${Math.floor(r.hi)} inches fill 30 to 40 degrees of the view: by this card’s own rule, one size up is the <b>${esc(nameOf(r.up))}</b>, ${money(priceOf(r.up))}.</p>`
         + `<div class="ptiles">${tileHtml(r.up, 'one size up · from your declared distance')}</div>`
         + (chosen ? `<p class="pmod-rule"><b>You chose the ${esc(String(r.up.sizeInches))}″.</b> Sent as select, your own choice${P2.sizeUp.moved ? `: ${esc(P2.sizeUp.moved)}` : ''}.</p>`
@@ -3331,14 +3299,14 @@ import { store } from '/oh/oh-store.js';
     const room = attrOf(p, 'room');
     const chips = (FIT_CHIPS[room] || FIT_CHIPS['laundry-room']).map((w) => `<button type="button" data-act="fit" data-width="${w}" data-ctl="fit-${w}" aria-pressed="${f.width === w}">${w} in</button>`).join('');
     const own = widthOf(p);
-    const result = !f.width ? (where === 'module' ? '<p class="pmod-rule">Her measurement is hers: declared, never inferred.</p>'
-      : '<p class="pmod-rule">Enter the width of her closet or cut-out: models wider than it drop out, and the page says how many. Her measurement is hers, labelled declared, never inferred.</p>')
+    const result = !f.width ? (where === 'module' ? '<p class="pmod-rule">Your measurement is yours: declared, never inferred.</p>'
+      : '<p class="pmod-rule">Enter the width of your closet or cut-out: models wider than it drop out, and the page says how many. Your measurement is yours, labelled declared, never inferred.</p>')
       : `<p class="pmod-lead"><b>${f.fit.length} of ${f.all} ${esc(f.kind)}</b> fit ${esc(inches(f.width))} · <span class="fit-hidden">hidden: ${f.hidden.length} wider than your space</span>${f.unknown.length ? ` · ${f.unknown.length} with no dimensions published, shown and counted` : ''}</p>`
-        + `${own ? `<p class="pmod-rule">This one is ${esc(inches(own.inches))} wide (${esc(own.from)}): ${own.inches <= f.width ? 'it fits' : 'wider than her space'}.</p>` : ''}`
+        + `${own ? `<p class="pmod-rule">This one is ${esc(inches(own.inches))} wide (${esc(own.from)}): ${own.inches <= f.width ? 'it fits' : 'wider than your space'}.</p>` : ''}`
         + `<div class="ptiles">${f.fit.slice(0, 6).map((id) => { const w = widthOf(productOf(id)); return tileHtml(productOf(id), w ? `${inches(w.inches)} wide` : 'no dimensions published'); }).join('')}</div>`
-        + `${f.hidden.length ? `<p class="pdp-same">Wider than her space: ${f.hidden.map((id) => `${esc(idOf(productOf(id)))} (${esc(inches(widthOf(productOf(id)).inches))})`).join(', ')}</p>` : ''}`
-        + `<p class="pdp-same">What fits, ${esc(sortLine())} · widths from the product pages (specs.json), else the feed’s fits, merged by sku · her width declared, never inferred</p>`;
-    return `<div class="pdp-fit" data-fit="${esc(where)}"><div class="fit-row pdp-chips">${chips}<input type="number" min="12" max="72" step="0.5" id="fitIn-${esc(where)}" aria-label="Her width in inches" value="${f.width || ''}">`
+        + `${f.hidden.length ? `<p class="pdp-same">Wider than your space: ${f.hidden.map((id) => `${esc(idOf(productOf(id)))} (${esc(inches(widthOf(productOf(id)).inches))})`).join(', ')}</p>` : ''}`
+        + `<p class="pdp-same">What fits, ${esc(sortLine())} · widths from the product pages (specs.json), else the feed’s fits, merged by sku · your width declared, never inferred</p>`;
+    return `<div class="pdp-fit" data-fit="${esc(where)}"><div class="fit-row pdp-chips">${chips}<input type="number" min="12" max="72" step="0.5" id="fitIn-${esc(where)}" aria-label="Your width in inches" value="${f.width || ''}">`
       + `<button type="button" class="btn btn--line btn--sm" data-act="fit-custom" data-in="fitIn-${esc(where)}" data-ctl="fit-custom-${esc(where)}">Check</button></div>${result}</div>`;
   }
 
@@ -3351,12 +3319,12 @@ import { store } from '/oh/oh-store.js';
   function receiptLine(d, i) {
     if (d.strategy === 'tenant-pinned') return `#${i + 1} · pinned by the merchandiser · the engine never ranked it`;
     const drivers = arr(d.explain && d.explain.drivers);
-    const completes = drivers.filter((x) => x.dim === 'completes').map((x) => `<b>Completes what she committed to: ${esc(x.value)} (+${esc(Number(x.weight))})</b>`);
+    const completes = drivers.filter((x) => x.dim === 'completes').map((x) => `<b>Completes what was committed to: ${esc(x.value)} (+${esc(Number(x.weight))})</b>`);
     const own = drivers.filter((x) => panels.OWN(x) && x.dim !== 'completes').sort((a, b) => Number(b.a) * Number(b.weight) - Number(a.a) * Number(a.weight)).slice(0, 2)
       .map((x) => `${esc(SITE.dimLabels[x.dim] || x.dim)} ${esc(x.value)}${herCarries(x) ? '' : ' (the region’s lean)'}`);
     const reg = drivers.find((x) => x.dim === 'regional');
     const parts = [`#${i + 1} · score ${fmt3(d.score)}`, ...completes, ...own, ...(reg ? [`region ${esc(reg.value)}`] : [])];
-    if (!completes.length && !own.length && !reg) parts.push(d.strategy === 'default' ? 'the catalog’s order, the holdout' : 'nothing she has shown moves it yet: the catalog’s order');
+    if (!completes.length && !own.length && !reg) parts.push(d.strategy === 'default' ? 'the catalog’s order, the holdout' : 'nothing the visitor has shown moves it yet: the catalog’s order');
     return parts.join(' · ');
   }
   function moduleCard(d, i, p, mv) {
@@ -3512,7 +3480,7 @@ import { store } from '/oh/oh-store.js';
   // region, the same anchor and family; nothing of hers (no declared width, no distance), and nothing sent for him.
   LANES.hooks.fresh = LANES.hooks.fresh || {};
   LANES.hooks.fresh[productKey()] = {
-    title: 'Her product page, and a fresh visitor’s',
+    title: 'The shopper’s product page, and a fresh visitor’s',
     ask: async (f) => {
       const r = await transport.ask(productKey(), f, { context: productContext(productOf(state.productId)) || {} });
       if (!r.ok) throw new Error(r.error);
@@ -3564,7 +3532,7 @@ import { store } from '/oh/oh-store.js';
     v.p2 = { ...(v.p2 || {}), fit: w };
     const a = productAttrs(p);
     await transport.sendCustom('filter', { control: 'fit', widthInches: w, declared: true, productId: a.productId, category: a.category, type: a.type, room: a.room });
-    panels.note('declared', `her space: ${inches(w)} wide`, 'her own measurement, declared, never inferred · asserted on the next decision as ctx.fit · wider models drop out of this page’s lists, counted');
+    panels.note('declared', `the space: ${inches(w)} wide`, 'the shopper’s own measurement, declared, never inferred · asserted on the next decision as ctx.fit · wider models drop out of this page’s lists, counted');
     await askProduct(productKey());
     focusOn(document.querySelector('#stage > .view:not([hidden]) [data-fit]'), 'center');
   }
@@ -3579,7 +3547,7 @@ import { store } from '/oh/oh-store.js';
     v.p2 = { ...(v.p2 || {}), distance: Number(ft) };
     const r = sizeUpFor(p, ft);
     P2.sizeUp = r && r.up ? { sku: idOf(r.up), name: nameOf(r.up), price: money(priceOf(r.up)), size: Number(r.up.sizeInches), ft: Number(ft), moved: null, chosen: false } : null;
-    panels.note('declared', `she sits ${ft} ft away`, `her own answer, declared · carried as ctx.distance on the next question, never as a choice of hers · nothing is sent for any product · ${r && r.up ? `the card names one size up by its own rule: ${nameOf(r.up)}` : r && r.fitsNow ? 'this size already fills her view' : 'no larger size of this series with a price'}`);
+    panels.note('declared', `the shopper sits ${ft} ft away`, `the shopper’s own answer, declared · carried as ctx.distance on the next question, never as a choice of theirs · nothing is sent for any product · ${r && r.up ? `the card names one size up by its own rule: ${nameOf(r.up)}` : r && r.fitsNow ? 'this size already fills the view' : 'no larger size of this series with a price'}`);
     await askProduct(productKey());
     director.sayAfter();
     focusOn(document.querySelector('#stage > .view:not([hidden]) [data-module="mod-tv-size-up"]'), 'center');
@@ -3589,8 +3557,8 @@ import { store } from '/oh/oh-store.js';
     const v = transport.cur(), p = productOf(state.productId), up = P2.sizeUp ? productOf(P2.sizeUp.sku) : null;
     if (!v || !p || !up) { say('declare a viewing distance on the size-up card first', 'bad'); return; }
     const was = JSON.parse(JSON.stringify(v.vector || {}));   // her meters as the panel last read them
-    await store.events.send('select', { sku: idOf(up), control: 'size-up', distanceFt: P2.sizeUp.ft, chosen: 'by her' },
-      { note: ['chose', `${nameOf(up)}, one size up`, 'her own press on the size-up card · sent as select with that size’s attributes · the price is the same for everyone'] });
+    await store.events.send('select', { sku: idOf(up), control: 'size-up', distanceFt: P2.sizeUp.ft, chosen: 'by the shopper' },
+      { note: ['chose', `${nameOf(up)}, one size up`, 'the shopper’s own press on the size-up card · sent as select with that size’s attributes · the price is the same for everyone'] });
     P2.sizeUp.chosen = true;
     await askProduct(productKey());
     // What her own choice did to her meters, dimension by dimension, as her profile reads after the ask.
@@ -3626,7 +3594,7 @@ import { store } from '/oh/oh-store.js';
     P2.sel.picks[g] = P2.sel.picks[g] === id ? null : id;
     renderSelections(p);
     const s = servicesFor(p), group = s && s.groups.find((x) => x.id === g), o = group && group.opts.find((x) => x[0] === id);
-    if (o) panels.note(P2.sel.picks[g] ? 'chose' : 'removed', `${group.short}: ${o[1]}`, 'a service on the line, chosen by her · it travels with Add to Cart, nothing is sent on its own');
+    if (o) panels.note(P2.sel.picks[g] ? 'chose' : 'removed', `${group.short}: ${o[1]}`, 'a service on the line, chosen by the shopper · it travels with Add to Cart, nothing is sent on its own');
   }
   /**
    * Add to Cart: the store's cart with the line's options, her services, and the decisions on this page (the decided
@@ -3660,7 +3628,7 @@ import { store } from '/oh/oh-store.js';
     if (P2.wished.has(sku)) { P2.wished.delete(sku); store.ui.toast(`Removed from your wishlist: ${nameOf(p)}`); }
     else {
       P2.wished.add(sku);
-      await store.events.send('wishlist_add', { sku, control: 'gallery' }, { note: ['saved', nameOf(p), 'to her wishlist · wishlist_add, the engine’s own action, with its attributes'] });
+      await store.events.send('wishlist_add', { sku, control: 'gallery' }, { note: ['saved', nameOf(p), 'to the shopper’s wishlist · wishlist_add, the engine’s own action, with its attributes'] });
       store.ui.toast(`Saved to your wishlist: ${nameOf(p)}`, 'good');
     }
     const on = P2.wished.has(sku);
@@ -3833,7 +3801,7 @@ import { store } from '/oh/oh-store.js';
     // The Find a Retailer list and its outcomes are the store's (oh-store.js, M3): one modal for the decided module, the
     // buy box and a manual press, reading the catalog's where-to-buy lists first and saying which list is in use.
     /** The companion modules the attach rows read off the product pages' grid. */
-    const ATTACH = [['mod-laundry-dryer', 'The dryer for her washer'], ['mod-laundry-pedestal', 'The pedestal'], ['mod-laundry-stacking', 'The stacking kit'],
+    const ATTACH = [['mod-laundry-dryer', 'The dryer for the washer'], ['mod-laundry-pedestal', 'The pedestal'], ['mod-laundry-stacking', 'The stacking kit'],
       ['mod-laundry-pair-price', 'The set price'], ['mod-tv-soundbar', 'The soundbar for the series'], ['mod-tv-mount', 'The mount for the VESA pattern'],
       ['mod-range-microwave', 'The microwave over the range'], ['mod-range-dishwasher', 'The dishwasher beside it']];
     const S = { laptop: null, phone: null, laptopTop: null, phoneBefore: null, phoneAfter: null, phoneTop: null, same: null, moved: null,
@@ -4023,10 +3991,10 @@ import { store } from '/oh/oh-store.js';
       S.laptopTop = topOf(await reflexOf(laptop));
       S.phoneAfter = null; S.phoneTop = null; S.same = null; S.moved = null;
       setPhoneFrame(true);
-      await transport.mintVisitor('B', transport.directEntry(), 'Her phone');
+      await transport.mintVisitor('B', transport.directEntry(), 'The phone');
       S.phone = 'B';
       transport.useVisitor('B');
-      panels.note('arrived', 'Her phone', 'a second device, a stranger to the engine: anonymous · consent granted · direct · nothing links it to the laptop until she signs in');
+      panels.note('arrived', 'The phone', 'a second device, a stranger to the engine: anonymous · consent granted · direct · nothing links it to the laptop until the shopper signs in');
       await panels.restoreRegion();                  // her own region, from the request: never an asserted one on a new device
       await openPage(phoneKey(), { quiet: true, focus: 'hero' });
       S.phoneBefore = shownOn(phoneKey());
@@ -4037,16 +4005,16 @@ import { store } from '/oh/oh-store.js';
       if (S.laptop && state.visitors[S.laptop] && transport.cur() !== state.visitors[S.laptop]) {
         transport.useVisitor(S.laptop);
         const link = linkOf(transport.cur());
-        panels.note('returned', 'Her laptop', link ? `signed in as ${link.account}: the same person as her phone` : 'anonymous, as she left it');
+        panels.note('returned', 'The laptop', link ? `signed in as ${link.account}: the same person as on the phone` : 'anonymous, as it was left');
       }
       renderSignedIn();
       return true;
     }
     /** m.html on its own: a direct load is a real arrival on the phone, a stranger decided live, her region from the request. */
     async function phoneArrival() {
-      const v = await transport.mintVisitor('A', transport.landingEntry(), 'Her phone');
+      const v = await transport.mintVisitor('A', transport.landingEntry(), 'The phone');
       transport.useVisitor('A');
-      panels.note('arrived', 'Her phone', `a stranger on this device: ${transport.describeEntry(v.entry)} · anonymous · consent granted · no device matching`);
+      panels.note('arrived', 'The phone', `a stranger on this device: ${transport.describeEntry(v.entry)} · anonymous · consent granted · no device matching`);
       await openPage(homeKey(), { quiet: true });
       await panels.loadColdStart();
       say('ready · this phone page was decided live for a stranger; Sign in names the fictional account; Next starts the walkthrough', 'good');
@@ -4066,7 +4034,7 @@ import { store } from '/oh/oh-store.js';
         return '<div class="p3-wtb" data-wtb="pickup"><p class="pmod-rule">Best Buy pickup is not offered for this model in our data, so there is nothing to press here: the page never invents an option.</p></div>';
       }
       const done = recorded('partner_pickup', idOf(p))[0];
-      return '<div class="p3-wtb" data-wtb="pickup"><p class="pmod-lead">Pickup changes how she gets it, not what she pays: the price is the buy box’s, the same for everyone.</p>'
+      return '<div class="p3-wtb" data-wtb="pickup"><p class="pmod-lead">Pickup changes how you get it, not what you pay: the price is the buy box’s, the same for everyone.</p>'
         + (done ? `<p class="p3-done" data-p3-outcome="partner_pickup"><b>Best Buy pickup chosen</b> at ${esc(hhmm(done.at))} · sent as <code>partner_pickup</code> with this module’s decision (#${done.position} on this page), which earned it</p>`
           : '<div class="sactions"><button type="button" class="btn btn--brand btn--sm" data-act="partner-pickup" data-ctl="partner-pickup">Choose Best Buy pickup</button></div>')
         + '<p class="pmod-rule">A press is the named outcome <code>partner_pickup</code>, credited to the decision that put this module here, and counted as a pickup, never as a second purchase: no value is read for it.</p></div>';
@@ -4384,7 +4352,7 @@ import { store } from '/oh/oh-store.js';
     if (!flags.region) {
       const o = state.own || {};
       panels.note('located', o.key ? `region ${o.key}${o.label && o.label !== o.key ? ` (${o.label})` : ''}` : 'no region on this request',
-        o.key ? (transport.localRuntime ? 'from the request, as the local runtime fills request.cf · nothing asserted' : 'from the request: the edge located her · nothing asserted')
+        o.key ? (transport.localRuntime ? 'from the request, as the local runtime fills request.cf · nothing asserted' : 'from the request: the edge located the visitor · nothing asserted')
           : 'the national figure is shown · nothing invented');
     }
   }
@@ -4441,7 +4409,7 @@ import { store } from '/oh/oh-store.js';
       if (ENTRY === 'product') {
         const id = new URLSearchParams(location.search).get('id');
         await openProduct(id).then(() => panels.loadColdStart())
-          .then(() => say(back ? 'ready · this product page was decided live for her, the same visitor as before on this browser; Next starts the walkthrough'
+          .then(() => say(back ? 'ready · this product page was decided live for the same visitor as before on this browser; Next starts the walkthrough'
             : 'ready · this product page was decided live for a direct visitor; Next starts the walkthrough', 'good'))
           .catch(failed);
       } else if (ENTRY === 'grid') {
@@ -4449,7 +4417,7 @@ import { store } from '/oh/oh-store.js';
       } else if (back) {
         // Home, a grid by its view, a search or the phone: her own page, decided for her, not the stranger's template.
         await panels.loadColdStart().then(() => store.nav.go(location.pathname + location.search, { dispatched: true }))
-          .then(() => say('ready · decided for her, the same visitor as before on this browser; Next starts the walkthrough', 'good'))
+          .then(() => say('ready · decided for the same visitor as before on this browser; Next starts the walkthrough', 'good'))
           .catch(failed);
       } else if (ENTRY === 'phone') {
         await phoneArrival().catch(failed);   // P3: a stranger on the phone

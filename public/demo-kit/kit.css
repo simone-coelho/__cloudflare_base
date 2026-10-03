@@ -441,6 +441,13 @@ body.kit-dock.kit-dock--collapsed .dock-rail {
   body.kit-dock.kit-dock--collapsed .dock-k { writing-mode: horizontal-tb; transform: none; }
   body.kit-dock.kit-dock--collapsed .dock-next { width: auto; flex-direction: row; padding: 6px 10px; border-radius: var(--radius-pill); }
 }
+/* At a phone's width the collapsed pill is off the page too, so a visitor sees the site alone; the presenter's address
+ * (?present=1, body.kit-present from director.js) keeps it, and wraps the bar's buttons so Hide stays on screen */
+@media (max-width: 640px) {
+  body.kit-dock.kit-dock--collapsed:not(.kit-present) .dock-rail { display: none; }
+  body.kit-dock.kit-present .beatnav { flex-wrap: wrap; }
+  body.kit-dock.kit-present .nextbeat { flex: 1 1 100%; }
+}
 
 /* ══ The by-dimension signals panel (config.signals.byDimension, panels.js): one compact row per dimension ══ */
 .vectors--dims { gap: 3px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }

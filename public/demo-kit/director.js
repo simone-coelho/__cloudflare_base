@@ -24,14 +24,14 @@
 // load, every branch of every section included.
 //
 // `run` is a list of steps. Each step names one verb:
-//   open      a place, through the page's own controls, as she would (the beats file's `places`, with arguments);
+//   open      a place, through the page's own controls, as a visitor would (the beats file's `places`, with arguments);
 //             open: 'back' presses the browser's own Back; with land: true the page opens it directly (an arrival)
 //   click     a performed press on a control: a selector, or a data-ctl name `in` a container; if: 'present'
 //             presses only when it is on the page; missing: the error when it is not
 //   select    a performed press on one option of a selector (a storage step, an answer, a line count)
 //   wait      a pause in ms; { seconds, timer } is a visible countdown in a strip (?wait=N shortens it)
 //   custom    a custom engine event sent directly ({ custom: 'compare', data }), for a step with no control
-//   assert    context asserted on every request, labelled: { region } ('own' is back in her own region), { intent }
+//   assert    context asserted on every request, labelled: { region } ('own' is back in the visitor's own region), { intent }
 //   focus     a region of the page into view (a selector, or the first present of a list), or { panel } to the front
 //   publish   a named beat document applied by the worker ({ publish: 'catalog' | 'slots', name, reason }), or 'reset';
 //             fixtureStep: a fixture piece marked with that step joins the pool from this publish on
@@ -52,7 +52,10 @@
 // site is the whole page. Collapsed by default when collapsed is true; expanded by the presenter's key (D), by
 // ?present=1 (?present=0 collapses), by the rail's own button, and under ?debug (a rehearsal is a presenter's
 // session) unless ?present says otherwise; the state is remembered in this tab (sessionStorage). The rail keeps
-// Next, so a beat can run with the tools put away. Its styles are kit.css's dock block.
+// Next, so a beat can run with the tools put away. At a phone's width (640 px and under) the collapsed rail is off the
+// page too, so a visitor sees the site alone, unless the address says ?present=1 (body.kit-present). { onForget }
+// (optional) adds "Forget this browser" beside Hide: the demo forgets the visitor it keeps and reloads to its cold
+// open, minting nobody. Its styles are kit.css's dock block.
 // No DOM or window access at import time.
 import { arr, esc, focusOn, num, sleep } from './util.js';
 
@@ -166,12 +169,18 @@ export function createDirector(k) {
     const read = () => { try { return sessionStorage.getItem(key); } catch { return null; } };
     const write = (v) => { try { sessionStorage.setItem(key, v); } catch { /* storage refused: the state lasts the page */ } };
     body.classList.add('kit-dock');
+    body.classList.toggle('kit-present', flags.present === true);   // the presenter's address: the rail stays on a phone's page
     body.insertAdjacentHTML('beforeend', '<div class="dock-rail" id="dockRail" role="group" aria-label="Director, collapsed">'
       + '<button type="button" class="dock-open" id="dockOpen" aria-controls="machine" aria-expanded="false" title="Open the director (D)"><span class="dock-k">Director</span></button>'
       + '<button type="button" class="dock-next" id="dockNext" title="Next beat"><span aria-hidden="true">&rarr;</span><span class="dock-n" id="dockNextNo"></span></button></div>');
     const nav = bar ? bar.querySelector('.beatnav') : null;
+    // opts.onForget (optional): "Forget this browser", the presenter's way back to the cold open. The demo forgets the
+    // visitor it keeps in this browser and reloads, minting nobody; absent, no control is drawn.
+    const forgets = typeof opts.onForget === 'function';
+    if (nav && forgets) nav.insertAdjacentHTML('beforeend', '<button type="button" class="director-handle dock-forget" id="dockForget" title="Forget the visitor this browser keeps: the next page is a stranger’s, and nobody exists until the first click">Forget this browser</button>');
     if (nav) nav.insertAdjacentHTML('beforeend', '<button type="button" class="director-handle dock-hide" id="dockHide" aria-controls="machine" aria-expanded="true" title="Collapse to the rail (D)">Hide</button>');
     const openBtn = document.getElementById('dockOpen'), hideBtn = document.getElementById('dockHide'), nextBtn = document.getElementById('dockNext');
+    const forgetBtn = forgets ? document.getElementById('dockForget') : null;
     let open = false;
     function apply(to, remember) {
       open = Boolean(to);
@@ -191,6 +200,12 @@ export function createDirector(k) {
     openBtn.addEventListener('click', () => apply(true, true));
     if (hideBtn) hideBtn.addEventListener('click', () => apply(false, true));
     nextBtn.addEventListener('click', () => { if (!state.busy && !el.nextBeat.disabled) el.nextBeat.click(); });
+    if (forgetBtn) forgetBtn.addEventListener('click', () => {
+      if (state.busy) { say('a beat is running; forget this browser once it lands', 'bad'); return; }
+      forgetBtn.disabled = true;
+      say('forgetting the visitor this browser keeps…');
+      Promise.resolve().then(() => opts.onForget()).catch((error) => { forgetBtn.disabled = false; say(String((error && error.message) || error), 'bad'); });
+    });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'd' && e.key !== 'D') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -235,7 +250,7 @@ export function createDirector(k) {
     await sleep(260);
   }
   /**
-   * The browser's Back, as she would press it. The page restores the page she
+   * The browser's Back, as a visitor would press it. The page restores the page they
    * left and asks again; a restore from history is not a new view, so it sends
    * no event (a bfcache restore runs no page script either). The chip at the
    * corner stands for the browser's own button while the hand presses it.
@@ -419,7 +434,7 @@ export function createDirector(k) {
       const what = step.assert || {};
       if (what.region !== undefined) {
         const to = value(what.region, ctx);
-        if (to === 'own') { await P().restoreRegion(); return true; }   // back in her own region, and said so
+        if (to === 'own') { await P().restoreRegion(); return true; }   // back in the visitor's own region, and said so
         P().setRegion(to, 'asserted');
         noteOf(step, ctx);
         await P().loadColdStart();

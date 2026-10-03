@@ -130,7 +130,7 @@ export function createProve(k) {
       el.pdWhyHead.textContent = `Why: every decision the last press made (${state.pdProof.label})`;
       el.pdWhyWrap.hidden = false;
     } else el.pdWhyWrap.hidden = true;
-    el.pdNote.textContent = `Above: computed from her real profile on the published registry: a = R / (R + K), K = ${K()}, checkable by hand. Below: what the engine actually did on the last press, read off its receipts. Nothing runs from this panel.`;
+    el.pdNote.textContent = `Above: computed from the visitor’s real profile on the published registry: a = R / (R + K), K = ${K()}, checkable by hand. Below: what the engine actually did on the last press, read off its receipts. Nothing runs from this panel.`;
     el.pdBack.hidden = false;
   }
   const closeExplain = () => { el.pdBack.hidden = true; };

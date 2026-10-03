@@ -88,13 +88,16 @@
         <div class="cards cards--one" id="slot-hero" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-hero" hidden></p>
       </section>
-      <!-- The service strip: static, the same for everyone. -->
+      <!-- The service strip: static, the same for everyone. At a phone's width one item at a time, with a pager (M1d). -->
       <div class="svc-strip static" aria-label="Services">
+        <div class="m1-svc-track" id="m1Svc">
         <button type="button" class="m1-svc" data-act="m1-info" data-info="delivery" data-ctl="svc-delivery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span><b>Free delivery</b></span></button>
         <button type="button" class="m1-svc" data-act="m1-info" data-info="returns" data-ctl="svc-returns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10H8"/><path d="M8 5 4 9l4 4"/></svg><span><b>14-day returns</b></span></button>
         <button type="button" class="m1-svc" data-act="m1-info" data-info="coverage" data-ctl="svc-coverage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6z"/><path d="m8.8 12 2.3 2.3 4.3-4.6" stroke-linecap="round"/></svg><span><b>Extended coverage</b></span></button>
         <button type="button" class="m1-svc" data-act="m1-info" data-info="haul-away" data-ctl="svc-haul-away"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7h16l-1.4 12.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M9 7V4.5h6V7M3 7h18"/></svg><span><b>Haul-away</b></span></button>
         <button type="button" class="m1-svc" data-act="m1-info" data-info="expert" data-ctl="svc-expert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-5 4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01" stroke-linecap="round" stroke-width="2.2"/></svg><span><b>Chat with an expert</b></span></button>
+        </div>
+        <div class="m1-pager static" data-pager-for="m1Svc"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="svc-page-prev" aria-label="Previous service" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="svc-page-next" aria-label="Next service">&rsaquo;</button></div>
         <span class="nper">not personalised</span>
       </div>
       <!-- The category row: static, the same for everyone (oh.js draws the pictures from the feed), under lg.com's heading. -->

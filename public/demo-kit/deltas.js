@@ -117,9 +117,9 @@ export function createDeltas(k) {
     if (typeof R.nothing === 'string') return R.nothing;
     const top = P().topSignal(), th = P().thetaIn();
     return `<li class="delta-none">${(R.nothing && R.nothing.text) || 'Nothing moved.'}${top
-      ? ` Her strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= th
-        ? 'past the entry threshold: what she has earned is already being served.' : `under the ${fmt2(th)} entry threshold.`}`
-      : ' She has sent no signal yet.'}</li>`;
+      ? ` The visitor’s strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= th
+        ? 'past the entry threshold: what the visitor has earned is already being served.' : `under the ${fmt2(th)} entry threshold.`}`
+      : ' The visitor has sent no signal yet.'}</li>`;
   }
 
   /** The strip for one slot: the before half, then what changed. */
@@ -166,7 +166,7 @@ export function createDeltas(k) {
     if (!R) return;
     const top = P().topSignal(), th = P().thetaIn();
     R.deltas.innerHTML = `<li class="delta-none">${esc(where)}: ${R.pending || 'the page has not been asked again yet'}.${top
-      ? ` Her strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= th
+      ? ` The visitor’s strongest signal is <b>${esc(top.value)}</b> (${esc(DIM_LABEL[top.dim] || top.dim)}) at <b>${fmt2(top.a)}</b>, ${top.a >= th
         ? `past the ${fmt2(th)} entry threshold.` : `under the ${fmt2(th)} entry threshold.`}` : ''}</li>`;
   }
 
@@ -204,8 +204,8 @@ export function createDeltas(k) {
     const led = fired.length > 1 ? `its arrival seeds (+${fmt3(c.applied)}: ${fired.map(([key, v]) => `${esc(key)} +${fmt3(v)} at entry`).join(', ')}`
       : `the campaign (+${fmt3(c.applied)}${sig ? ` from ${esc(String(sig.signal).replace(/_/g, ' '))} “${esc(sig.value)}”` : ''}`;
     return `<li class="delta-hinge"><span class="hk">Campaign context superseded by observed behaviour</span>
-      <b>${esc(R.titleOfId(seeded.customerContentId))}</b> led on ${led}${damp ? `, dampened ×${fmt2(damp.factor)} once she held ${esc(damp.dimension)} ${esc(damp.value)}` : ''}).
-      <b>${esc(R.title(leader))}</b> now leads on her own browsing: ${own.slice(0, 3).map((x) => `${esc(DIM_LABEL[x.dim] || x.dim)} ${esc(x.value)} ${fmt2(x.a)} × ${x.weight}`).join(', ')}.</li>`;
+      <b>${esc(R.titleOfId(seeded.customerContentId))}</b> led on ${led}${damp ? `, dampened ×${fmt2(damp.factor)} once the visitor held ${esc(damp.dimension)} ${esc(damp.value)}` : ''}).
+      <b>${esc(R.title(leader))}</b> now leads on the visitor’s own browsing: ${own.slice(0, 3).map((x) => `${esc(DIM_LABEL[x.dim] || x.dim)} ${esc(x.value)} ${fmt2(x.a)} × ${x.weight}`).join(', ')}.</li>`;
   }
 
   return { rotate, moves, chipHtml, diffRows, rowsHtml, driverShift, render, renderBeforeRow, toggleBefore, pending, superseded };

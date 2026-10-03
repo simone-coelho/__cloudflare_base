@@ -53,6 +53,33 @@ const { requests, refusedIn } = wire;
 /** Each request's document load (CDP loaderId): a page's own calls, told apart from a previous page's still in flight (lane S2). */
 const LOADER = new Map();
 browser.on('Network.requestWillBeSent', (e) => LOADER.set(e.requestId, e.loaderId));
+/** When each request's response arrived (lane S2): an action's own round trip, request to response. */
+const ANSWERED = new Map();
+browser.on('Network.responseReceived', (e) => ANSWERED.set(e.requestId, Date.now()));
+/** A fresh visitor's tab (lane S2): Storage.clearDataForOrigin leaves the tab's own sessionStorage, where the store mirrors her
+ *  kept visitor (M3), and DOMStorage.clear does not reach it either; and a clear can still be in flight when the next page
+ *  writes (hosted, with a full cache). So from a document of the site's own origin that runs no page script (the served
+ *  stylesheet) both stores are cleared, a probe is written, and a second later the probe must still be there and nothing
+ *  else: the storage is writable, empty and settled. Retried until it holds; then the tab leaves for about:blank. */
+async function forgetTab() {
+  const origin = new URL(base).origin;
+  await cdp('Page.navigate', { url: `${origin}/${SLUG}/oh.css` });
+  await waitFor(`location.origin === ${JSON.stringify(origin)} && document.readyState === 'complete'`, 10000);
+  const CLEAR = `(() => { if (location.origin !== ${JSON.stringify(origin)}) return 'not on the origin'; try { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('s2-settle', '1'); return localStorage.length === 1 && sessionStorage.length === 0; } catch (e) { return String(e); } })()`;
+  let held = false, tries = 0;
+  while (!held && tries < 10) {
+    tries += 1;
+    const w = await evaluate(CLEAR);
+    if (w !== true) throw new Error(`the tab's storage is not writable: ${w}`);
+    await sleep(1000);
+    held = await evaluate("localStorage.getItem('s2-settle') === '1' && localStorage.length === 1 && sessionStorage.length === 0");
+  }
+  const left = await evaluate("(() => { localStorage.removeItem('s2-settle'); return localStorage.length + sessionStorage.length; })()");
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(200);
+  return { settled: held && left === 0, tries };
+}
+
 
 // ── What a person sees: computed style up the chain, and a real box ──────────
 function pageHelpers({ vis, txt, own, shown }) {
@@ -190,18 +217,19 @@ function pageHelpers({ vis, txt, own, shown }) {
     const light = (c) => { const x = parse(c); return !x || x.a < 0.15 || hsl(x).l >= 0.9; };
     const name = (n) => (n.id ? '#' + n.id : n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className.trim() ? '.' + n.className.trim().split(/\s+/)[0] : ''));
     const els = [...document.querySelectorAll('#site *, #sheetBack *')].filter((e) => !e.closest(TOOLS) && vis(e).ok);
-    const yellows = [], bars = [], fills = [];
+    const yellows = [], bars = [], fills = [], offs = [];
     for (const e of els) {
       const cs = getComputedStyle(e);
       for (const [k, c] of [['background', cs.backgroundColor], ['text', cs.color], ['border', cs.borderTopWidth !== '0px' ? cs.borderTopColor : '']]) if (yellow(c)) yellows.push(name(e) + ' ' + k + ' ' + c);
       const r = e.getBoundingClientRect();
-      if (r.width >= innerWidth * 0.5 && r.height >= 16 && nearBlack(cs.backgroundColor)) bars.push(name(e) + ' ' + Math.round(r.width) + '×' + Math.round(r.height) + ' ' + cs.backgroundColor);
+      if (r.width >= innerWidth * 0.5 && r.height >= 16 && nearBlack(cs.backgroundColor) && !e.closest('#m1Pencil')) bars.push(name(e) + ' ' + Math.round(r.width) + '×' + Math.round(r.height) + ' ' + cs.backgroundColor);
       const isButton = e.matches('button, .btn, a.btn, [role="button"], input[type="submit"]') && !e.disabled && e.getAttribute('aria-disabled') !== 'true' && (txt(e).length >= 2 || (e.value || '').length >= 2);
-      if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius });
+      if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius, h: Math.round(r.height) });
+      if (e instanceof HTMLElement && !e.children.length && /^\$[\d,]+(?:\.\d{2})?\s+OFF$/i.test(txt(e))) offs.push({ el: name(e), text: txt(e), color: cs.color });
     }
     const wm = document.getElementById('wordmark');
     const siteEl = document.getElementById('site') || document.body, navBtn = document.querySelector('#site .site-header .mainnav button');
-    return { yellows: [...new Set(yellows)], bars, fills, body: getComputedStyle(document.body).backgroundColor, font: getComputedStyle(document.body).fontFamily,
+    return { yellows: [...new Set(yellows)], bars, fills, offs, body: getComputedStyle(document.body).backgroundColor, font: getComputedStyle(document.body).fontFamily,
       site: getComputedStyle(siteEl).backgroundColor, siteFont: getComputedStyle(siteEl).fontFamily, navFont: navBtn ? getComputedStyle(navBtn).fontFamily : '',
       fontLoaded: Boolean(document.fonts && document.fonts.check('500 16px Figtree')),
       ink: getComputedStyle(document.querySelector('#site') || document.body).color, wordmark: wm ? { text: txt(wm), color: getComputedStyle(wm).color, shown: vis(wm).ok } : null };
@@ -438,8 +466,8 @@ const W = (() => { const all = [...ohJs.matchAll(/\bconst WALK = \{([^}]*)\}/g)]
   for (const [, k, v] of String(m ? m[1] : '').matchAll(/([\w$]+):\s*('[^']*'|"[^"]*"|[\d.]+)/g)) out[k] = /^['"]/.test(v) ? v.slice(1, -1) : Number(v); return out; })();
 const reg = anchor.registry || {};
 const tau = (dim) => Number((((reg.dimensions || []).find((x) => x.key === dim)) || {}).tauMs) || Number(reg.tauMs) || 0;
-/** Her lasting signals (a day of memory or more), strongest first: what the page calls her taste. */
-const lasting = (dims, n = 3) => Object.entries(dims || {}).filter(([dim]) => tau(dim) >= 86400000)
+/** Her strongest values across every dimension, whatever its memory, strongest first: what the sign-in strip names (P3's topOf). */
+const strongest = (dims, n = 3) => Object.entries(dims || {})
   .flatMap(([dim, vals]) => Object.entries(vals || {}).map(([value, a]) => ({ key: `${dim}:${value}`, a: Number(a) }))).filter((x) => x.a > 0)
   .sort((x, y) => y.a - x.a).slice(0, n).map((x) => x.key);
 const bodyOf = async (id) => { try { const b = await cdp('Network.getResponseBody', { requestId: id }); return b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body; } catch { return null; } };
@@ -483,7 +511,7 @@ const p1Width = (p) => { const s = Number(p && p.width); if (Number.isFinite(s) 
 const AIM = (sel, text, nth) => `(async () => {
   const { vis, txt } = window.__s1;
   const want = ${JSON.stringify(text ? String(text).toLowerCase() : null)};
-  const all = [...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => vis(e).ok && (!want || (txt(e) || e.getAttribute('aria-label') || '').toLowerCase().includes(want)));
+  const all = [...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => vis(e).ok && (!want || ((txt(e) || '') + ' ' + (e.getAttribute('aria-label') || '')).toLowerCase().includes(want)));
   const el = all[${Number(nth) || 0}] || null;
   if (!el) return { ok: false, why: 'nothing on screen matches ' + ${JSON.stringify(sel)} + (want ? ' with “' + want + '”' : '') };
   el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
@@ -518,14 +546,14 @@ async function hand(sel, { text, nth, settle = true } = {}) {
   return a;
 }
 /** Typing into a field she can see: pressed first, then the text as input, then Enter. */
-async function typeIn(sel, text) {
+async function typeIn(sel, text, { settle = true } = {}) {
   const a = await hand(sel, { settle: false });
   if (!a.ok) return a;
   await evaluate(`(() => { const e = document.activeElement; if (e && 'value' in e) e.select && e.select(); })()`);
   await cdp('Input.insertText', { text });
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\r' });
   await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
-  await settled();
+  if (settle) await settled();
   return a;
 }
 /** The browser's own Back: the previous entry of its history, as the toolbar button goes there. */
@@ -539,6 +567,60 @@ async function browserBack() {
   return { ok: true, url: prev.url };
 }
 const S2 = { reloads: [] };
+
+/** The registry's dimensions (beats/anchor.json registry), and the events that are about a product (the coordinator's list). */
+const DIMS = (((anchor.registry || {}).dimensions) || []).map((d) => d.key);
+const PRODUCT_EVENTS = new Set(['add_to_cart', 'wishlist_add', 'purchase', 'select', 'compare', 'find_a_retailer', 'partner_pickup', 'retailer_referral', 'notify_me']);
+const eventName = (e) => (e.type === 'custom' ? e.data.event : e.type);
+/** The dimension values an event carries, as [dim, value] pairs (an array value, each of its members). */
+const carriedDims = (data) => DIMS.flatMap((d) => (Array.isArray(data[d]) ? data[d].map((v) => [d, String(v)]) : typeof data[d] === 'string' ? [[d, data[d]]] : []));
+/** Her reading now, from the engine itself (GET /realtime/reflex with the capability on her events), by dim and value. */
+async function engineReading(cap) {
+  if (!cap) return null;
+  const r = await fetch(`${base}/realtime/reflex`, { headers: { 'X-Tenant': TENANT, 'X-SDK-Key': 'demo-site', 'X-Shopper-Session': cap }, cache: 'no-store' }).catch(() => null);
+  const j = r ? await r.json().catch(() => null) : null;
+  return (j && j.affinity && j.affinity.dims) || null;
+}
+/** The panel's rows as rendered (the director is collapsed for a visitor: its rows are read as drawn) and the page's own vector. */
+const PANEL_READ = `(() => { const { txt } = window.__s1;
+  const own = (el) => (el ? [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\\s+/g, ' ').trim() : '');
+  const rows = [...document.querySelectorAll('#vectors .vecrow')].map((r) => ({ value: own(r.querySelector('.vectop span')), label: txt(r.querySelector('.vectop em')), a: Number(txt(r.querySelector('.vectop b'))) }));
+  const s = window.__oh && window.__oh.state;
+  return { rows, vector: (s && s.lastVector) || null };
+})()`;
+const dimLabel = (d) => (((PAGE_SITE.dimLabels) || {})[d]) || d;   // read at run time (PAGE_SITE is defined below)
+/**
+ * The panel follows a manual event by itself: from the moment the event's request answered, within two seconds and with no
+ * press or navigation, the page's vector equals the engine's reading for every dimension the event carried, and each of
+ * those the panel shows reads the engine's value (two decimals). Returns what it saw.
+ */
+async function panelFollows(label, presses, test) {
+  let evt = null;
+  for (let i = 0; i < 60 && !evt; i += 1) { evt = eventsIn(presses).filter(test).pop() || null; if (!evt) await sleep(100); }   // the page sends it just after the release
+  const hit = evt ? [...requests.entries()].filter(([, r]) => presses.includes(r.press) && r.path === '/realtime/action').find(([, r]) => { try { const b = JSON.parse(r.body); return eventName({ type: b.type, data: b.data || {} }) === eventName(evt); } catch { return false; } }) : null;
+  const req = hit ? hit[1] : null;
+  const roundTrip = () => (hit && ANSWERED.has(hit[0]) ? `${ANSWERED.get(hit[0]) - hit[1].at} ms` : 'not answered');
+  if (!evt) return ok(`${label}: the panel follows it by itself within two seconds`, false, 'no such event on the wire');
+  const dims = carriedDims(evt.data);
+  if (!dims.length) { info(`${label}: the event carries no dimension, so nothing on the panel is asked to move`); return null; }
+  for (let i = 0; i < 40 && req && req.status === null; i += 1) await sleep(50);
+  const t0 = Date.now();
+  const engine = await engineReading(evt.cap);
+  const close = (x, y, tol) => Math.abs(Number(x || 0) - Number(y || 0)) <= tol;
+  let P = null, pass = false, shown = [];
+  do {
+    P = await evaluate(PANEL_READ);
+    shown = dims.map(([d, v]) => ({ d, v, e: engine && engine[d] ? Number(engine[d][v] || 0) : 0, vec: P.vector && P.vector[d] ? Number(P.vector[d][v] || 0) : null,
+      row: P.rows.find((r) => r.value === v && (r.label.startsWith(dimLabel(d)) || r.label.startsWith(d))) || null }));
+    pass = Boolean(engine) && shown.every((x) => x.vec !== null && close(x.vec, x.e, 0.02)) && shown.some((x) => x.row) && shown.every((x) => !x.row || close(x.row.a, x.e, 0.011));
+    if (pass) break;
+    await sleep(200);
+  } while (Date.now() - t0 < 2000);
+  ok(`${label}: within two seconds, with no press or navigation, the panel and the page’s vector read what the engine now holds for what it carried`, pass,
+    shown.slice(0, 4).map((x) => `${x.d} ${x.v}: engine ${x.e.toFixed(2)} · vector ${x.vec === null ? 'none' : x.vec.toFixed(2)} · panel ${x.row ? x.row.a.toFixed(2) : 'not shown'}`).join(' | ') + ` · ${Date.now() - t0} ms after the answer · the action’s own round trip ${roundTrip()} (its request to its response)`);
+  return shown;
+}
+
 
 // ── Lane S2: R4's rulings, measured against her profile and the engine, never the page's sentence ──
 /** Her own reading of a dimension, from her profile as the page holds it (the meters' read): { value: a } with a > 0. */
@@ -686,12 +768,18 @@ async function pageAtBoth(label) {
 }
 /** LG's look on the page now (design §9.1), as computed style: the checks every page of the session repeats. */
 async function lgLook(label, { full = false } = {}) {
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2 });   // the hand moves off: no hover state is read as a button's colour
+  await sleep(200);
   const L = await lookNow();
-  const BRAND = [rgb('#A50034'), rgb('#8A0029')];
-  const brandFills = L.fills.filter((f) => BRAND.includes(f.bg)), other = L.fills.filter((f) => !BRAND.includes(f.bg));
-  ok(`${label}: no yellow anywhere and no black bar`, L.yellows.length === 0 && L.bars.length === 0, [...L.yellows.slice(0, 3), ...L.bars.slice(0, 3)].join(' ~ ') || 'none');
-  ok(`${label}: every filled button is the brand colour, white text, 4 px radius`, other.length === 0 && brandFills.every((f) => f.color === 'rgb(255, 255, 255)' && f.radius === '4px') && (!full || brandFills.length > 0),
-    other.length ? other.slice(0, 3).map((f) => `${f.el} “${f.text}” ${f.bg}`).join(' ~ ') : `${brandFills.length} brand button(s)${brandFills.filter((f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '4px').map((f) => ` · ${f.el} ${f.color} r${f.radius}`).join('')}`);
+  // R5's ruling (1281db3): lg.com's action red, #EA1917, as a 32 px pill 42–44 px tall on every button; #A50034 is the wordmark's alone.
+  const ACTION = rgb('#EA1917');
+  const action = L.fills.filter((f) => f.bg === ACTION), other = L.fills.filter((f) => f.bg !== ACTION);
+  const unlike = (f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '32px' || f.h < 42 || f.h > 44;
+  ok(`${label}: no yellow anywhere and no black bar (the charcoal top bar is lg.com’s, R5’s ruling)`, L.yellows.length === 0 && L.bars.length === 0, [...L.yellows.slice(0, 3), ...L.bars.slice(0, 3)].join(' ~ ') || 'none');
+  ok(`${label}: every filled button is lg.com’s action red #EA1917, white text, a 32 px pill 42 to 44 px tall`, other.length === 0 && action.every((f) => !unlike(f)) && (!full || action.length > 0),
+    other.length ? other.slice(0, 3).map((f) => `${f.el} “${f.text}” ${f.bg}`).join(' ~ ') : `${action.length} action button(s)${action.filter(unlike).slice(0, 3).map((f) => ` · ${f.el} “${f.text}” ${f.color} r${f.radius} h${f.h}`).join('')}`);
+  ok(`${label}: every “$X OFF” is in the action red #EA1917`, L.offs.every((o) => o.color === ACTION),
+    `${L.offs.length} on screen${L.offs.filter((o) => o.color !== ACTION).slice(0, 3).map((o) => ` · ${o.el} “${o.text}” ${o.color}`).join('')}`);
   if (full) {
     // Design §10 (M1b): lg.com's warm page, #F0ECE4, under the whole site; a geometric sans close to LG's (Figtree), loaded, first
     // in the site's and the nav's computed family, never Inter; the wordmark in the brand colour.
@@ -814,8 +902,21 @@ async function manualSession() {
   // 4. A search from the header: "washer".
   const Q = 'front load washer';
   await step(`a search from the header: “${Q}”`, async () => {
-    const a = await typeIn('#site .site-header form[data-store-search] input[name="q"]', Q);
+    const before = await engineReading(eventsIn(HANDS).map((e) => e.cap).filter(Boolean).pop());
+    const a = await typeIn('#site .site-header form[data-store-search] input[name="q"]', Q, { settle: false });
     pressed(a, 'the header’s search box');
+    {
+      // By design a search whose results span several categories carries no category, so nothing in her profile rises on it.
+      let s = null;
+      for (let i = 0; i < 60 && !s; i += 1) { s = eventsIn([press]).find((e) => eventName(e) === 'search') || null; if (!s) await sleep(100); }
+      await sleep(400);
+      const after = await engineReading(s && s.cap);
+      const cats = [...new Set(storeMatch(Q).map((p) => p.attributes && p.attributes.category))];
+      const rose = Object.entries(after || {}).flatMap(([d, vals]) => Object.entries(vals || {}).filter(([v, x]) => Number(x) > Number(((before || {})[d] || {})[v] || 0) + 0.004).map(([v]) => `${d} ${v}`));
+      ok(`a search whose results span several categories (${cats.length}) carries no category and moves nothing in her profile`, Boolean(s) && cats.length > 1 && carriedDims(s.data).length === 0 && Boolean(after) && rose.length === 0,
+        s ? `${carriedDims(s.data).map(([d, v]) => `${d} ${v}`).join(', ') || 'no dimension carried'} · rose: ${rose.join(', ') || 'nothing'}` : 'no search event');
+    }
+    await settled();
     const k = press, w = await at();
     route.push(w.path);
     const shown = await evaluate("[...document.querySelectorAll('#view-search #rail-search-grid [data-open], #sheetBody .st-result[data-open]')].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)");
@@ -849,7 +950,9 @@ async function manualSession() {
 
   // 6. A colour: the same model in its other finish, from the buy box's own selector.
   await step('a colour from the buy box', async () => {
-    const a = sibling ? await hand(`#view-product [data-act="pdp-variant"][data-sku="${sibling.sku}"], #view-product #bbOpts [data-open="${sibling.sku}"]`) : null;
+    const a = sibling ? await hand(`#view-product [data-act="pdp-variant"][data-sku="${sibling.sku}"], #view-product #bbOpts [data-open="${sibling.sku}"]`, { settle: false }) : null;
+    await panelFollows('after her colour (select)', [press], (e) => eventName(e) === 'select');
+    await settled();
     pressed(a, `the colour “${sibling ? words(sibling.attributes.finish) : '?'}”`);
     const k = press, w = await at(), box = await evaluate("window.__s1.txt('#buyBox')");
     route.push(w.path);
@@ -863,8 +966,10 @@ async function manualSession() {
   const cartCount = async () => { const c = (await storeNow()).cartCount; return c.length ? Number(c[0]) : null; };
   await step('Add to Cart', async () => {
     const n0 = await cartCount();
-    const a = await hand('#buyBox button, #buyBox [data-act]', { text: 'Add to Cart' });
+    const a = await hand('#buyBox button, #buyBox [data-act]', { text: 'Add to Cart', settle: false });
     pressed(a, 'Add to Cart in the buy box');
+    await panelFollows('after her add to cart', [press], (e) => e.type === 'add_to_cart');
+    await settled();
     const k = press, n1 = await cartCount();
     ok('the cart counts it in the header: one more', n0 !== null && n1 === n0 + 1, `${n0} → ${n1}`);
     const add = evts(k).filter((e) => e.type === 'add_to_cart');
@@ -1040,6 +1145,18 @@ async function manualSession() {
   // The session as a whole: one visitor, and every event in the beat verbs' shapes.
   {
     const all = eventsIn(HANDS);
+    {
+      // The guard (coordinator): every manual event about a product carries the dimension attributes product_view carries for
+      // that product: its product_view's body on the wire, else what productAttrs builds from the feed (product_view's builder).
+      const views = new Map(all.filter((e) => e.type === 'product_view' && e.data.productId).map((e) => [String(e.data.productId), e.data]));
+      const about = all.filter((e) => PRODUCT_EVENTS.has(eventName(e)));
+      const short = about.flatMap((e) => { const sku = e.data.productId ? String(e.data.productId) : null;
+        if (!sku) return [`${eventName(e)}: no product`];
+        const want = views.get(sku) || (row(sku) ? attrsOf(row(sku)) : {});
+        const miss = DIMS.filter((d) => d in want && JSON.stringify(e.data[d]) !== JSON.stringify(want[d]));
+        return miss.length ? [`${eventName(e)} ${sku}: ${miss.join(', ')}`] : []; });
+      ok(`every manual event about a product carries the dimension attributes its product_view carries (${about.length}: ${[...new Set(about.map(eventName))].join(', ')})`, about.length > 0 && short.length === 0, short.slice(0, 4).join(' ~ ') || 'all equal');
+    }
     const caps = [...new Set(all.map((e) => e.cap))];
     const mints = [...requests.values()].filter((r) => HANDS.includes(r.press) && /\/identity\/session$/.test(r.path));
     ok(`one visitor for the whole session: one mint, every one of her ${all.length} events on one session, every one accepted`, mints.length === 1 && caps.length === 1 && all.every((e) => e.status === 200),
@@ -1060,6 +1177,7 @@ async function manualSession() {
     press = 'search-direct'; HANDS.push(press);
     await cdp('Network.clearBrowserCookies');
     await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+    await forgetTab();
     const Q2 = 'front load washer';
     const nav = await cdp('Page.navigate', { url: `${base}/${SLUG}/?q=${encodeURIComponent(Q2)}` });
     await booted();
@@ -1079,6 +1197,258 @@ async function manualSession() {
     ok('and the first click mints her and opens that product', minted.length === 1 && w2.view === 'product' && w2.path === `/oh/product?id=${shown[0]}`, `${minted.length} mint · ${w2.path}`);
     await pageAtBoth('the search page, loaded directly');
   }
+}
+
+
+// ── Lane S2: at phone width, 390 (R5's ruling, 1281db3) ─────────────────────
+// A stranger's /oh/ at 390×844: the presenter's tools are put away entirely (the collapsed director's pill too) unless the
+// address says ?present=1; the deals and Recommended for you each show one item at a time, with a pager she can press.
+const PAGER = '[class*="pager"], [class*="dots"], [class*="pagination"], [class*="m1-car-dot"], [aria-label*="slide" i], [aria-label*="page" i]';
+const CAROUSELS = [['the deals', '#mod-deals', '#slot-deals .p1-deal'], ['Recommended for you', '#mod-for-you', '#rail-for-you [data-open]']];
+const CAROUSEL_READ = (root, items) => `(() => { const { vis, txt } = window.__s1;
+  const R = document.querySelector(${JSON.stringify(root)}); if (!R) return null;
+  const outer = (sel) => [...R.querySelectorAll(sel)].filter((e) => { const up = e.parentElement && e.parentElement.closest(sel); return !up || !R.contains(up); });
+  const all = outer(${JSON.stringify(items)}).filter((e) => vis(e).ok);
+  const full = (e) => { const r = e.getBoundingClientRect(); const seen = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)); return r.width > 0 && seen >= r.width * 0.8; };
+  const pagers = [...R.querySelectorAll(${JSON.stringify(PAGER)})].filter((e) => vis(e).ok && !e.closest('.m1-deal-tabs'));
+  const pager = pagers[0] || null;
+  return { items: all.length, onScreen: all.filter(full).map((e) => e.dataset.cid || e.dataset.open || txt(e).slice(0, 30)),
+    pager: pager ? { cls: (typeof pager.className === 'string' ? pager.className : '').trim().split(' ')[0] || pager.tagName.toLowerCase(), text: txt(pager).slice(0, 40),
+      controls: [...pager.querySelectorAll('button, a, [role="tab"]')].filter((b) => vis(b).ok).length || (pager.matches('button, a') ? 1 : 0) } : null };
+})()`;
+async function phoneWidth() {
+  console.log('\n── At phone width, 390: the director put away, the deals and the rail one at a time (R5’s ruling)');
+  const toPhone = async (url) => {
+    await cdp('Page.navigate', { url: 'about:blank' });
+    await sleep(300);
+    await settled(500, 8000);
+    await cdp('Network.clearBrowserCookies');
+    await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+    await forgetTab();
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await cdp('Page.navigate', { url });
+    const up = await booted();
+    await evaluate(inPage(pageHelpers));
+    await sleep(1200);
+    await imagesSettled();
+    return up;
+  };
+  const tools = () => evaluate("(() => { const v = window.__s1.vis; const pill = ['#dockRail', '.dock-rail', '#dockOpen', '#dockNext'].some((s) => v(s).ok); return { pill, machine: v('#machine').ok, director: v('.director').ok, overflow: document.documentElement.scrollWidth - innerWidth }; })()");
+  press = 'phone-390';
+  const up = await toPhone(`${base}/${SLUG}/`);
+  const T = await tools();
+  ok('at 390 a stranger’s /oh/ shows the store alone: the collapsed director’s pill, the machine panel and the director bar are not on screen', up && !T.pill && !T.machine && !T.director,
+    `pill ${T.pill} · machine ${T.machine} · director ${T.director}`);
+  ok('and the page does not scroll sideways at 390: the carousels scroll inside themselves', T.overflow <= 1, `overflow ${T.overflow}px`);
+  for (const [name, root, items] of CAROUSELS) {
+    const C = await evaluate(CAROUSEL_READ(root, items));
+    ok(`${name} at 390 is a one-at-a-time carousel with a pager: one item on screen of ${C ? C.items : '?'}, a pager beside it`,
+      Boolean(C && C.items >= 2 && C.onScreen.length === 1 && C.pager && (C.pager.controls >= 1 || /\d+\s*\/\s*\d+/.test(C.pager.text))),
+      C ? `on screen ${C.onScreen.join(', ') || 'none'} · pager ${C.pager ? `${C.pager.cls} (${C.pager.controls} control(s)${C.pager.text ? `, “${C.pager.text}”` : ''})` : 'none'}` : 'not on the page');
+    if (C && C.pager && C.pager.controls >= 1 && C.onScreen.length === 1) {
+      // The pager works by hand: its next control (an arrow named next, else its second control) brings another item on screen.
+      const sel = `${root} ${PAGER.split(', ').map((s) => `${s} button, ${s} [role="tab"]`).join(', ')}`;
+      const named = await hand(sel, { text: 'next', settle: false });
+      const a = named && named.ok ? named : await hand(sel, { nth: 1, settle: false });
+      await sleep(900);
+      const C2 = await evaluate(CAROUSEL_READ(root, items));
+      ok(`and its pager works by hand: pressing it brings another item on screen, still one at a time`, Boolean(a && a.ok && C2 && C2.onScreen.length === 1 && C2.onScreen[0] !== C.onScreen[0]),
+        `${a && a.ok ? `pressed “${a.label}”` : (a && a.why) || 'nothing pressed'} · ${C.onScreen[0]} → ${C2 ? C2.onScreen.join(', ') || 'none' : '?'}`);
+    }
+  }
+  await shot('S2-390-home');
+  press = 'phone-390-present';
+  await toPhone(`${base}/${SLUG}/?present=1`);
+  const P = await tools();
+  ok('and with ?present=1 the presenter’s tools are on screen at 390', P.pill || P.machine || P.director, `pill ${P.pill} · machine ${P.machine} · director ${P.director}`);
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+}
+
+
+/** The panel by dimension (M3: config.signals.byDimension): each row's dimension, leading value and reading, and its second. */
+const DIM_ROWS = `(() => { const { txt } = window.__s1;
+  const own = (el) => (el ? [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\\s+/g, ' ').trim() : '');
+  const rows = [...document.querySelectorAll('#vectors .vecrow[data-dim]')].map((r) => { const v2 = r.querySelector('.vec2'); const m = v2 ? /^(.*)\\s([\\d.]+)$/.exec(txt(v2)) : null;
+    return { dim: r.dataset.dim, value: own(r.querySelector('.vectop span')), a: Number(txt(r.querySelector('.vectop b'))), second: m ? { value: m[1], a: Number(m[2]) } : null }; });
+  const jn = document.getElementById('justNow');
+  const items = jn ? [...jn.querySelectorAll('li')].map((li) => ({ value: txt(li.querySelector('b')), text: txt(li) })) : [];
+  return { rows, just: { head: jn ? txt(jn.querySelector('.jn-k')) : '', items }, vector: (window.__oh && window.__oh.state && window.__oh.state.lastVector) || null };
+})()`;
+async function signalsWalk() {
+  console.log('\n── Her signals, by hand: one click registers at once; three washers after two TVs lead the panel; home leads with laundry');
+  const HANDS2 = [];
+  const step = (name) => { press = `signals · ${name}`; HANDS2.push(press); };
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(300);
+  await settled(500, 8000);
+  await cdp('Network.clearBrowserCookies');
+  await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+  await forgetTab();
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+  await cdp('Page.navigate', { url: `${base}/${SLUG}/?debug=1&present=0` });
+  await booted();
+  await evaluate(inPage(pageHelpers));
+  await sleep(1200);
+  const reg = anchor.registry || {}, K = Number(reg.K) || 1.8, wpv = Number((reg.weights || {}).product_view) || 1, oneTouch = wpv / (wpv + K);
+  const cap = () => { const e = eventsIn(HANDS2); return e.length ? e[e.length - 1].cap : null; };
+  const pv = async (sku) => { for (let i = 0; i < 60; i += 1) { const e = eventsIn([press]).find((x) => x.type === 'product_view' && String(x.data.productId) === sku); if (e) { for (let j = 0; j < 40; j += 1) { const r = [...requests.values()].filter((q) => q.press === press && q.path === '/realtime/action').pop(); if (!r || r.status !== null) break; await sleep(50); } return e; } await sleep(100); } return null; };
+  const at = async () => path((await storeNow()).address);
+  // Two TVs from the grid, the browser's Back between them.
+  step('TVs'); await hand('#site .site-header #mainnav [data-nav="tvs"]');
+  const tvs = (await evaluate("[...document.querySelectorAll('#view-tvs #rail-tv-grid [data-open]')].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)")).slice(0, 2);
+  for (const [i, sku] of tvs.entries()) {
+    step(`TV ${i + 1}`);
+    await hand(`#view-tvs #rail-tv-grid [data-open="${sku}"]`, { settle: false });
+    const e = await pv(sku);
+    if (i === 0) {
+      // One click registers at once: within two seconds of the view's answer, with no press, the room it carried reads on the
+      // panel and in the page's vector what the engine holds, which is the registry's one-touch reading, w / (w + K).
+      const room = e && e.data.room, t0 = Date.now(), engine = await engineReading(e && e.cap);
+      const want = engine && engine.room ? Number(engine.room[room] || 0) : 0;
+      let D = null, hit = false;
+      do { D = await evaluate(DIM_ROWS); const r = D.rows.find((x) => x.dim === 'room'); hit = Boolean(r && r.value === room && Math.abs(r.a - want) <= 0.011 && D.vector && D.vector.room && Math.abs(Number(D.vector.room[room] || 0) - want) <= 0.02); if (hit) break; await sleep(200); } while (Date.now() - t0 < 2000);
+      const r = D.rows.find((x) => x.dim === 'room');
+      ok(`one click registers at once: the first view’s room (${room}) reads on the panel within two seconds what the engine holds, the one-touch reading ${oneTouch.toFixed(2)}`,
+        hit && Math.abs(want - oneTouch) <= 0.02, `engine ${want.toFixed(2)} · panel ${r ? `${r.value} ${r.a.toFixed(2)}` : 'no room row'} · ${Date.now() - t0} ms`);
+    }
+    await settled();
+    await browserBack();
+  }
+  // The Laundry menu's own "Washers", then three washers from that grid, Back between them.
+  step('the Laundry menu');
+  await hand('#site .site-header #mainnav [data-menu="laundry"]');
+  await hand('#menu-laundry [data-ctl^="menu-head-washers"]');
+  const grid = (await evaluate("[...document.querySelectorAll('#stage > .view:not([hidden]) .rail [data-open]')].filter((e) => window.__s1.vis(e).ok).map((e) => e.dataset.open)"))
+    .filter((sku) => { const p = row(sku); return p && p.attributes && p.attributes.category === 'washers'; }).slice(0, 3);
+  ok(`the Laundry menu’s Washers opens a grid of washers to open (${grid.length})`, grid.length === 3, `${await at()} · ${grid.join(', ')}`);
+  for (const [i, sku] of grid.entries()) {
+    step(`washer ${i + 1}`);
+    await hand(`#stage > .view:not([hidden]) .rail [data-open="${sku}"]`, { settle: false });
+    const e = await pv(sku);
+    if (i === 0) {
+      // The "just now" strip names what the view moved, within two seconds: washers · category, with the engine's score.
+      const t0 = Date.now(), engine = await engineReading(e && e.cap);
+      const want = engine && engine.category ? Number(engine.category.washers || 0) : 0;
+      let D = null, item = null;
+      const scoreOk = (x) => { const m = /\bcategory\b\D*?(\d+\.\d+)/i.exec(x.text); return Boolean(m) && Math.abs(Number(m[1]) - want) <= 0.011; };
+      do { D = await evaluate(DIM_ROWS); item = D.just.items.find((x) => x.value === 'washers' && /\bcategory\b/i.test(x.text)); if (item && scoreOk(item)) break; await sleep(200); } while (Date.now() - t0 < 2000);
+      const cat = D.rows.find((x) => x.dim === 'category') || null;
+      ok('and after that one washer the category row shows tvs leading, washers second', Boolean(cat && cat.value === 'tvs' && cat.second && cat.second.value === 'washers'),
+        cat ? `category: ${cat.value} ${cat.a.toFixed(2)}${cat.second ? ` · ${cat.second.value} ${cat.second.a.toFixed(2)}` : ''}` : 'no category row');
+      ok(`after a washer view following the TVs, the “just now” strip names washers · category with its score, ${want.toFixed(2)}, within two seconds`,
+        Boolean(item) && scoreOk(item), `“${D.just.head}” ${D.just.items.slice(0, 3).map((x) => x.text).join(' | ').slice(0, 160)} · ${Date.now() - t0} ms`);
+    }
+    await settled();
+    await browserBack();
+  }
+  {
+    // Three washers after two TVs (about twenty seconds, the memory sixty): the panel's category row leads with washers over
+    // tvs and its room row with laundry-room over living-room, as the engine holds them.
+    const engine = await engineReading(cap());
+    const D = await evaluate(DIM_ROWS);
+    const rowOf = (dim) => D.rows.find((x) => x.dim === dim) || null;
+    const leads = (dim, top, under) => { const r = rowOf(dim); return Boolean(r && r.value === top && (!r.second || r.second.value === under || Number(r.second.a) <= r.a)) && engine && engine[dim] && Number(engine[dim][top] || 0) > Number(engine[dim][under] || 0); };
+    const show = (dim) => { const r = rowOf(dim); return r ? `${dim}: ${r.value} ${r.a.toFixed(2)}${r.second ? ` over ${r.second.value} ${r.second.a.toFixed(2)}` : ''}` : `${dim}: no row`; };
+    ok('three washers after two TVs: the panel’s category row reads washers above tvs, and the engine holds the same', leads('category', 'washers', 'tvs'), show('category'));
+    ok('and its room row reads laundry-room above living-room', leads('room', 'laundry-room', 'living-room'), show('room'));
+  }
+  // Home, by the wordmark: the engine's next homepage answer leads with laundry (the hero's or the four's first piece).
+  step('home');
+  await hand('#site .site-header a.wordmark, #site .site-header [data-ctl="home"]');
+  await sleep(SETTLE_MS);
+  const ans = await answerIn([press], 'home', cap());
+  const first = (slot) => (ans ? ans.body.decisions.filter((d) => d.slot === slot).sort((a, b) => a.order - b.order)[0] : null);
+  const roomOfCid = (cid) => (((OPEN_PIECES.get(cid) || {}).tags || {}).room || []);
+  const lead = ['hero', 'deals'].map((slot) => [slot, first(slot)]).filter(([, d]) => d);
+  ok('and the next homepage answer leads with laundry: its hero or its first deal is the laundry room’s, read off the engine’s answer', lead.some(([, d]) => roomOfCid(d.customerContentId).includes('laundry-room')),
+    lead.map(([slot, d]) => `${slot} ${d.customerContentId} (${roomOfCid(d.customerContentId).join(', ') || 'no room'})`).join(' · ') || 'no answer for home');
+}
+
+
+// ── Lane S2: one visitor across full page loads ──────────────────────────────
+/** The userId each of her events carried in a press (the action's body), in order. */
+const userIdsIn = (key) => [...requests.values()].filter((r) => r.press === key && r.path === '/realtime/action').map((r) => { try { return JSON.parse(r.body).userId || null; } catch { return null; } }).filter(Boolean);
+const mintsIn = (key) => [...requests.values()].filter((r) => r.press === key && /\/identity\/session$/.test(r.path)).length;
+const cookieOf = async (name) => { const host = new URL(base).hostname; const c = await cdp('Network.getAllCookies'); return ((c.cookies || []).find((x) => x.name === name && x.domain.replace(/^./, '') === host) || {}).value || null; };
+const sameCookie = (a, b) => (a ? b === a : !b);
+/** A second tab in the same browser profile, on its own DevTools connection, with its API requests recorded. */
+async function openTab(url) {
+  const t = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
+  const ws = new WebSocket(t.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error('the new tab’s DevTools socket did not open')); });
+  let id = 0; const pending = new Map(); const seen = [];
+  ws.onmessage = (m) => { const msg = JSON.parse(m.data);
+    if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg.result || {}); pending.delete(msg.id); return; }
+    if (msg.method === 'Network.requestWillBeSent') { let p = ''; try { p = new URL(msg.params.request.url).pathname; } catch { /* not a URL */ }
+      if (p === '/realtime/action' || /\/identity\/session$/.test(p)) seen.push({ path: p, body: msg.params.request.postData || null }); } };
+  const send = (method, params = {}) => new Promise((resolve) => { const i = ++id; pending.set(i, resolve); ws.send(JSON.stringify({ id: i, method, params })); });
+  await send('Network.enable'); await send('Page.enable'); await send('Runtime.enable');
+  await send('Page.navigate', { url });
+  return { seen, send, close: async () => { try { ws.close(); } catch { /* closing */ } await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => null); } };
+}
+async function persistenceWalk() {
+  console.log('\n── One visitor across full page loads: a reload, a direct product address, a new tab');
+  const washers = rowsAll.filter((p) => p.family === 'front-load-washer' && p.cta === 'cart' && p.inStock !== false && Number(p.salePrice) > 0).slice(0, 3);
+  const [A, B, C] = washers;
+  const K = Number((anchor.registry || {}).K) || 1.8;
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(300);
+  await settled(500, 8000);
+  await cdp('Network.clearBrowserCookies');
+  // No Storage.clearDataForOrigin here (coordinator, hosted): a clear of every store, the image cache included, can still be in
+  // flight when load 1 writes her record. The cookies are cleared above; forgetTab clears and settles both web stores itself.
+  const fresh = await forgetTab();
+  ok('before load 1 the tab’s storage is writable, empty and settled: a probe written after the clear is still there a second later, and nothing else', fresh.settled, `${fresh.tries} attempt(s)`);
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+  const addr = (p) => `${base}/${SLUG}/product?id=${encodeURIComponent(p.sku)}&debug=1&present=0`;
+  /** One full load (a navigation or a reload): booted, its product_view answered, then her washers reading on the panel and at the engine. */
+  const loadOnce = async (key, how) => {
+    press = key;
+    if (how === 'reload') await cdp('Page.reload', { ignoreCache: true }); else await cdp('Page.navigate', { url: how });
+    await booted();
+    const readyAt = Date.now(), decided = await waitFor("/decided live|error|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
+    const keptAtReady = await evaluate("Object.keys(localStorage).some((k) => k.startsWith('opt_shopper_session:'))");
+    await evaluate(inPage(pageHelpers));
+    let evt = null;
+    for (let i = 0; i < 100 && !evt; i += 1) { evt = eventsIn([key]).find((e) => e.type === 'product_view') || null; if (!evt) await sleep(100); }
+    for (let i = 0; i < 60; i += 1) { const r = [...requests.values()].filter((q) => q.press === key && q.path === '/realtime/action').pop(); if (!r || r.status !== null) break; await sleep(50); }
+    const engine = await engineReading(evt && evt.cap);
+    const want = engine && engine.category ? Number(engine.category.washers || 0) : 0;
+    const t0 = Date.now(); let D = null, panel = null;
+    do { D = await evaluate(DIM_ROWS); const r = D.rows.find((x) => x.dim === 'category'); panel = r && r.value === 'washers' ? r.a : null; if (panel !== null && Math.abs(panel - want) <= 0.011) break; await sleep(200); } while (Date.now() - t0 < 2000);
+    const mine = [...requests.entries()].filter(([, r]) => r.press === key).sort((x, y) => x[1].at - y[1].at);
+    const mintAt = mine.filter(([, r]) => /\/identity\/session$/.test(r.path)).map(([id]) => ANSWERED.get(id) || null).find(Boolean) || null;
+    const firstAction = mine.find(([, r]) => r.path === '/realtime/action');
+    const probe = mine.find(([, r]) => r.path === '/realtime/reflex' && (!firstAction || r.at <= firstAction[1].at)) || null;
+    return { ids: userIdsIn(key), mints: mintsIn(key), cookie: await cookieOf('opt_user_id'), engine: want, panel, cap: evt ? evt.cap : null, mintAt, decided, keptAtReady, readyMs: Date.now() - readyAt,
+      probe: probe ? { status: probe[1].status, cap: header(probe[1], 'X-Shopper-Session') || null, at: probe[1].at } : null };
+  };
+  const one = await loadOnce('persist · a direct product address', addr(A));
+  const two = await loadOnce('persist · a full reload', 'reload');
+  const three = await loadOnce('persist · another product address', addr(B));
+  const probeSays = (x) => (x.probe
+    ? `resume probe GET /realtime/reflex → ${x.probe.status === null ? 'no answer' : x.probe.status}, ${x.probe.cap && x.probe.cap === one.cap ? 'with load 1’s capability' : x.probe.cap ? 'with another capability' : 'with no capability'}${one.mintAt ? `, ${x.probe.at - one.mintAt} ms after load 1’s mint answered` : ''}${x.probe.status === 401 || x.probe.status === 403 ? ': the engine refused a kept session' : ''}`
+    : 'no resume probe on the wire: nothing kept was found in storage at this load');
+  info(`the page’s resume, read off the wire: the reload, ${probeSays(two)} · the direct load, ${probeSays(three)} · at each load’s own ready (“decided live”) her record was ${[one, two, three].map((x) => (x.decided ? (x.keptAtReady ? 'kept' : 'not yet kept') : 'never ready')).join(', ')}`);
+  const same = (x) => x.ids.length > 0 && one.ids.length > 0 && x.ids.every((u) => u === one.ids[0]);
+  ok('a full reload continues the same visitor: the same userId on her events, the same opt_user_id cookie, and no new identity call', same(two) && sameCookie(one.cookie, two.cookie) && two.mints === 0,
+    `userId ${same(two) ? 'the same' : 'changed'} · cookie ${one.cookie ? (two.cookie === one.cookie ? 'the same' : 'changed') : 'none set by the engine on this route'} · ${two.mints} new identity call(s) · ${probeSays(two)}`);
+  ok('and a direct load of another product address continues her too', same(three) && sameCookie(one.cookie, three.cookie) && three.mints === 0,
+    `userId ${same(three) ? 'the same' : 'changed'} · cookie ${one.cookie ? (three.cookie === one.cookie ? 'the same' : 'changed') : 'none set by the engine on this route'} · ${three.mints} new identity call(s) · ${probeSays(three)}`);
+  const touch = (n) => n / (n + K);
+  const steps = [one, two, three];
+  ok(`her readings accumulate across those loads, on the panel as the engine holds them: washers · category ${steps.map((x) => (x.panel === null ? '—' : x.panel.toFixed(2))).join(' → ')} (one, two and three touches: ${[1, 2, 3].map((n) => touch(n).toFixed(2)).join(', ')})`,
+    one.mints === 1 && steps.every((x, i) => x.panel !== null && Math.abs(x.panel - x.engine) <= 0.011 && Math.abs(x.engine - touch(i + 1)) <= 0.06) && one.engine < two.engine && two.engine < three.engine,
+    (one.mints === 1 ? '' : `the first load was not a fresh visitor (${one.mints} identity calls) · `) + steps.map((x, i) => `${i + 1}: engine ${x.engine.toFixed(2)} panel ${x.panel === null ? 'none' : x.panel.toFixed(2)}`).join(' · '));
+  // A new tab in the same profile: its first event about C carries her userId, with no new identity call.
+  const tab = await openTab(addr(C));
+  let firstAction = null;
+  for (let i = 0; i < 150 && !firstAction; i += 1) { firstAction = tab.seen.find((x) => x.path === '/realtime/action' && x.body) || null; if (!firstAction) await sleep(100); }
+  const tabUser = firstAction ? (() => { try { return JSON.parse(firstAction.body).userId || null; } catch { return null; } })() : null;
+  const tabMints = tab.seen.filter((x) => /\/identity\/session$/.test(x.path)).length;
+  await tab.close();
+  ok('and a new tab in the same profile continues her: its first event carries her userId, with no new identity call', Boolean(tabUser) && tabUser === one.ids[0] && tabMints === 0,
+    `${tabUser ? (tabUser === one.ids[0] ? 'the same userId' : 'another userId') : 'no event seen'} · ${tabMints} identity call(s) in the new tab`);
 }
 
 // ── Compare (the kit's widget): real pixels on every press ───────────────────
@@ -1159,6 +1529,7 @@ try {
   press = 'boot-store';
   await cdp('Network.clearBrowserCookies');
   await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+  await forgetTab();
   await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
   const bootNav = await cdp('Page.navigate', { url: `${base}/${SLUG}/` });
   const upBoot = await booted();
@@ -1240,12 +1611,34 @@ try {
   }
   await pageAtBoth('the boot page');
   await shot('S2-00-boot-store');
+  // The manual session: the same boot page, reloaded with the debug hook (window.__oh) and the director kept collapsed (?present=0).
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(300);
+  await settled(500, 8000);
+  await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+  await forgetTab();
+  await cdp('Page.navigate', { url: `${base}/${SLUG}/?debug=1&present=0` });
+  await booted();
+  await evaluate(inPage(pageHelpers));
+  await sleep(1500);
+  await imagesSettled();
   await manualSession();
+  await persistenceWalk().catch((error) => checks.fail(`one visitor across full page loads: the walk threw: ${error.message}`));
+  await signalsWalk().catch((error) => checks.fail(`her signals, by hand: the walk threw: ${error.message}`));
+  await phoneWidth().catch((error) => checks.fail(`at phone width, the checks threw: ${error.message}`));
 
   walkBlock: { if (ONLY_STORE) { info('--only store: the walk is not run'); break walkBlock; }
   // ── The walk ───────────────────────────────────────────────────────────────
   const url = `${base}/${SLUG}/?debug=1`;
   console.log(`\n── The page loads: ${url}`);
+  // The walk starts from a cleared profile: the store part's visitor is kept in this browser (M3) and would be resumed.
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await sleep(300);
+  await settled(500, 8000);
+  await cdp('Network.clearBrowserCookies');
+  await cdp('Storage.clearDataForOrigin', { origin: new URL(base).origin, storageTypes: 'all' });
+  await forgetTab();
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
   press = 'boot';
   const up = await load(url);
   const boot = await snap();
@@ -1695,13 +2088,25 @@ try {
         // The fade is the published memory's own projection: a = R / (R + K), R = aK / (1 − a), decaying by e^(−t/τ) on the dimension.
         const reg = anchor.registry || {}, K = Number(reg.K) || 1.8, t = days * 86400000;
         const tauRoom = Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs) || 1209600000;
+        const tauLabel = (ms) => (ms < 120000 ? `${Math.round(ms / 1000)} seconds` : ms < 7200000 ? `${Math.round(ms / 60000)} minutes` : `${Math.round(ms / 86400000)} days`);
         const carry = (a) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauRoom); return r / (r + K); };
         // The page shows two decimals of an unrounded dial: the projection must hold somewhere in the interval the displayed
         // reading allows (b ± 0.005; the projection rises with b), within the display's own rounding of the result.
         const fits = (x) => Boolean(x) && carry(x.b - 0.005) - 0.0051 <= x.a && x.a <= carry(x.b + 0.005) + 0.0051
           && [x.b - 0.005, x.b, x.b + 0.005].some((b) => Math.abs(Math.round(((b - carry(b)) / b) * 100) - x.fall) <= 1);
-        ok(`each fade is the published memory’s projection over ${days} days (τ ${Math.round(tauRoom / 86400000)} days on room, K ${K})`, fits(tv) && fits(laundry),
+        ok(`each fade is the published memory’s projection over ${days} days (τ ${tauLabel(tauRoom)} on room, K ${K})`, fits(tv) && fits(laundry),
           tv && laundry ? `living room ${tv.b} → projected ${carry(tv.b).toFixed(3)} · laundry room ${laundry.b} → projected ${carry(laundry.b).toFixed(3)}` : 'no dials read');
+        if (tauRoom < 3600000) {
+          // Beat 13 on the demo's dial (D1: τ 60 s on the page-driving dimensions; M1's wording): it says the dial is compressed,
+          // with the registry's own τ and K, and that her room signals are gone; and they are: every room below θin.
+          const thetaIn = Number(reg.thetaIn) || 0.6;
+          const says = `On the demo’s dial (τ ${tauLabel(tauRoom)} on room, K ${K}; production’s dial runs days) her room signals are gone within minutes`;
+          ok(`on the demo’s compressed dial beat 13 says so: “${says}”`, has(S.cont.text, says), S.cont.text.slice(0, 200));
+          const below = [tv, laundry].every((x) => x && x.a < thetaIn);
+          ok(`and it is true: every room is below the entry threshold (θin ${thetaIn.toFixed(2)}) ${days} days on, and the beat says the continue hero rests on her shortlist and the decisions trail`,
+            below && has(S.cont.text, `every room below the entry threshold (θin ${thetaIn.toFixed(2)})`) && has(S.cont.text, 'rests on her shortlist and the decisions trail, not on her room dials'),
+            `living room ${tv ? tv.a : '?'} · laundry room ${laundry ? laundry.a : '?'} · θin ${thetaIn}`);
+        }
         // The comparative claim appears only when the readings differ.
         const differ = Boolean(tv && laundry) && tv.fall !== laundry.fall;
         const said = `${S.cont.text} ${S.line}`;
@@ -1815,11 +2220,21 @@ try {
         const strangerCap = stranger ? header(stranger[1], 'X-Shopper-Session') : null;
         const strangerReads = meters.filter(([, r]) => r.at < phoneAt && header(r, 'X-Shopper-Session') === strangerCap);
         const personReads = meters.filter(([, r]) => r.at > phoneAt && header(r, 'X-Shopper-Session') === capB);
+        const laptopReads = meters.filter(([, r]) => r.at > phoneAt && header(r, 'X-Shopper-Session') === capA);
         if (strangerReads.length && personReads.length) {
-          const before = lasting(((json(await bodyOf(strangerReads[strangerReads.length - 1][0])) || {}).affinity || {}).dims);
-          const after = lasting(((json(await bodyOf(personReads[personReads.length - 1][0])) || {}).affinity || {}).dims);
-          ok('her phone’s own meters: a stranger’s, none of the laptop’s lasting taste; then, signed in, the laptop’s three strongest lasting signals',
-            after.length === 3 && !after.some((k) => before.includes(k)), `${before.join(', ') || 'none'} → ${after.join(', ')}`);
+          // At the moment of the link the page reads both sessions at once (P3): the phone's first read as the person and the
+          // laptop's beside it. Her three strongest values across every dimension, whatever their memory, must be the same.
+          const dimsOf = async (id) => ((json(await bodyOf(id)) || {}).affinity || {}).dims;
+          const before = strongest(await dimsOf(strangerReads[strangerReads.length - 1][0]));
+          const after = strongest(await dimsOf(personReads[0][0]));
+          const beside = laptopReads.length ? strongest(await dimsOf(laptopReads[0][0])) : [];
+          const sameSet = (x, y) => x.length > 0 && [...x].sort().join('|') === [...y].sort().join('|');
+          ok('her phone’s own meters: a stranger’s, none of the laptop’s taste; then, at the link, the three strongest values across every dimension, read at the same moment through the phone’s and the laptop’s sessions, the same',
+            after.length === 3 && sameSet(after, beside) && !after.some((k) => before.includes(k)),
+            `stranger ${before.join(', ') || 'none'} → phone ${after.join(', ') || 'none'} · laptop ${beside.join(', ') || (laptopReads.length ? 'none' : 'not read at the link')}`);
+          const shortTau = after.some((k) => tau(k.split(':')[0]) < 86400000);
+          ok(`and the strip labels them “strongest at sign-in”${shortTau ? ', with “memory compressed for the room; production runs days” (a named dimension’s τ is under a day)' : ''}`,
+            has(P.strip, 'strongest at sign-in') && (!shortTau || has(P.strip, 'memory compressed for the room; production runs days')), P.strip.slice(0, 220));
           ok('and the director’s sentence says what the meters say', has(S.line, 'the laptop’s three strongest signals lead here too'), S.line.slice(0, 160));
         } else ok('her phone’s meters were read before and after its sign-in', false, `${strangerReads.length} · ${personReads.length}`);
         P3D.base = await p3Report(true);
@@ -1964,7 +2379,8 @@ try {
       try { const b = await cdp('Network.getResponseBody', { requestId: id }); const body = JSON.parse(b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : b.body); read += 1;
         if (body.regional && (body.regional.dimensions || []).includes('priceTier')) hits.push(`/sort ${id}: regional.dimensions ${body.regional.dimensions.join(',')}`); } catch { /* evicted */ }
     }
-    ok(`no regional block the page received names priceTier: ${read} POST /sort answers read off the wire`, read > 0 && hits.length === 0, hits.slice(0, 3).join(' ~ '));
+    if (read === 0 && ONLY_STORE) info('no regional block read: the store part navigates away from its pages, so their /sort bodies are gone (the full run reads them)');
+    else ok(`no regional block the page received names priceTier: ${read} POST /sort answers read off the wire`, read > 0 && hits.length === 0, hits.slice(0, 3).join(' ~ '));
   }
 } catch (error) {
   checks.fail(`the walk threw at press ${press}: ${error.message}`);
