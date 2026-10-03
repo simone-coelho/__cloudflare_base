@@ -222,7 +222,7 @@ export class FeatureVariableManager {
 
     try {
       // Lane E4: on the per-event path, the records this isolate listed for this shopper in the
-      // last OVERRIDES_LIST_MS; every other read (the override routes, analytics) asks KV as before.
+      // last OVERRIDES_LIST_MS; every other read (a direct getUserOverrides, analytics) asks KV as before.
       const memory = this.overrideMemory(), slot = `${this.tenant}\n${userId}`, started = Date.now(), held = memory?.lists.get(slot);
       let records: FeatureVariableOverride[];
       if (remembered && held && Number.isFinite(started) && started >= held.at && started - held.at < OVERRIDES_LIST_MS) records = structuredClone(held.records);

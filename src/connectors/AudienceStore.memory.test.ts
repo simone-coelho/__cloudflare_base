@@ -111,7 +111,7 @@ describe('E4 a shopper\'s feature-variable overrides', () => {
     expect((await probes()).hero_content?.source).not.toBe('override');
     now += OVERRIDES_LIST_MS;
     await probes();
-    // Every other read (the override routes, analytics) still asks KV each time.
+    // Every other read (a direct getUserOverrides, analytics) still asks KV each time.
     const before = cache.calls.length;
     await new FeatureVariableManager(e, 'oh').getUserOverrides('visitor');
     expect(cache.calls.slice(before).filter(c => c.startsWith('list:'))).toHaveLength(1);

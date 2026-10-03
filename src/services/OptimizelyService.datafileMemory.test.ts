@@ -11,6 +11,8 @@ import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { FAILED_DATAFILE_MS, FRESH_DATAFILE_MS, OptimizelyService, forgetRememberedDatafiles } from './OptimizelyService';
 import { FeatureVariableManager, forgetListedOverrides } from './FeatureVariableManager';
 import { SessionAccessError } from '@/identity/sessionCapability';
+import { RetentionUnavailable, retentionBirth } from '@/retention';
+import { pinRetention, runOwnerOperation } from '@/identity/sessionAuthority';
 
 class KV {
   data = new Map<string, string>(); calls: string[] = [];
@@ -26,6 +28,8 @@ function customer(): { env: Env; cache: KV } {
   const env = {
     DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', CACHE: cache,
     TENANTS: JSON.stringify({ provisioned: ['oh'] }),
+    // A one-second profile lifetime, so a shopper's pinned stamp can lapse while a fetch is in flight.
+    RETENTION: JSON.stringify({ version: 1, tenants: { oh: { profile: { id: 'e4-profile', revision: 1, durationMs: 1_000, basis: 'admitted', renewal: 'new-record-only' } } } }),
     TENANT_CONNECTORS: JSON.stringify({ version: 1, tenants: { oh: { fx: { sdkKeyRef: 'CONNECTOR_SECRET_E4_FX', datafileUrl: DATAFILE_HOST + '{sdkKey}.json',
       eventsUrl: 'https://logx.optimizely.com/v1/events', accountId: 'account-e4', projectId: 'project-e4', identityNamespace: 'e4' } } } }),
     CONNECTOR_SECRET_E4_FX: 'e4-synthetic-sdk-key',
@@ -50,9 +54,10 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('E4 the Feature Experimentation datafile', () => {
-  it('is never fetched, read or logged for a tenant with no key, which degrades at once', async () => {
+  it('is never fetched, read or logged for a tenant with no key, whose decisions and probes answer as before', async () => {
     const fetcher = vi.fn(async () => Response.json(datafile(1))); vi.stubGlobal('fetch', fetcher);
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const cache = new KV(), env = { DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', CACHE: cache,
       TENANTS: JSON.stringify({ provisioned: ['oh'] }) } as unknown as Env;
     expect(new OptimizelyService(env, 'oh').hasFxKey()).toBe(false);
@@ -61,12 +66,25 @@ describe('E4 the Feature Experimentation datafile', () => {
       expect(Object.keys(decisions)).toEqual(CATALOG_FLAG_KEYS);
       for (const d of Object.values(decisions)) expect(d).toMatchObject({ enabled: false, variationKey: null, reason: 'fallback' });
     }
-    expect(fetcher).not.toHaveBeenCalled(); expect(cache.calls).toEqual([]);
-    expect(errors.mock.calls.flat().filter(m => String(m).includes('datafile'))).toEqual([]);
-    // The legacy demo with no real key and the FX decision source switched on: nothing fetched either.
+    // The feature-variable probes an update action runs: the same answers the inert client always gave
+    // (not enabled, no variables), and the overrides list still read as before.
+    const session = { userId: 'visitor', segments: [], attributes: {}, metadata: { firstSeen: 0, lastSeen: 0, sessionCount: 1, engagementScore: 0, lastSegmentUpdate: 0 },
+      preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true } } as never;
+    const probes = await new FeatureVariableManager(env, 'oh').getSessionFeatureVariables(session);
+    expect(Object.keys(probes)).toHaveLength(8);
+    for (const p of Object.values(probes)) expect(p).toMatchObject({ enabled: false, variables: {}, source: 'optimizely' });
+    const service = new OptimizelyService(env, 'oh');
+    expect([await service.getVariation('x', 'visitor'), await service.isFeatureEnabled('x', 'visitor'), await service.getFeatureVariable('x', 'y', 'visitor'),
+      await service.getAllFeatureVariables('x', 'visitor'), await service.decide('x', 'visitor'), await service.track('x', 'visitor')]).toEqual([null, false, null, {}, null, undefined]);
+    expect(fetcher).not.toHaveBeenCalled(); expect(cache.calls.filter(c => !c.startsWith('list:t:oh:override:'))).toEqual([]);
+    // Nothing at all is logged: the four lines the hosted tail showed for this tenant are gone.
+    expect(errors).not.toHaveBeenCalled(); expect(logs).not.toHaveBeenCalled();
+    // The legacy demo with no real key and the FX decision source switched on: nothing fetched or logged either,
+    // and its inert client answers as it always did ('control' for a variation, the demo's own mock).
     const legacy = { DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'optimizely', OPTIMIZELY_SDK_KEY: 'your-sdk-key-here', CACHE: new KV() } as unknown as Env;
     expect(Object.keys(await getConnectors(legacy).decisions.decideAll(CATALOG_FLAG_KEYS, 'visitor', [], {}))).toEqual(CATALOG_FLAG_KEYS);
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(await new OptimizelyService(legacy).getVariation('x', 'visitor')).toBe('control');
+    expect(fetcher).not.toHaveBeenCalled(); expect(errors).not.toHaveBeenCalled(); expect(logs).not.toHaveBeenCalled();
   });
 
   it('remembers a failed fetch for a minute: later actions degrade at once, the same way, then it is asked again', async () => {
@@ -109,7 +127,62 @@ describe('E4 the Feature Experimentation datafile', () => {
     expect(datafileFetches(fetcher)).toBe(4);
   });
 
-  it('never remembers an authority refusal raised while fetching, and keeps environments apart', async () => {
+  it('never remembers what the owner fence raises around one shopper\'s fetch, whatever its type (review R6, finding 1)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { env } = customer();
+    let fetches = 0, expiresAt = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      fetches += 1;
+      if (fetches === 1) now = expiresAt + 1; // shopper A's pinned profile retention lapses while the fetch is in flight
+      return new Response('unavailable', { status: 503 });
+    }));
+    // Shopper A, inside its owner operation with its profile retention pinned: the fence's recheck after
+    // the fetch refuses with RetentionUnavailable (not a 401), and A's operation rejects with it.
+    const ownerA = {};
+    const errA = await runOwnerOperation(ownerA, env, async () => {
+      const stamp = retentionBirth(env, 'oh', 'profile', now); expiresAt = stamp.expiresAt;
+      pinRetention(env, stamp, 'oh', 'profile');
+      return new OptimizelyService(env, 'oh').createFreshClient();
+    }).then(() => null, (error: unknown) => error);
+    expect(errA).toBeInstanceOf(RetentionUnavailable);
+    expect(fetches).toBe(1);
+    // Shopper B, 59 s later, outside any owner operation and with nothing lapsed: A's refusal was not
+    // remembered for the tenant, so B fetches and meets the datafile's own answer.
+    now += 59_000;
+    const errB = await new OptimizelyService(env, 'oh').createFreshClient().then(() => null, (error: unknown) => error);
+    expect(errB).not.toBeInstanceOf(RetentionUnavailable);
+    expect(String(errB)).toContain('Failed to fetch datafile: 503');
+    expect(fetches).toBe(2);
+    // The same for the KV-cached path the feature-variable probes take.
+    forgetRememberedDatafiles(); fetches = 0;
+    const ownerC = {};
+    await runOwnerOperation(ownerC, env, async () => {
+      const stamp = retentionBirth(env, 'oh', 'profile', now); expiresAt = stamp.expiresAt;
+      pinRetention(env, stamp, 'oh', 'profile');
+      await new OptimizelyService(env, 'oh').initialize();
+    }).catch(() => undefined);
+    expect(fetches).toBe(1);
+    await expect(new OptimizelyService(env, 'oh').createFreshClient()).rejects.toThrow('Failed to fetch datafile: 503');
+    expect(fetches).toBe(2);
+  });
+
+  it('remembers a network failure met inside a healthy owner operation: the datafile\'s own failure, not the fence\'s', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { env } = customer();
+    const network = new TypeError('Network connection lost');
+    const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { throw network; }); vi.stubGlobal('fetch', fetcher);
+    const owner = {};
+    const err = await runOwnerOperation(owner, env, async () => {
+      pinRetention(env, retentionBirth(env, 'oh', 'profile', now), 'oh', 'profile');
+      return new OptimizelyService(env, 'oh').createFreshClient();
+    }).then(() => null, (error: unknown) => error);
+    expect(err).toBe(network);
+    now += FAILED_DATAFILE_MS - 1;
+    await expect(new OptimizelyService(env, 'oh').createFreshClient()).rejects.toBe(network);
+    expect(datafileFetches(fetcher)).toBe(1);
+  });
+
+  it('never remembers an HTTP 401 refusal, wherever it is raised, and keeps environments apart', async () => {
     const { env } = customer();
     const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { throw new SessionAccessError(); }); vi.stubGlobal('fetch', fetcher);
     await expect(new OptimizelyService(env, 'oh').createFreshClient()).rejects.toBeInstanceOf(SessionAccessError);
