@@ -90,47 +90,47 @@
    {
     "key": "category",
     "source": "category",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "subcategory",
     "source": "subcategory",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "type",
     "source": "type",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "series",
     "source": "series",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "panel",
     "source": "panel",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "sizeBand",
     "source": "sizeBand",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "capacityTier",
     "source": "capacityTier",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "fuel",
     "source": "fuel",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "finish",
     "source": "finish",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "priceTier",
@@ -140,7 +140,7 @@
    {
     "key": "room",
     "source": "room",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "feature",
@@ -157,19 +157,19 @@
    {
     "key": "contentType",
     "source": "contentType",
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "retailer",
     "source": "retailer",
     "multi": true,
-    "tauMs": 60000
+    "tauMs": 180000
    },
    {
     "key": "package",
     "source": "package",
     "multi": true,
-    "tauMs": 60000
+    "tauMs": 180000
    }
   ],
   "weights": {
@@ -180,8 +180,8 @@
    "wishlist_add": 2,
    "add_to_wishlist": 2,
    "save_for_later": 2,
-   "add_to_cart": 3,
-   "cart_add": 3,
+   "add_to_cart": 5,
+   "cart_add": 5,
    "purchase": 5,
    "checkout": 5,
    "order_complete": 5,
@@ -192,15 +192,15 @@
    "tick": 0,
    "page_view": 1,
    "search": 1.5,
-   "select": 2,
+   "select": 3,
    "filter": 2,
-   "compare": 2,
-   "start_order": 3
+   "compare": 3,
+   "start_order": 5
   },
   "tauMs": 1209600000,
   "K": 1.8,
-  "thetaIn": 0.6,
-  "thetaOut": 0.45,
+  "thetaIn": 0.45,
+  "thetaOut": 0.3,
   "epsilon": 0.01,
   "maxValuesPerDim": 64,
   "eventAttributes": "event-when-unknown",
@@ -568,64 +568,64 @@
    "dimensions": [
     {
      "key": "category",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "subcategory",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "type",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "series",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "panel",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "sizeBand",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "capacityTier",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "fuel",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "finish",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
@@ -638,8 +638,8 @@
     },
     {
      "key": "room",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
@@ -659,22 +659,22 @@
     },
     {
      "key": "contentType",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "retailer",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "package",
-     "tauMs": 60000,
-     "room": "1 min",
+     "tauMs": 180000,
+     "room": "3 min",
      "compressed": true,
      "label": "memory compressed for this room; production runs days"
     }
