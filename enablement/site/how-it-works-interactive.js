@@ -576,16 +576,18 @@
   }
 
   /**
-   * src/reflex/contentCompose.ts:224-340, the take for one slot: a pinned prefix first and unranked
-   * (:230-235, its brand counted toward the cap, :203, :306), then the ranking by score with catalog order
-   * breaking ties (:271), a value over the cap yielding its place (:326-329) and filling a hole only if
-   * nothing else is eligible (:335-339). A pin on a piece this request cannot see refuses the slot
-   * (:186-199, :229).
+   * The take for one slot (src/reflex/contentCompose.ts:224-340): a pinned piece holds the place the brand
+   * set, here the first, and is never ranked (:230-235; its brand counts toward the cap, :203, :306); the
+   * ranking by score, with catalog order breaking ties (:271), fills the other places, a value over the cap
+   * yielding its place (:326-329) and filling a hole only if nothing else is eligible (:335-339). A pinned
+   * piece this request may not see is not shown, and the slot ranks as usual: the product as designed (S5
+   * rows C1 and V7), which this page shows.
    */
   function takeSlot(scored, slotDoc, pinIds) {
-    const pins = (pinIds || []).filter(Boolean);
     const byId = new Map(scored.map((s) => [s.piece.id, s]));
-    if (pins.some((id) => !byId.has(id)) || pins.length > slotDoc.take) return { refused: true, served: [], ranked: [] };
+    const asked = (pinIds || []).filter(Boolean);
+    const pins = asked.filter((id) => byId.has(id)).slice(0, slotDoc.take);
+    const unshown = asked.filter((id) => !byId.has(id));
     const rule = slotDoc.diversity && slotDoc.diversity.max >= 1 && slotDoc.diversity.dimension ? slotDoc.diversity : null;
     const seen = new Map();
     const served = [];
@@ -615,7 +617,7 @@
       served.push({ ...s, relaxed: true });
       taken += 1;
     }
-    return { refused: false, served, ranked, yielded, rule };
+    return { served, ranked, yielded, rule, unshown };
   }
 
   const platformOf = (device) => (device === 'iphone' ? 'ios' : device === 'android' ? 'android' : null);
@@ -875,12 +877,12 @@
     s4head: { t: 'One slot, every candidate', s: 'The visitor’s vector scored against every candidate in one slot: eligibility first, then the sum over each candidate’s tags of their interest times the slot’s weight, then the slot’s rules take the top N. Recomputed in your browser on the example’s documents.', f: 'score = Σ a[d][v] × w_slot[d]', p: 'the slots document, deals (`pages.home[1]`); the phones list’s dials are in no document: the site sends them with each request' },
     s4vec: { t: 'The visitor’s vector, from section 3', s: 'The same live visitor as section 3: a press here or there moves both. The line lists every coordinate they have now; an empty vector is a stranger, scored on their region’s prior when scoring as served.', p: 'the dimension registry (the vector); the learn document, `regional` (the prior)' },
     s4slot: { t: 'Which slot', s: `The homepage deals module, ${PROMOTIONS.length} promotions with a take of 4, or the phones list, which reorders the site’s own phone grid. The weights belong to the slot, so the same interest counts differently in each.`, p: 'the slots document, deals `take`: 4; the phones list’s dials are in no document: the site sends them with each request' },
-    s4mode: { t: 'Score with', s: 'As served is the whole decision: the visitor’s vector blended with the region’s prior, the arrival’s seeds and the promotion multiplier, at γ = 0. The tag sum alone is the plain sum of products on their own vector. It changes every score in the table and the four containers.', p: 'the learn document, `regional`; the slots document, deals `seeds` and `merchandising`' },
+    s4mode: { t: 'Score with', s: 'As served is the whole decision: the visitor’s vector blended with the region’s prior, the arrival’s seeds and the promotion multiplier, at γ = 0. The tag sum alone is the plain sum of products on their own vector. It changes every score in the table and the four places.', p: 'the learn document, `regional`; the slots document, deals `seeds` and `merchandising`' },
     s4intent: { t: 'The condition the page sends', s: 'The intent the page sends with this request. Eligibility runs before scoring and fails closed: an offer gated to other intents is not scored at all. A condition only decides which pieces may show; it is never stored as evidence about the visitor.', p: 'each promotion’s `eligibleWhen.context.intent`, in the catalog' },
-    s4cap: { t: 'The diversity cap', s: 'At most this many pieces of one brand in the four: a third yields its container to the next ranked piece, and unbranded offers never count. It moves the containers and the rows marked yielded.', p: 'the slots document, deals `diversity`: `brand`, `max` 2' },
-    s4pin: { t: 'A pin', s: 'A pinned piece is a required prefix: it takes container 1 and is never ranked. If it is not eligible for this request, the whole slot serves nothing and records a pin diagnostic, so a pin needs care.', p: 'the slots document, deals `pinnedPieceIds`: none in the example document' },
+    s4cap: { t: 'The diversity cap', s: 'At most this many pieces of one brand in the four places: a third yields its place to the next ranked piece, and unbranded offers never count. It moves the places and the rows marked yielded.', p: 'the slots document, deals `diversity`: `brand`, `max` 2' },
+    s4pin: { t: 'A pin', s: 'A pinned piece holds the place the brand set, here the first, and is never ranked; its receipt says ranking was skipped. A pinned piece that is not eligible for the request is not shown, and the rest of the slot ranks as usual.', p: 'the slots document, deals `pinnedPieceIds`: none in the example document' },
     s4weights: { t: 'The slot’s weights', s: 'What each dimension is worth in this slot, from 0 to 1: per slot, never per product. A dimension weighted 0 contributes nothing, and the campaign weight scores only through the seed, because no event builds that dimension. Moving one changes every sum in the table.', f: 'score = Σ a × w', p: 'the slots document, deals `weights`: brand 0.2, campaign 0.3, category 0.1, ecosystem 0.15, intent 1, lines 0.4, perk 0.1, priceBand 0.1' },
-    s4boxes: { t: 'The four containers', s: 'What the slot serves: pinned pieces first, then the ranking under the cap, until four are filled. If every score is zero, the slot serves catalog order, labeled as the default.', p: 'the slots document, deals `take`: 4' },
+    s4boxes: { t: 'The four places', s: 'What the slot serves, place by place: a pinned piece in the place the brand set, then the ranking under the cap, until the four places are filled. If every score is zero, the slot serves catalog order, labeled as the default.', p: 'the slots document, deals `take`: 4' },
     s4table: { t: 'Every candidate', s: 'Each promotion with its tags and its sum written out term by term: the visitor’s interest in the value times the slot’s weight, plus any seed, times any promotion multiplier. Rows that fail eligibility are listed but not scored; underlined terms are blended dimensions, and seeds are named.', p: 'the catalog, each promotion’s `tags` and `eligibleWhen`; the slots document, deals `weights`' },
     s4counts: { t: 'What it cost, counted', s: 'The lookups and multiply-adds this slot took: one per tag value on a weighted dimension, then one sort and a take of 4; the blend runs once per visitor. These are counts, not times.', p: 'the slots document, deals `weights` (which dimensions count)' },
     s4bench: { t: '10,000 synthetic candidates', s: 'Generates 10,000 candidates in this browser from the registry’s vocabulary at the example pool’s tag density, scores them against the same vector and weights, sorts them and takes four under the cap. It reports what it counted; it times nothing.', np: 'a page control; the candidates are synthetic and exist only in this browser' },
@@ -915,7 +917,7 @@
     s6chart: { t: 'Interest against time', s: 'Brand samsung, brand google and ecosystem android on one clock, with the entry and exit lines: solid is what happened, dashed what happens if the visitor stops. An amber line marks when a claim leaves.', p: 'the dimension registry, `K`, `thetaIn`, `thetaOut` and `tauMs`' },
     s6who: { t: 'Who is in, and until when', s: 'A meter per value with the visitor’s interest now and, for each claim, whether they are in the audience and when they leave, solved in closed form. Watch brand leave while ecosystem holds.', f: 't* = t + τ · ln(R(1 − θ_out) / (K θ_out))', p: 'the dimension registry, `thetaIn` 0.6, `thetaOut` 0.45' },
 
-    exHead: { t: 'One visit, recomputed', s: 'The example visit on the published documents: each step recomputes the visitor’s touches, the fading, their vector, λ, the blend, the seeds, the multiplier, the sums and the take. Beside it, the receipt’s drivers for the piece in container 1.', p: 'the dimension registry, the slots document and the learn document' },
+    exHead: { t: 'One visit, recomputed', s: 'The example visit on the published documents: each step recomputes the visitor’s touches, the fading, their vector, λ, the blend, the seeds, the multiplier, the sums and the take. Beside it, the receipt’s drivers for the piece in place 1.', p: 'the dimension registry, the slots document and the learn document' },
     exSteps: { t: 'The six steps', s: 'Each step is one moment: the visitor lands from the ad, views a Galaxy S26 card and then its page, an S26 Ultra card, then the Pixel 11 page and goes home, and returns directly days later. The homepage is asked at steps 0, 4 and 5; steps 1 to 3 show what it would answer.', np: 'a page control; t is time on the visit’s clock' },
     exRegion: { t: 'Region', s: 'Which region the visitor is in, and so whose synthetic sales the prior speaks for.', p: 'the learn document, `regional.minEvents`: 30; the sales are synthetic, made up for the example' },
     exAd: { t: 'Arrival', s: 'From the ad, the campaign seed fires on the launch offer and the launch hero; with no ad, it does not fire. The return at step 5 is direct, so no campaign seed fires there.', p: 'the slots document, deals `seeds[0]`: `weight` 0.2' },
@@ -923,7 +925,7 @@
     exDays: { t: 'Days before the return', s: 'How long after the last view the visitor comes back. Every interest fades on its 14-day memory meanwhile, and a claim with fewer views behind it leaves its audience sooner: the slider’s note gives both moments, solved in closed form.', np: 'an input you set' },
     exReset: { t: 'Back to the defaults', s: 'Puts the region, the arrival, the device and the days before the return back to Region A, from the ad, a laptop and 12 days.', np: 'a page control' },
     exLeft: { t: 'This step, recomputed', s: 'What happened at this step, the visitor’s own vector at the decision, λ and the blend, and the deals module: the four, then the ranking with every sum written out. All of it is recomputed here from the published documents.', f: 'score = (Σ ã × w + seeds) × multiplier', p: 'the dimension registry; the slots document, deals; the learn document, `regional`' },
-    exRight: { t: 'The receipt for container 1', s: 'The drivers the record lists for the piece that leads at this step: the four strongest tag terms, the region’s part and the multiplier, then the scores. Watch the region’s part shrink and the visitor’s own terms take over as the visit goes on.', p: 'the slots document, deals `weights`, `seeds` and `merchandising`; the learn document, `regional`' },
+    exRight: { t: 'The receipt for place 1', s: 'The drivers the record lists for the piece that leads at this step: the four strongest tag terms, the region’s part and the multiplier, then the scores. Watch the region’s part shrink and the visitor’s own terms take over as the visit goes on.', p: 'the slots document, deals `weights`, `seeds` and `merchandising`; the learn document, `regional`' },
 
     s7head: { t: 'One piece, one context, one dial', s: 'One piece’s counts in one context, turned into a clamped lift and raised to the learning dial γ. Every input in this panel is yours to set; none is a measurement.', f: 'score = base × lift^γ', p: 'the learn document, `stats`: `n0` 30, `liftMin` 0.5, `liftMax` 2, `nMin` 30; `slots.deals.gamma`: 0' },
     s7n: { t: 'n, exposures', s: 'How many times the piece was served in this context, faded over the 21-day memory. More exposures let the piece’s own rate outweigh the pull toward p0. It moves the pooled rate, the lift, the chart and the pooling levels.', p: 'the learn document, `stats.tauLearnMs`: 21 days' },
@@ -941,11 +943,11 @@
     s8slots: { t: 'The slots document', s: 'Per page, the slots in page order, each with its take, its weights and its rules: the journey-stage rule, the seeds, the promotion multiplier, the diversity cap and pins. This is revision r51.', p: 'PUT /content/slots: `pages.home[0]`, the hero; `pages.home[1]`, deals; and the phone page’s two slots' },
     s8learn: { t: 'The learn document', s: 'The holdout, the prior’s blend, the attribution policy, the statistics’ constants, and each slot’s learning dial γ, which is 0 on every slot. Revision r3.', p: 'PUT /content/learn: `holdout`, `regional`, `policy`, `stats`, `slots`' },
 
-    s9receipt: { t: 'The example record', s: 'One record for one served position: the launch offer in container 1, for a stranger in Region A who arrived from the campaign link. A note in words sits beside every field; the visitor id and the nonce are left out.', ex: 'a record the engine wrote, with its brand and region names made general, recomputed below from the documents on this page' },
+    s9receipt: { t: 'The example record', s: 'One record for one served position: the launch offer in place 1, for a stranger in Region A who arrived from the campaign link. A note in words sits beside every field; the visitor id and the nonce are left out.', ex: 'a record the engine wrote, with its brand and region names made general, recomputed below from the documents on this page' },
     s9recompute: { t: 'Recompute it', s: 'The same decision twice: from the record’s own terms, and from the published documents on this page, with the record’s ten candidates beside the page’s. The count of candidates that agree is computed, not typed.', f: '0.2 + 0.15 + 0.1 + 0.1 = 0.55; + 0.06 = 0.61; × 1.1 = 0.671', p: 'the slots document, deals `weights`, `seeds`, `merchandising`; the learn document, `regional`' },
 
     s10dims: { t: 'The registry’s dimensions', s: 'One line per dimension: the feed field it reads, how it is read, and the exact values the catalog uses. On a dimension the catalog names values on, a value outside them is simply not scored.', p: 'the dimension registry, `dimensions`; the vocabulary: the values the catalog’s `tags` name' },
-    s10feed: { t: 'A promotion feed’s fields', s: 'Each field of a promotion feed and what the engine does with it: scored, a band, eligibility, a multiplier or a prefix, or display only. Eligibility runs before scoring; the offer book goes to the page.', p: 'the catalog: each piece’s `tags`, `eligibleWhen`, `window` and `merchandising`; the slots document, `pinnedPieceIds`' },
+    s10feed: { t: 'A promotion feed’s fields', s: 'Each field of a promotion feed and what the engine does with it: scored, a band, eligibility, a multiplier or a pinned place, or display only. Eligibility runs before scoring; the offer book goes to the page.', p: 'the catalog: each piece’s `tags`, `eligibleWhen`, `window` and `merchandising`; the slots document, `pinnedPieceIds`' },
   };
 
   function instHead(title, tags, tip) {
@@ -1505,12 +1507,12 @@
     benchB.addEventListener('click', () => runBench());
     const priorNote = h('p', { class: 'inst-note' });
     dealsPane.append(
-      h('div', { class: 'ctrls' }, ctrlBlock('Score with', modeSeg.el, null, TIPS.s4mode), ctrlBlock('The condition the page sends', intentSel, 'Intent decides eligibility only. Gated offers fail closed.', TIPS.s4intent), ctrlBlock('Diversity', capSel, null, TIPS.s4cap), ctrlBlock('Pin', pinSel, 'A required prefix: container 1, never ranked. If the pinned piece is not eligible for this request, the whole slot serves nothing. Try an upgrade offer under intent new.', TIPS.s4pin)),
+      h('div', { class: 'ctrls' }, ctrlBlock('Score with', modeSeg.el, null, TIPS.s4mode), ctrlBlock('The condition the page sends', intentSel, 'Intent decides eligibility only. Gated offers fail closed.', TIPS.s4intent), ctrlBlock('Diversity', capSel, null, TIPS.s4cap), ctrlBlock('Pin', pinSel, 'A pinned piece holds the place the brand set, here the first, and is never ranked; its receipt says ranking was skipped.', TIPS.s4pin)),
       priorNote,
       ih('The slot’s weights: per slot, never per product', TIPS.s4weights),
       h('div', { class: 'ctrls' }, weightSliders.map((s) => s.el)),
       h('div', { class: 'btnrow' }, resetW),
-      ih('The four containers', TIPS.s4boxes), boxes, pinNote,
+      ih('The four places', TIPS.s4boxes), boxes, pinNote,
       ih('Every candidate, scored the same way', TIPS.s4table),
       h('div', { class: 'dt-scroll' }, h('table', { class: 'dt' }, h('thead', null, h('tr', null, h('th', { text: '#' }), h('th', { text: 'candidate and its tags' }), h('th', { text: 'Σ a × w, written out' }), h('th', { class: 'nr', text: 'score' }), h('th', { text: 'outcome' }))), tbody)),
       ih('What it cost, counted, not timed', TIPS.s4counts), counts, h('div', { class: 'btnrow' }, benchB, hint(TIPS.s4bench, 'the 10,000-candidate run')), bench,
@@ -1538,13 +1540,12 @@
     );
 
     function outcomeOf(row, take) {
-      if (row.why) return h('span', { class: 'out out--closed', text: row.why });
+      if (row.why) return h('span', { class: 'out out--closed', text: take.unshown.includes(row.piece.id) ? `pinned, not shown: ${row.why}` : row.why });
       const pos = take.served.findIndex((s) => s.piece.id === row.piece.id);
-      if (take.refused) return h('span', { class: 'out out--closed', text: 'not served: the slot served nothing' });
       if (pos >= 0) {
         const s = take.served[pos];
-        if (s.pinned) return h('span', { class: 'out out--pin', text: `pinned · container ${pos + 1} · ranking skipped` });
-        return h('span', { class: 'out out--served', text: `container ${pos + 1}${s.relaxed ? ' (cap relaxed)' : ''}` });
+        if (s.pinned) return h('span', { class: 'out out--pin', text: `pinned · place ${pos + 1} · ranking skipped` });
+        return h('span', { class: 'out out--served', text: `place ${pos + 1}${s.relaxed ? ' (cap relaxed)' : ''}` });
       }
       if ((take.yielded || []).some((s) => s.piece.id === row.piece.id)) return h('span', { class: 'out out--yield', text: `yielded: over ${take.rule.max} per ${take.rule.dimension}` });
       const rank = take.ranked.findIndex((s) => s.piece.id === row.piece.id);
@@ -1569,13 +1570,16 @@
       for (let i = 0; i < DEALS.take; i++) {
         const s = take.served[i];
         boxes.append(s
-          ? h('div', { class: s.pinned ? 'box box--pin' : i === 0 ? 'box box--lead' : 'box' }, h('p', { class: 'box-k' }, h('span', { text: `container ${i + 1}` }), h('span', { text: s.pinned ? 'pinned' : 'ranked' })), h('p', { class: 'box-t', text: s.piece.title }), h('p', { class: 'box-s', text: s.pinned ? 'ranking skipped' : f3(round3(s.score)) }))
-          : h('div', { class: take.refused ? 'box box--pin' : 'box' }, h('p', { class: 'box-k', text: `container ${i + 1}` }), h('p', { class: 'box-t', text: take.refused ? 'empty: the slot served nothing' : 'empty: nothing else eligible' })));
+          ? h('div', { class: s.pinned ? 'box box--pin' : i === 0 ? 'box box--lead' : 'box' }, h('p', { class: 'box-k' }, h('span', { text: `place ${i + 1}` }), h('span', { text: s.pinned ? 'pinned' : 'ranked' })), h('p', { class: 'box-t', text: s.piece.title }), h('p', { class: 'box-s', text: s.pinned ? 'ranking skipped' : f3(round3(s.score)) }))
+          : h('div', { class: 'box' }, h('p', { class: 'box-k', text: `place ${i + 1}` }), h('p', { class: 'box-t', text: 'empty: nothing else eligible' })));
       }
-      pinNote.hidden = !take.refused;
-      if (take.refused) {
-        const pinned = PROMO[S.pin];
-        pinNote.textContent = `The pinned piece, “${pinned.title.replace(/\.$/, '')}”, is not eligible for this request (${ineligibleWhy(pinned, d.ctx)}), so the whole slot serves nothing and records a pin diagnostic. A pin is a required prefix, and a prefix that cannot be served refuses the slot rather than serving three. A page that pins a gated offer sends the condition the offer needs, such as an upgrade intent for an upgrade offer.`;
+      const pinned = S.pin ? PROMO[S.pin] : null;
+      pinNote.hidden = !pinned;
+      if (pinned) {
+        const title = pinned.title.replace(/\.$/, '');
+        pinNote.textContent = take.unshown.includes(pinned.id)
+          ? `The pinned piece, “${title}”, is not eligible for this request (${ineligibleWhy(pinned, d.ctx)}), so it is not shown, and the four places rank as usual.`
+          : `The pinned piece, “${title}”, holds place 1 and is never ranked; its receipt says ranking was skipped, and the other three places rank as usual.`;
       }
       clear(tbody);
       const order = [...take.served.map((s) => s.piece.id), ...take.ranked.map((s) => s.piece.id)];
@@ -1830,7 +1834,7 @@
       const lrow = last.decision.rows.find((x) => x.piece.id === 'promo-iphone-18-pro-launch');
       const pos = last.decision.take.served.findIndex((s) => s.piece.id === 'promo-iphone-18-pro-launch');
       hingeNote.textContent = cross > 0
-        ? `Android overtakes the launch offer at “${steps[cross].short}”. At “${last.short}” the launch offer ${pos >= 0 ? `sits in container ${pos + 1}` : 'has left the four'}, its campaign seed still applied (+${f3(lrow && !lrow.why ? lrow.seedApplied : 0)}) and outscored: the seed never switches off, and the visitor’s own evidence outgrows it.`
+        ? `Android overtakes the launch offer at “${steps[cross].short}”. At “${last.short}” the launch offer ${pos >= 0 ? `sits in place ${pos + 1}` : 'has left the four'}, its campaign seed still applied (+${f3(lrow && !lrow.why ? lrow.seedApplied : 0)}) and outscored: the seed never switches off, and the visitor’s own evidence outgrows it.`
         : 'The launch offer holds the lead across these steps on these settings; Android has not outgrown the seed and the region.';
     }
     LIVE.listeners.push(render);
@@ -1950,7 +1954,7 @@
       stepsBar,
       h('div', { class: 'ctrls' }, ctrlBlock('Region', regionSeg.el, null, TIPS.exRegion), ctrlBlock('Arrival', adSeg.el, null, TIPS.exAd), ctrlBlock('The visitor’s device', devSeg.el, null, TIPS.exDev), daysS.el),
       h('div', { class: 'btnrow' }, resetT, hint(TIPS.exReset, 'the reset to the defaults')),
-      h('div', { class: 'ex-grid' }, h('div', { class: 'ex-col' }, ih('This step, recomputed', TIPS.exLeft), left), h('div', { class: 'rcpt-side' }, ih('The receipt for container 1', TIPS.exRight), right)),
+      h('div', { class: 'ex-grid' }, h('div', { class: 'ex-col' }, ih('This step, recomputed', TIPS.exLeft), left), h('div', { class: 'rcpt-side' }, ih('The receipt for place 1', TIPS.exRight), right)),
     );
     const clockAt = (st) => (st.at < 2 * MINUTE ? `t = ${f1(st.at / SECOND)} s` : `t = ${dur(st.at)}`);
     function render() {
@@ -2014,7 +2018,7 @@
       // The deals module
       left.append(h('p', { class: 'inst-h', text: 'The deals module: the four, then the ranking' }));
       const bx = h('div', { class: 'boxes' });
-      d.take.served.forEach((s, i) => bx.append(h('div', { class: i === 0 ? 'box box--lead' : 'box' }, h('p', { class: 'box-k' }, h('span', { text: `container ${i + 1}` }), h('span', { text: s.piece.tags.brand ? s.piece.tags.brand[0] : 'no brand' })), h('p', { class: 'box-t', text: s.piece.title }), h('p', { class: 'box-s', text: f3(round3(s.score)) }))));
+      d.take.served.forEach((s, i) => bx.append(h('div', { class: i === 0 ? 'box box--lead' : 'box' }, h('p', { class: 'box-k' }, h('span', { text: `place ${i + 1}` }), h('span', { text: s.piece.tags.brand ? s.piece.tags.brand[0] : 'no brand' })), h('p', { class: 'box-t', text: s.piece.title }), h('p', { class: 'box-s', text: f3(round3(s.score)) }))));
       left.append(bx);
       const tb = h('tbody');
       d.take.ranked.slice(0, 8).forEach((r) => {
@@ -2024,15 +2028,15 @@
           h('td', { 'data-k': 'candidate' }, h('div', { class: 'ttl', text: r.piece.title })),
           h('td', { 'data-k': 'the sum' }, sumLine(r, { blended: true })),
           h('td', { class: 'nr', 'data-k': 'score', text: f3(round3(r.score)) }),
-          h('td', { 'data-k': 'outcome' }, h('span', { class: pos >= 0 ? 'out out--served' : yielded ? 'out out--yield' : 'out', text: pos >= 0 ? `container ${pos + 1}` : yielded ? 'yielded: 2 per brand' : 'not in the four' }))));
+          h('td', { 'data-k': 'outcome' }, h('span', { class: pos >= 0 ? 'out out--served' : yielded ? 'out out--yield' : 'out', text: pos >= 0 ? `place ${pos + 1}` : yielded ? 'yielded: 2 per brand' : 'not in the four' }))));
       });
       left.append(h('div', { class: 'dt-scroll' }, h('table', { class: 'dt' }, h('thead', null, h('tr', null, h('th', { text: 'candidate' }), h('th', { text: 'Σ ã × w + seeds × multiplier' }), h('th', { class: 'nr', text: 'score' }), h('th', { text: 'outcome' }))), tb)));
-      // The receipt for container 1, beside it
+      // The receipt for place 1, beside it
       clear(right);
       const lead = d.take.served[0];
       if (lead) {
         const row = d.rows.find((r) => r.piece.id === lead.piece.id);
-        right.append(h('p', { class: 'inst-note' }, h('b', { text: lead.piece.title }), ` · authority engine · container 1`));
+        right.append(h('p', { class: 'inst-note' }, h('b', { text: lead.piece.title }), ` · authority engine · place 1`));
         const ul = h('ul');
         for (const x of recordDrivers(row, d.lambda, S.region)) {
           ul.append(h('li', { text: x.dim === 'merchandising' ? `merchandising · ${x.value}: × ${f2(1 + x.a * x.weight)}` : `${x.dim} · ${x.value}: a ${wfmt(round3(x.a))} × ${wfmt(x.weight)} = ${f3(x.a * x.weight)}` }));
@@ -2160,12 +2164,12 @@
       'pages.home[0].weights': 'The hero’s own dimension weights.',
       'pages.home[0].stage': 'The journey-stage rule: the continue hero is multiplied by 0 outside its journey stages and gains 0.5 inside them.',
       'pages.home[0].seeds': 'The same campaign seed as deals, at 0.2.',
-      'pages.home[1].take': 'Four containers.',
+      'pages.home[1].take': 'Four places.',
       'pages.home[1].weights': 'The deals slot’s vector of weights, 0 to 1 each.',
       'pages.home[1].weights.intent': 'The intent the visitor declares is this slot’s strongest axis: 1.',
       'pages.home[1].weights.lines': 'The lines the visitor declares count 0.4 here.',
       'pages.home[1].weights.campaign': 'Not a registry dimension: no event builds it, so only the seed scores it.',
-      'pages.home[1].diversity': 'At most two per brand; a third yields its container to the next ranked piece.',
+      'pages.home[1].diversity': 'At most two per brand; a third yields its place to the next ranked piece.',
       'pages.home[1].merchandising': 'The launch offer carries promotion 1: × (1 + 0.1 × 1) = 1.1, held between 0.7 and 1.6. A multiplier tilts; it never overrides.',
       'pages.home[1].seeds[0]': 'utm_term iphone-18-pro adds 0.2 on the campaign tag.',
       'pages.home[1].seeds[1]': 'An iPhone adds 1 on ecosystem ios; × 0.5 while the visitor holds intent switch, × 0 once they hold android.',
@@ -2251,7 +2255,7 @@
     page: 'The page the slot was asked for, by name.',
     slot: 'The slot, by name: one slot name is one set of learning counts.',
     position: 'Where it was served, counting from 0.',
-    ranking_position: 'Its rank after any pinned prefix.',
+    ranking_position: 'Its rank among the ranked pieces, with any pinned piece set aside.',
     item_id: 'The engine’s id for the piece.',
     customer_item_id: 'The brand’s own content id: what the page renders.',
     arm: 'personalized. A visitor in the holdout’s default arm sees the site’s defaults instead.',
@@ -2304,7 +2308,7 @@
     const noLink = tagSum * X.merchandising.boost;
     const test = selfTest();
     mount.append(
-      h('p', { class: 'rcpt-meta' }, h('span', null, h('b', { text: 'The launch offer, container 1, for a stranger in Region A from the campaign link' }), hint(TIPS.s9receipt, 'the example record')),
+      h('p', { class: 'rcpt-meta' }, h('span', null, h('b', { text: 'The launch offer, place 1, for a stranger in Region A from the campaign link' }), hint(TIPS.s9receipt, 'the example record')),
         h('span', { text: 'An example record · intent new · no platform header · the visitor id and the nonce left out' })),
       annotatedBlock(RECORD, RECEIPT_NOTES),
       h('div', { class: 'inst recompute' },
@@ -2342,7 +2346,7 @@
       ['Offer type', '`badge`, display only', 'no'],
       ['Eligible intents, line requirement', '`eligibleWhen.context.intent` (fails closed), plus `tags.intent`', 'gated and scored'],
       ['Plan requirement', 'the offer’s terms, display only', 'no'],
-      ['Priority flag', '`merchandising.promotion` with the slot’s weight, or a pin', 'a multiplier or a prefix'],
+      ['Priority flag', '`merchandising.promotion` with the slot’s weight, or a pin', 'a multiplier or a pinned place'],
       ['End date', '`window.to`', 'eligibility'],
       ['Not combinable', 'the offer’s terms; the engine does not stack offers', 'no'],
       ['Coverage', '`eligibleWhen.regions`', 'eligibility'],

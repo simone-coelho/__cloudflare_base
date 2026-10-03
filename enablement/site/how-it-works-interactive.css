@@ -258,7 +258,8 @@
 .tagl { display: flex; flex-wrap: wrap; gap: 3px; }
 .tg { font-family: var(--hiw-mono); font-size: .6rem; border: 1px solid var(--m-line); border-radius: 999px; padding: 1px 6px; color: var(--m-muted); white-space: nowrap; }
 .tg--hit { color: #fff; border-color: #6F8A78; }
-.tg--zero { opacity: .55; }
+/* A tag that adds nothing here: dimmer ink and a dashed edge, still at least 4.5:1 on the panel (no opacity). */
+.tg--zero { color: var(--m-dim); border-style: dashed; }
 .out { font-family: var(--hiw-mono); font-size: .66rem; white-space: nowrap; }
 .out--served { color: var(--m-good); }
 .out--pin { color: #E58FC8; }
@@ -266,7 +267,7 @@
 .out--closed { color: var(--m-dim); }
 .dt-scroll { max-height: 580px; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--m-line); border-radius: 8px; }
 
-/* The containers the take fills */
+/* The places the take fills */
 .boxes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 12px; }
 .boxes--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .box { background: var(--m-card); border: 1px solid var(--m-line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
@@ -321,7 +322,7 @@
 .events li em { font-style: normal; color: var(--m-dim); }
 
 /* ══ Hints: a circled question mark, and its tooltip ═══════════════════════════ */
-.hint { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; margin: -5px 0 -5px 3px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; font: 700 11px/1 var(--body); letter-spacing: 0; text-transform: none; vertical-align: middle; cursor: help; opacity: .82; }
+.hint { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; margin: -5px 0 -5px 3px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; font: 700 11px/1 var(--body); letter-spacing: 0; text-transform: none; vertical-align: middle; cursor: help; }
 .hint::before { content: ''; position: absolute; inset: 4px; border: 1.5px solid currentColor; border-radius: 50%; }
 .hint:hover, .hint.is-open { opacity: 1; color: var(--light-fir); }
 .hiw .inst .hint:hover, .hiw .inst .hint.is-open { color: var(--m-marker); }
