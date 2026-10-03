@@ -371,7 +371,9 @@ The credits document is back to 7 pages, the last 90 % full. It had spilled 14 %
 
 ## Version 3.0, 2026-10-03
 
-Lane W2, under `LANE-BRIEF-V3.md` (sections 1, 5, 6 and 7), this note's method, `LANE-BRIEF-COMMON.md`, the design's section 6 and `../verizon/lanes/W4.md`. Paths written: `docs/enablement/figures/shot-*.png` (47 files: 37 at 10:24 and 10:40, 9 more and 5 replaced at 11:01, 1 more and 14 replaced at 11:15), the four `docs/enablement/word/Enablement-*-v3.0.docx`, `scripts/md2docx.mjs` (by the lead's ruling of 10:50, section V3.10) and this section, appended. No source, page or partial was edited. Git was used read-only; nothing was installed, deployed or killed, and nothing was deleted; three version 2.0 files were moved out of `docs/enablement/word/` with `mv -n`, as the brief asks (section V3.10).
+Lane W2, under `LANE-BRIEF-V3.md` (sections 1, 5, 6 and 7), this note's method, `LANE-BRIEF-COMMON.md`, the design's section 6 and `../verizon/lanes/W4.md`. Paths written: `docs/enablement/figures/shot-*.png` (37 at 10:24 and 10:40, 9 more and 5 replaced at 11:01, 1 more and 14 replaced at 11:15, 21 replaced at 11:57; the folder holds 45 since two stale ones left it, section V3.12), the four `docs/enablement/word/Enablement-*-v3.0.docx`, `scripts/md2docx.mjs` (by the lead's ruling of 10:50, section V3.10) and this section, appended. No source, page or partial was edited. Git was used read-only; nothing was installed, deployed or killed, and nothing was deleted; three version 2.0 files were moved out of `docs/enablement/word/` with `mv -n`, as the brief asks (section V3.10).
+
+**Status, 12:05 EDT. After review round four's fixes (`6aa479f5`) all 45 shots were captured again and 21 changed (section V3.12). Selling it and How it works were rebuilt; What it is and the Battlecard were not, their sources and pictures being byte for byte what they were built from. All four pass all 18 checks: What it is 16 pages (`8d6eb9a2…`), Selling it 20 (`a92316b9…`), How it works and where it runs 22 (`c65c6fa5…`), the Battlecard 10 (`adb51ecf…`). The statuses below are kept as they were written.**
 
 **Status, 11:20 EDT. All four documents are built with the converter as the lead ruled it changed (sha-256 `224fa972…`, proved by paired builds), sit in `docs/enablement/word/` and pass all 18 checks: What it is (16 pages), Selling it (20), How it works and where it runs (22) and the Battlecard (10). The shots of the twice-corrected sellers' and engineers' pages were captured again from `e82925bc` (section V3.11); the two pictures no source names any more are left in place and listed (section V3.10). The three superseded version 2.0 files are moved out, intact. The statuses of 11:06 and 10:46 below are kept as they were written.**
 
@@ -657,3 +659,50 @@ The lead committed `e82925bc` (11:12:13): on `/how-it-works` the six instrument 
 - Page 22 is 2 % full. It is the companion card's link line, after its picture and caption at the foot of page 21.
 
 Every other body page of How it works is 70 % full or more (page 9, 70 %; page 3, 73 %; the rest 79 % and up). The other documents are as before: Selling it 20 pages (its sparsest body page 21 %), What it is 16 (10 %), the Battlecard 10 (18 %).
+
+### V3.12 Review round four's fixes (11:53 to 12:05)
+
+The lead committed my work of V3.10 and V3.11 at `819c6d9c`, then review round four's fixes at `6aa479f5` (11:52:58): the sellers' storyboard frames redrawn with larger text; on the engineers' page the reasons heading "Customers choose it for different reasons", a price-band line in the prior's card and the blend constant defined at first use; `data-reader` moved onto leaf elements on the marketing and sellers' pages (no visible change); the spine printing as ink on white; the tour's fixes. The lead asked for every shot the four pieces name to be captured again from the committed tree, the documents whose source or pictures changed to be rebuilt (What it is and the Battlecard checked by hash), and all 18 checks on all four. `4419a253` (11:54:55) followed, touching only the design document and M2's note.
+
+**Between 11:20 and 11:54 the two stale pictures of section V3.10 (`shot-se-instruments.png`, `shot-ae-objections.png`) left the folder.** Neither was committed, and I did not remove them; both are kept in `<w3>\prev-shots\`, unchanged. The folder now holds 45 shot files, exactly the ones the four pieces and the tour name.
+
+**The shots.** The site copy taken at 11:54:27 equals `6aa479f5` file by file (line endings aside); against the copy of 11:13 nine files changed (`battlecard.html`, `how-it-works.html`, `selling-it.html`, `selling-it.css`, `spine.css`, `what-it-is.html` and the tour's three). All 38 shots the four pieces name were captured as in section V3.1, and the tour's 7 with script off as before: all wholly in view, nothing outside their boxes but the known cases of section V3.1, no console message, no running animation; every caption visible inside its element (38 of 38, and 7 of 7); a second run byte-identical (45 of 45; one second tour run failed to start, Chrome not answering on its port within 20 s, left nothing running, and was run again). The marketing page's four moving pictures carry a bare `data-motion` attribute that its script, idle under reduced motion, never sets to "armed", so they show their end state, as the identical hashes confirm.
+
+**What changed, against the files in the folder:** 21 of 45. The other 24 are byte-identical: the six spine pictures, the seven marketing, the six battlecard, `se-reasons` and four instrument cards (interest, decay, entry and release, score).
+
+| Picture | What changed | CSS px | PNG px | Bytes | sha-256 (16) | In Word |
+|---|---|---|---|---|---|---|
+| `shot-ae-scenes.png` | its content | 928 x 787 | 1856 x 1574 | 404,629 | `190ec425173e748e` | 6.50 x 5.51 in |
+| `shot-ae-reasons.png` | moved down 17.6 px; same text, size and fonts | 928 x 695 | 1856 x 1390 | 230,533 | `e27a92a2f8e32394` | 6.50 x 4.87 in |
+| `shot-ae-measures.png` | moved down 17.6 px; same text, size and fonts | 928 x 676 | 1856 x 1354 | 266,179 | `4b9a29d6974204f0` | 6.50 x 4.74 in |
+| `shot-ae-objections-quote.png` | moved down 17.6 px; same text, size and fonts | 928 x 190 | 1856 x 382 | 52,680 | `285e17fa20bc27ee` | 6.50 x 1.34 in |
+| `shot-ae-objections-1.png` | moved down 17.6 px; same text, size and fonts | 928 x 851 | 1856 x 1704 | 268,008 | `b8590aa417c1bd8b` | 6.50 x 5.97 in |
+| `shot-ae-objections-2.png` | moved down 17.6 px; same text, size and fonts | 928 x 647 | 1856 x 1296 | 207,168 | `a01af6bc97e2ff4c` | 6.50 x 4.54 in |
+| `shot-ae-asks.png` | moved down 17.6 px; same text, size and fonts | 928 x 1260 | 1856 x 2522 | 384,276 | `adb890f82fdf7042` | 5.89 x 8.00 in, held to 8 in |
+| `shot-ae-demos.png` | moved down 17.6 px; same text, size and fonts | 928 x 856 | 1856 x 1714 | 421,000 | `5edb9573fa19eb8a` | 6.50 x 6.00 in |
+| `shot-ae-battlecard.png` | moved down 17.6 px; same text, size and fonts | 704 x 168 | 1408 x 338 | 29,409 | `dfce53a6ec2fb620` | 6.50 x 1.56 in |
+| `shot-se-instrument-prior.png` | its content | 928 x 478 | 1856 x 958 | 162,861 | `dceff43d1735b98d` | 6.50 x 3.36 in |
+| `shot-se-instrument-cap-pin.png` | moved down 52.5 px; same text, size and fonts | 928 x 521 | 1856 x 1044 | 197,072 | `49f78eeee5b71b48` | 6.50 x 3.66 in |
+| `shot-se-privacy.png` | moved down 52.5 px; same text, size and fonts | 928 x 516 | 1856 x 1034 | 171,137 | `9b4de448a23fd953` | 6.50 x 3.62 in |
+| `shot-se-asks.png` | moved down 52.5 px; same text, size and fonts | 928 x 979 | 1856 x 1958 | 315,020 | `4001d127a3baaf6c` | 6.50 x 6.86 in |
+| `shot-se-next.png` | moved down 52.5 px; same text, size and fonts | 668 x 151 | 1338 x 302 | 44,355 | `5a2865d02624764d` | 6.50 x 1.47 in |
+| `shot-tour-step-1.png` | its size | 928 x 538 | 1856 x 1078 | 123,986 | `61ad07352e55db27` | no Word copy |
+| `shot-tour-step-2.png` | its size | 928 x 516 | 1856 x 1032 | 180,612 | `a3aa5682ba998a7a` | no Word copy |
+| `shot-tour-step-3.png` | its size | 928 x 538 | 1856 x 1076 | 175,628 | `02b38732f6222d2d` | no Word copy |
+| `shot-tour-step-4.png` | its content | 928 x 538 | 1856 x 1076 | 182,098 | `0c3adb19b8663dbe` | no Word copy |
+| `shot-tour-step-5.png` | its size | 928 x 538 | 1856 x 1076 | 188,726 | `4a6834e727898a2f` | no Word copy |
+| `shot-tour-step-6.png` | its size | 928 x 538 | 1856 x 1078 | 189,524 | `7cdfd990c23c9cc5` | no Word copy |
+| `shot-tour-step-7.png` | its size | 928 x 538 | 1856 x 1078 | 183,204 | `32e1128318d9f5da` | no Word copy |
+
+`ae-scenes` carries A1's redrawn frames, its smallest text now 10.2 CSS px where it was 8.5 (about 5.1 pt in Word, where it was 4.3). `se-instrument-prior` gained its price-band line and names the blend constant in its formula; the twelve shots below those two only moved down their pages, so their text, size and fonts are those of section V3.11, and a PNG one device pixel taller or shorter is the outward rounding at a new fractional offset. The tour's frames are wider on the page now (928 px, where they were 565), and step 4's frame changed three characters. All 21 were placed at 11:57:53 over the old files (kept in `<w3>\prev-shots-3\`); the new content and step 4 were looked at, whole.
+
+**The documents.** What it is and the Battlecard were not rebuilt. Their sources equal HEAD and are those they were built from (their composed copies, made again from the snapshot of 11:59, equal the copies of 10:56 byte for byte), and every picture embedded in them is byte-identical to its PNG in the folder today (12 of 12 and 7 of 7). Selling it and How it works were rebuilt at 11:59:53 with the converter as committed (`224fa972…`, equal to HEAD), from `selling-it.md` `6630c6bc…` (unchanged since `e82925bc`; its pictures changed) and `how-it-works-and-where-it-runs.md` `06e74bf11290494fa2010f1501a8aed95f1bd196efecb699cf4d797b6b95071c` (changed in `6aa479f5`), each with `spine.md` `a6a59bc8…`. The converter printed no warning. The snapshot step now requires only the drawn figures to equal HEAD and lists the captured pictures that differ from it (21, this lane's recaptures, not yet committed), where it had refused any tracked figure that differed.
+
+| Word document | Bytes | sha-256 | Pages | Checks |
+|---|---|---|---|---|
+| `Enablement-What-It-Is-v3.0.docx` (not rebuilt) | 1,844,626 | `8d6eb9a2e1da1b6426d81cb154bad40f40f82eee8ed5d56a0615e12f1da9d7f7` | 16 | 18 of 18 |
+| `Enablement-Selling-It-v3.0.docx` | 2,729,271 | `a92316b9b38d390129dd024da2ea35028828ff876b34fc7e78f21ab9083e413b` | 20 | 18 of 18 |
+| `Enablement-How-It-Works-and-Where-It-Runs-v3.0.docx` | 3,982,035 | `c65c6fa52da6bcc7a18cf771efc14818adb5422b8c6c43a879d316380a6eb59c` | 22 | 18 of 18 |
+| `Enablement-Battlecard-v3.0.docx` (not rebuilt) | 811,941 | `adb51ecf0b260c27f949fa041a2d4f403a73f9d414b0bb520e4d38cb77a9cb82` | 10 | 18 of 18 |
+
+**All 18 checks pass on all four** (`final-check-output-v3d.txt`, the pictures' text from the 45 capture records of this round, each matched to its file in the folder): the scans at zero across the text, every picture's text and every package part; every heading keeping with the next paragraph; every picture line embedded byte for byte, none wider than the text width; "3.0" once in `word/document.xml`; a linked contents; rule 3 as section V3.10 reads it; `unzip -t` clean. The page counts are unchanged; How it works' sparsest body pages are still page 15 (8 %, the heading and lead line before the architecture figure) and page 22 (2 %, the companion card's link line).
