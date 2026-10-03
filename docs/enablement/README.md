@@ -2,7 +2,7 @@
 
 A reader starts at https://edge-platform-bti.expedge.workers.dev, enters the passphrase they were given, and picks the page written for them.
 
-A lane starts with `LANE-BRIEF-V2.md`, then `BTI-Enablement-Design.md`, and writes only the paths the design gives it.
+A lane starts with `LANE-BRIEF-V3.md` (form, structure and tooling), then `LANE-BRIEF-V2.md` (what the material says) and `BTI-Enablement-Design.md`, and writes only the paths its brief gives it.
 
 | Path | What it holds | Written by |
 |---|---|---|

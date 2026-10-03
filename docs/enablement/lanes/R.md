@@ -1273,3 +1273,85 @@ I also printed the battlecard to PDF from a light-mode and a dark-mode browser. 
 - **Chrome.** Each run was headless on its own profile and closed with `Browser.close`.
 
 When resumed: the two rebuilt Word copies, plus M4-10 and the name file if their owners take them up.
+
+# Round four, Word, 2026-10-03: the two rebuilt copies
+
+**Scope.** I reviewed the two copies committed in `03104fbe`:
+- `docs/enablement/word/Enablement-Selling-It-v3.0.docx`, sha-256 `a92316b9b38d3901`;
+- `docs/enablement/word/Enablement-How-It-Works-and-Where-It-Runs-v3.0.docx`, sha-256 `c65c6fa52da6bcc7`.
+
+Both hashes are as W2's note gives them. The Word folder and the figures in the working tree equal HEAD (`518d520f`).
+
+I also read the name file's additions at `518d520f`, and rechecked M4-10 at the same commit.
+
+## Verdicts
+
+| Copy | Verdict | Open |
+|---|---|---|
+| Selling it (rebuilt) | PASS | none |
+| How it works and where it runs (rebuilt) | PASS | none |
+| What it is (not rebuilt) | PASS, unchanged | none |
+| Battlecard (not rebuilt) | PASS, unchanged | none |
+
+The two copies that were not rebuilt are byte-identical to the copies passed in round four: `8d6eb9a2e1da1b64` for What it is and `adb51ecf0b260c27` for the Battlecard. Their pictures are still byte-identical to the folder's PNGs, 12 of 12 and 7 of 7.
+
+## Gate item 9, on the two rebuilt copies
+
+1. **Built by the committed converter.** I proved this with a paired build:
+   - **The sources.** I composed both copies myself, in the order W.md V3.3 sets: the reader line, then the spine less its title, then the piece from its first `##`. The sources were taken from HEAD: `selling-it.md` `6630c6bc`, `how-it-works-and-where-it-runs.md` `06e74bf1` and `spine.md` `a6a59bc8`. My compositions equal W2's of 11:59 byte for byte.
+   - **The build.** I ran `scripts/md2docx.mjs` at HEAD (`224fa972`, unchanged since `819c6d9c`) into scratch, using docx 9.7.2 in WSL and W2's cover arguments. The converter printed no warning.
+   - **The comparison.** Against the committed copies, every part of each package is byte-identical except three, and none of the three differs in content:
+     - `document.xml` and its relationships are identical once each random relationship, drawing and bookmark id is named by its order of first appearance;
+     - `core.xml` differs only in its two timestamps.
+2. **Opens with the spine.** Each copy runs in this order: the cover, the contents, the reader line, then the spine's five sections ("What we built" through "Then go through it, one moment at a time"). After them come the piece's own sections: 7 in Selling it and 8 in How it works.
+3. **Every section is a picture with its caption, after at most one lead line.**
+   - All 12 sections of Selling it and all 13 of How it works open with a picture. Every picture line (14 and 21) is followed by its caption.
+   - The lead lines are single lines: "Both engines on one page" (13 words, in the spine's order) in both copies, the sellers' objections (14 words), and the engineers' five mechanism sections (19 to 34 words).
+4. **Every embedded picture is byte-identical to its repository PNG.** All 14 media files of Selling it, and all 21 of How it works, equal a PNG in `docs/enablement/figures` by sha-256. That folder equals HEAD. This includes the two pictures whose content changed:
+   - `shot-ae-scenes`, with A1's larger frames;
+   - `shot-se-instrument-prior`, with the price-band line.
+5. **Linked contents.**
+   - Each copy has a Word contents field, with 12 and 13 entries, every one linked.
+   - Every internal link resolves to a bookmark: 12 and 13 links.
+   - Every heading keeps with the next paragraph.
+6. **Links resolve.** The copies hold 12 and 2 distinct external links:
+   - The 8 demo addresses answer 200.
+   - The 5 enablement-site addresses answer 302 to the passphrase gate, each with its own return path. Each target page exists in `enablement/site`.
+   - `unzip -t` is clean on both copies.
+7. **Version 3.0.** "Version 3.0" is on the cover and "· 3.0" in the footer. "3.0" appears once in the document text, and both file names end `-v3.0.docx`.
+8. **Scans at zero** across every XML part:
+   - Zero gendered pronouns.
+   - Zero names, under both the committed name file's 34 patterns and my earlier list.
+   - Zero for the abbreviation, dashes, state words, literal markdown and the visible host name.
+   - "You" appears only in "Recommended for you" (the carousel's own title) and in the never-say quotations (six in Selling it).
+9. **Round four's fixes carried.** The engineers' copy carries the reasons heading "Customers choose it for different reasons", the price-band line, "with k the blend constant" and "The blend constant k is 1 by default". Both copies carry the performance sentence.
+
+**Not machine-verified:** Word's own pagination, a Ctrl+Click and Save as PDF, as in earlier rounds.
+
+## The name file's additions, against S4
+
+`enablement/name-patterns.txt` at `518d520f` adds six patterns:
+- the customer group's two other brands;
+- the full names S4 gives at row 1.13 (the weather use case) and row 5.12 (the merchandiser's asks);
+- each of those two surnames alone.
+
+Each pattern matches the name exactly as S4 spells it.
+
+I tested the file on fresh copies of `mut/base2`, with the committed file laid in. `render-check` passes the unchanged copy. It refuses each of five attributions, in the page and the markdown, under its names scan: each of the two brands, each full name, and a surname alone. The remaining hole from my delta pass, #24, is closed.
+
+## M4-10, rechecked
+
+I printed the battlecard to PDF at `518d520f`: light and dark, on Letter with and without background graphics, and on A4 without. That is six PDFs.
+
+- **The headers.** No text run is #ABABAB in any of the six. Under print media, in both schemes, the two table headers compute to black on white with a rule line.
+- **The rest of the sheet.** Every PDF is one page. White text remains only on the fixed-sentence bands, which `print-color-adjust: exact` keeps, and on the badges drawn in SVG.
+
+M4-10 is closed.
+
+## Conduct
+
+- **What I wrote.** Only this section, appended to this file. No git command that changes anything; no install, delete, kill or deploy.
+- **The converter.** It ran only into `scratchpad/r4/wbuild/`.
+- **The links.** One GET per external link; no form was sent and nothing was signed in to.
+- **Chrome.** Each run was headless on its own profile and closed with `Browser.close`.
+- **Scratch.** The scripts are `docx-inspect3.mjs`, `rcompose.cjs`, `pairdiff.cjs`, `namecheck.mjs` and `probe-print5.mjs`. The copies are in `docx3/`, `wbuild/`, `site5/` and `mut/names-*`.
