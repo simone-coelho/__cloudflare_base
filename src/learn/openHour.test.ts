@@ -22,7 +22,7 @@ import { hourPrefix, outcomeFromAction, ts36, type OutcomeRecord } from '@/ledge
 import { writeTombstone } from '@/ledger/erasure';
 import { canonicalReportJson, ReportRowConflict, ReportTooLarge, REPORT_LIMITS, type DayReport } from './report';
 import {
-  buildHour, catchUp, emptyBrand, foldOpenHours, hourKey, mergeBrand, mergeBrandInto, openHours, openKey, openLedgerKey, openStateKey, reportFromHours,
+  buildHour, catchUp, countedStorage, emptyBrand, foldOpenHours, hourKey, mergeBrand, mergeBrandInto, openHours, openKey, openLedgerKey, openStateKey, reportFromHours,
   runDayReport, shardKey, SHARDS, type HourAggregate,
 } from './hourly';
 import { DEFAULT_STATS } from './stats';
@@ -37,6 +37,8 @@ const cell = { channel: 'organic', visit_bucket: '1' as const, region: 'US-NC', 
 class FakeR2 {
   objects = new Map<string, string>();
   gets: string[] = [];
+  /** Each read that asked for more than the key, with what it asked for. */
+  getOptions: Array<[string, unknown]> = [];
   puts: string[] = [];
   /** When set, the listing says what storage would: each object's etag and size. */
   listsIdentity = false;
@@ -47,8 +49,9 @@ class FakeR2 {
     this.objects.set(key, body); this.puts.push(key);
     return { etag: createHash('sha256').update(body).digest('hex') };
   }
-  async get(key: string) {
+  async get(key: string, options?: unknown) {
     this.gets.push(key);
+    if (options !== undefined) this.getOptions.push([key, options]);
     const v = this.objects.get(key); if (v === undefined) return null;
     const bytes = new TextEncoder().encode(v);
     return { etag: createHash('sha256').update(v).digest('hex'), size: bytes.length, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(bytes); c.close(); } }), text: async () => v, json: async () => JSON.parse(v) as unknown };
@@ -603,6 +606,21 @@ describe('lane E6, second build: budgets and cost', () => {
     expect(saved.hours).toMatchObject({ source: 'aggregates', built: [10, 11] });
     expect(saved.hours?.missing).toContain(12);
     expect(saved.hours?.open, 'no longer named open, nor summed from its working aggregate').toBeUndefined();
+  });
+
+  it('counts the run\'s storage calls through a wrapper that passes each call through whole: the catch-up\'s saved-summary read keeps its range', async () => {
+    const r2 = new FakeR2();
+    await finals(r2);
+    // 12:06: hours 10 and 11 are folded and nothing is left to build, so the catch-up reads the date's saved summary to decide whether to publish it again.
+    const counted = countedStorage(r2 as never);
+    r2.gets = []; r2.getOptions = [];
+    const run = await catchUp(counted.storage, TENANT, learn, T12 + 6 * MIN, { lookbackHours: 2 });
+    expect(run.built).toEqual([]);
+    const summary = `reports/${TENANT}/${TENANT}/${DATE}.json`;
+    expect(r2.getOptions.filter(([key]) => key === summary), 'the summary read asks for its first 64 KiB, as it does without the wrapper')
+      .toEqual([[summary, { range: { offset: 0, length: REPORT_LIMITS.summaryBytes } }]]);
+    expect(counted.calls(), 'and every call is counted').toBeGreaterThanOrEqual(r2.gets.length);
+    expect(counted.calls()).toBeGreaterThan(0);
   });
 
   it('applies an erasure by the visitor it names, not by text: a short id leaves the copy whole', async () => {

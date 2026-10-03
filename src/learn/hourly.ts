@@ -51,6 +51,25 @@ export const MAX_HOUR_OBJECTS = 600;
 /** The subrequests one catch-up run may spend on folding, under a Worker invocation's limit with room for the day reports. */
 export const RUN_BUDGET = 700;
 /**
+ * Lane E6: the five-minute run's storage, with every call made through it
+ * counted, so the open hour's folds spend only what the catch-up left of
+ * `RUN_BUDGET`. Each call reaches storage with its own arguments: the catch-up's
+ * saved-summary read asks for its 64 KiB range (`readWindowSummary`) through it
+ * exactly as it does without it.
+ */
+export function countedStorage(storage: R2Agg): { storage: R2Agg; calls: () => number } {
+  let calls = 0;
+  const ranged = storage as R2Agg & { get(key: string, options?: unknown): ReturnType<R2Agg['get']> };
+  return {
+    storage: {
+      get: (key: string, options?: unknown) => { calls++; return ranged.get(key, options); },
+      list: options => { calls++; return storage.list(options); },
+      put: (key, body, options) => { calls++; return storage.put(key, body, options); },
+    },
+    calls: () => calls,
+  };
+}
+/**
  * W22 R1.02: what the version-2 shard state is allowed to remember. Each is a
  * hard cap under the horizon prune, so a custom horizon, a long outage or a
  * corrupt document can never grow the shard without bound: at the default
