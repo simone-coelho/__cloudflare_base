@@ -807,3 +807,120 @@ Each edit reads "file:line, current text → required text".
 - **Servers and Chrome.** Every server ran on a port above 9400 (9441 to 9452) and exited by itself. Every Chrome run was headless on its own profile in the scratchpad and closed with `Browser.close`.
 - **Scripts and outputs.** All of them are in `scratchpad/r3`.
 - **The gate.** It was out of scope and was not touched.
+
+# Round three, confirmation, 2026-10-02
+
+**Verdict: all fourteen required edits are in place**, in their sources and on the rendered pages, and the full preflight passes. The site can stay as deployed.
+
+- **What I checked:** the folder deployed from `2e6436e`, compared at HEAD `bce8cdd`.
+- **Unchanged since the deploy:** sources, figures, `enablement/` and `wrangler.enablement.toml` are identical between the two commits.
+- **Exactness:** three edits carry one added sentence each, all making the same claim. That claim is the lead's ruling, recorded in the design's §12. I accept it (below).
+
+## RC.1 Each edit
+
+| Edit | In the source | On the page | Exactly as written |
+|---|---|---|---|
+| R3-1 not a recommendations engine | yes | yes | yes |
+| R3-2 consent choice in what a customer provides | yes, after the events item | yes, same place | yes |
+| R3-3 See it work link | yes, before Selling it | yes, `href="/see-it-work"` | yes |
+| R3-4 demo map title | yes | yes | yes |
+| R3-5 catalog-search service | yes | yes | yes |
+| R3-6 "One of our customers in luxury retail said" | yes | yes | yes |
+| R3-7 "The same customer … chose to build it with us" | yes | yes | yes |
+| R3-8 "The same retailer asked for" | yes | yes | yes |
+| R3-9 the cache sentence | yes | yes | yes |
+| R3-10 the empty-slot sentence | deleted | deleted | no: one clause added, below |
+| R3-11 Try and Watch for | yes | yes | yes |
+| R3-12 the instrument | the hint, the note, the branch | in the browser, below | the note yes; the hint has one sentence added |
+| R3-13 the legend row | gone from both sources | gone from the page | yes |
+| R3-14 Pin entry | yes | yes | no: one sentence added, below |
+
+Notes on three of the rows:
+
+- **R3-12, the refusal.** No "required prefix", "serves nothing", "served nothing", "refuses the slot", "needs care" or `refused` is left in `how-it-works-interactive.js`.
+- **R3-13, the builder and the check.**
+  - `render-check.mjs:344` has no exemption left.
+  - The builder now fails on any legend row.
+  - The legend's styles are gone from `site.css`.
+- **The old wording elsewhere.** None of the replaced wording survives on any served page. The one "serves nothing" left is the glossary's Off limits entry, which is correct.
+
+## RC.2 The three additions
+
+The required text landed in all three. Each also carries one more statement: an ineligible pinned piece is not shown, and the rest of the slot ranks as usual.
+
+- **R3-10, `how-it-works-interactive.md:130` and the page.** It now reads "a pinned piece holds the place the brand set in the slot and is never ranked, and one that is not eligible for the request is simply not shown; then the ranking fills the other places".
+- **R3-12, the hint `TIPS.s4pin`.** It opens with the required text, then adds "A pinned piece that is not eligible for the request is not shown, and the rest of the slot ranks as usual." The control's note is exactly the required text. The mechanics are H1's, as R3-12 allowed: an ineligible pin is left out and the four places rank.
+- **R3-14, `GLOSSARY.md`.** The entry adds "A pinned piece that may not show, such as one out of stock, is simply not shown, and the rest of the slot ranks as usual." The Placement entry follows it, and a new Gate entry (121 entries) says the same.
+
+**Why I accept them:**
+
+- The design's §12 records the ruling ("From review round three (R3-14 and RR3-6), the glossary: …").
+- The claim agrees with document 35's own words for the finished product: "Reserve valid pins and reject document-local contradictions at write time" (`35-audit-verification-and-source-of-truth.md:213`).
+- It agrees across pieces. (c) and (d) say a pin holds its place at any position, and say nothing that contradicts it.
+
+**One optional wording note on the new Gate entry.** It says "the receipt names which of the three decided each place". That follows S5 row C1 ("which tier decided"). But a gate only removes pieces, and (d)'s receipt table names the deciders as "the engine, a pin or the default". I suggest "the receipt names whether a pin, the ranking or the site's default decided each place". This does not block the deploy.
+
+## RC.3 The pages, headless
+
+I served a `git archive` copy of HEAD from the scratchpad with `_headers`, as the assets binding serves it. Chrome ran headless, as in round three.
+
+- **The text check:** it passes on all 10 pages and 11 page-source pairs, with 0 missing and 0 unexplained sentences, and every scan at 0.
+- **The page audit:** 66 loads, every address at 1440×800, 1366×768 and 390×844, in light and dark.
+  - The nine pages answer 200, and `/status` and an unknown address answer 404.
+  - No request leaves the origin, no load fails, and there is no CSP violation or horizontal scroll.
+  - No page has a form, storage or a cookie. The chrome is complete on every page.
+  - **Contrast:** the engineers' page is now at 5.12 or better, up from 3.51, because RR3-9 was taken. The lowest pair on the site is 4.91, on `/see-it-work`.
+- **The credits page.** It has no legend row:
+  - no element with a legend or `cr-lg` class;
+  - no "Deterministic engine · no credits" or "Conditional / exception" anywhere on the page;
+  - the timeline opens straight onto its three tabs.
+
+  The tabs still work by arrow keys, Home and End.
+- **The engineers' page, at all three sizes:**
+  - **No pin:** four ranked places.
+  - **An eligible pin** (the Galaxy S26 new-line offer, intent new): place 1 reads "pinned … ranking skipped", the other three are ranked, and the note says the other three places rank as usual.
+  - **An ineligible pin** (the S26 Ultra upgrade offer, intent new): the piece is not shown, and its row reads "pinned, not shown: needs intent upgrade: fails closed". All four places are filled by ranking, and the note explains why.
+  - **The same pin under intent upgrade:** it takes place 1.
+  - **Self-test:** 22 of 22.
+  - **Sliders:** they answer the arrow keys and Home; K went from 1.8 to 2.1 and down to its minimum.
+  - **Hints:**
+    - Focus opens 79 of the 86, and the other 7 sit in hidden panes.
+    - Escape closes all 86.
+    - Hover and tap each open every visible hint sampled.
+  - **The closing rule** carries its label (RR3-10).
+  - **The rendered text, tooltips included:** no "30-second", "required prefix", "serves nothing" or "needs care", no state word and no gendered pronoun.
+  - No console message.
+- **See it work, at all three sizes:**
+  - The region switch, the first click, the fade and the wheel all work by keyboard.
+  - No console message, including the old negative-width error (RR3-13 was taken).
+- **Keyboard:** 27 runs, nine pages at three sizes. The skip link is the first Tab stop everywhere. The only controls off the Tab order are the credits page's two inactive tabs, which the arrow keys reach.
+- **Without script:** 22 loads. Every page reads in full, and See it work shows its twelve stills.
+
+## RC.4 The preflight
+
+`node enablement/check-site.mjs`, run in the repository on the committed files: 161 of 161 checks pass, exit 0, "All checks passed." It includes:
+
+- the comparison with the local `.dev.vars` values, which it compares and never prints;
+- the gate's 33 of 33 unit tests;
+- the text check.
+
+The only uncommitted file in the tree is `docs/enablement/lanes/M1.md`, which the preflight does not read.
+
+## RC.5 What was not taken
+
+These were recommendations, not required edits:
+
+- **RR3-11:** without script, the engineers' instrument boxes are still empty.
+- **RR3-12:** `see-it-work.md` still sets its rule as bold paragraphs, not callouts.
+- **L3-4:** the stacked credits tabs still have no `aria-orientation`.
+
+RR3-1 to RR3-10 and RR3-13 are all in.
+
+## RC.6 Conduct
+
+- **What I wrote.** I wrote only this file.
+- **Git.** No git command that changes anything. `git archive`, which only reads, extracted HEAD into the scratchpad.
+- **The repository.** The preflight ran there; it reads and changes nothing. No install, deploy, delete or kill.
+- **Servers and Chrome.** Servers ran on ports 9461 to 9464 and exited by themselves. Every Chrome run was headless on its own profile in the scratchpad and closed with `Browser.close`.
+- **One probe crashed** on a malformed regular expression before it could close Chrome. I checked its debug port: nothing was listening, so nothing was left running.
+- **The live worker** behind the gate was out of scope and not checked.
