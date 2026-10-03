@@ -1,5 +1,5 @@
 {
-  "about": "Provenance and the defect-check verdict for every image under public/oh/img/. Products are written by scripts/demo-kit/fetch-imagery.mjs from scripts/demo-kit/configs/oh/imagery.json: LG's own product images from LG's media host, one hero per product, crop, scale and ground only. A verdict holds only for the sha256 it was given to; a changed file reads pending. \"unfetched\" lists the products without an image; they render placeholder-product.svg, a generated placeholder. index.json maps each sku to its entry. No OH page carries an LG mark of its own; LG's marks on its products are part of the product.",
+  "about": "Provenance and the defect-check verdict for every image under public/oh/img/. Products are written by scripts/demo-kit/fetch-imagery.mjs from scripts/demo-kit/configs/oh/imagery.json: LG's own product images from LG's media host, one hero per product, crop, scale and ground only. \"large\" holds 840-pixel renditions of the products the campaign art places, from the same sources. \"art\" is Lane A1's. A verdict holds only for the sha256 it was given to; a changed file reads pending. \"unfetched\" lists the products without an image; they render placeholder-product.svg, a generated placeholder. index.json maps each sku to its entry. No OH page carries an LG mark of its own; LG's marks on its products are part of the product.",
   "products": [
     {
       "id": "100mrgb95bu",
@@ -24828,9 +24828,9 @@
     "product": "placeholder-product.svg"
   },
   "totals": {
-    "files": 1908,
-    "bytes": 24722622,
-    "megabytes": 23.58,
+    "files": 1947,
+    "bytes": 25982879,
+    "megabytes": 24.78,
     "budgetMegabytes": 25
   },
   "unfetched": [
@@ -28811,5 +28811,579 @@
         }
       }
     ]
-  }
+  },
+  "large": [
+    {
+      "id": "oled77g6wua.840",
+      "of": "oled77g6wua",
+      "name": "77 Inch Class LG OLED evo AI G6 4K Smart TV 2026",
+      "maker": "lg",
+      "files": {
+        "png": "products/oled77g6wua.840.png",
+        "webp": "products/oled77g6wua.840.webp",
+        "white": "products/oled77g6wua.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 42981,
+        "webp": 32998,
+        "jpg": 47069
+      },
+      "sha256": "79491cf661005ef4653e10eeac230b3e9eff7a8b364875b7d68642379af70053",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.29,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/17bbad56-d426-408f-abef-b981d020a995/TVs_OLED77G6WUA_gallery-02_3000x3000",
+          "page": "https://www.lg.com/us/tvs/lg-oled77g6wua-oled-4k-tv",
+          "retrieved": "2026-10-02",
+          "sha256": "7b80b9aa7107fdf3ab2dc1445e81575f1843ecc4014b93d67b6b57cb45766b50",
+          "bytes": 28617,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. LG's gallery rendition holds the TV at under 600 pixels wide, so it is drawn about 1.3x larger here: clean at 1:1, no artefact, a little soft at full size; sharp where the art draws it at 600 pixels or less."
+      }
+    },
+    {
+      "id": "oled65c6pua.840",
+      "of": "oled65c6pua",
+      "name": "65 Inch Class LG OLED evo AI C6 4K Smart TV 2026",
+      "maker": "lg",
+      "files": {
+        "png": "products/oled65c6pua.840.png",
+        "webp": "products/oled65c6pua.840.webp",
+        "white": "products/oled65c6pua.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 44717,
+        "webp": 32980,
+        "jpg": 46010
+      },
+      "sha256": "5db09b611916cfaae20b06cbfd055aa135c1699ecd3aec2205e17087486d82d9",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.32,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/2d2188e8-c041-4b39-97ef-4c96aee29a28/TVs_OLED65C6PUA_gallery-02_3000x3000",
+          "page": "https://www.lg.com/us/tvs/lg-oled65c6pua-oled-4k-tv",
+          "retrieved": "2026-10-02",
+          "sha256": "ed0b7b2b8ddba44b99bf0d2fcafd9d6f8a5dfe26caf6bacf9ed617fe111e66a9",
+          "bytes": 24041,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. LG's gallery rendition holds the TV at under 600 pixels wide, so it is drawn about 1.3x larger here: clean at 1:1, no artefact, a little soft at full size; sharp where the art draws it at 600 pixels or less."
+      }
+    },
+    {
+      "id": "wm4000hwa.840",
+      "of": "wm4000hwa",
+      "name": "4.5 cu. ft. Front Load Washer (WM4000HWA)",
+      "maker": "lg",
+      "files": {
+        "png": "products/wm4000hwa.840.png",
+        "webp": "products/wm4000hwa.840.webp",
+        "white": "products/wm4000hwa.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 51331,
+        "webp": 22062,
+        "jpg": 28768
+      },
+      "sha256": "da1fc48c84fd1a9a12dd0fec440153dab94ce61f4d67d272b183b859ba05190c",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.1,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/a18a7451-361e-4ec5-8028-3f087a75f779/Washer-WM4000HWA-Front-gallery_5000x5000",
+          "page": "https://www.lg.com/us/washers-dryers/lg-wm4000hwa-front-load-washer",
+          "retrieved": "2026-10-02",
+          "sha256": "f504f6e1d1a645259703a764efff4a74cb3175c5fefba0de954a68ac3ddfd208",
+          "bytes": 17779,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.1x the source's pixels."
+      }
+    },
+    {
+      "id": "lsgl6335x.840",
+      "of": "lsgl6335x",
+      "name": "6.3 cu. ft. Gas Slide-in Range (LSGL6335X)",
+      "maker": "lg",
+      "files": {
+        "png": "products/lsgl6335x.840.png",
+        "webp": "products/lsgl6335x.840.webp",
+        "white": "products/lsgl6335x.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 58534,
+        "webp": 24868,
+        "jpg": 33426
+      },
+      "sha256": "c148c8dfb242b38d90ded82fb0b73cf7ee91a9ca4dcb6387ac6e7183d7045c09",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.09,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/d4bae1c7-86e5-4a2f-b1db-00788a2fefc4/Ranges_LSGL6335X_gallery_03_2500x2500",
+          "page": "https://www.lg.com/us/cooking-appliances/lg-lsgl6335x-slide-in-gas-range",
+          "retrieved": "2026-10-02",
+          "sha256": "b8301d40c8b3e31ac9e0fdd1197049501fb9b9833074351aafa0f90662bc8a0a",
+          "bytes": 16017,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.09x the source's pixels."
+      }
+    },
+    {
+      "id": "75mrgb95bua.840",
+      "of": "75mrgb95bua",
+      "name": "75 Inch Class LG Micro RGB evo AI MRGB95B 4K Smart TV 2026",
+      "maker": "lg",
+      "files": {
+        "png": "products/75mrgb95bua.840.png",
+        "webp": "products/75mrgb95bua.840.webp",
+        "white": "products/75mrgb95bua.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 69222,
+        "webp": 56836,
+        "jpg": 68854
+      },
+      "sha256": "46cd45b044dd55466d9ecd9d4eafac086e8719247d2379724916c345bdf85a50",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.04,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/bcd07587-91bd-4430-95dc-08fda676cdfc/TVs_75MRGB95BUA_gallery-02_3000x3000",
+          "page": "https://www.lg.com/us/tvs/lg-75mrgb95bua-mrgb-4k-tv",
+          "retrieved": "2026-10-02",
+          "sha256": "f4c5fc67a8a0b871d6e1c699d85d84df2286f3b3297c8b323f6c48a42dd80740",
+          "bytes": 50416,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.04x the source's pixels."
+      }
+    },
+    {
+      "id": "s90ty.840",
+      "of": "s90ty",
+      "name": "LG S90TY Soundbar",
+      "maker": "lg",
+      "files": {
+        "png": "products/s90ty.840.png",
+        "webp": "products/s90ty.840.webp",
+        "white": "products/s90ty.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 16418,
+        "webp": 12924,
+        "jpg": 11728
+      },
+      "sha256": "797fde25822c07050c508674c0732a9291834a4193971c3ba8de89f5001954bd",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.04,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/4b475ae9-ffd5-4ff1-9089-10ee776858c7/Soundbar_S90TY_gallery_01_5000x5000",
+          "page": "https://www.lg.com/us/soundbars/lg-s90ty-soundbar",
+          "retrieved": "2026-10-02",
+          "sha256": "fd5ba1c4e45493c8b702a972dd62b45cee9edf6837119d06cb4eaf9c11e74633",
+          "bytes": 4791,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.04x the source's pixels. Accepted with a note: LG's own \"perfect match for LG OLED / QNED\" tag (and, on some, the Dolby Atmos mark) sits beside the product; the page has no other product image on white."
+      }
+    },
+    {
+      "id": "m7-p4-h7-w7.840",
+      "of": "m7-p4-h7-w7",
+      "name": "LG Sound Suite Immersive Quad Suite 7 Pro (M7-P4 + H7 + W7)",
+      "maker": "lg",
+      "files": {
+        "png": "products/m7-p4-h7-w7.840.png",
+        "webp": "products/m7-p4-h7-w7.840.webp",
+        "white": "products/m7-p4-h7-w7.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 26672,
+        "webp": 27480,
+        "jpg": 20140
+      },
+      "sha256": "e048892984d88a40d53c650ce74d26a643e9aa0b045e547009e721111bbfde30",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.14,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/c23b8107-df85-4968-93eb-8ec31ea30a94/Soundbars_M7-P4_H7_W7_gallery-01_5000x5000",
+          "page": "https://www.lg.com/us/soundbars/lg-m7-p4-h7-w7-immersive-quad-suite-7-pro",
+          "retrieved": "2026-10-02",
+          "sha256": "0b2e1260cb75566f3ce5de3a7a16ec4ff3aedd4ec72fe5e9350c8e228ea917a6",
+          "bytes": 9059,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.14x the source's pixels. Accepted with a note: LG's own \"LG Sound Suite AI\" and \"Dolby Atmos FlexConnect\" logos sit beside the product; the page has no other product image on white (the rest are room scenes and infographics)."
+      }
+    },
+    {
+      "id": "27lx6tyga.840",
+      "of": "27lx6tyga",
+      "name": "27 Inch LG StanbyME Lifestyle Screen (27LX6TYGA)",
+      "maker": "lg",
+      "files": {
+        "png": "products/27lx6tyga.840.png",
+        "webp": "products/27lx6tyga.840.webp",
+        "white": "products/27lx6tyga.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 11846,
+        "webp": 6852,
+        "jpg": 9095
+      },
+      "sha256": "dea870ec198bd9580facd3110bc773b3786f7bdb3855ee7603093aeb7eb0632e",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.21,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/7d9dcfcd-7518-41ef-8fc4-abaff4b3e632/TV_27LX6TYGA_gallery_01_3000x3000",
+          "page": "https://www.lg.com/us/lifestyle-products/lg-27lx6tyga-lifestyle-screen",
+          "retrieved": "2026-10-02",
+          "sha256": "b37bd64ee48a2d741a44ec29f752bc1581a99bf1448856507b4d1647de3fffff",
+          "bytes": 2427,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.21x the source's pixels."
+      }
+    },
+    {
+      "id": "wm4000hwa-dlex4000w-wd300cw-wdp6w.840",
+      "of": "wm4000hwa-dlex4000w-wd300cw-wdp6w",
+      "name": "4.5 cu. ft. Front Load Washer and 7.4 cu. ft. Electric Dryer with pedestal washer and drawer Laundry Set in White",
+      "maker": "lg",
+      "files": {
+        "png": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.png",
+        "webp": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp",
+        "white": "products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 49814,
+        "webp": 24806,
+        "jpg": 31436
+      },
+      "sha256": "ce485cc19e8fd89914914e2164e7834301904391996d36a74ac557c31d72d192",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.17,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/1bd095a9-d917-4eb4-abd6-6a6b44003cca/Laundry-Package-WM4000HWA_DLEX4000W_WD300CW_WDP6W-gallery-01_5000x5000",
+          "page": "https://www.lg.com/us/laundry-appliance-sets/lg-wm4000hwa-dlex4000w-wd300cw-wdp6w",
+          "retrieved": "2026-10-02",
+          "sha256": "5d774d0bd2f63394bfb6ca8bd7991498cf914ccc962fb36c963681c9c8c34ce1",
+          "bytes": 16925,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.17x the source's pixels. Accepted with a note: LG's own composite of every member of the set, with LG's \"America's Most Reliable\" shield composited beside it; the page's other images show one member each, which would misstate what is sold."
+      }
+    },
+    {
+      "id": "lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840",
+      "of": "lf24z6530s-lsgl5833x-mvem1825f-adfd5448at",
+      "name": "Select 4-piece Kitchen Package with 24 cu. ft. Counter-depth Max Refrigerator, Slide-in Gas Range, Front Control…",
+      "maker": "lg",
+      "files": {
+        "png": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.png",
+        "webp": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp",
+        "white": "products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 43632,
+        "webp": 18392,
+        "jpg": 26688
+      },
+      "sha256": "8f0c50a9dcd723d05b0b3fbce0a0b6524626bad4458bd90a69099a73d4ef08ee",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.08,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/32b8dfb9-895f-43c8-89c9-88ece6f353ec/Kitchen-packages_LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT_gallery-1_5000x5000",
+          "page": "https://www.lg.com/us/kitchen-appliance-packages/lg-lf24z6530s-lsgl5833x-mvem1825f-adfd5448at",
+          "retrieved": "2026-10-02",
+          "sha256": "81a9d99db7605ec317483255e56f573744b3499a1bbcdfb676cae24fe7d5dca3",
+          "bytes": 11233,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.08x the source's pixels. Accepted with a note: LG's own composite of every member of the package, with LG's \"America's Most Reliable\" shield composited beside it; the page's other images show one member each, which would misstate what is sold."
+      }
+    },
+    {
+      "id": "ldnpm654s.840",
+      "of": "ldnpm654s",
+      "name": "Top Control Dishwasher (LDNPM654S)",
+      "maker": "lg",
+      "files": {
+        "png": "products/ldnpm654s.840.png",
+        "webp": "products/ldnpm654s.840.webp",
+        "white": "products/ldnpm654s.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 45219,
+        "webp": 5788,
+        "jpg": 12889
+      },
+      "sha256": "f253a8eb65ca5b78f0a0025df4e64d620eb896fc1e7769c9467dfda5558a63b6",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.1,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/8b351e88-ccde-4b2c-b0dd-7adaca296700/Dishwasher_LDNPM654S_gallery_01_5000x5000",
+          "page": "https://www.lg.com/us/dishwashers/lg-ldnpm654s-top-control-dishwasher",
+          "retrieved": "2026-10-02",
+          "sha256": "edd19c6cb69c75b647a794a8203ecd3ec66a08cec11335751649df5284a21cae",
+          "bytes": 3670,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.1x the source's pixels."
+      }
+    },
+    {
+      "id": "wm6700hwa.840",
+      "of": "wm6700hwa",
+      "name": "5.0 cu. ft. Front Load Washer (WM6700HWA)",
+      "maker": "lg",
+      "files": {
+        "png": "products/wm6700hwa.840.png",
+        "webp": "products/wm6700hwa.840.webp",
+        "white": "products/wm6700hwa.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 62909,
+        "webp": 20612,
+        "jpg": 28162
+      },
+      "sha256": "936ddae8e23b9864b1d9996476b6f64a52d40b21d3a30717295dff8f44f1a7d6",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.11,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/a47ab8bc-24f2-4952-95b9-6ee188d36086/Washer-WM6700HWA-Gallery-02_5000x5000",
+          "page": "https://www.lg.com/us/washers-dryers/lg-wm6700hwa-front-load-washer",
+          "retrieved": "2026-10-02",
+          "sha256": "3b0ba7840d6910ce3b38ba039534054d181277b70d83c9108255342ae6cca809",
+          "bytes": 15598,
+          "pixels": "730x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.11x the source's pixels."
+      }
+    },
+    {
+      "id": "wke100hwa.840",
+      "of": "wke100hwa",
+      "name": "LG WashTower (WKE100HWA)",
+      "maker": "lg",
+      "files": {
+        "png": "products/wke100hwa.840.png",
+        "webp": "products/wke100hwa.840.webp",
+        "white": "products/wke100hwa.840.jpg"
+      },
+      "size": {
+        "width": 840,
+        "height": 840,
+        "productFill": 0.88
+      },
+      "bytes": {
+        "png": 41356,
+        "webp": 18766,
+        "jpg": 23121
+      },
+      "sha256": "4a1cc03388534326cc24513995c67f7eadc113448816925227ea7e3a4b6e3235",
+      "generated": false,
+      "view": "LG's own product image, one hero per product, cut from its white studio ground",
+      "scale": 1.16,
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/de9e3b18-f879-4c20-8bf6-17347d99627f/md08000021-zoom-02-jpg",
+          "page": "https://www.lg.com/us/washers-dryers/lg-wke100hwa-washtower",
+          "retrieved": "2026-10-02",
+          "sha256": "3ae1f043cb54513b674912bd4b871c5a636431315c7e3d9b37f2329e3a4be0ca",
+          "bytes": 17362,
+          "pixels": "1100x730",
+          "touchesEdge": false,
+          "ground": "opaque 255,255,255 keyed from the border"
+        }
+      ],
+      "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-10-02",
+        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.16x the source's pixels."
+      }
+    }
+  ]
 }

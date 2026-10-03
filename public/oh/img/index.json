@@ -1,5 +1,5 @@
 {
- "about": "OH image index (Lane D2): sku -> the image entry in MANIFEST.json, so public/oh/products.json can stay the crawl's data and a page resolves its image by sku. src is the path to render: the WebP (transparent) when the defect check accepted the file, otherwise the generated placeholder. webp and png are transparent, jpg is on white; all are size x size. found says where the image URL came from: taxonomy-link (the crawl's image link) or product-page (the product page's server data). Provenance per file is in MANIFEST.json.",
+ "about": "OH image index (Lane D2): sku -> the image entry in MANIFEST.json, so public/oh/products.json can stay the crawl's data and a page resolves its image by sku. src is the path to render: the WebP (transparent) when the defect check accepted the file, otherwise the generated placeholder. webp and png are transparent, jpg is on white; all are size x size. found says where the image URL came from: taxonomy-link (the crawl's image link) or product-page (the product page's server data). large, on the products the campaign art places, is the same image at 840 x 840 (webp, png, jpg as above), for art and full-size heroes; a page that wants the large rendition asks for products[sku].large and falls back to src. Provenance per file is in MANIFEST.json (sections products and large).",
  "manifest": "/oh/img/MANIFEST.json",
  "placeholder": "/oh/img/placeholder-product.svg",
  "counts": {
@@ -10,7 +10,8 @@
   "verdicts": {
    "accept": 591,
    "missing": 11
-  }
+  },
+  "large": 13
  },
  "products": {
   "100MRGB95BU": {
@@ -99,7 +100,13 @@
    "webp": "/oh/img/products/27lx6tyga.webp",
    "png": "/oh/img/products/27lx6tyga.png",
    "jpg": "/oh/img/products/27lx6tyga.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/27lx6tyga.840.webp",
+    "png": "/oh/img/products/27lx6tyga.840.png",
+    "jpg": "/oh/img/products/27lx6tyga.840.jpg",
+    "size": 840
+   }
   },
   "32LB650BPUA": {
    "id": "32lb650bpua",
@@ -713,7 +720,13 @@
    "webp": "/oh/img/products/75mrgb95bua.webp",
    "png": "/oh/img/products/75mrgb95bua.png",
    "jpg": "/oh/img/products/75mrgb95bua.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/75mrgb95bua.840.webp",
+    "png": "/oh/img/products/75mrgb95bua.840.png",
+    "jpg": "/oh/img/products/75mrgb95bua.840.jpg",
+    "size": 840
+   }
   },
   "75NU710BAUA": {
    "id": "75nu710baua",
@@ -2293,7 +2306,13 @@
    "webp": "/oh/img/products/ldnpm654s.webp",
    "png": "/oh/img/products/ldnpm654s.png",
    "jpg": "/oh/img/products/ldnpm654s.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/ldnpm654s.840.webp",
+    "png": "/oh/img/products/ldnpm654s.840.png",
+    "jpg": "/oh/img/products/ldnpm654s.840.jpg",
+    "size": 840
+   }
   },
   "LDNPQ445S": {
    "id": "ldnpq445s",
@@ -2612,7 +2631,13 @@
    "webp": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.webp",
    "png": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.png",
    "jpg": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp",
+    "png": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.png",
+    "jpg": "/oh/img/products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.jpg",
+    "size": 840
+   }
   },
   "LF24Z6530S_LSIL6332FE_ADFD5448AT": {
    "id": "lf24z6530s-lsil6332fe-adfd5448at",
@@ -3622,7 +3647,13 @@
    "webp": "/oh/img/products/lsgl6335x.webp",
    "png": "/oh/img/products/lsgl6335x.png",
    "jpg": "/oh/img/products/lsgl6335x.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/lsgl6335x.840.webp",
+    "png": "/oh/img/products/lsgl6335x.840.png",
+    "jpg": "/oh/img/products/lsgl6335x.840.jpg",
+    "size": 840
+   }
   },
   "LSGL6335Z": {
    "id": "lsgl6335z",
@@ -4036,7 +4067,13 @@
    "webp": "/oh/img/products/m7-p4-h7-w7.webp",
    "png": "/oh/img/products/m7-p4-h7-w7.png",
    "jpg": "/oh/img/products/m7-p4-h7-w7.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/m7-p4-h7-w7.840.webp",
+    "png": "/oh/img/products/m7-p4-h7-w7.840.png",
+    "jpg": "/oh/img/products/m7-p4-h7-w7.840.jpg",
+    "size": 840
+   }
   },
   "MHEC1737F": {
    "id": "mhec1737f",
@@ -4476,7 +4513,13 @@
    "webp": "/oh/img/products/oled65c6pua.webp",
    "png": "/oh/img/products/oled65c6pua.png",
    "jpg": "/oh/img/products/oled65c6pua.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/oled65c6pua.840.webp",
+    "png": "/oh/img/products/oled65c6pua.840.png",
+    "jpg": "/oh/img/products/oled65c6pua.840.jpg",
+    "size": 840
+   }
   },
   "OLED65G4SUB": {
    "id": "oled65g4sub",
@@ -4630,7 +4673,13 @@
    "webp": "/oh/img/products/oled77g6wua.webp",
    "png": "/oh/img/products/oled77g6wua.png",
    "jpg": "/oh/img/products/oled77g6wua.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/oled77g6wua.840.webp",
+    "png": "/oh/img/products/oled77g6wua.840.png",
+    "jpg": "/oh/img/products/oled77g6wua.840.jpg",
+    "size": 840
+   }
   },
   "OLED77M3YUA": {
    "id": "oled77m3yua",
@@ -5092,7 +5141,13 @@
    "webp": "/oh/img/products/s90ty.webp",
    "png": "/oh/img/products/s90ty.png",
    "jpg": "/oh/img/products/s90ty.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/s90ty.840.webp",
+    "png": "/oh/img/products/s90ty.840.png",
+    "jpg": "/oh/img/products/s90ty.840.jpg",
+    "size": 840
+   }
   },
   "S95AR": {
    "id": "s95ar",
@@ -5577,7 +5632,13 @@
    "webp": "/oh/img/products/wke100hwa.webp",
    "png": "/oh/img/products/wke100hwa.png",
    "jpg": "/oh/img/products/wke100hwa.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/wke100hwa.840.webp",
+    "png": "/oh/img/products/wke100hwa.840.png",
+    "jpg": "/oh/img/products/wke100hwa.840.jpg",
+    "size": 840
+   }
   },
   "WKEX200HBA": {
    "id": "wkex200hba",
@@ -5863,7 +5924,13 @@
    "webp": "/oh/img/products/wm4000hwa.webp",
    "png": "/oh/img/products/wm4000hwa.png",
    "jpg": "/oh/img/products/wm4000hwa.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/wm4000hwa.840.webp",
+    "png": "/oh/img/products/wm4000hwa.840.png",
+    "jpg": "/oh/img/products/wm4000hwa.840.jpg",
+    "size": 840
+   }
   },
   "WM4000HWA_DLEX4000W_WD300CW_WDP6W": {
    "id": "wm4000hwa-dlex4000w-wd300cw-wdp6w",
@@ -5874,7 +5941,13 @@
    "webp": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.webp",
    "png": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.png",
    "jpg": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp",
+    "png": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.png",
+    "jpg": "/oh/img/products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.jpg",
+    "size": 840
+   }
   },
   "WM4000HWA_DLGX4001W_WD300CW_WDP6W": {
    "id": "wm4000hwa-dlgx4001w-wd300cw-wdp6w",
@@ -6193,7 +6266,13 @@
    "webp": "/oh/img/products/wm6700hwa.webp",
    "png": "/oh/img/products/wm6700hwa.png",
    "jpg": "/oh/img/products/wm6700hwa.jpg",
-   "size": 420
+   "size": 420,
+   "large": {
+    "webp": "/oh/img/products/wm6700hwa.840.webp",
+    "png": "/oh/img/products/wm6700hwa.840.png",
+    "jpg": "/oh/img/products/wm6700hwa.840.jpg",
+    "size": 840
+   }
   },
   "WM6700HWA_DLEX6700W_WD300CW_WDP6W": {
    "id": "wm6700hwa-dlex6700w-wd300cw-wdp6w",
