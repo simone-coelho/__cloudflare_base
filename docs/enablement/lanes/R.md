@@ -1155,3 +1155,121 @@ When resumed: B4-1 if the lead adds the line, and any of M4-1 to M4-8 the owners
 - **Scratch.** Every copy, script, mutation tree, screenshot, PDF and unzipped document is in `scratchpad/r4/`. The mutation trees were made in new folders, so nothing needed deleting.
 - **Chrome.** Every Chrome run was headless on its own profile and closed with `Browser.close`. Two harness runs stopped early (a missing favicon in one server; a path the shell rewrote in another). I checked their debug ports afterwards: nothing was listening, so nothing was left running.
 - **Out of scope.** The live worker behind the gate was not checked.
+
+# Round four, delta, 2026-10-03: the committed fixes, pages only
+
+**Scope.** This pass covers the pages, partials, sources, figures and checks as committed in two commits: `6aa479f5`, which closed the findings, and `4419a253`, which records the lead's rulings in design §12. I worked from a scratch copy of the tree at `4419a253`.
+
+`03104fbe` was committed while I worked, and it changes only the Word copies and their pictures. `git diff --stat 4419a253 03104fbe` is empty over `enablement/site`, `enablement/partials`, the two checks, the name file and `docs/enablement/content`, so every result below holds at `03104fbe` too.
+
+The two rebuilt Word copies are not in this pass; they follow when lane W2 reports.
+
+## Verdicts
+
+| Page | Verdict | Still open |
+|---|---|---|
+| `/what-it-is` | PASS | none |
+| `/see-it-work` | PASS | none; M4-8 stands as T1's departure 12, by the lead's ruling |
+| `/selling-it` | PASS | M4-10 by the shared table rule (not printed in this pass) |
+| `/battlecard` | PASS | minor M4-10 |
+| `/how-it-works` | PASS | M4-10 by the shared table rule (not printed in this pass) |
+
+Every finding of round four is closed as its owner's note says, except one remainder of M4-9 in the name file. One new minor finding, M4-10, came from printing to PDF rather than emulating print.
+
+## Each finding against its owner's note
+
+- **B4-1, closed (T1).**
+  - The performance sentence is verbatim in `content/see-it-work.md:19` and in step 2 of `see-it-work.html:166`.
+  - In the browser, with script, it is in step 2's visible text at 1366, with and without reduced motion.
+  - The tour now carries all four fixed sentences, as design §12 records (D1).
+- **M4-1, closed (T1).** I walked the tour by keyboard only, in both regions, at 1366 and 390.
+  - After Enter on a region, focus stays on that region's button, never on the body.
+  - "Next step" is one Tab away from Florida and two from Washington State, with the other region's button between.
+  - All seven steps, the pin and the holdout equal my independent recomputation in all four walks.
+  - The callout is a polite live region, and no console message appeared.
+- **M4-2, closed (S1).**
+  - Printed from a dark-mode browser, the three "The engine" labels are #197050, 6.04 to 1 on white.
+  - The text colors in the dark and light PDFs are identical, except 23 runs in the dark scheme's numbered badges, which print fir instead of white.
+- **M4-3, closed (G1).** The heading reads "Customers choose it for different reasons" at `how-it-works-and-where-it-runs.md:5` and `how-it-works.html:151`.
+- **M4-4, closed (G1).**
+  - `how-it-works-and-where-it-runs.md:108` now reads "Of the three tailored coats, two are premium and one is at the core price".
+  - From that line, Σa = 2.133: coats (three views) 0.625, tailored (three) 0.625, premium (two) 0.526 and core (one) 0.357.
+  - Then λ = 1/3.133 = 0.32, as printed.
+- **M4-5, closed (G1).**
+  - The formula defines k where it first appears: "λ = k / (k + Σa), with k the blend constant" (`:102`, `how-it-works.html:579`).
+  - The worked example under it opens with k's default of 1.
+- **M4-6, closed (A1, T1).** The smallest text inside a drawn frame, before and after:
+
+  | Frames | At 1366 and 1440 | At 390 |
+  |---|---|---|
+  | Sellers' storyboard | 11.2 px (was 9.3) | 18.3 px (was 15.2) |
+  | Tour stills | 13.9 px (was 7.8 to 10) | 11.3 px (was 10.1 to 13) |
+
+  The tour figures agree with T1's note.
+- **M4-7, closed (T1).**
+  - On the target card, `tour-beckon` runs three iterations of 1.8 s.
+  - At 6.2 s no animation remains on the card.
+  - Under reduced motion, none starts.
+- **M4-8, recorded.** T1's departure 12 carries the lead's ruling. Nothing is asked of the page.
+- **M4-9, closed except for the name file (S1, A1, M2).**
+  - `data-reader` now sits on leaf blocks only. On the marketing page it covers 31% of the words, and the check now refuses more than half on any page.
+  - The hardened checks catch ten of the eleven holes (below).
+
+## The checks
+
+- `node enablement/render-check.mjs` exits 0. `node enablement/check-site.mjs` exits 0 with 189 checks.
+- **Mutations.** I reran all thirty of round four's mutations, plus four new probes, on a scratch copy of `4419a253`:
+  - The eighteen mutations caught in the round are still caught.
+  - Ten of the eleven former holes are now caught: #13 to #17 and #19 to #23.
+  - #18 (two adjacent 59-word paragraphs) still passes, by design.
+  - #24 still passes: a quote attributed to one of the customer's other brands, in the page and the markdown, is not refused.
+  - Probe #34 (a 70-word SVG text in a storyboard frame) is caught.
+  - Probe #33 (a reader-voice line in a leaf with `data-reader`) passes, as it should.
+- **Still open (minor, for S1 and the lead).**
+  - **The name file covers less than its header claims.** `enablement/name-patterns.txt` holds 28 patterns.
+    - It names the customer and one of its brands, but not the brand used in #24. S3 names that brand, and the header does not claim to cover S3.
+    - It also omits the two customer people S4 names at rows 1.13 and 5.12, although its header says it holds "the customer people those files name".
+    - Adding the other brands in the customer's group, and those two people, would close #24.
+  - **Probe #31 passes.** Five 100-word paragraphs in a `data-visual` div pass when the div also holds one empty span that the stylesheet draws.
+  - **Probe #32 passes.** "It decides in under a second." (no digit) passes the timing scan.
+  - Both probes need a reader's judgment, and no page does either.
+- **Two notes are stale on one point.**
+  - S1 §9's row for #23 and T1's M4-9 bullet say the timing scan reads minutes.
+  - The check (`render-check.mjs:117`) and design §12 ("Minutes leave the timing scan") say it does not.
+  - The pages are unaffected.
+
+## The browser pass
+
+I loaded the five pages from the scratch copy of `4419a253` at 390, 1366 and 1440, in light and dark. The first three runs below each covered all 30 combinations of page, width and scheme:
+
+- **With script.** All 30 loads were clean: status 200, no request off origin, no failed request, no console message, no horizontal scroll.
+- **Reduced motion, 30 loads.** Every page opens at its end state, and nothing runs at load or after scrolling.
+- **Without script, 30 loads.** No section is hidden, and the text is as long as the scripted page's. There was no horizontal scroll and no console message.
+- **Contrast.** At 1440 and 390, HTML text is at least 4.91 to 1 in light and 6.7 to 1 in dark; SVG text is at least 5.12 to 1.
+- **Keyboard.** At 1366 and 390, the skip link is the first stop on every page.
+
+I also printed the battlecard to PDF from a light-mode and a dark-mode browser. Each was printed on Letter with and without background graphics, and on A4 without:
+
+- It prints on one page every time.
+- Every text passes AA against its background as computed under print media; the lowest is 5.65 to 1, in both schemes.
+- The four fixed-sentence bands print dark, with white and lime text, in both schemes. This is by design: `print-color-adjust: exact` keeps their background even with background graphics off.
+
+## New finding
+
+**M4-10 (minor).** Table headers print light gray on white when background graphics are off, which is Chrome's default.
+
+- **The cause.** In `enablement/site/site.css:229-230`, `.rt th` takes `--th-bg` (fir) and `--th-ink` (white), and the print block (`:549`) keeps both. Unlike the fixed-sentence bands, the rule sets no `print-color-adjust: exact`. Without background graphics, Chrome drops the fir and darkens the white text to #ABABAB, 2.3 to 1 on white.
+- **The evidence.** I read the text colors out of the PDFs' content streams. In all four no-background PDFs (light and dark, Letter and A4), exactly 42 text runs are #ABABAB. That is the character count of the battlecard's two headers, "The question to ask" and "The measure it leads to". With background graphics on, those runs print white on fir.
+- **Why round four missed it.** Round four measured under emulated print media, where backgrounds are always drawn.
+- **Other pages.** The same rule styles the tables on `/selling-it` (8 headers) and `/how-it-works` (5). I did not print those pages.
+- **The fix.** Add `print-color-adjust: exact` to `.rt th`, or print the header as ink on a light fill.
+- **The owner.** The stylesheet is shared, so the lead assigns it.
+
+## Conduct
+
+- **What I wrote.** Only this section, appended to this file.
+- **Git and the tree.** No git command that changes anything. No install, delete, kill or deploy.
+- **Scratch.** The copies, the probes (`tourkeys4.mjs`, `probe-print4.mjs`, `pdfcolors.cjs`), the PDFs and the results are in `scratchpad/r4/`, under `out/` and `out4/`.
+- **Chrome.** Each run was headless on its own profile and closed with `Browser.close`.
+
+When resumed: the two rebuilt Word copies, plus M4-10 and the name file if their owners take them up.

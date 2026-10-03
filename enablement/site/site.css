@@ -546,8 +546,12 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
   @page { margin: 16mm 14mm; }
   :root {
     --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F6F8F3; --ink: #000000; --muted: #2F4F3F; --line: #9AA88C;
-    --line-soft: #C9D3BE; --link: #000000; --tint: #FFFFFF; --th-bg: var(--fir); --th-ink: #FFFFFF;
+    --line-soft: #C9D3BE; --link: #000000; --tint: #FFFFFF;
+    /* Review round four, M4-10: table headers print ink on white with a rule line, so they read whether or not the
+       browser prints background graphics (without them, white on fir printed light gray, 2.3 to 1). */
+    --th-bg: #FFFFFF; --th-ink: #000000;
   }
+  thead th { border-bottom: 1.5px solid #000000; }
   body { display: block; font-size: 10.5pt; line-height: 1.45; background: #FFFFFF; color: #000000; }
   .skip, .sitenav, .figure-scroll-hint, .figure-switch-buttons, .figure-switch-help, .cr-tl-tabs, .az { display: none !important; }
   .masthead { border: 0; }

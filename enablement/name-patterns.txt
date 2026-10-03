@@ -1,7 +1,8 @@
 # enablement/name-patterns.txt
 # The names the site must never show: every customer, prospect, vendor and competitor named in
-# docs/enablement/research/S1-inventory.md and docs/enablement/research/S4-story-sources.md, and the customer people
-# those files name. Both enablement/render-check.mjs and enablement/check-site.mjs read this file, so neither check
+# docs/enablement/research/S1-inventory.md and docs/enablement/research/S4-story-sources.md, the customer people
+# those files name (S4 rows 1.13, 5.12 and section 8 among them), and the other brands of the customer's retail group
+# (S3-naming-and-narrative.md names one of them). Both enablement/render-check.mjs and enablement/check-site.mjs read this file, so neither check
 # names anyone itself. It sits outside the served folder and is never served.
 #
 # One pattern per line: a JavaScript regular-expression fragment, matched as a whole word, in any case.
@@ -17,6 +18,8 @@
 #   the forms that tell it apart (below).
 tapestry
 coach
+kate\s+spade
+stuart\s+weitzman
 qvc
 verizon
 mandeep
@@ -25,6 +28,10 @@ seth\s+gabriel
 gabriel
 nitin
 tyagi
+garrett\s+holl
+holl
+kevin\s+gallagher
+gallagher
 dynamic\s+yield
 =DY
 quin

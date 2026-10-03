@@ -301,6 +301,9 @@
   .spine .spine-headline { color: #000000; }
   .spine .spine-beat .spine-icon { color: #197050; }
   .spine .spine-frame p::before { background: #FFFFFF; color: #000000; border: 1px solid #000000; }
+  /* the closed box prints as an ink outline, so its "?" reads without background graphics */
+  .spine .spine-pict-box span { background: #FFFFFF; border: 2px solid #000000; }
+  .spine .spine-pict-box span::after { color: #000000; }
   .spine .spine-play *, .spine .spine-play.spine-buckets * { animation: none !important; }
   .spine .spine-replay-row { display: none; }
   .spine .spine-block { margin-top: 18pt; }
