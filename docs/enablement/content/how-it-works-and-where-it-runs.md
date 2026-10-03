@@ -14,7 +14,7 @@ The detail: [B.1](#b1-one-visitor-walked-through-end-to-end)
 
 ## A.2 It is a personal stylist for every visitor, at internet scale
 
-The engine reads the room: where the visitor is and how they arrived. It watches without interrogating: no form, no login, only what the visitor does. It rearranges the table: the page's sections and the pieces inside them, in this visitor's order. And it pivots when attention moves. The same retailer's paper asked for "a site that feels like a stylist who remembers."
+The engine reads the room: where the visitor is and how they arrived. It watches without interrogating: no form, no login, only what the visitor does. It rearranges the table: the page's sections and the pieces inside them, in this visitor's order. And it pivots when attention moves. The same retailer asked for "a site that feels like a stylist who remembers."
 
 Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. It is not a recommendations engine and does not replace one; it organizes the page by interest, in real time, around whatever recommendations exist.
 
@@ -76,7 +76,7 @@ The hero's coat story scores the coats share, 1, times category's weight, 0.3, p
 
 **A pin holds.** The brand has sold the edit's first place to its winter campaign, so that piece is pinned: reserved before anything is scored and served first at a score of 0, its receipt saying ranking never ran for it. The other three places are ranked for this visitor.
 
-**Attention moves.** The visitor turns to boots and views two pairs. Boots rises to 0.526, and the next page brings boots forward in the edit. The campaign's 0.06 is still added and simply outscored: a seed never switches off, and the visitor's own behavior wins.
+**Attention moves.** The visitor turns to boots and views two pairs. Boots rises to 0.526, and the next page brings boots forward in the edit. The campaign's 0.06 is still added and simply outscored: time never switches a seed off, and the visitor's own behavior wins.
 
 **The visitor leaves, and interest drains.** At the default memory of 14 days, coats, at a raw score of 3, falls below the exit line of 0.45 after 14 × ln(3/1.4727) = 9.96 days with no further event ([B.2](#b2-interest-is-a-number-anyone-can-check)). The visitor leaves the coats audience on that clock, the coat content steps back, and the next decision's receipt records the release.
 
@@ -170,7 +170,7 @@ Arrival seeds work beside the region. A seed fires on how the visitor arrived: t
 seed = weight · Π dampen · ω[slot, dimension of the tag]
 ```
 
-A seed never switches off. It is dampened when the visitor's own audiences point elsewhere and outscored as their interests grow, and the receipt shows every seed that fired and what it added.
+Time never switches a seed off. A dampening factor the brand publishes, from 1 down to 0, lowers it when the visitor's own audiences point elsewhere, and the visitor's growing interests outscore it. The receipt shows every seed that fired and what it added.
 
 ## B.5 Learning waits for the dial, and the receipt shows everything
 
@@ -246,8 +246,8 @@ Imported priors, a warehouse's starting beliefs per piece and context, sit besid
 
 | Who | Changes | Where |
 |---|---|---|
-| The brand's team | Weights, memory, lines, slot rules, pins, learning dials, the holdout share | The console |
-| The brand's team or its developers | The catalog, the arrival seeds, the dimensions and the attribute each reads | The API, without a release |
+| The brand's team | Weights, memory, lines, slot rules, pins, arrival seeds, learning dials, the holdout share | The console, or the API |
+| The brand's team or its developers | The catalog, the dimensions and the attribute each reads | The API, without a release |
 | Engineers | Tenants, site keys, allowed origins, identity secrets, retention periods | The deployment's own settings |
 
 The console also shows what has been learned, why a visitor saw a piece, the day report and the history of every document.
@@ -256,7 +256,7 @@ The console also shows what has been learned, why a visitor saw a piece, the day
 
 Back to the story: [A.3](#a3-what-it-does-thirteen-capabilities-each-with-its-use)
 
-One script, the SDK, starts the visitor's session and sends events, or reads the brand's existing data layer with GA4 event names. It receives every slot's decision by id in one call and lets the site's own default stand whenever no answer arrives in time. The brand's server can fetch the first page's decisions before sending the page, so the content above the fold arrives already chosen. The front end is built once, and later capabilities are switched on in configuration. Developers work from the integration kit: the SDK, the API reference, the payload schemas and a staging connection check.
+One script, the SDK, starts the visitor's session and sends events, or reads the brand's existing data layer with GA4 event names. It receives every slot's decision by id in one call and lets the site's own default stand whenever no answer arrives in time. The brand's server can fetch the first page's decisions before sending the page, so the content above the fold arrives already chosen. The front end is built once, and every other capability is switched on in configuration. Developers work from the integration kit: the SDK, the API reference, the payload schemas and a staging connection check.
 
 | Call | The site sends | It gets back |
 |---|---|---|
@@ -269,7 +269,7 @@ One script, the SDK, starts the visitor's session and sends events, or reads the
 
 Given a product list from the commerce platform or a recommendations system, the engine reorders it for the visitor and removes nothing; at a dial of zero the list comes back unchanged.
 
-**Opal.** The brand's team asks Opal, in plain words, to draft audiences, tests, analyses, tags and imagery, or to explain a result, and Opal proposes what matters from the engine's records, with its evidence. When a signal arrives from another system, such as a partner's social-listening feed, Opal drafts a test or a contextual-bandit experiment on the slots it affects and launches it once a person approves. Design-time tagging proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. [Where Opal and AI credits fit](https://edge-platform-bti.expedge.workers.dev/credits) sets out the boundary.
+**Opal.** The brand's team asks Opal, in plain words, to draft audiences, tests, analyses, tags and imagery, or to explain a result, and Opal proposes what matters from the engine's records, with its evidence. When a signal arrives from another system, such as a partner's social-listening feed, Opal drafts a test or a contextual-bandit experiment on the slots it affects and launches it once a person approves. Design-time tagging proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. [Where Opal and AI Credits Fit, and Where They Never Do](https://edge-platform-bti.expedge.workers.dev/credits) sets out the boundary.
 
 **ODP and Feature Experimentation.** Events, the audiences the engine forms and each visitor's journey stage land in ODP as durable facts for the brand's other teams, and a recognized visitor's interests can be restored from it without any decision waiting. An experiment or a contextual bandit from Feature Experimentation can be pointed at any slot as an optional instrument; neither is how the engine decides.
 
