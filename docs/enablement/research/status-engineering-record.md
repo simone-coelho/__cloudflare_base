@@ -1,3 +1,5 @@
+**Engineering record, kept out of the enablement material: this file is not part of the package, and the lead will move it.**
+
 # Behavioral Targeting and Intelligence: what is built, designed and open
 
 **For anyone at Optimizely who must know what may be claimed today.** Each row says what happens, its verdict, and what to keep straight about it.
