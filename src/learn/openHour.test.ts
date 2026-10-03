@@ -20,9 +20,9 @@ import { createHash } from 'node:crypto';
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { hourPrefix, outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { writeTombstone } from '@/ledger/erasure';
-import { canonicalReportJson, ReportTooLarge, type DayReport } from './report';
+import { canonicalReportJson, ReportRowConflict, ReportTooLarge, REPORT_LIMITS, type DayReport } from './report';
 import {
-  buildHour, catchUp, emptyBrand, foldOpenHours, hourKey, mergeBrand, mergeBrandInto, openHours, openKey, openLedgerKey, reportFromHours,
+  buildHour, catchUp, emptyBrand, foldOpenHours, hourKey, mergeBrand, mergeBrandInto, openHours, openKey, openLedgerKey, openStateKey, reportFromHours,
   runDayReport, shardKey, SHARDS, type HourAggregate,
 } from './hourly';
 import { DEFAULT_STATS } from './stats';
@@ -233,7 +233,7 @@ describe('the open hour\'s working aggregate', () => {
     expect(one.folded).toEqual([{ date: DATE, hour: 12, objects: 1, read: 1, copied: 0, truncated: false, decisions: 3, outcomes: 0, changed: true }]);
     expect(one.published, 'the day is published again with the hour in it').toEqual([DATE]);
     const saved = JSON.parse(r2.objects.get(`reports/${TENANT}/${TENANT}/${DATE}.json`)!) as DayReport;
-    expect(saved.hours).toMatchObject({ source: 'aggregates', built: [12], open: [12] });
+    expect(saved.hours).toMatchObject({ source: 'aggregates', built: [12], open: [{ hour: 12, status: 'current', through: T12 + 6 * MIN }] });
     expect(saved.counts.decisions).toBe(3);
 
     const second = [...write(r2, hour12.outcomes.slice(0, 2), 'c'), ...write(r2, hour12.decisions.slice(3), 'b')];
@@ -276,7 +276,7 @@ describe('the open hour\'s working aggregate', () => {
     const working13 = stored(r2, openKey(TENANT, DATE, 13));
     expect(working13.brands[TENANT]!.policies.learning!.armCredits['hero|personalized'], 'the 13:01 click credits the 12:59 hero').toBe(1);
     const day = await runDayReport(r2 as never, ids, learn, null, T12 + 64 * MIN);
-    expect(day.hours).toMatchObject({ built: [12, 13], open: [12, 13] });
+    expect(day.hours).toMatchObject({ built: [12, 13], open: [{ hour: 12, status: 'current' }, { hour: 13, status: 'current' }] });
     // The finals, when they come, say the same.
     await buildHour(r2 as never, TENANT, { date: DATE, hour: 12 }, learn, T12 + 2 * H + 6 * MIN);
     const final13 = await buildHour(r2 as never, TENANT, { date: DATE, hour: 13 }, learn, T12 + 2 * H + 6 * MIN);
@@ -291,16 +291,18 @@ describe('the open hour\'s working aggregate', () => {
     await writeTombstone(r2 as never, TENANT, 'v5', 'test', T12 + 30 * MIN);
     const next = await foldOpenHours(r2 as never, TENANT, learn, T12 + 31 * MIN, { start: true, publish: true });
     const after = stored(r2, openKey(TENANT, DATE, 12)).brands[TENANT]!;
-    expect(next.folded[0]).toMatchObject({ copied: 5, changed: true });
+    // The erasure is applied to the copy before the fold: the segment naming the visitor goes, and the fold reads the hour from the ledger.
+    expect(next.pruned).toBe(1);
+    expect(next.folded[0]).toMatchObject({ copied: 0, changed: true });
     expect([before.decisions, before.outcomes, before.rows_hidden]).toEqual([6, 4, 0]);
-    expect([after.decisions, after.outcomes, after.rows_hidden], 'her decision and her click are gone from the counts, and named as hidden').toEqual([5, 3, 2]);
+    expect([after.decisions, after.outcomes, after.rows_hidden], 'the visitor\'s decision and click are gone from the counts, and named as hidden').toEqual([5, 3, 2]);
     expect(after.visitorsDay, 'and from the day\'s visitors').toBe(before.visitorsDay - 1);
     const rows = segmentRows(r2);
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.filter((row) => row.visitor_id === 'v5'), 'and the hour\'s ledger copy keeps none of her rows').toEqual([]);
+    expect(rows.filter((row) => row.visitor_id === 'v5'), 'and the hour\'s ledger copy keeps none of the visitor\'s rows').toEqual([]);
     r2.gets = [];
     const again = await foldOpenHours(r2 as never, TENANT, learn, T12 + 36 * MIN, { start: true, publish: true });
-    expect(again.folded[0], 'the objects that name her are read from the ledger, as the final fold reads them').toMatchObject({ copied: 3, changed: false });
+    expect(again.folded[0], 'the objects that name the visitor are read from the ledger, as the final fold reads them').toMatchObject({ copied: 3, changed: false });
     expect(ledgerKeys(r2.gets, 12)).toHaveLength(2);
   });
 
@@ -311,7 +313,8 @@ describe('the open hour\'s working aggregate', () => {
     const standing = r2.objects.get(openKey(TENANT, DATE, 12));
     write(r2, [{ ...pickup, item_id: 'another' }], 'conflict');
     const refused = await foldOpenHours(r2 as never, TENANT, learn, T12 + 11 * MIN, { start: true, publish: true });
-    expect(refused.failed).toEqual([{ date: DATE, hour: 12, error: 'conflicting rows under one logical id' }]);
+    expect(refused.failed).toEqual([{ date: DATE, hour: 12, error: 'conflicting rows under one logical id',
+      refusal: { at: T12 + 11 * MIN, error: 'conflicting rows under one logical id', code: 'report_row_conflict', conflict: { stream: 'decision' } } }]);
     expect(r2.objects.get(openKey(TENANT, DATE, 12))).toBe(standing);
     await expect(buildHour(r2 as never, TENANT, { date: DATE, hour: 12 }, learn, T12 + H + 6 * MIN)).rejects.toThrow('conflicting rows under one logical id');
     // 13:02: the refused hour is in its grace and the next hour is open. The refusal does not hold the next hour
@@ -345,7 +348,7 @@ describe('the open hour\'s working aggregate', () => {
     // 13:06: the catch-up folds hour 12, and the next open-hour run removes its working objects.
     await catchUp(r2 as never, TENANT, learn, T12 + H + 6 * MIN, { lookbackHours: 2 });
     const after = await foldOpenHours(r2 as never, TENANT, learn, T12 + H + 6 * MIN, { start: true, publish: true });
-    expect(after.removed).toBe(2);
+    expect(after.removed, 'its working aggregate, its state and its one segment').toBe(3);
     expect([...r2.objects.keys()].filter((k) => k.startsWith(`aggregates/${TENANT}/open/`))).toEqual([]);
   });
 });
@@ -375,7 +378,8 @@ describe('the day report on a busy day', () => {
     expect([...ledgerKeys(r2.gets, 10), ...ledgerKeys(r2.gets, 11)], 'no raw of a closed hour').toEqual([]);
     expect(ledgerKeys(r2.gets, 12).sort(), 'and of the open hour only what the queue wrote since the job\'s run').toEqual([...tail].sort());
     expect(r2.gets.some((k) => k.startsWith(openLedgerKey(TENANT, DATE, 12) + '.')), 'and the copy the job wrote').toBe(true);
-    expect(report.hours).toEqual({ source: 'aggregates', built: [10, 11, 12], missing: [...Array(10).keys()], open: [12], horizonMs: 48 * H });
+    expect(report.hours).toEqual({ source: 'aggregates', built: [10, 11, 12], missing: [...Array(10).keys()],
+      open: [{ hour: 12, status: 'current', through: T12 + 31 * MIN }], horizonMs: 48 * H });
     expect(report.counts.decisions, 'the tail is counted: 3 + 1 + hour 12\'s 6 (one of them redelivered)').toBe(9);
     expect(report.counts.outcomes).toBe(5);
     expect(report.coverage?.status, 'and a day with an hour still open says it is incomplete').toBe('incomplete');
@@ -422,11 +426,194 @@ describe('the day report on a busy day', () => {
     const afternoon = reportFromHours([...busyHours, ...quiet], ids, config, T12 + 11 * H, { pending: 0, missing: [] });
     expect(morning.counts.decisions).toBe(6 * 828);
     expect(afternoon.counts).toEqual(morning.counts);
-    // The day merged in place is the day the old merge made, value for value and key for key.
+    // The day merged in place is the day the old merge made, value for value (and here, where every hour
+    // carries the same members, key for key; the running total's key order follows first appearance).
     const tau = DEFAULT_STATS.tauLearnMs;
     let copied = emptyBrand();
     const inPlace = emptyBrand();
     for (const hour of busyHours) { copied = mergeBrand(copied, hour.brands[TENANT]!, tau); mergeBrandInto(inPlace, hour.brands[TENANT]!, tau); }
     expect(JSON.stringify(inPlace)).toBe(JSON.stringify(copied));
+  });
+});
+
+describe('lane E6, second build: the erasures on every run, a refused hour named, no work where nothing changed', () => {
+  /** The hour's state, as the job wrote it. */
+  const state = (r2: FakeR2, hour = 12) => JSON.parse(r2.objects.get(openStateKey(TENANT, DATE, hour))!) as {
+    status: string; basis: string | null; through: number | null; refusal?: Record<string, unknown>; segments: Array<{ key: string; visitors: string[] }> };
+  /** Hours 10 and 11 folded, so the day has final hours. */
+  async function finals(r2: FakeR2): Promise<void> {
+    const T10 = T12 - 2 * H, T11 = T12 - H;
+    write(r2, [dec('v7', T10 + 5 * MIN, 'hero', 'item-a'), dec('v8', T10 + 9 * MIN, 'hero', 'item-b')], 'ten');
+    write(r2, [dec('v9', T11 + 15 * MIN, 'deals', 'gift-card')], 'eleven');
+    await buildHour(r2 as never, TENANT, { date: DATE, hour: 10 }, learn, T11 + 6 * MIN);
+    await buildHour(r2 as never, TENANT, { date: DATE, hour: 11 }, learn, T12 + 6 * MIN);
+  }
+
+  it('applies an erasure to the copy on every run, while the hour\'s fold is refused too', async () => {
+    const r2 = new FakeR2();
+    for (const [rows, batch] of BATCHES) write(r2, rows, batch);
+    const good = await foldOpenHours(r2 as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true });
+    expect(good.failed).toEqual([]);
+    expect(segmentRows(r2).some((row) => row.visitor_id === 'v5'), 'the copy holds the visitor\'s rows before the erasure').toBe(true);
+    const standing = r2.objects.get(openKey(TENANT, DATE, 12));
+    // 12:22: a conflicting row lands in the hour, and the visitor is erased.
+    write(r2, [{ ...pickup, item_id: 'another' }], 'conflict');
+    await writeTombstone(r2 as never, TENANT, 'v5', 'test', T12 + 22 * MIN);
+    for (const minute of [25, 30, 35]) {
+      const run = await foldOpenHours(r2 as never, TENANT, learn, T12 + minute * MIN, { start: true, publish: true });
+      expect(run.failed.map((f) => f.error), `12:${minute}: the fold is refused`).toEqual(['conflicting rows under one logical id']);
+      expect(segmentRows(r2).filter((row) => row.visitor_id === 'v5'), `12:${minute}: and the copy holds none of the visitor's rows`).toEqual([]);
+      expect(state(r2).segments.flatMap((s) => s.visitors), 'nor does its index name the visitor').not.toContain('v5');
+      expect(run.pruned, 'the segment naming the visitor went at the first run after the erasure').toBe(minute === 25 ? 1 : 0);
+    }
+    expect(r2.objects.get(openKey(TENANT, DATE, 12)), 'the earlier working aggregate stands').toBe(standing);
+    expect(state(r2)).toMatchObject({ status: 'refused', through: T12 + 20 * MIN, refusal: { code: 'report_row_conflict', conflict: { stream: 'decision' } } });
+  });
+
+  it('on a day with no final hour, leaves a refused open hour to the raw read: the conflict is raised, as before the open hour was folded', async () => {
+    const r2 = new FakeR2();
+    write(r2, hour12.decisions.slice(0, 3), 'a');
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true });
+    write(r2, [{ ...pickup, item_id: 'another' }], 'conflict');
+    write(r2, [hour12.decisions[3]!], 'later');
+    const job = await foldOpenHours(r2 as never, TENANT, learn, T12 + 15 * MIN, { start: true, publish: true });
+    expect(job.failed.map((f) => f.hour)).toEqual([12]);
+    // The route files this conflict and answers 409 (src/routes/decisions.ts), exactly as it did when a day with no final hour was read raw.
+    const refused = runDayReport(r2 as never, ids, learn, null, T12 + 16 * MIN, { maxObjects: 100 });
+    await expect(refused).rejects.toBeInstanceOf(ReportRowConflict);
+    await expect(refused).rejects.toMatchObject({ stream: 'decision', id: pickup.decision_id });
+    // The job's own saved report says what it holds: the hour summed from the fold that stands, named refused.
+    const saved = JSON.parse(r2.objects.get(`reports/${TENANT}/${TENANT}/${DATE}.json`)!) as DayReport;
+    expect(saved.hours?.open).toEqual([{ hour: 12, status: 'refused', through: T12 + 10 * MIN,
+      refusal: { at: T12 + 15 * MIN, error: 'conflicting rows under one logical id', code: 'report_row_conflict', conflict: { stream: 'decision' } } }]);
+    expect(saved.counts.decisions).toBe(3);
+  });
+
+  it('on a day with final hours, names the refused hour with the conflict, and what it sums from as stale', async () => {
+    const r2 = new FakeR2();
+    await finals(r2);
+    write(r2, hour12.decisions.slice(0, 3), 'a');
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true });
+    write(r2, [{ ...pickup, item_id: 'another' }], 'conflict');
+    const report = await runDayReport(r2 as never, ids, learn, null, T12 + 16 * MIN, { maxObjects: 100 });
+    expect(report.hours).toMatchObject({ source: 'aggregates', built: [10, 11, 12], open: [{ hour: 12, status: 'refused', through: T12 + 10 * MIN,
+      refusal: { at: T12 + 16 * MIN, error: 'conflicting rows under one logical id', code: 'report_row_conflict', conflict: { stream: 'decision' } } }] });
+    expect(report.counts.decisions, 'hours 10 and 11, and hour 12 as the fold at 12:10 found it').toBe(3 + 3);
+    expect(report.coverage?.status).toBe('incomplete');
+  });
+});
+
+describe('lane E6, second build: budgets and cost', () => {
+  const state = (r2: FakeR2, hour = 12) => JSON.parse(r2.objects.get(openStateKey(TENANT, DATE, hour))!) as {
+    status: string; basis: string | null; through: number | null; refusal?: Record<string, unknown>; segments: Array<{ key: string; visitors: string[] }> };
+  async function finals(r2: FakeR2): Promise<void> {
+    const T10 = T12 - 2 * H, T11 = T12 - H;
+    write(r2, [dec('v7', T10 + 5 * MIN, 'hero', 'item-a'), dec('v8', T10 + 9 * MIN, 'hero', 'item-b')], 'ten');
+    write(r2, [dec('v9', T11 + 15 * MIN, 'deals', 'gift-card')], 'eleven');
+    await buildHour(r2 as never, TENANT, { date: DATE, hour: 10 }, learn, T11 + 6 * MIN);
+    await buildHour(r2 as never, TENANT, { date: DATE, hour: 11 }, learn, T12 + 6 * MIN);
+  }
+
+  it('names an open hour past its raw budget as refused, with the budget and the figures, and folds it again only when something changes', async () => {
+    const r2 = new FakeR2();
+    r2.listsIdentity = true;
+    await finals(r2);
+    write(r2, hour12.decisions.slice(0, 3), 'a');
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true });
+    // One object more than the hour's raw budget holds.
+    const big = `${TENANT}/${DATE}/12/decision/${ts36(T12 + 12 * MIN)}-${ts36(T12 + 13 * MIN)}-big.ndjson`;
+    r2.objects.set(big, 'x'.repeat(REPORT_LIMITS.rawBytes));
+    const job = await foldOpenHours(r2 as never, TENANT, learn, T12 + 15 * MIN, { start: true, publish: true });
+    const figures = { error: 'report budget exceeded', code: 'report_budget_exceeded', budget: 'rawBytes', limit: REPORT_LIMITS.rawBytes };
+    expect(job.failed[0]?.refusal).toMatchObject({ at: T12 + 15 * MIN, ...figures });
+    expect(job.published, 'the saved day says so at once').toEqual([DATE]);
+    expect(state(r2)).toMatchObject({ status: 'refused', through: T12 + 10 * MIN });
+    expect(state(r2).basis, 'a refusal the same inputs give again is kept with its basis').not.toBeNull();
+    r2.gets = [];
+    const report = await runDayReport(r2 as never, ids, learn, null, T12 + 16 * MIN, { maxObjects: 100 });
+    expect(report.hours?.open).toEqual([{ hour: 12, status: 'refused', through: T12 + 10 * MIN, refusal: { at: T12 + 15 * MIN, ...figures, observed: expect.any(Number) } }]);
+    expect(report.hours!.open![0]!.refusal!.observed!, 'observed past the limit').toBeGreaterThan(REPORT_LIMITS.rawBytes);
+    expect(report.counts.decisions, 'summed from the fold at 12:10, and saying so').toBe(3 + 3);
+    expect(ledgerKeys(r2.gets, 12), 'nothing changed since the job was refused: the build does not read the hour again').toEqual([]);
+    expect(r2.gets.filter((k) => k.startsWith(`aggregates/${TENANT}/rings/`))).toEqual([]);
+    // Nothing new: the next run does not fold it again.
+    const quiet = await foldOpenHours(r2 as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true });
+    expect(quiet.unchanged).toEqual([{ date: DATE, hour: 12, status: 'refused' }]);
+    expect(quiet.failed).toEqual([]);
+  });
+
+  it('does no open-hour work for a tenant with nothing written since the last run', async () => {
+    const r2 = new FakeR2();
+    r2.listsIdentity = true;
+    const idle = await foldOpenHours(r2 as never, TENANT, learn, T12 + 30 * MIN, { start: true, publish: true });
+    expect(idle).toMatchObject({ folded: [], unchanged: [], failed: [], removed: 0 });
+    expect(r2.gets, 'an idle tenant reads nothing').toEqual([]);
+    expect(idle.calls, 'a listing of its open-hour objects and one of the open hour\'s ledger').toBe(2);
+    for (const [rows, batch] of BATCHES) write(r2, rows, batch);
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 30 * MIN, { start: true, publish: true });
+    r2.gets = []; r2.puts = [];
+    const quiet = await foldOpenHours(r2 as never, TENANT, learn, T12 + 35 * MIN, { start: true, publish: true });
+    expect(quiet.unchanged).toEqual([{ date: DATE, hour: 12, status: 'current' }]);
+    expect(quiet.folded).toEqual([]);
+    expect(r2.gets, 'nothing new: the hour\'s state, and no shard, segment or ledger object').toEqual([openStateKey(TENANT, DATE, 12)]);
+    expect(r2.puts).toEqual([]);
+    expect(quiet.calls, 'four listings — the open-hour objects, the hour\'s ledger, the erasures, the shards — and the state').toBe(5);
+    r2.gets = [];
+    const report = await runDayReport(r2 as never, ids, learn, null, T12 + 36 * MIN);
+    expect(report.hours?.open).toEqual([{ hour: 12, status: 'current', through: T12 + 30 * MIN }]);
+    expect(r2.gets.filter((k) => !k.startsWith('erasures/')).sort(), 'a build where nothing changed reads the state and the working aggregate')
+      .toEqual([openKey(TENANT, DATE, 12), openStateKey(TENANT, DATE, 12)].sort());
+  });
+
+  it('counts its storage calls against the run\'s budget: a fold it does not cover is deferred, and the erasures are applied anyway', async () => {
+    const r2 = new FakeR2();
+    r2.listsIdentity = true;
+    for (const [rows, batch] of BATCHES) write(r2, rows, batch);
+    const short = await foldOpenHours(r2 as never, TENANT, learn, T12 + 30 * MIN, { start: true, publish: true, budget: 20 });
+    expect(short.deferred).toEqual([{ date: DATE, hour: 12, estimate: expect.any(Number) }]);
+    expect(short.deferred[0]!.estimate, 'every shard and every object the fold would read').toBeGreaterThan(SHARDS + 5);
+    expect(short.folded).toEqual([]);
+    expect([...r2.objects.keys()].filter((k) => k.startsWith(`aggregates/${TENANT}/open/`)), 'nothing started').toEqual([]);
+    expect(short.calls).toBeLessThanOrEqual(20);
+    const covered = await foldOpenHours(r2 as never, TENANT, learn, T12 + 31 * MIN, { start: true, publish: true, budget: 700 });
+    expect(covered.folded.map((h) => h.hour)).toEqual([12]);
+    expect(covered.calls, 'the estimate covers what the fold spent').toBeLessThanOrEqual(short.deferred[0]!.estimate + 4);
+    // An erasure while no fold is covered: the copy loses the visitor's rows all the same.
+    await writeTombstone(r2 as never, TENANT, 'v5', 'test', T12 + 32 * MIN);
+    const none = await foldOpenHours(r2 as never, TENANT, learn, T12 + 33 * MIN, { start: true, publish: true, budget: 0 });
+    expect(none.deferred.map((h) => h.hour)).toEqual([12]);
+    expect(none.pruned).toBe(1);
+    expect(segmentRows(r2).filter((row) => row.visitor_id === 'v5')).toEqual([]);
+  });
+
+  it('publishes the day again once a refused open hour has closed unfolded: the saved day names it missing, not open', async () => {
+    const r2 = new FakeR2();
+    await finals(r2);
+    write(r2, hour12.decisions.slice(0, 3), 'a');
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true });
+    write(r2, [{ ...pickup, item_id: 'another' }], 'conflict');
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 55 * MIN, { start: true, publish: true });
+    const savedKey = `reports/${TENANT}/${TENANT}/${DATE}.json`;
+    expect((JSON.parse(r2.objects.get(savedKey)!) as DayReport).hours?.open).toMatchObject([{ hour: 12, status: 'refused' }]);
+    // 13:06: hour 12's own fold is refused too, so the date has no new final hour; its saved day is published again all the same.
+    const run = await catchUp(r2 as never, TENANT, learn, T12 + H + 6 * MIN, { lookbackHours: 3 });
+    expect(run.failed.map((f) => f.hour)).toEqual([12]);
+    expect(run.reports.published).toEqual([DATE]);
+    const saved = JSON.parse(r2.objects.get(savedKey)!) as DayReport;
+    expect(saved.hours).toMatchObject({ source: 'aggregates', built: [10, 11] });
+    expect(saved.hours?.missing).toContain(12);
+    expect(saved.hours?.open, 'no longer named open, nor summed from its working aggregate').toBeUndefined();
+  });
+
+  it('applies an erasure by the visitor it names, not by text: a short id leaves the copy whole', async () => {
+    const r2 = new FakeR2();
+    for (const [rows, batch] of BATCHES) write(r2, rows, batch);
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 25 * MIN, { start: true, publish: true });
+    // "s" is in every row's text (session ids, slot names), and is no row's visitor.
+    await writeTombstone(r2 as never, TENANT, 's', 'test', T12 + 26 * MIN);
+    const next = await foldOpenHours(r2 as never, TENANT, learn, T12 + 27 * MIN, { start: true, publish: true });
+    expect(next.pruned).toBe(0);
+    expect(next.folded[0]).toMatchObject({ copied: 5 });
+    expect(state(r2).segments.flatMap((s) => s.visitors).sort()).toEqual(['v1', 'v2', 'v3', 'v4', 'v5']);
   });
 });

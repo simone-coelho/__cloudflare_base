@@ -828,6 +828,25 @@ export interface ReportCoverage {
   unassignedHours?: number[] | null;
 }
 
+/**
+ * Lane E6: why an open hour's latest working fold was refused, as the day
+ * report names it. `code` is the refusal's own. A budget refusal carries the
+ * budget, its limit and the figure observed, as the 413 answer does; a row
+ * conflict carries its stream, and not its id, which names a visitor and would
+ * outlive an erasure in a saved report.
+ */
+export interface OpenHourRefusal {
+  at: number;
+  error: string;
+  code: string;
+  budget?: string;
+  limit?: number;
+  observed?: number;
+  conflict?: { stream: 'decision' | 'outcome' };
+}
+/** Lane E6: one open hour of a day report (`DayReport.hours.open`). */
+export interface OpenHourEntry { hour: number; status: 'current' | 'refused'; through: number | null; refusal?: OpenHourRefusal }
+
 export interface DayReport {
   tenant: string;
   brand: string;
@@ -875,13 +894,24 @@ export interface DayReport {
   /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
   hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number;
     /**
-     * Lane E6: the hours of `built` summed from an open hour's WORKING
-     * aggregate — the hour still open, or just closed and not yet folded — and
-     * not from its final one. They are what the ledger held when the report was
-     * built; the hour's final fold replaces them. Absent when every built hour is
-     * final, which is every report written before it existed.
+     * Lane E6: the open hours — the hour still open, and the hour just closed
+     * until its own fold is due — the five-minute job has started a WORKING
+     * aggregate for. Absent when there is none, which is every report written
+     * before it existed. Each says where it stands:
+     *
+     *  · `current`: the hour is in `built`, summed from a working fold of
+     *    everything the ledger held at `through`, and nothing that fold reads
+     *    has changed since. The hour's final fold replaces it.
+     *  · `refused`: the hour's latest working fold was refused, and `refusal`
+     *    says why — the budget with its limit and the observed figure, or the
+     *    row conflict's stream. Where an earlier fold stands the hour is in
+     *    `built` from THAT fold and `through` is when it read the ledger: the
+     *    hour is stale, and says so. Where none stands `through` is null and
+     *    the hour is not in `built`.
+     *
+     * Either way the day is incomplete by its own account.
      */
-    open?: number[] };
+    open?: OpenHourEntry[] };
   coverage?: ReportCoverage;
   /** Null/absent means unknown. Equality is not experimental compatibility. */
   computation?: ComputationBasis | null;
@@ -925,9 +955,9 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const source = report.hours?.source === 'aggregates' || report.hours?.source === 'ledger' ? report.hours.source
     : report.hours === undefined && e.version === 1 && e.source === 'ledger' ? 'ledger' : 'unknown';
   const built = knownHours(report.hours?.built), missing = knownHours(report.hours?.missing);
-  // Lane E6: an hour summed from its working aggregate is not final, so a day
-  // that holds one is incomplete by its own account.
-  const open = knownHours(report.hours?.open).filter(h => built.includes(h));
+  // Lane E6: an open hour, current or refused, is not final, so a day that
+  // names one is incomplete by its own account.
+  const open = Array.isArray(report.hours?.open) ? Array.from(report.hours.open as unknown[]).filter(v => hour(v) || (object(v) && hour(v.hour))) : [];
   // W21 C1.08 (R149): optional in the evidence, because a report written before
   // this release cannot carry it and is not thereby invalid. Present, it is a
   // list of built hours or the explicit unknown.
