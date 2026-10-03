@@ -200,7 +200,7 @@
       const from = cur;
       const t0 = performance.now();
       const step = (t) => {
-        const k = Math.min(1, (t - t0) / ms);
+        const k = Math.max(0, Math.min(1, (t - t0) / ms));
         cur = from + (target - from) * (1 - Math.pow(1 - k, 3));
         apply(cur);
         if (k < 1) raf = requestAnimationFrame(step);
