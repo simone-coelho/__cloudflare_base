@@ -473,3 +473,337 @@ RR-1 to RR-3 (site), RE-1 to RE-3 (credits), RG-1 (demo map) and RF-2 (glossary 
 ## R2.11 Conduct
 
 No git command that changes anything; `git archive`, which only reads, extracted HEAD's tree into the scratchpad. No install, deploy or kill. Every server exited by itself, and every Chrome run was headless on its own profile and closed with `Browser.close`. One slip: before copying the site into my scratchpad, I ran `rm -rf` on the copy's target folder, `scratchpad/r2/site`, out of habit. The folder did not exist yet, so nothing was removed, and no other delete was run. Scratch work is in `scratchpad/r2/`: the audit scripts, `out/` and `out2/` (captures and `results.json`), `build/` and `headbuild/` (dry runs) and `head/` (HEAD's tree).
+
+# Round three, 2026-10-02
+
+Under the new law: `LANE-BRIEF-V2.md`, then the design's version 2 (§4 the story and the fixed sentences, §5 quotations and voice, §9 the gate), with S4 and S5 as the dossiers and S2 as the engineering view. The sources were reviewed as committed at `f15a10e`, and the rendered site as committed at `08b9287`. Neither has changed through HEAD `5042804`: `git diff 08b9287 HEAD -- enablement docs/enablement` is empty. Wherever version 2 contradicts rounds one and two (labels, the legend, the receipt never-say, the consent conditions, the ban on timing), those rounds' findings are withdrawn.
+
+## R3.1 Verdicts
+
+| Piece | Source | Page | Verdict |
+|---|---|---|---|
+| (a) Landing | `enablement/render-pages.mjs` | `/` | Ready |
+| (b) What it is | `content/what-it-is.md` | `/what-it-is` | Ready after R3-1 to R3-4 |
+| (c) Selling it | `content/selling-it.md` | `/selling-it` | Ready after R3-5 to R3-7 |
+| (d) How it works and where it runs | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | Ready after R3-8 |
+| (e) How it works, interactive | `content/how-it-works-interactive.md`, with its page and script | `/how-it-works-interactive` | Ready after R3-9 to R3-12 |
+| (f) See it work | `content/see-it-work.md`, with its page and script | `/see-it-work` | Ready |
+| (g) Where Opal and AI Credits Fit | `content/credits.md`, `content/credits-source.html` | `/credits` | Ready after R3-13 |
+| (h) The glossary | `GLOSSARY.md` | `/glossary` | Ready after R3-14 |
+| (i) Which demo shows which story | `content/demos.md` | `/demos` | Ready |
+| The three figures | `figures/*.svg` and `*.png` | inlined | Pass |
+| Not found | | `/status` and any unknown address | Pass |
+
+There are 14 required edits (R3.5) and 13 recommended ones (R3.6). None of the recommended edits blocks the deploy. The deploy can follow once:
+
+1. the required edits are made;
+2. P1 re-renders (b), (c), (d), (g) and (h), and H1 edits its page and script with its markdown;
+3. the text check and the preflight pass again.
+
+## R3.2 What I ran
+
+- **Read in full:**
+  - the brief, the design's version 2 (§1 to §12), S4 and S5;
+  - every source named in the round's message, the three figures (SVG text and PNG by eye), and the lane notes P1, M1 and H1 where they bear on a finding.
+- **Recomputed (d)'s arithmetic.** I recomputed every number in its walk and tables:
+  - interest after one, two and three views, the entry and exit lines in evidence, and the exit at 14 × ln(3/1.4727) = 9.96 days;
+  - λ at 1.07 and 2.13, the hero's 0.46, 0.52 and 0.572, and the return's 0.41 and 0.32.
+  - Every one holds, and the constants match S2 (`S2-engine-facts.md:417`, `:459`, `:539`, `:573-575`, `:640-641`, `:677-690`).
+- **Scans:** `scratchpad/r3/scan3.mjs` read the sources and the figures' text. It scanned for:
+  - the four fixed sentences, counted verbatim per file, and their near misses;
+  - gendered pronouns, build-state, stage and label words, and names;
+  - timing figures, the never-say phrases, the constants and every address;
+  - the rule first and last, the glossary's deprecated words, em-dashes and British spellings.
+- **The text check:** `node enablement/render-check.mjs`, run on a `git archive` copy of HEAD in the scratchpad:
+  - 11 page-source pairs on 10 pages, with 0 missing and 0 unexplained sentences in every pair;
+  - every scan at 0;
+  - the marked additions listed and read (`--verbose`).
+- **Headless Chrome** (`scratchpad/r3/audit3.mjs` and its probes). The copy was served with `_headers` the way the assets binding serves it.
+  - **Page loads:** 66, one for each of 11 addresses at 1440×800, 1366×768 and 390×844, in light and dark.
+  - **Keyboard:** 18 runs, Tab through every page at 1366 and 390.
+  - **No script:** 22 loads.
+  - **Interaction:** both interactive pages, driven at 1366 and 390.
+  - **Element screenshots:** taken where a judgment needed the eye.
+- **Quotations:** I checked every quotation against its file and line through S4 (R3.3, gate f).
+
+## R3.3 The gate, piece by piece
+
+| Gate | (b) | (c) | (d) | (e) | (f) | (g) | (h) | (i) |
+|---|---|---|---|---|---|---|---|---|
+| (a) The story in order, retellable | Pass, with R3-1 and R3-2 | Pass | Pass | Pass | Pass | Its own shape | Its own shape | Its own shape |
+| (b) Every capability | 13 of 13 | 13 of 13 | 13 of 13 | 13 of 13 | The four moves and the rest in "more moves" and the reasons | Not required | Not required | 13 rows |
+| (c) Ten reasons, unranked, with the weighing sentence | Pass | Pass | Pass | Pass | Pass | Not required | Not required | Not required |
+| (d) Fixed sentences verbatim; performance once; no other timing figure | Pass | Pass (L3-1) | Pass | R3-9 | Pass | AI sentence, pass | Learning sentence, pass | Pass |
+| (e) No build state, stage, label, legend or verdict | Pass | Pass | Pass (RR3-5) | R3-10 to R3-12 | Pass | R3-13 | Pass | Pass |
+| (f) No names; quotations by industry; no pronoun | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| (g) The rule first and last, as a callout, identical | Pass | Pass | Pass | Pass | Pass on the page (RR3-12) | The original's rule and closing line | Pass | Pass |
+| (h) The devices | Pass | Pass | Pass | Pass (RR3-8) | Pass | Pass | Pass | Pass |
+| (i) Consistency across pieces | R3-3, R3-4 | R3-5 | Pass (RR3-6, RR3-7) | R3-10, R3-11 | Pass | Pass | R3-14 | Pass |
+| (j) True to S4 and S5 | Pass | R3-5 | Pass | R3-10 to R3-12 | Pass | Pass | R3-14 | Pass |
+| Design §2, condition 3 (the customer paper) | Pass | R3-6, R3-7 | R3-8 | Pass | Pass | Pass | Pass | Pass |
+
+**(a), as a reader.**
+- **(b)** A marketer comes away knowing four things. What the engine is: a stylist for every visitor that decides the page at the point in time and lives beside recommendations. What it does: nine scenes that between them carry all thirteen capabilities. What it solves: strangers, and rules that go stale and fight. What to do with it: the four sentences, the say and never-say table, and five answers. The scenes come before "Underneath", and there is no arithmetic. It is retellable.
+- **(c)** An account executive gets the pitch in the story's order:
+  - seven scenes a customer would recognize;
+  - the reasons as a table, with the instruction to lead with the two or three a customer raises first;
+  - outcomes paired with discovery questions, and the asks with what each is for and who provides it;
+  - objections with say and never-say, a demo table, and the four sentences.
+
+  It is retellable.
+- **(d)** Part A tells the whole story in two pages, each part linked to its detail. Part B follows the Vantage note: one visitor end to end with numbers that recompute, then interest, the score, the stranger's start, learning and the receipt, the architecture with both figures, configuration, integration, privacy and the asks.
+- **(e)** Every one of its ten instruments sits under a lead in three parts ("What you are looking at", "Try", "Watch for") and after the section's words and formulas. It runs at the engine's defaults, and its self-test passes 22 of 22.
+- **(f)** Each of the four moves is told in plain words above its instrument, with a one-line how-to between the words and the instrument. The reasons and the two links follow.
+
+**(b) and (c), counted.** All thirteen capabilities of design §4.2 appear in (b), (c), (d) and (e), each with a use case, and all ten reasons of §4.3 appear in (b) to (f). The weighing sentence is in each:
+- (b:43) "Each customer weighs these reasons differently."
+- (c:47) "Each customer weighs them differently".
+- (d:43) "Each customer weighs them differently, so no list ranks them."
+- (e:35) "each customer weighs them differently".
+- (f:59) "Each customer weighs these reasons differently."
+
+None of them ranks the reasons or tells a win.
+
+**(d), counted (verbatim occurrences).**
+
+| Sentence | (b) | (c) | (d) | (e) | (f) | (g) | (h) | (i) |
+|---|---|---|---|---|---|---|---|---|
+| Performance | 1 | 3 | 1 | 1 | 1 | 0 | 0 | 1 |
+| Learning | 3 | 3 | 2 | 2 | 1 | 0 | 1 | 1 |
+| AI | 2 | 3 | 2 | 2 | 1 | 1 | 0 | 1 |
+| Recommendations | 3 | 3 | 1 | 1 | 1 | 0 | 0 | 0 |
+
+Each narrative carries all four. The performance sentence sits where design §3 places it:
+- (b), in the closing list;
+- (d), in B.6 where it speaks of the edge;
+- (e), in the edge capability;
+- (f), under the first-click scene;
+- (i), as a never-say replacement.
+
+On (c), see L3-1.
+
+The other durations are configuration constants, which S2 states as constants (S2 `:43`): memory, attribution windows, consent's 30 days, the 24-hour pass and the 21-day learning memory. The one timing claim is (e)'s 30-second cache (R3-9).
+
+**(e).** No "today", "not yet", "designed", "planned", "roadmap", "open" or label word appears about the product. "Stage" appears only as journey stage, or as the glossary's own retired entries. The hits I read and passed:
+- "tools built for known customers";
+- "in the open" (transparency);
+- "Three weeks later", a demo beat;
+- the verb "withdrawn" for a seed dampened to zero (e:158);
+- (d)'s "later capabilities", which is borderline (RR3-5).
+
+**(f).** No customer, prospect or competitor name appears; only real product brands appear, as example dimension values and products in (e) (design §5.1). The pronoun scan is 0 in every source, in the figures' text, and in the three served scripts' strings and comments. Every quotation is attributed by industry, carries no gendered pronoun, and traces to S4:
+- "It works, but it caps out." (b:11, c:11, d:11): S4 8.32, the white paper's line 103.
+- "a site that feels like a stylist who remembers" (b:15, c:17, d:17): S4 8.33, line 126.
+- "none of them offer real-time, ML-driven content or experience personalization at the individual level." (d:11): S4 8.30, line 243.
+- "How else would it learn? I don't understand." (c:103, d:146): S4 8.13, the session transcript's extraction line 604.
+- "reinforce it while it is live, or let the shopper drift" (b:27): S4 5.12. It is in the use-case document's table of asks at line 35, written as our team's summary "from the transcript", not between quotation marks (RR3-2).
+
+**(g).**
+- (b), (c), (d), (e), (h) and (i) open and close on the same callout.
+- (f)'s markdown sets its rule as bold paragraphs. Its page sets them as callouts with the rule labels (RR3-12).
+- (g) keeps the original's one-rule panel with the AI sentence beside it, and its closing line, as design §3.7 keeps the standalone page's structure.
+
+**(h).** Examples come before mechanism everywhere. Every figure, table of numbers, switcher and instrument has a plain lead above it. Each narrative has its say and never-say table with replacements. The glossary's deprecated words do not appear, except "container" for a slot's positions in (e) (RR3-8); "real-time" is no longer deprecated (design §3.8).
+
+**(i).** The constants agree wherever they appear:
+- K 1.8 in (d:98, :106), (e:7, :74) and the glossary's K entry;
+- entry 0.60 or 0.6, and release 0.45, in (d:98-108), (e:7, :78) and the glossary's entry and exit lines;
+- a 14-day default memory, set per dimension up to 90, in (d:105) and (e:66, :164), with the glossary's Memory entry giving the 14-day default and the 90-day cap.
+
+Both interactive scripts use K 1.8, 0.6, 0.45 and 14 days. See it work's regional blend runs at kBlend 0.5 (L3-5).
+
+Every site address is `https://edge-platform-bti.expedge.workers.dev/<page>`, with no trailing slash, and every demo address is one of the four workers. `/see-it-work` is linked from (f), the landing page and the navigation, but not from (b) (R3-3). `/how-it-works-interactive` is linked from (d), (f), (i) and the landing page.
+
+The disagreements across pieces:
+- **Pins.** (c) and (d) put a pin at any position; (e) and the glossary make it a prefix (R3-10, R3-11, R3-14).
+- **AI search.** (c:99) has it on the brand's own model key; (b), (d), the credits page and the glossary have it switched on with credits (R3-5).
+- **Arrival seeds.** The glossary's Console entry changes them in the console; (d)'s table says the API only (RR3-7).
+
+**(j).** S5 is the finished product:
+- C1, V7, and ticket P04 through S4 5.5: a pinned module holds "any position rather than only the first".
+- The brief: the AI add-ons "a customer may switch on with their credits".
+
+(e) and the glossary teach S2's current prefix pin. (e) also teaches S2's finding 8, "A pin whose piece is ineligible empties the whole slot … W20's territory" (S2 `:1212`), which document 35's W20 replaces with "dead-pin diagnostics … and default fallback". Version 2 keeps remediation out of the material (brief §1). Everything else the stories assert about the mechanism holds against S5, and against S2 for the arithmetic.
+
+## R3.4 The pages
+
+- **The text check.** It passes on the committed site (R3.2). Read as a reader, the pages say what the sources say, with the marked additions as listed: the rule labels, scroll hints, (e)'s section labels and numbers, (f)'s four how-to leads, and the session figure placed by ruling on `/what-it-is` and `/credits`.
+- **The 66 loads.**
+  - The nine pages answer 200, and `/status` and an unknown address answer 404 with the not-found page.
+  - No request leaves the origin, and no load fails. There is no CSP violation and no horizontal scroll at any width, in either theme.
+  - There is no form, no storage and no cookie.
+  - The only console messages are the two expected 404 responses.
+  - Every page carries:
+    - the skip link as the first element, aimed at `#main`;
+    - "Internal · Optimizely" and the nine-link navigation with the current page marked;
+    - the reader tag, and "Updated October 2, 2026" once;
+    - the package name once, in `#package-name` inside the `h1`;
+    - the piece list, and the footer line.
+  - At 390, every inlined figure scrolls sideways in its labeled region with its hint.
+- **What a reader sees and hears.** The scan covered visible text, `aria-label`s, titles and SVG text, after the scripts have run and after the interactions below:
+  - no gendered pronoun, no customer name and no state word;
+  - no timing figure but the performance sentence and the configuration durations;
+  - the one exception: (e)'s cache sentence (R3-9).
+- **Links.** All of them resolve: to the nine pages, to an existing anchor, or to the four demo workers (`edge-platform`, `-vantage`, `-top-offers`, `-oh`).
+- **Legends and chips.**
+  - **The credits page:** one legend in form remains, the timeline's three-word row "Credits apply · Deterministic engine · no credits · Conditional / exception". It is the old color legend with its swatches stripped. It keys nothing, since no row's look changes with its verdict, and it reads as a row of headers above the tabs (R3-13). The verdicts themselves are bold words in the ink color, with no fill (37 checked).
+  - **Passed, and why:**
+    - the charts' own keys (See it work's entry and release line key and its "Their region / Their own clicks" bar; (e)'s series swatches);
+    - (e)'s two tags, "recomputed in your browser" and "regional sales: synthetic, for the example";
+    - See it work's "Pinned" and "pinned" markers.
+  - None of these says anything about the product's state. The synthetic tag is the marking the demo rules require.
+- **Keyboard.**
+  - The skip link is the first Tab stop on all nine pages, at 1366 and 390.
+  - The credits tabs move with the left and right arrows, Home and End at 1366, and with up and down when they stack at 390 (L3-4).
+  - The marketing figure's switch works with Enter and Space.
+- **See it work, by keyboard, at 1366 and 390:**
+  - **Region switch:** an arrow moves between Washington State and Florida, and Enter or Space selects. The sections, the hero and the receipt change, and the page labels the two as example visitors, never as the reader.
+  - **First click:** Enter on a card fills its buckets, reorders the sections, changes the hero and adds receipt lines.
+  - **Fade:** "Step forward" releases the interest past its line, the receipt records the release, and the sections settle back. The clock runs on its own.
+  - **The wheel:** pin and gate hold the partner spotlight first and hide the out-of-stock jacket, which returns when the gate is off. The pin holds when the visitor's interest changes.
+  - Once, at each width, the first interaction run logged "`<rect>` attribute width: A negative value is not valid" from `see-it-work.js`. Two reruns did not reproduce it, and I traced it to the easing at `see-it-work.js:203` (RR3-13).
+- **How it works, interactive, by keyboard, focus, hover and tap:**
+  - The self-test passes 22 of 22, and the page shows "10 of 10 candidates agree to the third decimal".
+  - Sliders move with the arrow keys, and the readouts follow: K went from 1.8 to 2.1 in three presses.
+  - Hints:
+    - Focus opens 79 of the 86. The other 7 sit in panes that stay hidden until chosen.
+    - Escape closes all 86.
+    - Hover opened 12 of 12 visible hints sampled at 1366, and tap 12 of 12 at 390.
+  - "Run it on 10,000 synthetic candidates" counts the work and times nothing.
+  - 4 of the 27 sliders, and 7 of the hints, are in hidden panes, so they are out of the Tab order until shown.
+- **Without script.** Every page reads in full. See it work shows its twelve still pictures. (e)'s instruments in sections 1 to 9 are empty boxes under leads that describe them (RR3-11).
+- **Contrast.** The lowest pairs are 4.91 on `/see-it-work` and 5.12 or more everywhere else, except `/how-it-works-interactive`. There, the dimmed zero-contribution tags (`.tg--zero`, at opacity 0.55) read 3.51 to 3.58, in about 52 places, and the hint glyph reads 3.65 in light and 4.18 in dark (RR3-9). P1's note reports a lowest of 4.91 on every page; that misses these.
+
+## R3.5 Required edits
+
+Each edit reads "file:line, current text → required text".
+
+**(b) `content/what-it-is.md`, lane C1**
+- **R3-1** (gate a: the brief's §2.2 and design §4.6, "It is not a recommendations engine and does not replace one").
+  - what-it-is.md:19, "The engine needs no purchase history, so it works for a visitor nobody has met, and it replaces no recommendations product."
+  - → "It is not a recommendations engine and does not replace one: it needs no purchase history, so it works for a visitor nobody has met."
+- **R3-2** (design §4.2: "'what a customer provides' names the visitor's choice that the site passes"; (c:93) and (d:297) do).
+  - what-it-is.md:67, after the events bullet, insert the bullet "- The visitor's consent choice, which the site passes from its consent banner and the engine follows."
+- **R3-3** (gate i, and design §3.2's device "a link to See it work").
+  - what-it-is.md:107, before the "Selling it" bullet, insert "- [See it work](https://edge-platform-bti.expedge.workers.dev/see-it-work), the stylist's four moves on a page."
+- **R3-4** (gate i: the page's title is "Which demo shows which story", in demos.md:1, the navigation's footer list and design §3.9).
+  - what-it-is.md:110, "[Which demo to show to whom](https://edge-platform-bti.expedge.workers.dev/demos)"
+  - → "[Which demo shows which story](https://edge-platform-bti.expedge.workers.dev/demos)"
+
+**(c) `content/selling-it.md`, lane C2**
+- **R3-5** (gates i and j). The brief §1 has the add-ons "a customer may switch on with their credits". The credits page (credits.md:49, :65), the glossary's Typed search entry, (c:39) itself and (d:276, :302) agree, and (d) asks for a catalog-search service.
+  - selling-it.md:99, "the brand's own AI model key, for AI search and tagging;"
+  - → "a catalog-search service, for AI search;"
+- **R3-6** (design §2, condition 3, kept by version 2's §8: "never cite the customer paper it came from"). The words stay; the reference to the paper goes.
+  - selling-it.md:11, "A luxury retailer's own brief said of its rule-based personalization:"
+  - → "One of our customers in luxury retail said of its rule-based personalization:"
+- **R3-7** (the same condition; it also joins the two references to one customer, and keeps the claim true: S4 7.8 records a signature, not a finished build).
+  - selling-it.md:17, "A luxury retailer's own brief asked for exactly this: "a site that feels like a stylist who remembers". One of our customers in luxury retail concluded that this capability did not exist off the shelf, and built it with us."
+  - → "The same customer asked for exactly this: "a site that feels like a stylist who remembers". It concluded that this capability did not exist off the shelf, and chose to build it with us."
+
+**(d) `content/how-it-works-and-where-it-runs.md`, lane C3**
+- **R3-8** (the same condition).
+  - how-it-works-and-where-it-runs.md:17, "The same retailer's paper asked for"
+  - → "The same retailer asked for"
+
+**(e) How it works, interactive, lane H1: the markdown, `enablement/site/how-it-works-interactive.html` and `.js`**
+- **R3-9** (gate d: a propagation time is a timing figure beyond the performance sentence, and the design's never-say turns "Changes go live in seconds" into "A change is in force without a software release." S2 `:716-717` says the cache "does not establish a deployed propagation SLO").
+  - how-it-works-interactive.md:202, "A change is in force without a release: at once where it is written, and everywhere within the documents' 30-second cache."
+  - → "A change is in force without a software release."
+  - Make the same change on the page, `how-it-works-interactive.html:300`.
+- **R3-10** (gates e, i and j: S2's finding 8, a remediation item, told as the product; it also contradicts (c:35) and (d:135), "at any position").
+  - how-it-works-interactive.md:130, delete "A pin is a required prefix: if the pinned piece is not eligible for the request, the whole slot serves nothing, so a pin needs care."
+  - Make the same change on the page, `how-it-works-interactive.html:208`.
+- **R3-11** (the same).
+  - how-it-works-interactive.md:136, "or pin an upgrade offer under intent new. **Watch for:** a piece over the cap yielding its place to the next ranked piece, and an ineligible pin emptying the whole slot."
+  - → "or pin an offer. **Watch for:** a piece over the cap yielding its place to the next ranked piece, and a pinned piece holding its place while ranking skips it."
+  - Make the same change on the page, `how-it-works-interactive.html:215`.
+- **R3-12** (the same, in the instrument).
+  - The hint `TIPS.s4pin` at `how-it-works-interactive.js:881` currently says "A pinned piece is a required prefix … the whole slot serves nothing and records a pin diagnostic, so a pin needs care."
+  - The Pin control's note at `:1508` currently says "A required prefix: container 1, never ranked. If the pinned piece is not eligible for this request, the whole slot serves nothing. Try an upgrade offer under intent new."
+  - The refused branch at `:1575-1579` currently writes "empty: the slot served nothing" and "A pin is a required prefix, and a prefix that cannot be served refuses the slot".
+  - Required: the instrument neither shows nor narrates an ineligible pin emptying the slot. For example, it offers only the pins eligible under the chosen condition. The hint and the note become "A pinned piece holds the place the brand set, here the first, and is never ranked; its receipt says ranking was skipped." The mechanics are H1's choice. None of the self-test's 22 checks depends on the refusal.
+
+**(g) The credits page, lane P1**
+- **R3-13** (gate e: "no legend"; design §7, "No legend and no label, anywhere on the site"). The timeline's three-word row is the old color legend with its swatches removed, and it keys nothing.
+  - credits.md:25-27, the three bullets "**Credits apply**", "**Deterministic engine · no credits**" and "**Conditional / exception**": delete them.
+  - credits-source.html:288-292, the `<div class="tl-legend">` block: delete it.
+  - `enablement/render-check.mjs:344`: drop the exemption `&& !/\bcr-tl-legend\b/.test(n.attrs.class || '')`.
+  - Re-render `/credits`.
+
+**(h) `GLOSSARY.md`, lane E1**
+- **R3-14** (gates i and j: S5 V7 and P04; (c:35), (d:135) and the glossary's own Module and Placement entries).
+  - GLOSSARY.md:185, "**Pin.** The brand's instruction that named pieces fill a slot's first positions before any ranking, such as the placements the brand sells; the rest of the slot is still ranked. The receipt says ranking never ran for the pinned pieces."
+  - → "**Pin.** The brand's instruction that a named piece holds the place the brand sets in a slot, first or any other, before any ranking, such as a placement the brand sells; the rest of the slot is still ranked around it. The receipt says ranking never ran for the pinned piece."
+
+## R3.6 Recommended edits, none blocking
+
+- **RR3-1**
+  - what-it-is.md:15, "and built it with us." → "and chose to build it with us."
+  - This is the same truth as R3-7.
+- **RR3-2**
+  - what-it-is.md:27, "whether to "reinforce it while it is live, or let the shopper drift"." → "whether to reinforce it while it is live or let the shopper drift."
+  - The source line is our team's summary of the ask, so it reads as a paraphrase.
+- **RR3-3**
+  - what-it-is.md:83, "The engine calls no AI model to decide; Opal and the optional add-ons are where AI works." → the AI sentence verbatim.
+  - Design §3.0 item 7 says a piece that touches the subject uses the fixed sentence's words.
+- **RR3-4** (links show the page's title, design §6).
+  - what-it-is.md:109, selling-it.md:39 and how-it-works-and-where-it-runs.md:272: "Where Opal and AI credits fit" → "Where Opal and AI Credits Fit, and Where They Never Do".
+  - selling-it.md:123: "[Demo map]" → "[Which demo shows which story]".
+- **RR3-5**
+  - how-it-works-and-where-it-runs.md:259, "and later capabilities are switched on in configuration" → "and every other capability is switched on in configuration".
+  - This keeps clear of the design's "later".
+- **RR3-6** (seeds and dampening: a dampen factor runs from 0 to 1, `src/content/kinds.ts:291`, and (e:158) withdraws the platform seed at 0).
+  - how-it-works-and-where-it-runs.md:79, "a seed never switches off" → "time never switches a seed off".
+  - how-it-works-and-where-it-runs.md:173, "A seed never switches off. It is dampened when the visitor's own audiences point elsewhere and outscored as their interests grow" → "Time never switches a seed off. A dampening factor the brand publishes, from 1 down to 0, lowers it when the visitor's own audiences point elsewhere, and the visitor's growing interests outscore it".
+  - GLOSSARY.md:235, "A seed adds a fixed amount to matching pieces" → "A seed adds an amount the brand publishes to matching pieces, lowered when the visitor's own audiences point elsewhere".
+- **RR3-7** (S5 C7 and the glossary's Console entry).
+  - how-it-works-and-where-it-runs.md:249-250: move "arrival seeds" from the API row to the console row.
+  - Row 249: "Weights, memory, lines, slot rules, pins, arrival seeds, learning dials, the holdout share | The console, or the API".
+  - Row 250: "The catalog, the dimensions and the attribute each reads | The API, without a release".
+- **RR3-8**
+  - how-it-works-interactive.md:136, :172 and :208, and the instrument's labels ("container 1", "THE FOUR CONTAINERS"): "container" → "place", or "position".
+  - The glossary retires "container" as a word for a slot.
+- **RR3-9** (contrast on `/how-it-works-interactive`).
+  - Raise `.tg--zero` (opacity 0.55) and the hint glyph (opacity 0.82) to at least 4.5:1 in both themes. The figures are in R3.4.
+- **RR3-10**
+  - how-it-works-interactive.html:345: give the closing rule the label `<p class="rule-label" data-chrome="rule label">The one rule, again</p>`, as every other page has.
+- **RR3-11** (design §7: "the interactive pages show their explanations with static illustrations").
+  - Without script, (e)'s instrument boxes are empty. At least, put one line in each box, or hide the "What you are looking at" leads when the script has not run.
+- **RR3-12**
+  - see-it-work.md:5 and :82: set the rule as callouts (`> **…**`), as the page already shows them and as every other source does.
+- **RR3-13**
+  - see-it-work.js:203, `const k = Math.min(1, (t - t0) / ms);` → `const k = Math.max(0, Math.min(1, (t - t0) / ms));`.
+  - A frame's timestamp can precede the `performance.now()` taken in the same frame. The cubic ease then returns a negative fraction, and the region-lean fill at `:547` gets a negative width.
+
+## R3.7 For the lead
+
+- **L3-1. (c)'s performance sentence.** (c) carries it three times: in the stranger's scene (c:27), in the objections (c:109) and in the closing list (c:137). Design §3.3 says (c) carries the fixed sentences "in their scenes, in the objections and in the closing list", while this round's gate says "the performance sentence once". I passed (c) under §3.3, the more specific rule. Rule it if "once" is to govern (c) too.
+- **L3-2. Design §2, condition 3, and the brief's §4.** The brief lets customers' words be quoted by industry. The design keeps "never cite the customer paper it came from". R3-6 to R3-8 satisfy both: they keep the words and attribute them to the retailer, not to its paper. If condition 3 is read as covering only the name, R3-6 to R3-8 become optional, though R3-7's "chose to build" stays a truth fix.
+- **L3-3. The text check's exemption.** The text check passes the credits legend only by an exemption written for it (`render-check.mjs:344`). R3-13 removes both the legend and the exemption.
+- **L3-4. RR-2 (design §10) is still open.** On the phone the credits tabs stack and answer the up and down arrows, but the tab list carries no `aria-orientation`.
+- **L3-5. See it work's regional blend.** See it work runs the blend at kBlend 0.5, the value the example demo publishes. The engine's default is 1, and design §3.6 says the page's arithmetic is at the defaults. M1 records why in `lanes/M1.md` ("Why kBlend 0.5": at 1, a stranger's first click almost never moves a section). No number on the page shows it. I pass it as a recorded, deliberate setting; rule it if the defaults are to be literal.
+- **L3-6. The Word copies.** The six `-v2.0.docx` were built from these sources. R3-1 to R3-8, R3-13 and R3-14 change five of them, so lane W rebuilds:
+  - What It Is;
+  - Selling It;
+  - How It Works and Where It Runs;
+  - the credits page;
+  - the glossary.
+
+  (b)'s Word copy carries no session figure, because the page adds it by ruling (`RULED_FIGURES` in `render-check.mjs`) and the markdown does not name it. Decide whether Word should have it.
+- **L3-7. The keys and tags I passed.** In R3.4, I list the keys and tags I passed as not being legends or labels. Overrule this if "no legend" is to cover a chart's own key.
+
+## R3.8 Where S4 and S5 are wrong or in conflict
+
+- **S4 row 5.12.** It gives the home-shopping ask as "transcript". The use-case document's table row is our team's summary of the ask, without quotation marks (RR3-2).
+- **S5 row V11.** It has AI search read the query with "the brand's own AI model". The brief makes the AI add-ons something a brand switches on with its credits. The brief governs; S5 should say so (R3-5).
+- **S5 §1.2 C1, and S4 row 5.3.** Both record today's prefix pin and the empty slot as conditions. S5's rows C1 and V7 and ticket P04 are the finished product. (e) and the glossary followed the conditions (R3-10 to R3-12, R3-14).
+
+## R3.9 Conduct
+
+- **What I wrote.** I wrote only this file.
+- **Git.** No git command that changes anything. `git archive`, which only reads, extracted HEAD's `enablement` and `docs/enablement` into the scratchpad.
+- **Repository.** No install, deploy, delete or kill in the repository.
+- **Servers and Chrome.** Every server ran on a port above 9400 (9441 to 9452) and exited by itself. Every Chrome run was headless on its own profile in the scratchpad and closed with `Browser.close`.
+- **Scripts and outputs.** All of them are in `scratchpad/r3`.
+- **The gate.** It was out of scope and was not touched.
