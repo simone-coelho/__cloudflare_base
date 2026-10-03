@@ -3,45 +3,48 @@
   "dimensions": [
     {
       "key": "category",
-      "source": "category"
+      "source": "category",
+      "tauMs": 60000
     },
     {
       "key": "subcategory",
-      "source": "subcategory"
+      "source": "subcategory",
+      "tauMs": 60000
     },
     {
       "key": "type",
       "source": "type",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "series",
       "source": "series",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "panel",
-      "source": "panel"
+      "source": "panel",
+      "tauMs": 60000
     },
     {
       "key": "sizeBand",
       "source": "sizeBand",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "capacityTier",
       "source": "capacityTier",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "fuel",
       "source": "fuel",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "finish",
       "source": "finish",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "priceTier",
@@ -51,7 +54,7 @@
     {
       "key": "room",
       "source": "room",
-      "tauMs": 5184000000
+      "tauMs": 60000
     },
     {
       "key": "feature",
@@ -79,7 +82,8 @@
     {
       "key": "package",
       "source": "package",
-      "multi": true
+      "multi": true,
+      "tauMs": 60000
     }
   ],
   "weights": {

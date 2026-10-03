@@ -89,45 +89,48 @@
   "dimensions": [
    {
     "key": "category",
-    "source": "category"
+    "source": "category",
+    "tauMs": 60000
    },
    {
     "key": "subcategory",
-    "source": "subcategory"
+    "source": "subcategory",
+    "tauMs": 60000
    },
    {
     "key": "type",
     "source": "type",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "series",
     "source": "series",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "panel",
-    "source": "panel"
+    "source": "panel",
+    "tauMs": 60000
    },
    {
     "key": "sizeBand",
     "source": "sizeBand",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "capacityTier",
     "source": "capacityTier",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "fuel",
     "source": "fuel",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "finish",
     "source": "finish",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "priceTier",
@@ -137,7 +140,7 @@
    {
     "key": "room",
     "source": "room",
-    "tauMs": 5184000000
+    "tauMs": 60000
    },
    {
     "key": "feature",
@@ -165,7 +168,8 @@
    {
     "key": "package",
     "source": "package",
-    "multi": true
+    "multi": true,
+    "tauMs": 60000
    }
   ],
   "weights": {
@@ -564,57 +568,66 @@
    "dimensions": [
     {
      "key": "category",
-     "tauMs": 1209600000,
-     "room": "14 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "subcategory",
-     "tauMs": 1209600000,
-     "room": "14 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "type",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "series",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "panel",
-     "tauMs": 1209600000,
-     "room": "14 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "sizeBand",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "capacityTier",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "fuel",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "finish",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "priceTier",
@@ -625,9 +638,10 @@
     },
     {
      "key": "room",
-     "tauMs": 5184000000,
-     "room": "60 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     },
     {
      "key": "feature",
@@ -659,9 +673,10 @@
     },
     {
      "key": "package",
-     "tauMs": 1209600000,
-     "room": "14 days",
-     "compressed": false
+     "tauMs": 60000,
+     "room": "1 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days"
     }
    ]
   }
