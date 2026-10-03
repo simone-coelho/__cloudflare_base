@@ -2,23 +2,23 @@
 
 Written for a marketer, the least technical reader of this package. Every definition also holds for an account executive and a solutions engineer.
 
-**One word for each meaning, defined once, in plain words.**
+> **One word for each meaning, defined once, in plain words.**
 
 ## How to read it
 
-Terms are in alphabetical order, one entry each, in two or three sentences. "Deprecated" marks a word that older material uses and this package does not; the entry names the word to use instead. Built, Designed and Open are the package's three labels, and each has its own entry.
+Terms are in alphabetical order, one entry each, in two or three sentences. "Deprecated" marks a word that older material uses and this package does not; the entry names the word to use instead.
 
 ## A
 
-**Action weight.** How much one kind of action counts toward an interest, such as a product view, an add to cart or a purchase. The brand sets every weight in its registry, and an action the registry does not name counts nothing. The weights compiled into the code, from 1 for a view to 5 for a purchase, apply only to two older demo scopes.
+**Action weight.** How much one kind of action counts toward an interest, such as a product view, an add to cart or a purchase. The brand sets every weight in its registry, a purchase counting for more than a view, and an action the registry does not name counts nothing.
 
 **Affinity.** Deprecated: say interest. It is the code's word for the same number, and engineers still see it in audience names such as brand_samsung_affinity.
 
-**AI credits.** The meter for AI work that a brand's team does in Opal, such as writing or analyzing; as designed, it follows the team's work and never the site's traffic. Serving a page spends no credit, because the engine calls no AI model to decide. How each line is metered and priced is open.
+**AI credits.** The meter for AI work: what a brand's team asks of Opal, and the optional AI add-ons a visitor uses. Credits follow that work, never the site's traffic: serving a page spends no credit, because the engine calls no AI model to decide.
 
-**AI model.** The engine calls no AI model to decide: each decision is arithmetic over the brand's published settings and counted evidence. Say exactly that, never "we don't use a model", because a place for a customer's own model exists in the code and is switched off by policy. The model calls the product can make sit outside the decision, in optional features such as typed search.
+**AI model.** The engine calls no AI model to decide: each decision is arithmetic over the brand's published settings and counted evidence. Say exactly that, never "we don't use a model": AI works around the decision, in Opal and in the optional AI add-ons a visitor may use, such as AI search.
 
-**Asserted.** Said of a value that the caller states instead of the engine observing it, such as a region a presenter picks or a condition a page sends. An asserted region chooses the regional prior only in a demo, where the receipt marks it as asserted; an asserted condition only decides which pieces may show and is never stored as evidence about the visitor.
+**Asserted.** Said of a value that the caller states instead of the engine observing it, such as a region a presenter picks to show a contrast, or a condition a page sends. An asserted condition only decides which pieces may show and is never stored as evidence about the visitor, and an asserted region is marked as asserted on the receipt.
 
 **Asset.** Deprecated for a unit of content: say piece.
 
@@ -26,21 +26,19 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Attribution.** Crediting an outcome to the decision that earned it: the same visitor, the same session, the same piece, and the last decision before the outcome. By default a click is credited within 30 minutes, an add to cart within 6 hours and a purchase within 7 days.
 
-**Audience.** A group a visitor belongs to on one dimension value while their interest in it stays high, such as everyone strongly interested in one brand. A visitor joins when their interest reaches the entry line and leaves only when it falls below the lower exit line. Older material says segment or bucket; say audience.
+**Audience.** A group a visitor belongs to on one dimension value while their interest in it stays high, such as everyone strongly interested in one brand. A visitor joins when their interest reaches the entry line and leaves only when it falls below the lower exit line. Older material says segment; say audience.
 
-**Autonomy.** The engine changing its own weights. It is in the code, switched off by policy and never offered: a person sets every weight and raises every learning dial.
+**Autonomy.** The engine changing its own weights by itself, which it never does: a person sets every weight and turns every learning dial. Suggestions, such as a pattern found in the brand's results, reach a person through Opal for approval.
 
 ## B
 
-**Before, during, after.** The three parts of a visitor's session that every piece in this package follows: what the brand sets up before the visitor arrives, what the engine does while they are on the site, and what is counted afterwards. Older material calls them phases; this package does not.
+**Before, during, after.** The three parts of a visitor's session: what the brand sets up before the visitor arrives, what the engine does while they are on the site, and what is counted afterwards. Older material calls them phases; this package does not.
 
 **Behavioral targeting.** The first half of the package's name: the rules and weights the brand's team writes, in force without a software release. It is not the behavioral targeting in other Optimizely products.
 
 **BTIE.** Deprecated: never use it. It is the title of a customer's own paper. Write the package's name in full on first use in a piece, then say the engine.
 
-**Bucket.** Deprecated: older material uses it for four different things. Say visit band for a count of visits, interest for the number kept per dimension value, and audience for a group of visitors.
-
-**Built.** In the code and exercised by tests or by a hosted demo. It is one of the package's three labels, shown in the same color on every page.
+**Bucket.** The plain image of one interest: it fills with each action the visitor takes and drains with time. Each bucket has an entry line, a release line and a cap, so nobody writes expiration rules.
 
 ## C
 
@@ -48,13 +46,13 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Cell.** Deprecated for readers: say context. It is the code's word for the same thing.
 
-**CMAB.** Contextual multi-armed bandit, part of Optimizely Feature Experimentation and outside the engine. The engine is not CMAB and depends on no experiment; the CMAB screens in older demos simulate their results.
+**CMAB.** Contextual multi-armed bandit, a capability of Optimizely Feature Experimentation. The engine is not CMAB and does not depend on it; where the brand wants a test, Opal can propose and launch an experiment or a CMAB test on a slot, beside the engine's own decisions.
 
-**Cold start.** What the engine does for a visitor it has no evidence about yet. It reads how the visitor arrived and, where the brand turns it on, what visitors in their region are interested in; census figures on one demo's screen are shown there and never scored.
+**Cold start.** What the engine does for a visitor it has no evidence about yet. It reads how the visitor arrived and what visitors in their region are interested in, from the brand's own sales where its warehouse supplies them; public census figures can explain that lean on screen and never enter the score.
 
 **Consent.** The visitor's explicit choice, passed by the site from its consent banner, with two switches: tracking and personalization. Nothing is personalized or recorded until the choice arrives, and personalization needs both switches on. A choice lasts 30 days, and without one the visitor sees the site's own defaults.
 
-**Console.** The operator console, where the brand's team signs in to see and change what each slot does: weights, rules, pins, learning dials, what has been learned, receipts and history. A few settings, such as the catalog and arrival seeds, have no screen and are published through the API, still without a software release.
+**Console.** The operator console, where the brand's team signs in to see and change what each slot does: weights, rules, pins, seeds, learning dials, what has been learned, receipts and history. Every setting can also be changed through the API, and either way the change is in force without a software release.
 
 **Content decision service.** Deprecated for readers: an engineering name. Say the engine.
 
@@ -64,19 +62,15 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **D1.** Cloudflare's SQL database. On a customer deployment it holds operator accounts, their grants and the audit trail, not visitor events.
 
-**Day report.** The daily summary, per brand, of outcomes credited to decisions, built each night for the day before. It is labeled an attribution diagnostic: it credits outcomes and makes no claim of lift.
+**Day report.** The daily summary, per brand, of outcomes credited to decisions, compiled each night for the day before. It is labeled an attribution diagnostic: it credits outcomes and makes no claim of lift.
 
 **Decision record.** Deprecated for readers: say receipt.
 
 **Default.** What the site shows when the engine is silent: its own content, in its own order. The site renders its defaults without consent, for a visitor held out in the default arm, and when no decision arrives in time.
 
-**Demo only.** Said of something that runs only on a demo deployment, such as an asserted region choosing the regional prior, or the AI chat and experiment screens in older demos. It is never offered as part of a customer deployment.
+**Deployment.** One customer's own copy of the engine, one per environment such as staging and production, with its own storage; engineers call it a stamp.
 
-**Deployment.** One customer's own copy of the engine, one per environment such as staging and production, with its own storage; engineers call it a stamp. The workflow that sets one up stops before the customer's first configuration, which is open.
-
-**Design-time tagging.** Proposing tags for the brand's content with the brand's own AI model while content is authored; a person approves, rejects or edits every tag before anything is published. It is built, off by default and outside the decision.
-
-**Designed.** In an architecture document, not in the code. It is one of the package's three labels.
+**Design-time tagging.** Proposing tags for the brand's content with AI while the content is prepared, through Opal or the brand's own model; a person approves, rejects or edits every tag before anything is published. It sits outside the decision.
 
 **Dimension.** An axis the brand scores on, such as brand, category or price band, named in its registry with the attribute it reads. A brand can publish up to 32.
 
@@ -88,11 +82,9 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Durable Object.** A small named program on Cloudflare with its own private storage, one copy per name, so it is the single writer for what it holds. The engine uses them per visitor, per region and per slot.
 
-**Durable recovery.** A switch that recording a rendered piece depends on. It is off in every configuration, and turning it on needs approved retention periods for its data, which are open.
-
 ## E
 
-**Edge.** Cloudflare's network: the engine runs in the data center nearest each request. Say "on Cloudflare's network" or "at the edge", and never attach a speed to either.
+**Edge.** Cloudflare's network: the engine runs in the data center nearest each request, close to the visitor. Say "on Cloudflare's network" or "at the edge".
 
 **Edge personalization.** Deprecated as a name for the product: write the package's name in full on first use, then say the engine. "At the edge" stays, as a description of where it runs.
 
@@ -102,7 +94,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Enrichment.** Deprecated: say design-time tagging.
 
-**Entry and exit lines.** Two levels of interest: a visitor joins an audience when their interest reaches the entry line, 0.6 by default, and leaves only when it falls below the lower exit line, 0.45. The gap stops a visitor flickering in and out, and time alone can take a visitor out of an audience but never put one in.
+**Entry and exit lines.** Two levels of interest: a visitor joins an audience when their interest reaches the entry line, 0.6 by default, and leaves only when it falls below the lower exit line, 0.45. The gap stops a visitor flickering in and out, and time alone can take a visitor out of an audience but never put one in. Leaving is the release, and the receipt records it as it records the entry.
 
 **Erasure.** Removing a visitor's records when they ask to be forgotten, started from the console. It is bounded and resumable; never call it one call and done, or proof that data is physically erased.
 
@@ -112,33 +104,29 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Explain record.** Deprecated: say receipt.
 
-**Exploration.** Deliberately showing a less-tried piece so that learning can find out how it does. It is built and off by default, which form is offered to a customer is open, and one form, Thompson sampling, is switched off by policy and never offered.
+**Exploration.** Deliberately showing a less-tried piece on a share of decisions the brand sets, so that learning finds out how it does. It stays off unless the brand turns it on.
 
 ## F
 
 **Fatigue.** A slot rule that lowers a piece's score the more often this visitor has been served it anywhere in the brand, up to a cap. It never takes a score below zero.
 
-**Feature Experimentation.** Optimizely's experimentation product. It is not in the engine's decision path and cannot be connected to a customer deployment today; the engine measures itself with its own holdout.
+**Feature Experimentation.** Optimizely's experimentation product, which the engine links with: an experiment or a CMAB test can run on any slot, beside the engine's own decisions. It is never in the engine's decision path, and the engine also measures itself with its own holdout.
 
-**First paint.** The first view of a page as the visitor sees it. Deciding it on the site's own server before the browser draws has a source module in the code, and its acceptance on a real site is open, so never claim that nothing flashes.
+**First paint.** The first view of a page as the visitor sees it. The brand's own server can fetch the first page's decisions before the page is sent, so the content above the fold arrives already chosen.
 
 **Freshness.** A slot rule that favors newer pieces, with a boost that halves over a half-life the brand sets. The age is counted from the piece's freshness date, or else from the start of its window.
-
-## G
-
-**Generation 1, Generation 2.** Generation 2 is the engine this package describes, which the newest demos run on. Generation 1 is the older shared demo pipeline that earlier demos still run on, at an older version of the code.
 
 ## H
 
 **Half-life.** Deprecated as a name for the memory (τ), which is a time constant, not a half-life. The evidence behind an interest halves in about 0.69 times τ, about 9.7 days at the default memory of 14 days.
 
-**Holdout.** A share of visitors kept out on purpose so the engine has something to be compared with: they see the site's own defaults, or personalization without learning. Assignment is stable per visitor and draws only visitors who consented; the design of a production experiment is open.
+**Holdout.** A share of visitors kept out on purpose so there is always something to compare against: they see the site's own defaults, or personalization without learning. Assignment is stable per visitor and draws only visitors who consented, and the brand measures lift by comparing the groups on its own numbers.
 
 ## I
 
 **Intelligence.** The second half of the package's name: counted learning behind a dial, never AI. The engine counts which pieces earn outcomes and changes nothing until a person raises the learning dial.
 
-**Interest.** How strongly a visitor leans toward one dimension value, from 0 up to just under 1, built from their own actions and fading with time. It is a quantity, not a yes or no; an audience is the yes or no drawn from it. The code and older material say affinity.
+**Interest.** How strongly a visitor leans toward one dimension value, from 0 up to just under 1, filling like a bucket with their own actions and draining with time. It is a quantity, not a yes or no; an audience is the yes or no drawn from it. The code and older material say affinity.
 
 ## J
 
@@ -156,35 +144,33 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Learn document.** The published document that holds the learning and measurement settings: the learning dial for each slot, the holdout, the regional prior, the attribution windows and exploration.
 
-**Learning.** Counting which pieces earn outcomes in which contexts, so that what works can move a piece's score; in this package the word never means building a visitor's interests. It is built, it is counting and never AI, and it moves nothing until a person raises the learning dial. With the SDK as shipped nothing is recorded for it yet, because recording needs each slot set to count rendered pieces and durable recovery switched on, which no configuration has yet.
+**Learning.** Counting which pieces earn outcomes in which contexts, so that what works can move a piece's score; in this package the word never means building a visitor's interests. It is counting, never AI. It records what works from the first day and changes nothing until the brand turns the dial.
 
 **Learning dial (γ).** The setting on each slot, from 0 to 1, that decides how much learning may move its scores. It starts at 0, so what is learned moves nothing until a person raises it. Older material calls it the trust dial.
 
-**Ledger.** The store of receipts and outcome records, kept in R2, to which new records are only ever added. An erasure hides a visitor's records at once, and a nightly rewrite then removes them; the day report is built from the ledger.
+**Ledger.** The store of receipts and outcome records, kept in R2, to which new records are only ever added. An erasure hides a visitor's records at once, and a nightly rewrite then removes them; the day report is compiled from the ledger.
 
 **Lift.** How much better a piece does than its slot's usual rate in the same context, held between half and double. While the learning dial is at 0 it is computed and recorded, and changes nothing; never quote a lift figure as a result.
 
 ## M
 
-**Measurement basis.** Whether a slot counts a decision when it is served or only once the page confirms it drew the piece (rendered). With the SDK as shipped, only a rendered slot records, and that needs durable recovery, which no configuration has on.
+**Measurement basis.** Whether a slot counts a decision when it is served, or only once the page confirms it drew the piece (rendered), so that only what the visitor could see is counted.
 
 **Membership.** Deprecated for readers: say audience. It is the engineers' word for being in one.
 
-**Memory (τ).** How long an interest lasts without new actions, set by the brand in its registry and, if it wants, per dimension. τ is a time constant, not a half-life: the evidence behind an interest falls to about 37 percent after τ and to half after about 0.69 τ. The engine's default is 14 days and the most a brand may set is 90; the production value is open, and a demo may publish a far shorter memory so that a change happens while a presenter talks.
+**Memory (τ).** How long an interest lasts without new actions, set by the brand in its registry and, if it wants, per dimension. τ is a time constant, not a half-life: the evidence behind an interest falls to about 37 percent after τ and to half after about 0.69 τ. The engine's default is 14 days and the most a brand may set is 90, and a demo may publish a far shorter memory so that a change happens while a presenter talks.
 
 **Merchandising weight.** A multiplier the brand sets on a slot for season, promotion or margin, applied to pieces that carry those values and held within a range, half to double by default. It changes a score; it never overrides the brand's rules.
 
-**Module.** A block of a page's layout, such as a hero, a row of products or a promotions block. When a page's modules are the pieces of one slot, the engine orders them for each visitor and shows why, as on one demo's phone page. Where each slot sits on the page stays the site's own template, and configuring the layout per context is Designed, not built.
+**Module.** A block of a page's layout, such as a hero, a recommendations carousel, a category grid or reviews. The engine orders a page's modules for each visitor and context, not only what goes inside them, and holds pinned or locked modules where the brand put them.
 
 ## O
 
-**ODP.** Optimizely Data Platform, a separate Optimizely product. The engine's decision reads no ODP data and ODP cannot be connected to a customer deployment today, so older material that calls it the backbone or the memory is out of date.
+**ODP.** Optimizely Data Platform, a separate Optimizely product the engine links with. Events, the audiences the engine forms and each visitor's journey stage land in it as lasting facts, and a recognized visitor's interests can be restored from it; decisions never wait on it.
 
 **Off limits.** A slot the brand marks so that the engine serves nothing there, such as a buy box. The site keeps its own content in that place; the engine never decides it.
 
-**Opal.** Optimizely's AI assistant, a separate product, which is where AI authoring and explanation belong. It is not connected to the engine today, and the engine produces its own reasons as arithmetic, without a model.
-
-**Open.** No decision yet, or the decision belongs to an owner who has not given it. It is one of the package's three labels: an open item is named once, as open, and never promised.
+**Opal.** Optimizely's AI assistant, which works with the engine: it authors audiences and tests, explains results, tags content, and proposes and launches experiments on signals. It never takes part in a live decision; the engine produces its own reasons as arithmetic, and Opal is where people ask and generative AI creates.
 
 **Operator.** A person on the brand's team with an account and a grant for the brand, who signs in to the console to change settings. Sign-in can go through the brand's own single sign-on.
 
@@ -196,9 +182,9 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Piece.** One item of the brand's content in the catalog, such as a promotion, a banner or an article, named by the brand's own content id. The engine answers with these ids, and the site renders the pieces.
 
-**Pin.** The brand's instruction that named pieces fill a slot's first positions, before any ranking; the rest of the slot is still ranked, and the receipt says ranking never ran for the pinned pieces. If a pinned piece cannot be served, the whole slot shows nothing, so a pin needs care.
+**Pin.** The brand's instruction that named pieces fill a slot's first positions before any ranking, such as the placements the brand sells; the rest of the slot is still ranked. The receipt says ranking never ran for the pinned pieces.
 
-**Placement.** Deprecated: say slot.
+**Placement.** A section of a page that a merchandiser sells or reserves, such as a spot a partner pays for or a funded campaign. The engine honors it through a pin, so it holds its place while the rest of the page is ranked, and the receipt says so.
 
 **Pooling levels.** How learning widens its evidence when a context has too little: from the full context through coarser ones to everyone, using the finest level with enough exposures. Older material calls this the pooling ladder.
 
@@ -220,11 +206,9 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Raw score (R).** The running total behind an interest: each action adds its weight, and the total fades with time. Interest is R divided by R plus K.
 
-**Real-time.** Deprecated as a claim about speed. Say what is true: with the visitor's consent, the engine personalizes within their session from their first event, and this package quotes no timing figure.
+**Receipt.** The record of one served decision: what was served, in what position, and the arithmetic behind it, with the revisions of the published documents in force, so a person can recompute it. It is written after the answer, with the visitor's consent. Say receipt, never explain record; the page's own answer carries the shorter drivers.
 
-**Receipt.** The record of one served decision: what was served, in what position, and the arithmetic behind it, with the revisions of the published documents in force. It is written after the answer and only with tracking consent; with the SDK as shipped, only for slots set to count rendered pieces with durable recovery on, which no configuration has yet. Say receipt, never explain record; the page's own answer carries the shorter drivers.
-
-**Recording.** Writing receipts, outcomes and learning counts after an answer, which happens only with tracking consent. A page that asks the engine directly, without the SDK, is recorded when its slots use the default served basis, which is how the demos record; with the SDK as shipped, decisions are recorded only for slots set to count rendered pieces with durable recovery switched on, and no configuration has it on yet.
+**Recording.** Writing receipts, outcomes and learning counts after an answer, with the visitor's consent. It runs from the first day, so what works is known before the brand turns the learning dial.
 
 **Reflex.** Deprecated: older material uses it for the engine, for a program kept per visitor and for the registry. Say the engine, or the registry.
 
@@ -232,13 +216,13 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Regional fallback.** When a region has too few events to answer, the engine uses its country, and then everyone. Older material calls this the ladder.
 
-**Regional prior (λ).** What visitors in a stranger's region are interested in, blended with the stranger's own interests while their evidence is thin; λ is the region's share of the blend, 1 for a stranger and falling as their own interests grow. The region's counts come from the site's own events, carry no visitor ids and have a memory of one day. The learn document turns it on or off, and demos seed synthetic regional data and label it.
+**Regional prior (λ).** What visitors in a stranger's region are interested in, blended with the stranger's own interests while their evidence is thin; λ is the region's share of the blend, 1 for a stranger and falling as their own interests grow. The region's counts come from the site's own events, with a memory of one day, and can start from the brand's own sales by region; they carry no visitor ids. The learn document turns it on or off, and demos seed synthetic regional data and label it.
 
 **Registry.** The brand's published list of dimensions, the attribute each one reads, how much each action counts and how long interest lasts. Engineers call it the reflex document.
 
 **Replay.** Recomputing a past decision from its receipt to show that it comes out the same. It is exact for one slot; never claim it for a whole page.
 
-**Retention.** How long each category of stored data is kept, set for each customer. A category with no period set captures nothing that depends on it, and the actual periods are open.
+**Retention.** How long each category of stored data is kept, set for each customer. A category with no period set captures nothing that depends on it.
 
 **Revision.** One saved version of one published document. A rollback writes the old value as a new revision, so the history always shows it.
 
@@ -254,7 +238,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Session.** The visitor's time on the site, which this package follows from before they arrive to after they leave. Engineers also use the word for the signed pass the visitor's browser presents, which lasts at most 24 hours; that pass is the shopper capability.
 
-**Session host, object host.** The two places a visitor's interests can live: a record in KV (the session host) or a Durable Object of their own (the object host). Every configuration runs the session host today; the object host is built and held back by a known engine finding.
+**Session host, object host.** The two places a visitor's interests can live: a record in KV (the session host) or a Durable Object of their own (the object host).
 
 **Shopper.** The same person as a visitor. Say visitor, except in a retail example.
 
@@ -266,13 +250,13 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Site key.** The key that identifies the brand's site on every call from its pages. It is not a secret; the engine checks that it belongs to the brand being called.
 
-**Slot.** One place on one page that the engine decides, showing one or more pieces in order. Older material says placement, container, frame or zone; say slot.
+**Slot.** One place on one page that the engine decides, showing one or more pieces in order. Older material says container, frame or zone; say slot.
 
 **Slot weight (ω).** How much a dimension counts in a slot, from 0 to 1, so one slot can favor brand and another category. The brand sets it in the slots document.
 
 **Slots document.** The published document that lists the brand's pages and their slots, with each slot's take, weights, pins, rules and arrival seeds.
 
-**Stage.** Deprecated on its own: say journey stage, the only stage in this package, and never call a part of learning a stage.
+**Stage.** Deprecated on its own: say journey stage, the only stage in this package. Never call a part of learning, or a step in delivering the product, a stage.
 
 **Stamp.** Deprecated for readers: say customer deployment. It is the engineers' word for one: one Worker per environment, with its own storage.
 
@@ -290,7 +274,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Trust dial.** Deprecated: say learning dial.
 
-**Typed search.** Search in which the brand's own AI model reads what the visitor types before the brand's catalog search fetches results. It is built, off by default, outside the decision, and needs both the model key and the search service to be configured.
+**Typed search.** Search in which an AI model reads what the visitor types, the brand's catalog search fetches results, and the engine ranks them for that visitor; also called AI search. It is one of the optional AI add-ons, outside the decision, which a brand switches on with its credits.
 
 ## V
 
@@ -304,4 +288,4 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 **Worker.** A program that runs on Cloudflare's network, in the data center nearest each request. The engine is one Worker per deployment.
 
-**One word for each meaning, defined once, in plain words.**
+> **One word for each meaning, defined once, in plain words.**
