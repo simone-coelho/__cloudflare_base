@@ -22,8 +22,11 @@
  *                       with no identity call and no new consent (localStorage, the SDK's key opt_shopper_session:<origin>
  *                       :<tenant> for the capability and opt_shopper_visitor:<origin>:<tenant> for the record, with a
  *                       sessionStorage mirror); null when nothing valid is kept or the engine refuses the session.
- *   persist(v)        keeps visitor A (the boot, the first click's mint, the arrival, the sign-in's swap call it).
- *   forget()          the demo's reset: a new person from the next mint.
+ *   persist(v)        keeps visitor A the moment the mint answers (the kit's ensureVisitor, wrapped at the bind: the first
+ *                     click, a direct product address, the director's first press), and on the arrival, the sign-in's
+ *                     swap (useVisitor('A'), wrapped) and the boot. It writes only when the record has changed.
+ *   forget()          the demo's reset and "Forget this browser": a new person from the next mint; the capability, the
+ *                     record and every visitor's cart leave both storage areas, and the cart on screen empties.
  *
  * store.events
  *   send(type, attrs = {}, opts = {}) → Promise<{ ok, status, body } | null>   (null: nobody on the page yet)
@@ -38,10 +41,14 @@
  *                     list is closed (src/events/actionTypes.ts), so a manual action maps to one of its types or to
  *                     custom with data.event, never to a new type.
  *     opts.reask      true (the page on screen) or a page key: store.reask after the send.
- *     After every send that lands, her profile is read again and "What has been signalled", the who chip, Why these
- *     and the before/now strips on screen are redrawn at once (refreshSignals), as after a director's press; with
- *     opts.reask the re-ask does it. An event about a product always carries productAttrs(p) under its own fields; a
- *     sku the feed does not hold is sent with its id only, and the Session panel says so.
+ *     After every send that lands, the panel's dimension rows are drawn at once from the action's own answer when it
+ *     carries the state after the event (update.data.affinity.dims), then her profile is read again and "What has been
+ *     signalled", the who chip, Why these and the before/now strips on screen are redrawn (refreshSignals), as after a
+ *     director's press; with opts.reask the rows are drawn from the answer (or her profile read at once, when the
+ *     answer carries no state) before the page is asked again, and the re-ask's read confirms them. An event about a
+ *     product always carries productAttrs(p) under its own fields; a sku the feed does not hold is sent with its id
+ *     only, and the Session panel says so. The page's own sends straight to the kit's transport (a page view, a product
+ *     view, a declared fit) get the same early draw by hand, never in a beat (the bind wraps transport.send).
  *     opts.note       [verb, what, detail]: the machine's Session line (a default line is written otherwise).
  *   weight(type)      → the published registry's weight for that action (anchor.json registry.weights); 0 = no taste.
  *
@@ -173,6 +180,7 @@ const RETAILERS = {
 const STORE_KEY = 'oh:store:cart:v1';
 
 let H = null;
+let raw = null;   // the kit's own cur, send and sendCustom, as they were before the bind (the store's events go out on them)
 let readyNow;
 const ready = new Promise((r) => { readyNow = r; });
 const need = () => { if (!H) throw new Error('oh-store: not bound (oh.js binds the store right after createDemo)'); return H; };
@@ -240,12 +248,14 @@ async function ensure() {
   if (t.cur()) { persist(t.cur()); return own(t.cur()); }
   if (!minting) {
     minting = t.ensureVisitor()
-      // Her arrival, as beat 1 reads it: the region from the request (never asserted), the brand's lean there, the census shown.
-      .then(async (v) => { try { await P().loadColdStart(); } catch { /* the panel says what it could not read */ } return v; })
+      // Kept the moment the mint answers (her session, then her consent), before the cold-start read: a reload inside that
+      // read continues her. Then her arrival, as beat 1 reads it: the region from the request (never asserted), the
+      // brand's lean there, the census shown.
+      .then(async (v) => { persist(v); try { await P().loadColdStart(); } catch { /* the panel says what it could not read */ } return v; })
       .finally(() => { minting = null; });
   }
   const v = own(await minting);
-  persist(v);
+  persist(v);   // again after the cold-start read: it writes only when the record has changed
   return v;
 }
 /** The store's own fields on a visitor (carried over when the sign-in swaps her session: the page spreads the visitor). */
@@ -282,10 +292,16 @@ function persist(v) {
   }
   return true;
 }
-/** The demo's reset starts a new person: what this browser kept of her goes. */
+/**
+ * The demo's reset, or "Forget this browser", starts a new person: what this browser kept goes from both storage areas
+ * (her capability, her record and the cart's lines, every visitor's), whether or not anyone is on the page, and the cart
+ * on screen empties, so nothing of hers comes back with the next person.
+ */
 function forget() {
   if (!H) return;
-  for (const area of areas()) { try { area.removeItem(capKey()); area.removeItem(recKey()); } catch { /* storage refused */ } }
+  for (const area of areas()) for (const key of [capKey(), recKey(), STORE_KEY]) { try { area.removeItem(key); } catch { /* storage refused */ } }
+  LINES = []; cartOwner = null;
+  try { changed(false); } catch { /* nothing on screen to redraw */ }
 }
 /** What this browser kept, when it is for this tenant, names the same visitor as its capability, and has a minute left. */
 function kept() {
@@ -325,7 +341,7 @@ async function resume() {
   S().visitors.A = v;
   t.useVisitor('A');
   note('continued', `Shopper A, from this browser (${rec.subject.slice(-8)})`,
-    `the same visitor as before: her session kept in this browser, no identity call and no new consent · ${rec.kind} · until ${new Date(rec.exp * 1000).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' })}`);
+    `the same visitor as before: the session kept in this browser, no identity call and no new consent · ${rec.kind} · until ${new Date(rec.exp * 1000).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' })}`);
   return v;
 }
 const visitor = { ensure, current: () => (H ? T().cur() : null), resume, persist, forget };
@@ -355,7 +371,7 @@ const trail = {
 // ── Events: exactly the beat verbs' shapes ───────────────────────────────────
 const weight = (type) => { const w = ((S().registry || {}).weights || {})[type]; return Number.isFinite(num(w)) ? num(w) : 0; };
 async function send(type, attrs = {}, opts = {}) {
-  const h = need(), t = T();
+  const h = need(), t = raw || T();   // the kit's own sends, as before the bind: the store draws its own panel (refreshSignals, or before its re-ask)
   const v = opts.visitor || t.cur();
   if (!v) return null;
   const { sku, ...rest } = attrs || {};
@@ -378,28 +394,60 @@ async function send(type, attrs = {}, opts = {}) {
     r = await t.sendCustom(name, data, v);
   }
   if (opts.note !== false) {
-    const [verb, what, detail] = opts.note || ['sent', type === 'custom' ? rest.event : type, `${p ? `${h.productName(p)} · ` : ''}by hand${weight(type === 'custom' ? rest.event : type) ? ` · weighs ${weight(type === 'custom' ? rest.event : type)} on her profile` : ' · no taste'}`];
+    const [verb, what, detail] = opts.note || ['sent', type === 'custom' ? rest.event : type, `${p ? `${h.productName(p)} · ` : ''}by hand${weight(type === 'custom' ? rest.event : type) ? ` · weighs ${weight(type === 'custom' ? rest.event : type)} on the profile` : ' · no taste'}`];
     note(verb, what, detail);
   }
   eventsBus.emit('sent', { type, data, ok: Boolean(r && r.ok) });
-  if (opts.reask) await reask(opts.reask === true ? undefined : opts.reask);   // the re-ask redraws the signals itself
+  if (opts.reask) { drawEarly(r, type === 'custom' ? rest.event : type, v); await reask(opts.reask === true ? undefined : opts.reask); }   // the re-ask's own read confirms it
   else if (r && r.ok) await refreshSignals(r.body, type === 'custom' ? rest.event : type);
   return r;
 }
 /**
- * After an event the store sent (a manual add, select, filter, search, wishlist, outcome): her profile read again
- * (GET /realtime/reflex, through the kit's panels) and what shows it redrawn, the moment it lands, with no press and no
- * navigation: "What has been signalled" (the meters, the moved rows marked fresh), the who chip and her stage, Why
- * these (the receipts of the set on screen), and the before/now strips on the page, whose quiet line names her
- * strongest signal. The decided slots are not asked again here: store.reask does that, on navigation or when a
- * caller asks for it. Calls that land while one runs are folded into one more read.
+ * What the action's own answer says about her after the event. POST /realtime/action answers { success, message,
+ * update: { type, userId, data: { affinity: { dims, audiences, changed, odpConfirmed }, journeyStage, … } }, signals,
+ * sessionId, cookiesUpdated, consent } on both engine hosts (src/services/RealtimeSegmentEngine.ts, ShopperReflex.ts),
+ * and its dims are the profile read's own shape ({ category: { washers: 0.64, … }, … }, reflex snapshot()). The engine
+ * sends update only when an audience or the stage moved; otherwise the answer says "no personalization changes" and
+ * carries no dims. → { dims | null, changed } for an event taken as sent, or null for one that was not (refused,
+ * buffered, dropped, no consent to personalize): nothing is drawn early for that one.
+ */
+function afterOf(answer) {
+  const b = answer && typeof answer === 'object' ? answer : null;
+  if (!b || b.success !== true || b.processing === 'buffered' || b.dropped) return null;
+  if (b.consent && (b.consent.tracking === false || b.consent.personalization === false)) return null;
+  const aff = (b.update && ((b.update.data && b.update.data.affinity) || b.update.affinity)) || b.affinity || null;
+  return { dims: aff && aff.dims && typeof aff.dims === 'object' ? aff.dims : null, changed: aff && Array.isArray(aff.changed) ? aff.changed : [] };
+}
+/** Whether an answer is about the visitor on screen (its session is hers). */
+const forHer = (answer, v) => { const c = H && T().cur(); return Boolean(c && (!v || v === c) && c.session && (!answer || !answer.sessionId || answer.sessionId === c.session.sessionId)); };
+/**
+ * The panel the moment an answer lands, before anything else is asked: its rows drawn from the answer's dims, or, when
+ * the engine sent none, her profile read at once rather than after the page's question. trigger names the event for the
+ * "just now" strip (none: the strip reads as after a page's own question). The read that follows, the page's after its
+ * question, confirms it.
+ */
+function drawEarly(r, trigger, v) {
+  const a = r && r.ok ? afterOf(r.body) : null;
+  if (!a || !forHer(r.body, v)) return;
+  const said = trigger ? { changed: a.changed, trigger } : {};
+  try { Promise.resolve(P().renderVectors(a.dims ? { ...said, dims: a.dims } : { ...said, early: true })).catch(() => {}); } catch { /* no panel */ }
+}
+/**
+ * After an event the store sent (a manual add, select, filter, search, wishlist, outcome): the panel's rows drawn at once
+ * from the action's own answer when it carries them, then her profile read again (GET /realtime/reflex, through the
+ * kit's panels), which confirms them, and what shows it redrawn, with no press and no navigation: "What has been
+ * signalled" (the meters, the moved rows marked fresh), the who chip and her stage, Why these (the receipts of the set on
+ * screen), and the before/now strips on the page, whose quiet line names her strongest signal: those stay on the read.
+ * The decided slots are not asked again here: store.reask does that, on navigation or when a caller asks for it. Calls
+ * that land while one runs are each drawn from their answer at once and folded into one more read.
  */
 let refreshing = null, refreshAgain = false, lastAnswer = null;
 function refreshSignals(answer, type) {
-  // The action's own answer: the audiences it reports entering or leaving and its trigger, for the "just now" strip.
-  // POST /realtime/action answers { update: { affinity: { dims, changed, … } } }; the event's own name is the trigger.
-  const aff = (answer && ((answer.update && answer.update.affinity) || answer.affinity)) || null;
-  lastAnswer = { changed: aff && Array.isArray(aff.changed) ? aff.changed : [], trigger: type || null };
+  // The action's own answer: the state after the event (dims), the audiences it reports entering or leaving and its
+  // trigger, for the panel and the "just now" strip; the event's own name is the trigger.
+  const a = afterOf(answer);
+  lastAnswer = { changed: a ? a.changed : [], trigger: type || null };
+  if (a && a.dims && forHer(answer)) { try { Promise.resolve(P().renderVectors({ ...lastAnswer, dims: a.dims })).catch(() => {}); } catch { /* no panel */ } }
   if (refreshing) { refreshAgain = true; return refreshing; }
   refreshing = (async () => {
     do {
@@ -546,6 +594,7 @@ function save() {
   const v = T().cur();
   if (!v) return;
   const all = stored();
+  if (!LINES.length && !all[v.key]) return;   // an empty cart is not written where none was kept: a forgotten browser stays empty
   all[v.key] = { owner: own(v).ohStore.id, lines: LINES };
   safe.set(STORE_KEY, all);
 }
@@ -1034,8 +1083,17 @@ function bind(host) {
   if (H) throw new Error('oh-store: bound twice');
   H = host;
   if (!H.lanes.routes) H.lanes.routes = {};
-  const t = T(), useVisitor = t.useVisitor;
+  const t = T(), useVisitor = t.useVisitor, ensureVisitor = t.ensureVisitor;
   t.useVisitor = (key) => { useVisitor(key); if (key === 'A') persist(t.cur()); };
+  // The kit's own mint (a direct product address, the director's first press; the store's ensure goes through it too):
+  // visitor A is kept the moment it answers, not when the page around it has finished asking.
+  t.ensureVisitor = async () => { const v = await ensureVisitor(); persist(v); return v; };
+  // The page's own events straight to the kit (a page view, a product view, a declared fit), by hand, never in a beat:
+  // the panel is drawn the moment the answer lands, while the page asks its question, whose read confirms it. The
+  // store's own events go out on the kit's sends as they were (raw) and draw in send().
+  raw = { cur: t.cur, send: t.send, sendCustom: t.sendCustom };
+  t.send = async (type, data, v) => { const who = v || t.cur(), r = await raw.send(type, data, v); if (!S().busy) drawEarly(r, null, who); return r; };
+  t.sendCustom = async (name, data, v) => { const who = v || t.cur(), r = await raw.sendCustom(name, data, v); if (!S().busy) drawEarly(r, null, who); return r; };
   // A new walk (beat 1's arrival) is a new stranger: her cart starts empty.
   H.lanes.beforeBeat.push((b) => { if (b && b.data && b.data.arrives) clearAll(); });
   style();

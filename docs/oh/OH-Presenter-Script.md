@@ -2,7 +2,7 @@
 
 **Hosted: https://edge-platform-oh.expedge.workers.dev/oh/** · version `cd3775e2` from `bbf8a9d`, reseeded on 2026-10-03 with the sixty-second dials (51 of 51 regions, no census term in the lean); lane E4, the engine's action speed, deploys next, so the version id will move. TV grid `/oh/?view=tvs`, a product `/oh/product?id=<sku>`, search `/oh/?q=<words>`, the phone `/oh/m`.
 
-OH is a working store first and a scripted walk second: open it cold and click, then walk sixteen beats in eight acts with **Next →**. Figures come from the lane reports of 2026-10-02 and 10-03 and the hosted runs; where one depends on the walk or the time since the last click, the script says so, and the screen wins. Quotes keep the screen's words, which call the visitor "she"; a product keeps its own name as the catalog has it. **OH** is fictional; the products, their names, images and prices are the customer's, as listed publicly on or before 2 October 2026; offers, packages, delivery dates, retailer lists and regional sales are representative, and the footer says so.
+OH is a working store first and a scripted walk second: open it cold and click, then walk sixteen beats in eight acts with **Next →**. Figures come from the lane reports of 2026-10-02 and 10-03 and the hosted runs; where one depends on the walk or the time since the last click, the script says so, and the screen wins. Quotes keep the screen's words; a product keeps its own name as the catalog has it. **OH** is fictional; the products, their names, images and prices are the customer's, as listed publicly on or before 2 October 2026; offers, packages, delivery dates, retailer lists and regional sales are representative, and the footer says so.
 
 ---
 
@@ -16,7 +16,7 @@ The customer's store already runs our platform: Web Experimentation, Product Rec
 
 **One browser, one person.** The store keeps its visitor in the browser for the session's 24 hours: a reload, a typed address, Back and a new tab are the same person. A reset is how a new person starts: beat 1 forgets the visitor this browser kept and lands a new stranger. A sign-in swaps the kept session for the recognized one.
 
-**The cold open needs a browser that keeps nobody.** A browser that walked the demo in the last 24 hours opens `/oh/` on that visitor's decided page, not the template. Before the meeting, press the director's **Forget this browser** (lands with the next deploy): it forgets the kept visitor, empties the cart and loads `/oh/`, which mints nobody. Check that `/oh/` reads "the published template".
+**The cold open needs a browser that keeps nobody.** A browser that walked the demo in the last 24 hours opens `/oh/` on that visitor's decided page, not the template. Before the meeting, press the director's **Forget this browser**: it forgets the kept visitor, empties the cart and loads `/oh/`, which mints nobody. Check that `/oh/` reads "the published template".
 
 > "Nothing on this page ranks anything. It sends what the visitor does, paints what the engine answers, and every decided card carries its reason. The buy box is off limits: the title, the price, the sizes, the button and the financing line are the catalog's, the same for everyone. Off limits means we never decide it, not that it's dead: Add to Cart works.
 >
@@ -48,7 +48,7 @@ Then click, in this order; each line is what the lanes measured by real clicks.
 | **A size** on the TV, or **a colour** on a washer | The page becomes that model at its own price (WM6500HWA: White $1,199.00, Black steel $1,249.00), and Back returns; Just now names what the select moved. | "The price follows the model, the same for everyone. What the visitor picks is a signal." |
 | **Add to Cart** | "Added to your cart: …", the count goes to 1, the drawer opens. The event carries the decisions that led there and weighs three views: Just now shows the product's dimensions jump. | "Adding to the cart counts three times a view, and you just watched it land." |
 | **The cart** (the icon) | Lines, quantities, add-ons, the pair saving when a washer and its own dryer are both in, the total. **Checkout** opens "What this demo records": one order event per line against the decision that led to it; "No payment is taken, no card or address is asked for, nothing ships." | "Nothing is charged. The order is recorded against the decision that earned it." |
-| **Find a Retailer** (a retailer-only card, or Find a Store on a product page) | The one retailer modal: Buy directly, Best Buy pickup where offered, Online, then Nearby stores in the region from the request; the demo's own list, "not a live PriceSpider answer". A seller pressed sends a referral, credited to a decided where-to-buy module or to none, as the modal says: "A referral is not a sale." | "Every retailer hand-off becomes a named outcome. The list is ours for the demo; in production it's yours." |
+| **Find a Retailer** (a retailer-only card, or Find a Store on a product page) | The one retailer modal: Buy directly, Best Buy pickup where offered, Online, then Nearby stores in the region from the request; the demo's own list, "not a live PriceSpider answer". A seller pressed sends a referral, credited to a decided where-to-buy module or to none, as the modal says: "A referral is not a sale". | "Every retailer hand-off becomes a named outcome. The list is ours for the demo; in production it's yours." |
 | **Back** | One press per page, the grid's filter still on. | |
 | **Reload**, or the address in a new tab | The same visitor, with no identity call: the page reopens decided for them, the meters carry on, and the Session tab says "continued". A product page's reload is one more view. | "Still the same person: a reload, a new tab, Back or a typed address. Only a reset starts someone new." |
 | **Search:** "front load washer" | The search icon opens the field. "54 results for “front load washer”", in POST /sort's order with the lean's label; the search goes out as a signal. Open a washer. | "Search results come back in the engine's order, over every match." |
@@ -66,7 +66,7 @@ The Session tab lists every event the visitor sent. Then **Next** for beat 1.
 The director is docked right, collapsed by default to a slim rail with **Director** and **Next**, so the room sees the store full width. Open it with **D** (outside a text field), the rail's Director button or `/oh/?present=1`; close it with **Hide** or **D**. Open, it shows the engine panel above the director bar, and the store goes to three cards across.
 
 - **Next →** runs the next beat (the rail's Next is the same press). **All beats** opens the sixteen, the region buttons and the Compare tools; **Explain** shows what a press will do.
-- The dark panel is the engine. **What has been signalled** has one row per dimension in the registry's order: the leading value and its score, the second beside it, "—" where nothing has evidence, the row's memory ("1 min memory", "10 min memory"), the green tick at the 0.60 entry line, the hollow mark for the region's lean. **Just now**, above the rows, names what the last event changed ("entered the panel", "was 0.36") or says "Nothing in her profile moved on this one."; beneath them, the registry's constants and "Memory is compressed for this room (…); production runs days." Then the tabs Arrival, Session, Why these, Learned (the day report) and Roadmap, and Capture and Compare.
+- The dark panel is the engine. **What has been signalled** has one row per dimension in the registry's order: the leading value and its score, the second beside it, "—" where nothing has evidence, the row's memory ("1 min memory", "10 min memory"), the green tick at the 0.60 entry line, the hollow mark for the region's lean. **Just now**, above the rows, names what the last event changed ("entered the panel", "was 0.36") or says "Nothing in the profile moved on this one."; beneath them, the registry's constants and "Memory is compressed for this room (…); production runs days." Then the tabs Arrival, Session, Why these, Learned (the day report) and Roadmap, and Capture and Compare.
 - Each decided slot has a before/now strip ("What was on screen before this press · What changed") and a receipt under each card, redrawn after every event. The quoted lines under **They see** are on screen: point at them.
 
 ---
@@ -102,7 +102,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 
 ### Beat 4. The fresh visitor beside them
 **Press:** Next: Compare → Fresh visitor on the homepage.
-**They see:** the visitor's homepage beside a stranger's: "Same page, same moment, same region, same catalog and the same public prices. The fresh visitor arrived direct and has sent nothing: the region’s prior alone. Hers, on the left, is what her visit earned."
+**They see:** the visitor's homepage beside a stranger's: "Same page, same moment, same region, same catalog and the same public prices. The fresh visitor arrived direct and has sent nothing: the region’s prior alone. The shopper’s, on the left, is what their visit earned."
 **You say:**
 > "A stranger in the same state, at the same moment, who has sent nothing. What's different on the left is what this visit earned."
 
@@ -115,7 +115,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 
 ### Beat 5. The washer page
 **Press:** Next. The WM6500HWA front-load washer, $1,199.00, through a link on screen when there is one.
-**They see:** the buy bar marked off limits; below it, "Complete your laundry room": the dryer that goes with it, the pedestal, the stacking kit and the laundry sets, each with "Our merchandiser's rule" and the receipt "Completes what she committed to: WM6500HWA (+0.6)". The dryer card says what led and why (lane run): "The 7.4 cu. ft. Front Load Gas Dryer (DLGX6501W) (gas) leads, by POST /sort over the dryers of this series, ahead of the next on: sold here · in the 4-piece laundry set with it; she has shown no fuel yet, so none is claimed for her."
+**They see:** the buy bar marked off limits; below it, "Complete your laundry room": the dryer that goes with it, the pedestal, the stacking kit and the laundry sets, each with "Our merchandiser's rule" and the receipt "Completes what was committed to: WM6500HWA (+0.6)". The dryer card says what led and why (lane run): "The 7.4 cu. ft. Front Load Gas Dryer (DLGX6501W) (gas) leads, by POST /sort over the dryers of this series, ahead of the next on: sold here · in the 4-piece laundry set with it; you have shown no fuel yet, so none is claimed for you."
 **You say:**
 > "Your washer page already has Complete Your Laundry Room. Here it's a rule your merchandiser writes, shown as one: the dryer of this series, the pedestal, the stacking kit. The dryer card says why the gas model leads: it's sold here, and it's in the four-piece set with this washer. This visitor hasn't shown a fuel, so the card claims none."
 
@@ -125,7 +125,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 
 ### Beat 6. A switch to a top-loader
 **Press:** Next. The page's own type switch (Front load, Top load) opens the WT8600CW top-loader.
-**They see:** the pedestal, the stacking kit and the sets struck through, "Withdrawn · not decided", each with its reason; the pedestal's reads "A top-loader has no pedestal and does not stack … the rule fails closed." The dryer stays.
+**They see:** the pedestal, the stacking kit and the sets struck through, "withdrawn · not decided", each with its reason; the pedestal's reads "A top-loader has no pedestal and does not stack … the rule fails closed." The dryer stays.
 **You say:**
 > "The visitor switches to a top-loader, and the pedestal leaves. Nothing outscored it: the rule serves front-load pairs only, and the card says so. A rule withdrawing itself."
 
@@ -163,11 +163,11 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 
 ---
 
-## Act 5. Windows: the merchandiser's day
+## Act 5. Windows
 
 Say once: "Each of these is a real publish of your catalog or slots, as a merchandiser would make it."
 
-### Beat 11. An offer's window closes
+### Beat 11. An offer’s window closes
 **Press:** Next. The visitor's last TV page opens from the grid (on a straight walk, the QNED from beat 9); the catalog publishes the gift-card offer's window closed, with the offers that close with it, nine pieces in one publish; the TV page asks again; then home.
 **They see:** on the TV page's offer strip, the NFL Shop eGift Card and free wall mounting "left the page · its window closed [date and time]". At home, on the deals strip, what left the TV page, then (lane run) "9 offers' windows closed in one publish", how many left the homepage, and "3 packages with a member out of stock were never shown as complete".
 **You say:**
@@ -177,7 +177,7 @@ Say once: "Each of these is a real publish of your catalog or slots, as a mercha
 
 ### Beat 12. The merchandiser pins a launch
 **Press:** Next. The slots publish with "New for 2026: Micro RGB evo." pinned into the deals.
-**They see:** the card in container 1, marked PINNED: "pinned by our merchandiser · container 1 for everyone · ranking skipped · without the pin the engine would have led with [a piece], container 2 now" (lane run: "A free Xbox controller with select TVs"; it varies with the walk).
+**They see:** the card in container 1, marked PINNED: "pinned by our merchandiser · container 1 for everyone · ranking skipped · without the pin the engine would have led with [a piece] (score …), container 2 now" (lane run: "A free Xbox controller with select TVs"; it varies with the walk).
 **You say:**
 > "Launch week: the merchandiser pins the Micro RGB evo for everyone. The receipt says ranking was skipped and names what the engine would have led with, so an instruction never passes for a decision. The other three are still ranked for this visitor."
 
@@ -189,7 +189,7 @@ Say once: "Each of these is a real publish of your catalog or slots, as a mercha
 
 ### Beat 13. Three weeks later
 **Press:** Next. A labelled clock jump: every window moves back 21 days in one publish, and the return visit is asserted from here on, labelled.
-**They see:** "Pick up where you left off." over the shortlist, "what you opened on this device, nothing inferred"; "21 days later · a labelled clock jump" and a note read from the registry (lane rig: "On the demo’s dial (τ 60 seconds on room, K 1.8; production’s dial runs days) her room signals are gone within minutes: living room 0.621 → 0.000 (−100%) · … ; every room below the entry threshold (θin 0.60)."); the receipt "ctx.visit = return, asserted for the clock jump (labelled)".
+**They see:** "Pick up where you left off." over the shortlist, "what you opened on this device, nothing inferred"; "21 days later · a labelled clock jump" and a note read from the registry (lane rig: "On the demo’s dial (τ 60 seconds on room, K 1.8; production’s dial runs days) the shopper’s room signals are gone within minutes: living room 0.621 → 0.000 (−100%) · … ; every room below the entry threshold (θin 0.60)."); the receipt "ctx.visit = return, asserted for the clock jump (labelled)".
 **You say:**
 > "I can't make you wait three weeks, so this is a labelled clock jump: every window really moved back 21 days. Memory in this room runs a minute on purpose, so three weeks leaves nothing of the rooms this visitor browsed, and the note says production's dial runs days. What carries the return is the shortlist: what they opened on this device, nothing inferred, kept for the window you publish, with their consent."
 
@@ -197,7 +197,7 @@ Say once: "Each of these is a real publish of your catalog or slots, as a mercha
 
 ### Beat 14. What changed in the meantime
 **Press:** Next. "What changed while you were away" on the continue hero.
-**They see:** per product, the price marked "held", the offers that ended (struck through), the ones still running, and a newer model where the feed lists one (the 2026 C6 beside the shortlist's 2025 C5). The counts follow the shortlist (lane run: "8 on her shortlist · 20 offers on it ended · 11 still running · every price held, the catalog's · a newer model listed for 1").
+**They see:** per product, the price marked "held", the offers that ended (struck through), the ones still running, and a newer model where the feed lists one (the 2026 C6 beside the shortlist's 2025 C5). The counts follow the shortlist (lane run: "8 on your shortlist · 20 offers on it ended · 11 still running · every price held, the catalog's · a newer model listed for 1").
 **You say:**
 > "What changed in the meantime: the offers that ended, the ones still running, a newer model of a TV on the shortlist. The prices are the catalog's. The page says what changed; it never decides a price."
 
@@ -271,7 +271,7 @@ If asked why a reload keeps the visitor: "The browser keeps its own session toke
 - Any lift, conversion or revenue number of ours. Attach is measured, never claimed.
 - That we undercut or reprice a retailer: price parity and advertised-price rules are the customer's.
 - That the customer's site fails at anything: every contrast is their next step on the platform they already run.
-- "In her fuel", unless the profile carries a fuel signal and the card says so.
+- "In your fuel", unless the profile carries a fuel signal and the card says so.
 - That the visitor picked the 75-inch before pressing "Choose the 75″", or that the page chose it.
 - That a price dropped, or anything that sounds like a price history. The feed holds one price per product.
 - That the retailer lists are the customer's data, or a live PriceSpider answer. They are the demo's own, and the modal says so.

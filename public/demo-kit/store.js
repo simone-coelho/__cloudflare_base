@@ -181,18 +181,108 @@ export function createStore() {
   let minting = null;
   async function ensure() {
     const t = T();
-    if (t.cur()) return own(t.cur());
+    if (t.cur()) { persist(t.cur()); return own(t.cur()); }
     if (!minting) {
       minting = t.ensureVisitor()
-        // Her arrival, as beat 1 reads it: the region from the request (never asserted), the lean there, the census shown.
-        .then(async (v) => { try { await P().loadColdStart(); } catch { /* the panel says what it could not read */ } return v; })
+        // Kept the moment the mint answers (her session, then her consent), before the cold-start read: a reload inside
+        // that read continues her. Then her arrival, as beat 1 reads it: the region from the request (never asserted), the
+        // lean there, the census shown.
+        .then(async (v) => { persist(v); try { await P().loadColdStart(); } catch { /* the panel says what it could not read */ } return v; })
         .finally(() => { minting = null; });
     }
-    return own(await minting);
+    const v = own(await minting);
+    persist(v);   // again after the cold-start read: it writes only when the record has changed
+    return v;
   }
   /** The store's own fields on a visitor (carried over when the sign-in swaps her session: the page spreads the visitor). */
   function own(v) { if (v && !v.kitStore) v.kitStore = { id: uid().slice(0, 16), trail: [] }; return v; }
-  const visitor = { ensure, current: () => (H ? T().cur() : null) };
+
+  // ── Her visitor, kept in this browser: a full load continues the same person (OH's store, lanes M3 and M3b) ────
+  // The engine's shopper capability (its own 24-hour bearer) is kept as the SDK keeps it, under the SDK's own key
+  // (public/sdk/edge-personalization.js: opt_shopper_session:<endpoint>:<tenant>, the endpoint being this origin), in
+  // localStorage with a sessionStorage mirror; beside it, under the SDK's family of names, the record of who she is: the
+  // tenant, the visitor id (subject), the session id, kind, the claims' times and grant, her consent, the cart's owner id
+  // and the fictional account she signed in as. Nothing else, and no secret: the capability is her own token, signed by
+  // the engine, the thing the SDK stores.
+  const CAPABILITY = /^ss1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+  const tenantOf = () => need().site.tenant || 'demo';
+  const capKey = () => `opt_shopper_session:${encodeURIComponent(location.origin)}:${encodeURIComponent(tenantOf())}`;
+  const recKey = () => `opt_shopper_visitor:${encodeURIComponent(location.origin)}:${encodeURIComponent(tenantOf())}`;
+  const areas = () => ['localStorage', 'sessionStorage'].map((n) => { try { return globalThis[n] || null; } catch { return null; } }).filter(Boolean);
+  /** The capability's own claims (its payload is the engine's signed JSON; read here only to match the record). */
+  function claimsOf(cap) {
+    try { return JSON.parse(atob(cap.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }
+  }
+  /** Keep her (visitor A, this browser's own; a second device or a fresh visitor for Compare is never kept). Writes only a change. */
+  function persist(v) {
+    if (!H || !v || v.key !== 'A' || !v.session || !CAPABILITY.test(String(v.session.capability || ''))) return false;
+    const s = v.session;
+    const rec = { version: 1, tenant: tenantOf(), subject: s.subject, sessionId: s.sessionId, kind: s.kind, grantId: s.grantId || null,
+      authorityEpoch: s.authorityEpoch || null, iat: s.iat, exp: s.exp,
+      // Her consent as granted at the mint (the kit's mint refuses a visitor without it); a recognized session's own
+      // answer says it after the sign-in. A fresh anonymous session's consent field predates the grant, so it is not read.
+      consent: { tracking: true, personalization: s.kind === 'recognized' && s.consent && typeof s.consent.personalization === 'boolean' ? s.consent.personalization : true },
+      owner: own(v).kitStore.id, linked: v.linked && v.linked.account ? { account: v.linked.account } : null };
+    const text = JSON.stringify(rec);
+    for (const area of areas()) {
+      try { if (area.getItem(capKey()) !== s.capability || area.getItem(recKey()) !== text) { area.setItem(capKey(), s.capability); area.setItem(recKey(), text); } } catch { /* storage refused */ }
+    }
+    return true;
+  }
+  /**
+   * The demo's reset, or "Forget this browser": a new person from the next mint. What this browser kept goes from both
+   * storage areas (her capability, her record and the cart's lines, every visitor's), whether or not anyone is on the page,
+   * and the cart on screen empties: nothing of hers comes back with the next person.
+   */
+  function forget() {
+    if (!H) return;
+    for (const area of areas()) for (const key of [capKey(), recKey(), storeKey()]) { try { area.removeItem(key); } catch { /* storage refused */ } }
+    LINES = []; cartOwner = null;
+    try { changed(false); } catch { /* nothing on screen to redraw */ }
+  }
+  /** What this browser kept, when it is for this tenant, names the same visitor as its capability, and has a minute left. */
+  function kept() {
+    for (const area of areas()) {
+      try {
+        const cap = area.getItem(capKey()), rec = JSON.parse(area.getItem(recKey()) || 'null');
+        if (!cap || !CAPABILITY.test(cap) || !rec || rec.version !== 1 || rec.tenant !== tenantOf()) continue;
+        if (!['anonymous', 'recognized'].includes(rec.kind) || typeof rec.subject !== 'string' || typeof rec.sessionId !== 'string') continue;
+        if (!Number.isSafeInteger(rec.exp) || rec.exp * 1000 <= Date.now() + 60000) continue;
+        const c = claimsOf(cap);
+        if (!c || c.tenant !== rec.tenant || c.subject !== rec.subject || c.sessionId !== rec.sessionId || c.exp !== rec.exp) continue;
+        return { cap, rec };
+      } catch { /* this area's copy is unreadable: the other may serve */ }
+    }
+    return null;
+  }
+  /**
+   * On a page load (the page's boot calls it first): her visitor from this browser, continued, with no identity call and no
+   * new consent, so the next action is the same person and the panel reads her accumulated profile. One read of her own
+   * profile (GET /realtime/reflex, her capability, not an identity call) confirms the engine still knows the session;
+   * refused (a reset, an expiry, another state), what was kept is forgotten and the page is a stranger's until her first
+   * click. host.visitorFields() (optional) gives the vertical's own fields on a visitor, as the kit's mint does.
+   */
+  async function resume() {
+    const t = T();
+    if (t.cur()) return t.cur();
+    const got = kept();
+    if (!got) return null;
+    const { cap, rec } = got;
+    const session = { capability: cap, tenant: rec.tenant, subject: rec.subject, sessionId: rec.sessionId, kind: rec.kind,
+      ...(rec.grantId ? { grantId: rec.grantId } : {}), ...(rec.authorityEpoch ? { authorityEpoch: rec.authorityEpoch } : {}), iat: rec.iat, exp: rec.exp,
+      ...(rec.kind === 'recognized' ? { consent: rec.consent } : {}) };
+    const v = { key: 'A', label: 'Shopper A', session, entry: t.landingEntry(), journey: [], ...(H.visitorFields ? H.visitorFields() : {}),
+      intent: t.defaultIntent(), vector: {}, kitStore: { id: rec.owner || uid().slice(0, 16), trail: [] }, continued: true,
+      ...(rec.linked && rec.linked.account ? { linked: { account: rec.linked.account, at: Date.now() } } : {}) };
+    const probe = await t.api('/realtime/reflex', undefined, { visitor: v });
+    if (probe.status === 401 || probe.status === 403) { forget(); return null; }
+    S().visitors.A = v;
+    t.useVisitor('A');
+    note('continued', `Shopper A, from this browser (${rec.subject.slice(-8)})`,
+      `the same visitor as before: the session kept in this browser, no identity call and no new consent · ${rec.kind} · until ${new Date(rec.exp * 1000).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' })}`);
+    return v;
+  }
+  const visitor = { ensure, current: () => (H ? T().cur() : null), resume, persist, forget };
 
   // ── The decisions that led somewhere: decided presses, by the product they opened ─────────────
   const trail = {
@@ -237,7 +327,7 @@ export function createStore() {
     }
     const named = type === 'custom' ? rest.event : type;
     if (opts.note !== false) {
-      const [verb, what, detail] = opts.note || ['sent', named, `${p ? `${h.productName(p)} · ` : ''}by hand${weight(named) ? ` · weighs ${weight(named)} on her profile` : ' · no taste'}`];
+      const [verb, what, detail] = opts.note || ['sent', named, `${p ? `${h.productName(p)} · ` : ''}by hand${weight(named) ? ` · weighs ${weight(named)} on the profile` : ' · no taste'}`];
       note(verb, what, detail);
     }
     eventsBus.emit('sent', { type, data, ok: Boolean(r && r.ok) });
@@ -284,6 +374,13 @@ export function createStore() {
     }
     return null;
   }
+  /** Whether two addresses (or routes) are the same place: the same route, its view, product or query. */
+  function same(a, b) {
+    const x = typeof a === 'string' ? parse(a) : a, y = typeof b === 'string' ? parse(b) : b;
+    return Boolean(x && y && x.name === y.name && (x.view || null) === (y.view || null) && (x.id || null) === (y.id || null) && (x.q || '') === (y.q || ''));
+  }
+  /** The canonical address of a path: the route's own (<base>search?q=x → <base>?q=x), else the path as given. */
+  const canonical = (path) => { const r = parse(path); return r ? r.path : path; };
   const href = (r) => (r && r.path) || base();
   function navPath(name) {
     const B = base();
@@ -343,7 +440,7 @@ export function createStore() {
     mount();
     return out;
   }
-  const nav = { go, back: () => history.back(), restore, parse, href, navPath, onRoute: (fn) => navBus.on('route', fn), current: () => lastRoute };
+  const nav = { go, back: () => history.back(), restore, parse, same, canonical, href, navPath, onRoute: (fn) => navBus.on('route', fn), current: () => lastRoute };
 
   // ── The cart ─────────────────────────────────────────────────────────────────────────────────
   const cartBus = emitter();
@@ -355,6 +452,7 @@ export function createStore() {
     const v = T().cur();
     if (!v) return;
     const all = stored();
+    if (!LINES.length && !all[v.key]) return;   // an empty cart is not written where none was kept: a forgotten browser stays empty
     all[v.key] = { owner: own(v).kitStore.id, lines: LINES };
     safe.set(storeKey(), all);
   }
@@ -659,7 +757,22 @@ export function createStore() {
     toast(label(event === 'partner_pickup' ? 'pickupChosen' : 'referred', { partner, name: h.productName(p) }), 'good');
     return true;
   }
-  const retailers = { open: openRetailers };
+  /**
+   * A decided pickup module's own button: the same partner_pickup as the sheet's pickup row, at the product's first pickup
+   * partner in its lists, credited to that module's decision (else the where-to-buy decision on the page).
+   */
+  async function pickup(product, decision) {
+    const h = need();
+    const p = productOfAny(product || S().productId);
+    if (!p) throw new Error('a pickup belongs to a product');
+    const [key, partner] = arr(retailerLists(p).pickup)[0] || [];
+    if (!key) throw new Error(`no pickup partner is listed for ${h.productName(p)}`);
+    await ensure();
+    M.sku = h.idOf(p);
+    M.pickup = decision && decision.decisionId ? decision : onScreen();
+    return outcome('partner_pickup', { dataset: { sku: M.sku, retailer: key, retailerName: partner || key } });
+  }
+  const retailers = { open: openRetailers, pickup };
 
   // ── Sign in, from any page's header ──────────────────────────────────────────────────────────
   const accounts = () => arr(need().site.signIn && need().site.signIn.accounts);
@@ -933,6 +1046,11 @@ export function createStore() {
     H = host;
     if (!H.lanes) H.lanes = {};
     if (!H.lanes.routes) H.lanes.routes = {};
+    // Visitor A is kept the moment the kit mints her (ensureVisitor: a press, a direct product address, the director's first
+    // press) and whenever the page switches to her (useVisitor('A'): the arrival, the sign-in's swap, back from a phone).
+    const t = T(), useVisitor = t.useVisitor, ensureVisitor = t.ensureVisitor;
+    if (typeof useVisitor === 'function') t.useVisitor = (key) => { useVisitor(key); if (key === 'A') persist(t.cur()); };
+    if (typeof ensureVisitor === 'function') t.ensureVisitor = async () => { const v = await ensureVisitor(); persist(v); return v; };
     // A new walk (beat 1's arrival) is a new stranger: her cart starts empty.
     if (Array.isArray(H.lanes.beforeBeat)) H.lanes.beforeBeat.push((b) => { if (b && b.data && b.data.arrives) clearAll(); });
     // An image that cannot load becomes its product's name on the tile: never a broken image.

@@ -363,7 +363,7 @@ async function freshHere(where) {
   await sleep(500);
   const C = (await snap()).compare;
   const px = await evaluate('window.__s1.framePixels()');
-  checks.known(`Fresh visitor on ${where} opens on two frames of real pixels, her page and a fresh visitor’s in the same region`, C.mode === 'seam' && /^Her page · /i.test(C.tags.before)
+  checks.known(`Fresh visitor on ${where} opens on two frames of real pixels, the shopper’s page and a fresh visitor’s in the same region`, C.mode === 'seam' && /^(Her|The shopper’s) page · /i.test(C.tags.before)
     && /^A fresh visitor, same region · /i.test(C.tags.now) && inked(px), `${C.msg || `${C.tags.before} | ${C.tags.now}`} · ${fmtPx(px)}`,
     'P1 and P2 (oh.js freshVisitor answers only on the homepage and the TV grid; a product page needs its own)');
   await closeOpen();
@@ -435,7 +435,10 @@ async function answerOf(pressKey, test, fits = () => true) {
 }
 const snapshotsOf = (pressKey) => [...requests.values()].filter((r) => r.press === pressKey && /\/decisions\/snapshot/.test(r.path)).map((r) => new URL(r.url).searchParams);
 const mod = (R, cid) => R.mods.find((x) => x.cid === cid) || null;
-const completes = (m, sku) => Boolean(m && m.decided && m.receipt.includes(`Completes what she committed to: ${sku}`));
+/** A receipt line that says the piece completes the named product: “Completes what she committed to: <sku>”, or lane C3’s
+ *  gender-neutral “Completes what was committed to: <sku>”; any other wording fails. */
+const completesIn = (text, sku) => has(text, `Completes what she committed to: ${sku}`) || has(text, `Completes what was committed to: ${sku}`);
+const completes = (m, sku) => Boolean(m && m.decided && completesIn(m.receipt, sku));
 /** The products in a module, as the page shows them, against POST /sort's own order for this press: the page reorders nothing. */
 async function p2InSortOrder(label, m, i) {
   const sort = m && m.tiles.length ? await answerOf(i, (r) => r.path === '/sort', (b) => Array.isArray(b.order) && m.tiles.every((id) => b.order.map(String).includes(id))) : null;
@@ -1687,7 +1690,8 @@ try {
       const deals = S.slots.find((s) => s.slot === 'deals');
       ok('the arrival four are on screen', Boolean(deals) && deals.cards.length === 4, deals ? deals.cards.map((c) => c.cid).join(', ') : 'no deals');
       const own = await evaluate(`(() => { const s = window.${HOOK}.state; return s && s.own ? { key: s.own.key || null, label: s.own.label || null } : null; })()`);
-      const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : has(S.cold.text, 'the edge located her'));
+      // The kit's panel copy (public/demo-kit/panels.js) is going gender neutral (lane C3): “the edge located her” or “… the visitor”.
+      const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : (has(S.cold.text, 'the edge located her') || has(S.cold.text, 'the edge located the visitor')));
       const none = has(S.cold.text, 'no region on this request');
       ok(`the Arrival panel says the region comes from the request${LOOPBACK ? ' (locally: as the runtime fills request.cf, not an edge)' : ''}, or that there is none`,
         S.cold.ok && (fromRequest || none) && !has(S.cold.text, 'asserted, not observed'), S.cold.text.slice(0, 200));
@@ -1790,7 +1794,7 @@ try {
     'fresh-visitor': async (S, i) => {
       const C = S.compare;
       const px = await evaluate('window.__s1.framePixels()');
-      ok('Compare → Fresh visitor opens on two frames of real pixels, tagged “Her page” and “A fresh visitor, same region”', C.ok && C.mode === 'seam' && /^Her page · /i.test(C.tags.before)
+      ok('Compare → Fresh visitor opens on two frames of real pixels, tagged “The shopper’s page” (or “Her page”) and “A fresh visitor, same region”', C.ok && C.mode === 'seam' && /^(Her|The shopper’s) page · /i.test(C.tags.before)
         && /^A fresh visitor, same region · /i.test(C.tags.now) && inked(px), `${C.tags.before || C.msg} | ${C.tags.now} · ${fmtPx(px)}`);
       await evaluate("(() => { const b = document.getElementById('cmp-mode-details'); if (b && !b.disabled) b.click(); })()");
       await sleep(300);
@@ -1850,7 +1854,7 @@ try {
       ok(lower ? `the set-price card shows, since a set of ${p.sku}’s costs less than its pieces` : `the set-price card is absent: none of ${p.sku}’s sets costs less than its pieces (${sets.length} sets, the feed’s own figures)`,
         lower ? S.modules.some((m) => m.cid === 'mod-laundry-pair-price') : !S.modules.some((m) => m.cid === 'mod-laundry-pair-price'),
         sets.map((x) => `${x.sku.split('_').slice(1, 2).join('')} set $${x.set} · apart $${x.apart}`).join(' · ').slice(0, 220));
-      ok(`each card’s receipt line reads “Completes what she committed to: ${p.sku}”`, cards.every((m) => m && has(m.receipt, `Completes what she committed to: ${p.sku}`)),
+      ok(`each card’s receipt line reads “Completes what was committed to: ${p.sku}”`, cards.every((m) => m && completesIn(m.receipt, p.sku)),
         cards.map((m) => (m ? `${m.cid}: ${m.receipt.slice(0, 90)}` : 'missing')).join(' ~ ').slice(0, 300));
       ok('and states its rule as the merchandiser’s: “Our merchandiser’s rule”', cards.every((m) => m && has(m.rule, 'Our merchandiser’s rule')), cards.map((m) => (m ? m.rule.slice(0, 60) : 'missing')).join(' ~ '));
       const region = await evaluate(`(() => { const s = window.${HOOK}.state; return (s.ctx && s.ctx.region) || (s.own && s.own.key) || null; })()`);
@@ -1872,7 +1876,7 @@ try {
         ok(`it was decided with ctx.anchor = ${p.sku} and ctx.family = ${p.family}, through the kit’s context hook`, asked.length > 0 && asked.every((q) => q.get('ctx.anchor') === p.sku && q.get('ctx.family') === p.family),
           asked.map((q) => `anchor ${q.get('ctx.anchor')} family ${q.get('ctx.family')}`).join(' · '));
         const want = ['mod-laundry-dryer', 'mod-laundry-pedestal', 'mod-laundry-stacking', ...(setsOf(p).some((x) => x.lower) ? ['mod-laundry-pair-price'] : [])];   // R4 F7 (S2)
-        ok(`the dryer, the pedestal, the stacking kit${want.length === 4 ? ' and the set price' : ''} are on screen, each decided, each receipt reading “Completes what she committed to: ${p.sku}”`,
+        ok(`the dryer, the pedestal, the stacking kit${want.length === 4 ? ' and the set price' : ''} are on screen, each decided, each receipt reading “Completes what was committed to: ${p.sku}”`,
           want.every((cid) => completes(mod(R, cid), p.sku)), want.map((cid) => `${cid} ${mod(R, cid) ? (completes(mod(R, cid), p.sku) ? 'completes' : 'no completes line') : 'absent'}`).join(' · '));
         ok('each states its rule as our merchandiser’s, on the card', want.every((cid) => mod(R, cid) && /our merchandiser/i.test(mod(R, cid).rule)), want.filter((cid) => !(mod(R, cid) && /our merchandiser/i.test(mod(R, cid).rule))).join(', ') || 'all four');
         const dryer = mod(R, 'mod-laundry-dryer');
@@ -1907,7 +1911,7 @@ try {
       ok('the pedestal’s card says why, on screen: withdrawn by its own rule, which serves front-load pairs, as this page asserts ctx.family = top-load-washer',
         Boolean(ped) && has(ped.text, 'Withdrawn by its own rule') && has(ped.text, 'ctx.family = top-load-washer') && has(ped.text, 'not decided'), ped ? ped.text.slice(0, 200) : `withdrawn cards: ${S.gone.map((g) => g.cid).join(', ') || 'none'}`);
       const dryer = S.modules.find((m) => m.cid === 'mod-laundry-dryer');
-      ok(`the dryer stays, completing the new washer ${top ? top.sku : ''}`, Boolean(dryer && top) && has(dryer.receipt, `Completes what she committed to: ${top.sku}`), dryer ? dryer.receipt.slice(0, 100) : 'no dryer card');
+      ok(`the dryer stays, completing the new washer ${top ? top.sku : ''}`, Boolean(dryer && top) && completesIn(dryer.receipt, top.sku), dryer ? dryer.receipt.slice(0, 100) : 'no dryer card');
       const strip = S.strips.find((x) => x.module === 'pdp-modules' || /pdp-modules/.test(x.module));
       ok('and the before/now strip names what left and why', Boolean(strip) && strip.rows.some((r) => has(r, 'pedestal') && has(r, 'withdrawn')), strip ? strip.rows.slice(0, 3).join(' · ').slice(0, 200) : 'no strip');
       {
@@ -1928,7 +1932,7 @@ try {
       productOnScreen(S, p);
       for (const [id, what] of [['mod-tv-soundbar', 'the soundbar for its series'], ['mod-tv-mount', 'the mount for its VESA pattern']]) {
         const m = S.modules.find((x) => x.cid === id);
-        ok(`${what} is on screen, its receipt reading “Completes what she committed to: ${p.sku}”`, Boolean(m) && has(m.receipt, `Completes what she committed to: ${p.sku}`), m ? m.receipt.slice(0, 100) : `${id} not on screen`);
+        ok(`${what} is on screen, its receipt reading “Completes what was committed to: ${p.sku}”`, Boolean(m) && completesIn(m.receipt, p.sku), m ? m.receipt.slice(0, 100) : `${id} not on screen`);
       }
       const mount = S.modules.find((x) => x.cid === 'mod-tv-mount');
       const vesa = p.vesa ? String(p.vesa).replace('x', ' x ') : null;
@@ -1952,7 +1956,7 @@ try {
       productOnScreen(S, p);
       for (const [id, what] of [['mod-range-microwave', 'the over-the-range microwave'], ['mod-range-dishwasher', 'the dishwasher']]) {
         const m = S.modules.find((x) => x.cid === id);
-        ok(`${what} is on screen, completing ${p.sku}`, Boolean(m) && has(m.receipt, `Completes what she committed to: ${p.sku}`), m ? m.receipt.slice(0, 100) : `${id} not on screen`);
+        ok(`${what} is on screen, completing ${p.sku}`, Boolean(m) && completesIn(m.receipt, p.sku), m ? m.receipt.slice(0, 100) : `${id} not on screen`);
       }
       const pkg = S.modules.find((m) => /^Together \$[\d,.]+ · apart \$[\d,.]+ · \$[\d,.]+ less as a package/.test(m.lead));
       const disp = pkg ? (catalog.pieces.find((x) => x.customerContentId === pkg.cid) || {}).display || {} : {};
@@ -2100,11 +2104,13 @@ try {
           // Beat 13 on the demo's dial (D1: τ 60 s on the page-driving dimensions; M1's wording): it says the dial is compressed,
           // with the registry's own τ and K, and that her room signals are gone; and they are: every room below θin.
           const thetaIn = Number(reg.thetaIn) || 0.6;
-          const says = `On the demo’s dial (τ ${tauLabel(tauRoom)} on room, K ${K}; production’s dial runs days) her room signals are gone within minutes`;
-          ok(`on the demo’s compressed dial beat 13 says so: “${says}”`, has(S.cont.text, says), S.cont.text.slice(0, 200));
+          // Lane C3's wording “the shopper’s room signals”, or the earlier “her room signals”; nothing else.
+          const dial = `On the demo’s dial (τ ${tauLabel(tauRoom)} on room, K ${K}; production’s dial runs days)`;
+          const says = `${dial} the shopper’s room signals are gone within minutes`, saidBefore = `${dial} her room signals are gone within minutes`;
+          ok(`on the demo’s compressed dial beat 13 says so: “${says}”`, has(S.cont.text, says) || has(S.cont.text, saidBefore), S.cont.text.slice(0, 200));
           const below = [tv, laundry].every((x) => x && x.a < thetaIn);
           ok(`and it is true: every room is below the entry threshold (θin ${thetaIn.toFixed(2)}) ${days} days on, and the beat says the continue hero rests on her shortlist and the decisions trail`,
-            below && has(S.cont.text, `every room below the entry threshold (θin ${thetaIn.toFixed(2)})`) && has(S.cont.text, 'rests on her shortlist and the decisions trail, not on her room dials'),
+            below && has(S.cont.text, `every room below the entry threshold (θin ${thetaIn.toFixed(2)})`) && (has(S.cont.text, 'rests on the shopper’s shortlist and the decisions trail, not on their room dials') || has(S.cont.text, 'rests on her shortlist and the decisions trail, not on her room dials')),
             `living room ${tv ? tv.a : '?'} · laundry room ${laundry ? laundry.a : '?'} · θin ${thetaIn}`);
         }
         // The comparative claim appears only when the readings differ.

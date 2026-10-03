@@ -28,6 +28,9 @@
 //                         diff, and the audiences the action's own answer reports entering or leaving). Without it, the
 //                         panel is the top eight values, exactly as before (Vantage).
 // renderVectors({ changed, trigger }) takes the action's own answer when the caller has one (affinity.changed, its trigger).
+//   With dims (the answer's affinity.dims, the profile read's own shape) it draws at once without a read; with early it
+//   reads at once, ahead of the page's own question. Either is an early draw, and the next plain call is the engine's read
+//   that confirms it. Without either, a call is the read it always was (Vantage passes neither).
 // No DOM or window access at import time.
 import { arr, esc, fmt2, fmt3, hhmm, money0, num, sleep } from './util.js';
 
@@ -70,10 +73,10 @@ export function createPanels(k) {
     const chips = [state.ctx.region
       ? `<span title="${state.regionSource === 'rehearsal override' ? 'A rehearsal override (?region=): asserted on the request, labelled' : 'Asserted on the request, labelled: not observed'}">region <b>${esc(state.ctx.region)}</b> · ${esc(state.regionSource)}</span>`
       : own && own.key
-        ? `<span title="${T().localRuntime ? 'From the request, as the local runtime fills request.cf' : 'From the request: the edge located her, nothing asserted'}">region <b>${esc(own.key)}</b> · from the request</span>`
+        ? `<span title="${T().localRuntime ? 'From the request, as the local runtime fills request.cf' : 'From the request: the edge located the visitor, nothing asserted'}">region <b>${esc(own.key)}</b> · from the request</span>`
         : `<span title="Nothing asserted: the region comes from the request when it carries one">region <b>${own ? 'none on this request' : 'from the request'}</b></span>`];
-    if (v && v.intent) chips.push(`<span title="Asserted, as her account would; it gates offers and never prices">intent <b>${esc(v.intent)}</b> · asserted</span>`);
-    if (v && v.stage) chips.push(`<span title="The journey stage the engine reads from her profile">stage <b>${esc(v.stage)}</b></span>`);
+    if (v && v.intent) chips.push(`<span title="Asserted, as the visitor’s account would; it gates offers and never prices">intent <b>${esc(v.intent)}</b> · asserted</span>`);
+    if (v && v.stage) chips.push(`<span title="The journey stage the engine reads from the visitor’s profile">stage <b>${esc(v.stage)}</b></span>`);
     el.ctxChips.innerHTML = chips.join('');
     k.director.renderAsserts();
   }
@@ -86,13 +89,42 @@ export function createPanels(k) {
   const leanShare = () => { const l = state.coldstart && state.coldstart.lean; return (l && (l.share || l.shares)) || {}; };
 
   // ── Her meters ────────────────────────────────────────────────────────────
+  // Draws land in the order they start: a read that left before a later draw landed is not drawn over it. An early draw
+  // (opts.dims, or opts.early) keeps its baseline, the vector before the event, and what the answer said; the plain read
+  // that follows confirms it against the same baseline (the moved rows stay marked, the "just now" strip keeps the event's
+  // answer unless the read names its own), so the engine's reading is always the last word on screen.
+  let started = 0, landed = 0, early = null;
+  /** The per-dimension vector an answer carries ({ category: { washers: 0.64, … }, … }), or null when it is not that shape. */
+  function dimsOf(x) {
+    if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
+    for (const values of Object.values(x)) {
+      if (!values || typeof values !== 'object' || Array.isArray(values)) return null;
+      if (!Object.values(values).every((a) => typeof a === 'number' && Number.isFinite(a))) return null;
+    }
+    return x;
+  }
   async function renderVectors(opts = {}) {
     const v = T().cur();
     if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; if (byDimension()) justNow(null); return; }
-    const { body } = await T().api('/realtime/reflex', undefined, { visitor: v });
-    const dims = (body && body.affinity && body.affinity.dims) || {};
-    if (body && body.journeyStage && body.journeyStage !== v.stage) { v.stage = body.journeyStage; if (v === T().cur()) renderWho(); }
-    const prev = v.vector || {};
+    const mine = ++started, given = dimsOf(opts.dims), first = Boolean(given || opts.early);
+    const base = v.vector || {};
+    let dims = given;
+    if (!given) {
+      const { body } = await T().api('/realtime/reflex', undefined, { visitor: v });
+      if (mine < landed) return;   // a later draw is on screen: this read left before it, and the read after that draw confirms it
+      dims = (body && body.affinity && body.affinity.dims) || {};
+      if (body && body.journeyStage && body.journeyStage !== v.stage) { v.stage = body.journeyStage; if (v === T().cur()) renderWho(); }
+    }
+    landed = mine;
+    let prev = first ? base : v.vector || {};
+    if (first) early = { v, prev, said: { changed: opts.changed, trigger: opts.trigger } };
+    else if (early) {
+      if (early.v === v) {
+        prev = early.prev;
+        if (!arr(opts.changed).length && !opts.trigger) opts = { ...opts, ...early.said };
+      }
+      early = null;
+    }
     const rows = [];
     for (const [dim, values] of Object.entries(dims)) for (const [value, a] of Object.entries(values || {})) rows.push({ dim, value, a: num(a) || 0 });
     state.fresh = new Set(rows.filter((r) => Math.abs(r.a - num(((prev[r.dim] || {})[r.value]) || 0)) > 0.004).map((r) => `${r.dim}\u0000${r.value}`));
@@ -109,7 +141,7 @@ export function createPanels(k) {
         <div class="vectop"><span>${esc(r.value)}<em>${esc(DIM_LABEL[r.dim] || r.dim)}${roomOf(r.dim) ? ` · ${esc(roomOf(r.dim))} memory` : ''}</em></span><b class="${r.a >= th ? 'over' : ''}">${r.a.toFixed(2)}</b></div>
         <div class="track"><span class="fill${r.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, r.a * 100)}%"></span>
           <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
-    }).join('') : '<p class="m-empty">No evidence of her own yet. The first paint is the region and the campaign, not her.</p>';
+    }).join('') : '<p class="m-empty">No evidence from the visitor yet. The first paint is the region and the campaign, not the visitor.</p>';
     renderPrior();
   }
   /** The line under the meters: the region's share of the blend, the registry's constants, the memory. */
@@ -117,7 +149,7 @@ export function createPanels(k) {
     const th = thetaIn();
     const reg0 = cfg.regionalDriver ? cfg.regionalDriver() : null;
     el.priorLine.innerHTML = reg0
-      ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as her own evidence grows. Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
+      ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as the visitor’s own evidence grows. Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
       : `a = R / (R + K) with K = ${K()}, from the published registry. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`;
     const mem = memoryLine();
     if (mem) el.priorLine.insertAdjacentHTML('beforeend', `<span class="memline">${mem}</span>`);
@@ -175,7 +207,7 @@ export function createPanels(k) {
     // A read that follows a navigation or a page's own question with nothing new keeps the strip: it says what the last
     // event did until another event, or another change, replaces it.
     if (!moved.length && !arr(opts && opts.changed).length && !(opts && opts.trigger)) return;
-    const lines = moved.slice(0, 6).map((m) => `<li><b>${esc(m.value)}</b> · ${esc(DIM_LABEL[m.dim] || m.dim)} ${m.a.toFixed(2)} <em>${m.a <= 0 ? 'left her profile'
+    const lines = moved.slice(0, 6).map((m) => `<li><b>${esc(m.value)}</b> · ${esc(DIM_LABEL[m.dim] || m.dim)} ${m.a.toFixed(2)} <em>${m.a <= 0 ? 'left the profile'
       : m.entered ? 'entered the panel' : m.b <= 0 ? 'new' : `was ${m.b.toFixed(2)}`}</em></li>`);
     if (moved.length > 6) lines.push(`<li class="jn-more">and ${moved.length - 6} more</li>`);
     for (const c of arr(opts && opts.changed)) {
@@ -183,7 +215,7 @@ export function createPanels(k) {
       lines.push(`<li class="jn-aud"><b>${esc(c.value)}</b> · ${esc(DIM_LABEL[c.dim] || c.dim)} <em>${c.direction === 'exit' ? 'left' : 'entered'} the audience${c.audience ? ` ${esc(c.audience)}` : ''}${c.trigger ? ` on ${esc(c.trigger)}` : ''}</em></li>`);
     }
     const trigger = opts && opts.trigger ? ` · ${esc(opts.trigger)}` : '';
-    box.innerHTML = `<p class="jn-k">Just now${trigger}</p>${lines.length ? `<ul>${lines.join('')}</ul>` : '<p class="jn-none">Nothing in her profile moved on this one.</p>'}`;
+    box.innerHTML = `<p class="jn-k">Just now${trigger}</p>${lines.length ? `<ul>${lines.join('')}</ul>` : '<p class="jn-none">Nothing in the profile moved on this one.</p>'}`;
     box.hidden = false;
   }
   /** The registry's per-dimension memory, as the vertical labels it: compressed for this room, days in production. */
@@ -259,7 +291,7 @@ export function createPanels(k) {
     const located = !asserted && r.source === 'edge' && Boolean(r.key);
     const src = override ? 'a rehearsal override (?region=), asserted and labelled'
       : asserted ? 'asserted on the request, labelled'
-        : located ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills it' : 'from the request: the edge located her')
+        : located ? (LOCAL_RUNTIME ? 'from the request, as the local runtime fills it' : 'from the request: the edge located the visitor')
           : 'no region on this request';
     // "geo real" only when the edge located her; an asserted region is labelled as asserted, never as real,
     // and under local wrangler dev request.cf is the runtime's stand-in, so it is not called real either.
@@ -307,7 +339,7 @@ export function createPanels(k) {
   /** Her own region: the rehearsal override when the address bar carries one, else null (nothing asserted: the request's own). */
   const ownRegion = () => flags.region || null;
   const ownSource = () => (flags.region ? 'rehearsal override' : 'edge');
-  const ownName = () => (state.own && (state.own.label || state.own.key)) || (flags.region ? regionName(flags.region) || flags.region : 'her own region');
+  const ownName = () => (state.own && (state.own.label || state.own.key)) || (flags.region ? regionName(flags.region) || flags.region : 'the visitor’s own region');
   function setRegion(region, source) { state.ctx.region = region || null; state.regionSource = source || (region ? 'asserted' : 'edge'); renderWho(); }
   /** Back in her own region (from the request, or the rehearsal override), and said so on screen. */
   async function restoreRegion() {
@@ -315,7 +347,7 @@ export function createPanels(k) {
     if ((state.ctx.region || null) === own) return;
     setRegion(own, ownSource());
     if (own) note('asserted', `region = ${own}`, 'back in the rehearsal override’s region (?region=), labelled');
-    else note('located', `back in ${ownName()}`, 'her own region: from the request, nothing asserted');
+    else note('located', `back in ${ownName()}`, 'the visitor’s own region: from the request, nothing asserted');
     await loadColdStart();
   }
   /** The region a frame was decided in, with how it is known, for Compare's columns. */
@@ -366,7 +398,7 @@ export function createPanels(k) {
       const rec = d.decisionId && state.receipts.get(d.decisionId);
       const ex = (rec && rec.explain) || {};
       if (ex.contextual && num(ex.contextual.applied) > 0) {
-        lines.push(`<span class="ctx">${esc(seedLabel(ex.contextual))} applied: ${arr(ex.contextual.drivers).map((x) => `${esc(String(x.signal).replace(/_/g, ' '))} “${esc(x.value)}” → ${esc(x.dimension)} ${esc(x.tag)} +${fmt3(x.contribution)} at entry${arr(x.dampened).length ? ` (dampened ${arr(x.dampened).map((m) => `×${fmt2(m.factor)}: she holds ${esc(m.dimension)} ${esc(m.value)}`).join(', ')})` : ''}`).join('; ')}</span>`);
+        lines.push(`<span class="ctx">${esc(seedLabel(ex.contextual))} applied: ${arr(ex.contextual.drivers).map((x) => `${esc(String(x.signal).replace(/_/g, ' '))} “${esc(x.value)}” → ${esc(x.dimension)} ${esc(x.tag)} +${fmt3(x.contribution)} at entry${arr(x.dampened).length ? ` (dampened ${arr(x.dampened).map((m) => `×${fmt2(m.factor)}: the visitor holds ${esc(m.dimension)} ${esc(m.value)}`).join(', ')})` : ''}`).join('; ')}</span>`);
       }
       if (ex.regional) lines.push(`<span class="reg">regional prior ${esc(ex.regional.region)} (${esc(ex.regional.level)}) λ ${fmt2(ex.regional.lambda)} +${fmt3(ex.regional.contribution)}</span>`);
       for (const key of ['merchandising', 'stage', 'freshness', 'fatigue']) if (ex[key] && ex[key].sentence) lines.push(`<span>${esc(ex[key].sentence)}</span>`);

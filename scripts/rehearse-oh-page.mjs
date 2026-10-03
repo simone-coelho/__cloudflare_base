@@ -1258,7 +1258,12 @@ const OUTCOMES = {
     }
     {
       // Lane P3's checks for this beat (P3 wrote them; S1 runs them after its own, in the beat's order).
-      const v = await client.mintVisitor({}, 'P3 outcomes');
+      const v = await client.mintVisitor({}, 'P3 outcomes').catch(async (error) => {
+        if (!/\(503\b/.test(error.message)) throw error;
+        info(`the identity route answered 503 right after the day report built (the engine on wrangler dev); asked again after 3 s`);
+        await sleep(3000);
+        return client.mintVisitor({}, 'P3 outcomes');
+      });
       const base0 = await p3Report().catch((error) => { ok('the day report builds', false, error.message); return null; });
       const sent = [];
       for (const [event, sku, cid, extra] of [['partner_pickup', W.pickup, 'mod-where-to-buy-pickup', { retailer: 'best-buy-pickup' }],
@@ -1291,7 +1296,7 @@ const OUTCOMES = {
       // Since M3 landed, the outcomes are the store's: oh-store.js outcome() sends { sku, ...decisionData(at), store } through send(), which
       // posts any name off the engine's closed type list through the kit's sendCustom; P3's module delegates to it (S2, read where it now lives).
       ok('the page’s own where-to-buy code posts type custom with data.event and the decision’s ids, through the kit’s send',
-        /async function outcome\(event, t\)[\s\S]{0,1600}?send\(event, \{ sku: [^\n]*\.\.\.decisionData\(at\)/.test(storeCode) && /r = await t\.sendCustom\(name, data, v\)/.test(storeCode)
+        /async function outcome\(event, t\)[\s\S]{0,1600}?send\(event, \{ sku: [^\n]*\.\.\.decisionData\(at\)/.test(storeCode) && /r = await (?:t|kit)\.sendCustom\(name, data, v\)/.test(storeCode)
           && /const decisionData = \(d\) => \(d && d\.decisionId \? \{ decisionId: d\.decisionId/.test(storeCode) && /store\.retailers\.pickup\(/.test(code) && /store\.retailers\.open\(/.test(code),
         'oh-store.js outcome() · send() · decisionData; oh.js delegates to store.retailers');
       ok('and its sign-in leaves through the kit’s api door with { account } alone', /transport\.api\(SIGN_IN, \{ account: name \}, \{ visitor: v \}\)/.test(code));
@@ -1591,9 +1596,9 @@ async function storeByHand() {
     const PRODUCT = ['add_to_cart', 'wishlist_add', 'purchase', 'select', 'compare', 'find_a_retailer', 'partner_pickup', 'retailer_referral', 'notify_me'];
     const sites = [];
     for (const [where, code] of [['oh-store.js', sc], ['oh.js', pc]]) {
-      for (const m of code.matchAll(/((?:store\.events\.|transport\.|\bt\.)?send(?:Custom)?)\(\s*(?:'([a-z_]+)'|(event))\s*,\s*([^\n]{0,140})/g)) {
+      for (const m of code.matchAll(/((?:store\.events\.|transport\.|\bkit\.|\bt\.)?send(?:Custom)?)\(\s*(?:'([a-z_]+)'|(event))\s*,\s*([^\n]{0,140})/g)) {
         if (m[2] && !PRODUCT.includes(m[2])) continue;
-        const direct = /^(transport\.|t\.)/.test(m[1]);
+        const direct = /^(transport\.|kit\.|t\.)/.test(m[1]);
         sites.push({ where, name: m[2] || 'an outcome (partner_pickup, retailer_referral)', ok: direct ? /^productAttrs\(/.test(m[4]) : /^\{\s*sku\b/.test(m[4]) });
       }
     }
