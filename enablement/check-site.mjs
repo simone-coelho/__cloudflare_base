@@ -11,9 +11,9 @@
 //     nothing else;
 //   - the policy in site/_headers is exactly the page policy: styles and scripts from this site only
 //     ('self'), images only as data: URIs, and a hash only for an inline style still in use;
-//   - a page loads nothing but /site.css, /site.js and its own stylesheet and script, and links out only
-//     to the site itself and the demo workers; no stylesheet or script the site serves loads or stores
-//     anything;
+//   - a page loads nothing but /site.css, /site.js, the shared spine's /spine.css and /spine.js, and its
+//     own stylesheet and script, and links out only to the site itself and the demo workers; no
+//     stylesheet or script the site serves loads or stores anything;
 //   - the package name is written once on every page, inside its h1, the same string everywhere;
 //   - what a reader sees holds no build-state word and no customer or competitor name (LANE-BRIEF-V2);
 //   - wrangler.enablement.toml names the gate (enablement/worker.mjs) in front of every request, with
@@ -37,15 +37,21 @@ const renderCheckPath = join(root, 'enablement', 'render-check.mjs');
 const renderPagesPath = join(root, 'enablement', 'render-pages.mjs');
 
 // The pages the site must have, beside E0's 404.html. Each <name>.html is served at /<name> (index at /).
-const PAGES = ['index', 'what-it-is', 'selling-it', 'how-it-works', 'credits', 'glossary', 'demos', 'see-it-work', 'how-it-works-interactive'];
-// The interactive pages' own stylesheets and scripts (lanes M1 and H1, LANE-BRIEF-V2 §5).
-const OWN_FILES = ['see-it-work.css', 'see-it-work.js', 'how-it-works-interactive.css', 'how-it-works-interactive.js'];
+// LANE-BRIEF-V3 adds the battlecard (lane A1).
+const PAGES = ['index', 'what-it-is', 'selling-it', 'battlecard', 'how-it-works', 'credits', 'glossary', 'demos', 'see-it-work', 'how-it-works-interactive'];
+// Files the site must serve beside its pages: the interactive page's own stylesheet and script (lane H1), and the
+// shared spine's (lane S1, LANE-BRIEF-V3 section 5), which every hand-written page loads. The hand-written pages'
+// own files (what-it-is, see-it-work, selling-it, battlecard, how-it-works) sit beside their pages, and every one a
+// page loads must exist (section 3 below).
+const OWN_FILES = ['how-it-works-interactive.css', 'how-it-works-interactive.js', 'spine.css', 'spine.js'];
 // Pages LANE-BRIEF-V2 retired: refused if they are still in the served folder.
 const RETIRED = ['status.html'];
-// The shared script and stylesheet, written exactly so. A page may also load its own, /<name>.js and
-// /<name>.css, in the same form, and nothing else.
+// The shared script and stylesheet, and the shared spine's (LANE-BRIEF-V3 section 5), written exactly so. A page
+// may also load its own, /<name>.js and /<name>.css, in the same form, and nothing else; each at most once.
 const SCRIPT_TAG = '<script src="/site.js" defer></script>';
 const STYLESHEET_TAG = '<link rel="stylesheet" href="/site.css">';
+const SPINE_SCRIPT_TAG = '<script src="/spine.js" defer></script>';
+const SPINE_STYLESHEET_TAG = '<link rel="stylesheet" href="/spine.css">';
 const ownScriptTag = (name) => `<script src="/${name}.js" defer></script>`;
 const ownStylesheetTag = (name) => `<link rel="stylesheet" href="/${name}.css">`;
 // The only addresses an <a href> may name besides the site's own paths: the site and the demo workers.
@@ -104,10 +110,11 @@ check(figureFiles.length > 0 && staleFigures.length === 0,
 for (const f of [renderCheckPath, renderPagesPath]) check(existsSync(f), `${rel(f)} exists`);
 const servedNames = files.map((f) => relative(siteDir, f).split(sep).join('/'));
 const pageNames = new Set(servedNames.filter((f) => /^[a-z0-9-]+\.html$/.test(f)).map((f) => f.slice(0, -'.html'.length)));
-// A stylesheet or script is either the shared one (site) or a page's own (<name>.css, <name>.js beside <name>.html).
-const sharedOrOwn = (f) => { const m = /^([a-z0-9-]+)\.(?:css|js)$/.exec(f); return Boolean(m) && (m[1] === 'site' || pageNames.has(m[1])); };
+// A stylesheet or script is the shared one (site), the shared spine's (spine, LANE-BRIEF-V3 section 5), or a page's
+// own (<name>.css, <name>.js beside <name>.html).
+const sharedOrOwn = (f) => { const m = /^([a-z0-9-]+)\.(?:css|js)$/.exec(f); return Boolean(m) && (m[1] === 'site' || m[1] === 'spine' || pageNames.has(m[1])); };
 const strays = servedNames.filter((f) => !/^(?:[a-z0-9-]+\.html|_headers|figures\/[a-z0-9-]+\.svg)$/.test(f) && !sharedOrOwn(f));
-check(strays.length === 0, `enablement/site/ holds only pages, site.css, site.js, a page's own .css and .js, figures/*.svg and _headers${strays.length ? ` (also: ${strays.join(', ')})` : ''}`);
+check(strays.length === 0, `enablement/site/ holds only pages, site.css, site.js, spine.css, spine.js, a page's own .css and .js, figures/*.svg and _headers${strays.length ? ` (also: ${strays.join(', ')})` : ''}`);
 
 // 2. The policy in _headers: one rule for every address, and exactly the page policy.
 const headersFile = join(siteDir, '_headers');
@@ -150,9 +157,10 @@ check(/no-store/i.test(headerValue('Cache-Control')) && /private/i.test(headerVa
 check(/max-age=\d{7,}/.test(headerValue('Strict-Transport-Security')), 'header: Strict-Transport-Security with a long max-age');
 check(/noindex/i.test(headerValue('X-Robots-Tag')), 'header: X-Robots-Tag noindex');
 
-// 3. A page runs no script but /site.js and its own /<name>.js, loads no stylesheet but /site.css and its
-//    own /<name>.css, loads nothing from another address, and its links leave only for the site itself and
-//    the demo workers. No stylesheet or script the site serves loads or stores anything.
+// 3. A page runs no script but /site.js, /spine.js and its own /<name>.js, loads no stylesheet but
+//    /site.css, /spine.css and its own /<name>.css (LANE-BRIEF-V3 section 5), loads nothing from another
+//    address, and its links leave only for the site itself and the demo workers. No stylesheet or script the
+//    site serves loads or stores anything.
 const BANNED_TAG = /<(script|form|input|select|textarea|iframe|frame|object|embed|applet|base)\b/i;
 const SCHEME = /^\s*([a-z][a-z0-9+.-]*:|\/\/)/i;
 const ICON_TAG = /^<link rel="icon" href="data:image\/[^"]*">$/i;
@@ -179,17 +187,17 @@ const cssLoadsSomething = (css) => cssLoads(css).length > 0 || /@import|@font-fa
 for (const p of pages) {
   const html = noComments(p.html);
   const name = p.file.split('/').pop().replace(/\.html$/, '');
-  const allowedScripts = [SCRIPT_TAG, ownScriptTag(name)];
-  const allowedStylesheets = [STYLESHEET_TAG, ownStylesheetTag(name)];
+  const allowedScripts = [SCRIPT_TAG, SPINE_SCRIPT_TAG, ownScriptTag(name)];
+  const allowedStylesheets = [STYLESHEET_TAG, SPINE_STYLESHEET_TAG, ownStylesheetTag(name)];
   const repeatedScript = allowedScripts.some((t) => html.split(t).length - 1 > 1);
   const rest = allowedScripts.reduce((text, t) => text.split(t).join(''), html);
   check(!repeatedScript && !BANNED_TAG.test(rest),
-    `${p.file}: no script but /site.js and /${name}.js (each at most once, as <script src="..." defer></script>), and no form, input, iframe, object, embed or base element`);
+    `${p.file}: no script but /site.js, /spine.js and /${name}.js (each at most once, as <script src="..." defer></script>), and no form, input, iframe, object, embed or base element`);
   check(!/\son[a-z]+\s*=|\sstyle\s*=|javascript:|http-equiv\s*=/i.test(html), `${p.file}: no event handler, style attribute, javascript: URL or http-equiv`);
   const linkTags = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
   const badLinks = linkTags.filter((t) => !allowedStylesheets.includes(t) && !ICON_TAG.test(t));
   const repeatedStylesheet = allowedStylesheets.some((t) => linkTags.filter((x) => x === t).length > 1);
-  check(badLinks.length === 0 && !repeatedStylesheet, `${p.file}: the only link elements are the inline icon, /site.css and /${name}.css (each at most once)`);
+  check(badLinks.length === 0 && !repeatedStylesheet, `${p.file}: the only link elements are the inline icon, /site.css, /spine.css and /${name}.css (each at most once, in the exact form)${badLinks.length ? ` (found ${badLinks[0]})` : ''}`);
   const absent = [...allowedScripts, ...allowedStylesheets].filter((t) => html.includes(t)).map((t) => t.match(/"\/([^"]+)"/)[1]).filter((f) => !existsSync(join(siteDir, f)));
   check(absent.length === 0, `${p.file}: every stylesheet and script it loads is served${absent.length ? ` (missing ${absent.join(', ')})` : ''}`);
   const loadsOut = [];
@@ -242,7 +250,7 @@ for (const p of contentPages) {
 }
 const otherServed = files.filter((f) => !contentPages.some((p) => p.file === rel(f)) && (TEXT.has(extname(f).toLowerCase()) || f.endsWith('_headers')));
 const nameElsewhere = packageName ? otherServed.filter((f) => noComments(read(f)).includes(packageName)).map(rel) : [];
-check(nameElsewhere.length === 0, `the package name is in no other served file (404.html, site.css, site.js, the figures, _headers)${nameElsewhere.length ? ` (found in ${nameElsewhere.join(', ')})` : ''}`);
+check(nameElsewhere.length === 0, `the package name is in no other served file (404.html, the stylesheets and scripts, the figures, _headers)${nameElsewhere.length ? ` (found in ${nameElsewhere.join(', ')})` : ''}`);
 
 // 4b. What a reader sees (LANE-BRIEF-V2 §1 and §4): no build-state word and no customer or competitor name.
 //     Scanned: each served page's visible text (comments, scripts and styles removed; alt, title, aria-label

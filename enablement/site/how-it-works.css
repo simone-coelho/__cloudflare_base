@@ -1,0 +1,150 @@
+/* enablement/site/how-it-works.css
+   The solutions engineers' page, /how-it-works (lane G1, docs/enablement/LANE-BRIEF-V3.md section 4.5). Loaded after
+   /site.css and /spine.css. Colors and type are site.css tokens only; dark mode follows prefers-color-scheme, as site.css
+   does. Nothing moves on this page, so there is no motion to pause. It fetches no file, image or font. */
+
+/* ---------- the sections ---------- */
+.se-piece .se-lead { font-size: 1.0625rem; }
+.se-figure { margin-top: 18px; }
+
+/* why customers choose it: ten equal tiles, unranked, the weighing sentence as their lead */
+.se-reasons { margin: 14px 0 6px; }
+.se-reasons-lead { max-width: var(--measure); margin: 0 0 14px; font: 600 1.0625rem/1.5 var(--body); }
+.se-tiles, .piece .se-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.piece .se-tile {
+  display: flex; flex-direction: column; gap: 10px; max-width: none; margin: 0; padding: 14px 16px 16px;
+  border-radius: var(--radius-s); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.piece .se-tile p { max-width: none; margin: 0; font: 700 .9375rem/1.35 var(--head); }
+.se-tile-icon { width: 26px; height: 26px; }
+
+/* the five lines under the chain: one per box, numbered like the boxes' order */
+.se-steps, .piece .se-steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 6px 0 22px; padding: 0; list-style: none; counter-reset: se-step; }
+.piece .se-steps li {
+  position: relative; max-width: none; margin: 0; padding: 14px 18px 14px 58px; counter-increment: se-step;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.se-steps li::before {
+  content: counter(se-step); position: absolute; left: 16px; top: 13px; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--lf-green); color: var(--fir); font: 700 .85rem/1 var(--mono);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.se-steps strong { font-family: var(--head); font-size: 1.04em; }
+
+/* ---------- the instrument cards ---------- */
+.se-instruments { margin: 20px 0 8px; }
+.se-shot-cap, .piece .se-shot-cap { max-width: none; margin: 0 0 12px; color: var(--muted); font: 500 .9375rem/1.45 var(--body); }
+.se-grid, .piece .se-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 760px) { .se-grid, .piece .se-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.piece .se-card {
+  display: flex; flex-direction: column; gap: 12px; max-width: none; margin: 0; padding: 20px 22px 22px; scroll-margin-top: 16px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.piece .se-card p { max-width: none; margin: 0; }
+.piece .se-card-title { display: flex; align-items: center; gap: 10px; margin: 0; font: 800 1.3rem/1.2 var(--head); letter-spacing: -.01em; }
+.se-icon { flex: none; width: 24px; height: 24px; color: var(--light-fir); }
+.se-formula code {
+  display: inline-block; padding: 7px 12px; border-radius: 10px; font: 600 1rem/1.45 var(--mono);
+  background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--ink);
+}
+.piece .se-card .se-formula + .se-formula { margin-top: -6px; }
+.se-draw { margin: 2px 0; }
+.se-draw svg { display: block; width: 100%; height: auto; overflow: visible; }
+.se-worked { padding: 12px 14px; border-radius: var(--radius-s); background: var(--tint); border: 1px solid var(--line-soft); }
+.se-part, .piece .se-part { margin: 0 0 4px; color: var(--muted); font: 700 .6875rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.se-worked p:not(.se-part) { font-size: .9375rem; line-height: 1.55; }
+.piece .se-card .se-worked .se-note { margin-top: 6px; }
+.se-means p:not(.se-part) { font-weight: 600; line-height: 1.5; }
+.piece .se-order-lead { margin-top: 2px; font: 700 .9375rem/1.4 var(--head); }
+.se-order, .piece .se-order { margin: 0; padding: 0 0 0 1.5em; font-size: .875rem; line-height: 1.45; }
+.piece .se-order li { max-width: none; margin: 0 0 4px; padding-left: .15em; }
+
+/* the drawings: user units scale with the card, so the text scales with the drawing */
+.se-draw .d-t { font: 500 16px/1 var(--body); fill: var(--ink); }
+.se-draw .d-strong { font-weight: 700; }
+.se-draw .d-muted { fill: var(--muted); }
+.se-draw .d-on-fill { fill: var(--white); font-weight: 700; }
+.se-draw .d-on-pin { fill: var(--fir); font-weight: 700; }
+.se-draw .d-axis { stroke: var(--muted); stroke-width: 1.5; }
+.se-draw .d-guide { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.se-draw .d-curve { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.se-draw .d-dot { fill: var(--light-fir); stroke: var(--surface); stroke-width: 2; }
+.se-draw .d-fill { fill: var(--light-fir); }
+.se-draw .d-drained { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.5; }
+.se-draw .d-band { fill: var(--neutral-3); }
+.se-draw .d-entry { stroke: var(--light-fir); stroke-width: 2.5; }
+.se-draw .d-exit { stroke: var(--ink); stroke-width: 2; }
+.se-draw .d-cell { fill: var(--surface-2); }
+.se-draw .d-rule { stroke: var(--ink); stroke-width: 2; }
+.se-draw .d-region { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+.se-draw .d-page { fill: none; stroke: var(--line); stroke-width: 2; }
+.se-draw .d-place { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+.se-draw .d-pin { fill: var(--lf-green); }
+.se-draw .d-pin-icon { fill: none; stroke: var(--fir); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.se-draw .d-yield { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+
+/* ---------- the fixed sentences ---------- */
+.se-sentence {
+  display: flex; align-items: center; gap: 16px; max-width: var(--measure); margin: 18px 0 22px;
+  padding: 18px 24px; border-radius: var(--radius-m); background: var(--rule-bg); color: var(--rule-ink); border: 2px solid var(--rule-bg);
+}
+.piece .se-sentence p { max-width: none; margin: 0; font: 800 clamp(1.1rem, 2.4vw, 1.375rem)/1.3 var(--head); letter-spacing: -.01em; text-wrap: pretty; }
+.se-icon-lg { width: 34px; height: 34px; color: var(--lf-green); }
+
+/* ---------- the points under the learning figure ---------- */
+.se-points, .piece .se-points { margin: 18px 0 8px; padding: 0; list-style: none; display: grid; gap: 10px; }
+.piece .se-points li {
+  position: relative; max-width: var(--measure); margin: 0; padding: 0 0 0 26px;
+}
+.se-points li::before {
+  content: ""; position: absolute; left: 4px; top: .55em; width: 10px; height: 10px; border-radius: 3px; background: var(--light-fir);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+/* ---------- the two tables ---------- */
+.se-tbl { margin-top: 22px; }
+.se-tbl .se-caption, .piece .se-tbl .se-caption { max-width: none; margin: 0 0 10px; color: var(--muted); font: 500 .9375rem/1.45 var(--body); }
+.se-privacy td:first-child, .se-asks td:first-child { font-weight: 700; }
+@media (min-width: 721px) {
+  .se-privacy td:first-child { width: 22%; }
+  .se-asks td { width: 33%; }
+}
+
+/* ---------- the companion page ---------- */
+.se-linkcard {
+  display: flex; align-items: flex-start; gap: 18px; max-width: var(--measure); margin: 18px 0 0; padding: 22px 24px;
+  border-radius: var(--radius-m); background: var(--surface); border: 2px solid var(--ink);
+}
+.piece .se-linkcard p { max-width: none; margin: 0; }
+.piece .se-linkcard-title { margin: 0 0 6px; }
+.se-linkcard-title a { font: 800 1.35rem/1.2 var(--head); }
+.se-linkcard-title a::after { content: " \2192"; }
+.se-icon-xl { width: 44px; height: 44px; margin-top: 2px; }
+
+/* ---------- dark ---------- */
+@media (prefers-color-scheme: dark) {
+  .se-icon { color: var(--lf-green); }
+  .se-draw .d-on-fill { fill: var(--fir); }
+  .se-draw .d-dot, .se-draw .d-fill { fill: var(--lf-green); }
+  .se-draw .d-entry { stroke: var(--lf-green); }
+  .se-draw .d-band { fill: var(--line-soft); }
+  .se-points li::before { background: var(--lf-green); }
+  .se-sentence { border-color: var(--lf-green); }
+}
+
+/* ---------- small screens ---------- */
+@media (max-width: 520px) {
+  .piece .se-card { padding: 16px 14px 18px; }
+  .piece .se-steps li { padding: 12px 14px 12px 52px; }
+  .se-steps li::before { left: 12px; }
+  .se-sentence { padding: 16px 18px; gap: 12px; }
+  .se-linkcard { padding: 18px; gap: 14px; }
+  .se-icon-xl { width: 36px; height: 36px; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  .piece .se-card, .se-sentence, .se-linkcard, .piece .se-steps li, .se-tbl, .piece .se-tile { break-inside: avoid; page-break-inside: avoid; }
+  .se-grid, .piece .se-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .se-sentence { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

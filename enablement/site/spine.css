@@ -1,0 +1,297 @@
+/* enablement/site/spine.css
+   The shared spine: the four blocks every piece opens with (enablement/partials/spine.html, whose text of record
+   is docs/enablement/content/spine.md) and its short form for the battlecard (enablement/partials/spine-compact.html).
+   Lane S1, LANE-BRIEF-V3 sections 3 and 5. Loaded after /site.css; its colors and type are site.css tokens, and the
+   few it adds are defined below with their dark values. Every rule is scoped to .spine, so nothing here reaches a
+   page's own sections. It loads nothing: no address, no import, no web font.
+   Motion is CSS keyframes only. The watch-it loop plays once, about six seconds (the movement is over within four),
+   and holds its end state: the boots section on top, the hero second, the receipt card shown. The bucket frame fills
+   and drains three times and holds. The end state is the base style, so under prefers-reduced-motion: reduce, in
+   print, and wherever animation does not run, the end state is what shows, still. /spine.js only replays: the
+   "Play again" control, and each animated picture the first time it comes into view. */
+
+:root {
+  --spine-accent: var(--light-fir);
+  --spine-accent-bg: #E3F4D0;
+  --spine-accent-line: var(--light-fir);
+  --spine-skel: var(--surface-2);
+  --spine-pin-bg: #FFF0C4;
+  --spine-pin-line: #B07800;
+  --spine-pin-ink: #6B4700;
+  --spine-story-ink: #D9E7CC;
+  --spine-story-line: rgba(255, 255, 255, .2);
+  --spine-shadow: 0 10px 24px rgba(8, 37, 26, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --spine-accent: var(--lf-green);
+    --spine-accent-bg: #174A36;
+    --spine-accent-line: var(--lf-green);
+    --spine-skel: #0A2F21;
+    --spine-pin-bg: #3B3214;
+    --spine-pin-line: #E8B64C;
+    --spine-pin-ink: #F6D37E;
+    --spine-story-ink: #D9E7CC;
+    --spine-story-line: rgba(255, 255, 255, .18);
+    --spine-shadow: 0 10px 24px rgba(0, 0, 0, .5);
+  }
+}
+
+/* ---------- base ---------- */
+.spine { display: block; margin: 6px 0 0; color: var(--ink); }
+.spine *, .spine *::before, .spine *::after { box-sizing: border-box; }
+.spine p, .spine li { max-width: none; }
+.spine p { margin: 0; }
+.spine ul, .spine ol { margin: 0; padding: 0; list-style: none; }
+.spine li { margin: 0; padding: 0; }
+.spine .spine-icon { flex: none; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.spine .spine-block { margin: clamp(44px, 6.5vw, 68px) 0 0; }
+.spine .spine-block:first-child { margin-top: 0; }
+.spine .spine-h2 {
+  max-width: none; margin: 0 0 18px; padding: 22px 0 0; border: 0; border-top: 1px solid var(--line);
+  color: var(--ink); font: 800 clamp(1.45rem, 3vw, 2.1rem)/1.14 var(--head); letter-spacing: -.02em; text-wrap: balance;
+}
+.spine .spine-h3 { max-width: none; margin: 0 0 16px; padding: 0; border: 0; color: var(--ink); font: 800 clamp(1.2rem, 2.2vw, 1.45rem)/1.2 var(--head); letter-spacing: -.01em; }
+.spine .spine-lead { max-width: 46rem; margin: 0 0 18px; color: var(--ink); font: 500 clamp(1.0625rem, 2vw, 1.25rem)/1.45 var(--body); text-wrap: pretty; }
+
+/* ---------- block 1: the story ---------- */
+.spine .spine-story-card {
+  padding: clamp(22px, 4vw, 40px); border-radius: var(--radius); background: var(--rule-bg); color: var(--rule-ink);
+  border: 2px solid var(--rule-bg); -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+@media (prefers-color-scheme: dark) { .spine .spine-story-card { border-color: var(--lf-green); } }
+.spine .spine-kicker {
+  max-width: none; margin: 0 0 14px; padding: 0; border: 0; color: var(--rule-accent);
+  font: 600 .8125rem/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+}
+.spine .spine-headline {
+  max-width: 40rem; margin: 0 0 clamp(22px, 3.4vw, 32px); color: var(--rule-ink);
+  font: 800 clamp(1.5rem, 3.6vw, 2.4rem)/1.16 var(--head); letter-spacing: -.02em; text-wrap: balance;
+}
+.spine .spine-beats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 18px 28px; }
+.spine .spine-beat { display: flex; gap: 14px; align-items: flex-start; padding-top: 16px; border-top: 1px solid var(--spine-story-line); }
+.spine .spine-beat .spine-icon { width: 30px; height: 30px; margin-top: 1px; color: var(--rule-accent); }
+.spine .spine-beat p { color: var(--spine-story-ink); font: 400 1rem/1.5 var(--body); text-wrap: pretty; }
+
+/* ---------- block 2: the side by side ---------- */
+.spine .spine-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr)); gap: 16px; align-items: stretch; }
+.spine .spine-card { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); }
+.spine .spine-side { padding: 18px 20px 20px; }
+.spine .spine-side-engine { flex: 1 1 auto; background: var(--tint); border-top: 2px solid var(--spine-accent-line); }
+.spine .spine-who { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--muted); font: 700 .9375rem/1.25 var(--head); }
+.spine .spine-who .spine-icon { width: 22px; height: 22px; }
+.spine .spine-who-engine { color: var(--spine-accent); }
+.spine .spine-line { color: var(--ink); font: 400 1rem/1.5 var(--body); text-wrap: pretty; }
+.spine .spine-flow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 6px;
+  margin: 14px 0 0;
+}
+.spine .spine-step {
+  display: grid; place-items: center; min-height: 46px; padding: 6px; border-radius: 10px; background: var(--surface-2);
+  border: 1px solid var(--line); color: var(--ink); font: 600 .78rem/1.2 var(--body); text-align: center; overflow-wrap: anywhere;
+}
+.spine .spine-flow-engine .spine-step { background: var(--spine-accent-bg); border-color: var(--spine-accent-line); }
+.spine .spine-arrow { align-self: center; color: var(--muted); font: 700 .9375rem/1 var(--body); }
+.spine .spine-fixed {
+  margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--spine-accent-line);
+  color: var(--ink); font: 700 .9375rem/1.45 var(--body); text-wrap: pretty;
+}
+/* the small pictures beside the second and third contrasts */
+.spine .spine-pict { position: relative; height: 46px; margin: 14px 0 0; }
+.spine .spine-pict-rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.spine .spine-pict-rules span { display: block; border-radius: 8px; border: 1px dashed var(--muted); background: var(--surface-2); }
+.spine .spine-pict-rules span:nth-child(2), .spine .spine-pict-rules span:nth-child(4) {
+  background: linear-gradient(to top right, transparent calc(50% - 1px), var(--muted) calc(50% - 1px), var(--muted) calc(50% + 1px), transparent calc(50% + 1px)), var(--surface-2);
+}
+.spine .spine-pict-buckets { display: inline-flex; align-items: flex-end; gap: 12px; height: 50px; padding: 0 10px; }
+.spine .spine-pb { position: relative; display: block; flex: none; width: 26px; height: 50px; border-radius: 6px; background: var(--surface-2); border: 1.5px solid var(--line); }
+.spine .spine-pb-level { position: absolute; left: 3px; right: 3px; bottom: 3px; border-radius: 4px; background: var(--spine-accent-bg); border: 1.5px solid var(--spine-accent-line); }
+.spine .spine-pb-high { height: 39px; }
+.spine .spine-pb-mid { height: 20px; }
+.spine .spine-pb-low { height: 9px; }
+.spine .spine-pb-line { position: absolute; left: 0; right: 0; bottom: 27px; border-top: 1.5px dashed var(--muted); }
+.spine .spine-pict-box span { display: grid; place-items: center; width: 64px; height: 46px; border-radius: 10px; background: var(--ink); }
+.spine .spine-pict-box span::after { content: "?"; color: var(--surface); font: 800 1.375rem/1 var(--head); }
+.spine .spine-pict-receipt { display: grid; align-content: center; gap: 9px; width: 112px; height: 50px; padding: 0 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.spine .spine-pr { position: relative; display: block; height: 5px; width: 52px; border-radius: 3px; background: var(--muted); }
+.spine .spine-pr::after { position: absolute; left: 62px; top: 50%; transform: translateY(-52%); font: 800 1.25rem/1 var(--body); }
+.spine .spine-pr-up::after { content: "+"; color: var(--spine-accent); }
+.spine .spine-pr-down::after { content: "\2212"; color: var(--muted); }
+
+/* ---------- block 3: both engines on one page ---------- */
+.spine .spine-both-card { container: spine-both / inline-size; padding: clamp(16px, 3vw, 26px); border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); }
+.spine .spine-both-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.spine .spine-page-frame, .spine .spine-page-bar { display: none; }
+.spine .spine-region { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--spine-skel); border: 1px solid var(--line); }
+.spine .spine-region p { color: var(--ink); font: 700 .9375rem/1.3 var(--body); }
+.spine .spine-region-engine { background: var(--spine-accent-bg); border: 1.5px solid var(--spine-accent-line); }
+.spine .spine-region-engine .spine-icon { color: var(--spine-accent); }
+.spine .spine-region-lead { min-height: 92px; }
+.spine .spine-region-story { min-height: 58px; }
+.spine .spine-region-row { flex-direction: column; align-items: stretch; }
+.spine .spine-products { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.spine .spine-products span { display: block; height: 40px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.spine .spine-marks { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 8px; }
+.spine .mark {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 5px 11px 5px 8px; border-radius: 8px;
+  color: var(--ink); font: 700 .8125rem/1.2 var(--body); letter-spacing: .005em;
+}
+.spine .mark .spine-icon { width: 16px; height: 16px; stroke-width: 2.2; }
+.spine .mark-different { background: var(--spine-accent-bg); border: 1.5px solid var(--spine-accent-line); }
+.spine .mark-different .spine-icon { color: var(--spine-accent); }
+.spine .mark-same { background: var(--surface); border: 1.5px dashed var(--muted); }
+.spine .mark-same .spine-icon { color: var(--muted); }
+.spine .spine-closing { margin: 18px 0 0; color: var(--ink); font: 800 clamp(1.1rem, 2.2vw, 1.375rem)/1.3 var(--head); letter-spacing: -.01em; text-wrap: balance; }
+@container spine-both (min-width: 540px) {
+  .spine .spine-both-grid { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 30px; row-gap: 10px; align-items: center; }
+  .spine .spine-page-frame { display: block; grid-column: 1; grid-row: 1 / 5; align-self: stretch; margin: -10px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+  .spine .spine-page-bar { position: relative; z-index: 1; display: flex; grid-column: 1; grid-row: 1; gap: 5px; padding: 0 2px; }
+  .spine .spine-page-bar span { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .spine .spine-region { grid-column: 1; }
+  .spine .spine-region-lead { grid-row: 2; }
+  .spine .spine-region-story { grid-row: 3; }
+  .spine .spine-region-row { grid-row: 4; }
+  .spine .spine-marks { grid-column: 2; margin: 0; flex-direction: column; align-items: flex-start; }
+  .spine .spine-marks-lead { grid-row: 2; }
+  .spine .spine-marks-story { grid-row: 3; }
+  .spine .spine-marks-row { grid-row: 4; }
+  .spine .spine-marks::before { content: ""; position: absolute; left: -22px; top: 50%; width: 16px; border-top: 1.5px solid var(--muted); }
+}
+
+/* ---------- block 4: watch it move, then the walk-through ---------- */
+.spine .spine-watch { container: spine-watch / inline-size; }
+.spine .spine-watch-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-items: center; padding: clamp(16px, 3vw, 26px); border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); }
+@container spine-watch (min-width: 700px) { .spine .spine-watch-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; } }
+.spine .spine-watch-lead { margin: 0 0 12px; color: var(--ink); font: 700 clamp(1.125rem, 2.2vw, 1.375rem)/1.38 var(--head); text-wrap: pretty; }
+.spine .spine-watch-second { color: var(--muted); font: 500 1rem/1.5 var(--body); }
+.spine .spine-watch-pane { container: spine-pane / inline-size; min-width: 0; }
+.spine .spine-loop { position: relative; }
+.spine .spine-loop-page { position: relative; height: 244px; }
+.spine .spine-loop-bar {
+  position: absolute; left: 0; right: 0; top: 0; height: 22px; display: flex; align-items: center; gap: 5px; padding: 0 10px;
+  border-radius: 8px; background: var(--spine-skel); border: 1px solid var(--line);
+}
+.spine .spine-loop-bar span { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.spine .spine-loop-row {
+  position: absolute; left: 0; right: 0; height: 48px; display: flex; align-items: center; padding: 0 14px;
+  border-radius: 10px; background: var(--spine-skel); border: 1px solid var(--line); color: var(--ink); font: 600 .875rem/1.25 var(--body);
+}
+/* The end state is the base: the boots section on top and marked as clicked, the hero second. The animation
+   below starts from the order the visitor landed on (hero first) and arrives here. */
+.spine .spine-loop-hero { top: 30px; z-index: 1; transform: translateY(54px); background: var(--spine-accent-bg); border-color: var(--spine-accent-line); }
+.spine .spine-loop-boots { top: 84px; z-index: 2; transform: translateY(-54px); box-shadow: inset 0 0 0 2px var(--spine-accent-line); }
+.spine .spine-loop-leather { top: 138px; }
+.spine .spine-loop-recs { top: 192px; }
+.spine .spine-loop-ring {
+  position: absolute; left: 44%; top: 94px; z-index: 3; width: 28px; height: 28px; border-radius: 50%;
+  border: 2.5px solid var(--spine-accent-line); opacity: 0;
+}
+.spine .spine-receipt {
+  position: relative; z-index: 4; width: min(250px, 100%); margin: 12px 0 0 auto; padding: 12px 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--spine-shadow);
+}
+.spine .spine-receipt-title { margin: 0 0 6px; color: var(--muted); font: 600 .75rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.spine .spine-receipt-lines li { color: var(--ink); font: 600 .875rem/1.45 var(--body); }
+.spine .spine-receipt-up { color: var(--spine-accent); font-weight: 800; }
+.spine .spine-receipt-down { color: var(--muted); font-weight: 800; }
+@container spine-pane (min-width: 440px) {
+  .spine .spine-receipt { position: absolute; right: 0; bottom: 0; width: 214px; margin: 0; }
+  .spine .spine-loop-leather, .spine .spine-loop-recs { padding-right: 228px; }
+}
+.spine .spine-replay-row { margin: 16px 0 0; }
+.spine .spine-replay {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px 8px 12px; border-radius: 999px; border: 2px solid var(--ink);
+  background: var(--surface); color: var(--ink); font: 700 .9375rem/1.1 var(--body); cursor: pointer;
+}
+.spine .spine-replay:hover { background: var(--surface-2); }
+.spine .spine-replay .spine-icon { width: 18px; height: 18px; stroke-width: 2.2; }
+
+.spine .spine-walk { margin: clamp(30px, 4.5vw, 44px) 0 0; }
+.spine .spine-frames { counter-reset: spine-frame; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: 18px 14px; }
+.spine .spine-frame { counter-increment: spine-frame; display: flex; flex-direction: column; gap: 10px; }
+.spine .spine-frame-art { border-radius: 12px; background: var(--surface); border: 1px solid var(--line-soft); overflow: hidden; }
+.spine .spine-frame p { display: flex; gap: 8px; align-items: flex-start; color: var(--ink); font: 500 .9375rem/1.4 var(--body); text-wrap: pretty; }
+.spine .spine-frame p::before {
+  content: counter(spine-frame); flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
+  background: var(--lf-green); color: var(--fir); font: 700 .75rem/1 var(--mono); -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.spine .spine-art { display: block; width: 100%; height: auto; }
+.spine .spine-art .spine-sk { fill: var(--spine-skel); stroke: var(--line); stroke-width: 1; }
+.spine .spine-art .spine-acc { fill: var(--spine-accent-bg); stroke: var(--spine-accent-line); stroke-width: 1.25; }
+.spine .spine-art .spine-pinned { fill: var(--spine-pin-bg); stroke: var(--spine-pin-line); stroke-width: 1.25; }
+.spine .spine-art .spine-ic, .spine .spine-art .spine-ic-acc, .spine .spine-art .spine-ic-pin { fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.spine .spine-art .spine-ic { stroke: var(--muted); }
+.spine .spine-art .spine-ic-acc { stroke: var(--spine-accent); }
+.spine .spine-art .spine-ic-pin { stroke: var(--spine-pin-ink); }
+.spine .spine-art .spine-ring { fill: none; stroke: var(--spine-accent); stroke-width: 2.2; }
+.spine .spine-art .spine-vessel { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.25; }
+.spine .spine-art .spine-level { fill: var(--spine-accent-bg); stroke: var(--spine-accent-line); stroke-width: 1.25; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: 50% 100%; }
+.spine .spine-art .spine-level-fill { transform: scaleY(1); }
+.spine .spine-art .spine-level-drain { transform: scaleY(.18); }
+.spine .spine-art .spine-dash { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.spine .spine-art .spine-paper { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.25; stroke-linejoin: round; }
+.spine .spine-art .spine-ink-line { fill: none; stroke: var(--muted); stroke-width: 3; stroke-linecap: round; }
+.spine .spine-art .spine-plus { fill: none; stroke: var(--spine-accent); stroke-width: 2.4; stroke-linecap: round; }
+.spine .spine-art .spine-minus { fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; }
+
+/* ---------- motion: only where the reader allows it ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .spine .spine-play .spine-loop-hero { animation: spine-hero 6s ease-in-out both; }
+  .spine .spine-play .spine-loop-boots { animation: spine-boots 6s ease-in-out both; }
+  .spine .spine-play .spine-loop-ring { animation: spine-ring 6s ease-in-out both; }
+  .spine .spine-play .spine-receipt { animation: spine-receipt 6s ease-in-out both; }
+  .spine .spine-buckets.spine-play .spine-level-fill { animation: spine-fill 1.4s ease-in-out 3 alternate both; }
+  .spine .spine-buckets.spine-play .spine-level-drain { animation: spine-drain 1.4s ease-in-out 3 alternate both; }
+  /* spine.js holds a picture that is out of view at its start, and plays it when it comes into view */
+  .spine .spine-wait, .spine .spine-wait * { animation-play-state: paused !important; }
+}
+@media (prefers-reduced-motion: reduce) { .spine .spine-replay-row { display: none; } }
+@keyframes spine-hero { 0%, 28% { transform: translateY(0); } 46%, 100% { transform: translateY(54px); } }
+@keyframes spine-boots {
+  0%, 15% { transform: translateY(0); box-shadow: inset 0 0 0 2px transparent; }
+  20%, 28% { transform: translateY(0); box-shadow: inset 0 0 0 2px var(--spine-accent-line); }
+  46%, 100% { transform: translateY(-54px); box-shadow: inset 0 0 0 2px var(--spine-accent-line); }
+}
+@keyframes spine-ring {
+  0%, 11% { opacity: 0; transform: scale(.5); }
+  17% { opacity: 1; transform: scale(1); }
+  24% { opacity: 1; transform: scale(1.12); }
+  31%, 100% { opacity: 0; transform: scale(1.3); }
+}
+@keyframes spine-receipt { 0%, 50% { opacity: 0; transform: translateY(10px); } 64%, 100% { opacity: 1; transform: translateY(0); } }
+@keyframes spine-fill { from { transform: scaleY(.18); } to { transform: scaleY(1); } }
+@keyframes spine-drain { from { transform: scaleY(1); } to { transform: scaleY(.18); } }
+
+/* ---------- the short form, for the battlecard ---------- */
+.spine.spine-compact { margin: 0; }
+.spine .spine-compact-card { padding: clamp(14px, 2.4vw, 22px); border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); }
+.spine .spine-compact-headline { margin: 0 0 12px; color: var(--ink); font: 800 clamp(1.15rem, 2.4vw, 1.5rem)/1.22 var(--head); letter-spacing: -.01em; text-wrap: balance; }
+.spine .spine-compact-rows { display: grid; gap: 8px; }
+.spine .spine-compact-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px 12px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); }
+.spine .spine-compact-row .spine-who { margin: 0 0 2px; font-size: .8125rem; }
+.spine .spine-compact-row .spine-who .spine-icon { width: 18px; height: 18px; }
+.spine .spine-compact-row .spine-line { font-size: .875rem; line-height: 1.4; }
+.spine .spine-compact-arrow { width: 20px; height: 20px; color: var(--spine-accent); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 560px) {
+  .spine .spine-compact-row { grid-template-columns: minmax(0, 1fr); }
+  .spine .spine-compact-arrow { transform: rotate(90deg); }
+}
+
+/* ---------- print: every picture still, at its end state ---------- */
+@media print {
+  .spine .spine-play *, .spine .spine-play.spine-buckets * { animation: none !important; }
+  .spine .spine-replay-row { display: none; }
+  .spine .spine-block { margin-top: 18pt; }
+  .spine .spine-h2 { break-after: avoid; page-break-after: avoid; }
+  .spine .spine-story-card, .spine .spine-card, .spine .spine-both-card, .spine .spine-watch-card, .spine .spine-frame, .spine .spine-compact-row {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .spine .spine-card, .spine .spine-both-card, .spine .spine-watch-card, .spine .spine-frame-art, .spine .spine-compact-card { border: 1px solid #9AA88C; }
+  .spine .spine-receipt { box-shadow: none; }
+  .spine .spine-compact-card { padding: 8pt 10pt; }
+  .spine .spine-compact-headline { font-size: 12pt; margin-bottom: 6pt; }
+  .spine .spine-compact-row { padding: 4pt 8pt; gap: 2pt 8pt; }
+  .spine .spine-compact-row .spine-who { font-size: 8.5pt; }
+  .spine .spine-compact-row .spine-line { font-size: 8.5pt; line-height: 1.3; }
+}

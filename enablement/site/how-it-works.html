@@ -7,131 +7,331 @@
 <meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
 <title>How it works and where it runs · Optimizely enablement</title>
-<!-- Built by enablement/render-pages.mjs from its source. Nothing inline: every style is in /site.css and the behavior in /site.js, which the page does not need in order to read in full. -->
+<!-- The solutions engineers' page, written by hand (lane G1, docs/enablement/LANE-BRIEF-V3.md section 4.5). Its visible text is
+     docs/enablement/content/spine.md (the stamped spine) and docs/enablement/content/how-it-works-and-where-it-runs.md, in order.
+     The header, the spine and the footer are stamped from enablement/partials by enablement/render-pages.mjs --stamp. Nothing
+     inline: the styles are /site.css, /spine.css and /how-it-works.css; the page has no script of its own and reads in full
+     without one. The figures are inlined verbatim from docs/enablement/figures. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/spine.css">
+<link rel="stylesheet" href="/how-it-works.css">
 <script src="/site.js" defer></script>
+<script src="/spine.js" defer></script>
 </head>
 <body>
+<!-- chrome:header:start -->
 <a class="skip" href="#main">Skip to the page</a>
 <header class="masthead">
 <div class="wrap masthead-inner">
 <p class="eyebrow">Internal · Optimizely</p>
-<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/see-it-work">See it work</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works" aria-current="page">How it works</a></li><li><a href="/how-it-works-interactive">How it works, interactive</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/see-it-work">See it work</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/battlecard">Battlecard</a></li><li><a href="/how-it-works" aria-current="page">How it works</a></li><li><a href="/how-it-works-interactive">How it works, interactive</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
 </div>
 </header>
+<!-- chrome:header:end -->
 <main id="main" class="wrap">
-<div class="piece-meta"><p class="reader-tag" data-reader="se">For solutions engineers</p><p class="stamp">Updated October 2, 2026</p></div>
-<article class="piece" data-source="docs/enablement/content/how-it-works-and-where-it-runs.md">
+<div class="piece-meta"><p class="reader-tag" data-reader="se">For solutions engineers</p><p class="stamp">Updated October 3, 2026</p></div>
+<article class="piece se-piece" data-source="docs/enablement/content/spine.md docs/enablement/content/how-it-works-and-where-it-runs.md">
 <h1 class="title"><span class="kicker"><span id="package-name">Behavioral Targeting and Intelligence</span>:</span> <span class="title-main">how it works and where it runs</span></h1>
-<p class="reader-line"><strong>For solutions engineers.</strong> The story comes first, in two pages; then one visitor walked through end to end, the mechanism and its arithmetic, the architecture on Cloudflare, configuration, integration, privacy and what a customer provides, each part of the story linked to its detail and back. The companion page, <a href="/how-it-works-interactive">How it works, interactive</a>, puts the constants on sliders, and a live demo's <a href="https://edge-platform-vantage.expedge.workers.dev/vantage/how-it-works">How it works</a> page is a worked example. Every word follows the <a href="/glossary">Glossary</a>.</p>
-<div class="rule"><p class="rule-label" data-chrome="rule label">The one rule</p><p class="rule-text"><strong>The engine decides each page at the point in time from what the visitor is doing now, under rules the brand publishes, and writes every decision out as arithmetic a person can recompute.</strong></p></div>
-<section class="sec sec-part" aria-labelledby="part-a-the-story">
-<h2 id="part-a-the-story" class="part">Part A. The story</h2>
+<p class="reader-line"><strong>For solutions engineers.</strong> The story first and why customers choose it, then one visitor walked through, the arithmetic as worked examples, learning and the receipt, where the engine runs and how it is configured, integration and privacy, and what a customer provides.</p>
+<!-- spine:start -->
+<div class="spine" data-spine="docs/enablement/content/spine.md">
+<section class="spine-block spine-story" aria-labelledby="spine-what-we-built">
+<div class="spine-story-card" data-visual="the story in one headline and three beats" data-shot="spine-story">
+<h2 class="spine-kicker" id="spine-what-we-built">What we built</h2>
+<p class="spine-headline">We built an engine that follows each visitor's interest in real time and decides the page at that point in time.</p>
+<ul class="spine-beats">
+<li class="spine-beat"><svg class="spine-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><circle cx="10" cy="7.5" r="3.5"/><path d="M4 20.5v-1.5a4.5 4.5 0 0 1 4.5-4.5h3"/><path d="M16.6 15.4a2.1 2.1 0 1 1 3 1.9c-.6.3-.9.8-.9 1.4"/><path d="M18.7 21.2v.01"/></svg><p>Most visitors to a brand's site arrive as strangers, and most buying happens before any profile exists. Tools built for known customers are blind in that window.</p></li>
+<li class="spine-beat"><svg class="spine-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M3 12h4l3 8l4-16l3 8h4"/></svg><p>The engine watches what a visitor does on this visit and arranges the page around it, click by click, from the first page on.</p></li>
+<li class="spine-beat"><svg class="spine-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 14v7"/><path d="M10 12l-6.7-2"/><path d="M14 12l6.7-2"/></svg><p>The brand's team publishes the rules, keeps the last word, and can read the reason behind every decision.</p></li>
+</ul>
+</div>
 </section>
-<section class="sec" aria-labelledby="a1-most-visitors-are-strangers-and-the-tools-built-for-known-customers-cannot-see-them">
-<h2 id="a1-most-visitors-are-strangers-and-the-tools-built-for-known-customers-cannot-see-them">A.1 Most visitors are strangers, and the tools built for known customers cannot see them</h2>
-<p>In one luxury retailer's own count, nine visitors in ten arrive unidentified, about four in five have never been seen before, and four purchases in ten happen on the first visit. Most buying happens before any profile exists, and tools built for known customers are blind in that window. The rules written to compensate, one for each campaign and each kind of visitor, go stale, multiply and start to fight. The retailer's own setup, built on eight to ten audience lists, "works, but it caps out", and its scan of more than ten vendors found "none of them offer real-time, ML-driven content or experience personalization at the individual level." The engine is built for that window.</p>
-<p class="navlink navlink-detail">The detail: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a></p>
+<section class="spine-block spine-contrast" aria-labelledby="spine-how-it-differs">
+<h2 class="spine-h2" id="spine-how-it-differs">How it differs from recommendations and from personalization, and why</h2>
+<ul class="spine-cards" data-visual="three contrast cards, the first drawn as two flows" data-shot="spine-side-by-side">
+<li class="spine-card">
+<div class="spine-side spine-side-other">
+<p class="spine-who"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M12 8v4l2.5 2"/><path d="M3.5 11a8.5 8.5 0 1 1 .6 4.2"/><path d="M3.3 6.5v4.5h4.5"/></svg><span>A recommendations engine</span></p>
+<p class="spine-line">Ranks the past: what people like this visitor bought before.</p>
+<p class="spine-flow"><span class="spine-step">History</span> <span class="spine-arrow">→</span> <span class="spine-step">Ranks products</span> <span class="spine-arrow">→</span> <span class="spine-step">Product row</span></p>
+</div>
+<div class="spine-side spine-side-engine">
+<p class="spine-who spine-who-engine"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M3 12h4l3 8l4-16l3 8h4"/></svg><span>The engine</span></p>
+<p class="spine-line">Decides the page from what this visitor is doing now. The brand's carousel is one of the modules it orders.</p>
+<p class="spine-flow spine-flow-engine"><span class="spine-step">Observe this visit</span> <span class="spine-arrow">→</span> <span class="spine-step">Interpret interest</span> <span class="spine-arrow">→</span> <span class="spine-step">Act on the page</span></p>
+<p class="spine-fixed">Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side.</p>
+</div>
+</li>
+<li class="spine-card">
+<div class="spine-side spine-side-other">
+<p class="spine-who"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4.5 6v.01"/><path d="M4.5 12v.01"/><path d="M4.5 18v.01"/></svg><span>Rule-based personalization</span></p>
+<p class="spine-line">Sorts visitors into segments written in advance. The rules go stale, multiply and fight.</p>
+<div class="spine-pict spine-pict-rules" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+</div>
+<div class="spine-side spine-side-engine">
+<p class="spine-who spine-who-engine"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M5 8h14l-1.6 11.2a2 2 0 0 1-2 1.8H8.6a2 2 0 0 1-2-1.8z"/><path d="M7.5 8a4.5 4.5 0 0 1 9 0"/><path d="M6.3 13.5h11.4"/></svg><span>The engine</span></p>
+<p class="spine-line">Needs no segment and no expiration rule. Interest fills with each action and drains on its own, like a bucket.</p>
+<div class="spine-pict spine-pict-buckets" aria-hidden="true"><span class="spine-pb"><span class="spine-pb-level spine-pb-high"></span></span><span class="spine-pb"><span class="spine-pb-level spine-pb-mid"></span></span><span class="spine-pb"><span class="spine-pb-level spine-pb-low"></span></span><span class="spine-pb-line"></span></div>
+</div>
+</li>
+<li class="spine-card">
+<div class="spine-side spine-side-other">
+<p class="spine-who"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5l8-4.5"/><path d="M12 12v9"/></svg><span>AI that decides</span></p>
+<p class="spine-line">Chooses in the moment and cannot show its work.</p>
+<div class="spine-pict spine-pict-box" aria-hidden="true"><span></span></div>
+</div>
+<div class="spine-side spine-side-engine">
+<p class="spine-who spine-who-engine"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M6 3h12v18l-2-1.4l-2 1.4l-2-1.4l-2 1.4l-2-1.4L6 21z"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg><span>The engine</span></p>
+<p class="spine-line">Every decision is arithmetic a person can recompute, on a receipt.</p>
+<div class="spine-pict spine-pict-receipt" aria-hidden="true"><span class="spine-pr spine-pr-up"></span><span class="spine-pr spine-pr-down"></span><span class="spine-pr"></span></div>
+<p class="spine-fixed">The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.</p>
+</div>
+</li>
+</ul>
 </section>
-<section class="sec" aria-labelledby="a2-it-is-a-personal-stylist-for-every-visitor-at-internet-scale">
-<h2 id="a2-it-is-a-personal-stylist-for-every-visitor-at-internet-scale">A.2 It is a personal stylist for every visitor, at internet scale</h2>
-<p>The engine reads the room: where the visitor is and how they arrived. It watches without interrogating: no form, no login, only what the visitor does. It rearranges the table: the page's sections and the pieces inside them, in this visitor's order. And it pivots when attention moves. The same retailer asked for "a site that feels like a stylist who remembers."</p>
-<p>Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. It is not a recommendations engine and does not replace one; it organizes the page by interest, in real time, around whatever recommendations exist.</p>
-<p class="navlink navlink-detail">The detail: <a href="#b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3</a></p>
+<section class="spine-block spine-both" aria-labelledby="spine-both-engines">
+<h2 class="spine-h2" id="spine-both-engines">Both engines on one page</h2>
+<p class="spine-lead">One engine keeps choosing the products. The other decides the experience around them.</p>
+<div class="spine-both-card" data-visual="one page with both engines, and what changed and what stayed" data-shot="spine-both-on-one-page">
+<div class="spine-both-grid">
+<div class="spine-page-frame" aria-hidden="true"></div>
+<div class="spine-page-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+<div class="spine-region spine-region-engine spine-region-lead"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5l-8 8"/></svg><p>Lead image · chosen by the engine</p></div>
+<ul class="spine-marks spine-marks-lead"><li class="mark mark-different"><svg class="spine-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>different lead image</li></ul>
+<div class="spine-region spine-region-engine spine-region-story"><svg class="spine-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M4 10h11"/><path d="M4 14h16"/><path d="M4 18h9"/></svg><p>Story · chosen by the engine</p></div>
+<ul class="spine-marks spine-marks-story"><li class="mark mark-different"><svg class="spine-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>different story</li><li class="mark mark-different"><svg class="spine-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>different module</li></ul>
+<div class="spine-region spine-region-row"><p><span data-ui-label="the carousel's own title">Recommended for you</span> · the brand's recommendation engine</p><div class="spine-products" aria-hidden="true"><span></span><span></span><span></span></div></div>
+<ul class="spine-marks spine-marks-row"><li class="mark mark-same"><svg class="spine-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M5 9.5h14"/><path d="M5 14.5h14"/></svg>same products</li><li class="mark mark-same"><svg class="spine-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M5 9.5h14"/><path d="M5 14.5h14"/></svg>same order</li></ul>
+</div>
+<p class="spine-closing">Same product recommendations. A page arranged for this visitor.</p>
+</div>
 </section>
-<section class="sec" aria-labelledby="a3-what-it-does-thirteen-capabilities-each-with-its-use">
-<h2 id="a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3 What it does: thirteen capabilities, each with its use</h2>
-<ul><li><strong>The first page feels local before the first click.</strong> It leans on what the visitor's real region favors, read from the request, until their own interests take over (<a href="#b4-a-stranger-starts-from-the-region-and-the-arrival">B.4</a>).</li><li><strong>The first click changes the page.</strong> With consent, the next page or slot reflects the first action, with no login (<a href="#b2-interest-is-a-number-anyone-can-check">B.2</a>).</li><li><strong>Every channel seeds the visit.</strong> An email, an ad, a social post, a campaign term on a link (a partner's quiz link included), the referring network or the phone's operating system family lifts matching content (<a href="#b4-a-stranger-starts-from-the-region-and-the-arrival">B.4</a>).</li><li><strong>Interest fills and drains like a bucket.</strong> Each action pours its weight into a bucket for every dimension value it touches; each bucket drains on its own memory and fills toward a cap. A visitor joins an audience at an entry line and leaves below a lower exit line, so nobody writes expiration rules, and the release is on the receipt (<a href="#b2-interest-is-a-number-anyone-can-check">B.2</a>).</li><li><strong>The page's sections reorganize by interest.</strong> The engine orders the page's modules, not only what fills a slot, and a recommendations carousel is one of them: it chooses its products, the engine its place (<a href="#b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3</a>).</li><li><strong>Merchandisers keep the wheel.</strong> Gates remove what may not show, pins hold the sections the brand sells, the engine ranks the rest, and every override and decision is written out as arithmetic on a receipt a person can recompute (<a href="#b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3</a>, <a href="#b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5</a>).</li><li><strong>Every constant is tuned in plain view.</strong> Marketers and data scientists set weights, memories, lines and dials in published, versioned documents and the console, with no software release (<a href="#b7-every-setting-is-a-published-document-changed-without-a-release">B.7</a>).</li><li><strong>It learns behind a dial the brand controls.</strong> It records what works from the first day and changes nothing until the brand turns the dial. Holdouts run from the start, so the brand measures the lift (<a href="#b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5</a>).</li><li><strong>Opal works with it.</strong> The brand's team asks Opal to author audiences and tests, explain results, tag content, and propose and launch experiments and contextual-bandit tests on signals, each launch approved by a person (<a href="#b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">B.8</a>). The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.</li><li><strong>It links with ODP and Feature Experimentation.</strong> Its events and audiences land in ODP, and an experiment or contextual bandit can be pointed at any slot (<a href="#b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">B.8</a>).</li><li><strong>Optional AI add-ons serve shoppers.</strong> A brand may switch on AI search, a style concierge and generated imagery, paid from its credits (<a href="#b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">B.8</a>).</li><li><strong>Identity carries across sign-in.</strong> The anonymous and known profiles merge, so nothing done before sign-in is lost (<a href="#b1-one-visitor-walked-through-end-to-end">B.1</a>).</li><li><strong>It runs at the edge, on Cloudflare.</strong> Each decision is made close to the visitor and lands, with its outcome, in the brand's own warehouse (<a href="#b6-it-runs-on-cloudflares-network-in-the-data-center-nearest-the-visitor">B.6</a>).</li></ul>
-<p class="navlink navlink-detail">The detail: <a href="#b2-interest-is-a-number-anyone-can-check">B.2</a> to <a href="#b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">B.8</a></p>
+<section class="spine-block spine-watch" aria-labelledby="spine-watch-it">
+<h2 class="spine-h2" id="spine-watch-it">Now watch it: one visitor, one click</h2>
+<div class="spine-watch-card" data-visual="one visitor, one click, the page rearranging" data-shot="spine-watch-it">
+<div class="spine-watch-text">
+<p class="spine-watch-lead">A visitor lands on the brand's page, clicks one boot banner, and the page rearranges around that interest. The card that appears is the receipt: why this page, in words.</p>
+<p class="spine-watch-second">Same catalog, same rules. Only what the visitor did changed.</p>
+</div>
+<div class="spine-watch-pane">
+<div class="spine-loop spine-play">
+<div class="spine-loop-page">
+<div class="spine-loop-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+<ol class="spine-loop-sections">
+<li class="spine-loop-row spine-loop-hero">Hero · outerwear editorial</li>
+<li class="spine-loop-row spine-loop-boots">Boots</li>
+<li class="spine-loop-row spine-loop-leather">Leather accessories</li>
+<li class="spine-loop-row spine-loop-recs"><span class="spine-loop-words"><span data-ui-label="the carousel's own title">Recommended for you</span> · one module among the rest</span></li>
+</ol>
+<span class="spine-loop-ring" aria-hidden="true"></span>
+</div>
+<div class="spine-receipt">
+<p class="spine-receipt-title">Why this page</p>
+<ul class="spine-receipt-lines"><li>Clicked a boot banner, <span class="spine-receipt-up">+</span></li><li>Regional start, fading, <span class="spine-receipt-down">−</span></li></ul>
+</div>
+</div>
+<p class="spine-replay-row"><button class="spine-replay" type="button" data-chrome="the replay control" hidden><svg class="spine-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" aria-hidden="true" focusable="false"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>Play again</button></p>
+</div>
+</div>
+<div class="spine-walk" data-visual="the walk-through in five frames" data-shot="spine-walk-through">
+<h3 class="spine-h3" id="spine-walk-through">Then go through it, one moment at a time</h3>
+<ol class="spine-frames">
+<li class="spine-frame"><div class="spine-frame-art"><svg class="spine-art" viewBox="0 0 160 90" aria-hidden="true" focusable="false"><rect class="spine-sk" x="12" y="10" width="136" height="10" rx="3"/><rect class="spine-acc" x="12" y="27" width="136" height="26" rx="4"/><rect class="spine-sk" x="12" y="60" width="136" height="20" rx="4"/><g class="spine-ic-acc" transform="translate(119 27.5) scale(1.05)"><path d="M12 21s-6-5.4-6-11a6 6 0 0 1 12 0c0 5.6-6 11-6 11z"/><circle cx="12" cy="10" r="2.4"/></g></svg></div><p>The first page feels local, before the first click.</p></li>
+<li class="spine-frame"><div class="spine-frame-art"><svg class="spine-art" viewBox="0 0 160 90" aria-hidden="true" focusable="false"><rect class="spine-sk" x="12" y="10" width="136" height="10" rx="3"/><rect class="spine-acc" x="12" y="27" width="136" height="24" rx="4"/><rect class="spine-sk" x="12" y="58" width="136" height="22" rx="4"/><circle class="spine-ring" cx="62" cy="39" r="9"/><g class="spine-ic" transform="translate(122 28) scale(.95)"><path d="M7 4v16"/><path d="M4 7l3-3l3 3"/><path d="M17 20V4"/><path d="M14 17l3 3l3-3"/></g></svg></div><p>The first click changes the page.</p></li>
+<li class="spine-frame"><div class="spine-frame-art"><svg class="spine-art spine-buckets spine-play" viewBox="0 0 160 90" aria-hidden="true" focusable="false"><rect class="spine-vessel" x="44" y="22" width="18" height="58" rx="4"/><rect class="spine-vessel" x="71" y="22" width="18" height="58" rx="4"/><rect class="spine-vessel" x="98" y="22" width="18" height="58" rx="4"/><rect class="spine-level spine-level-fill" x="46" y="26" width="14" height="52" rx="3"/><rect class="spine-level spine-level-drain" x="73" y="26" width="14" height="52" rx="3"/><rect class="spine-level spine-level-still" x="100" y="62" width="14" height="16" rx="3"/><path class="spine-dash" d="M34 46H126"/></svg></div><p>Interest fills and drains like buckets. Nobody writes expiration rules.</p></li>
+<li class="spine-frame"><div class="spine-frame-art"><svg class="spine-art" viewBox="0 0 160 90" aria-hidden="true" focusable="false"><rect class="spine-pinned" x="12" y="10" width="136" height="24" rx="4"/><rect class="spine-sk" x="12" y="41" width="136" height="17" rx="4"/><rect class="spine-sk" x="12" y="64" width="136" height="17" rx="4"/><g class="spine-ic-pin" transform="translate(121 10.5) scale(.95)"><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5-1.5l1.5-4l4-4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></g></svg></div><p>A pin holds the section a merchandiser sold.</p></li>
+<li class="spine-frame"><div class="spine-frame-art"><svg class="spine-art" viewBox="0 0 160 90" aria-hidden="true" focusable="false"><path class="spine-paper" d="M46 8h68v74l-5.7-3.5l-5.6 3.5l-5.7-3.5l-5.6 3.5l-5.7-3.5l-5.7 3.5l-5.6-3.5l-5.7 3.5l-5.6-3.5l-5.7 3.5l-5.6-3.5L46 82z"/><path class="spine-ink-line" d="M56 24H90"/><path class="spine-ink-line" d="M56 40H86"/><path class="spine-ink-line" d="M56 56H80"/><path class="spine-plus" d="M98 24h10M103 19v10"/><path class="spine-minus" d="M98 40h10"/></svg></div><p>Every decision has a receipt a person can recompute.</p></li>
+</ol>
+</div>
 </section>
-<section class="sec" aria-labelledby="a4-customers-choose-it-for-ten-reasons-and-each-weighs-them-differently">
-<h2 id="a4-customers-choose-it-for-ten-reasons-and-each-weighs-them-differently">A.4 Customers choose it for ten reasons, and each weighs them differently</h2>
-<p>Customers choose it because they can control it; it decides at the point in time; it is fast at the edge; every decision is explainable; it hooks to Opal; AI is theirs to use or not; it learns only as far as they govern; it links with ODP; it works alongside their recommendations; and it honors the placements they sell. Each customer weighs them differently, so no list ranks them.</p>
-<p class="navlink navlink-detail">The detail: <a href="#b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5</a> and <a href="#b6-it-runs-on-cloudflares-network-in-the-data-center-nearest-the-visitor">B.6</a></p>
+</div>
+<!-- spine:end -->
+<section class="sec se-sec" aria-labelledby="why-customers-choose-it">
+<h2 id="why-customers-choose-it">Why customers choose it</h2>
+<figure class="se-reasons" data-visual="ten equal tiles, one reason each, unranked" data-shot="se-reasons">
+<figcaption class="se-reasons-lead">Each customer weighs these reasons differently.</figcaption>
+<ul class="se-tiles">
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 14v7M10 12l-6.7-2M14 12l6.7-2"/></svg><p>They can control it.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><p>It decides at the point in time.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg><p>It is performant at the edge.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg><p>Every decision is explainable.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/></svg><p>It hooks to Opal.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="8" cy="12" r="2.5"/></svg><p>AI is theirs to use or not.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17H6.5"/><circle cx="12" cy="17" r="1"/></svg><p>It learns to the degree they govern.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><p>It links with ODP.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg><p>It works alongside their recommendations.</p></li>
+<li class="se-tile"><svg class="se-icon se-tile-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v7"/></svg><p>It honors the placements they sell.</p></li>
+</ul>
+</figure>
 </section>
-<section class="sec" aria-labelledby="a5-how-it-works-in-four-sentences">
-<h2 id="a5-how-it-works-in-four-sentences">A.5 How it works, in four sentences</h2>
-<p>For each dimension value a visitor touches, the engine keeps an interest that rises with each action and fades with time. When a page asks, it removes what the brand's rules forbid, holds the brand's pins, and scores every other piece as the visitor's interests times the slot's weights, added up. For a stranger, the region's interests and the arrival stand in until the visitor's own take over. Every decision carries its reasons, and its receipt holds the arithmetic.</p>
-<p class="navlink navlink-detail">The detail: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a> to <a href="#b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5</a></p>
-</section>
-<section class="sec" aria-labelledby="a6-what-a-customer-provides-and-what-we-use-it-for">
-<h2 id="a6-what-a-customer-provides-and-what-we-use-it-for">A.6 What a customer provides, and what we use it for</h2>
-<p>The customer provides the content it already has, by its own ids, for the engine to rank; a map of its pages and slots, with the default each slot shows when the engine is silent; events carrying the attributes that build interest; the visitor's consent choice, without which nothing personalizes; a signed proof at sign-in, to merge profiles; and a retention period for each kind of data.</p>
-<p class="navlink navlink-detail">The detail: <a href="#b10-what-a-customer-provides-and-what-we-use-it-for">B.10</a></p>
-</section>
-<section class="sec sec-part" aria-labelledby="part-b-the-detail">
-<h2 id="part-b-the-detail" class="part">Part B. The detail</h2>
-</section>
-<section class="sec" aria-labelledby="b1-one-visitor-walked-through-end-to-end">
-<h2 id="b1-one-visitor-walked-through-end-to-end">B.1 One visitor, walked through end to end</h2>
-<p>Back to the story: <a href="#a1-most-visitors-are-strangers-and-the-tools-built-for-known-customers-cannot-see-them">A.1</a> and <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a></p>
-<p>A fashion brand scores on three dimensions: category, style and price band. Its homepage has a hero and a four-piece slot called the edit; its product page stacks six modules, one of them a recommendations carousel. The numbers use the engine's defaults and this brand's own slot weights.</p>
-<p class="lead-in"><strong>Arrival.</strong> A stranger in Illinois taps a paid-social ad for a wool coat on a phone. The site's banner passes the visitor's consent, and the first call returns an anonymous id. The request places the visitor in US-IL, where coats lead this week's category counts with a share of 1 and boots follow at 0.6. With no interests of their own, the stranger is scored wholly on the region: λ, the region's share of the blend, is 1. The ad's link carries the campaign term wool-coat, and the brand's seed for that term adds 0.2, times the slot's weight for category, 0.3, to every piece tagged coats: 0.06 (<a href="#b4-a-stranger-starts-from-the-region-and-the-arrival">B.4</a>).</p>
-<p>The hero's coat story scores the coats share, 1, times category's weight, 0.3, plus the tailored share, 0.8, times style's weight, 0.2: 0.46. The seed makes it 0.52, and the story's promotion, at the slot's promotion weight of 0.1, multiplies it by 1.1, to 0.572. It leads the hero (<a href="#b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3</a>).</p>
-<p class="lead-in"><strong>The first click.</strong> The visitor views a tailored wool coat at the premium price. The view, weighted 1, touches three values at once: coats, tailored and premium each reach a raw score of 1, an interest of 1/(1 + 1.8) = 0.357 (<a href="#b2-interest-is-a-number-anyone-can-check">B.2</a>). The visitor's interests now sum to 1.07, so λ falls to 1/(1 + 1.07) = 0.48, and on the next page coat and tailored pieces move up in the edit.</p>
-<p class="lead-in"><strong>Three views in.</strong> Two more tailored coats follow, one at the core price and one premium. Coats and tailored reach a raw score of 3, an interest of 3/4.8 = 0.625, above the entry line of 0.6, so the visitor joins both audiences; premium reads 0.526 and core 0.357. Nobody wrote a rule: the audience is the line.</p>
-<p class="lead-in"><strong>The product page.</strong> On the coat's page, the six modules come back in this visitor's order, the styling story raised for a visitor leaning tailored: size and fit, the styling story, reviews, the recommendations carousel, the care guide, delivery and returns. The carousel still chooses its own products, and the buy box is off limits (<a href="#b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3</a>).</p>
-<p class="lead-in"><strong>A pin holds.</strong> The brand has sold the edit's first place to its winter campaign, so that piece is pinned: reserved before anything is scored and served first at a score of 0, its receipt saying ranking never ran for it. The other three places are ranked for this visitor.</p>
-<p class="lead-in"><strong>Attention moves.</strong> The visitor turns to boots and views two pairs. Boots rises to 0.526, and the next page brings boots forward in the edit. The campaign's 0.06 is still added and simply outscored: time never switches a seed off, and the visitor's own behavior wins.</p>
-<p class="lead-in"><strong>The visitor leaves, and interest drains.</strong> At the default memory of 14 days, coats, at a raw score of 3, falls below the exit line of 0.45 after 14 × ln(3/1.4727) = 9.96 days with no further event (<a href="#b2-interest-is-a-number-anyone-can-check">B.2</a>). The visitor leaves the coats audience on that clock, the coat content steps back, and the next decision's receipt records the release.</p>
-<p class="lead-in"><strong>The return.</strong> The brand recognizes returning visitors, so when the visitor comes back twelve days after the first visit, their interests are there, cooled rather than reset: coats reads 0.41, below its exit line, and boots 0.32, so the region leans in a little again. The visitor taps a boots story in the edit, signs in at checkout and buys. At sign-in the brand's server signs a short proof, and the two profiles merge, adding interests and overriding nothing.</p>
-<p class="lead-in"><strong>The outcome.</strong> The purchase is credited to the decision that served the boots story in this session, inside the purchase window, and counted for that story in its context. The decision and the outcome land in the brand's warehouse, where its analysts compare personalized visitors with the holdout (<a href="#b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5</a>).</p>
-<p>Every step above is on a receipt: the terms that decided, the seed's 0.06, the promotion's 1.1, the region's share and λ, the pin, the release and the revision of every setting in force.</p>
-</section>
-<section class="sec" aria-labelledby="b2-interest-is-a-number-anyone-can-check">
-<h2 id="b2-interest-is-a-number-anyone-can-check">B.2 Interest is a number anyone can check</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a> and <a href="#a5-how-it-works-in-four-sentences">A.5</a>; the walk: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a></p>
-<p>For each dimension value, the engine stores a raw score R and the time of the last touch, never a faded number. An event fades R to now and adds the action's weight; a read fades R to the moment of the request and turns it into an interest between 0 and just under 1.</p>
-<pre><code>event:  R ← R · e^(−Δt/τ) + w,   and the last touch becomes now
-read:   a = R(t) / (R(t) + K),    R(t) = R · e^(−(t − t_last)/τ)
-enter:  a ≥ 0.6    ⇔   R ≥ 2.7          (K = 1.8)
-leave:  a &lt; 0.45   ⇔   R &lt; 1.4727
-exit:   t_exit = t_last + τ · ln( R / 1.4727 )</code></pre>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Setting</th><th scope="col">Default</th><th scope="col">Where the brand sets it</th></tr></thead><tbody><tr><td data-label="Setting">Memory, τ</td><td data-label="Default">14 days, at most 90</td><td data-label="Where the brand sets it">The registry, overall or per dimension</td></tr><tr><td data-label="Setting">K, the evidence for half strength</td><td data-label="Default">1.8</td><td data-label="Where the brand sets it">The registry, overall or per dimension</td></tr><tr><td data-label="Setting">Entry line</td><td data-label="Default">0.6</td><td data-label="Where the brand sets it">The registry, overall or per dimension</td></tr><tr><td data-label="Setting">Exit line</td><td data-label="Default">0.45</td><td data-label="Where the brand sets it">The registry, overall or per dimension</td></tr><tr><td data-label="Setting">Action weights</td><td data-label="Default">The brand's own, for example a view 1, a wishlist add 2, an add to cart 3, a purchase 5, a mere impression 0</td><td data-label="Where the brand sets it">The registry</td></tr><tr><td data-label="Setting">Values kept per dimension</td><td data-label="Default">24, the weakest dropped first</td><td data-label="Where the brand sets it">The registry</td></tr></tbody></table></div>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">A view of one value, weighted 1</th><th scope="col">Raw score</th><th scope="col">Interest</th><th scope="col">Audience</th></tr></thead><tbody><tr><td data-label="A view of one value, weighted 1">Once</td><td data-label="Raw score">1</td><td data-label="Interest">0.357</td><td data-label="Audience">Below the entry line</td></tr><tr><td data-label="A view of one value, weighted 1">Twice</td><td data-label="Raw score">2</td><td data-label="Interest">0.526</td><td data-label="Audience">Below the entry line</td></tr><tr><td data-label="A view of one value, weighted 1">Three times</td><td data-label="Raw score">3</td><td data-label="Interest">0.625</td><td data-label="Audience">Joins, at or above 0.6</td></tr><tr><td data-label="A view of one value, weighted 1">Three times, then quiet for about ten days</td><td data-label="Raw score">1.47</td><td data-label="Interest">0.45</td><td data-label="Audience">Leaves, below 0.45</td></tr></tbody></table></div>
-<p>Time alone can take a visitor out of an audience but never put one in, and the engine computes the moment interest crosses the exit line, so release needs no clean-up job. One event touches every dimension whose attribute it carries, and where the catalog names a dimension's values, an event value outside them builds nothing. Interest approaches 1 without reaching it, so the tenth click counts for less than the first. An impression weighs nothing: seeing is not choosing.</p>
-</section>
-<section class="sec" aria-labelledby="b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">
-<h2 id="b3-a-pieces-score-is-a-dot-product-under-the-slots-weights">B.3 A piece's score is a dot product under the slot's weights</h2>
-<p>Back to the story: <a href="#a2-it-is-a-personal-stylist-for-every-visitor-at-internet-scale">A.2</a> and <a href="#a5-how-it-works-in-four-sentences">A.5</a>; the walk: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a></p>
-<p>Every piece carries tags in the brand's vocabulary, and every slot gives each dimension a weight, ω, from 0 to 1. A piece's base score is the visitor's blended interest ã in each of its tags, which <a href="#b4-a-stranger-starts-from-the-region-and-the-arrival">B.4</a> defines, times the slot's weight for that tag's dimension, added up: a dot product.</p>
-<pre><code>B0 = Σ over the piece's tags of ω[slot, dimension] · ã(value)</code></pre>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Order</th><th scope="col">Step</th><th scope="col">What it does</th></tr></thead><tbody><tr><td data-label="Order">1</td><td data-label="Step">Gates</td><td data-label="What it does">A piece must be live, inside its window, in stock, and pass its own rule, such as a list of regions; a rule that cannot be checked fails closed</td></tr><tr><td data-label="Order">2</td><td data-label="Step">Exclusions and off-limits slots</td><td data-label="What it does">Pieces, tags or types a slot never shows, and whole slots the engine never touches</td></tr><tr><td data-label="Order">3</td><td data-label="Step">Pins</td><td data-label="What it does">The pieces the brand has sold take their places, at any position, and are never scored</td></tr><tr><td data-label="Order">4</td><td data-label="Step">The base</td><td data-label="What it does">The dot product above</td></tr><tr><td data-label="Order">5</td><td data-label="Step">Completing the product in view</td><td data-label="What it does">Adds the slot's weight to pieces that complete the product on the page</td></tr><tr><td data-label="Order">6</td><td data-label="Step">Arrival seeds</td><td data-label="What it does">Add each fired seed's weight, as <a href="#b4-a-stranger-starts-from-the-region-and-the-arrival">B.4</a> shows</td></tr><tr><td data-label="Order">7</td><td data-label="Step">Journey stage</td><td data-label="What it does">Adds a bonus inside a piece's journey-stage fit, and a factor outside it</td></tr><tr><td data-label="Order">8</td><td data-label="Step">Freshness and fatigue</td><td data-label="What it does">Add a boost that halves over the brand's chosen period, and subtract for pieces this visitor has been served often</td></tr><tr><td data-label="Order">9</td><td data-label="Step">Merchandising weights</td><td data-label="What it does">Multiply by season, promotion and margin factors, held to half to double by default</td></tr><tr><td data-label="Order">10</td><td data-label="Step">Learning</td><td data-label="What it does">Multiplies by lift^γ, which is 1 while γ is 0</td></tr></tbody></table></div>
-<p>The slot sorts by score, ties going to the catalog's order. A diversity cap keeps one value from filling it, such as two pieces at most from one line; no piece appears twice on a page; and with no signal the slot serves the catalog's order, labeled the default. Per candidate, the cost is one lookup and one multiply-add per tag value, a check per seed, up to three merchandising factors and one power.</p>
-<p class="lead-in"><strong>Modules are pieces too.</strong> A page's sections are the pieces of one slot, so the same arithmetic orders the page, the recommendations carousel among them. The luxury retailer's program head asked how a page could learn its order without versions to learn from: "How else would it learn? I don't understand." An ordering is a ranking: the engine scores each module for this visitor in this context and sorts, so six modules in ten arrival contexts are sixty numbers to learn, not 720 orders to test. A merchandiser sets each arrival context's starting order, and the layout's rules say which sections are fixed, movable or required.</p>
-</section>
-<section class="sec" aria-labelledby="b4-a-stranger-starts-from-the-region-and-the-arrival">
-<h2 id="b4-a-stranger-starts-from-the-region-and-the-arrival">B.4 A stranger starts from the region and the arrival</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a>; the walk: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a></p>
-<p>Every scored event also adds its touches, at the action's weight and with no visitor id, to a count for the visitor's region, which the request resolves, on a one-day memory. A value's share is its count over its dimension's leader, so the leader reads 1, and a region with too few events falls back to its country, then to everyone. A brand can set each region's starting lean from its own warehouse sales, labeled with the source.</p>
-<pre><code>share(v) = R_region(v) / max R_region       within one dimension
-λ = kBlend / (kBlend + Σa)                   kBlend = 1 by default
-ã = (1 − λ) · a + λ · share</code></pre>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">The visitor's interests, summed</th><th scope="col">λ, the region's share of the blend</th></tr></thead><tbody><tr><td data-label="The visitor's interests, summed">0, a stranger</td><td data-label="λ, the region's share of the blend">1</td></tr><tr><td data-label="The visitor's interests, summed">1.07, after one view touching three values</td><td data-label="λ, the region's share of the blend">0.48</td></tr><tr><td data-label="The visitor's interests, summed">2.13, after three views</td><td data-label="λ, the region's share of the blend">0.32</td></tr><tr><td data-label="The visitor's interests, summed">4</td><td data-label="λ, the region's share of the blend">0.2</td></tr></tbody></table></div>
-<p>Arrival seeds work beside the region. A seed fires on how the visitor arrived: the channel (direct, paid social, paid search, email, organic or referral), the link's campaign term, ignoring case, the referring network or the phone's operating system family. It adds its weight, times any dampening, times the slot's weight on the tag's dimension, so a campaign term on any link, from an email, an ad, a social post or a partner's quiz, reaches the first page.</p>
-<pre><code>seed = weight · Π dampen · ω[slot, dimension of the tag]</code></pre>
-<p>Time never switches a seed off. A dampening factor the brand publishes, from 1 down to 0, lowers it when the visitor's own audiences point elsewhere, and the visitor's growing interests outscore it. The receipt shows every seed that fired and what it added.</p>
-</section>
-<section class="sec" aria-labelledby="b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">
-<h2 id="b5-learning-waits-for-the-dial-and-the-receipt-shows-everything">B.5 Learning waits for the dial, and the receipt shows everything</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a> and <a href="#a4-customers-choose-it-for-ten-reasons-and-each-weighs-them-differently">A.4</a>; the walk: <a href="#b1-one-visitor-walked-through-end-to-end">B.1</a></p>
-<p>With the visitor's consent, the engine records every decision it serves and every outcome that follows. An outcome is credited to the last decision before it for the same visitor, session and piece, within windows the brand sets (by default 30 minutes for a click, 6 hours for an add to cart and 7 days for a purchase), and a purchase can credit a piece that featured one of its products.</p>
-<p>Learning counts, per piece and per context, how much better the piece does than its slot's usual rate, pooling similar contexts when one is thin:</p>
-<pre><code>p̂ = (s + n0 · p0) / (n + n0)       n0 = 30
-lift = clamp(p̂ / p0, 0.5, 2)
-score_final = score · lift^γ        0 ≤ γ ≤ 1, set per slot</code></pre>
-<p>It records what works from the first day and changes nothing until the brand turns the dial. While γ is 0, every receipt still shows the lift learning would apply. Each slot learns toward the outcome the brand names: clicks, adds to cart, purchases, revenue or margin. A new piece starts from its slot's usual rate or from the pieces most like it, a share of views the brand sets goes to less-tried pieces, and neighboring modules sometimes swap places so learning can tell position from appeal. A holdout keeps a stable share of visitors, assigned before their first recorded decision, on the brand's own page or on personalization without learning, and the brand's analysts measure lift against it on their own numbers.</p>
-<p class="lead-in"><strong>The receipt.</strong> Every answer carries the reasons that placed each piece, and every served decision has a receipt:</p>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Part</th><th scope="col">What it holds</th></tr></thead><tbody><tr><td data-label="Part">Where it was served</td><td data-label="What it holds">The page, slot and position, and the piece's ids</td></tr><tr><td data-label="Part">Candidates</td><td data-label="What it holds">The top ten, with their scores</td></tr><tr><td data-label="Part">Context</td><td data-label="What it holds">Arrival channel, visit band, region, leading interest and journey stage</td></tr><tr><td data-label="Part">Authority</td><td data-label="What it holds">Who decided: the engine, a pin or the default</td></tr><tr><td data-label="Part">Explain</td><td data-label="What it holds">The drivers, the base score, the regional block with λ, every seed, every multiplier, the lift and the final score</td></tr><tr><td data-label="Part">Versions</td><td data-label="What it holds">The revision of every published document in force</td></tr><tr><td data-label="Part">Replay inputs</td><td data-label="What it holds">The visitor's interests as scored and the region's shares, so the decision replays exactly for its slot</td></tr></tbody></table></div>
-<p>A release is recorded like an entry, and a person can recompute any score from the receipt by hand.</p>
-</section>
-<section class="sec" aria-labelledby="b6-it-runs-on-cloudflares-network-in-the-data-center-nearest-the-visitor">
-<h2 id="b6-it-runs-on-cloudflares-network-in-the-data-center-nearest-the-visitor">B.6 It runs on Cloudflare's network, in the data center nearest the visitor</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a> and <a href="#a4-customers-choose-it-for-ten-reasons-and-each-weighs-them-differently">A.4</a></p>
-<p>The engine is one Worker per deployment: a program on Cloudflare's network that runs in the data center nearest each request. Each customer has its own deployment for staging and for production, with its own storage of every kind, and each brand inside it is a tenant whose data sits under its own prefix; nothing pools across brands. A decision is arithmetic over the visitor's state and the brand's published settings, held at the edge, with no AI model and no round trip to a central database. We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.</p>
-<p>The first figure follows one event to one decision, step by step.</p>
-<figure class="figure" data-figure="decision-path">
+<section class="sec se-sec" aria-labelledby="one-visitors-first-click-becomes-the-slots-answer-in-five-steps">
+<h2 id="one-visitors-first-click-becomes-the-slots-answer-in-five-steps">One visitor’s first click becomes the slot’s answer in five steps</h2>
+<p class="se-lead">A stranger in Illinois arrives from a paid-social ad for a wool coat and views a tailored wool coat. The figure follows that one view to the edit, a four-piece slot on the homepage; the lines under it give this visitor’s numbers.</p>
+<figure class="figure se-figure" data-figure="se-signal-chain" data-visual="figure">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600" role="img" aria-labelledby="sesc-t sesc-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="sesc-t">One click, from the event to the slot's answer</title>
+  <desc id="sesc-d">Five boxes, left to right. An event: the visitor views a tailored wool coat, and the event carries three attributes, coats, tailored and premium. Dimension values: the registry places them on category, style and price band, and each touch adds the view's weight, 1, to that value's raw score R. The visitor's vector: each value reads 0.357, because interest a is R over R plus K, and K is 1.8, so one view reads 1 over 2.8. A score for each piece: the tailored coats, tagged coats and tailored, score the slot's weight omega times the visitor's interest a-tilde, blended with the region, added up over their tags, the same sum for every piece that may show. The slot's answer: place 1 is the pinned winter campaign; then the tailored coats at 0.374, up a place, the casual coats at 0.357 and the tailored boots at 0.201. Pins come first; then the slot sorts, applies its cap and takes four.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5: the five-box chain of the Vantage explainer,
+       redrawn for the engine's defaults on the package's example brand. Facts: the Vantage facts sheet (FACTS.md) sections 1 to 3;
+       research/S2-engine-facts.md 3.3, 3.4, 3.6, 3.10 to 3.12. K is 1.8, a view weighs 1, the blend constant is 1. The slot
+       weights (category 0.3, style 0.2), the region's shares and the seed are the example's own, as the page says. -->
+  <defs>
+    <marker id="sesc-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="600" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">One click, from the event to the slot's answer</text>
+  <text x="20" y="82" font-size="20" fill="#197050">One view of a tailored wool coat, worked at the engine's defaults.</text>
+
+  <!-- arrows between the boxes -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sesc-head)">
+    <line x1="216" y1="344" x2="224" y2="344"/>
+    <line x1="432" y1="344" x2="440" y2="344"/>
+    <line x1="648" y1="344" x2="656" y2="344"/>
+    <line x1="864" y1="344" x2="872" y2="344"/>
+  </g>
+
+  <!-- An event (S2 3.3: the event's attributes; FACTS 1: one view, several dimensions) -->
+  <g data-box="event">
+    <rect x="20" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="20" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="34" y="152" font-size="21" font-weight="700">An event</text>
+    <text x="34" y="214" font-size="20">The visitor views</text>
+    <text x="34" y="239" font-size="20">a tailored wool</text>
+    <text x="34" y="264" font-size="20">coat; the event</text>
+    <text x="34" y="289" font-size="20">carries three</text>
+    <text x="34" y="314" font-size="20">attributes:</text>
+    <g data-box="event-coats">
+      <rect x="34" y="330" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="353" font-size="19" font-weight="500">coats</text>
+    </g>
+    <g data-box="event-tailored">
+      <rect x="34" y="372" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="395" font-size="19" font-weight="500">tailored</text>
+    </g>
+    <g data-box="event-premium">
+      <rect x="34" y="414" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="437" font-size="19" font-weight="500">premium</text>
+    </g>
+    <text x="34" y="510" font-size="18" fill="#197050">One event touches</text>
+    <text x="34" y="532" font-size="18" fill="#197050">every attribute</text>
+    <text x="34" y="554" font-size="18" fill="#197050">the registry reads.</text>
+  </g>
+
+  <!-- Dimension values (S2 3.3 item 6; 3.4: an event adds the action's weight) -->
+  <g data-box="values">
+    <rect x="236" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="236" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="139" font-size="21" font-weight="700">Dimension</text>
+    <text x="250" y="165" font-size="21" font-weight="700">values</text>
+    <text x="250" y="214" font-size="18" fill="#197050">category</text>
+    <text x="250" y="240" font-size="20" font-weight="700">coats</text>
+    <text x="418" y="240" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="284" font-size="18" fill="#197050">style</text>
+    <text x="250" y="310" font-size="20" font-weight="700">tailored</text>
+    <text x="418" y="310" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="354" font-size="18" fill="#197050">price band</text>
+    <text x="250" y="380" font-size="20" font-weight="700">premium</text>
+    <text x="418" y="380" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="488" font-size="18" fill="#197050">Each touch adds</text>
+    <text x="250" y="510" font-size="18" fill="#197050">the view's weight,</text>
+    <text x="250" y="532" font-size="18" fill="#197050">1, to the value's</text>
+    <text x="250" y="554" font-size="18" fill="#197050">raw score R.</text>
+  </g>
+
+  <!-- The visitor's vector (S2 3.4: a = R / (R + K), K 1.8; one view, a = 0.357) -->
+  <g data-box="vector">
+    <rect x="452" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="452" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="139" font-size="21" font-weight="700">The visitor's</text>
+    <text x="466" y="165" font-size="21" font-weight="700">vector</text>
+    <text x="466" y="214" font-size="19">coats</text>
+    <text x="634" y="214" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="224" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="224" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="268" font-size="19">tailored</text>
+    <text x="634" y="268" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="278" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="278" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="322" font-size="19">premium</text>
+    <text x="634" y="322" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="332" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="332" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="392" font-size="20" font-weight="700" fill="#197050">a = R / (R + K)</text>
+    <text x="466" y="422" font-size="18">K is 1.8, so one</text>
+    <text x="466" y="444" font-size="18">view reads 1 / 2.8.</text>
+    <text x="466" y="510" font-size="18" fill="#197050">One graded interest</text>
+    <text x="466" y="532" font-size="18" fill="#197050">per value, draining</text>
+    <text x="466" y="554" font-size="18" fill="#197050">on its own memory.</text>
+  </g>
+
+  <!-- A score for each piece (S2 3.11: the sum of the slot's weight times the blended interest over the piece's tags) -->
+  <g data-box="score">
+    <rect x="668" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="668" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="139" font-size="21" font-weight="700">A score for</text>
+    <text x="682" y="165" font-size="21" font-weight="700">each piece</text>
+    <g data-box="score-piece">
+      <rect x="682" y="194" width="168" height="94" rx="10" fill="#FFFFFF" stroke="#197050" stroke-width="2"/>
+      <text x="696" y="222" font-size="18" font-weight="700">Tailored coats</text>
+      <text x="696" y="248" font-size="18">tags: coats,</text>
+      <text x="696" y="272" font-size="18">tailored</text>
+    </g>
+    <text x="682" y="330" font-size="20" font-weight="700" fill="#197050">score = Σ ω × ã</text>
+    <text x="682" y="368" font-size="18"><tspan font-weight="700" fill="#197050">ω</tspan> the slot's</text>
+    <text x="682" y="390" font-size="18">weight for the</text>
+    <text x="682" y="412" font-size="18">dimension</text>
+    <text x="682" y="444" font-size="18"><tspan font-weight="700" fill="#197050">ã</tspan> the visitor's</text>
+    <text x="682" y="466" font-size="18">interest, blended</text>
+    <text x="682" y="488" font-size="18">with the region</text>
+    <text x="682" y="532" font-size="18" fill="#197050">The same sum for</text>
+    <text x="682" y="554" font-size="18" fill="#197050">every piece.</text>
+  </g>
+
+  <!-- The slot's answer (S2 3.10 pins; 3.12 sort, cap, take). Scores after the first click, computed at the defaults. -->
+  <g data-box="answer">
+    <rect x="884" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="884" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="139" font-size="21" font-weight="700">The slot's</text>
+    <text x="898" y="165" font-size="21" font-weight="700">answer</text>
+    <circle cx="908" cy="208" r="12" fill="#ABFF44" stroke="#08251A" stroke-width="1.5"/>
+    <text x="908" y="214" font-size="17" font-weight="700" text-anchor="middle">1</text>
+    <text x="928" y="214" font-size="18" font-weight="700">Winter</text>
+    <text x="928" y="236" font-size="18" font-weight="700">campaign</text>
+    <text x="928" y="258" font-size="17" fill="#197050">pinned</text>
+    <circle cx="908" cy="296" r="12" fill="#08251A"/>
+    <text x="908" y="302" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+    <text x="928" y="302" font-size="18" font-weight="700">Tailored coats</text>
+    <text x="928" y="324" font-size="17" fill="#197050">0.374, up a place</text>
+    <circle cx="908" cy="362" r="12" fill="#08251A"/>
+    <text x="908" y="368" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+    <text x="928" y="368" font-size="18" font-weight="700">Casual coats</text>
+    <text x="928" y="390" font-size="17" fill="#197050">0.357</text>
+    <circle cx="908" cy="428" r="12" fill="#08251A"/>
+    <text x="908" y="434" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">4</text>
+    <text x="928" y="434" font-size="18" font-weight="700">Tailored boots</text>
+    <text x="928" y="456" font-size="17" fill="#197050">0.201</text>
+    <text x="898" y="510" font-size="18" fill="#197050">Pins first; then</text>
+    <text x="898" y="532" font-size="18" fill="#197050">the slot sorts, caps</text>
+    <text x="898" y="554" font-size="18" fill="#197050">and takes four.</text>
+  </g>
+</svg></div>
+<figcaption>One click, from the event to the slot’s answer</figcaption>
+</figure>
+<ol class="se-steps"><li><strong>An event.</strong> The visitor views a tailored wool coat, and the event carries the product id and the attributes the registry reads: coats, tailored and premium.</li><li><strong>Dimension values.</strong> The registry turns the one view into three touches, on category, style and price band, and each adds the view’s weight, 1, to that value’s raw score R.</li><li><strong>The visitor’s vector.</strong> Each value now reads 1/(1 + 1.8) = 0.357; the three sum to 1.07, so λ, the region’s share of the blend, falls from 1 to 0.48.</li><li><strong>A score for each piece.</strong> Each piece in the edit that may show scores the slot’s weight times the visitor’s blended interest for each of its tags, added up, plus the ad’s seed of 0.06 on pieces tagged coats.</li><li><strong>The slot’s answer.</strong> The pinned winter campaign keeps place 1; the tailored coats, at 0.374, now pass the casual coats, at 0.357, which led on arrival.</li></ol>
+<p>The same arithmetic orders a page’s modules. On the coat’s page, the styling story rises for a visitor leaning tailored, and the recommendations carousel is one of the six modules the engine orders, still choosing its own products.</p>
+<p>An ordering is a ranking, so six modules in ten arrival contexts are sixty numbers to learn, not 720 orders to test. A merchandiser sets each arrival context’s starting order, and the layout’s rules say which sections are fixed, movable or required.</p>
+<p class="se-lead">Every decision runs the same ten steps, from identity and consent to outcomes and the dial; under each step is what governs it.</p>
+<figure class="figure se-figure" data-figure="decision-path" data-visual="figure">
 <p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
 <div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="880" viewBox="0 0 1100 880" role="img" aria-labelledby="path-t path-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
   <title id="path-t">From an event to a decision</title>
@@ -334,8 +534,181 @@ score_final = score · lift^γ        0 ≤ γ ≤ 1, set per slot</code></pre>
 </svg></div>
 <figcaption>From an event to a decision</figcaption>
 </figure>
-<p>The second shows what runs where.</p>
-<figure class="figure" data-figure="architecture">
+</section>
+<section class="sec se-sec" aria-labelledby="six-quantities-carry-the-mechanism-and-each-one-can-be-worked-by-hand">
+<h2 id="six-quantities-carry-the-mechanism-and-each-one-can-be-worked-by-hand">Six quantities carry the mechanism, and each one can be worked by hand</h2>
+<p class="se-lead">Each card is one quantity: its formula, a drawing, one moment of the same visitor worked by hand, and what it means. The engine’s defaults are K = 1.8, an entry line at 0.60, an exit line at 0.45, a memory τ of 14 days and a blend constant k of 1; the example brand weighs a view 1, as the engine’s own table does, and its slot weights and its region’s shares are invented for this page.</p>
+<div class="se-instruments" data-visual="instrument cards" data-shot="se-instruments">
+<p class="se-shot-cap">Six instruments, each worked at the engine’s defaults.</p>
+<ol class="se-grid">
+<li class="se-card" id="interest">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-2 12H6z"/><path d="M6.6 14h10.8"/><path d="M8 8a4 4 0 0 1 8 0"/></svg><span>Interest</span></h3>
+<p class="se-formula"><code>a = R / (R + K)</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 196" role="img" aria-label="A curve of interest against the raw score R: it passes 0.5 where R equals K, 1.8, and approaches 1 without reaching it. Dots mark one, two and three views at 0.357, 0.526 and 0.625." focusable="false"><line x1="44" y1="18" x2="368" y2="18" class="d-guide" stroke-dasharray="2 5"/><line x1="44" y1="162" x2="368" y2="162" class="d-axis"/><line x1="44" y1="12" x2="44" y2="162" class="d-axis"/><line x1="44" y1="90" x2="127.3" y2="90" class="d-guide" stroke-dasharray="5 4"/><line x1="127.3" y1="162" x2="127.3" y2="170" class="d-axis"/><polyline points="44,162 48.6,154.4 53.3,147.6 57.9,141.4 62.5,135.8 67.1,130.7 71.8,126 76.4,121.7 81,117.7 85.7,114 90.3,110.6 94.9,107.4 99.5,104.4 104.2,101.6 108.8,99 113.4,96.5 118.1,94.2 122.7,92.1 127.3,90 131.9,88.1 136.6,86.2 141.2,84.5 145.8,82.8 150.5,81.2 155.1,79.7 159.7,78.3 164.3,76.9 169,75.6 173.6,74.3 178.2,73.1 182.9,72 187.5,70.9 192.1,69.8 196.7,68.8 201.4,67.8 206,66.9 210.6,66 215.3,65.1 219.9,64.3 224.5,63.5 229.1,62.7 233.8,61.9 238.4,61.2 243,60.5 247.7,59.8 252.3,59.1 256.9,58.5 261.5,57.9 266.2,57.3 270.8,56.7 275.4,56.1 280.1,55.6 284.7,55 289.3,54.5 293.9,54 298.6,53.5 303.2,53 307.8,52.6 312.5,52.1 317.1,51.7 321.7,51.2 326.3,50.8 331,50.4 335.6,50 340.2,49.6 344.9,49.2 349.5,48.9 354.1,48.5 358.7,48.1 363.4,47.8 368,47.5" class="d-curve"/><circle cx="90.3" cy="110.6" r="5.5" class="d-dot"/><circle cx="136.6" cy="86.2" r="5.5" class="d-dot"/><circle cx="182.9" cy="72" r="5.5" class="d-dot"/><text x="98.3" y="130.6" class="d-t d-strong">0.357</text><text x="144.6" y="106.2" class="d-t d-strong">0.526</text><text x="190.9" y="92" class="d-t d-strong">0.625</text><text x="36" y="23" class="d-t d-muted" text-anchor="end">1</text><text x="36" y="95" class="d-t d-muted" text-anchor="end">0.5</text><text x="36" y="167" class="d-t d-muted" text-anchor="end">0</text><text x="127.3" y="190" class="d-t d-strong" text-anchor="middle">K = 1.8</text><text x="374" y="167" class="d-t d-muted">R</text><text x="368" y="40" class="d-t d-muted" text-anchor="end">never reaches 1</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>The visitor views three tailored coats, each view weighted 1: coats reads 1/2.8 = 0.357 after the first, 2/3.8 = 0.526 after the second and 3/4.8 = 0.625 after the third.</p><p class="se-note">An impression weighs nothing: seeing is not choosing.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>Interest is graded and never reaches 1, so every click counts and the tenth counts for less than the first.</p></div>
+</li>
+<li class="se-card" id="decay">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/></svg><span>Decay</span></h3>
+<p class="se-formula"><code>R(t) = R · e^(−Δt/τ)</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 150" role="img" aria-label="A bar of raw score that stood at 3 when the visitor left and has drained to 1.27 after twelve quiet days; interest reads 0.41, down from 0.625." focusable="false"><text x="24" y="40" class="d-t d-strong">R = 1.27 after 12 quiet days</text><rect x="151.3" y="54" width="172.7" height="36" rx="6" class="d-drained" stroke-dasharray="6 4"/><rect x="24" y="54" width="127.3" height="36" rx="6" class="d-fill"/><text x="36" y="78" class="d-t d-on-fill">a = 0.41</text><text x="314" y="78" class="d-t d-muted" text-anchor="end">a = 0.625</text><line x1="324" y1="98" x2="324" y2="108" class="d-axis"/><text x="324" y="130" class="d-t d-muted" text-anchor="end">R = 3 when the visitor left</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>Coats stands at R = 3 when the visitor leaves. After 12 quiet days at τ = 14 days, R = 3 × e^(−12/14) = 1.27, so coats reads 1.27/(1.27 + 1.8) = 0.41.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>Interest drains on its own, its evidence halving about every 9.7 days at the default memory, so nobody writes an expiration rule.</p></div>
+</li>
+<li class="se-card" id="entry-and-release">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18"/><path d="M3 16h18" stroke-dasharray="2 3"/><path d="M8 20V4"/></svg><span>Entry and release</span></h3>
+<p class="se-formula"><code>join at a ≥ 0.60; leave only at a &lt; 0.45</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 196" role="img" aria-label="Interest over time: three views climb past the entry line at 0.60 to 0.625, and the visitor joins; left alone, interest drains through the band and falls below the exit line at 0.45 on day 9.96, and the visitor is released." focusable="false"><rect x="40" y="55" width="260" height="55.5" class="d-band"/><line x1="40" y1="55" x2="300" y2="55" class="d-entry"/><line x1="40" y1="110.5" x2="300" y2="110.5" class="d-exit" stroke-dasharray="6 4"/><line x1="40" y1="166" x2="300" y2="166" class="d-axis"/><polyline points="40,144.9 58,144.9 58,82.3 76,82.3 76,45.7 80,47.3 84,48.9 88,50.4 92,52 96,53.6 100,55.2 104,56.7 108,58.3 112,59.9 116,61.5 120,63.2 124,64.8 128,66.4 132,68 136,69.6 140,71.3 144,72.9 148,74.5 152,76.2 156,77.8 160,79.5 164,81.1 168,82.7 172,84.4 176,86 180,87.7 184,89.3 188,91 192,92.7 196,94.3 200,96 204,97.6 208,99.3 212,100.9 216,102.5 220,104.2 224,105.8 228,107.5 232,109.1 236,110.8 240,112.4 244,114 248,115.6 252,117.3 256,118.9 260,120.5 264,122.1 268,123.7 272,125.3 276,126.9 280,128.5 284,130.1 288,131.7 292,133.2 296,134.8 300,136.4" class="d-curve"/><circle cx="76" cy="45.7" r="5.5" class="d-dot"/><circle cx="235.4" cy="110.5" r="5.5" class="d-dot"/><text x="86" y="37.7" class="d-t d-strong">joins at 0.625</text><text x="225.4" y="134.5" class="d-t d-strong" text-anchor="end">released on day 9.96</text><text x="308" y="60" class="d-t d-muted">entry 0.60</text><text x="308" y="115.5" class="d-t d-muted">exit 0.45</text><text x="76" y="190" class="d-t d-muted" text-anchor="middle">day 0</text><text x="300" y="190" class="d-t d-muted" text-anchor="end">day 14</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>At 0.625 the visitor joins the coats audience, since a ≥ 0.60 means R ≥ 2.7. Left alone, coats falls below 0.45, where R &lt; 1.4727, after 14 × ln(3/1.4727) = 9.96 days, and the visitor is released.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>The gap stops a visitor flickering in and out; time alone can release a visitor but never admit one, and the release is on the receipt like the entry.</p></div>
+</li>
+<li class="se-card" id="a-pieces-score">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M11 4v16"/></svg><span>A piece’s score</span></h3>
+<p class="se-formula"><code>score = Σ ω × ã, over the piece's tags</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 232" role="img" aria-label="The hero's coat story scored as a grid: coats, region share 1, slot weight 0.3, gives 0.30; tailored, share 0.8, weight 0.2, gives 0.16; the sum is 0.46, the seed adds 0.06, the promotion multiplies by 1.1, and the score is 0.572." focusable="false"><text x="20" y="26" class="d-t d-muted">tag</text><text x="176" y="26" class="d-t d-muted">ã</text><text x="252" y="26" class="d-t d-muted">ω</text><text x="380" y="26" class="d-t d-muted" text-anchor="end">ã × ω</text><rect x="10" y="38" width="380" height="30" rx="6" class="d-cell"/><rect x="10" y="74" width="380" height="30" rx="6" class="d-cell"/><text x="20" y="59" class="d-t">coats</text><text x="176" y="59" class="d-t">1</text><text x="252" y="59" class="d-t">0.3</text><text x="380" y="59" class="d-t" text-anchor="end">0.30</text><text x="20" y="95" class="d-t">tailored</text><text x="176" y="95" class="d-t">0.8</text><text x="252" y="95" class="d-t">0.2</text><text x="380" y="95" class="d-t" text-anchor="end">0.16</text><line x1="10" y1="116" x2="390" y2="116" class="d-axis"/><text x="20" y="140" class="d-t">sum</text><text x="380" y="140" class="d-t" text-anchor="end">0.46</text><text x="20" y="166" class="d-t">seed, 0.2 × 0.3</text><text x="380" y="166" class="d-t" text-anchor="end">+ 0.06</text><text x="20" y="192" class="d-t">promotion, 1 + 0.1 × 1</text><text x="380" y="192" class="d-t" text-anchor="end">× 1.1</text><line x1="10" y1="202" x2="390" y2="202" class="d-rule"/><text x="20" y="220" class="d-t d-strong">score</text><text x="380" y="220" class="d-t d-strong" text-anchor="end">0.572</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>On arrival each ã is the region’s share. The hero’s coat story scores coats 1 × 0.3 + tailored 0.8 × 0.2 = 0.46; the ad’s seed adds 0.2 × 0.3 = 0.06, making 0.52; its promotion, at the slot’s weight of 0.1, multiplies by 1 + 0.1 × 1 = 1.1, making 0.572.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>A tag scores only where the visitor has interest in its value and the slot weighs its dimension; the seed stays 0.06 while the visitor’s own interests outscore it.</p></div>
+<p class="se-order-lead">Every score follows one order:</p>
+<ol class="se-order"><li>Gates and exclusions remove what may not show.</li><li>Pins take their places and are never scored.</li><li>The sum above.</li><li>Completing the product in view adds the slot’s weight.</li><li>Arrival seeds add weight × dampen × ω when the channel, the link’s campaign term, the referring network or the phone’s operating system family matches, so an email, an ad, a social post or a partner’s quiz link shapes the first page.</li><li>Journey stage adds a bonus inside a piece’s fit and applies a factor outside it.</li><li>Freshness adds a boost that halves over a period the brand sets; fatigue subtracts for pieces served often, never below zero.</li><li>Merchandising multiplies, held between half and double by default.</li><li>Learning multiplies by lift^γ.</li></ol>
+</li>
+<li class="se-card" id="the-regional-prior">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span>The regional prior</span></h3>
+<p class="se-formula"><code>λ = k / (k + Σa)</code></p>
+<p class="se-formula"><code>ã = (1 − λ) · a + λ · share</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 174" role="img" aria-label="Three bars, each the blend of the region's share and the visitor's own interest: a stranger, at a sum of 0, is all region, lambda 1; after one view, at 1.07, lambda is 0.48; after three views, at 2.13, lambda is 0.32." focusable="false"><rect x="104" y="14" width="284" height="34" rx="5" class="d-region"/><text x="8" y="29" class="d-t d-strong">Σa = 0</text><text x="8" y="46" class="d-t d-muted">a stranger</text><text x="114" y="37" class="d-t">region, λ = 1</text><rect x="104" y="70" width="137.1" height="34" rx="5" class="d-region"/><rect x="241.1" y="70" width="146.9" height="34" rx="5" class="d-fill"/><text x="8" y="85" class="d-t d-strong">Σa = 1.07</text><text x="8" y="102" class="d-t d-muted">one view</text><text x="114" y="93" class="d-t">λ = 0.48</text><text x="378" y="93" class="d-t d-on-fill" text-anchor="end">1 − λ = 0.52</text><rect x="104" y="126" width="90.6" height="34" rx="5" class="d-region"/><rect x="194.6" y="126" width="193.4" height="34" rx="5" class="d-fill"/><text x="8" y="141" class="d-t d-strong">Σa = 2.13</text><text x="8" y="158" class="d-t d-muted">three views</text><text x="114" y="149" class="d-t">λ = 0.32</text><text x="378" y="149" class="d-t d-on-fill" text-anchor="end">1 − λ = 0.68</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>A stranger has Σa = 0, so λ = 1 and each ã is the region’s share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>The region speaks for a stranger and steps back as the visitor’s own interests grow; its counts carry no visitor ids, and a thin region falls back to its country, then everyone.</p></div>
+</li>
+<li class="se-card" id="the-diversity-cap-and-the-pin">
+<h3 class="se-card-title"><svg class="se-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v7"/></svg><span>The diversity cap and the pin</span></h3>
+<p class="se-formula"><code>place 1: the pin, never scored</code></p>
+<p class="se-formula"><code>then ranked, at most two per category</code></p>
+<div class="se-draw"><svg viewBox="0 0 400 252" role="img" aria-label="A page skeleton of the edit, four places: place 1 is the winter campaign, pinned, where ranking never runs; then the casual coats at 0.56, the tailored coats at 0.52 and the tailored boots at 0.34. Beside it, the coat care guide at 0.36 gives way, because it would be a third coat over the cap of two." focusable="false"><rect x="10" y="6" width="248" height="240" rx="12" class="d-page"/><rect x="24" y="18" width="220" height="12" rx="4" class="d-cell"/><text x="24" y="46" class="d-t d-muted">the edit</text><rect x="24" y="52" width="220" height="34" rx="6" class="d-pin"/><text x="36" y="74" class="d-t d-on-pin">1  Winter campaign</text><path d="M226 61 h8 l-1.5 7 4 4 h-13 l4 -4 z M230 72 v7" class="d-pin-icon"/><rect x="24" y="94" width="220" height="34" rx="6" class="d-place"/><text x="36" y="116" class="d-t">2  Casual coats</text><text x="234" y="116" class="d-t d-strong" text-anchor="end">0.56</text><rect x="24" y="136" width="220" height="34" rx="6" class="d-place"/><text x="36" y="158" class="d-t">3  Tailored coats</text><text x="234" y="158" class="d-t d-strong" text-anchor="end">0.52</text><rect x="24" y="178" width="220" height="34" rx="6" class="d-place"/><text x="36" y="200" class="d-t">4  Tailored boots</text><text x="234" y="200" class="d-t d-strong" text-anchor="end">0.34</text><text x="268" y="68" class="d-t d-muted">pinned: ranking</text><text x="268" y="86" class="d-t d-muted">never runs</text><rect x="266" y="112" width="126" height="74" rx="6" class="d-yield" stroke-dasharray="5 4"/><text x="276" y="134" class="d-t">Coat care</text><text x="276" y="154" class="d-t">guide, 0.36</text><text x="276" y="175" class="d-t d-muted">a third coat</text><text x="268" y="206" class="d-t d-muted">gives way: at</text><text x="268" y="224" class="d-t d-muted">most two per</text><text x="268" y="242" class="d-t d-muted">category</text></svg></div>
+<div class="se-worked"><p class="se-part" data-chrome="card part">Worked example</p><p>The edit weighs category 0.3 and style 0.2, carries the ad’s seed and allows two pieces per category. On arrival, place 1 is the winter campaign the brand sold, served at a score of 0 because ranking never runs for it. Ranked, the casual coats score 0.56 and the tailored coats 0.52; the coat care guide, at 0.36, would be a third coat, so the tailored boots, at 0.34, take place 4.</p></div>
+<div class="se-means"><p class="se-part" data-chrome="card part">What it means</p><p>The brand’s rules come first: a pin holds the place a merchandiser sold, a pinned piece that may not show is simply not shown, and the cap keeps one value from filling a slot.</p></div>
+</li>
+</ol>
+</div>
+</section>
+<section class="sec se-sec" aria-labelledby="learning-waits-behind-the-dial-and-every-decision-keeps-a-receipt">
+<h2 id="learning-waits-behind-the-dial-and-every-decision-keeps-a-receipt">Learning waits behind the dial, and every decision keeps a receipt</h2>
+<div class="se-sentence"><svg class="se-icon se-icon-lg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17H6.5"/><circle cx="12" cy="17" r="1"/></svg><p>It records what works from the first day and changes nothing until the brand turns the dial.</p></div>
+<p class="se-lead">The figure shows the learning dial, the holdout that keeps a comparison, and the receipt for the tailored coats after the first click.</p>
+<figure class="figure se-figure" data-figure="se-learning-and-receipt" data-visual="figure">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="660" viewBox="0 0 1100 660" role="img" aria-labelledby="selr-t selr-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="selr-t">Learning behind the dial, and the receipt</title>
+  <desc id="selr-d">Three panels. The learning dial: a dial from 0 to 1, its needle at 0. A score is multiplied by lift to the power gamma; gamma starts at 0, so lift to the power gamma is 1, and what is learned is recorded and changes nothing. Lift is p-hat over p0, held between half and double, where p-hat is s plus 30 times p0, over n plus 30; a piece never shown in a context has n and s at 0, so p-hat is p0 and its lift is 1. The holdout: a grid of one hundred dots, each a visitor, five of them hollow. A stable share of the visitors who consent is held out, 5 percent by default, on the brand's own page or on personalization without learning, and the brand compares the groups on its own numbers. A receipt for the tailored coats, place 2 in the edit, decided by the engine: coats 0.667 times 0.3 is 0.200, tailored 0.571 times 0.2 is 0.114, the seed for the campaign term wool-coat adds 0.060, and lift at gamma 0 multiplies by 1, for a score of 0.374; the regional prior's lambda is 0.483; the context is paid social, a first visit, the region US-IL and the journey stage exploring; the revisions of every published document in force are named; the top ten candidates and the vector as scored are kept too.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 3. Facts: the Vantage facts sheet
+       (FACTS.md) section 5 (the estimate, the clamp, the dial, the holdout arms) and section 9 (the receipt's fields);
+       research/S2-engine-facts.md 3.13 to 3.15, 3.17 (n0 30, lift 0.5 to 2, the dial 0, a 5 percent holdout in the compiled
+       learn settings) and 5.2 to 5.3. The receipt is the worked example's, after the first click, computed at the defaults.
+       The learning sentence of docs/enablement/LANE-BRIEF-V2.md section 3 stands verbatim on the page, just above this figure. -->
+  <rect x="0" y="0" width="1100" height="660" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">Learning behind the dial, and the receipt</text>
+  <text x="20" y="82" font-size="20" fill="#197050">The dial holds back what is learned, the holdout keeps a comparison, and the receipt keeps the arithmetic.</text>
+
+  <!-- The learning dial (S2 3.11 step 7; 3.13; 5.2) -->
+  <g data-box="dial">
+    <rect x="20" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="20" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="142" font-size="21" font-weight="700">The learning dial</text>
+    <path d="M100,300 A90,90 0 0 1 280,300" fill="none" stroke="#E4F0DA" stroke-width="22" stroke-linecap="round"/>
+    <line x1="190" y1="300" x2="112" y2="300" stroke="#08251A" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="190" cy="300" r="9" fill="#08251A"/>
+    <text x="190" y="270" font-size="26" font-weight="700" text-anchor="middle">γ = 0</text>
+    <text x="100" y="340" font-size="18" text-anchor="middle">0</text>
+    <text x="280" y="340" font-size="18" text-anchor="middle">1</text>
+    <text x="190" y="190" font-size="18" text-anchor="middle">0.5</text>
+    <text x="36" y="382" font-size="20" font-weight="700" fill="#197050">score × lift^γ</text>
+    <text x="36" y="412" font-size="18">γ starts at 0, so lift^γ = 1:</text>
+    <text x="36" y="434" font-size="18">what is learned is recorded</text>
+    <text x="36" y="456" font-size="18">and changes nothing.</text>
+    <text x="36" y="494" font-size="18">lift = p̂ / p0, held between</text>
+    <text x="36" y="516" font-size="18">half and double</text>
+    <text x="36" y="548" font-size="18">p̂ = (s + 30 · p0) / (n + 30)</text>
+    <text x="36" y="586" font-size="18" fill="#197050">Never shown: n = s = 0,</text>
+    <text x="36" y="608" font-size="18" fill="#197050">so p̂ = p0 and lift = 1.</text>
+  </g>
+
+  <!-- The holdout (S2 3.17: 5 percent to the default arm in the compiled learn settings; 5.3: stable, consenting visitors only) -->
+  <g data-box="holdout">
+    <rect x="380" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M380,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="380" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="396" y="142" font-size="21" font-weight="700">The holdout</text>
+    <g fill="#197050">
+      <circle cx="442" cy="196" r="8"/><circle cx="466" cy="196" r="8"/><circle cx="490" cy="196" r="8"/><circle cx="514" cy="196" r="8"/><circle cx="538" cy="196" r="8"/><circle cx="562" cy="196" r="8"/><circle cx="610" cy="196" r="8"/><circle cx="634" cy="196" r="8"/><circle cx="658" cy="196" r="8"/>
+      <circle cx="442" cy="220" r="8"/><circle cx="466" cy="220" r="8"/><circle cx="490" cy="220" r="8"/><circle cx="514" cy="220" r="8"/><circle cx="538" cy="220" r="8"/><circle cx="562" cy="220" r="8"/><circle cx="586" cy="220" r="8"/><circle cx="610" cy="220" r="8"/><circle cx="634" cy="220" r="8"/><circle cx="658" cy="220" r="8"/>
+      <circle cx="442" cy="244" r="8"/><circle cx="490" cy="244" r="8"/><circle cx="514" cy="244" r="8"/><circle cx="538" cy="244" r="8"/><circle cx="562" cy="244" r="8"/><circle cx="586" cy="244" r="8"/><circle cx="610" cy="244" r="8"/><circle cx="634" cy="244" r="8"/><circle cx="658" cy="244" r="8"/>
+      <circle cx="442" cy="268" r="8"/><circle cx="466" cy="268" r="8"/><circle cx="490" cy="268" r="8"/><circle cx="514" cy="268" r="8"/><circle cx="538" cy="268" r="8"/><circle cx="562" cy="268" r="8"/><circle cx="586" cy="268" r="8"/><circle cx="610" cy="268" r="8"/><circle cx="634" cy="268" r="8"/><circle cx="658" cy="268" r="8"/>
+      <circle cx="442" cy="292" r="8"/><circle cx="466" cy="292" r="8"/><circle cx="490" cy="292" r="8"/><circle cx="514" cy="292" r="8"/><circle cx="538" cy="292" r="8"/><circle cx="562" cy="292" r="8"/><circle cx="586" cy="292" r="8"/><circle cx="610" cy="292" r="8"/><circle cx="658" cy="292" r="8"/>
+      <circle cx="442" cy="316" r="8"/><circle cx="466" cy="316" r="8"/><circle cx="490" cy="316" r="8"/><circle cx="514" cy="316" r="8"/><circle cx="538" cy="316" r="8"/><circle cx="562" cy="316" r="8"/><circle cx="586" cy="316" r="8"/><circle cx="610" cy="316" r="8"/><circle cx="634" cy="316" r="8"/><circle cx="658" cy="316" r="8"/>
+      <circle cx="442" cy="340" r="8"/><circle cx="466" cy="340" r="8"/><circle cx="490" cy="340" r="8"/><circle cx="538" cy="340" r="8"/><circle cx="562" cy="340" r="8"/><circle cx="586" cy="340" r="8"/><circle cx="610" cy="340" r="8"/><circle cx="634" cy="340" r="8"/><circle cx="658" cy="340" r="8"/>
+      <circle cx="442" cy="364" r="8"/><circle cx="466" cy="364" r="8"/><circle cx="490" cy="364" r="8"/><circle cx="514" cy="364" r="8"/><circle cx="538" cy="364" r="8"/><circle cx="562" cy="364" r="8"/><circle cx="586" cy="364" r="8"/><circle cx="610" cy="364" r="8"/><circle cx="634" cy="364" r="8"/><circle cx="658" cy="364" r="8"/>
+      <circle cx="442" cy="388" r="8"/><circle cx="466" cy="388" r="8"/><circle cx="490" cy="388" r="8"/><circle cx="514" cy="388" r="8"/><circle cx="538" cy="388" r="8"/><circle cx="586" cy="388" r="8"/><circle cx="610" cy="388" r="8"/><circle cx="634" cy="388" r="8"/><circle cx="658" cy="388" r="8"/>
+      <circle cx="442" cy="412" r="8"/><circle cx="466" cy="412" r="8"/><circle cx="490" cy="412" r="8"/><circle cx="514" cy="412" r="8"/><circle cx="538" cy="412" r="8"/><circle cx="562" cy="412" r="8"/><circle cx="586" cy="412" r="8"/><circle cx="610" cy="412" r="8"/><circle cx="634" cy="412" r="8"/><circle cx="658" cy="412" r="8"/>
+    </g>
+    <g fill="#FFFFFF" stroke="#08251A" stroke-width="2.5">
+      <circle cx="586" cy="196" r="7"/><circle cx="466" cy="244" r="7"/><circle cx="634" cy="292" r="7"/><circle cx="514" cy="340" r="7"/><circle cx="562" cy="388" r="7"/>
+    </g>
+    <text x="396" y="462" font-size="18">Each dot is a visitor. A stable</text>
+    <text x="396" y="484" font-size="18">share of those who consent is</text>
+    <text x="396" y="506" font-size="18">held out, 5 percent by default:</text>
+    <text x="396" y="528" font-size="18">the hollow dots, on the brand's</text>
+    <text x="396" y="550" font-size="18">own page or on personalization</text>
+    <text x="396" y="572" font-size="18">without learning.</text>
+    <text x="396" y="608" font-size="18" fill="#197050">The brand compares the groups.</text>
+  </g>
+
+  <!-- A receipt (S2 3.14; FACTS 9): the worked example's tailored coats, after the first click -->
+  <g data-box="receipt-panel">
+    <rect x="740" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M740,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="740" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="756" y="142" font-size="21" font-weight="700">A receipt</text>
+    <g data-box="receipt">
+      <rect x="756" y="176" width="308" height="448" rx="6" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="772" y="206" font-size="19" font-weight="700">Tailored coats</text>
+      <text x="772" y="230" font-size="17" fill="#197050">the edit, place 2, by the engine</text>
+      <line x1="772" y1="246" x2="1048" y2="246" stroke="#C3CEAF" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="772" y="276" font-size="18">coats</text>
+      <text x="866" y="276" font-size="18">0.667 × 0.3</text>
+      <text x="1048" y="276" font-size="18" text-anchor="end">0.200</text>
+      <text x="772" y="304" font-size="18">tailored</text>
+      <text x="866" y="304" font-size="18">0.571 × 0.2</text>
+      <text x="1048" y="304" font-size="18" text-anchor="end">0.114</text>
+      <text x="772" y="332" font-size="18">seed</text>
+      <text x="866" y="332" font-size="18">wool-coat</text>
+      <text x="1048" y="332" font-size="18" text-anchor="end">0.060</text>
+      <text x="772" y="360" font-size="18">lift</text>
+      <text x="866" y="360" font-size="18">γ 0</text>
+      <text x="1048" y="360" font-size="18" text-anchor="end">× 1</text>
+      <line x1="772" y1="376" x2="1048" y2="376" stroke="#08251A" stroke-width="1.5"/>
+      <text x="772" y="404" font-size="19" font-weight="700">score</text>
+      <text x="1048" y="404" font-size="19" font-weight="700" text-anchor="end">0.374</text>
+      <text x="772" y="444" font-size="18">regional prior: λ 0.483</text>
+      <text x="772" y="476" font-size="18">context: paid social, first</text>
+      <text x="772" y="498" font-size="18">visit, US-IL, exploring</text>
+      <text x="772" y="530" font-size="18">revisions: every published</text>
+      <text x="772" y="552" font-size="18">document in force</text>
+      <text x="772" y="586" font-size="17" fill="#197050">Kept too: the top ten candidates</text>
+      <text x="772" y="608" font-size="17" fill="#197050">and the vector as scored.</text>
+    </g>
+  </g>
+</svg></div>
+<figcaption>Learning behind the dial, and the receipt</figcaption>
+</figure>
+<ul class="se-points"><li>An outcome is credited to the last decision before it for the same visitor, session and piece: by default within 30 minutes for a click, 6 hours for an add to cart and 7 days for a purchase.</li><li>If the visitor buys the tailored boots the edit served, the purchase is credited to that decision and counted for that piece in its context.</li><li>Learning compares each piece with its slot’s usual rate in the same context, pooling similar contexts when one is thin, and each slot learns toward the outcome the brand names: clicks, adds to cart, purchases, revenue or margin.</li><li>The holdout keeps a stable share of consenting visitors on the brand’s own page or on personalization without learning, and the brand measures lift against it on its own numbers.</li><li>Exploration, off unless the brand turns it on, gives a share of views to less-tried pieces, and neighboring modules sometimes swap places so learning can tell position from appeal.</li><li>Every answer carries the reasons that placed each piece; the receipt keeps the arithmetic and what is needed to replay it, so a replay of its slot comes out the same.</li></ul>
+</section>
+<section class="sec se-sec" aria-labelledby="it-runs-at-the-edge-and-every-setting-is-a-published-document">
+<h2 id="it-runs-at-the-edge-and-every-setting-is-a-published-document">It runs at the edge, and every setting is a published document</h2>
+<p>The engine is one Worker per deployment, in the data center nearest each request. Each customer has its own deployment for staging and for production, and each brand inside it is a tenant whose data never pools with another’s.</p>
+<div class="se-sentence"><svg class="se-icon se-icon-lg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-5"/><circle cx="12" cy="17" r="1"/></svg><p>We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.</p></div>
+<p class="se-lead">The figure shows what runs where: the Worker, what each Worker keeps, each deployment’s own storage, and the products beside it.</p>
+<figure class="figure se-figure" data-figure="architecture" data-visual="figure">
 <p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
 <div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1340" viewBox="0 0 1100 1340" role="img" aria-labelledby="arch-t arch-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
   <title id="arch-t">Where the engine runs on Cloudflare</title>
@@ -580,47 +953,278 @@ score_final = score · lift^γ        0 ≤ γ ≤ 1, set per slot</code></pre>
 </svg></div>
 <figcaption>Where the engine runs on Cloudflare</figcaption>
 </figure>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Part</th><th scope="col">What it holds or does</th></tr></thead><tbody><tr><td data-label="Part">The Worker</td><td data-label="What it holds or does">Checks access and consent, updates interest, decides, writes the receipt, hands records to the ledger and runs the scheduled jobs</td></tr><tr><td data-label="Part">The visitor's objects (Durable Objects)</td><td data-label="What it holds or does">One small program per visitor, with its own storage: consent, session grants, the decisions served</td></tr><tr><td data-label="Part">The visitor's interests (KV, the key-value store)</td><td data-label="What it holds or does">A record held at the edge with the visitor's session</td></tr><tr><td data-label="Part">Region counts</td><td data-label="What it holds or does">One object per region, counting interest with no visitor ids</td></tr><tr><td data-label="Part">Learning counts</td><td data-label="What it holds or does">One object per slot, counting pieces shown and outcomes credited, by context</td></tr><tr><td data-label="Part">Published snapshots (KV)</td><td data-label="What it holds or does">The regional lean and the learned lift, kept where every decision reads them fast</td></tr><tr><td data-label="Part">File storage (R2)</td><td data-label="What it holds or does">The published documents with every revision, the ledger of receipts and outcomes, and the day reports</td></tr><tr><td data-label="Part">The database (D1)</td><td data-label="What it holds or does">Operator accounts, grants and the audit trail</td></tr><tr><td data-label="Part">The queue</td><td data-label="What it holds or does">Hands receipts and outcomes to the ledger after the answer</td></tr><tr><td data-label="Part">Scheduled jobs</td><td data-label="What it holds or does">Fold each hour's records, build the day report, roll regions up into countries and carry erasures through the ledger</td></tr></tbody></table></div>
-<p>Every decision and outcome record also lands in the brand's own warehouse, on a cadence the brand sets, from a minute to a day, with visitor ids replaced by a pseudonymous subject.</p>
+<p>A decision is arithmetic over the visitor’s state and the brand’s published settings, held at the edge, with no AI model and no round trip to a central database. Every decision and outcome also lands in the brand’s own warehouse, on a cadence the brand sets, from a minute to a day.</p>
+<p class="se-lead">Four published documents hold everything the brand tunes; the console and the API change them, every save becomes a new revision, and a change is in force without a software release. Imported priors, a warehouse’s starting beliefs per piece and context, sit beside them.</p>
+<figure class="figure se-figure" data-figure="se-published-documents" data-visual="figure">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="824" viewBox="0 0 1100 824" role="img" aria-labelledby="sepd-t sepd-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="sepd-t">How the engine is configured</title>
+  <desc id="sepd-d">At the top, two ways in. The console: the brand's team signs in to change weights, memory, lines, slot rules, pins, seeds, learning dials and the holdout, and to read what has been learned, receipts, the day report and the history of every document. The API: the brand's developers make every change the console makes, and also change the catalog, the dimensions and the attribute each reads. A publish is validated whole and kept as a new revision. In the middle, the four published documents. The registry: the dimensions and the attribute each reads, the action weights, the memory tau, 14 days by default and at most 90, K of 1.8, and the entry and exit lines at 0.60 and 0.45. The catalog: the pieces by the brand's own ids, their tags in the registry's vocabulary, their windows, rules and stock, and their merchandising signals. The slots document: each slot's take and weights, its pins, exclusions and cap, its journey-stage rule, freshness and fatigue, its merchandising weights and its arrival seeds. The learn document: the learning dial for each slot, 0 by default, the holdout, the regional prior with its blend constant of 1, the attribution windows, and exploration, off by default. The engine reads one coherent set of them for each decision. At the foot, every revision is kept: each save records who changed it and why, a rollback writes the old value forward as a new revision, every receipt names the revisions in force, and a change is in force without a software release. Beside it, the deployment's own settings: engineers set tenants, site keys, allowed origins, identity secrets and retention periods, and no document change needs an engineer.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 4. Facts: research/S2-engine-facts.md 3.17
+       (the defaults), 4.1 (the publication set, revisions, rollback), 4.2 (what each document holds), 4.5 (the console) and
+       4.6 (what needs no deploy, and what needs an engineer); the Vantage facts sheet (FACTS.md) section 10 (the knobs).
+       Glossary: published documents, registry, catalog, slots document, learn document, revision, console. -->
+  <defs>
+    <marker id="sepd-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="824" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">How the engine is configured</text>
+  <text x="20" y="82" font-size="20" fill="#197050">Four published documents, changed in the console or through the API, with every revision kept.</text>
+
+  <!-- the two ways in (S2 4.4, 4.5; the console's views) -->
+  <g data-box="console">
+    <rect x="20" y="108" width="520" height="160" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="142" font-size="22" font-weight="700">The console</text>
+    <text x="36" y="174" font-size="19">The brand's team signs in to change weights, memory,</text>
+    <text x="36" y="198" font-size="19">lines, slot rules, pins, seeds, learning dials and the</text>
+    <text x="36" y="222" font-size="19">holdout, and to read what has been learned, receipts,</text>
+    <text x="36" y="246" font-size="19">the day report and every document's history.</text>
+  </g>
+  <g data-box="api">
+    <rect x="560" y="108" width="520" height="160" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="576" y="142" font-size="22" font-weight="700">The API</text>
+    <text x="576" y="174" font-size="19">The brand's developers make every change the</text>
+    <text x="576" y="198" font-size="19">console makes, and also change the catalog, the</text>
+    <text x="576" y="222" font-size="19">dimensions and the attribute each reads.</text>
+  </g>
+
+  <!-- a publish -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sepd-head)">
+    <line x1="280" y1="270" x2="280" y2="296"/>
+    <line x1="820" y1="270" x2="820" y2="296"/>
+  </g>
+  <text x="550" y="296" font-size="19" font-weight="500" text-anchor="middle" fill="#197050">a publish: validated whole, kept as a new revision</text>
+
+  <!-- the four published documents (S2 4.2; defaults S2 3.17) -->
+  <g data-box="registry">
+    <rect x="20" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="20" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="349" font-size="22" font-weight="700">Registry</text>
+    <text x="36" y="398" font-size="19">dimensions, and the</text>
+    <text x="36" y="421" font-size="19">attribute each reads</text>
+    <text x="36" y="452" font-size="19">action weights</text>
+    <text x="36" y="483" font-size="19">memory τ: 14 days by</text>
+    <text x="36" y="506" font-size="19">default, at most 90</text>
+    <text x="36" y="537" font-size="19">K 1.8; entry line 0.60,</text>
+    <text x="36" y="560" font-size="19">exit line 0.45</text>
+  </g>
+  <g data-box="catalog">
+    <rect x="290" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M290,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="290" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="306" y="349" font-size="22" font-weight="700">Catalog</text>
+    <text x="306" y="398" font-size="19">pieces, by the brand's</text>
+    <text x="306" y="421" font-size="19">own ids</text>
+    <text x="306" y="452" font-size="19">tags in the registry's</text>
+    <text x="306" y="475" font-size="19">vocabulary</text>
+    <text x="306" y="506" font-size="19">windows, rules, stock</text>
+    <text x="306" y="537" font-size="19">merchandising signals</text>
+  </g>
+  <g data-box="slots">
+    <rect x="560" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M560,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="560" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="576" y="349" font-size="22" font-weight="700">Slots</text>
+    <text x="576" y="398" font-size="19">each slot's take and</text>
+    <text x="576" y="421" font-size="19">weights</text>
+    <text x="576" y="452" font-size="19">pins, exclusions, the cap</text>
+    <text x="576" y="483" font-size="19">journey-stage rule,</text>
+    <text x="576" y="506" font-size="19">freshness, fatigue</text>
+    <text x="576" y="537" font-size="19">merchandising weights,</text>
+    <text x="576" y="560" font-size="19">arrival seeds</text>
+  </g>
+  <g data-box="learn">
+    <rect x="830" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M830,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="830" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="846" y="349" font-size="22" font-weight="700">Learn</text>
+    <text x="846" y="398" font-size="19">the learning dial for</text>
+    <text x="846" y="421" font-size="19">each slot: 0 by default</text>
+    <text x="846" y="452" font-size="19">the holdout</text>
+    <text x="846" y="483" font-size="19">the regional prior: k = 1</text>
+    <text x="846" y="514" font-size="19">attribution windows</text>
+    <text x="846" y="545" font-size="19">exploration: off by</text>
+    <text x="846" y="568" font-size="19">default</text>
+  </g>
+
+  <!-- the engine reads one coherent set (S2 4.1, "Serving reads") -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sepd-head)">
+    <line x1="550" y1="594" x2="550" y2="620"/>
+  </g>
+  <text x="566" y="620" font-size="19" font-weight="500" fill="#197050">the engine reads one coherent set for each decision</text>
+
+  <!-- every revision kept (S2 4.1); what needs an engineer (S2 4.6) -->
+  <g data-box="revisions">
+    <rect x="20" y="640" width="620" height="164" rx="12" fill="#08251A" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="674" font-size="22" font-weight="700" fill="#ABFF44">Every revision kept</text>
+    <text x="36" y="704" font-size="19" fill="#FFFFFF">Each save records who changed it and why; a rollback</text>
+    <text x="36" y="728" font-size="19" fill="#FFFFFF">writes the old value forward as a new revision; every</text>
+    <text x="36" y="752" font-size="19" fill="#FFFFFF">receipt names the revisions in force.</text>
+    <text x="36" y="776" font-size="19" fill="#FFFFFF">A change is in force without a software release.</text>
+  </g>
+  <g data-box="settings">
+    <rect x="660" y="640" width="420" height="164" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="676" y="674" font-size="22" font-weight="700">The deployment's settings</text>
+    <text x="676" y="704" font-size="19">Engineers set tenants, site keys, allowed</text>
+    <text x="676" y="728" font-size="19">origins, identity secrets and retention;</text>
+    <text x="676" y="752" font-size="19">no document change needs an engineer.</text>
+  </g>
+</svg></div>
+<figcaption>How the engine is configured</figcaption>
+</figure>
 </section>
-<section class="sec" aria-labelledby="b7-every-setting-is-a-published-document-changed-without-a-release">
-<h2 id="b7-every-setting-is-a-published-document-changed-without-a-release">B.7 Every setting is a published document, changed without a release</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a></p>
-<p>Four published documents hold everything the brand tunes:</p>
-<ul><li>The <strong>registry</strong> names the dimensions, the attribute each reads, the action weights, the memory and the lines.</li><li>The <strong>catalog</strong> lists the pieces by the brand's own ids, with their tags, windows, rules and merchandising signals.</li><li>The <strong>slots document</strong> sets each slot's take, weights, pins, exclusions, journey-stage rule, freshness, fatigue, diversity cap, merchandising weights and arrival seeds.</li><li>The <strong>learn document</strong> holds the learning dial, the holdout, the regional prior, the attribution windows and exploration.</li></ul>
-<p>Imported priors, a warehouse's starting beliefs per piece and context, sit beside them. Every save is validated whole, kept as a revision with who changed it and why, and in force without a software release. A rollback writes the old value forward as a new revision, and every receipt names the revisions in force.</p>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Who</th><th scope="col">Changes</th><th scope="col">Where</th></tr></thead><tbody><tr><td data-label="Who">The brand's team</td><td data-label="Changes">Weights, memory, lines, slot rules, pins, arrival seeds, learning dials, the holdout share</td><td data-label="Where">The console, or the API</td></tr><tr><td data-label="Who">The brand's team or its developers</td><td data-label="Changes">The catalog, the dimensions and the attribute each reads</td><td data-label="Where">The API, without a release</td></tr><tr><td data-label="Who">Engineers</td><td data-label="Changes">Tenants, site keys, allowed origins, identity secrets, retention periods</td><td data-label="Where">The deployment's own settings</td></tr></tbody></table></div>
-<p>The console also shows what has been learned, why a visitor saw a piece, the day report and the history of every document.</p>
+<section class="sec se-sec" aria-labelledby="the-site-connects-once-and-privacy-holds-on-every-request">
+<h2 id="the-site-connects-once-and-privacy-holds-on-every-request">The site connects once, and privacy holds on every request</h2>
+<p class="se-lead">One script starts the visitor’s session, sends events or reads the brand’s existing data layer, and receives every slot’s decision by id in one call. When no answer arrives in time, the site’s own default stands, and the brand’s server can fetch the first page’s decisions before the page is sent.</p>
+<figure class="figure se-figure" data-figure="se-integration" data-visual="figure">
+<p class="figure-scroll-hint" data-chrome="scroll hint" aria-hidden="true">The figure scrolls sideways.</p>
+<div class="figure-frame"><svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900" viewBox="0 0 1100 900" role="img" aria-labelledby="seint-t seint-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="seint-t">One connection, three products beside the engine</title>
+  <desc id="seint-d">At the top, Opal, backstage with the brand's team: it authors audiences and tests, explains results and tags content; when a signal arrives from another channel, Opal drafts an experiment or a CMAB test, launched once a person approves, and it never takes part in a live decision. A line runs from Opal to Feature Experimentation and none runs to the engine. On the left, the brand's side, each joined to the engine by one connection. The visitor's browser: the page and the engine's script, which start a session, pass the visitor's consent choice, send events and ask for every slot's decision in one call. The brand's server: a signed proof at sign-in merges the anonymous and known profiles. The commerce platform: a product list comes back in the visitor's order, with nothing removed. Each carries the call it uses. In the middle, the engine, at the edge, decides from the published rules and calls no AI model to decide; it keeps a receipt for each decision and lands every decision and outcome in the brand's warehouse. On the right, beside the engine: Feature Experimentation, where an experiment or a CMAB test can run on any slot beside the engine's decisions; ODP, where events and the audiences the engine forms land as lasting facts and a returning visitor's interests can be restored, and decisions never wait on it; and the optional AI add-ons, AI search, the style concierge and generated imagery, which the brand switches on and pays for from its credits, and in AI search a model reads the query and the engine ranks the results.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 5. Facts: research/S2-engine-facts.md 2.7
+       (arrows 1 to 3, 7, 18 and 19, the calls), 3.1, 7.1 to 7.4, 6.1 and 6.2; research/S5-product-as-designed.md rows B9,
+       B10, C8, V10, V11, V12 and F16; docs/enablement/LANE-BRIEF-V2.md section 2.3 (K9 to K12). Opal is joined to Feature
+       Experimentation and to nothing in the engine, as in the architecture figure. -->
+  <defs>
+    <marker id="seint-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+    <marker id="seint-tail" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M10,0 L0,5 L10,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="900" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">One connection, three products beside the engine</text>
+  <text x="20" y="82" font-size="20" fill="#197050">The site connects once; Opal, ODP and Feature Experimentation work beside the engine.</text>
+
+  <!-- Opal, backstage (S5 B10, C8, F14; S2 6.2): joined to Feature Experimentation, never to the engine -->
+  <g data-box="opal">
+    <rect x="20" y="108" width="1060" height="130" rx="12" fill="#197050" stroke="#197050" stroke-width="2"/>
+    <text x="36" y="142" font-size="22" font-weight="700" fill="#FFFFFF">Opal, backstage with the brand's team</text>
+    <text x="36" y="172" font-size="19" fill="#FFFFFF">Authors audiences and tests, explains results and tags content.</text>
+    <text x="36" y="197" font-size="19" fill="#FFFFFF">When a signal arrives from another channel, Opal drafts an experiment or a CMAB test,</text>
+    <text x="36" y="222" font-size="19" fill="#FFFFFF">launched once a person approves. It never takes part in a live decision.</text>
+  </g>
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#seint-head)">
+    <line x1="895" y1="240" x2="895" y2="264"/>
+  </g>
+  <text x="909" y="262" font-size="18" font-weight="500" fill="#197050">a test, once approved</text>
+
+  <!-- the brand's side, one connection each (S2 2.7 arrows 1 to 3, 7, 18, 19) -->
+  <g data-box="browser">
+    <rect x="20" y="280" width="430" height="304" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="314" font-size="22" font-weight="700">The visitor's browser</text>
+    <text x="36" y="342" font-size="18">The page and the engine's script:</text>
+    <text x="36" y="378" font-size="18" font-weight="700">a session</text>
+    <text x="36" y="400" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /v1/{tenant}/identity/session</text>
+    <text x="36" y="434" font-size="18" font-weight="700">the visitor's consent choice</text>
+    <text x="36" y="456" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /realtime/session/preferences</text>
+    <text x="36" y="490" font-size="18" font-weight="700">events</text>
+    <text x="36" y="512" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /realtime/action</text>
+    <text x="36" y="546" font-size="18" font-weight="700">every slot's decision, in one call</text>
+    <text x="36" y="568" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">GET /v1/{tenant}/decisions/snapshot</text>
+  </g>
+  <g data-box="server">
+    <rect x="20" y="604" width="430" height="128" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="638" font-size="22" font-weight="700">The brand's server</text>
+    <text x="36" y="666" font-size="18">A signed proof at sign-in merges the</text>
+    <text x="36" y="688" font-size="18">anonymous and known profiles:</text>
+    <text x="36" y="714" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /v1/{tenant}/identity/link</text>
+  </g>
+  <g data-box="commerce">
+    <rect x="20" y="752" width="430" height="128" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="786" font-size="22" font-weight="700">The commerce platform</text>
+    <text x="36" y="814" font-size="18">A product list comes back in the</text>
+    <text x="36" y="836" font-size="18">visitor's order, nothing removed:</text>
+    <text x="36" y="862" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /sort</text>
+  </g>
+
+  <!-- the engine, at the edge (S5 A8; S2 6.1) -->
+  <g data-box="engine">
+    <rect x="490" y="280" width="180" height="600" rx="12" fill="#08251A" stroke="#08251A" stroke-width="2"/>
+    <text x="580" y="318" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">The engine,</text>
+    <text x="580" y="344" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">at the edge</text>
+    <text x="580" y="384" font-size="18" fill="#FFFFFF" text-anchor="middle">decides from</text>
+    <text x="580" y="406" font-size="18" fill="#FFFFFF" text-anchor="middle">the published</text>
+    <text x="580" y="428" font-size="18" fill="#FFFFFF" text-anchor="middle">rules, and calls</text>
+    <text x="580" y="450" font-size="18" fill="#FFFFFF" text-anchor="middle">no AI model</text>
+    <text x="580" y="472" font-size="18" fill="#FFFFFF" text-anchor="middle">to decide</text>
+    <text x="580" y="528" font-size="18" fill="#FFFFFF" text-anchor="middle">keeps a receipt</text>
+    <text x="580" y="550" font-size="18" fill="#FFFFFF" text-anchor="middle">for each decision</text>
+    <text x="580" y="606" font-size="18" fill="#FFFFFF" text-anchor="middle">and lands every</text>
+    <text x="580" y="628" font-size="18" fill="#FFFFFF" text-anchor="middle">decision and</text>
+    <text x="580" y="650" font-size="18" fill="#FFFFFF" text-anchor="middle">outcome in the</text>
+    <text x="580" y="672" font-size="18" fill="#FFFFFF" text-anchor="middle">brand's own</text>
+    <text x="580" y="694" font-size="18" fill="#FFFFFF" text-anchor="middle">warehouse</text>
+  </g>
+  <g stroke="#08251A" stroke-width="3" marker-start="url(#seint-tail)" marker-end="url(#seint-head)">
+    <line x1="465" y1="432" x2="475" y2="432"/>
+    <line x1="465" y1="668" x2="475" y2="668"/>
+    <line x1="465" y1="816" x2="475" y2="816"/>
+    <line x1="685" y1="350" x2="695" y2="350"/>
+    <line x1="685" y1="542" x2="695" y2="542"/>
+    <line x1="685" y1="770" x2="695" y2="770"/>
+  </g>
+
+  <!-- beside the engine (S5 C8, F16, V11; S2 7.3, 7.4, 6.1) -->
+  <g data-box="fx">
+    <rect x="710" y="280" width="370" height="140" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="314" font-size="22" font-weight="700">Feature Experimentation</text>
+    <text x="726" y="344" font-size="19">An experiment or a CMAB test</text>
+    <text x="726" y="368" font-size="19">can run on any slot, beside</text>
+    <text x="726" y="392" font-size="19">the engine's decisions.</text>
+  </g>
+  <g data-box="odp">
+    <rect x="710" y="440" width="370" height="204" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="474" font-size="22" font-weight="700">ODP</text>
+    <text x="726" y="504" font-size="19">Events and the audiences the</text>
+    <text x="726" y="528" font-size="19">engine forms land as lasting</text>
+    <text x="726" y="552" font-size="19">facts, and a returning visitor's</text>
+    <text x="726" y="576" font-size="19">interests can be restored.</text>
+    <text x="726" y="610" font-size="19">Decisions never wait on it.</text>
+  </g>
+  <g data-box="addons">
+    <rect x="710" y="664" width="370" height="216" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="698" font-size="22" font-weight="700">Optional AI add-ons</text>
+    <text x="726" y="728" font-size="19">AI search, the style concierge</text>
+    <text x="726" y="752" font-size="19">and generated imagery, switched</text>
+    <text x="726" y="776" font-size="19">on by the brand and paid from</text>
+    <text x="726" y="800" font-size="19">its credits. In AI search a model</text>
+    <text x="726" y="824" font-size="19">reads the query and the engine</text>
+    <text x="726" y="848" font-size="19">ranks the results.</text>
+  </g>
+</svg></div>
+<figcaption>One connection, three products beside the engine</figcaption>
+</figure>
+<p>The front end is built once, and every other capability is switched on in configuration. Developers work from the integration kit: the SDK, the API reference, the payload schemas and a staging connection check.</p>
+<p>When Opal proposes tags for thinly labeled content, a person approves, edits or rejects each one before it is used.</p>
+<p>The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. <a href="/credits">Where Opal and AI Credits Fit, and Where They Never Do</a> sets out the boundary.</p>
+<div class="tbl se-tbl se-privacy" data-visual="table" data-shot="se-privacy"><p class="se-caption" id="se-privacy-caption">Privacy is a property of every request.</p><table class="rt" aria-labelledby="se-privacy-caption"><thead><tr><th scope="col">On every request</th><th scope="col">What holds</th></tr></thead><tbody><tr><td data-label="On every request">Consent</td><td data-label="What holds">Nothing is personalized or recorded until the site passes the visitor’s explicit choice: two switches, tracking and personalization, each lasting 30 days. A request can withdraw a choice but never grant one, and with tracking off nothing about the request is written anywhere.</td></tr><tr><td data-label="On every request">Identity</td><td data-label="What holds">The visitor is a random id in a signed pass valid for at most 24 hours; a signed-in customer is stored under a salted one-way hash, never the raw account id.</td></tr><tr><td data-label="On every request">Devices</td><td data-label="What holds">Nothing about the device beyond the phone’s operating system family, no fingerprinting, and no anonymous visitor recognized across devices.</td></tr><tr><td data-label="On every request">Inputs</td><td data-label="What holds">No third-party data in a decision, and region counts that carry no visitor ids.</td></tr><tr><td data-label="On every request">What it decides</td><td data-label="What holds">Which content leads: never a price, a discount, financing, credit or who may enter, and no protected class or proxy for one.</td></tr><tr><td data-label="On every request">Retention and erasure</td><td data-label="What holds">Each category of data is kept only for the period the brand agrees; a visitor who asks to be forgotten is hidden from every report at once and removed by a scheduled rewrite, with a receipt naming anything outside the engine’s reach.</td></tr></tbody></table></div>
 </section>
-<section class="sec" aria-labelledby="b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">
-<h2 id="b8-the-site-connects-once-and-opal-odp-and-feature-experimentation-link-beside-the-engine">B.8 The site connects once, and Opal, ODP and Feature Experimentation link beside the engine</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a></p>
-<p>One script, the SDK, starts the visitor's session and sends events, or reads the brand's existing data layer with GA4 event names. It receives every slot's decision by id in one call and lets the site's own default stand whenever no answer arrives in time. The brand's server can fetch the first page's decisions before sending the page, so the content above the fold arrives already chosen. The front end is built once, and every other capability is switched on in configuration. Developers work from the integration kit: the SDK, the API reference, the payload schemas and a staging connection check.</p>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">Call</th><th scope="col">The site sends</th><th scope="col">It gets back</th></tr></thead><tbody><tr><td data-label="Call"><code>POST /v1/{tenant}/identity/session</code></td><td data-label="The site sends">The site key and <code>X-Tenant</code></td><td data-label="It gets back">A shopper capability, a visitor id and a session id</td></tr><tr><td data-label="Call"><code>POST /realtime/session/preferences</code></td><td data-label="The site sends">The visitor's consent choice</td><td data-label="It gets back">The choice, stored with the visitor</td></tr><tr><td data-label="Call"><code>POST /realtime/action</code></td><td data-label="The site sends">One event: its type, the ids, the product id with the attributes the registry reads, the arrival and a timestamp</td><td data-label="It gets back">The product references it could not place</td></tr><tr><td data-label="Call"><code>GET</code> or <code>POST /v1/{tenant}/decisions/snapshot</code></td><td data-label="The site sends">The page, the brand, the arrival and up to eight named conditions</td><td data-label="It gets back">Per slot, the brand's content ids in order, with scores and reasons, and the versions in force</td></tr><tr><td data-label="Call"><code>POST /v1/{tenant}/identity/link</code></td><td data-label="The site sends">The backend's signed proof at sign-in</td><td data-label="It gets back">The two profiles merge</td></tr><tr><td data-label="Call"><code>POST /sort</code></td><td data-label="The site sends">Up to 500 product candidates with their attributes</td><td data-label="It gets back">The same ids in this visitor's order, with reasons</td></tr></tbody></table></div>
-<p>Given a product list from the commerce platform or a recommendations system, the engine reorders it for the visitor and removes nothing; at a dial of zero the list comes back unchanged.</p>
-<p class="lead-in"><strong>Opal.</strong> The brand's team asks Opal, in plain words, to draft audiences, tests, analyses, tags and imagery, or to explain a result, and Opal proposes what matters from the engine's records, with its evidence. When a signal arrives from another system, such as a partner's social-listening feed, Opal drafts a test or a contextual-bandit experiment on the slots it affects and launches it once a person approves. Design-time tagging proposes tags from the brand's own vocabulary, and a person approves, edits or rejects each one. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. <a href="/credits">Where Opal and AI Credits Fit, and Where They Never Do</a> sets out the boundary.</p>
-<p class="lead-in"><strong>ODP and Feature Experimentation.</strong> Events, the audiences the engine forms and each visitor's journey stage land in ODP as durable facts for the brand's other teams, and a recognized visitor's interests can be restored from it without any decision waiting. An experiment or a contextual bandit from Feature Experimentation can be pointed at any slot as an optional instrument; neither is how the engine decides.</p>
-<p class="lead-in"><strong>AI add-ons for shoppers.</strong> In AI search, a model reads what the shopper types, the brand's catalog search fetches results, and the engine ranks them for that shopper with the same receipt. A style concierge answers questions in conversation, grounded in the brand's real products, and generated imagery fills creative where the brand allows. The brand switches each on, paid from its credits.</p>
+<section class="sec se-sec" aria-labelledby="every-ask-says-what-we-need-and-what-we-use-it-for">
+<h2 id="every-ask-says-what-we-need-and-what-we-use-it-for">Every ask says what we need and what we use it for</h2>
+<p class="se-lead">Each row names what the engine needs, what it is used for and who provides it.</p>
+<div class="tbl se-tbl se-asks" data-visual="table" data-shot="se-asks"><p class="se-caption" id="se-asks-caption">What a customer provides, and what we use it for.</p><table class="rt" aria-labelledby="se-asks-caption"><thead><tr><th scope="col">What we need</th><th scope="col">What we use it for</th><th scope="col">Who provides it</th></tr></thead><tbody><tr><td data-label="What we need">The exact origins, scheme and host, that the site’s pages call from, for staging and production</td><td data-label="What we use it for">The cross-origin allow-list</td><td data-label="Who provides it">The customer’s platform team</td></tr><tr><td data-label="What we need">A site key per brand, or we mint one</td><td data-label="What we use it for">It identifies the site and binds the tenant on every call from its pages; it is not a secret</td><td data-label="Who provides it">Either</td></tr><tr><td data-label="What we need">The registry: the dimensions to score on, the field each one reads, how much each action counts, and the memory</td><td data-label="What we use it for">What the engine scores on, and how fast it forgets</td><td data-label="Who provides it">The customer, with our team</td></tr><tr><td data-label="What we need">A content feed: each piece’s own id, type, title, tags in the registry’s vocabulary, slot types, render URL and windows</td><td data-label="What we use it for">The catalog the engine ranks</td><td data-label="Who provides it">The customer’s content team</td></tr><tr><td data-label="What we need">A slot map: the pages, their slots and each slot’s default</td><td data-label="What we use it for">The slots document; each default renders whenever the engine is silent</td><td data-label="Who provides it">The customer’s front-end and merchandising owners</td></tr><tr><td data-label="What we need">Product events carrying the product id and the registry’s attributes</td><td data-label="What we use it for">Building interest, because the engine keeps no copy of the product catalog</td><td data-label="Who provides it">The customer’s tag owner</td></tr><tr><td data-label="What we need">The conversion event: the order id, value, currency and items</td><td data-label="What we use it for">Outcomes for attribution and learning</td><td data-label="Who provides it">The customer’s commerce and analytics owners</td></tr><tr><td data-label="What we need">The visitor’s explicit consent choice, from the consent banner</td><td data-label="What we use it for">Personalizing and recording only for visitors who agree; without it, nothing personalizes and nothing is recorded</td><td data-label="Who provides it">The customer’s privacy owner</td></tr><tr><td data-label="What we need">A signed identity proof at sign-in, and the secret behind it</td><td data-label="What we use it for">Merging the anonymous and signed-in profiles</td><td data-label="Who provides it">The customer’s backend</td></tr><tr><td data-label="What we need">A retention period for each category of data</td><td data-label="What we use it for">Keeping each kind of record only as long as agreed; a category with no period set captures nothing that depends on it</td><td data-label="Who provides it">The customer’s privacy owner</td></tr><tr><td data-label="What we need">A person who runs the connection check from inside the customer’s network</td><td data-label="What we use it for">Proving the network path from their side</td><td data-label="Who provides it">The customer</td></tr></tbody></table></div>
+<p>Optional, each with its use: candidate product lists from the commerce platform, for re-ranking; a catalog-search service, for AI search; historical rows, which start known customers warm; regional sales from the brand’s warehouse, which set each region’s starting lean; and a warehouse destination for the receipts and outcomes.</p>
 </section>
-<section class="sec" aria-labelledby="b9-privacy-is-a-property-of-every-request">
-<h2 id="b9-privacy-is-a-property-of-every-request">B.9 Privacy is a property of every request</h2>
-<p>Back to the story: <a href="#a3-what-it-does-thirteen-capabilities-each-with-its-use">A.3</a></p>
-<p>Nothing is personalized or recorded until the site passes the visitor's explicit choice from its consent banner: two switches, tracking and personalization, each lasting 30 days. A request can withdraw a choice but never grant one, and with tracking off nothing about the request is written anywhere. A visitor is known only by a random id, carried in a shopper capability valid for at most 24 hours, and a signed-in customer is stored under a salted one-way hash, never the raw account id. The engine reads no device detail beyond the phone's operating system family, never recognizes an anonymous visitor across devices and uses no third-party data in a decision. Place and context decide which content leads, never a price, a discount, financing, credit or who may enter, and no protected class or proxy for one is used. Each category of data is kept only for the period the brand agrees, and a visitor who asks to be forgotten is hidden from every report at once and removed from stored records by a scheduled rewrite, with a receipt naming anything outside the engine's reach.</p>
+<section class="sec se-sec" aria-labelledby="the-interactive-page-puts-every-constant-on-a-slider">
+<h2 id="the-interactive-page-puts-every-constant-on-a-slider">The interactive page puts every constant on a slider</h2>
+<div class="se-linkcard" data-visual="companion card"><svg class="se-icon se-icon-xl" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg><div><p class="se-linkcard-title"><a href="/how-it-works-interactive">How it works, interactive</a></p><p>The engine’s own arithmetic, recomputed in the browser as each constant moves: interest, decay, the two lines, a slot scored in full, the regional prior, learning and a receipt.</p></div></div>
 </section>
-<section class="sec" aria-labelledby="b10-what-a-customer-provides-and-what-we-use-it-for">
-<h2 id="b10-what-a-customer-provides-and-what-we-use-it-for">B.10 What a customer provides, and what we use it for</h2>
-<p>Back to the story: <a href="#a6-what-a-customer-provides-and-what-we-use-it-for">A.6</a></p>
-<div class="tbl tbl-plain"><table class="rt t-plain"><thead><tr><th scope="col">What we need</th><th scope="col">What we use it for</th><th scope="col">Who provides it</th></tr></thead><tbody><tr><td data-label="What we need">The exact origins, scheme and host, that the site's pages call from, for staging and production</td><td data-label="What we use it for">The cross-origin allow-list</td><td data-label="Who provides it">The customer's platform team</td></tr><tr><td data-label="What we need">A site key per brand, or we mint one</td><td data-label="What we use it for">It identifies the site and binds the tenant on every call from its pages; it is not a secret</td><td data-label="Who provides it">Either</td></tr><tr><td data-label="What we need">The registry: the dimensions to score on, the field each one reads, how much each action counts, and the memory</td><td data-label="What we use it for">What the engine scores on, and how fast it forgets</td><td data-label="Who provides it">The customer, with our team</td></tr><tr><td data-label="What we need">A content feed: each piece's own id, type, title, tags in the registry's vocabulary, slot types, render URL and windows</td><td data-label="What we use it for">The catalog the engine ranks</td><td data-label="Who provides it">The customer's content team</td></tr><tr><td data-label="What we need">A slot map: the pages, their slots and each slot's default</td><td data-label="What we use it for">The slots document; each default renders whenever the engine is silent</td><td data-label="Who provides it">The customer's front-end and merchandising owners</td></tr><tr><td data-label="What we need">Product events carrying the product id and the registry's attributes</td><td data-label="What we use it for">Building interest, because the engine keeps no copy of the product catalog</td><td data-label="Who provides it">The customer's tag owner</td></tr><tr><td data-label="What we need">The conversion event: the order id, value, currency and items</td><td data-label="What we use it for">Outcomes for attribution and learning</td><td data-label="Who provides it">The customer's commerce and analytics owners</td></tr><tr><td data-label="What we need">The visitor's explicit consent choice, from the consent banner</td><td data-label="What we use it for">Without it, nothing personalizes and nothing is recorded</td><td data-label="Who provides it">The customer's privacy owner</td></tr><tr><td data-label="What we need">A signed identity proof at sign-in, and the secret behind it</td><td data-label="What we use it for">Merging the anonymous and signed-in profiles</td><td data-label="Who provides it">The customer's backend</td></tr><tr><td data-label="What we need">A retention period for each category of data</td><td data-label="What we use it for">How long each kind of record is kept</td><td data-label="Who provides it">The customer's privacy owner</td></tr><tr><td data-label="What we need">A person who runs the connection check from inside the customer's network</td><td data-label="What we use it for">Proving the network path from their side</td><td data-label="Who provides it">The customer</td></tr></tbody></table></div>
-<p>Optional: candidate product lists for re-ranking, from the commerce platform; a catalog-search service, for AI search; historical rows, which start known customers warm; and a warehouse destination for the receipts and outcomes.</p>
-</section>
-<div class="rule rule-close"><p class="rule-label" data-chrome="rule label">The one rule, again</p><p class="rule-text"><strong>The engine decides each page at the point in time from what the visitor is doing now, under rules the brand publishes, and writes every decision out as arithmetic a person can recompute.</strong></p></div>
 </article>
 </main>
+<!-- chrome:footer:start -->
 <footer class="foot">
 <div class="wrap">
-<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/see-it-work"><span class="pieces-name">See it work</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works" aria-current="page"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/how-it-works-interactive"><span class="pieces-name">How it works, with every constant on a slider</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo shows which story</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/see-it-work"><span class="pieces-name">See it work</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/battlecard"><span class="pieces-name">Battlecard</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works" aria-current="page"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/how-it-works-interactive"><span class="pieces-name">How it works, with every constant on a slider</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo shows which story</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
 <p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
 </div>
 </footer>
+<!-- chrome:footer:end -->
 </body>
 </html>

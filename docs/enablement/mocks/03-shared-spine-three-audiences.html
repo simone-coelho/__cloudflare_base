@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Approved mock 3: the shared spine and the three readers</title><link rel="stylesheet" href="_tokens.css">
+<!-- Approved by the owner, 2026-10-03 ("It's a proposal, let's go ahead and do it"), with one condition for the build:
+     no section is only text, in any piece, the solutions engineers' included. Shown in the chat as
+     "bti_shared_spine_three_audiences_design_mock". The spine's side by side reuses the six-slide visual brief
+     docs/enablement/research/live-experience-vs-recommendations.source.html (slides 2 to 5), updated to the third person
+     ("the brand's recommendation engine"), with no customer named. The "text" tags in the engineers' column are
+     superseded by the owner's condition: those sections pair a figure, an instrument or a worked example with short text. --></head><body>
+<h2 class="sr-only">Design mock of the shared spine for all three audience pieces. A top band shows the four opening blocks every piece shares: the story, the side by side of a recommendation engine against the engine, both engines on one page with what changed and what stayed, and the watch-it animation. Below, three columns list the sections that follow for marketing, account executives and solutions engineers.</h2>
+<style>
+@keyframes click{0%,15%{opacity:0;transform:scale(.6)}20%,30%{opacity:1;transform:scale(1)}40%,100%{opacity:0}}
+@keyframes lead{0%,25%{background:var(--surface-2)}40%,100%{background:var(--bg-accent)}}
+.lbl{font-size:11px;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+.sec{border-top:0.5px solid var(--border);padding:1.25rem 0}
+.card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px}
+.step{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--surface-1);border:0.5px solid var(--border);color:var(--text-secondary);display:inline-block;margin:2px 0}
+.arrow{font-size:11px;color:var(--text-muted);display:inline-block;margin:0 2px}
+.bar{height:10px;border-radius:3px;background:var(--surface-1);border:0.5px solid var(--border);margin:4px 0}
+.row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:0.5px solid var(--border);font-size:12px;line-height:1.4}
+.row:first-of-type{border-top:0}
+.row i{font-size:15px;flex:none;margin-top:1px;color:var(--text-secondary)}
+.tag{font-size:10px;padding:1px 6px;border-radius:999px;border:0.5px solid var(--border-strong);color:var(--text-muted);margin-left:auto;flex:none;white-space:nowrap}
+.chip{font-size:10px;padding:2px 7px;border-radius:999px;border:0.5px solid var(--border-strong);color:var(--text-secondary);display:inline-block;margin:2px 2px 0 0}
+.chip.on{border-color:var(--border-accent);color:var(--text-accent);background:var(--bg-accent)}
+</style>
+
+<div style="padding:1rem 0 0">
+<p class="lbl">The shared spine · every piece opens with these four blocks</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px">
+
+  <div class="card">
+    <p class="lbl" style="margin-bottom:6px">1 · The story</p>
+    <p style="font-size:13px;font-weight:500;line-height:1.4;margin:0 0 6px">We built an engine that follows each visitor's interest in real time and decides the page at that point in time.</p>
+    <p style="font-size:11px;color:var(--text-secondary);margin:0;line-height:1.45">Strangers, the window before any profile, the brand's team keeping the last word.</p>
+  </div>
+
+  <div class="card">
+    <p class="lbl" style="margin-bottom:6px">2 · Side by side</p>
+    <p style="font-size:11px;color:var(--text-muted);margin:0 0 2px">The brand's recommendation engine</p>
+    <div><span class="step">History</span><span class="arrow">→</span><span class="step">Ranks products</span><span class="arrow">→</span><span class="step">Product row</span></div>
+    <p style="font-size:11px;color:var(--text-accent);margin:8px 0 2px">The engine</p>
+    <div><span class="step">Observe this visit</span><span class="arrow">→</span><span class="step">Interpret interest</span><span class="arrow">→</span><span class="step">Act on the page</span></div>
+    <p style="font-size:11px;color:var(--text-secondary);margin:8px 0 0;line-height:1.45">Then the same pair for rule-based personalization and for AI that decides.</p>
+  </div>
+
+  <div class="card">
+    <p class="lbl" style="margin-bottom:6px">3 · Both on one page</p>
+    <div style="height:20px;border-radius:4px;border:0.5px solid var(--border-accent);animation:lead 6s ease-in-out infinite;position:relative"><span style="position:absolute;left:6px;top:3px;font-size:10px;color:var(--text-accent)">Lead image · the engine</span></div>
+    <div class="bar" style="background:var(--bg-accent);border-color:var(--border-accent);height:8px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:4px 0"><div class="bar" style="height:16px;margin:0"></div><div class="bar" style="height:16px;margin:0"></div><div class="bar" style="height:16px;margin:0"></div></div>
+    <p style="font-size:10px;color:var(--text-muted);margin:0 0 6px">Product row · the recommendation engine</p>
+    <span class="chip">same products</span><span class="chip">same order</span><span class="chip on">different lead image</span><span class="chip on">different story</span><span class="chip on">different module</span>
+  </div>
+
+  <div class="card">
+    <p class="lbl" style="margin-bottom:6px">4 · Watch it move</p>
+    <div style="position:relative">
+      <div class="bar" style="height:8px"></div>
+      <div class="bar" style="height:18px;background:var(--bg-accent);border-color:var(--border-accent)"></div>
+      <div class="bar" style="height:18px"></div>
+      <div class="bar" style="height:18px"></div>
+      <div style="position:absolute;left:46%;top:34px;width:18px;height:18px;border-radius:50%;border:2px solid var(--text-accent);animation:click 6s ease-in-out infinite"></div>
+    </div>
+    <p style="font-size:11px;color:var(--text-secondary);margin:6px 0 0;line-height:1.45">One visitor, one click, sections trade places, the receipt appears. Then the walk-through, one moment at a time.</p>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">Then each reader's own depth · existing content re-cut onto the spine · every section pairs a visual with short text</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 2px">Marketing</p>
+    <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px">scans · pictures with captions</p>
+    <div class="row"><i class="ti ti-layout-grid" aria-hidden="true"></i>Capabilities as pillars, one picture and one use case each<span class="tag">cards</span></div>
+    <div class="row"><i class="ti ti-list-numbers" aria-hidden="true"></i>How it works in three steps<span class="tag">strip</span></div>
+    <div class="row"><i class="ti ti-grid-dots" aria-hidden="true"></i>Why customers choose it, ten tiles, unranked<span class="tag">tiles</span></div>
+    <div class="row"><i class="ti ti-quote" aria-hidden="true"></i>Proof by industry<span class="tag">quotes</span></div>
+    <div class="row"><i class="ti ti-arrows-left-right" aria-hidden="true"></i>What to say and never say<span class="tag">pairs</span></div>
+    <div class="row"><i class="ti ti-help-circle" aria-hidden="true"></i>Questions marketing will be asked<span class="tag">open on click</span></div>
+    <div class="row"><i class="ti ti-player-play" aria-hidden="true"></i>Into the guided tour<span class="tag">link</span></div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 2px">Account executives</p>
+    <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px">scans · the seller's kit</p>
+    <div class="row"><i class="ti ti-movie" aria-hidden="true"></i>Seven scenes, one picture each<span class="tag">storyboard</span></div>
+    <div class="row"><i class="ti ti-grid-dots" aria-hidden="true"></i>Why customers choose it, ten tiles, unranked<span class="tag">tiles</span></div>
+    <div class="row"><i class="ti ti-chart-bar" aria-hidden="true"></i>What a customer can measure, and the questions that surface it<span class="tag">table</span></div>
+    <div class="row"><i class="ti ti-messages" aria-hidden="true"></i>Objections with the sentence to say and never say<span class="tag">pairs</span></div>
+    <div class="row"><i class="ti ti-package" aria-hidden="true"></i>What a customer provides and what we use it for<span class="tag">table</span></div>
+    <div class="row"><i class="ti ti-device-desktop" aria-hidden="true"></i>Which demo shows which story<span class="tag">map</span></div>
+    <div class="row"><i class="ti ti-id-badge" aria-hidden="true"></i>The one-page battlecard<span class="tag">page</span></div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 2px">Solutions engineers</p>
+    <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px">reads · the Vantage way · a figure, instrument or worked example in every section</p>
+    <div class="row"><i class="ti ti-user" aria-hidden="true"></i>One visitor walked through end to end<span class="tag">figure + lines</span></div>
+    <div class="row"><i class="ti ti-math-function" aria-hidden="true"></i>The mechanism, then the arithmetic: interest, decay, score, prior<span class="tag">instrument cards</span></div>
+    <div class="row"><i class="ti ti-adjustments" aria-hidden="true"></i>Learning behind the dial, the receipt<span class="tag">figure</span></div>
+    <div class="row"><i class="ti ti-cloud" aria-hidden="true"></i>Where it runs on Cloudflare, configuration as published documents<span class="tag">figure</span></div>
+    <div class="row"><i class="ti ti-plug" aria-hidden="true"></i>Integration: Opal, ODP, Feature Experimentation; privacy<span class="tag">figure + table</span></div>
+    <div class="row"><i class="ti ti-package" aria-hidden="true"></i>What a customer provides and what we use it for<span class="tag">table</span></div>
+    <div class="row"><i class="ti ti-player-play" aria-hidden="true"></i>The interactive how-it-works page, real engine, real receipts<span class="tag">companion</span></div>
+  </div>
+</div>
+<p style="font-size:11px;color:var(--text-muted);margin:10px 0 0">The Word copy of each piece carries the same spine and the same pictures with captions. The credits page, the glossary and the demo map stay standalone.</p>
+</div>
+</body></html>

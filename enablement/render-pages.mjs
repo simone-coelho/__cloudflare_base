@@ -1,27 +1,51 @@
 #!/usr/bin/env node
 // enablement/render-pages.mjs
-// Renders every page of the internal enablement site from its source. Lane P1. Run it after any source changes,
-// then run the text check:
+// Renders the builder's pages of the internal enablement site from their sources, and stamps the shared chrome and
+// the shared spine into every page. Lane P1, rewritten for LANE-BRIEF-V3 by lane S1. Run it after any source or
+// partial changes, then run the text check:
 //
-//   node enablement/render-pages.mjs              write the pages, and the figure copies, into enablement/site/
-//   node enablement/render-pages.mjs --out DIR    write them into DIR instead (a dry run)
-//   node enablement/render-check.mjs             prove that each page says what its source says
+//   node enablement/render-pages.mjs              write the builder's pages and the figure copies into enablement/site/,
+//                                                then stamp every page there (below)
+//   node enablement/render-pages.mjs --stamp      only stamp: fill the marked blocks of every page in enablement/site/
+//                                                from enablement/partials/, and bring the figure copies in
+//                                                enablement/site/figures/ up to their sources; write nothing else
+//   node enablement/render-pages.mjs --out DIR    a dry run: copy the served folder into DIR, write the builder's pages
+//                                                there, and stamp DIR; enablement/site/ is not touched
+//   node enablement/render-pages.mjs --stamp --out DIR
+//                                                copy the served folder into DIR and only stamp DIR
+//   ... --out DIR --no-copy                      the same, on DIR as it stands (a scratch mirror), without the copy
+//   node enablement/render-check.mjs             prove that each page says what its sources say
 //
 // No dependencies, nothing evaluated: it reads files, parses markdown, HTML and JSON as text, and writes .html and
 // .svg files. What it reads, and what each source becomes:
-//   docs/enablement/content/what-it-is.md, selling-it.md, how-it-works-and-where-it-runs.md
-//                                        the three pieces, each a designed rendering of the same text
 //   docs/enablement/content/demos.md     the demo map: which demo shows which story
 //   docs/enablement/content/credits-source.html
 //                                        the credits page: the page leadership saw, corrected; its structure is
 //                                        mapped element by element, and its timeline rows are its JSON block
 //   docs/enablement/GLOSSARY.md          the glossary
+//   docs/enablement/content/spine.md     the landing page's one line on what the engine is (the spine's headline)
 //   docs/enablement/figures/*.svg        inlined verbatim, and copied byte for byte to enablement/site/figures/
-// It does not write the two interactive pages (lanes M1 and H1 build see-it-work.* and
-// how-it-works-interactive.*), and it writes no status page: LANE-BRIEF-V2 retired it from the site.
+//   enablement/partials/*.html           the chrome (header.html, footer.html) and the spine (spine.html, and
+//                                        spine-compact.html for the battlecard), stamped into every page
+// It writes index.html (the landing page), credits.html, glossary.html, demos.html and 404.html. It does not write
+// the hand-written pages (LANE-BRIEF-V3 section 5): what-it-is (lane M2), see-it-work (T1), selling-it and battlecard
+// (A1) and how-it-works (G1), nor how-it-works-interactive (H1). It only stamps them.
+//
+// The stamp. A page carries up to three marked blocks, each a pair of comments (the spine pair or the compact pair):
+//   <!-- chrome:header:start --> ... <!-- chrome:header:end -->       the skip link, masthead and navigation
+//   <!-- spine:start --> ... <!-- spine:end -->                       the spine's four blocks, inside the <article>
+//   <!-- spine:compact:start --> ... <!-- spine:compact:end -->       its short form, on the battlecard instead
+//   <!-- chrome:footer:start --> ... <!-- chrome:footer:end -->       the footer
+// The stamp replaces what is between each pair with its partial, marking the page's own address in the navigation
+// and the footer with aria-current="page". It is idempotent, writes a page only when the page changes, keeps the
+// page's line endings, skips a page that has no markers and says so, and never writes anything else into a page.
+// The stamp alone (--stamp) also brings the figure copies up to their sources, since the page lanes run only it.
+// One exception, named here: how-it-works-interactive.html predates the markers, and its chrome is lane S1's to
+// re-stamp (LANE-BRIEF-V3 section 4.6). The first stamp wraps its existing header and footer in the markers, and
+// every stamp sets its stamp line ("Updated ...") to STAMP; nothing else in it is touched.
 // Every page links /site.css, and /site.js where it has something to enhance; no page carries an inline style or
-// script, and none shows a label, a chip or a legend (LANE-BRIEF-V2). Anything a page adds to its source's text is
-// marked (data-chrome, data-lead or data-added, with a reason), so the text check can list it instead of comparing it.
+// script, and none shows a label, a chip or a legend. Anything a page adds to its source's text is marked
+// (data-chrome, data-lead or data-added, with a reason), so the text check can list it instead of comparing it.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,57 +53,97 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = path.join(ROOT, 'enablement', 'site');
 const FIGURES = path.join(ROOT, 'docs', 'enablement', 'figures');
+const PARTIALS = path.join(ROOT, 'enablement', 'partials');
 const argv = process.argv.slice(2);
 const OUT = argv.includes('--out') ? path.resolve(argv[argv.indexOf('--out') + 1]) : SITE;
+const STAMP_ONLY = argv.includes('--stamp');
+// --no-copy (with --out): stamp or build into DIR as it stands, without first copying the served folder into it.
+const NO_COPY = argv.includes('--no-copy');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
 const notes = [];
 
 const NAME = 'Behavioral Targeting and Intelligence';
-// The stamp names the day the pages last changed. Under LANE-BRIEF-V2 the material describes the finished
-// product, so it no longer names the code commit the old facts sheet was pinned to.
-const STAMP = 'Updated October 2, 2026';
-const FOOTLINE = 'Internal · Optimizely · do not forward outside Optimizely';
+// The stamp names the day the pages last changed (LANE-BRIEF-V3 section 5). The material describes the finished
+// product, so it names no code commit.
+const STAMP = 'Updated October 3, 2026';
 const ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E";
 const CREDITS_SRC = 'docs/enablement/content/credits-source.html';
 const CREDITS_MD = 'docs/enablement/content/credits.md';
 const DEMOS_MD = 'docs/enablement/content/demos.md';
+const SPINE_MD = 'docs/enablement/content/spine.md';
 
-// The status page is retired from the site (LANE-BRIEF-V2); its markdown stays in the repository as an
-// engineering record. The two interactive pages are built by lanes M1 and H1, not by this builder.
-const NAV = [
-  ['/', 'All pages'],
-  ['/what-it-is', 'What it is'],
-  ['/see-it-work', 'See it work'],
-  ['/selling-it', 'Selling it'],
-  ['/how-it-works', 'How it works'],
-  ['/how-it-works-interactive', 'How it works, interactive'],
-  ['/credits', 'AI credits'],
-  ['/glossary', 'Glossary'],
-  ['/demos', 'Demo map'],
+// ---------- the partials and the stamp ----------
+// The navigation, the footer's list of pieces and the spine live in enablement/partials/, outside the served folder;
+// this builder and the stamp read them from there, so every page carries the same chrome.
+const partial = (name) => fs.readFileSync(path.join(PARTIALS, name), 'utf8').replace(/\r\n?/g, '\n').trim();
+const MARKERS = [
+  ['header', 'chrome:header:start', 'chrome:header:end', 'header.html'],
+  ['spine', 'spine:start', 'spine:end', 'spine.html'],
+  ['compact', 'spine:compact:start', 'spine:compact:end', 'spine-compact.html'],
+  ['footer', 'chrome:footer:start', 'chrome:footer:end', 'footer.html'],
 ];
-const PIECES = [
-  ['/what-it-is', 'What it is', 'For marketing'],
-  ['/see-it-work', 'See it work', 'For marketing'],
-  ['/selling-it', 'Selling it', 'For account executives'],
-  ['/how-it-works', 'How it works and where it runs', 'For solutions engineers'],
-  ['/how-it-works-interactive', 'How it works, interactive', 'For solutions engineers'],
-  ['/credits', 'Where Opal and AI Credits Fit, and Where They Never Do', 'For account executives'],
-  ['/glossary', 'The glossary', 'For everyone'],
-  ['/demos', 'Which demo shows which story', 'For account executives'],
-];
-// The two interactive pages are titled by their own lanes (M1, H1): the list takes each title from the page's text
-// when the text is there, as "# Behavioral Targeting and Intelligence: <title>", and keeps the name above otherwise.
-for (const [href, src] of [['/see-it-work', 'docs/enablement/content/see-it-work.md'], ['/how-it-works-interactive', 'docs/enablement/content/how-it-works-interactive.md']]) {
-  let m = null;
-  try { m = new RegExp(`^# ${NAME}: (.+)$`, 'm').exec(fs.readFileSync(path.join(ROOT, src), 'utf8')); } catch { m = null; }
-  const row = PIECES.find((p) => p[0] === href);
-  if (m && row) row[1] = m[1].trim().charAt(0).toUpperCase() + m[1].trim().slice(1);
+const markerPair = (a, b) => new RegExp(`<!--\\s*${a}\\s*-->[\\s\\S]*?<!--\\s*${b}\\s*-->`, 'g');
+// The address a page is served at: index.html at /, the not-found page at none, <name>.html at /<name>.
+const addressOf = (file) => (file === 'index.html' ? '/' : file === '404.html' ? null : `/${file.replace(/\.html$/, '')}`);
+// The page's own link, in the navigation and in the footer, carries aria-current="page".
+const markCurrent = (html, address) => (address ? html.split(`<a href="${address}">`).join(`<a href="${address}" aria-current="page">`) : html);
+function stampBlocks(html, file) {
+  const eol = html.includes('\r\n') ? '\r\n' : '\n';
+  const address = addressOf(file);
+  const filled = [];
+  const problems = [];
+  let out = html;
+  for (const [kind, a, b, source] of MARKERS) {
+    const found = out.match(markerPair(a, b)) || [];
+    if (!found.length) {
+      if (new RegExp(`<!--\\s*(?:${a}|${b})\\s*-->`).test(out)) problems.push(`the ${kind} markers are not a pair`);
+      continue;
+    }
+    if (found.length > 1) { problems.push(`the ${kind} markers appear ${found.length} times`); continue; }
+    let content = partial(source);
+    if (kind === 'header' || kind === 'footer') content = markCurrent(content, address);
+    const block = `<!-- ${a} -->\n${content}\n<!-- ${b} -->`.split('\n').join(eol);
+    out = out.replace(markerPair(a, b), () => block);
+    filled.push(kind);
+  }
+  return { html: out, filled, problems };
 }
+// how-it-works-interactive.html predates the markers; its chrome is S1's (LANE-BRIEF-V3 section 4.6).
+const ADOPTED = new Set(['how-it-works-interactive.html']);
+function adoptChrome(html) {
+  let out = html;
+  if (!/<!--\s*chrome:header:start\s*-->/.test(out)) {
+    const m = /<a class="skip" href="#main">[\s\S]*?<header class="masthead">[\s\S]*?<\/header>/.exec(out);
+    if (m) out = out.slice(0, m.index) + `<!-- chrome:header:start -->\n${m[0]}\n<!-- chrome:header:end -->` + out.slice(m.index + m[0].length);
+  }
+  if (!/<!--\s*chrome:footer:start\s*-->/.test(out)) {
+    const m = /<footer class="foot">[\s\S]*?<\/footer>/.exec(out);
+    if (m) out = out.slice(0, m.index) + `<!-- chrome:footer:start -->\n${m[0]}\n<!-- chrome:footer:end -->` + out.slice(m.index + m[0].length);
+  }
+  return out.replace(/(<p class="stamp">)[^<]*(<\/p>)/, (all, open, close) => `${open}${STAMP}${close}`);
+}
+// Stamp every page in a folder; report what each got. Returns the report lines.
+function stampFolder(dir) {
+  const lines = [];
+  for (const file of fs.readdirSync(dir).filter((f) => /^[a-z0-9-]+\.html$/.test(f)).sort()) {
+    const full = path.join(dir, file);
+    const raw = fs.readFileSync(full, 'utf8');
+    const start = ADOPTED.has(file) ? adoptChrome(raw.replace(/\r\n/g, '\n')).split('\n').join(raw.includes('\r\n') ? '\r\n' : '\n') : raw;
+    const { html, filled, problems } = stampBlocks(start, file);
+    if (problems.length) { lines.push(`${file}: not stamped: ${problems.join('; ')}`); continue; }
+    if (!filled.length) { lines.push(`${file}: no markers, skipped`); continue; }
+    if (html !== raw) fs.writeFileSync(full, html);
+    lines.push(`${file}: ${filled.join(', ')} ${html !== raw ? 'stamped' : 'already current'}`);
+  }
+  return lines;
+}
+
 // Italic titles in the sources that name another piece become links to it; their text is unchanged.
 const TITLE_LINKS = new Map([
   ['What it is', '/what-it-is'],
   ['See it work', '/see-it-work'],
   ['Selling it', '/selling-it'],
+  ['Battlecard', '/battlecard'],
   ['How it works and where it runs', '/how-it-works'],
   ['How it works, interactive', '/how-it-works-interactive'],
   ['Where Opal and AI Credits Fit, and Where They Never Do', '/credits'],
@@ -669,24 +733,12 @@ function headHtml(title, js) {
 <link rel="stylesheet" href="/site.css">
 ${js ? '<script src="/site.js" defer></script>\n' : ''}</head>`;
 }
+// The chrome comes from the partials, already wrapped in its markers, so a later stamp finds it and keeps it current.
 function chromeTop(url) {
-  const nav = NAV.map(([href, label]) => `<li><a href="${href}"${href === url ? ' aria-current="page"' : ''}>${esc(label)}</a></li>`).join('');
-  return `<a class="skip" href="#main">Skip to the page</a>
-<header class="masthead">
-<div class="wrap masthead-inner">
-<p class="eyebrow">Internal · Optimizely</p>
-<nav class="sitenav" aria-label="Pages"><ul>${nav}</ul></nav>
-</div>
-</header>`;
+  return `<!-- chrome:header:start -->\n${markCurrent(partial('header.html'), url)}\n<!-- chrome:header:end -->`;
 }
 function chromeFoot(url) {
-  const pieces = PIECES.map(([href, t, r]) => `<li><a href="${href}"${href === url ? ' aria-current="page"' : ''}><span class="pieces-name">${esc(t)}</span><span class="pieces-reader">${esc(r)}</span></a></li>`).join('');
-  return `<footer class="foot">
-<div class="wrap">
-<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul>${pieces}</ul></nav>
-<p class="internal">${esc(FOOTLINE)}</p>
-</div>
-</footer>`;
+  return `<!-- chrome:footer:start -->\n${markCurrent(partial('footer.html'), url)}\n<!-- chrome:footer:end -->`;
 }
 function pageHtml({ url, title, readerTag, readerKey, article, js }) {
   const meta = `<div class="piece-meta">${readerTag ? `<p class="reader-tag" data-reader="${readerKey}">${esc(readerTag)}</p>` : ''}<p class="stamp">${esc(STAMP)}</p></div>`;
@@ -720,76 +772,103 @@ ${chromeFoot(null)}
 }
 
 // ---------- the landing page ----------
-// LANE-BRIEF-V2's framing: the reader picks their audience. The lede is V2 §2's own two sentences on what the engine
-// is, first and last. Each card carries its piece's one rule, read from the piece's source, says what the piece
-// gives, and links the piece and, for marketing and solutions engineers, its interactive companion.
-const LANDING_LEDE = 'A personal stylist for every visitor at internet scale. It decides the page at the point in time from what the visitor is doing now.';
-function renderLanding(rules) {
-  const card = (n, reader, srcPath, gives, links) => `<li class="card">
-<span class="num" aria-hidden="true">${n}</span>
-<h3>${esc(reader)}</h3>
-<p class="card-rule" data-rule-of="${srcPath}">${esc(rules[srcPath])}</p>
-<p class="card-gives">${esc(gives)}</p>
-<ul class="card-links">${links.map(([href, text]) => `<li><a href="${href}">${esc(text)}</a></li>`).join('')}</ul>
+// LANE-BRIEF-V3 section 4.6 and the lane brief: the reader picks their audience, as before. Under the package name,
+// the one line that says what the engine is: the spine's headline, read from spine.md and held to it by the text
+// check (data-quote-of). Then each reader's pieces, with a line on what they give, and the glossary for everyone.
+// The landing page carries no label, chip or legend; each reader's badge is a small inline icon.
+const READER_ICONS = {
+  marketing: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  ae: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
+  se: '<path d="M8 8l-4 4l4 4"/><path d="M16 8l4 4l-4 4"/><path d="M14 4l-4 16"/>',
+};
+const READERS = [
+  { key: 'marketing', reader: 'For marketing',
+    gives: 'The story in pictures, the capabilities as pillars, the reasons customers choose it, the words to use and never to use, and a guided tour of one sample store, step by step.',
+    links: [['/what-it-is', 'What it is'], ['/see-it-work', 'See it work']] },
+  { key: 'ae', reader: 'For account executives',
+    gives: 'Seven scenes, the reasons customers choose it, what a customer can measure, the objections, what a customer provides, a battlecard on one sheet, where AI credits apply, and which demo shows which story.',
+    links: [['/selling-it', 'Selling it'], ['/battlecard', 'Battlecard'], ['/credits', 'AI credits'], ['/demos', 'Demo map']] },
+  { key: 'se', reader: 'For solutions engineers',
+    gives: 'One visitor end to end, the arithmetic as worked examples, where it runs on Cloudflare, configuration, integration and privacy, and every constant on a slider.',
+    links: [['/how-it-works', 'How it works'], ['/how-it-works-interactive', 'How it works, interactive']] },
+];
+const SPINE_HEADLINE = "We built an engine that follows each visitor's interest in real time and decides the page at that point in time.";
+function renderLanding() {
+  if (!read(SPINE_MD).includes(SPINE_HEADLINE)) throw new Error(`${SPINE_MD} no longer holds the headline the landing page quotes; update SPINE_HEADLINE`);
+  const icon = (key) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${READER_ICONS[key]}</svg>`;
+  const card = (r) => `<li class="card">
+<span class="num" aria-hidden="true">${icon(r.key)}</span>
+<h3>${esc(r.reader)}</h3>
+<p class="card-gives">${esc(r.gives)}</p>
+<ul class="card-links">${r.links.map(([href, text]) => `<li><a href="${href}">${esc(text)}</a></li>`).join('')}</ul>
 </li>`;
-  return `<div class="hero" data-landing="LANE-BRIEF-V2: the reader picks their audience">
+  return `<div class="hero" data-landing="LANE-BRIEF-V3: the reader picks their audience">
 <h1><span id="package-name">${NAME}</span></h1>
-<p class="lede" data-quote-of="docs/enablement/LANE-BRIEF-V2.md">${esc(LANDING_LEDE)}</p>
-<p class="signin">This site is for Optimizely employees; it opens with the passphrase you were given.</p>
+<p class="lede" data-quote-of="${SPINE_MD}">${esc(SPINE_HEADLINE)}</p>
+<p class="signin">This site is for Optimizely employees; it opens with the passphrase shared with Optimizely staff.</p>
 </div>
 <h2 class="landing-h2">Each page is written for one reader</h2>
 <ul class="cards">
-${card(1, 'For marketing', 'docs/enablement/content/what-it-is.md', 'The story with the stylist and the buckets, the use cases as short scenes, the reasons customers choose it, the words to use and to avoid, and the questions marketing will be asked.', [['/what-it-is', 'What it is'], ['/see-it-work', 'See it work']])}
-${card(2, 'For account executives', 'docs/enablement/content/selling-it.md', 'The story with the use cases, the reasons customers choose it, the outcomes a customer can measure, the discovery questions, what a customer provides, the objections, and which demo to show for which story.', [['/selling-it', 'Selling it']])}
-${card(3, 'For solutions engineers', 'docs/enablement/content/how-it-works-and-where-it-runs.md', 'The story, then how it works: one visitor, the mechanism, the arithmetic, the architecture on Cloudflare, configuration, integration and privacy.', [['/how-it-works', 'How it works and where it runs'], ['/how-it-works-interactive', 'How it works, interactive']])}
+${READERS.map(card).join('\n')}
 </ul>
-<h2 class="landing-h2">Three references serve every reader</h2>
+<h2 class="landing-h2">For everyone</h2>
 <ul class="refs">
-<li class="ref"><a href="/credits">Where Opal and AI Credits Fit, and Where They Never Do</a><p>Where AI and its cost live, and the sentences that settle the question.</p></li>
 <li class="ref"><a href="/glossary">Glossary</a><p>One word for each meaning, defined once.</p></li>
-<li class="ref"><a href="/demos">Which demo shows which story</a><p>The demo for each part of the story, and what the room sees.</p></li>
-</ul>
-<div class="rule rule-close"><p class="rule-text" data-quote-of="docs/enablement/LANE-BRIEF-V2.md">${esc(LANDING_LEDE)}</p></div>`;
+</ul>`;
 }
 
 // ---------- build ----------
 
+// LANE-BRIEF-V3: what-it-is, selling-it and how-it-works are hand-written pages (lanes M2, A1 and G1), and so are
+// see-it-work (T1) and battlecard (A1); this builder writes none of them. It writes the demo map, the glossary, the
+// credits page, the landing page and the not-found page, copies the figures, then stamps every page.
 const PAGES = [
-  { file: 'what-it-is.html', url: '/what-it-is', src: 'docs/enablement/content/what-it-is.md', title: 'What it is', reader: 'For marketing', readerKey: 'marketing', js: true,
-    insert: [{ afterSection: 'short-scenes-show-what-it-does', figure: 'before-during-after', html: figureHtml('before-during-after', {
-      lead: 'The figure follows one session in three parts, before, during and after, and shows where AI and credits apply in each.',
-      sw: 'before during after', added: "the session figure, by the coordinator's ruling of 2026-10-02" }) }] },
-  { file: 'selling-it.html', url: '/selling-it', src: 'docs/enablement/content/selling-it.md', title: 'Selling it', reader: 'For account executives', readerKey: 'ae', js: true },
-  { file: 'how-it-works.html', url: '/how-it-works', src: 'docs/enablement/content/how-it-works-and-where-it-runs.md', title: 'How it works and where it runs', reader: 'For solutions engineers', readerKey: 'se', js: true },
   { file: 'demos.html', url: '/demos', src: DEMOS_MD, title: 'Which demo shows which story', reader: 'For account executives', readerKey: 'ae' },
 ];
 
-fs.mkdirSync(path.join(OUT, 'figures'), { recursive: true });
-// A dry run is a whole site: the shared stylesheet, script and headers come along, unchanged.
-if (path.resolve(OUT) !== path.resolve(SITE)) for (const f of ['site.css', 'site.js', '_headers']) if (fs.existsSync(path.join(SITE, f))) fs.copyFileSync(path.join(SITE, f), path.join(OUT, f));
-const written = [];
-const write = (rel, content) => { fs.writeFileSync(path.join(OUT, rel), content); written.push(`${rel} (${Buffer.byteLength(content)} bytes)`); };
-for (const f of fs.readdirSync(FIGURES).filter((n) => /^[a-z0-9-]+\.svg$/.test(n)).sort()) {
-  fs.copyFileSync(path.join(FIGURES, f), path.join(OUT, 'figures', f));
-  written.push(`figures/${f} (copied from docs/enablement/figures/)`);
+const where = path.relative(ROOT, OUT) || '.';
+// A dry run is a whole site: everything in the served folder comes along first, the hand-written pages and their
+// files included, so the stamp and the checks can run on DIR without touching enablement/site/.
+if (path.resolve(OUT) !== path.resolve(SITE)) {
+  fs.mkdirSync(OUT, { recursive: true });
+  if (!NO_COPY) fs.cpSync(SITE, OUT, { recursive: true });
 }
-const rules = {};
-for (const p of PAGES) {
-  const { html, rule } = renderPiece(read(p.src), p);
-  rules[p.src] = rule;
-  const article = `<article class="piece" data-source="${[p.src, p.also].filter(Boolean).join(' ')}">\n${html}\n</article>`;
-  write(p.file, pageHtml({ url: p.url, title: p.title, readerTag: p.reader, readerKey: p.readerKey, article, js: Boolean(p.js) }));
+if (STAMP_ONLY) {
+  // The page lanes run only the stamp, so it also brings the figure copies up to their sources, byte for byte: a
+  // page that inlines a figure is checked against both. Only a copy that is missing or differs is written.
+  fs.mkdirSync(path.join(OUT, 'figures'), { recursive: true });
+  const copied = [];
+  for (const f of fs.readdirSync(FIGURES).filter((n) => /^[a-z0-9-]+\.svg$/.test(n)).sort()) {
+    const to = path.join(OUT, 'figures', f);
+    const src = fs.readFileSync(path.join(FIGURES, f));
+    if (!fs.existsSync(to) || !fs.readFileSync(to).equals(src)) { fs.writeFileSync(to, src); copied.push(`figures/${f}`); }
+  }
+  console.log(`render-pages --stamp: stamped ${where} from enablement/partials/:\n  ${stampFolder(OUT).join('\n  ')}`);
+  console.log(`figure copies brought up to docs/enablement/figures/: ${copied.length ? copied.join(', ') : 'none needed'}`);
+  console.log('\nNext: node enablement/render-check.mjs');
+} else {
+  fs.mkdirSync(path.join(OUT, 'figures'), { recursive: true });
+  const written = [];
+  const write = (rel, content) => { fs.writeFileSync(path.join(OUT, rel), content); written.push(`${rel} (${Buffer.byteLength(content)} bytes)`); };
+  for (const f of fs.readdirSync(FIGURES).filter((n) => /^[a-z0-9-]+\.svg$/.test(n)).sort()) {
+    fs.copyFileSync(path.join(FIGURES, f), path.join(OUT, 'figures', f));
+    written.push(`figures/${f} (copied from docs/enablement/figures/)`);
+  }
+  for (const p of PAGES) {
+    const { html } = renderPiece(read(p.src), p);
+    const article = `<article class="piece" data-source="${[p.src, p.also].filter(Boolean).join(' ')}">\n${html}\n</article>`;
+    write(p.file, pageHtml({ url: p.url, title: p.title, readerTag: p.reader, readerKey: p.readerKey, article, js: Boolean(p.js) }));
+  }
+  {
+    const g = renderGlossary(read('docs/enablement/GLOSSARY.md'), { url: '/glossary' });
+    write('glossary.html', pageHtml({ url: '/glossary', title: 'The glossary', readerTag: 'For everyone', readerKey: 'all', article: `<article class="piece piece-glossary" data-source="docs/enablement/GLOSSARY.md">\n${g.html}\n</article>` }));
+    notes.push(`glossary: ${g.entries} entries under ${g.letters} letters`);
+  }
+  write('credits.html', pageHtml({ url: '/credits', title: 'Where Opal and AI Credits Fit, and Where They Never Do', readerTag: 'For account executives', readerKey: 'ae', article: renderCredits(), js: true }));
+  write('index.html', pageHtml({ url: '/', title: 'All pages', article: renderLanding() }));
+  write('404.html', notFoundHtml());
+  console.log(`render-pages: wrote into ${where}:\n  ${written.join('\n  ')}`);
+  if (notes.length) console.log(`notes:\n  ${notes.join('\n  ')}`);
+  console.log(`\nthe stamp, from enablement/partials/:\n  ${stampFolder(OUT).join('\n  ')}`);
+  console.log('\nNext: node enablement/render-check.mjs');
 }
-{
-  const g = renderGlossary(read('docs/enablement/GLOSSARY.md'), { url: '/glossary' });
-  rules['docs/enablement/GLOSSARY.md'] = g.rule;
-  write('glossary.html', pageHtml({ url: '/glossary', title: 'The glossary', readerTag: 'For everyone', readerKey: 'all', article: `<article class="piece piece-glossary" data-source="docs/enablement/GLOSSARY.md">\n${g.html}\n</article>` }));
-  notes.push(`glossary: ${g.entries} entries under ${g.letters} letters`);
-}
-write('credits.html', pageHtml({ url: '/credits', title: 'Where Opal and AI Credits Fit, and Where They Never Do', readerTag: 'For account executives', readerKey: 'ae', article: renderCredits(), js: true }));
-write('index.html', pageHtml({ url: '/', title: 'All pages', article: renderLanding(rules) }));
-write('404.html', notFoundHtml());
-
-console.log(`render-pages: wrote into ${path.relative(ROOT, OUT) || '.'}:\n  ${written.join('\n  ')}`);
-if (notes.length) console.log(`notes:\n  ${notes.join('\n  ')}`);
-console.log('\nNext: node enablement/render-check.mjs');

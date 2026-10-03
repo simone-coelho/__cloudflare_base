@@ -1,22 +1,32 @@
 /* enablement/site/see-it-work.js
-   The four instruments of the page See it work, added as progressive enhancement. Without this script the page
-   reads in full and shows a still picture of each move. It stores nothing, sends nothing and loads nothing. It
-   writes no style attribute and builds no markup from strings: every element is made with createElement and
-   filled with textContent, the buckets, bars and clock are SVG whose attributes are set directly, and motion uses
-   the Web Animations API or a class the stylesheet animates.
+   The guided tour of the page See it work: one sample store, Morrow & Vale, and seven steps the reader walks with
+   Back and Next. It is progressive enhancement. Without it the page reads in full as a storyboard: each step's text,
+   a still frame drawn from the same arithmetic, and a caption. With it, the stills give way to one live storefront,
+   a callout per step that says what to do and then what changed, the interest buckets, and a receipt panel.
 
-   The arithmetic is the engine's, as the explainer facts sheet (FACTS.md, sections 1 to 3) states it:
-     interest   a = R / (R + K) with K = 1.8, where R is the raw score each touch adds its action's weight to
-     fading     R falls as R * exp(-elapsed / tau), with tau = 14 days, the engine's default memory
-     lines      a visitor joins an interest at a >= 0.60 and is released only below 0.45; time alone can release,
-                never admit
-     region     lambda = kBlend / (kBlend + the sum of the visitor's own interests); each blended interest is
-                (1 - lambda) * a + lambda * the region's share; kBlend = 0.5, the published value FACTS cites
-     score      for each of the slot's dimensions, its weight times the sum of the blended interests of the
-                piece's tags, added up
-     order      gates first, then pins, then the score, with ties in the brand's own order
-   The store, its products and the regional shares are invented for the page. The block between the model
-   markers is self-contained, so the still pictures in the page are drawn from the same numbers. */
+   It stores nothing, sends nothing and loads nothing. It builds every element with createElement and fills it with
+   textContent; it sets SVG attributes directly; the only styles it touches are CSS custom properties and the
+   transforms of a glide, through the element's style object. Motion is CSS transitions and keyframes, which the
+   stylesheet stills under prefers-reduced-motion.
+
+   The arithmetic is the engine's, as the explainer facts sheet (FACTS.md, sections 1 to 3) and the engine facts
+   sheet (docs/enablement/research/S2-engine-facts.md, sections 3.4, 3.6, 3.10, 3.11, 3.17) state it, at the
+   engine's defaults:
+     interest   a = R / (R + K), K = 1.8, where R is the raw score each touch adds its action's weight to
+     fading     R falls as R * exp(-elapsed / tau); tau is the memory the brand publishes
+     lines      a visitor enters at a >= 0.60 on an event and is released only below 0.45; time alone releases,
+                never admits; the release time is t* = t_last + tau * ln(R (1 - 0.45) / (K * 0.45))
+     region     lambda = kBlend / (kBlend + the sum of the visitor's own interests), kBlend = 1; each blended
+                interest is (1 - lambda) * a + lambda * the region's share
+     score      the slot's weight (1) times the sum of the blended interests of the piece's tags
+     order      pins first, then the score, with ties in the brand's own order; the holdout's default arm scores
+                nothing and keeps the pins
+     weights    a look (a product view or a content click) adds 1; an add to the bag adds 3 (the engine's shipped
+                table)
+   One setting is the sample store's own: its memory is 5 minutes, so the tour can show a bucket drain while the
+   reader watches. The engine's default memory is 14 days, and the page says so. The store, its products, its
+   regional leans and its partner are invented for the page. The block between the model markers holds no
+   reference to the page, so the still frames and the self-test are drawn from the same numbers. */
 (function () {
   'use strict';
 
@@ -24,26 +34,34 @@
   const K = 1.8;
   const ENTRY = 0.6;
   const RELEASE = 0.45;
-  const TAU = 14;
-  const KBLEND = 0.5;
-  const WEIGHT = 1;
-  const SLOT_WEIGHTS = { kind: 1 };
+  const KBLEND = 1;
+  const MEMORY = 5;
+  const W_LOOK = 1;
+  const W_ADD = 3;
+  const SLOT_WEIGHT = 1;
   const EPS = 1e-9;
+  // Minutes into the visit: the arrival, the add to the bag, the look, the minutes that pass, the last click.
+  const AT = { arrive: 0, add: 0.5, look: 1, pass: 5, story: 6.5 };
 
   const VALUES = [
-    { id: 'rain', dim: 'kind', name: 'Rain layers', word: 'rain layers' },
-    { id: 'knit', dim: 'kind', name: 'Knitwear', word: 'knitwear' },
-    { id: 'linen', dim: 'kind', name: 'Linen', word: 'linen' },
-    { id: 'table', dim: 'kind', name: 'Tableware', word: 'tableware' },
+    { id: 'rain', name: 'Rain layers', word: 'rain layers' },
+    { id: 'knit', name: 'Knitwear', word: 'knitwear' },
+    { id: 'linen', name: 'Linen', word: 'linen' },
+    { id: 'table', name: 'Tableware', word: 'tableware' },
   ];
   const VALUE = {};
   VALUES.forEach((v) => { VALUE[v.id] = v; });
 
-  // What visitors in each region lean toward: shares within the dimension, the leader at one. Invented.
+  // What visitors in each region lean toward: shares within the dimension, the leader at one. Invented. Each
+  // region's plan names the cards the tour asks the reader to use: the region's second lean is added to the bag,
+  // the lean the region ignores is looked at, and a story about the first interest is clicked after the pin.
   const REGIONS = {
-    wa: { id: 'wa', name: 'Washington State', share: { rain: 1, knit: 0.75, table: 0.5, linen: 0 }, morning: 'knit' },
-    fl: { id: 'fl', name: 'Florida', share: { linen: 1, table: 0.75, rain: 0.5, knit: 0 }, morning: 'table' },
+    wa: { id: 'wa', name: 'Washington State', share: { rain: 1, knit: 0.75, table: 0.5, linen: 0 },
+      plan: { first: 'knit', add: 'cardigan', second: 'linen', look: 'shirt', story: 'woolcare' } },
+    fl: { id: 'fl', name: 'Florida', share: { linen: 1, rain: 0.75, table: 0.5, knit: 0 },
+      plan: { first: 'rain', add: 'shell', second: 'knit', look: 'cardigan', story: 'wet' } },
   };
+  const REGION_IDS = ['wa', 'fl'];
 
   const HEROES = [
     { id: 'h-rain', title: 'The rain edit', sub: 'Layers for wet weekends', tags: ['rain'], tone: 'rain' },
@@ -51,62 +69,69 @@
     { id: 'h-linen', title: 'Linen days', sub: 'Light layers for warm afternoons', tags: ['linen'], tone: 'linen' },
     { id: 'h-table', title: 'Hosting at home', sub: 'Plates, bowls and everything between', tags: ['table'], tone: 'table' },
   ];
+  const HERO = {};
+  HEROES.forEach((h) => { HERO[h.id] = h; });
 
-  // The page's sections, in the brand's own order: the order the site shows when nothing points anywhere.
+  // The page's sections in the brand's own order, the order the site shows when nothing points anywhere. The
+  // carousel's products come from the brand's recommendations; the section itself carries no tag.
   const SECTIONS = [
-    { id: 'rain', title: 'Rain-ready layers', start: 'Rain-ready layers', mid: 'Rain-ready layers', tone: 'rain', tags: ['rain'], cards: [
-      { id: 'jacket', name: 'Waxed field jacket', icon: 'jacket', tags: ['rain', 'knit'], outOfStock: true },
+    { id: 'rain', title: 'Rain-ready layers', tone: 'rain', tags: ['rain'], cards: [
+      { id: 'jacket', name: 'Waxed field jacket', icon: 'jacket', tags: ['rain', 'knit'] },
       { id: 'shell', name: 'Packable rain shell', icon: 'shell', tags: ['rain'] },
       { id: 'wet', name: 'Dressing for wet weekends', icon: 'story', tags: ['rain'], story: true },
     ] },
-    { id: 'recs', title: 'Recommended for you', start: 'The recommendations carousel', mid: 'the recommendations carousel', tone: 'recs', tags: [], recs: true, fixedOrder: true, cards: [
-      { id: 'throw', name: 'Wool throw', icon: 'throw', tags: ['knit'] },
-      { id: 'carafe', name: 'Glass carafe', icon: 'carafe', tags: ['table'] },
-      { id: 'tote', name: 'Linen market tote', icon: 'bag', tags: ['linen'] },
+    { id: 'recs', title: 'Recommended picks', tone: 'recs', tags: [], recs: true, cards: [
+      { id: 'throw', name: 'Wool throw', icon: 'throw', tags: [] },
+      { id: 'carafe', name: 'Glass carafe', icon: 'carafe', tags: [] },
+      { id: 'tote', name: 'Linen market tote', icon: 'bag', tags: [] },
     ] },
-    { id: 'knit', title: 'Soft knits', start: 'Soft knits', mid: 'Soft knits', tone: 'knit', tags: ['knit'], cards: [
+    { id: 'knit', title: 'Soft knits', tone: 'knit', tags: ['knit'], cards: [
       { id: 'cardigan', name: 'Cable-knit cardigan', icon: 'sweater', tags: ['knit'] },
       { id: 'crew', name: 'Merino crew sweater', icon: 'sweater', tags: ['knit'] },
       { id: 'woolcare', name: 'How to care for wool', icon: 'story', tags: ['knit'], story: true },
     ] },
-    { id: 'linen', title: 'The linen shop', start: 'The linen shop', mid: 'the linen shop', tone: 'linen', tags: ['linen'], cards: [
+    { id: 'linen', title: 'The linen shop', tone: 'linen', tags: ['linen'], cards: [
       { id: 'shirt', name: 'Linen camp shirt', icon: 'shirt', tags: ['linen'] },
       { id: 'trousers', name: 'Wide-leg linen trousers', icon: 'trousers', tags: ['linen'] },
       { id: 'living', name: 'Living in linen', icon: 'story', tags: ['linen'], story: true },
     ] },
-    { id: 'partner', title: 'Partner spotlight: Saltmarsh Ceramics', start: 'The partner spotlight', mid: 'the partner spotlight', tone: 'table', tags: ['table'], partner: true, cards: [
+    { id: 'partner', title: 'Partner spotlight: Saltmarsh Ceramics', tone: 'table', tags: ['table'], partner: true, cards: [
       { id: 'plates', name: 'Stoneware dinner plates', icon: 'plate', tags: ['table'] },
       { id: 'bowl', name: 'Speckled serving bowl', icon: 'bowl', tags: ['table'] },
       { id: 'napkins', name: 'Linen napkin set', icon: 'napkin', tags: ['table', 'linen'] },
     ] },
   ];
   const SECTION = {};
-  SECTIONS.forEach((s) => { SECTION[s.id] = s; });
-  const HERO = {};
-  HEROES.forEach((h) => { HERO[h.id] = h; });
+  const CARD = {};
+  SECTIONS.forEach((s) => { SECTION[s.id] = s; s.cards.forEach((c) => { CARD[c.id] = Object.assign({ section: s.id }, c); }); });
+  const PIN = 'partner';
 
   function newProfile() { return { R: {}, t: {}, member: {}, released: {} }; }
-  function rawAt(p, v, now) { const R = p.R[v] || 0; return R ? R * Math.exp(-(now - p.t[v]) / TAU) : 0; }
+  function rawAt(p, v, now) { const R = p.R[v] || 0; return R ? R * Math.exp(-(now - p.t[v]) / MEMORY) : 0; }
   function interestOf(R) { return R / (R + K); }
   // One touch: fade what is there to now, then add the action's weight.
   function touch(p, v, w, now) { p.R[v] = rawAt(p, v, now) + w; p.t[v] = now; }
   function ownInterests(p, now) { const a = {}; VALUES.forEach((v) => { a[v.id] = interestOf(rawAt(p, v.id, now)); }); return a; }
-  // After an event: a visitor joins at the entry line, and leaves below the release line.
+  // After an event: a visitor enters at the entry line and is released below the release line.
   function settleOnEvent(p, now) {
     const a = ownInterests(p, now);
-    const changes = [];
+    const out = [];
     VALUES.forEach((v) => {
-      if (!p.member[v.id] && a[v.id] >= ENTRY) { p.member[v.id] = true; changes.push({ v: v.id, kind: 'entered' }); }
-      else if (p.member[v.id] && a[v.id] < RELEASE) { p.member[v.id] = false; p.released[v.id] = true; changes.push({ v: v.id, kind: 'released' }); }
+      if (!p.member[v.id] && a[v.id] >= ENTRY) { p.member[v.id] = true; out.push({ v: v.id, kind: 'entered', t: now }); }
+      else if (p.member[v.id] && a[v.id] < RELEASE) { p.member[v.id] = false; p.released[v.id] = true; out.push({ v: v.id, kind: 'released', t: now }); }
     });
-    return changes;
+    return out;
   }
-  // As time passes: time alone can release a visitor, never admit one.
+  // The moment a member crosses its release line with no new touch, in closed form.
+  function releaseTime(p, v) { return p.t[v] + MEMORY * Math.log((p.R[v] * (1 - RELEASE)) / (K * RELEASE)); }
+  // As time passes: time alone can release a visitor, never admit one. Each release carries its exact moment.
   function settleOnTime(p, now) {
     const a = ownInterests(p, now);
     const out = [];
-    VALUES.forEach((v) => { if (p.member[v.id] && a[v.id] < RELEASE) { p.member[v.id] = false; p.released[v.id] = true; out.push(v.id); } });
-    return out;
+    VALUES.forEach((v) => {
+      if (p.member[v.id] && a[v.id] < RELEASE) { out.push({ v: v.id, kind: 'released', t: releaseTime(p, v.id) }); p.member[v.id] = false; p.released[v.id] = true; }
+    });
+    return out.sort((x, y) => x.t - y.t);
   }
   function blend(a, share) {
     let sum = 0;
@@ -114,50 +139,121 @@
     const lambda = KBLEND / (KBLEND + sum);
     const b = {};
     VALUES.forEach((v) => { b[v.id] = (1 - lambda) * a[v.id] + lambda * (share[v.id] || 0); });
-    return { lambda, b };
+    return { lambda, b, sum };
   }
-  function scoreOf(tags, b) {
-    const byDim = {};
-    tags.forEach((t) => { const d = VALUE[t].dim; byDim[d] = (byDim[d] || 0) + b[t]; });
-    let s = 0;
-    Object.keys(byDim).forEach((d) => { s += (SLOT_WEIGHTS[d] || 0) * byDim[d]; });
-    return s;
-  }
+  function scoreOf(tags, b) { let s = 0; tags.forEach((t) => { s += SLOT_WEIGHT * b[t]; }); return s; }
   function rank(items, b) {
-    return items.map((it, i) => ({ it, i, s: scoreOf(it.tags, b) }))
+    return items.map((it, i) => ({ it, i, s: b ? scoreOf(it.tags, b) : 0 }))
       .sort((x, y) => (y.s - x.s > EPS ? 1 : x.s - y.s > EPS ? -1 : x.i - y.i))
       .map((r) => r.it);
   }
-  // One decision for the whole page: the hero slot, the layout slot's sections, and the pieces inside each.
-  function decide(p, regionId, now, rules) {
-    const r = rules || {};
+  // One decision for the whole page: the hero slot, and the layout slot's sections. The holdout's default arm
+  // sees no interest, so it serves the brand's own order with the pins kept.
+  function decide(p, regionId, now, opts) {
+    const o = opts || {};
     const a = ownInterests(p, now);
-    const { lambda, b } = blend(a, REGIONS[regionId].share);
-    const interestOrder = rank(SECTIONS, b).map((s) => s.id);
-    let order = interestOrder.slice();
-    if (r.pin) order = [r.pin].concat(order.filter((id) => id !== r.pin));
-    const hero = rank(HEROES, b)[0].id;
-    const cardsByInterest = {};
-    const removed = [];
-    SECTIONS.forEach((s) => {
-      const all = s.fixedOrder ? s.cards.slice() : rank(s.cards, b);
-      cardsByInterest[s.id] = all.map((c) => c.id);
-      all.forEach((c) => { if (r.gate && c.outOfStock) removed.push(c.id); });
-    });
+    const share = REGIONS[regionId].share;
+    const bl = o.holdout ? { lambda: null, b: null, sum: 0 } : blend(a, share);
+    const interestOrder = rank(SECTIONS, bl.b).map((s) => s.id);
+    const order = o.pin ? [PIN].concat(interestOrder.filter((id) => id !== PIN)) : interestOrder.slice();
+    const heroOrder = rank(HEROES, bl.b).map((h) => h.id);
     const scores = {};
-    SECTIONS.forEach((s) => { scores[s.id] = scoreOf(s.tags, b); });
-    return { a, b, lambda, order, interestOrder, hero, cardsByInterest, removed, scores, pin: r.pin || null };
+    SECTIONS.forEach((s) => { scores[s.id] = bl.b ? scoreOf(s.tags, bl.b) : 0; });
+    const heroScores = {};
+    HEROES.forEach((h) => { heroScores[h.id] = bl.b ? scoreOf(h.tags, bl.b) : 0; });
+    return { now, a, b: bl.b, lambda: bl.lambda, sum: bl.sum, share, order, interestOrder, hero: heroOrder[0], scores, heroScores, pinned: o.pin ? PIN : null, holdout: !!o.holdout };
   }
-  const MODEL = { K, ENTRY, RELEASE, TAU, KBLEND, WEIGHT, VALUES, VALUE, REGIONS, HEROES, HERO, SECTIONS, SECTION, newProfile, touch, ownInterests, settleOnEvent, settleOnTime, decide };
+
+  // The tour. Each step's own actions, in order: the region (step 1), the add to the bag (2), the look (3), the
+  // minutes that pass (4), the pin and the story click (5), none (6), and the holdout view (7), which changes
+  // nothing the engine holds and is a way of looking only.
+  const STEP_COUNT = 7;
+  const ACTIONS = [0, 1, 1, 1, 1, 2, 0, 0];
+  function replay(regionId, step, progress) {
+    const r = REGIONS[regionId];
+    const plan = r.plan;
+    const p = newProfile();
+    const log = [];
+    const pages = [];
+    let now = AT.arrive;
+    let pin = false;
+    const page = () => { const d = decide(p, regionId, now, { pin }); pages.push(d); return d; };
+    page();
+    log.push({ t: now, kind: 'region', region: regionId });
+    const done = (s, k) => step > s || (step === s && progress >= k);
+    if (done(2, 1)) {
+      now = AT.add;
+      touch(p, plan.first, W_ADD, now);
+      log.push({ t: now, kind: 'add', card: plan.add, v: plan.first, w: W_ADD });
+      settleOnEvent(p, now).forEach((c) => log.push(c));
+      log.push({ t: now, kind: 'fading' });
+      page();
+    }
+    if (done(3, 1)) {
+      now = AT.look;
+      touch(p, plan.second, W_LOOK, now);
+      log.push({ t: now, kind: 'look', card: plan.look, v: plan.second, w: W_LOOK });
+      settleOnEvent(p, now).forEach((c) => log.push(c));
+      page();
+    }
+    if (done(4, 1)) {
+      const from = now;
+      now = from + AT.pass;
+      settleOnTime(p, now).forEach((c) => log.push(c));
+      log.push({ t: now, kind: 'time', from });
+      page();
+    }
+    if (done(5, 1)) {
+      pin = true;
+      log.push({ t: now, kind: 'pin', section: PIN });
+      page();
+    }
+    if (done(5, 2)) {
+      now = AT.story;
+      touch(p, plan.first, W_LOOK, now);
+      log.push({ t: now, kind: 'look', card: plan.story, v: plan.first, w: W_LOOK });
+      settleOnEvent(p, now).forEach((c) => log.push(c));
+      page();
+    }
+    const d = pages[pages.length - 1];
+    const prev = pages.length > 1 ? pages[pages.length - 2] : null;
+    return { regionId, step, progress, p, now, pin, log, pages, d, prev };
+  }
+  // The receipt's arithmetic, rounded as it is printed, so a person can recompute every line from what is shown.
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  function receiptOf(state) {
+    const d = state.d;
+    const share = d.share;
+    const lam = r3(d.lambda);
+    const rest = r3(1 - d.lambda);
+    const levels = {};
+    VALUES.forEach((v) => { levels[v.id] = r3(d.a[v.id]); });
+    const places = d.order.map((id, i) => {
+      const s = SECTION[id];
+      if (d.pinned === id) return { place: i + 1, id, pinned: true, interestPlace: d.interestOrder.indexOf(id) + 1 };
+      if (!s.tags.length) return { place: i + 1, id, untagged: true, score: 0 };
+      const t = s.tags[0];
+      return { place: i + 1, id, value: t, rest, level: levels[t], lam, lean: share[t] || 0, score: r3(d.scores[id]) };
+    });
+    const first = REGIONS[state.regionId].plan.first;
+    const R = rawAt(state.p, first, state.now);
+    return { lam, rest, levels, places, hero: d.hero, heroScore: r3(d.heroScores[d.hero]), sumShown: r3(VALUES.reduce((x, v) => x + levels[v.id], 0)), worked: { v: first, R: r3(R), RK: r3(R + K), level: levels[first] } };
+  }
+  const MODEL = { K, ENTRY, RELEASE, KBLEND, MEMORY, W_LOOK, W_ADD, SLOT_WEIGHT, AT, VALUES, VALUE, REGIONS, REGION_IDS, HEROES, HERO, SECTIONS, SECTION, CARD, PIN, STEP_COUNT, ACTIONS,
+    newProfile, rawAt, interestOf, touch, ownInterests, settleOnEvent, settleOnTime, releaseTime, blend, scoreOf, rank, decide, replay, receiptOf, r3 };
   /* model:end */
 
   if (typeof document === 'undefined') return;
   const doc = document;
-  const reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const canAnimate = !reduced && typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
+  const tourEl = doc.getElementById('tour');
+  const liveEl = doc.getElementById('tour-live');
+  if (!tourEl || !liveEl) return;
+  const stepEls = Array.prototype.slice.call(tourEl.querySelectorAll('section.tour-step[data-step]'));
+  if (stepEls.length !== STEP_COUNT) return;
+  const motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const reduced = () => !!(motionQuery && motionQuery.matches);
   const SVGNS = 'http://www.w3.org/2000/svg';
   const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth'];
-  void MODEL;
 
   // ---------- small helpers ----------
   function el(tag, cls, text) {
@@ -171,61 +267,35 @@
     if (attrs) Object.keys(attrs).forEach((k) => e.setAttribute(k, String(attrs[k])));
     return e;
   }
+  function added(node, why) { node.setAttribute('data-added', why); return node; }
   function button(cls, text, onClick) {
     const b = el('button', cls, text);
     b.type = 'button';
     b.addEventListener('click', onClick);
     return b;
   }
-  let uidCounter = 0;
-  const uid = (prefix) => `${prefix}-${++uidCounter}`;
+  function clock(t) {
+    const whole = Math.floor(t + 1e-9);
+    const sec = Math.floor((t - whole) * 60 + 1e-6);
+    return `${whole}:${String(sec).padStart(2, '0')}`;
+  }
+  const num = (x) => (Math.abs(x) < 5e-4 ? '0' : x.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''));
+  const fixed3 = (x) => x.toFixed(3);
   function listWords(words, joiner) {
     if (words.length <= 1) return words.join('');
     if (joiner === 'then') return words.join(', then ');
     return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
   }
-  function flash(node, cls, ms) {
+  const sectionName = (id, start) => {
+    const s = SECTION[id];
+    if (s.partner) return start ? 'The partner spotlight' : 'the partner spotlight';
+    if (s.recs) return start ? 'The recommendations carousel' : 'the recommendations carousel';
+    return !start && /^The /.test(s.title) ? `the ${s.title.slice(4)}` : s.title;
+  };
+  function restartAnimation(node, cls) {
     node.classList.remove(cls);
-    void node.getBoundingClientRect();
+    void node.offsetWidth;
     node.classList.add(cls);
-    setTimeout(() => node.classList.remove(cls), ms || 1400);
-  }
-  // A number eased toward its target over a few frames, then handed to apply.
-  function tweener(apply) {
-    let cur = null;
-    let raf = 0;
-    return function to(target, ms) {
-      cancelAnimationFrame(raf);
-      if (cur === null || !ms || reduced) { cur = target; apply(target); return; }
-      const from = cur;
-      const t0 = performance.now();
-      const step = (t) => {
-        const k = Math.max(0, Math.min(1, (t - t0) / ms));
-        cur = from + (target - from) * (1 - Math.pow(1 - k, 3));
-        apply(cur);
-        if (k < 1) raf = requestAnimationFrame(step);
-      };
-      raf = requestAnimationFrame(step);
-    };
-  }
-  // Move nodes to new places and let each glide from where it was. Focus survives the move.
-  function flipMove(scope, nodes, mutate, animate) {
-    const before = new Map();
-    if (animate && canAnimate) nodes.forEach((n) => { if (!n.hidden) before.set(n, n.getBoundingClientRect()); });
-    const focused = doc.activeElement;
-    mutate();
-    if (focused && focused !== doc.body && scope.contains(focused) && doc.activeElement !== focused) focused.focus({ preventScroll: true });
-    if (!animate || !canAnimate) return;
-    nodes.forEach((n) => {
-      const a = before.get(n);
-      if (!a || n.hidden) return;
-      const b = n.getBoundingClientRect();
-      const dx = a.left - b.left;
-      const dy = a.top - b.top;
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-        n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }], { duration: 620, easing: 'cubic-bezier(.2, .75, .25, 1)' });
-      }
-    });
   }
 
   // ---------- icons: simple line drawings, decorative ----------
@@ -242,735 +312,741 @@
     plate: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17Z M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 1 0 0-9Z',
     bowl: 'M3.5 10.5h17a8.5 7 0 0 1-17 0Z M9 20h6',
     napkin: 'M5 5h14v14H5Z M5 5l14 14 M12 5v3',
+    pin: 'M9 3.5h6l-1 5 3 3H7l3-3-1-5Z M12 11.5V20.5',
+    clock: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17Z M12 7.5V12l3 2',
+    up: 'M12 19V5 M6.5 10.5 12 5l5.5 5.5',
+    down: 'M12 5v14 M6.5 13.5 12 19l5.5-5.5',
   };
   function icon(name, cls) {
-    const s = svgEl('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false', class: cls || 'sw-icon' });
+    const s = svgEl('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false', class: cls || 'tour-icon' });
     s.appendChild(svgEl('path', { d: ICONS[name] }));
     return s;
   }
 
   // ---------- words ----------
-  const heroTitle = (id) => HERO[id].title;
-  function describeMoves(before, after) {
-    const lines = [];
+  const regionOf = () => (state.regionId ? REGIONS[state.regionId] : null);
+  function leanWords(r) {
+    const leaning = VALUES.filter((v) => (r.share[v.id] || 0) > 0).sort((x, y) => r.share[y.id] - r.share[x.id]).slice(0, 2).map((v) => v.word);
+    return listWords(leaning, 'then');
+  }
+  function cardPhrase(id, cap) {
+    const c = CARD[id];
+    if (c.story) return `${cap ? 'The' : 'the'} story ${c.name}`;
+    return `${cap ? 'The' : 'the'} ${c.name.toLowerCase()}`;
+  }
+  // What moved between two pages: two neighbors that traded places, or a section that moved up past others.
+  function movesOf(before, after) {
+    const out = { up: [], down: [], swap: null, lines: [] };
+    if (!before) return out;
     after.forEach((id, i) => {
       const j = before.indexOf(id);
-      if (j <= i) return;
-      const passed = before.slice(0, j).filter((x) => after.indexOf(x) > i);
-      if (!passed.length) return;
-      if (i === 0) lines.push(`${SECTION[id].start} moved to the top.`);
-      else lines.push(`${SECTION[id].start} moved up, ahead of ${listWords(passed.map((x) => SECTION[x].mid))}.`);
+      if (j > i) out.up.push(id);
+      else if (j < i) out.down.push(id);
     });
-    return lines;
+    if (out.up.length === 1 && out.down.length === 1) {
+      const u = out.up[0];
+      const w = out.down[0];
+      if (Math.abs(after.indexOf(u) - after.indexOf(w)) === 1 && Math.abs(before.indexOf(u) - before.indexOf(w)) === 1) out.swap = [u, w];
+    }
+    return out;
   }
-  function levelWords(a, member) {
-    if (a >= ENTRY) return member ? 'past the entry line, so the visitor counts as interested' : 'past the entry line';
-    if (a >= RELEASE) return member ? 'between the two lines, and the visitor still counts as interested' : 'between the release line and the entry line';
-    if (a >= 0.05) return 'below the release line';
-    return 'nearly empty';
+  function moveSentence(m) {
+    if (m.swap) return `${sectionName(m.swap[0], true)} moved up, ahead of ${sectionName(m.swap[1])}: the two traded places.`;
+    if (m.up.length) return `${listWords(m.up.map((id, i) => sectionName(id, i === 0)))} moved up.`;
+    return '';
   }
-  function leanWords(lambda) {
-    if (lambda > 0.9) return 'almost all on the region';
-    if (lambda > 0.6) return 'mostly on the region';
-    if (lambda >= 0.4) return 'about equally on the region and the visitor';
-    if (lambda >= 0.1) return "mostly on the visitor's own clicks";
-    return "almost all on the visitor's own clicks";
-  }
-  function cardPhrase(c) { return c.story ? `the story "${c.name}"` : `the ${c.name.toLowerCase()}`; }
+
+  // ---------- the state, and the history the tour can rebuild ----------
+  const state = { regionId: null, step: 1, progress: 0, holdoutView: false, busy: 0, timers: [] };
+  function current() { return state.regionId ? replay(state.regionId, state.step, state.progress) : null; }
 
   // ---------- components ----------
-  function Announcer() {
-    const p = el('p', 'visually-hidden');
-    p.setAttribute('role', 'status');
-    p.setAttribute('aria-live', 'polite');
-    let t = 0;
+  function Stepper() {
+    const root = el('div', 'tour-stepper');
+    root.setAttribute('role', 'group');
+    root.setAttribute('aria-label', 'Tour steps');
+    const back = button('tour-btn', 'Back', () => go(state.step - 1, false));
+    const count = added(el('p', 'tour-count'), 'the step counter, drawn by the script');
+    const dots = el('ol', 'tour-dots');
+    dots.setAttribute('aria-hidden', 'true');
+    const dotEls = [];
+    for (let i = 1; i <= STEP_COUNT; i++) { const li = el('li', 'tour-dot'); dots.appendChild(li); dotEls.push(li); }
+    const next = button('tour-btn tour-btn--next', 'Next', () => (state.step === STEP_COUNT ? restart() : go(state.step + 1, false)));
+    root.appendChild(back);
+    root.appendChild(count);
+    root.appendChild(dots);
+    root.appendChild(next);
     return {
-      root: p,
-      say(text) { clearTimeout(t); p.textContent = ''; t = setTimeout(() => { p.textContent = text; }, 80); },
+      root,
+      next,
+      update() {
+        count.textContent = `Step ${state.step} of ${STEP_COUNT}`;
+        back.setAttribute('aria-disabled', state.step === 1 ? 'true' : 'false');
+        const waiting = state.step === 1 && !state.regionId;
+        next.setAttribute('aria-disabled', waiting ? 'true' : 'false');
+        next.textContent = state.step === STEP_COUNT ? 'Start over' : 'Next';
+        next.setAttribute('aria-label', state.step === STEP_COUNT ? 'Start the tour over' : 'Next step');
+        back.setAttribute('aria-label', 'Previous step');
+        dotEls.forEach((d, i) => { d.classList.toggle('is-done', i + 1 < state.step); d.classList.toggle('is-current', i + 1 === state.step); });
+      },
     };
   }
 
-  function Segmented(labelText, options, selected, onChange) {
-    const wrap = el('div', 'sw-seg');
-    const lab = el('span', 'sw-seg-label', labelText);
-    lab.id = uid('sw-seg');
+  function Callout() {
+    const root = el('div', 'tour-callout');
+    const said = el('div', 'tour-callout-said');
+    said.setAttribute('aria-live', 'polite');
+    said.setAttribute('aria-atomic', 'true');
+    const top = el('p', 'tour-callout-top');
+    const pill = added(el('span', 'tour-pill'), 'the step counter, drawn by the script');
+    const title = added(el('span', 'tour-callout-title'), "the step's title, repeated in the callout by the script");
+    top.appendChild(pill);
+    top.appendChild(title);
+    const text = added(el('p', 'tour-callout-text'), 'what to do, then what changed, written by the script for the region picked');
+    text.setAttribute('data-reader', 'the reader');
+    const note = added(el('p', 'tour-callout-note'), "a note on the step's instrument, written by the script");
+    said.appendChild(top);
+    said.appendChild(text);
+    said.appendChild(note);
+    root.appendChild(said);
+    const actions = el('div', 'tour-callout-actions');
+    root.appendChild(actions);
+    return {
+      root,
+      actions,
+      set(o) {
+        pill.textContent = `Step ${state.step} of ${STEP_COUNT}`;
+        title.textContent = o.title;
+        text.textContent = o.text;
+        note.textContent = o.note || '';
+        note.hidden = !o.note;
+        root.classList.toggle('is-done', !!o.done);
+      },
+    };
+  }
+
+  function RegionPicker(onPick) {
+    const wrap = el('div', 'tour-regions');
     wrap.setAttribute('role', 'group');
-    wrap.setAttribute('aria-labelledby', lab.id);
-    wrap.appendChild(lab);
-    let current = selected;
-    const buttons = options.map((o, i) => {
-      const b = button('sw-btn', o.name, () => select(o.id, true));
-      b.dataset.value = o.id;
+    const name = el('span', 'tour-regions-name', 'Pick where this visitor is');
+    name.id = 'tour-regions-name';
+    name.setAttribute('data-reader', 'the reader');
+    added(name, 'the region control, drawn by the script');
+    wrap.setAttribute('aria-labelledby', name.id);
+    wrap.appendChild(name);
+    const buttons = REGION_IDS.map((id, i) => {
+      const b = button('tour-btn tour-btn--region', REGIONS[id].name, () => onPick(id));
+      b.dataset.region = id;
+      b.setAttribute('aria-pressed', 'false');
       b.addEventListener('keydown', (e) => {
         let to = -1;
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (i + 1) % options.length;
-        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (i + options.length - 1) % options.length;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (i + 1) % REGION_IDS.length;
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (i + REGION_IDS.length - 1) % REGION_IDS.length;
         if (to >= 0) { e.preventDefault(); buttons[to].focus(); }
       });
       wrap.appendChild(b);
       return b;
     });
-    function paint() { buttons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.value === current ? 'true' : 'false')); }
-    function select(id, fire) {
-      if (id === current) return;
-      current = id;
-      paint();
-      if (fire) onChange(id);
-    }
-    paint();
-    return { root: wrap, select, get value() { return current; } };
-  }
-
-  function Toggle(text, onChange) {
-    const b = button('sw-btn sw-toggle', text, () => {
-      const on = b.getAttribute('aria-pressed') !== 'true';
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      onChange(on);
-    });
-    b.setAttribute('aria-pressed', 'false');
-    return b;
-  }
-
-  function Storefront(opts) {
-    const root = el('div', 'sw-store');
-    root.setAttribute('role', 'group');
-    root.setAttribute('aria-label', 'Morrow & Vale, the sample store: its home page');
-    const head = el('div', 'sw-store-head');
-    head.setAttribute('aria-hidden', 'true');
-    head.appendChild(el('span', 'sw-store-mark', 'Morrow & Vale'));
-    const nav = el('span', 'sw-store-nav');
-    ['New in', 'Clothing', 'Home', 'Journal'].forEach((t) => nav.appendChild(el('span', null, t)));
-    head.appendChild(nav);
-    head.appendChild(icon('bag', 'sw-icon sw-store-bag'));
-    root.appendChild(head);
-    const status = el('p', 'sw-store-status');
-    root.appendChild(status);
-    const hero = el('div', 'sw-hero');
-    const heroTitleEl = el('span', 'sw-hero-title');
-    const heroSub = el('span', 'sw-hero-sub');
-    hero.appendChild(heroTitleEl);
-    hero.appendChild(heroSub);
-    root.appendChild(hero);
-    const list = el('ol', 'sw-sections');
-    list.setAttribute('aria-label', 'The sections of the page, in order');
-    root.appendChild(list);
-    const secEls = {};
-    const cardEls = {};
-    SECTIONS.forEach((s) => {
-      const li = el('li', `sw-section sw-tone-${s.tone}`);
-      li.dataset.id = s.id;
-      const sh = el('div', 'sw-section-head');
-      sh.appendChild(el('span', 'sw-section-title', s.title));
-      if (s.recs) sh.appendChild(el('span', 'sw-section-note', "Products from the brand's recommendations"));
-      const badge = el('span', 'sw-badge', 'Pinned');
-      badge.hidden = true;
-      sh.appendChild(badge);
-      li.appendChild(sh);
-      const ul = el('ul', 'sw-cards');
-      s.cards.forEach((c) => {
-        const item = el('li', 'sw-card-item');
-        item.dataset.id = c.id;
-        const card = el(opts.clickable ? 'button' : 'div', 'sw-card');
-        if (opts.clickable) {
-          const words = c.tags.map((t) => VALUE[t].word);
-          card.type = 'button';
-          card.setAttribute('aria-label', `${c.name}${c.story ? ', a story' : ''}: fills the ${listWords(words)} ${words.length > 1 ? 'buckets' : 'bucket'}`);
-          card.addEventListener('click', () => opts.onCard(c, card));
-        }
-        card.appendChild(icon(c.icon));
-        const txt = el('span', 'sw-card-text');
-        if (c.story) txt.appendChild(el('span', 'sw-card-kind', 'Story'));
-        txt.appendChild(el('span', 'sw-card-name', c.name));
-        if (opts.showTags) txt.appendChild(el('span', 'sw-card-tags', c.tags.map((t) => VALUE[t].name).join(', ')));
-        if (c.outOfStock && opts.showStock) txt.appendChild(el('span', 'sw-card-oos', 'Out of stock'));
-        card.appendChild(txt);
-        item.appendChild(card);
-        ul.appendChild(item);
-        cardEls[c.id] = item;
-      });
-      li.appendChild(ul);
-      list.appendChild(li);
-      secEls[s.id] = li;
-    });
-    let heroId = null;
-    let busy = 0;
-    let leaveAnims = [];
-    function setHero(id, animate) {
-      if (id === heroId) return;
-      const h = HERO[id];
-      heroTitleEl.textContent = h.title;
-      heroSub.textContent = h.sub;
-      HEROES.forEach((x) => hero.classList.remove(`sw-tone-${x.tone}`));
-      hero.classList.add(`sw-tone-${h.tone}`);
-      if (animate && canAnimate && heroId !== null) hero.animate([{ opacity: 0.2, transform: 'scale(.985)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 480, easing: 'ease-out' });
-      heroId = id;
-    }
-    function update(d, animate) {
-      // A fade-out still waiting from an earlier update is dropped, so no card is left invisible.
-      leaveAnims.forEach((an) => an.cancel());
-      leaveAnims = [];
-      const leaving = [];
-      const arriving = [];
-      SECTIONS.forEach((s) => s.cards.forEach((c) => {
-        const gone = d.removed.indexOf(c.id) >= 0;
-        if (gone && !cardEls[c.id].hidden) leaving.push(cardEls[c.id]);
-        if (!gone && cardEls[c.id].hidden) arriving.push(cardEls[c.id]);
-      }));
-      const nodes = SECTIONS.map((s) => secEls[s.id]).concat(Object.keys(cardEls).map((k) => cardEls[k]));
-      const run = () => {
-        flipMove(root, nodes, () => {
-          d.order.forEach((id) => list.appendChild(secEls[id]));
-          SECTIONS.forEach((s) => {
-            const ul = secEls[s.id].querySelector('.sw-cards');
-            d.cardsByInterest[s.id].forEach((cid) => ul.appendChild(cardEls[cid]));
-            const pinned = d.pin === s.id;
-            secEls[s.id].classList.toggle('is-pinned', pinned);
-            secEls[s.id].querySelector('.sw-badge').hidden = !pinned;
-          });
-          SECTIONS.forEach((s) => s.cards.forEach((c) => { cardEls[c.id].hidden = d.removed.indexOf(c.id) >= 0; }));
-        }, animate);
-        if (animate && canAnimate) arriving.forEach((n) => n.animate([{ opacity: 0, transform: 'scale(.9)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' }));
-        setHero(d.hero, animate);
-      };
-      const ticket = ++busy;
-      if (animate && canAnimate && leaving.length) {
-        leaveAnims = leaving.map((n) => n.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 260, easing: 'ease-in', fill: 'forwards' }));
-        setTimeout(() => {
-          if (ticket !== busy) return;
-          run();
-          leaveAnims.forEach((an) => an.cancel());
-          leaveAnims = [];
-        }, 270);
-      } else run();
-    }
     return {
-      root,
-      update,
-      setStatus(text) { status.textContent = text; },
+      root: wrap,
+      update() { buttons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.region === state.regionId ? 'true' : 'false')); },
     };
   }
 
-  const VESSEL = 'M6 6H58L52 96H12Z';
-  const yOf = (a) => 96 - a * 90;
-  function Buckets(name) {
-    const root = el('div', 'sw-buckets');
-    root.appendChild(el('p', 'sw-panel-title', 'Interest buckets'));
-    const row = el('div', 'sw-bucket-row');
+  function Storefront(onCard) {
+    const root = el('div', 'tour-store');
+    root.setAttribute('role', 'group');
+    root.setAttribute('aria-label', 'Morrow & Vale, the sample store: its home page');
+    const head = el('div', 'tour-store-head');
+    head.setAttribute('aria-hidden', 'true');
+    head.appendChild(el('span', 'tour-store-mark', 'Morrow & Vale'));
+    const nav = el('span', 'tour-store-nav');
+    ['New in', 'Clothing', 'Home', 'Journal'].forEach((t) => nav.appendChild(el('span', null, t)));
+    head.appendChild(nav);
+    head.appendChild(icon('bag', 'tour-icon tour-store-bag'));
+    root.appendChild(head);
+    const status = added(el('p', 'tour-store-status'), 'what the storefront shows, written by the script');
+    root.appendChild(status);
+    const hero = el('div', 'tour-hero');
+    const heroTitle = el('span', 'tour-hero-title');
+    const heroSub = el('span', 'tour-hero-sub');
+    hero.appendChild(heroTitle);
+    hero.appendChild(heroSub);
+    root.appendChild(hero);
+    const list = el('ol', 'tour-sections');
+    list.setAttribute('aria-label', 'The sections of the page, in order');
+    root.appendChild(list);
+    const secEls = {};
+    SECTIONS.forEach((s) => {
+      const li = el('li', `tour-section tone-${s.tone}`);
+      li.dataset.id = s.id;
+      const sh = el('div', 'tour-section-head');
+      sh.appendChild(el('span', 'tour-section-title', s.title));
+      if (s.recs) sh.appendChild(el('span', 'tour-section-note', "Products from the brand's recommendations"));
+      const mark = el('span', 'mark');
+      mark.hidden = true;
+      sh.appendChild(mark);
+      li.appendChild(sh);
+      const ul = el('ul', 'tour-products');
+      li.appendChild(ul);
+      list.appendChild(li);
+      secEls[s.id] = { li, mark, ul };
+    });
+    let heroId = null;
+    function drawCards(s, target) {
+      const ul = secEls[s.id].ul;
+      const items = s.cards.map((c) => {
+        const item = el('li', 'tour-product-item');
+        const isTarget = target && target.card === c.id;
+        const node = el(isTarget ? 'button' : 'div', `tour-product${isTarget ? ' is-target' : ''}`);
+        if (isTarget) {
+          node.type = 'button';
+          node.setAttribute('aria-label', target.aria);
+          node.addEventListener('click', () => onCard(c.id));
+        }
+        node.appendChild(icon(c.icon));
+        const txt = el('span', 'tour-product-text');
+        if (c.story) txt.appendChild(el('span', 'tour-product-kind', 'Story'));
+        txt.appendChild(el('span', 'tour-product-name', c.name));
+        if (isTarget && target.verb) txt.appendChild(el('span', 'tour-product-do', target.verb));
+        node.appendChild(txt);
+        item.appendChild(node);
+        return item;
+      });
+      ul.replaceChildren(...items);
+    }
+    // Move the sections to their new places and let each glide from where it was (CSS transitions do the motion).
+    function glide(order) {
+      const nodes = SECTIONS.map((s) => secEls[s.id].li);
+      const before = new Map();
+      nodes.forEach((n) => before.set(n, n.getBoundingClientRect()));
+      order.forEach((id) => list.appendChild(secEls[id].li));
+      if (reduced()) return;
+      const moved = [];
+      nodes.forEach((n) => {
+        const a = before.get(n);
+        const b = n.getBoundingClientRect();
+        const dy = a.top - b.top;
+        if (Math.abs(dy) > 0.5) { n.classList.remove('is-gliding'); n.style.transform = `translateY(${dy.toFixed(1)}px)`; moved.push(n); }
+      });
+      if (!moved.length) return;
+      void list.offsetHeight;
+      moved.forEach((n) => { n.classList.add('is-gliding'); n.style.transform = ''; });
+    }
+    return {
+      root,
+      secEls,
+      update(view, animate) {
+        status.textContent = view.status;
+        const h = HERO[view.hero];
+        if (heroId !== view.hero) {
+          heroTitle.textContent = h.title;
+          heroSub.textContent = h.sub;
+          HEROES.forEach((x) => hero.classList.remove(`tone-${x.tone}`));
+          hero.classList.add(`tone-${h.tone}`);
+          if (animate && heroId !== null) restartAnimation(hero, 'is-fresh');
+          heroId = view.hero;
+        }
+        SECTIONS.forEach((s) => drawCards(s, view.target && view.target.section === s.id ? view.target : null));
+        SECTIONS.forEach((s) => {
+          const m = view.marks[s.id];
+          const e = secEls[s.id];
+          e.mark.hidden = !m;
+          e.mark.textContent = m ? m.text : '';
+          e.mark.className = `mark${m ? ` mark--${m.kind}` : ''}`;
+          e.li.classList.toggle('is-pinned', view.pinned === s.id);
+          e.li.classList.toggle('is-changed', !!m && m.kind !== 'pin');
+        });
+        if (animate) glide(view.order);
+        else view.order.forEach((id) => list.appendChild(secEls[id].li));
+        root.classList.toggle('is-holdout', !!view.holdout);
+      },
+      focusTarget() { const t = root.querySelector('.tour-product.is-target'); if (t) t.focus({ preventScroll: false }); },
+    };
+  }
+
+  const VESSEL = 'M5 4H59L53 96H11Z';
+  const levelY = (a) => 96 - a * 92;
+  function Buckets() {
+    const root = el('div', 'tour-buckets');
+    root.appendChild(el('p', 'tour-panel-title', 'Interest buckets'));
+    const row = el('div', 'tour-bucket-row');
     root.appendChild(row);
     const cells = {};
     VALUES.forEach((v) => {
-      const cell = el('div', `sw-bucket sw-tone-${v.id}`);
-      const svg = svgEl('svg', { viewBox: '0 0 64 100', class: 'sw-bucket-svg', role: 'img' });
-      const clipId = uid(`sw-clip-${name}-${v.id}`);
+      const cell = el('div', `tour-bucket tone-${v.id}`);
+      const svg = svgEl('svg', { viewBox: '0 0 64 100', class: 'tour-vessel', role: 'img' });
+      const clipId = `tour-clip-${v.id}`;
       const defs = svgEl('defs');
       const clip = svgEl('clipPath', { id: clipId });
       clip.appendChild(svgEl('path', { d: VESSEL }));
       defs.appendChild(clip);
       svg.appendChild(defs);
-      svg.appendChild(svgEl('path', { d: VESSEL, class: 'sw-vessel' }));
-      const liquid = svgEl('rect', { x: 0, y: 96, width: 64, height: 0, class: 'sw-liquid', 'clip-path': `url(#${clipId})` });
-      svg.appendChild(liquid);
-      svg.appendChild(svgEl('line', { x1: 3, x2: 61, y1: yOf(ENTRY), y2: yOf(ENTRY), class: 'sw-entry' }));
-      svg.appendChild(svgEl('line', { x1: 3, x2: 61, y1: yOf(RELEASE), y2: yOf(RELEASE), class: 'sw-release' }));
-      svg.appendChild(svgEl('path', { d: VESSEL, class: 'sw-vessel-rim' }));
+      svg.appendChild(svgEl('path', { d: VESSEL, class: 'tour-vessel-back' }));
+      const g = svgEl('g', { 'clip-path': `url(#${clipId})` });
+      const liquid = svgEl('rect', { x: 0, y: 4, width: 64, height: 92, class: 'tour-liquid' });
+      g.appendChild(liquid);
+      svg.appendChild(g);
+      svg.appendChild(svgEl('line', { x1: 1, x2: 63, y1: levelY(ENTRY), y2: levelY(ENTRY), class: 'tour-entry' }));
+      svg.appendChild(svgEl('line', { x1: 1, x2: 63, y1: levelY(RELEASE), y2: levelY(RELEASE), class: 'tour-release' }));
+      svg.appendChild(svgEl('path', { d: VESSEL, class: 'tour-vessel-rim' }));
       cell.appendChild(svg);
-      cell.appendChild(el('p', 'sw-bucket-name', v.name));
-      const state = el('p', 'sw-bucket-state', '');
-      cell.appendChild(state);
+      cell.appendChild(el('p', 'tour-bucket-name', v.name));
+      const level = added(el('p', 'tour-bucket-level'), "the bucket's level, computed by the script");
+      cell.appendChild(level);
+      const word = added(el('p', 'tour-bucket-word'), "the bucket's state, written by the script");
+      cell.appendChild(word);
       row.appendChild(cell);
-      const to = tweener((a) => { const y = yOf(a); liquid.setAttribute('y', y.toFixed(2)); liquid.setAttribute('height', (96 - y).toFixed(2)); });
-      cells[v.id] = { cell, svg, state, to };
+      cells[v.id] = { cell, svg, liquid, level, word };
     });
-    const key = el('p', 'sw-bucket-legend');
-    key.appendChild(el('span', 'sw-key sw-key--entry', 'Entry line'));
-    key.appendChild(el('span', 'sw-key sw-key--release', 'Release line'));
+    const key = el('p', 'tour-key');
+    key.appendChild(el('span', 'tour-key-entry', 'Entry line'));
+    key.appendChild(el('span', 'tour-key-release', 'Release line'));
     root.appendChild(key);
     return {
       root,
-      update(levels, p, ms) {
+      update(levels, p, opts) {
+        const o = opts || {};
         VALUES.forEach((v) => {
           const c = cells[v.id];
+          const a = levels[v.id];
+          c.liquid.style.setProperty('--level', a.toFixed(4));
+          c.cell.classList.toggle('is-slow', !!o.slow);
           const member = !!p.member[v.id];
-          c.to(levels[v.id], ms);
+          const released = !member && !!p.released[v.id];
           c.cell.classList.toggle('is-member', member);
-          c.state.textContent = member ? 'Interested' : p.released[v.id] ? 'Released' : '';
-          c.svg.setAttribute('aria-label', `${v.name} bucket: ${levelWords(levels[v.id], member)}${!member && p.released[v.id] ? ', and released' : ''}.`);
+          c.cell.classList.toggle('is-released', released);
+          c.level.textContent = a < 5e-4 ? 'empty' : fixed3(a);
+          c.word.textContent = member ? 'Interested' : released ? 'Released' : '';
+          const where = a >= ENTRY ? 'past the entry line' : a >= RELEASE ? 'between the two lines' : a < 5e-4 ? 'empty' : 'below the release line';
+          c.svg.setAttribute('aria-label', `${v.name} bucket: ${a < 5e-4 ? 'empty' : `${fixed3(a)}, ${where}`}${member ? ', interested' : released ? ', released' : ''}.`);
         });
       },
-      flash(v, kind) { flash(cells[v].cell, kind === 'released' ? 'is-released-flash' : 'is-entered-flash', 1600); },
+      flash(v, kind) { restartAnimation(cells[v].cell, kind === 'released' ? 'is-let-go' : 'is-filled'); },
     };
   }
 
   function Balance() {
-    const root = el('div', 'sw-balance');
-    root.appendChild(el('p', 'sw-panel-title', 'What the page leans on'));
-    const svg = svgEl('svg', { viewBox: '0 0 200 14', preserveAspectRatio: 'none', class: 'sw-balance-svg', role: 'img' });
-    const region = svgEl('rect', { x: 0, y: 0, width: 200, height: 14, class: 'sw-bal-region' });
-    const own = svgEl('rect', { x: 200, y: 0, width: 0, height: 14, class: 'sw-bal-own' });
-    svg.appendChild(region);
-    svg.appendChild(own);
-    root.appendChild(svg);
-    const labels = el('div', 'sw-balance-labels');
-    labels.appendChild(el('span', 'sw-bal-key sw-bal-key--region', 'Their region'));
-    labels.appendChild(el('span', 'sw-bal-key sw-bal-key--own', 'Their own clicks'));
-    root.appendChild(labels);
-    const to = tweener((l) => {
-      const w = Math.max(0, Math.min(200, l * 200));
-      region.setAttribute('width', w.toFixed(2));
-      own.setAttribute('x', w.toFixed(2));
-      own.setAttribute('width', (200 - w).toFixed(2));
-    });
+    const root = el('div', 'tour-balance');
+    root.appendChild(el('p', 'tour-panel-title', 'What the page leans on'));
+    const bar = el('div', 'tour-balance-bar');
+    bar.setAttribute('role', 'img');
+    const regionPart = el('span', 'tour-balance-region');
+    const ownPart = el('span', 'tour-balance-own');
+    bar.appendChild(regionPart);
+    bar.appendChild(ownPart);
+    root.appendChild(bar);
+    const words = el('div', 'tour-balance-words');
+    const rw = added(el('span', 'tour-balance-key tour-balance-key--region'), "the region's share, computed by the script");
+    const ow = added(el('span', 'tour-balance-key tour-balance-key--own'), "the visitor's share, computed by the script");
+    words.appendChild(rw);
+    words.appendChild(ow);
+    root.appendChild(words);
     return {
       root,
-      update(lambda, ms) { to(lambda, ms); svg.setAttribute('aria-label', `The page leans ${leanWords(lambda)}.`); },
-    };
-  }
-
-  function RegionLean() {
-    const root = el('div', 'sw-lean');
-    const title = el('p', 'sw-panel-title', '');
-    root.appendChild(title);
-    const list = el('div', 'sw-lean-rows');
-    root.appendChild(list);
-    const rows = {};
-    VALUES.forEach((v) => {
-      const row = el('div', `sw-lean-row sw-tone-${v.id}`);
-      row.appendChild(el('span', 'sw-lean-name', v.name));
-      const svg = svgEl('svg', { viewBox: '0 0 100 10', preserveAspectRatio: 'none', class: 'sw-lean-svg', 'aria-hidden': 'true' });
-      svg.appendChild(svgEl('rect', { x: 0, y: 0, width: 100, height: 10, rx: 5, class: 'sw-lean-track' }));
-      const fill = svgEl('rect', { x: 0, y: 0, width: 0, height: 10, rx: 5, class: 'sw-lean-fill' });
-      svg.appendChild(fill);
-      row.appendChild(svg);
-      const words = el('span', 'sw-lean-words', '');
-      row.appendChild(words);
-      list.appendChild(row);
-      rows[v.id] = { row, words, to: tweener((s) => fill.setAttribute('width', (s * 100).toFixed(2))) };
-    });
-    return {
-      root,
-      update(regionId, animate) {
-        const share = REGIONS[regionId].share;
-        title.textContent = `What visitors in ${REGIONS[regionId].name} lean toward`;
-        const order = VALUES.slice().sort((x, y) => (share[y.id] || 0) - (share[x.id] || 0));
-        flipMove(root, order.map((v) => rows[v.id].row), () => order.forEach((v) => list.appendChild(rows[v.id].row)), animate);
-        order.forEach((v, i) => {
-          const s = share[v.id] || 0;
-          rows[v.id].to(s, animate ? 520 : 0);
-          rows[v.id].words.textContent = s === 0 ? 'hardly at all' : '';
-          rows[v.id].row.classList.toggle('is-lead', i === 0);
-        });
+      update(lambda, opts) {
+        const l = lambda === null ? 1 : lambda;
+        const pr = Math.round(l * 100);
+        bar.style.setProperty('--lambda', l.toFixed(4));
+        bar.classList.toggle('is-slow', !!(opts && opts.slow));
+        rw.textContent = `The region ${pr}%`;
+        ow.textContent = `This visitor ${100 - pr}%`;
+        bar.setAttribute('aria-label', `The page leans ${pr} percent on the region and ${100 - pr} percent on this visitor's own buckets.`);
       },
     };
   }
 
-  function Receipt(subtitle) {
-    const root = el('div', 'sw-receipt');
-    const head = el('p', 'sw-receipt-head', 'Receipt');
+  function Receipt() {
+    const root = el('div', 'tour-receipt');
+    const head = el('p', 'tour-receipt-head', 'Why this page');
     root.appendChild(head);
-    root.appendChild(el('p', 'sw-receipt-sub', subtitle));
-    const list = el('ol', 'sw-receipt-lines');
-    list.setAttribute('aria-label', 'Receipt lines, newest first');
+    const sub = added(el('p', 'tour-receipt-sub'), "the receipt's subject, written by the script");
+    root.appendChild(sub);
+    const list = el('ol', 'tour-receipt-lines');
+    list.setAttribute('aria-label', 'Receipt lines, oldest first');
     root.appendChild(list);
-    function line(l, fresh) {
-      const li = el('li', fresh ? 'is-new' : '');
-      li.appendChild(el('span', 'sw-r-tag', l.tag));
-      li.appendChild(el('span', 'sw-r-text', l.text));
+    const extra = el('div', 'tour-receipt-extra');
+    root.appendChild(extra);
+    // What is new on the receipt, said once to a screen reader; the whole list stays readable in place.
+    const fresh = added(el('p', 'visually-hidden'), 'the new receipt lines, repeated for a screen reader by the script');
+    fresh.setAttribute('aria-live', 'polite');
+    root.appendChild(fresh);
+    function line(l) {
+      const li = added(el('li', `tour-rline${l.fresh ? ' is-new' : ''}${l.kind ? ` tour-rline--${l.kind}` : ''}`), 'a receipt line, written by the script from the arithmetic');
+      li.appendChild(el('span', 'tour-rtime', l.time || ''));
+      const sign = el('span', `tour-rsign${l.sign === '+' ? ' is-plus' : l.sign === '−' ? ' is-minus' : ''}`);
+      if (l.sign === 'pin') sign.appendChild(icon('pin', 'tour-icon tour-rpin'));
+      else sign.textContent = l.sign || '';
+      sign.setAttribute('aria-hidden', 'true');
+      li.appendChild(sign);
+      const t = el('span', 'tour-rtext', l.text);
+      if (l.sign === '+' || l.sign === '−') t.prepend(el('span', 'visually-hidden', l.sign === '+' ? 'Plus: ' : 'Minus: '));
+      li.appendChild(t);
       return li;
     }
     return {
       root,
-      set(lines) { list.replaceChildren(...lines.map((l) => line(l, false))); },
-      add(lines) {
-        // Newest event first; its first line carries the rule that separates it from the one before.
-        lines.slice().reverse().forEach((l, k) => {
-          const li = line(l, true);
-          if (k === lines.length - 1) li.classList.add('sw-r-first');
-          list.insertBefore(li, list.firstChild);
-        });
-        while (list.children.length > 12) list.removeChild(list.lastChild);
+      list,
+      extra,
+      set(title, subject, lines, mode) {
+        head.textContent = title;
+        sub.textContent = subject;
+        list.replaceChildren(...lines.map(line));
+        const news = lines.filter((l) => l.fresh).map((l) => l.text);
+        fresh.textContent = news.length ? `New on the receipt: ${news.join(' ')}` : '';
+        root.classList.toggle('is-whole', mode === 'whole');
+        root.classList.toggle('is-learning', mode === 'learning');
       },
     };
   }
 
-  function Clock() {
-    const root = el('div', 'sw-clock');
-    const svg = svgEl('svg', { viewBox: '0 0 48 48', class: 'sw-clock-svg', 'aria-hidden': 'true' });
-    svg.appendChild(svgEl('circle', { cx: 24, cy: 24, r: 21, class: 'sw-clock-face' }));
-    for (let i = 0; i < 12; i++) {
-      const ang = (i / 12) * Math.PI * 2;
-      svg.appendChild(svgEl('line', { x1: (24 + Math.sin(ang) * 16).toFixed(2), y1: (24 - Math.cos(ang) * 16).toFixed(2), x2: (24 + Math.sin(ang) * 19).toFixed(2), y2: (24 - Math.cos(ang) * 19).toFixed(2), class: 'sw-clock-tick' }));
+  // The learning dial, at zero, and the holdout's share (step 7).
+  function Learning() {
+    const root = el('div', 'tour-learning');
+    const dialBox = el('div', 'tour-dial');
+    const svg = svgEl('svg', { viewBox: '0 0 160 92', class: 'tour-dial-svg', role: 'img', 'aria-label': 'The learning dial, at zero: learning moves nothing.' });
+    svg.appendChild(svgEl('path', { d: 'M14 84A66 66 0 0 1 146 84', class: 'tour-dial-track' }));
+    for (let i = 0; i <= 10; i++) {
+      const ang = Math.PI - (i / 10) * Math.PI;
+      const x1 = 80 + Math.cos(ang) * 58; const y1 = 84 - Math.sin(ang) * 58;
+      const x2 = 80 + Math.cos(ang) * (i % 5 === 0 ? 48 : 52); const y2 = 84 - Math.sin(ang) * (i % 5 === 0 ? 48 : 52);
+      svg.appendChild(svgEl('line', { x1: x1.toFixed(1), y1: y1.toFixed(1), x2: x2.toFixed(1), y2: y2.toFixed(1), class: 'tour-dial-tick' }));
     }
-    const hand = svgEl('line', { x1: 24, y1: 24, x2: 24, y2: 9, class: 'sw-clock-hand' });
-    svg.appendChild(hand);
-    svg.appendChild(svgEl('circle', { cx: 24, cy: 24, r: 2.4, class: 'sw-clock-pin' }));
-    root.appendChild(svg);
-    const text = el('div', 'sw-clock-text');
-    const label = el('p', 'sw-clock-label', '');
-    text.appendChild(label);
-    const days = el('div', 'sw-days');
-    days.setAttribute('aria-hidden', 'true');
-    const dots = [];
-    for (let i = 0; i < 21; i++) { const d = el('span', 'sw-day'); days.appendChild(d); dots.push(d); }
-    text.appendChild(days);
-    text.appendChild(el('p', 'sw-clock-note', 'The clock runs fast: each dot is a day.'));
-    root.appendChild(text);
-    return {
-      root,
-      update(now, words) {
-        hand.setAttribute('transform', `rotate(${((now / 7) * 360).toFixed(1)} 24 24)`);
-        label.textContent = words;
-        dots.forEach((d, i) => d.classList.toggle('is-past', i < Math.floor(now)));
-      },
-    };
+    svg.appendChild(svgEl('line', { x1: 80, y1: 84, x2: 24, y2: 84, class: 'tour-dial-needle' }));
+    svg.appendChild(svgEl('circle', { cx: 80, cy: 84, r: 5, class: 'tour-dial-hub' }));
+    dialBox.appendChild(svg);
+    const dialWords = el('div', 'tour-dial-words');
+    dialWords.appendChild(el('p', 'tour-dial-value', 'Learning dial: 0'));
+    dialWords.appendChild(el('p', 'tour-dial-note', 'The brand turns it, slot by slot.'));
+    dialBox.appendChild(dialWords);
+    root.appendChild(dialBox);
+    const hold = el('div', 'tour-holdout');
+    const dots = el('div', 'tour-holdout-dots');
+    dots.setAttribute('role', 'img');
+    dots.setAttribute('aria-label', 'Twenty visitors, one of them in the holdout.');
+    for (let i = 0; i < 20; i++) dots.appendChild(el('span', `tour-holdout-dot${i === 13 ? ' is-held' : ''}`));
+    hold.appendChild(dots);
+    hold.appendChild(el('p', 'tour-holdout-note', 'Here one visitor in twenty keeps the site’s own page; the brand sets the share.'));
+    root.appendChild(hold);
+    return { root };
   }
 
-  function whenWords(now) {
-    if (now < 0.5) return 'This morning';
-    if (now < 1.5) return 'The next day';
-    if (now < 7) return 'Days on';
-    if (now < 14) return 'Over a week on';
-    return 'Weeks on';
+  // ---------- the live tour ----------
+  const stepper = Stepper();
+  tourEl.insertBefore(stepper.root, tourEl.firstChild);
+  const board = el('div', 'tour-board');
+  const main = el('div', 'tour-main');
+  const side = el('div', 'tour-side');
+  board.appendChild(main);
+  board.appendChild(side);
+  const callout = Callout();
+  const picker = RegionPicker(pickRegion);
+  const store = Storefront(onCard);
+  main.appendChild(callout.root);
+  main.appendChild(store.root);
+  const clockBox = el('p', 'tour-clock');
+  clockBox.appendChild(icon('clock', 'tour-icon tour-clock-icon'));
+  const clockText = added(el('span', 'tour-clock-text'), 'the time into the visit, kept by the script');
+  clockBox.appendChild(clockText);
+  const buckets = Buckets();
+  const balance = Balance();
+  const receipt = Receipt();
+  const learning = Learning();
+  side.appendChild(clockBox);
+  side.appendChild(buckets.root);
+  side.appendChild(balance.root);
+  side.appendChild(receipt.root);
+  receipt.extra.appendChild(learning.root);
+  liveEl.appendChild(board);
+
+  const passBtn = button('tour-btn tour-btn--act', 'A few minutes pass', () => act());
+  const pinBtn = button('tour-btn tour-btn--act', 'Pin the partner spotlight', () => act());
+  const holdBtn = button('tour-btn tour-btn--act', 'Show the holdout’s page', () => toggleHoldout());
+  const nextBtn = button('tour-btn tour-btn--next tour-btn--inline', 'Next step', () => go(state.step + 1, true));
+  [passBtn, pinBtn, holdBtn].forEach((b) => b.setAttribute('data-reader', 'the reader'));
+
+  function clearTimers() { state.timers.forEach((t) => clearTimeout(t)); state.timers = []; state.busy = 0; }
+  function later(fn, ms) { state.timers.push(setTimeout(fn, ms)); }
+
+  // The words of each step, for the region picked: what to do before the action, what changed after it.
+  function stepWords(s) {
+    const r = regionOf();
+    const title = stepEls[state.step - 1].querySelector('h2').textContent.trim();
+    if (state.step === 1) {
+      if (!r) return { title, text: 'Start with the visitor’s region. The engine reads it from each request; here it is picked on the page, never guessed.', note: 'Each region’s leans are invented for this sample store.' };
+      const lifted = movesOf(SECTIONS.map((x) => x.id), s.d.order).up;
+      return { title, text: `Visitors in ${r.name} lean toward ${leanWords(r)}, so ${sectionName(s.d.order[0])} leads, and against the brand’s own order ${listWords(lifted.map((id) => sectionName(id)))} moved up. The hero is ${HERO[s.d.hero].title}.`, note: 'Each region’s leans are invented for this sample store.', done: true };
+    }
+    const plan = r.plan;
+    const first = VALUE[plan.first];
+    const second = VALUE[plan.second];
+    if (state.step === 2) {
+      if (!state.progress) return { title, text: `Add ${cardPhrase(plan.add)} to the bag, and watch the two sections at the top.` };
+      const m = movesOf(s.prev.order, s.d.order);
+      return { title, text: `${moveSentence(m)} The add counts three times a look, so ${first.word} passed its entry line, and the hero is now ${HERO[s.d.hero].title}.`, done: true };
+    }
+    if (state.step === 3) {
+      if (!state.progress) return { title, text: `Click ${cardPhrase(plan.look)}, a look at something different.` };
+      const m = movesOf(s.prev.order, s.d.order);
+      return { title, text: `${moveSentence(m)} One look fills ${second.word} partway; ${first.word} still leads, so the page leans on both.`, done: true };
+    }
+    if (state.step === 4) {
+      if (!state.progress) return { title, text: 'Let a few minutes pass with no clicks, and watch the buckets drain.' };
+      const rel = s.log.filter((x) => x.kind === 'released').pop();
+      const m = movesOf(s.prev.order, s.d.order);
+      const dropped = m.swap ? `${sectionName(m.swap[1], true)} dropped back behind ${sectionName(m.swap[0])}.` : '';
+      return { title, text: `At ${clock(rel.t)}, ${first.word} drained below its release line, so the visitor was released from it. ${dropped} Nobody wrote a rule; time did it.`, done: true };
+    }
+    if (state.step === 5) {
+      if (state.progress === 0) return { title, text: 'A merchandiser sold the partner spotlight the first place on the home page. Pin it there, as the merchandiser would.' };
+      if (state.progress === 1) return { title, text: `The partner spotlight now holds the first place. Click ${cardPhrase(plan.story)}, and watch the sections below the pin.` };
+      const m = movesOf(s.prev.order, s.d.order);
+      return { title, text: `${moveSentence(m)} The pinned spotlight held the first place: ranking never ran for it.`, done: true };
+    }
+    if (state.step === 6) return { title, text: 'The receipt panel now shows the whole receipt for the home page shown here. Every number on it can be recomputed by hand.', done: true };
+    if (!state.holdoutView) return { title, text: 'The learning dial is at zero: what this visit recorded changes nothing until the brand turns it. See the page a holdout visitor gets.', done: true };
+    return { title, text: 'A holdout visitor gets the site’s own page: the brand’s own order, with the pin kept. Comparing the two groups shows the lift.', done: true };
   }
 
-  // ---------- the region the visitor is in, shared by the four moves ----------
-  const shared = { region: 'wa', subs: [] };
-  function setRegion(id) { shared.region = id; shared.subs.forEach((f) => f(id)); }
-  const regionName = () => REGIONS[shared.region].name;
-
-  function frame(mod) {
-    const inst = el('div', `sw-inst sw-inst--${mod}`);
-    const controls = el('div', 'sw-controls');
-    inst.appendChild(controls);
-    return { inst, controls };
+  // The receipt panel's lines, in words, from the replay's log.
+  function logLines(s, freshFrom) {
+    const r = REGIONS[s.regionId];
+    const out = [];
+    s.log.forEach((x, i) => {
+      const fresh = i >= freshFrom;
+      const time = clock(x.t);
+      if (x.kind === 'region') out.push({ time, sign: '+', text: `Regional start: ${r.name}, picked on this page. Visitors there lean toward ${leanWords(r)}.`, fresh });
+      else if (x.kind === 'add') out.push({ time, sign: '+', text: `Added to the bag: ${CARD[x.card].name}. An add counts three times a look.`, fresh });
+      else if (x.kind === 'entered') out.push({ time, sign: '+', text: `${VALUE[x.v].name} passed its entry line: the visitor counts as interested.`, fresh });
+      else if (x.kind === 'fading') out.push({ time, sign: '−', text: 'Regional start, stepping back as the visitor’s own buckets fill.', fresh });
+      else if (x.kind === 'look') out.push({ time, sign: '+', text: `${CARD[x.card].story ? 'Clicked a story' : 'Looked at'}: ${CARD[x.card].name}.`, fresh });
+      else if (x.kind === 'released') out.push({ time, sign: '−', text: `Released from ${VALUE[x.v].word}: the bucket drained below its release line.`, fresh, kind: 'release' });
+      else if (x.kind === 'time') out.push({ time, sign: '', text: `${Math.round(x.t - x.from)} minutes with no clicks; the page is decided again.`, fresh });
+      else if (x.kind === 'pin') out.push({ time, sign: 'pin', text: 'Pinned by a merchandiser: the partner spotlight, first. Ranking never ran for it.', fresh, kind: 'pin' });
+    });
+    return out;
+  }
+  // The whole receipt, as a person would recompute it (step 6).
+  function wholeLines(s) {
+    const rc = receiptOf(s);
+    const r = REGIONS[s.regionId];
+    const lines = [];
+    const own = VALUES.filter((v) => rc.levels[v.id] > 0).map((v) => `${v.word} ${num(rc.levels[v.id])}`);
+    lines.push({ time: 'Rule', sign: '', text: 'Score = (1 − the region’s share) × the visitor’s level + the region’s share × the region’s lean.' });
+    lines.push({ time: 'Buckets', sign: '', text: `Levels: ${listWords(own)}; every other bucket is empty. A level is evidence ÷ (evidence + 1.8): ${VALUE[rc.worked.v].word}, ${num(rc.worked.R)} ÷ ${num(rc.worked.RK)} = ${num(rc.worked.level)}.` });
+    lines.push({ time: 'Region', sign: '', text: `${r.name}. The region’s share is 1 ÷ (1 + ${VALUES.filter((v) => rc.levels[v.id] > 0).map((v) => num(rc.levels[v.id])).join(' + ')}) = ${num(rc.lam)}.` });
+    rc.places.forEach((pl) => {
+      const name = SECTION[pl.id].title;
+      if (pl.pinned) lines.push({ time: `Place ${pl.place}`, sign: 'pin', text: `${name}: pinned by a merchandiser, an instruction. Ranking never ran for it; interest alone would have placed it ${ORDINAL[pl.interestPlace - 1]}.`, kind: 'pin' });
+      else if (pl.untagged) lines.push({ time: `Place ${pl.place}`, sign: '', text: `${name}: no tag, so 0. Its products come from the brand’s recommendations; the engine decides where it sits.` });
+      else lines.push({ time: `Place ${pl.place}`, sign: '', text: `${name}: ${num(pl.rest)} × ${num(pl.level)} + ${num(pl.lam)} × ${num(pl.lean)} = ${num(pl.score)}.` });
+    });
+    lines.push({ time: 'Hero', sign: '', text: `${HERO[rc.hero].title}: ${num(rc.heroScore)}, the highest of the four heroes.` });
+    lines.push({ time: 'Learning', sign: '', text: 'Recorded with the receipt. The learning dial is at 0, so it changed nothing.' });
+    return lines;
+  }
+  function learningLines(s) {
+    const out = [];
+    s.log.forEach((x) => {
+      if (x.kind === 'add') out.push({ time: clock(x.t), sign: '+', text: `An add to the bag, credited to ${SECTION[CARD[x.card].section].title}.` });
+      else if (x.kind === 'look') out.push({ time: clock(x.t), sign: '+', text: `A click, credited to ${SECTION[CARD[x.card].section].title}.` });
+    });
+    out.push({ time: '', sign: '', text: 'Every page decided on this visit, each with its receipt.' });
+    return out;
   }
 
-  // ---------- first move: the first page already feels local ----------
-  function sceneLocal(live) {
-    const { inst, controls } = frame('local');
-    const seg = Segmented('A visitor from', Object.keys(REGIONS).map((k) => ({ id: k, name: REGIONS[k].name })), shared.region, (id) => { setRegion(id); render(true); });
-    controls.appendChild(seg.root);
-    const store = Storefront({ clickable: false });
-    const meters = el('div', 'sw-meters');
-    const lean = RegionLean();
-    meters.appendChild(lean.root);
-    const receipt = Receipt('Why this first page');
-    const say = Announcer();
-    inst.appendChild(store.root);
-    inst.appendChild(meters);
-    inst.appendChild(receipt.root);
-    inst.appendChild(say.root);
-    live.appendChild(inst);
-    function render(animate) {
-      const r = REGIONS[shared.region];
-      const d = decide(newProfile(), r.id, 0);
-      store.setStatus(`The home page for a visitor from ${r.name}, before any click.`);
-      store.update(d, animate);
-      lean.update(r.id, animate);
-      const leaning = VALUES.filter((v) => (r.share[v.id] || 0) > 0).sort((x, y) => r.share[y.id] - r.share[x.id]).map((v) => v.word);
-      const scored = d.order.filter((id) => d.scores[id] > EPS);
-      const rest = d.order.filter((id) => d.scores[id] <= EPS);
-      const lines = [
-        { tag: 'Stranger', text: "Before any click, the engine reads only the visitor's region." },
-        { tag: 'Region', text: `Visitors in ${r.name} lean toward ${listWords(leaning, 'then')}.` },
-        { tag: 'Sections', text: `So ${listWords(scored.map((id) => SECTION[id].mid))} come first, in that order.` },
-        { tag: 'Hero', text: `The hero follows the strongest lean: ${heroTitle(d.hero)}.` },
-      ];
-      if (rest.length) lines.push({ tag: 'Default', text: `Sections nothing points to keep the brand's own order: ${listWords(rest.map((id) => SECTION[id].mid), 'then')}.` });
-      receipt.set(lines);
-      if (animate) say.say(`The first page for a visitor from ${r.name}: ${d.order.map((id) => SECTION[id].title).join(', ')}. The hero is ${heroTitle(d.hero)}.`);
+  // The view of the storefront for the state: its order, hero, marks and the one card the reader may use.
+  function viewOf(s, showMarks) {
+    const r = REGIONS[s.regionId];
+    const plan = r.plan;
+    const d = state.holdoutView && state.step === 7 ? decide(s.p, s.regionId, s.now, { pin: s.pin, holdout: true }) : s.d;
+    const marks = {};
+    const lastPin = s.log.length && s.log[s.log.length - 1].kind === 'pin';
+    const before = s.prev ? s.prev.order : state.step === 1 ? SECTIONS.map((x) => x.id) : null;
+    if (showMarks && before && !d.holdout && !lastPin) {
+      const m = movesOf(before, d.order);
+      m.up.forEach((id) => { marks[id] = { kind: 'up', text: 'moved up' }; });
+      m.down.forEach((id) => { marks[id] = { kind: 'down', text: 'moved down' }; });
     }
-    render(false);
+    if (d.pinned) marks[d.pinned] = { kind: 'pin', text: 'pinned' };
+    let target = null;
+    if (state.step === 2 && !state.progress) target = { card: plan.add, verb: 'Add to bag', aria: `${CARD[plan.add].name}: add to the bag` };
+    if (state.step === 3 && !state.progress) target = { card: plan.look, verb: 'Look', aria: `${CARD[plan.look].name}: look at it` };
+    if (state.step === 5 && state.progress === 1) target = { card: plan.story, verb: 'Read', aria: `${CARD[plan.story].name}: click the story` };
+    if (target) target.section = CARD[target.card].section;
+    let status;
+    if (d.holdout) status = `What a holdout visitor in ${r.name} gets at ${clock(s.now)}: the site’s own page, with the pin kept.`;
+    else if (s.now === 0) status = `The home page for a visitor in ${r.name}, the region picked above, before any click.`;
+    else status = `The home page at ${clock(s.now)} into the visit.`;
+    return { order: d.order, hero: d.hero, marks, target, pinned: d.pinned, holdout: d.holdout, status };
+  }
+  function blankView() {
+    return { order: SECTIONS.map((x) => x.id), hero: HEROES[0].id, marks: {}, target: null, pinned: null, holdout: false, status: 'The brand’s own order. The engine has no region yet: pick one in the callout.' };
   }
 
-  // ---------- second move: the first click changes the page ----------
-  function sceneClick(live) {
-    const { inst, controls } = frame('click');
-    const who = el('p', 'sw-who', '');
-    controls.appendChild(who);
-    const meters = el('div', 'sw-meters sw-meters--sticky');
-    const buckets = Buckets('click');
-    const balance = Balance();
-    meters.appendChild(buckets.root);
-    meters.appendChild(balance.root);
-    const receipt = Receipt('What each click changed');
-    const say = Announcer();
-    let p;
-    let now;
-    let last;
-    let timer = 0;
-    let first;
-    let seen;
-    const store = Storefront({ clickable: true, showTags: true, onCard });
-    const actions = el('div', 'sw-actions');
-    actions.appendChild(button('sw-btn', 'Start over', () => reset(true)));
-    controls.appendChild(actions);
-    // The buckets and the store share a stage, so on a narrow screen the buckets stay in view only beside the store.
-    const stage = el('div', 'sw-stage');
-    stage.appendChild(meters);
-    stage.appendChild(store.root);
-    inst.appendChild(stage);
-    inst.appendChild(receipt.root);
-    inst.appendChild(say.root);
-    live.appendChild(inst);
-    function reset(animate) {
-      clearTimeout(timer);
-      p = newProfile();
-      now = 0;
-      first = true;
-      seen = {};
-      last = decide(p, shared.region, now);
-      who.textContent = `A visitor from ${regionName()}`;
-      store.setStatus('The home page, as the visitor first sees it.');
-      store.update(last, animate);
-      buckets.update(last.a, p, animate ? 400 : 0);
-      balance.update(last.lambda, animate ? 400 : 0);
-      receipt.set([{ tag: 'Start', text: 'No clicks so far, so the page follows the regional lean.' }]);
-      if (animate) say.say('Started over: the first page, before any click.');
+  function sideFor(s) {
+    if (!s) {
+      const zero = {};
+      VALUES.forEach((v) => { zero[v.id] = 0; });
+      buckets.update(zero, newProfile());
+      balance.update(1);
+      clockText.textContent = 'Visit time 0:00';
+      receipt.set('Why this page', 'No region picked yet.', [], 'log');
+      return;
     }
-    function onCard(card, node) {
-      now += 2 / (24 * 60);
-      const before = last;
-      card.tags.forEach((t) => touch(p, t, WEIGHT, now));
-      const changes = settleOnEvent(p, now);
-      const d = decide(p, shared.region, now);
-      last = d;
-      flash(node, 'is-pulsed', 700);
-      buckets.update(d.a, p, 650);
-      changes.forEach((c) => buckets.flash(c.v, c.kind));
-      balance.update(d.lambda, 650);
-      store.setStatus(`The visitor ${card.story ? 'reads' : 'looks at'} ${cardPhrase(card)}, then comes back to the home page.`);
-      clearTimeout(timer);
-      timer = setTimeout(() => store.update(d, true), reduced ? 0 : 480);
-      const words = card.tags.map((t) => VALUE[t].word);
-      const lines = [{ tag: 'Click', text: `${card.name}: the ${listWords(words)} ${words.length > 1 ? 'buckets fill' : 'bucket fills'}.` }];
-      changes.forEach((c) => lines.push(c.kind === 'entered'
-        ? { tag: 'Entered', text: `${VALUE[c.v].name} passed its entry line, so the visitor now counts as interested.` }
-        : { tag: 'Released', text: `${VALUE[c.v].name} fell below its release line, so the interest is let go.` }));
-      card.tags.forEach((t) => {
-        seen[t] = (seen[t] || 0) + 1;
-        if (seen[t] === 2) lines.push({ tag: 'Cap', text: `Each extra ${VALUE[t].word} click adds a little less, so the bucket never overflows.` });
-      });
-      const moves = describeMoves(before.order, d.order);
-      if (moves.length) moves.forEach((m) => lines.push({ tag: 'Next page', text: m }));
-      else if (SECTION[d.order[0]].tags.some((t) => card.tags.indexOf(t) >= 0)) lines.push({ tag: 'Next page', text: `${SECTION[d.order[0]].start} already leads, and the click made its lead stronger.` });
-      else lines.push({ tag: 'Next page', text: 'No section moved this time; the buckets are filling toward the next change.' });
-      if (d.hero !== before.hero) lines.push({ tag: 'Hero', text: `The hero changes to ${heroTitle(d.hero)}, which matches the strongest interest.` });
-      if (first) lines.push({ tag: 'Region', text: "The regional lean steps back as the visitor's own buckets fill." });
-      first = false;
-      receipt.add(lines);
-      say.say(lines.map((l) => l.text).join(' '));
-    }
-    shared.subs.push(() => reset(false));
-    reset(false);
+    clockText.textContent = `Visit time ${clock(s.now)}`;
+    buckets.update(s.d.a, s.p, {});
+    balance.update(s.d.lambda === null ? 1 : s.d.lambda, {});
   }
 
-  // ---------- third move: relevance expires on its own ----------
-  function sceneFade(live) {
-    const DAYS_PER_SECOND = 1.6;
-    const { inst, controls } = frame('fade');
-    const who = el('p', 'sw-who', '');
-    controls.appendChild(who);
-    const go = button('sw-btn sw-btn--go', 'Start the clock', () => (running ? stop() : start()));
-    go.setAttribute('aria-pressed', 'false');
-    const stepBtn = button('sw-btn', 'Step forward', () => { stop(); advance(2, true); });
-    const actions = el('div', 'sw-actions');
-    actions.appendChild(go);
-    actions.appendChild(stepBtn);
-    actions.appendChild(button('sw-btn', 'Start over', () => reset(true)));
-    controls.appendChild(actions);
-    const meters = el('div', 'sw-meters sw-meters--sticky');
-    const clock = Clock();
-    const buckets = Buckets('fade');
-    const balance = Balance();
-    meters.appendChild(clock.root);
-    meters.appendChild(buckets.root);
-    meters.appendChild(balance.root);
-    const store = Storefront({ clickable: false });
-    const receipt = Receipt('What time changed');
-    const say = Announcer();
-    const stage = el('div', 'sw-stage');
-    stage.appendChild(meters);
-    stage.appendChild(store.root);
-    inst.appendChild(stage);
-    inst.appendChild(receipt.root);
-    inst.appendChild(say.root);
-    live.appendChild(inst);
-    let p;
-    let now;
-    let running = false;
-    let raf = 0;
-    let lastT = 0;
-    let lastOrder;
-    let lastHero;
-    let settled;
-    let stranger;
-    let v;
-    function reset(animate) {
-      stop();
-      const r = REGIONS[shared.region];
-      v = r.morning;
-      p = newProfile();
-      [-0.1, -0.05, 0].forEach((t) => { touch(p, v, WEIGHT, t); settleOnEvent(p, t); });
-      now = 0;
-      settled = false;
-      stranger = decide(newProfile(), r.id, 0);
-      const d = decide(p, r.id, now);
-      lastOrder = d.order.slice();
-      lastHero = d.hero;
-      who.textContent = `A visitor from ${r.name}, who spent the morning on ${VALUE[v].word}`;
-      store.setStatus('The home page the visitor would see at this moment.');
-      store.update(d, animate);
-      buckets.update(d.a, p, animate ? 400 : 0);
-      balance.update(d.lambda, animate ? 400 : 0);
-      clock.update(now, whenWords(now));
-      go.disabled = false;
-      stepBtn.disabled = false;
-      receipt.set([{ tag: 'This morning', text: `The visitor looked at ${VALUE[v].word} a few times, and its bucket passed the entry line: interested in ${VALUE[v].word}.` }]);
-      if (animate) say.say('Started over: this morning, the visitor is interested in ' + VALUE[v].word + '.');
-    }
-    function advance(dt, animate) {
-      if (settled) return;
-      now += dt;
-      const r = REGIONS[shared.region];
-      const out = settleOnTime(p, now);
-      const d = decide(p, r.id, now);
-      buckets.update(d.a, p, 0);
-      balance.update(d.lambda, 0);
-      const when = whenWords(now);
-      clock.update(now, when);
-      const lines = [];
-      out.forEach((x) => {
-        buckets.flash(x, 'released');
-        lines.push({ tag: when, text: `Released from ${VALUE[x].word}: the bucket drained below its release line. Nobody wrote a rule; time did it.` });
-      });
-      if (d.order.join() !== lastOrder.join() || d.hero !== lastHero) {
-        describeMoves(lastOrder, d.order).forEach((m) => lines.push({ tag: when, text: m }));
-        if (d.hero !== lastHero) lines.push({ tag: when, text: d.hero === stranger.hero ? `The hero is ${heroTitle(d.hero)} again, the region's favorite.` : `The hero changes to ${heroTitle(d.hero)}.` });
-        store.update(d, animate);
-        lastOrder = d.order.slice();
-        lastHero = d.hero;
-      }
-      const released = VALUES.every((x) => !p.member[x.id]);
-      if (released && d.order.join() === stranger.order.join() && d.hero === stranger.hero) {
-        settled = true;
-        stop();
-        go.disabled = true;
-        stepBtn.disabled = true;
-        lines.push({ tag: 'Settled', text: `The page matches a stranger's first page in ${r.name} again, and nobody wrote an expiration rule.` });
-      }
-      if (lines.length) {
-        receipt.add(lines);
-        say.say(lines.map((l) => l.text).join(' '));
-      }
-    }
-    function tick(t) {
-      if (!running) return;
-      const dt = Math.min(0.1, Math.max(0, (t - lastT) / 1000));
-      lastT = t;
-      advance(dt * DAYS_PER_SECOND, true);
-      if (running) raf = requestAnimationFrame(tick);
-    }
-    function start() {
-      if (settled) return;
-      running = true;
-      go.textContent = 'Pause the clock';
-      go.setAttribute('aria-pressed', 'true');
-      lastT = performance.now();
-      raf = requestAnimationFrame(tick);
-    }
-    function stop() {
-      running = false;
-      cancelAnimationFrame(raf);
-      go.textContent = 'Start the clock';
-      go.setAttribute('aria-pressed', 'false');
-    }
-    shared.subs.push(() => reset(false));
-    reset(false);
+  // Draw everything for the current state. freshFrom marks the receipt lines that are new since the last draw.
+  function render(opts) {
+    const o = opts || {};
+    const s = current();
+    stepper.update();
+    stepEls.forEach((sec, i) => sec.classList.toggle('is-current', i + 1 === state.step));
+    picker.update();
+    const words = stepWords(s);
+    callout.set(words);
+    const acts = [];
+    if (state.step === 1) acts.push(picker.root);
+    if (state.step === 4 && !state.progress) acts.push(passBtn);
+    if (state.step === 5 && state.progress === 0) acts.push(pinBtn);
+    if (state.step === 7) { holdBtn.textContent = state.holdoutView ? 'Show this visitor’s page' : 'Show the holdout’s page'; holdBtn.setAttribute('aria-pressed', state.holdoutView ? 'true' : 'false'); acts.push(holdBtn); }
+    if (words.done && state.step < STEP_COUNT) acts.push(nextBtn);
+    // Re-insert the controls only when they change, so a control that has focus keeps it.
+    const now = Array.prototype.slice.call(callout.actions.children);
+    if (now.length !== acts.length || now.some((n, i) => n !== acts[i])) callout.actions.replaceChildren(...acts);
+    passBtn.setAttribute('aria-disabled', state.busy ? 'true' : 'false');
+    if (!s) { store.update(blankView(), !!o.animate); sideFor(null); return; }
+    store.update(viewOf(s, !!o.marks), !!o.animate);
+    if (!o.keepSide) sideFor(s);
+    if (state.step === 6) receipt.set('The receipt, whole', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, wholeLines(s), 'whole');
+    else if (state.step === 7) receipt.set('What learning recorded', `This visit, up to ${clock(s.now)}.`, learningLines(s), 'learning');
+    else receipt.set('Why this page', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, logLines(s, o.freshFrom === undefined ? s.log.length : o.freshFrom), 'log');
+    liveEl.classList.toggle('is-learning', state.step === 7);
   }
 
-  // ---------- fourth move: the merchandiser keeps the wheel ----------
-  function sceneWheel(live) {
-    const { inst, controls } = frame('wheel');
-    const who = el('p', 'sw-who', '');
-    controls.appendChild(who);
-    let into = 'rain';
-    let pin = false;
-    let gate = false;
-    const seg = Segmented('The visitor is into', ['rain', 'knit', 'linen'].map((k) => ({ id: k, name: VALUE[k].name })), into, (id) => { into = id; render(true, 'into'); });
-    controls.appendChild(seg.root);
-    const rules = el('div', 'sw-rules');
-    rules.appendChild(Toggle('Pin the partner spotlight first', (on) => { pin = on; render(true, 'pin'); }));
-    rules.appendChild(Toggle('Gate: hide anything out of stock', (on) => { gate = on; render(true, 'gate'); }));
-    controls.appendChild(rules);
-    const store = Storefront({ clickable: false, showStock: true });
-    const receipt = Receipt('Rules first, then interest');
-    const compare = el('div', 'sw-compare');
-    const shows = el('div', 'sw-compare-col');
-    shows.appendChild(el('p', 'sw-compare-head', 'The page shows'));
-    const showsList = el('ol', 'sw-compare-list');
-    shows.appendChild(showsList);
-    const alone = el('div', 'sw-compare-col');
-    alone.appendChild(el('p', 'sw-compare-head', 'Interest alone would rank'));
-    const aloneList = el('ol', 'sw-compare-list');
-    alone.appendChild(aloneList);
-    compare.appendChild(shows);
-    compare.appendChild(alone);
-    receipt.root.appendChild(compare);
-    const say = Announcer();
-    inst.appendChild(store.root);
-    inst.appendChild(receipt.root);
-    inst.appendChild(say.root);
-    live.appendChild(inst);
-    function fill(listEl, order, pinned) {
-      listEl.replaceChildren(...order.map((id) => {
-        const li = el('li', SECTION[id].partner ? 'is-partner' : '', SECTION[id].title);
-        if (pinned === id) li.appendChild(el('span', 'sw-compare-pin', 'pinned'));
-        return li;
-      }));
+  function pickRegion(id) {
+    if (state.step !== 1) return;
+    clearTimers();
+    const first = !state.regionId;
+    state.regionId = id;
+    state.progress = 1;
+    render({ animate: true, marks: true, freshFrom: 0 });
+    void first;
+  }
+
+  // The step's action: the add, the look, the minutes, the pin, the story click.
+  function act() {
+    if (!state.regionId || state.busy) return;
+    const before = current();
+    const need = ACTIONS[state.step];
+    if (state.progress >= need) return;
+    if (state.step === 4) { passTime(before); return; }
+    state.progress += 1;
+    const s = current();
+    render({ animate: true, marks: true, freshFrom: before.log.length });
+    s.log.slice(before.log.length).forEach((x) => { if (x.kind === 'entered') buckets.flash(x.v, 'entered'); });
+    if (state.progress >= need) focusNext();
+    else store.focusTarget();
+  }
+  function onCard(cardId) {
+    const r = regionOf();
+    if (!r) return;
+    const plan = r.plan;
+    const want = state.step === 2 ? plan.add : state.step === 3 ? plan.look : state.step === 5 && state.progress === 1 ? plan.story : null;
+    if (cardId !== want) return;
+    act();
+  }
+  // Step 4: the clock runs on, the bucket drains past its release line, then the page is decided again.
+  function passTime(before) {
+    state.progress = 1;
+    const s = current();
+    const rel = s.log.filter((x) => x.kind === 'released');
+    if (reduced() || !rel.length) {
+      render({ animate: true, marks: true, freshFrom: before.log.length });
+      rel.forEach((x) => buckets.flash(x.v, 'released'));
+      focusNext();
+      return;
     }
-    function render(animate, what) {
-      const r = REGIONS[shared.region];
-      const p = newProfile();
-      [-0.1, -0.05, 0].forEach((t) => { touch(p, into, WEIGHT, t); settleOnEvent(p, t); });
-      const d = decide(p, r.id, 0, { pin: pin ? 'partner' : null, gate });
-      who.textContent = `A visitor from ${r.name}, into ${VALUE[into].word}`;
-      store.setStatus(pin || gate ? "The home page, with the brand's rules applied first." : 'The home page, ranked by interest alone.');
-      store.update(d, animate);
-      const jacketAt = d.cardsByInterest.rain.indexOf('jacket');
-      const partnerAt = d.interestOrder.indexOf('partner');
-      const lines = [];
-      lines.push(gate
-        ? { tag: 'Gate', text: `The waxed field jacket is out of stock, so it never appears. Interest alone would have shown it ${ORDINAL[jacketAt]} in Rain-ready layers.` }
-        : { tag: 'Gate', text: 'No gate is set, so the out-of-stock jacket still shows.' });
-      lines.push(pin
-        ? { tag: 'Pin', text: `The partner spotlight holds the first section. Ranking was skipped for it: an instruction, not a decision. Interest alone would have placed it ${ORDINAL[partnerAt]}${partnerAt === 0 ? ' too' : ''}.` }
-        : { tag: 'Pin', text: `No pin is set, so the partner spotlight sits where interest puts it: ${ORDINAL[partnerAt]}.` });
-      lines.push({ tag: 'Ranking', text: pin ? "Every other section follows the visitor's interest, around the pin." : "Every section follows the visitor's interest." });
-      receipt.set(lines);
-      receipt.root.appendChild(compare);
-      fill(showsList, d.order, d.pin);
-      fill(aloneList, d.interestOrder, null);
-      if (animate) {
-        const lead = what === 'pin' ? lines[1].text : what === 'gate' ? lines[0].text : `The visitor is into ${VALUE[into].word}. The page shows ${d.order.map((id) => SECTION[id].title).join(', ')}.`;
-        say.say(lead);
-      }
+    // Hold the page as it was while the buckets drain, then let it be decided again.
+    state.busy = 1;
+    state.progress = 0;
+    render({ keepSide: true });
+    passBtn.setAttribute('aria-disabled', 'true');
+    const t0 = before.now;
+    const tRel = rel[0].t;
+    const t1 = s.now;
+    const p = before.p;
+    const levelsAt = (t) => { const a = {}; VALUES.forEach((v) => { a[v.id] = interestOf(rawAt(p, v.id, t)); }); return a; };
+    const lambdaAt = (t) => blend(levelsAt(t), REGIONS[state.regionId].share).lambda;
+    const firstMs = 1400;
+    const restMs = 900;
+    buckets.update(levelsAt(tRel), p, { slow: true });
+    balance.update(lambdaAt(tRel), { slow: true });
+    const ticks = 14;
+    for (let i = 1; i <= ticks; i++) later(() => { clockText.textContent = `Visit time ${clock(t0 + ((tRel - t0) * i) / ticks)}`; }, (firstMs * i) / ticks);
+    later(() => {
+      const pr = newProfile();
+      Object.assign(pr.member, before.p.member, { [rel[0].v]: false });
+      Object.assign(pr.released, before.p.released, { [rel[0].v]: true });
+      buckets.update(levelsAt(tRel), pr, { slow: true });
+      buckets.flash(rel[0].v, 'released');
+      buckets.update(levelsAt(t1), pr, { slow: true });
+      balance.update(lambdaAt(t1), { slow: true });
+      const lines = logLines(s, before.log.length).filter((l) => l.kind === 'release');
+      receipt.set('Why this page', `The home page at ${clock(t0)}, for a visitor in ${REGIONS[state.regionId].name}.`, logLines(before, before.log.length).concat(lines), 'log');
+      const extraTicks = 8;
+      for (let i = 1; i <= extraTicks; i++) later(() => { clockText.textContent = `Visit time ${clock(tRel + ((t1 - tRel) * i) / extraTicks)}`; }, (restMs * i) / extraTicks);
+    }, firstMs);
+    later(() => {
+      state.busy = 0;
+      state.timers = [];
+      state.progress = 1;
+      render({ animate: true, marks: true, freshFrom: before.log.length });
+      focusNext();
+    }, firstMs + restMs + 60);
+  }
+  function toggleHoldout() {
+    state.holdoutView = !state.holdoutView;
+    render({ animate: true });
+  }
+  function focusNext() {
+    if (nextBtn.isConnected) nextBtn.focus({ preventScroll: true });
+  }
+
+  function go(step, fromCallout) {
+    if (step < 1 || step > STEP_COUNT) return;
+    if (step > 1 && !state.regionId) { restartAnimation(callout.root, 'is-nudged'); return; }
+    clearTimers();
+    state.step = step;
+    state.progress = step === 1 ? (state.regionId ? 1 : 0) : 0;
+    state.holdoutView = false;
+    render({ animate: true });
+    if (fromCallout) {
+      const h = stepEls[step - 1].querySelector('h2');
+      h.setAttribute('tabindex', '-1');
+      h.focus({ preventScroll: true });
+      stepper.root.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
     }
-    shared.subs.push(() => render(false));
-    render(false);
+  }
+  function restart() {
+    clearTimers();
+    state.regionId = null;
+    state.step = 1;
+    state.progress = 0;
+    state.holdoutView = false;
+    render({ animate: true });
+    const first = picker.root.querySelector('button');
+    if (first) first.focus({ preventScroll: true });
+    stepper.root.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
   }
 
   // ---------- start ----------
-  const SCENES = { local: sceneLocal, click: sceneClick, fade: sceneFade, wheel: sceneWheel };
-  Array.prototype.forEach.call(doc.querySelectorAll('figure.sw-figure[data-scene]'), (fig) => {
-    const build = SCENES[fig.getAttribute('data-scene')];
-    const live = fig.querySelector('.sw-live');
-    const still = fig.querySelector('.sw-static');
-    if (!build || !live) return;
-    build(live);
-    live.hidden = false;
-    if (still) still.hidden = true;
-    const howto = fig.parentNode.querySelector('.sw-howto');
-    if (howto) howto.hidden = false;
-  });
-  doc.documentElement.classList.add('sw-ready');
+  liveEl.hidden = false;
+  tourEl.classList.add('is-live');
+  render({});
+  // For the page's own checks in a browser: the model and the state, read only.
+  window.__seeItWork = Object.freeze({ model: MODEL, state: () => ({ regionId: state.regionId, step: state.step, progress: state.progress, holdoutView: state.holdoutView }), current });
 })();
