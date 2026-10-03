@@ -69,12 +69,10 @@
   <main class="stage" id="stage">
     <section class="view view--home" id="view-home" data-page="home">
       <p class="offlimits-note"><b>Off limits</b> the header &middot; the service strip &middot; the footer: never decided, never personalised</p>
-      <!-- The 13-icon category nav: static, the same for everyone (oh.js draws the pictures from the feed). -->
-      <nav class="m1-cats static" id="m1Cats" aria-label="Shop by category"></nav>
       <!-- Slot continue, take 1, gated on the return visit (ctx.visit = return): off the page until a decision says otherwise. -->
       <section class="module decided" id="mod-continue" data-slot="continue" data-gated="true" hidden aria-labelledby="head-continue">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; slot <b>continue</b> &middot; take 1 &middot; gated on a return visit</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>continue</b> &middot; take 1 &middot; gated on a return visit</p>
           <h2 id="head-continue">Welcome back</h2>
         </div></header>
         <div class="cards cards--one" id="slot-continue" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
@@ -84,7 +82,7 @@
            the other slides are the template's own heroes, static, in the catalog's order. -->
       <section class="module decided" id="mod-hero" data-slot="hero" aria-labelledby="head-hero">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; slot <b>hero</b> &middot; take 1</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>hero</b> &middot; take 1</p>
           <h2 id="head-hero">Featured</h2>
         </div></header>
         <div class="cards cards--one" id="slot-hero" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
@@ -99,11 +97,16 @@
         <button type="button" class="m1-svc" data-act="m1-info" data-info="expert" data-ctl="svc-expert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-5 4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01" stroke-linecap="round" stroke-width="2.2"/></svg><span><b>Chat with an expert</b></span></button>
         <span class="nper">not personalised</span>
       </div>
+      <!-- The category row: static, the same for everyone (oh.js draws the pictures from the feed), under lg.com's heading. -->
+      <section class="m1-cats-wrap static" aria-labelledby="head-cats">
+        <header class="module-head"><div><h2 id="head-cats">Shop top appliances and electronics</h2></div></header>
+        <nav class="m1-cats static" id="m1Cats" aria-label="Shop by category"></nav>
+      </section>
       <!-- Slot category-rail, take 3: the room tiles in the order the engine returns. -->
       <section class="module decided" id="mod-category-rail" data-slot="category-rail" aria-labelledby="head-category-rail">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; slot <b>category-rail</b> &middot; take 3</p>
-          <h2 id="head-category-rail">Shop top appliances and electronics</h2>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>category-rail</b> &middot; take 3</p>
+          <h2 id="head-category-rail">Shop by room</h2>
         </div></header>
         <div class="cards cards--many" id="slot-category-rail" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-category-rail" hidden></p>
@@ -111,22 +114,33 @@
       <!-- Slot deals, take 4: the page renders what comes back, in the order it comes back. -->
       <section class="module decided" id="mod-deals" data-slot="deals" aria-labelledby="head-deals">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; slot <b>deals</b> &middot; take 4</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>deals</b> &middot; take 4</p>
           <h2 id="head-deals">Discover OH. deals</h2>
         </div></header>
+        <div class="m1-deal-head static"><button type="button" class="btn btn--brand" data-nav="offers" data-ctl="deals-all">View all deals</button>
+          <div class="m1-deal-tabs" role="tablist" aria-label="Deals by room"><span class="m1-deal-tab" role="tab" aria-selected="true">Top deals for you</span>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:living-room" data-ctl="deals-tab-tv">TV &amp; audio</button>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:laundry-room" data-ctl="deals-tab-laundry">Laundry</button>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:kitchen" data-ctl="deals-tab-kitchen">Kitchen</button></div></div>
         <div class="cards cards--many" id="slot-deals" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-deals" hidden></p>
       </section>
-      <!-- Shop with an expert: static. -->
+      <!-- Shop with an expert: static, a wide band. -->
       <section class="m1-expert static" aria-labelledby="head-expert">
-        <span class="m1-expert-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg></span>
-        <div><h2 id="head-expert">Shop with an OH. expert</h2><p>Not sure which TV fits the room, or whether the dryer runs on gas? Our product experts help you choose, then you decide.</p></div>
-        <button type="button" class="btn btn--line" data-act="m1-info" data-info="expert" data-ctl="expert-chat">Chat with an expert</button>
+        <div class="m1-expert-copy"><h2 id="head-expert">Shop with an OH. expert: free advice and the right deal</h2>
+          <p>Not sure which TV fits the room, or whether the dryer runs on gas? Our product experts help you choose, then you decide.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-info" data-info="expert" data-ctl="expert-chat">Chat with an expert</button></div>
+        <div class="m1-expert-art" aria-hidden="true">
+          <span class="m1-expert-disc"><img src="/oh/img/products/oled65c6pua.webp" alt="" loading="lazy" decoding="async" data-p1-name="OLED65C6PUA"></span>
+          <span class="m1-expert-disc"><img src="/oh/img/products/wm4000hwa.webp" alt="" loading="lazy" decoding="async" data-p1-name="WM4000HWA"></span>
+          <span class="m1-expert-disc"><img src="/oh/img/products/lsgl6335x.webp" alt="" loading="lazy" decoding="async" data-p1-name="LSGL6335X"></span>
+          <span class="m1-expert-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg></span>
+        </div>
       </section>
       <!-- Rail for-you: POST /sort across the rooms; before a visitor, the template's own order. -->
       <section class="module decided" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 8</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 8</p>
           <h2 id="head-for-you">Recommended for you</h2>
         </div><span class="rail-chip" id="chip-for-you">the site&rsquo;s own order</span></header>
         <div class="rail" id="rail-for-you"></div>
@@ -158,17 +172,17 @@
     <section class="view view--grid" id="view-tvs" data-page="tvs" data-grid="tvs" hidden>
       <p class="offlimits-note"><b>Off limits</b> the filters &middot; the sort control: never decided, never personalised</p>
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>TV &amp; Audio</span><span>/</span><span>TVs</span></nav>
-      <header class="view-head"><h1 class="view-title">TVs</h1><span class="p1-sub">OLED evo, QNED evo Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches</span></header>
-      <div class="m1-quick static" id="m1Quick-tvs" aria-label="TV types"></div>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">TVs</h1><span class="p1-sub">OLED evo, QNED evo Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-tvs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
       <!-- Slot grid-promo, take 1: the page renders what comes back, in the order it comes back. -->
       <section class="module decided" id="mod-grid-promo" data-slot="grid-promo" aria-labelledby="head-grid-promo">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for">Decided for you</span> &middot; slot <b>grid-promo</b> &middot; take 1</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>grid-promo</b> &middot; take 1</p>
           <h2 id="head-grid-promo">In the TV grid</h2>
         </div></header>
         <div class="cards cards--one" id="slot-grid-promo" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-grid-promo" hidden></p>
       </section>
+      <div class="m1-quick static" id="m1Quick-tvs" aria-label="TV types"></div>
       <div class="m1-layout">
         <aside class="m1-filters static" id="m1Filters-tvs" aria-label="Filters"></aside>
         <div class="m1-main">
@@ -176,7 +190,7 @@
           <!-- Rail tv-grid: POST /sort over every priced TV, with the regional prior; before a visitor, the site's own order. -->
           <section class="module decided" id="mod-tv-grid" data-rail="tv-grid" aria-labelledby="head-tv-grid">
             <header class="module-head"><div>
-              <p class="module-where"><span class="m1-for">Best match, decided for you</span> &middot; rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the TVs</p>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the TVs</p>
               <h2 id="head-tv-grid">Every TV, ordered for you</h2>
             </div><span class="rail-chip" id="chip-tv-grid">the site&rsquo;s own order</span></header>
             <div class="rail" id="rail-tv-grid"></div>
@@ -189,7 +203,13 @@
 
     <section class="view view--grid" id="view-laundry" data-page="laundry" data-grid="laundry" hidden>
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Laundry</span></nav>
-      <header class="view-head"><h1 class="view-title">Washers &amp; dryers</h1><span class="p1-sub">Front-load and top-load washers, gas and electric dryers, WashTower, all-in-one, laundry sets and pedestals</span></header>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Washers &amp; dryers</h1><span class="p1-sub">Front-load and top-load washers, gas and electric dryers, WashTower, all-in-one, laundry sets and pedestals</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-laundry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Laundry">
+        <div class="m1-banner-art" id="m1BannerArt-laundry" data-room="laundry-room" data-skus="WM4000HWA DLEX4000W"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Laundry</p><h2>A laundry room that runs itself</h2><p class="p1-sub">Front-load pairs that stack, WashTower, all-in-one and the pedestals that raise them; the width is on every one we list.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="laundry" data-filter="category:laundry-sets" data-ctl="banner-laundry">Shop laundry sets</button></div>
+      </section>
       <div class="m1-quick static" id="m1Quick-laundry" aria-label="Laundry types"></div>
       <div class="m1-layout">
         <aside class="m1-filters static" id="m1Filters-laundry" aria-label="Filters"></aside>
@@ -197,7 +217,7 @@
           <div class="m1-toolbar" id="m1Bar-laundry"></div>
           <section class="module decided" id="mod-laundry-grid" data-rail="laundry-grid" aria-labelledby="head-laundry-grid">
             <header class="module-head"><div>
-              <p class="module-where"><span class="m1-for">Best match, decided for you</span> &middot; rail <b>laundry-grid</b> &middot; <code>POST /sort</code> over the laundry room</p>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>laundry-grid</b> &middot; <code>POST /sort</code> over the laundry room</p>
               <h2 id="head-laundry-grid">Laundry, ordered for you</h2>
             </div><span class="rail-chip" id="chip-laundry-grid">the site&rsquo;s own order</span></header>
             <div class="rail m1-grid-cards" id="rail-laundry-grid"></div>
@@ -210,7 +230,13 @@
 
     <section class="view view--grid" id="view-kitchen" data-page="kitchen" data-grid="kitchen" hidden>
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Kitchen</span></nav>
-      <header class="view-head"><h1 class="view-title">Kitchen</h1><span class="p1-sub">Ranges, over-the-range microwaves, dishwashers and kitchen packages</span></header>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Kitchen</h1><span class="p1-sub">Ranges, over-the-range microwaves, dishwashers and kitchen packages</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Kitchen">
+        <div class="m1-banner-art" id="m1BannerArt-kitchen" data-room="kitchen" data-skus="LSGL6335X MVEM1825F"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Kitchen</p><h2>Cook, vent and clean up, matched</h2><p class="p1-sub">Ranges in your fuel, the microwave above them and a dishwasher to finish; every package priced beside its pieces bought apart.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="kitchen" data-filter="category:kitchen-packages" data-ctl="banner-kitchen">Shop kitchen packages</button></div>
+      </section>
       <div class="m1-quick static" id="m1Quick-kitchen" aria-label="Kitchen categories"></div>
       <div class="m1-layout">
         <aside class="m1-filters static" id="m1Filters-kitchen" aria-label="Filters"></aside>
@@ -218,7 +244,7 @@
           <div class="m1-toolbar" id="m1Bar-kitchen"></div>
           <section class="module decided" id="mod-kitchen-grid" data-rail="kitchen-grid" aria-labelledby="head-kitchen-grid">
             <header class="module-head"><div>
-              <p class="module-where"><span class="m1-for">Best match, decided for you</span> &middot; rail <b>kitchen-grid</b> &middot; <code>POST /sort</code> over the kitchen</p>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>kitchen-grid</b> &middot; <code>POST /sort</code> over the kitchen</p>
               <h2 id="head-kitchen-grid">The kitchen, ordered for you</h2>
             </div><span class="rail-chip" id="chip-kitchen-grid">the site&rsquo;s own order</span></header>
             <div class="rail m1-grid-cards" id="rail-kitchen-grid"></div>
@@ -231,7 +257,13 @@
 
     <section class="view view--grid" id="view-offers" data-page="offers" data-grid="offers" hidden>
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Offers</span></nav>
-      <header class="view-head"><h1 class="view-title">Offers</h1><span class="p1-sub">Everything on sale today, across TVs, laundry and the kitchen; the same prices for everyone</span></header>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Offers</h1><span class="p1-sub">Everything on sale today, across TVs, laundry and the kitchen; the same prices for everyone</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-offers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Offers">
+        <div class="m1-banner-art" id="m1BannerArt-offers" data-room="living-room" data-skus="OLED77G6WUA WM4000HWA"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Offers</p><h2>Everything on sale today</h2><p class="p1-sub">Across TVs, laundry and the kitchen; the same prices for everyone, and the dates each offer runs.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="offers" data-filter="room:living-room" data-ctl="banner-offers">Shop TV offers</button></div>
+      </section>
       <div class="m1-quick static" id="m1Quick-offers" aria-label="Offers by room"></div>
       <div class="m1-layout">
         <aside class="m1-filters static" id="m1Filters-offers" aria-label="Filters"></aside>
@@ -239,7 +271,7 @@
           <div class="m1-toolbar" id="m1Bar-offers"></div>
           <section class="module decided" id="mod-offers-grid" data-rail="offers-grid" aria-labelledby="head-offers-grid">
             <header class="module-head"><div>
-              <p class="module-where"><span class="m1-for">Best match, decided for you</span> &middot; rail <b>offers-grid</b> &middot; <code>POST /sort</code> over what is on sale</p>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>offers-grid</b> &middot; <code>POST /sort</code> over what is on sale</p>
               <h2 id="head-offers-grid">On sale, ordered for you</h2>
             </div><span class="rail-chip" id="chip-offers-grid">the site&rsquo;s own order</span></header>
             <div class="rail m1-grid-cards" id="rail-offers-grid"></div>
@@ -258,7 +290,7 @@
           <div class="m1-toolbar" id="m1Bar-search"></div>
           <section class="module decided" id="mod-search-grid" data-rail="search-grid" aria-labelledby="head-search-grid">
             <header class="module-head"><div>
-              <p class="module-where"><span class="m1-for">Best match, decided for you</span> &middot; <code>POST /sort</code> over every match</p>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; <code>POST /sort</code> over every match</p>
               <h2 id="head-search-grid">Results, ordered for you</h2>
             </div><span class="rail-chip" id="chip-search-grid">the site&rsquo;s own order</span></header>
             <div class="rail m1-grid-cards" id="rail-search-grid"></div>

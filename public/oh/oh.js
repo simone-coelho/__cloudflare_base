@@ -566,7 +566,7 @@ import { store } from '/oh/oh-store.js';
       ready: null, display: new Map(), images: {}, weights: {}, openSlots: {},
       home: { set: null, slots: {}, heroWas: null, rail: { status: 'site', order: null, items: null, regional: null, prevOrder: null } },
       grid: freshGrid(),
-      grids: {}, search: { q: '', matches: [] }, tpl: false, zip: null, slide: 0, pencil: 0, tab: 'appliances', template: null, feedAsOf: null,
+      grids: {}, search: { q: '', matches: [] }, tpl: false, zip: null, slide: 0, pencil: 0, tab: 'appliances', template: null, feedAsOf: null, art: null,
       mark: null, windows: null, held: null, pin: null, clock: null, returned: false, lead: null, quiet: false, restoring: false, contrast: null, contrastAsk: null,
     };
 
@@ -598,8 +598,9 @@ import { store } from '/oh/oh-store.js';
     function data() {
       if (S.ready) return S.ready;
       S.ready = Promise.all([transport.tryJson(`${BASE}catalog.json`), transport.tryJson(`${BASE}img/index.json`), transport.tryJson(`${BASE}demo.config.json`),
-        transport.tryJson(`${BASE}beats/open-slots.json`), transport.tryJson(SITE.products.file)])
-        .then(([cat, idx, cfg, slots, feed]) => {
+        transport.tryJson(`${BASE}beats/open-slots.json`), transport.tryJson(SITE.products.file), transport.tryJson(`${BASE}img/art/index.json`)])
+        .then(([cat, idx, cfg, slots, feed, art]) => {
+          S.art = art && typeof art === 'object' ? art : null;   // lane A1's campaign art by piece id; none yet: the soft scenes
           // The site's own merchandising order, declared in the products file (best sellers, the same for everyone): what
           // the rail and the grids show before anyone arrives. Read as the file gives it; the page orders nothing.
           S.template = (feed && feed.template && typeof feed.template === 'object') ? feed.template : null;
@@ -817,6 +818,81 @@ import { store } from '/oh/oh-store.js';
     }
 
     // ── The hero, take 1 ────────────────────────────────────────────────────
+    // ── The campaign art (lane A1, design §10): by piece id from img/art/index.json; until it lands, a soft scene with the
+    //    product itself on it. The headline, the sub and the button are the piece's own copy, drawn over the art.
+    const roomOfPiece = (piece) => arr(piece && piece.tags && piece.tags.room)[0] || (arr(piece && piece.tags && piece.tags.category).includes('tvs') ? 'living-room' : 'living-room');
+    const KICKER = { 'living-room': 'TV & audio', 'laundry-room': 'Laundry', kitchen: 'Kitchen' };
+    /** A1's formats by the page's roles: a hero is a slide (1440×640); tall (720×860), tile (720×420), banner (1440×360). */
+    const ART_ROLE = { hero: 'slide' };
+    const VIEW_OF_ROOM = { 'living-room': 'tvs', 'laundry-room': 'laundry', kitchen: 'kitchen' };
+    /** The room's own art piece (A1's index maps a grid's view to it): the banners. */
+    const roomArtKey = (room) => { const r = S.art && S.art.rooms; return r ? r[VIEW_OF_ROOM[room] || room] || null : null; };
+    /** The art A1 mapped to a piece for a role, as { src, avif, ink }; null when it has none (then the scene). */
+    function artSrc(keys, role) {
+      const idx = S.art;
+      if (!idx) return null;
+      const book = idx.pieces || idx.art || idx.items || idx;
+      const roles = [...new Set([ART_ROLE[role] || role, role])];
+      for (const key of arr(keys)) {
+        const e = key && book[key];
+        if (!e) continue;
+        if (typeof e === 'string') return { src: e };
+        for (const r of roles) {
+          const pick = e[r];
+          if (typeof pick === 'string') return { src: pick };
+          if (pick && typeof pick === 'object' && (pick.src || pick.webp)) return { src: pick.src || pick.webp, avif: pick.avif || null, ink: pick.ink || null, zones: pick.zones || null };
+        }
+      }
+      return null;
+    }
+    /** The picture for A1's art: AVIF first, the WebP as the src; dark type where A1 measured the art light. */
+    const artPicture = (art, name) => `<span class="m1-scene m1-scene--art${art.ink === 'dark' ? ' m1-ink-dark' : ''}"><picture>${art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc(art.src)}" alt="" decoding="async" data-p1-name="${esc(name)}"></picture></span>`;
+    /** A piece's picture for a role: A1's art when it exists, else a dark scene in its room's colours with the product on it. */
+    function sceneHtml(piece, cid, role) {
+      const room = roomOfPiece(piece), prod = productOfPiece(piece, cid);
+      const art = artSrc([cid, piece.id, role === 'banner' ? roomArtKey(room) : null], role);
+      if (art) return artPicture(art, bare(piece.title || cid));
+      return `<span class="m1-scene m1-scene--${esc(room)}" data-art="placeholder">${prod ? artHtml(prod, 'p1-art--scene') : ''}</span>`;
+    }
+    /** The art's zones for a piece in a role (A1 records them per file), or null without art. */
+    const zonesOf = (piece, cid, role) => { const art = artSrc([cid, piece.id, role === 'banner' ? roomArtKey(roomOfPiece(piece)) : null], role); return art && art.zones ? art.zones : null; };
+    /** A badge in the corner the art names (its badge zone), anchored to the zone's nearer edges; none without a zone. */
+    function badgePos(z) {
+      const bz = z && Array.isArray(z.badge) && z.badge.length === 4 ? z.badge.map(Number) : null;
+      if (!bz || bz.some((n) => !Number.isFinite(n))) return '';
+      const pc = (n) => `${(Math.max(0, Math.min(1, n)) * 100).toFixed(1)}%`;
+      const x = bz[0] + bz[2] > 1 ? `right:${pc(1 - bz[2])};left:auto` : `left:${pc(bz[0])};right:auto`;
+      const y = bz[1] + bz[3] > 1 ? `bottom:${pc(1 - bz[3])};top:auto` : `top:${pc(bz[1])};bottom:auto`;
+      return ` style="${x};${y}" data-zone="badge"`;
+    }
+    /** A grid's own banner (static, the same for everyone): the room's art from A1, else a dark scene with its products. */
+    function roomBanner(view) {
+      const box = $(`m1BannerArt-${view}`);
+      if (!box || box.dataset.m1 === (S.art ? 'art' : 'scene')) return;
+      box.dataset.m1 = S.art ? 'art' : 'scene';
+      const room = box.dataset.room || '';
+      const art = room ? artSrc([roomArtKey(room)], 'banner') : null;
+      if (art) { box.innerHTML = artPicture(art, GRIDS[view] ? GRIDS[view].title : view); return; }
+      const prods = (box.dataset.skus || '').split(' ').filter(Boolean).map(productOf).filter(Boolean);
+      box.innerHTML = `<span class="m1-scene m1-scene--${esc(room || 'living-room')}" data-art="placeholder">${prods.map((p, k) => `<span class="m1-banner-prod m1-banner-prod--${k}">${artHtml(p, 'p1-art--scene')}</span>`).join('')}</span>`;
+    }
+
+    /** A clone for the carousel's peeking neighbours: the same picture, no decision, no control, inert. */
+    const cloneOf = (html) => html.replace(/ data-(?:cid|op-[a-z-]+|ctl|receipt|open|nav|act|menu|view|filter|q)="[^"]*"/g, '');
+
+    // ── The hero, take 1: a carousel of wide art slides, the neighbours peeking on both sides ──
+    function heroSlideHtml(d, i, decidedSlide, entered) {
+      const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
+      const kicker = d.strategy === 'tenant-pinned' ? 'Pinned by our merchandiser' : (KICKER[roomOfPiece(piece)] || 'New');
+      const badge = d.strategy === 'tenant-pinned' ? 'Pinned' : g.ends || (/^new for/i.test(piece.title || '') ? 'New for 2026' : '');
+      const attrs = decidedSlide ? decided(d) : '';
+      return `<div class="m1-slide" data-slide="${i}"><article class="card p1-hero${entered ? ' p1-entered' : ''}${decidedSlide ? '' : ' m1-static-slide'}"${attrs}>${entered ? '<span class="delta-chip delta-chip--in">new</span>' : ''}
+        ${sceneHtml(piece, d.customerContentId, 'hero')}
+        <div class="p1-hero-copy"><p class="p1-kicker">${esc(kicker)}</p><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-hero-sub">${esc(piece.subtitle)}</p>` : ''}
+          <div class="p1-ctas"><button type="button" class="btn btn--brand" ${target(piece, d.customerContentId)} data-ctl="${decidedSlide ? 'hero-cta' : `hero-cta-${i + 1}`}">${esc(disp.cta || 'Shop now')}</button></div></div>
+        ${badge ? `<span class="m1-hero-badge"${badgePos(zonesOf(piece, d.customerContentId, 'hero'))}>${esc(badge)}</span>` : ''}
+        <p class="receipt p1-receipt"${decidedSlide ? ` data-receipt="${esc(d.decisionId || '')}"` : ''}>${decidedSlide ? receiptLine(d, 0) : 'one of the site’s own slides: static, the same for everyone'}</p></article></div>`;
+    }
     function renderHero(slot, decisions) {
       const box = $(`slot-${slot.slot}`);
       if (!box) return;
@@ -824,27 +900,19 @@ import { store } from '/oh/oh-store.js';
       const entered = !S.quiet && !S.restoring && !S.tpl && Boolean(d && S.home.heroWas && S.home.heroWas !== d.customerContentId);
       if (!S.quiet && !S.restoring && !S.tpl) { S.home.heroPrev = S.home.heroWas; S.home.heroWas = d ? d.customerContentId : null; }
       if (!d) { box.innerHTML = '<p class="slot-empty">The engine returned no hero for this request, and the page shows none rather than invent one.</p>'; return; }
-      const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), prod = productOfPiece(piece, d.customerContentId);
-      const kicker = d.strategy === 'tenant-pinned' ? 'Pinned by our merchandiser' : ({ 'living-room': 'TV & audio', 'laundry-room': 'Laundry', kitchen: 'Kitchen' }[arr(piece.tags && piece.tags.room)[0]] || 'New');
-      // The carousel: the slot's answer first; then the template's other heroes, static, the same for everyone, in the catalog's order.
+      // The slot's answer first; then the template's other heroes, static, the same for everyone, in the catalog's order.
       const others = S.quiet ? [] : M1.template({ slot: 'hero', take: 6 }).filter((x) => x.customerContentId !== d.customerContentId).slice(0, 4);
       S.slide = 0;
-      const slide = (x, i) => {
-        const pc = pieceOf(x) || {}, dp = dispOf(x.customerContentId), pr = productOfPiece(pc, x.customerContentId);
-        const k = { 'living-room': 'TV & audio', 'laundry-room': 'Laundry', kitchen: 'Kitchen' }[arr(pc.tags && pc.tags.room)[0]] || 'New';
-        return `<div class="m1-slide" data-slide="${i + 1}" hidden><article class="card p1-hero m1-static-slide"><div class="p1-hero-copy"><p class="p1-kicker">${esc(k)}</p><h3>${esc(pc.title || x.customerContentId)}</h3>${pc.subtitle ? `<p class="p1-hero-sub">${esc(pc.subtitle)}</p>` : ''}
-          <div class="p1-ctas"><button type="button" class="btn btn--brand" ${target(pc, x.customerContentId)} data-ctl="hero-cta-${i + 2}">${esc(dp.cta || 'Shop now')}</button></div></div>
-          <div class="p1-hero-art">${pr ? artHtml(pr, 'p1-art--hero') : ''}</div><p class="receipt p1-receipt">one of the site’s own slides: static, the same for everyone</p></article></div>`;
-      };
-      const n = others.length + 1;
-      box.innerHTML = `<div class="m1-carousel"><div class="m1-slides"><div class="m1-slide" data-slide="0"><article class="card p1-hero${entered ? ' p1-entered' : ''}"${decided(d)}>${entered ? '<span class="delta-chip delta-chip--in">new</span>' : ''}
-        <div class="p1-hero-copy"><p class="p1-kicker">${esc(kicker)}</p><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-hero-sub">${esc(piece.subtitle)}</p>` : ''}
-          <div class="p1-ctas"><button type="button" class="btn btn--brand" ${target(piece, d.customerContentId)} data-ctl="hero-cta">${esc(disp.cta || 'Shop now')}</button></div></div>
-        <div class="p1-hero-art">${prod ? artHtml(prod, 'p1-art--hero') : ''}</div>
-        <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, 0)}</p></article></div>${others.map(slide).join('')}</div>
-        ${n > 1 ? `<div class="m1-car-ctl"><button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="-1" data-ctl="hero-prev" aria-label="Previous slide">&lsaquo;</button>
-          <div class="m1-dots">${Array.from({ length: n }, (_, i) => `<button type="button" class="m1-dot" data-act="m1-slide" data-to="${i}" data-ctl="hero-dot-${i + 1}" aria-label="Slide ${i + 1} of ${n}" aria-current="${i === 0}"></button>`).join('')}</div>
+      const slides = [heroSlideHtml(d, 0, true, entered), ...others.map((x, i) => heroSlideHtml(x, i + 1, false, false))];
+      const n = slides.length;
+      // The neighbours that peek: the last slide before the first, the first after the last (inert copies).
+      const track = n > 1 ? [`<div class="m1-slide m1-slide--clone" aria-hidden="true" inert>${cloneOf(slides[n - 1]).replace(/^<div class="m1-slide"[^>]*>|<\/div>$/g, '')}</div>`, ...slides,
+        `<div class="m1-slide m1-slide--clone" aria-hidden="true" inert>${cloneOf(slides[0]).replace(/^<div class="m1-slide"[^>]*>|<\/div>$/g, '')}</div>`] : slides;
+      box.innerHTML = `<div class="m1-carousel"><div class="m1-hero-bleed"><div class="m1-hero-track" id="m1HeroTrack" style="--i:${n > 1 ? 1 : 0}">${track.join('')}</div></div>
+        ${n > 1 ? `<div class="m1-car-ctl"><div class="m1-dots">${Array.from({ length: n }, (_, i) => `<button type="button" class="m1-dot" data-act="m1-slide" data-to="${i}" data-ctl="hero-dot-${i + 1}" aria-label="Slide ${i + 1} of ${n}" aria-current="${i === 0}"></button>`).join('')}</div>
+          <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="-1" data-ctl="hero-prev" aria-label="Previous slide">&lsaquo;</button>
           <button type="button" class="m1-car-arrow" data-act="m1-slide" data-step="1" data-ctl="hero-next" aria-label="Next slide">&rsaquo;</button></div>` : ''}</div>`;
+      M1.heads();
     }
 
     // ── The room tiles, take 3: the order is the engine's ────────────────────
@@ -857,16 +925,17 @@ import { store } from '/oh/oh-store.js';
       if (row && !S.restoring) deltas.rotate(slot.slot, after, decisions);   // her answer put back after Compare: no new before
       const moves = row && !S.quiet ? deltas.moves(slot.slot, slotState(slot.slot).previous, after, decisions) : {};
       box.innerHTML = decisions.map((d, i) => {
-        const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), prod = productOfPiece(piece, d.customerContentId);
+        const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId);
         return `<article class="card p1-tile"${decided(d)}>${deltas.chipHtml(moves[d.customerContentId])}
-          <button type="button" class="p1-tile-hit" ${target(piece, d.customerContentId)} data-ctl="tile-${esc(d.customerContentId)}">${prod ? artHtml(prod, 'p1-art--tile') : ''}
-          <h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}<span class="p1-tile-cta">${esc(disp.cta || 'Shop')} &rarr;</span></button>
+          <button type="button" class="p1-tile-hit" ${target(piece, d.customerContentId)} data-ctl="tile-${esc(d.customerContentId)}">${sceneHtml(piece, d.customerContentId, 'tile')}
+          <span class="p1-tile-text"><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<span class="p1-sub">${esc(piece.subtitle)}</span>` : ''}<span class="p1-tile-cta">${esc(disp.cta || 'Shop')} &rsaquo;</span></span></button>
           <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></article>`;
       }).join('') || '<p class="slot-empty">The engine returned no tile for this request.</p>';
       if (row && !S.quiet) deltas.render(slot.slot);
+      M1.heads();
     }
 
-    // ── The deals four ──────────────────────────────────────────────────────
+    // ── The deals four: the bento of art tiles, headlines over them ──────────
     function renderDeals(slot, decisions) {
       const box = $(`slot-${slot.slot}`);
       if (!box) return;
@@ -877,15 +946,16 @@ import { store } from '/oh/oh-store.js';
       box.innerHTML = decisions.map((d, i) => dealHtml(d, i, moves[d.customerContentId])).join('')
         || '<p class="slot-empty">The engine returned no deal for this request, and the page shows none rather than invent one.</p>';
       if (row && !S.quiet) deltas.render(slot.slot);
+      M1.heads();
     }
     function dealHtml(d, i, mv) {
-      const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), prod = productOfPiece(piece, d.customerContentId), g = disp.grammar || {};
-      return `<article class="card p1-deal${d.strategy === 'tenant-pinned' ? ' p1-deal--pinned' : ''}"${decided(d)}>${deltas.chipHtml(mv)}
-        <div class="p1-deal-art">${prod ? artHtml(prod, 'p1-art--deal') : ''}${disp.badge ? `<span class="p1-badge">${esc(disp.badge)}</span>` : ''}</div>
-        <div class="p1-deal-body"><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
-          ${g.value || g.consideration ? `<p class="p1-fine">${esc([g.value, g.consideration].filter(Boolean).join(' · '))}</p>` : ''}
-          <button type="button" class="btn btn--line btn--sm" ${target(piece, d.customerContentId)} data-ctl="deal-${i + 1}">${esc(disp.cta || 'Shop the deal')}</button>
-          <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></div></article>`;
+      const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
+      return `<article class="card p1-deal p1-deal--${i}${d.strategy === 'tenant-pinned' ? ' p1-deal--pinned' : ''}"${decided(d)}>${deltas.chipHtml(mv)}
+        <div class="p1-deal-tile">${sceneHtml(piece, d.customerContentId, i === 3 ? 'tile' : 'tall')}${disp.badge ? `<span class="p1-badge"${badgePos(zonesOf(piece, d.customerContentId, i === 3 ? 'tile' : 'tall'))}>${esc(disp.badge)}</span>` : ''}
+          <div class="p1-deal-body"><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
+            ${g.value || g.consideration ? `<p class="p1-fine">${esc([g.value, g.consideration].filter(Boolean).join(' · '))}</p>` : ''}</div>
+          <button type="button" class="m1-tile-go" ${target(piece, d.customerContentId)} data-ctl="deal-${i + 1}" aria-label="${esc(disp.cta || 'Shop the deal')}"><span>${esc(disp.cta || 'Shop the deal')}</span> &rsaquo;</button></div>
+        <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></article>`;
     }
 
     // ── The continue hero: gated on the return visit; its body is her own shortlist ─
@@ -898,7 +968,8 @@ import { store } from '/oh/oh-store.js';
       const piece = pieceOf(d) || {};
       const list = S.quiet ? [] : shortlist();
       const clock = S.clock && !S.quiet ? `<div class="p1-clock"><span class="hk">${esc(S.clock.head)}</span>${S.clock.html}</div>` : '';
-      box.innerHTML = `<article class="card p1-continue"${decided(d)}>
+      const contArt = artSrc([d.customerContentId, piece.id], 'hero');
+      box.innerHTML = `<article class="card p1-continue"${decided(d)}>${contArt ? artPicture(contArt, bare(piece.title || d.customerContentId)) : ''}
         <div class="p1-cont-head"><p class="p1-kicker">${S.returned ? 'A return visit, asserted for the clock jump' : 'A return visit'}</p><h3>${esc(piece.title || 'Pick up where you left off.')}</h3>
           <p class="p1-hero-sub">Your shortlist is what you opened on this device, nothing inferred, kept for the window we publish, with your consent.</p></div>
         <div class="p1-shortlist">${list.map((s, i) => { const p = productOf(s.id); return p ? `<button type="button" class="p1-short" data-open="${esc(s.id)}" data-ctl="short-${i + 1}">${artHtml(p, 'p1-art--short')}<span><b>${esc(productName(p))}</b><em>${money(priceNum(p))}</em></span></button>` : ''; }).join('')
@@ -906,6 +977,7 @@ import { store } from '/oh/oh-store.js';
         ${clock}
         <div class="p1-ctas"><button type="button" class="btn btn--brand" data-act="p1-changes" data-ctl="continue-changes">What changed while you were away</button></div>
         <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${continueReceipt(d)}</p></article>`;
+      M1.heads();
     }
     function continueReceipt(d) {
       const rec = recOf(d), ex = (rec && rec.explain) || {};
@@ -914,16 +986,20 @@ import { store } from '/oh/oh-store.js';
         ex.stage && ex.stage.sentence ? esc(ex.stage.sentence) : null].filter(Boolean).join(' · ');
     }
 
-    // ── The grid's promotion, take 1 ────────────────────────────────────────
+    // ── The grid's promotion, take 1: a wide banner over the room's art, the copy the piece's own ──
     function renderGridPromo(slot, decisions) {
       const box = $(`slot-${slot.slot}`);
       if (!box) return;
       box.innerHTML = decisions.map((d, i) => {
-        const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), prod = productOfPiece(piece, d.customerContentId);
-        return `<article class="card p1-promo"${decided(d)}>${prod ? artHtml(prod, 'p1-art--promo') : ''}<div><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
-          <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></div>
-          ${disp.cta ? `<button type="button" class="p1-promo-cta" data-act="m1-promo" data-cid="${esc(d.customerContentId)}" data-ctl="promo-cta">${esc(disp.cta)}</button>` : ''}</article>`;
+        const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
+        const badge = g.ends || disp.badge || '';
+        return `<article class="card p1-promo m1-banner"${decided(d)}>${sceneHtml(piece, d.customerContentId, 'banner')}
+          <div class="m1-banner-copy"><p class="p1-kicker">${esc(KICKER[roomOfPiece(piece)] || 'Offer')}</p><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
+            ${disp.cta ? `<button type="button" class="btn btn--brand p1-promo-cta" data-act="m1-promo" data-cid="${esc(d.customerContentId)}" data-ctl="promo-cta">${esc(disp.cta)}</button>` : ''}</div>
+          ${badge ? `<span class="m1-hero-badge"${badgePos(zonesOf(piece, d.customerContentId, 'banner'))}>${esc(badge)}</span>` : ''}
+          <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></article>`;
       }).join('') || '<p class="slot-empty">The engine returned nothing for the grid’s promotion on this request.</p>';
+      M1.heads();
     }
 
     // ── The /sort rails: "for you" across rooms, and the TV grid ────────────
@@ -1066,6 +1142,7 @@ import { store } from '/oh/oh-store.js';
       }).join('') || `<p class="slot-empty m1-empty">${view && G.fit && !pool.length ? `Nothing here fits that space.` : view ? 'Nothing matches those filters.' : 'No product to show.'}${view && Object.keys(G.f).length ? `<br><button type="button" class="btn btn--line btn--sm" data-act="m1-filter-clear" data-view="${view}" data-ctl="filter-clear-${view}">Clear the filters</button>` : ''}</p>`;
       if (view) M1.gridChrome(view, pool, best || [], order.length);
       else railDeltas(prev, order);
+      M1.heads();
     }
     function railDeltas(prev, order) {
       const node = $('p1RailDeltas');
@@ -1652,13 +1729,17 @@ import { store } from '/oh/oh-store.js';
 
       // ── The product card: image, badges, name, model, stars, sale price, $X OFF, the struck list price, delivery, a button ──
       const stars = (r) => { const n = Math.round(num(r) || 0); return `${'★'.repeat(Math.max(0, Math.min(5, n)))}${'☆'.repeat(Math.max(0, 5 - n))}`; };
+      const ICON_TRUCK = '<svg class="m1-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3.2v2.8h-7"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="17" cy="17" r="1.8"/></svg>';
+      const ICON_STORE = '<svg class="m1-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5V20h16V9.5M3 9.5l1.6-5h14.8L21 9.5zM9.5 20v-5.5h5V20"/></svg>';
       function shipLine(p) {
-        if (p.cta !== 'cart') return 'Sold through retailers <span>· Find a Retailer for stock near you</span>';
-        if (p.inStock === false) return '<span>Out of stock online</span>';
+        if (p.cta !== 'cart') return `<span class="m1-sl">${ICON_STORE}Sold through retailers <span>· Find a Retailer for stock near you</span></span>`;
+        if (p.inStock === false) return `<span class="m1-sl">${ICON_TRUCK}<span>Out of stock online</span></span>`;
         const room = roomOf(p);
         const when = new Date(Date.now() + (room === 'living-room' ? 5 : 8) * DAY).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        return `Free delivery <span>· est. ${esc(when)}</span>${isPickup(p) ? '<br>Pick up at Best Buy <span>· where eligible</span>' : ''}`;
+        return `<span class="m1-sl">${ICON_TRUCK}Free delivery <span>· est. ${esc(when)}</span></span>${isPickup(p) ? `<span class="m1-sl">${ICON_STORE}Pick up at Best Buy <span>· where eligible</span></span>` : ''}`;
       }
+      /** The card in lg.com's grammar: badges, the picture, the name, the model with the stars, the price bold with $X OFF over
+       *  the struck list price beside it, delivery with its icons, the button. */
       function card(p, o = {}) {
         const id = idOf(p), price = priceNum(p), list = listNum(p);
         const off = price !== null && list && list > price ? list - price : 0;
@@ -1668,11 +1749,11 @@ import { store } from '/oh/oh-store.js';
           : p.cta !== 'cart' ? `<button type="button" class="btn btn--line btn--sm" data-act="store-retailers" data-sku="${esc(id)}" data-ctl="retailers-${esc(id)}">Find a Retailer</button>`
             : '<span class="p1-stock">Out of stock</span>';
         return `<article class="pcard p1-pcard" data-open="${esc(id)}" data-ctl="${esc(o.ctl || `open-${id}`)}" data-sku="${esc(id)}">${o.chip || ''}
+          <span class="m1-badges">${badges.map((b) => `<span class="m1-badge${/new/i.test(b) ? '' : ' m1-badge--quiet'}">${esc(b)}</span>`).join('')}</span>
           ${artHtml(p, 'p1-art--card')}
-          ${badges.length ? `<span class="m1-badges">${badges.map((b) => `<span class="m1-badge${/new/i.test(b) ? '' : ' m1-badge--quiet'}">${esc(b)}</span>`).join('')}</span>` : ''}
-          <span class="pname">${esc(titleOfP(p))}</span><span class="m1-sku">${esc(id)}</span>
-          ${p.rating ? `<span class="p1-rating"><i aria-hidden="true">${stars(p.rating)}</i> ${esc(p.rating)}${p.reviews ? ` <em>(${Number(p.reviews).toLocaleString('en-US')})</em>` : ''}</span>` : ''}
-          <span class="pprice">${price !== null ? money(price) : '<span class="m1-retail">Price at the retailer</span>'}${off ? ` <span class="m1-off">${money0(Math.round(off * 100) / 100)} OFF</span> <s>${money(list)}</s>` : ''}</span>
+          <span class="pname">${esc(titleOfP(p))}</span>
+          <span class="m1-meta"><span class="m1-sku">${esc(id)}</span>${p.rating ? ` <span class="p1-rating"><i aria-hidden="true">${stars(p.rating)}</i> ${esc(p.rating)}${p.reviews ? ` <em>(${Number(p.reviews).toLocaleString('en-US')})</em>` : ''}</span>` : ''}</span>
+          <span class="pprice">${price !== null ? `<b class="m1-now">${money(price)}</b>` : '<span class="m1-retail">Price at the retailer</span>'}${off ? ` <span class="m1-was"><span class="m1-off">${money0(Math.round(off * 100) / 100)} OFF</span> <s>${money(list)}</s></span>` : ''}</span>
           <span class="m1-ship">${shipLine(p)}</span>
           <span class="m1-cardbtn">${cta}</span>
           ${o.rank ? `<span class="p1-rank">${o.rank}</span>` : ''}</article>`;
@@ -1792,6 +1873,7 @@ import { store } from '/oh/oh-store.js';
         if (more) more.innerHTML = pool.length > shown ? `<span>Showing ${shown} of ${pool.length}</span><button type="button" class="btn btn--line" data-act="m1-more" data-view="${view}" data-ctl="more-${view}">Show more</button>` : (pool.length ? `<span>Showing all ${pool.length}</span>` : '');
         if (GRIDS[view].fit) fitNote(view);
         quick(view);
+        roomBanner(view);
         if (view === 'search') searchHead();
       }
       function quick(view) {
@@ -1980,6 +2062,27 @@ import { store } from '/oh/oh-store.js';
         }).catch(() => null);
         return legalAsk;
       }
+      /**
+       * Each decided module's head says what is true of what it shows: "Decided for you" (a grid's "Best match, decided
+       * for you") once the engine has returned a decision for her there, else the site's own order, "before anyone
+       * arrives" while nobody has. Read off the page: a slot's container carrying a decision id, a rail's /sort answer.
+       */
+      function heads() {
+        const someone = Boolean(transport.cur());
+        for (const mod of document.querySelectorAll('#stage .module[data-slot], #stage .module[data-rail]')) {
+          const tag = mod.querySelector('.module-where .m1-for');
+          if (!tag) continue;
+          let decided = false;
+          if (mod.dataset.slot) decided = Boolean(mod.querySelector('[data-op-decision-id]:not([data-op-decision-id=""])'));
+          else {
+            const rail = mod.dataset.rail === 'for-you' ? railsOf(HOME)[0] : GRID_OF_SLOT[mod.dataset.rail] ? gridRail(GRID_OF_SLOT[mod.dataset.rail]) : null;
+            decided = Boolean(rail && railState(rail).status === 'sorted');
+          }
+          const text = decided ? (tag.dataset.decided || 'Decided for you') : someone ? 'The site’s own order' : 'The site’s own order · before anyone arrives';
+          if (tag.textContent !== text) tag.textContent = text;
+          tag.classList.toggle('m1-for--site', !decided);
+        }
+      }
       /** The header marks the page on screen: TVs, Offers, or the menu whose room's grid is open. */
       function markNav(view) {
         const v = view || state.viewPage;
@@ -2108,18 +2211,19 @@ import { store } from '/oh/oh-store.js';
         if (act === 'm1-tab') { S.tab = d.tab === 'entertainment' ? 'entertainment' : 'appliances'; showcase(); return true; }
         if (act === 'm1-promo') return promo(d.cid);
         if (act === 'm1-slide') {
-          const slides = [...document.querySelectorAll('#slot-hero .m1-slide')];
+          const track = $('m1HeroTrack');
+          const slides = track ? [...track.querySelectorAll('.m1-slide:not(.m1-slide--clone)')] : [];
           if (!slides.length) return true;
           const to = d.to !== undefined ? num(d.to) : S.slide + (num(d.step) || 1);
           S.slide = ((to % slides.length) + slides.length) % slides.length;
-          slides.forEach((s, i) => { s.hidden = i !== S.slide; });
+          track.style.setProperty('--i', String(slides.length > 1 ? S.slide + 1 : 0));
           for (const b of document.querySelectorAll('#slot-hero .m1-dot')) b.setAttribute('aria-current', String(num(b.dataset.to) === S.slide));
           return true;
         }
         return undefined;
       }
 
-      return { template, paintTemplate, card, filtered, bestOrder, declaredFor, chosenOrder, sortLabel, gridChrome, askGrid, openGrid, openSearch, setSearch, searchHead, chrome, shell, fill, zip, legal, markNav, control };
+      return { heads, template, paintTemplate, card, filtered, bestOrder, declaredFor, chosenOrder, sortLabel, gridChrome, askGrid, openGrid, openSearch, setSearch, searchHead, chrome, shell, fill, zip, legal, markNav, control };
     })();
 
     // ── Registration, once ──────────────────────────────────────────────────

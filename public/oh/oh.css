@@ -20,6 +20,9 @@
  * Loaded after public/demo-kit/tokens.css and kit.css, before compare.css.
  */
 
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap");
+
+
 /* ══ Token overrides: LG's palette (§9.1) ═════════════════════════════════ */
 :root {
   --brand: #A50034;
@@ -131,6 +134,8 @@ body { color: var(--ink); }
 .module-where::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex: none; }
 .module-where b { color: var(--muted); font-weight: 600; }
 .module-where .m1-for { color: var(--brand); font-weight: 600; }
+.module-where .m1-for--site { color: var(--muted); }
+.module-where:has(.m1-for--site)::before { background: var(--line-2); }
 .offlimits-note { display: none; }           /* the scaffold's banner: the marks above say it on the page itself */
 .offlimits { font-size: 12.5px; color: var(--muted); background: var(--soft); border-radius: var(--radius-sm); padding: 7px 12px; }
 .offlimits b { color: var(--ink); text-transform: uppercase; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; margin-right: 6px; }
@@ -576,6 +581,392 @@ body.shell--phone .cards { grid-template-columns: minmax(0, 1fr); }
   .rail-chip { white-space: normal; }
   .p1-lean { white-space: normal; }
   .p1-shortlist { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ══ M1b: visual parity with lg.com (design §10) ════════════════════════════════════════════════════════════════════
+ * lg.com at 1440, observed 2026-10-02: a warm off-white page (#F0ECE4) under white cards; a thin promo line; a slim
+ * header on the page colour; a carousel of wide campaign slides with the neighbours peeking; a service band; a row of
+ * category tiles; the deals as a bento of picture tiles with headlines over them; a wide expert band; product cards on
+ * white with 16 px corners; centred section headings, heavy and large; about 80 px between sections. The art is lane
+ * A1's (img/art/index.json, by piece id); until it lands each picture is a soft scene in its room's colours with the
+ * product itself on it, and the copy over it is the piece's own. Buttons stay the brand red, 44 px, 4 px corners. */
+:root {
+  --m1-page: #F0ECE4;            /* lg.com's page */
+  --m1-band: #E6E1D8;            /* the service band, the footer */
+  --m1-rule: #DCD6CB;            /* rules on the page colour */
+  --m1-card: #FFFFFF;
+  --m1-r: 16px;                  /* cards and picture tiles */
+  --m1-head: 56px;
+  --m1-star: #F08C1A;            /* the review stars (orange, as lg.com draws them) */
+  --font: "Figtree", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+body, .site { background: var(--m1-page); }
+body { font-size: 16px; color: #111; }
+.stage { padding-bottom: 80px; }
+#view-home { gap: 80px; padding-top: 0; }
+.view--grid, .view--product { padding-top: 16px; }
+
+/* The promo line and the header */
+.m1-pencil { background: #E4DFD6; border-bottom: 0; color: #111; font-size: 13.5px; }
+.m1-pencil-in { height: 36px; }
+.site-header { background: var(--m1-page); border-bottom: 1px solid var(--m1-rule); }
+.mast { background: transparent; }
+.mainnav button { font-size: 15.5px; font-weight: 500; }
+.m1-search { height: 38px; border-radius: 19px; border-color: var(--m1-rule); background: var(--m1-card); }
+@container site (min-width: 1241px) {
+  .mast { gap: 32px; }
+  .mainnav button { padding: 0 14px; }
+  .m1-search { width: 230px; }
+}
+@container site (min-width: 641px) { .wm { font-size: 32px; } }
+.m1-zip { font-size: 14px; }
+.m1-zip b { font-weight: 500; }
+#signIn, .u-sign { font-size: 14.5px; font-weight: 500; }
+.p1-menu { background: var(--m1-card); border-radius: 0 0 var(--m1-r) var(--m1-r); }
+
+/* Section heads: centred, heavy, large; the decided line above in small type */
+#view-home .module-head, .m1-cats-wrap .module-head, .m1-showcase .module-head, .m1-benefits-wrap .module-head { justify-content: center; text-align: center; margin-bottom: 28px; }
+#view-home .module-head > div { display: flex; flex-direction: column; align-items: center; }
+#view-home .module-head h2, .m1-cats-wrap h2, .m1-showcase h2, .m1-benefits-wrap h2 { font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; color: #111; }
+.module-where { display: block; line-height: 1.5; }
+.module-where::before { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+#view-home .module-where { text-align: center; margin-bottom: 10px; }
+#mod-for-you .module-head { flex-direction: column; align-items: center; }
+#mod-for-you .module-head > div { flex: none; }
+
+/* The hero: wide art slides, the neighbours peeking on both sides */
+#mod-hero { padding-top: 24px; }
+.m1-hero-bleed { width: 100cqw; margin-left: calc(50% - 50cqw); overflow: hidden; }
+.m1-hero-track { --sw: min(1180px, calc(100cqw - 160px)); --gap: 16px; display: flex; gap: var(--gap); transition: transform .55s cubic-bezier(.2, .7, .2, 1);
+  transform: translateX(calc((100cqw - var(--sw)) / 2 - var(--i, 0) * (var(--sw) + var(--gap)))); }
+.m1-slide, .m1-slide[hidden] { display: block !important; flex: 0 0 var(--sw); min-width: 0; }
+.m1-slide--clone { pointer-events: none; }
+#slot-hero .p1-hero { position: relative; display: block; aspect-ratio: 1440 / 600; min-height: 440px; padding: 0; border: 0; border-radius: var(--m1-r); overflow: hidden; background: #2B2342; cursor: default; }
+#slot-hero .p1-hero-copy { position: absolute; z-index: 2; left: 64px; top: 50%; transform: translateY(-50%); width: min(520px, 46%); display: flex; flex-direction: column; gap: 14px; }
+#slot-hero .p1-hero h3 { font-size: 44px; line-height: 1.08; font-weight: 800; letter-spacing: -0.025em; color: #fff; padding: 0; }
+#slot-hero .p1-hero-sub { font-size: 16px; line-height: 1.45; color: rgba(255, 255, 255, .88); max-width: 46ch; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#slot-hero .p1-kicker { color: rgba(255, 255, 255, .8); font-size: 12.5px; letter-spacing: .08em; }
+#slot-hero .p1-ctas .btn { height: 44px; padding: 0 26px; font-size: 15px; }
+#slot-hero .p1-receipt { position: absolute; z-index: 2; left: 64px; right: 38%; bottom: 14px; margin: 0; padding: 0; font-size: 11px; color: rgba(255, 255, 255, .62); }
+#slot-hero .p1-receipt b { color: inherit; }
+.m1-hero-badge { position: absolute; z-index: 2; left: 64px; top: 24px; background: var(--m1-card); color: var(--brand); font-size: 14px; font-weight: 800; letter-spacing: -0.01em; border-radius: 10px; padding: 10px 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, .14); }
+/* Over A1's art: lg.com's white panel with a curved edge on the calm left (the text zone), dark type on it */
+#slot-hero .p1-hero:has(.m1-scene--art)::before, .m1-banner:has(.m1-scene--art)::before, #slot-continue .p1-continue:has(.m1-scene--art)::before {
+  content: ''; position: absolute; z-index: 1; left: -10%; top: -45%; width: 60%; height: 190%; pointer-events: none;
+  background: linear-gradient(90deg, #FFFFFF 0%, #FFFFFF 72%, #FBFAF8 100%); border-radius: 0 50% 50% 0 / 0 50% 50% 0; box-shadow: 8px 0 40px rgba(0, 0, 0, .12); }
+#slot-hero .p1-hero:has(.m1-scene--art) h3, .m1-banner:has(.m1-scene--art) .m1-banner-copy h2, .m1-banner:has(.m1-scene--art) .m1-banner-copy h3, #slot-grid-promo .m1-banner:has(.m1-scene--art) .m1-banner-copy h3 { color: #111; }
+#slot-hero .p1-hero:has(.m1-scene--art) .p1-hero-sub, .m1-banner:has(.m1-scene--art) .m1-banner-copy .p1-sub { color: #333; }
+#slot-hero .p1-hero:has(.m1-scene--art) .p1-kicker, .m1-banner:has(.m1-scene--art) .m1-banner-copy .p1-kicker { color: var(--brand); }
+#slot-hero .p1-hero:has(.m1-scene--art) .p1-receipt, .m1-banner:has(.m1-scene--art) .p1-receipt { color: rgba(0, 0, 0, .55); right: 50%; }
+.m1-hero-badge[data-zone] { left: auto; right: auto; top: auto; bottom: auto; }
+/* The continue module over hero_continue's art: the copy on the panel, her shortlist drawn into the art's product zone */
+#slot-continue .p1-continue:has(.m1-scene--art) { position: relative; overflow: hidden; min-height: 460px; padding: 40px 48px 18px; border-radius: var(--m1-r); background: #2B2342;
+  display: grid; grid-template-columns: minmax(0, 46%) minmax(0, 1fr); grid-template-areas: "head list" "clock list" "ctas list" "rec rec"; column-gap: 48px; row-gap: 14px; align-content: center; }
+#slot-continue .p1-continue:has(.m1-scene--art) > :not(.m1-scene) { position: relative; z-index: 2; }
+#slot-continue .p1-continue .p1-cont-head { grid-area: head; }
+#slot-continue .p1-continue .p1-shortlist { grid-area: list; align-self: center; }
+#slot-continue .p1-continue .p1-clock { grid-area: clock; }
+#slot-continue .p1-continue .p1-ctas { grid-area: ctas; }
+#slot-continue .p1-continue .p1-receipt { grid-area: rec; }
+#slot-continue .p1-continue:has(.m1-scene--art) .p1-short { background: rgba(255, 255, 255, .96); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+#slot-continue .p1-continue:has(.m1-scene--art) .p1-receipt { color: rgba(0, 0, 0, .55); max-width: 46%; }
+#slot-continue .p1-continue:has(.m1-scene--art) .slot-empty { color: #fff; }
+.m1-car-ctl { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 18px; }
+.m1-dots { gap: 8px; margin-right: 8px; }
+.m1-dot { width: 40px; height: 3px; border-radius: 2px; background: #C9C2B5 !important; }
+.m1-dot[aria-current="true"] { background: #111 !important; width: 64px; }
+.m1-car-arrow { width: 36px; height: 36px; border-radius: 50%; background: var(--m1-card) !important; box-shadow: 0 1px 4px rgba(0, 0, 0, .15) !important; font-size: 20px; }
+
+/* The pictures: A1's art, or a soft scene in the room's colours with the product on it */
+.m1-scene { position: absolute; inset: 0; display: block; overflow: hidden; }
+.m1-scene--art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.m1-scene--art picture { display: block; width: 100%; height: 100%; }
+/* Until A1's art lands: a dark studio in the room's colour with one soft glow, the product on it (white type over it, as over the art) */
+.m1-scene--living-room { background: radial-gradient(46% 72% at 74% 52%, rgba(139, 92, 246, .55) 0%, rgba(139, 92, 246, 0) 72%), radial-gradient(28% 46% at 90% 14%, rgba(236, 72, 153, .3) 0%, rgba(236, 72, 153, 0) 70%), linear-gradient(110deg, #17122B 0%, #1E1738 48%, #2B1F4E 100%); }
+.m1-scene--laundry-room { background: radial-gradient(46% 72% at 74% 52%, rgba(56, 189, 208, .42) 0%, rgba(56, 189, 208, 0) 72%), linear-gradient(110deg, #101D22 0%, #152A30 48%, #1C3A41 100%); }
+.m1-scene--kitchen { background: radial-gradient(46% 72% at 74% 52%, rgba(245, 158, 66, .45) 0%, rgba(245, 158, 66, 0) 72%), linear-gradient(110deg, #1D140D 0%, #2A1D13 48%, #392617 100%); }
+.m1-scene .p1-art--scene { position: absolute; right: 7%; top: 9%; width: 42%; height: 82%; aspect-ratio: auto; background: transparent; border-radius: 0; }
+.m1-scene .p1-art--scene img { left: 0; top: 0; width: 100%; height: 100%; mix-blend-mode: normal; filter: drop-shadow(0 22px 28px rgba(0, 0, 0, .5)); }
+.m1-scene .p1-noimg { background: transparent; }
+
+/* The service band, under the hero */
+#view-home .svc-strip { width: 100cqw; margin-left: calc(50% - 50cqw); margin-top: -56px; background: var(--m1-band); border-radius: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 248px)); justify-content: center; }
+.m1-svc { padding: 22px 12px; font-size: 15.5px; }
+.m1-svc b { font-weight: 500; }
+.m1-svc + .m1-svc { box-shadow: none; }
+.m1-svc svg { width: 26px; height: 26px; }
+
+/* The category row: white tiles with the product, under lg.com's heading */
+.m1-cats { display: flex; gap: 14px; justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 4px 2px 8px; margin: 0; }
+.m1-cats::-webkit-scrollbar { display: none; }
+.m1-cat { flex: 0 0 140px; height: 172px; justify-content: flex-start; gap: 12px; padding: 18px 10px 14px; background: var(--m1-card); border-radius: var(--m1-r); transition: box-shadow .2s; }
+.m1-cat:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, .08); }
+.m1-cat:hover .p1-art { box-shadow: none; }
+.p1-art--cat { width: 96px; border-radius: 0; background: transparent; }
+.p1-art--cat img { left: 4%; top: 4%; width: 92%; height: 92%; }
+.m1-cat span:last-child { font-size: 14.5px; font-weight: 500; }
+
+/* The room tiles: picture cards */
+#slot-category-rail.cards { gap: 20px; }
+.p1-tile { background: var(--m1-card); border: 0; border-radius: var(--m1-r); overflow: hidden; }
+.p1-tile-hit { gap: 0; }
+.p1-tile-hit .m1-scene { position: relative; display: block; aspect-ratio: 720 / 420; }
+.p1-tile-hit .m1-scene .p1-art--scene { right: 22%; left: 22%; width: auto; top: 10%; height: 80%; }
+.p1-tile-text { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px 6px; }
+.p1-tile-hit h3 { font-size: 22px; font-weight: 700; margin: 0; }
+.p1-tile-cta { color: var(--brand); text-decoration: none; font-size: 15px; }
+.p1-tile .p1-receipt { margin: 4px 22px 18px; }
+
+/* Discover OH. deals: tabs, then the bento of picture tiles with headlines over them */
+.m1-deal-head { display: flex; flex-direction: column; align-items: center; gap: 28px; margin: -8px 0 28px; }
+.m1-deal-head .btn--brand { height: 44px; padding: 0 22px; }
+.m1-deal-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 34px; }
+.m1-deal-tab { border: 0; background: none; font: inherit; font-size: 17px; font-weight: 500; color: #111; padding: 4px 4px 12px; cursor: pointer; box-shadow: inset 0 -3px 0 transparent; }
+.m1-deal-tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--brand); cursor: default; }
+.m1-deal-tab:hover { box-shadow: inset 0 -3px 0 #111; }
+.m1-deal-tab[aria-selected="true"]:hover { box-shadow: inset 0 -3px 0 var(--brand); }
+#mod-deals > .changes { max-width: 1280px; margin-left: auto; margin-right: auto; }
+#slot-deals.cards { width: min(1408px, calc(100cqw - 32px)); margin-left: calc(50% - min(704px, calc(50cqw - 16px))); display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: auto; gap: 16px; }
+.p1-deal { display: flex; flex-direction: column; gap: 8px; background: transparent; border: 0; overflow: visible; padding: 0; }
+.p1-deal--0 { grid-row: span 2; }
+.p1-deal--3 { grid-column: span 2; }
+.p1-deal-tile { position: relative; flex: 1; min-height: 420px; border-radius: 20px; overflow: hidden; background: #2B2342; }
+.p1-deal--0 .p1-deal-tile { min-height: 856px; }
+.p1-deal-tile .m1-scene .p1-art--scene { left: 22%; right: 22%; width: auto; top: 7%; height: 36%; }
+.p1-deal--0 .p1-deal-tile .m1-scene .p1-art--scene { left: 12%; right: 12%; top: 10%; height: 56%; }
+.p1-deal--3 .p1-deal-tile .m1-scene .p1-art--scene { left: auto; right: 6%; width: 38%; top: 10%; height: 80%; }
+.p1-deal-body { position: absolute; z-index: 2; left: 24px; right: 24px; bottom: 80px; display: flex; flex-direction: column; gap: 6px; padding: 0; }
+.p1-deal--3 .p1-deal-body { right: 52%; top: auto; bottom: 80px; transform: none; }
+.p1-deal-body h3 { font-size: 20px; line-height: 1.22; font-weight: 700; color: #fff; }
+.p1-deal--0 .p1-deal-body h3 { font-size: 32px; }
+.p1-deal--0 .p1-deal-body { right: 40%; }
+.p1-deal-body .p1-sub { font-size: 14px; color: rgba(255, 255, 255, .86); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.p1-deal-body .p1-fine { font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, .86); }
+.p1-deal:not(.p1-deal--0):not(.p1-deal--3) .p1-fine { display: none; }
+@container site (min-width: 861px) { .p1-deal--1 .p1-deal-body .p1-sub, .p1-deal--2 .p1-deal-body .p1-sub { display: none; } }
+.m1-tile-go { position: absolute; z-index: 3; left: 24px; bottom: 22px; height: 44px; border: 0; border-radius: 22px; padding: 0 18px; background: var(--m1-card); color: #111; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .14); white-space: nowrap; }
+.m1-tile-go span { max-width: 140px; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.m1-tile-go:hover { background: #F7F4EF; }
+.p1-deal-tile:has(.m1-scene--art:not(.m1-ink-dark))::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(0deg, rgba(10, 8, 20, .62) 0%, rgba(10, 8, 20, .2) 45%, rgba(10, 8, 20, 0) 70%); pointer-events: none; }
+.p1-deal-tile:has(.m1-ink-dark) .p1-deal-body h3, .p1-deal-tile:has(.m1-ink-dark) .p1-deal-body .p1-sub, .p1-deal-tile:has(.m1-ink-dark) .p1-deal-body .p1-fine { color: #111; }
+.p1-badge { z-index: 2; top: 16px; left: 16px; bottom: auto; font-size: 11.5px; padding: 4px 10px; border-radius: 6px; }
+.p1-deal > .p1-receipt { margin: 0 6px; }
+.p1-deal--pinned { box-shadow: none; }
+.p1-deal--pinned .p1-deal-tile { box-shadow: 0 0 0 3px var(--brand); }
+
+/* Shop with an OH. expert: a wide band */
+#view-home .m1-expert { width: 100cqw; margin-left: calc(50% - 50cqw); border-radius: 0; background-color: #3A0D22; background-image: linear-gradient(100deg, #36091F 0%, #4A0C2A 48%, #6E1238 100%);
+  color: #fff; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: center; padding: 56px max(32px, calc(50cqw - 640px)); }
+.m1-expert-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 620px; }
+#view-home .m1-expert h2 { font-size: 36px; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+#view-home .m1-expert p { font-size: 16px; color: rgba(255, 255, 255, .86); margin: 0; }
+.m1-expert-copy .btn { height: 44px; margin-top: 6px; }
+.m1-expert-art { display: flex; align-items: center; gap: 14px; }
+.m1-expert-disc { width: 128px; height: 128px; border-radius: 50%; background: #fff; display: grid; place-items: center; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, .25); }
+.m1-expert-disc img { width: 80%; height: 80%; object-fit: contain; mix-blend-mode: multiply; }
+.m1-expert-art .m1-expert-mark { width: 72px; height: 72px; background: var(--brand); color: #fff; }
+.m1-expert-art .m1-expert-mark svg { width: 34px; height: 34px; }
+
+/* The product card, in lg.com's grammar: white, 16 px corners, image, name, stars, price bold, $X OFF, struck list, a red button */
+.pcard, .p1-pcard { background: var(--m1-card); border-radius: var(--m1-r); padding: 16px 16px 18px; gap: 7px; transition: box-shadow .2s; }
+.pcard:hover { box-shadow: 0 8px 22px rgba(0, 0, 0, .08); }
+.pcard .p1-art, .p1-pcard .p1-art { background: var(--m1-card); border-radius: 8px; margin-bottom: 4px; }
+.pcard .p1-art img { left: 4%; top: 4%; width: 92%; height: 92%; }
+.m1-badges { min-height: 24px; }
+.m1-badge, .m1-badge--quiet { font-size: 12px; font-weight: 500; color: #1F7A3A; background: #E7F3EA; border: 0; border-radius: 4px; padding: 3px 8px; }
+.pcard .pname, .p1-pcard .pname { font-size: 15px; line-height: 1.38; font-weight: 500; color: #111; }
+.m1-sku { font-size: 12.5px; }
+.p1-rating i { color: var(--m1-star); letter-spacing: 1px; font-size: 14px; }
+.pcard .pprice, .p1-pcard .pprice { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; font-size: 27px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; margin-top: auto; padding-top: 10px; }
+.m1-now { font-weight: 700; white-space: nowrap; }
+.m1-was { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; letter-spacing: 0; }
+.m1-was .m1-off { font-size: 12.5px; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.m1-was s, .p1-pcard .pprice .m1-was s { font-size: 12.5px; font-weight: 400; color: #555; white-space: nowrap; }
+.m1-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.m1-ship { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-top: 4px; }
+.m1-ship .m1-sl { display: block; position: relative; padding-left: 26px; color: #111; }
+.m1-ship .m1-sl .m1-i { position: absolute; left: 0; top: -1px; }
+.m1-ship .m1-sl span { color: #666; }
+.m1-i { width: 18px; height: 18px; flex: none; }
+.m1-cardbtn .btn, .m1-cardbtn .btn--sm { height: 44px; font-size: 15px; padding: 0 12px; }
+.p1-rank { border-top-color: var(--m1-rule); }
+#rail-for-you, #rail-tv-grid, .m1-grid-cards, .m1-showcase-cards { gap: 20px; }
+
+/* The showcase and the benefits */
+.m1-tabs { justify-content: center; border-bottom: 0; gap: 34px; }
+.m1-tabs button { font-size: 17px; font-weight: 500; color: #111; padding-bottom: 12px; box-shadow: inset 0 -3px 0 transparent; }
+.m1-tabs button[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--brand); }
+.m1-benefits { gap: 20px; }
+.m1-benefit { background: var(--m1-card); border-radius: var(--m1-r); padding: 32px 26px 28px; gap: 12px; }
+.m1-benefit svg { width: 44px; height: 44px; padding: 9px; border-radius: 50%; background: var(--brand-wash); }
+.m1-benefit h3 { font-size: 19px; }
+.m1-benefit span { color: var(--brand); text-decoration: none; }
+
+/* The arrival line and the before/now strips on the page colour */
+.p1-arrival { background: var(--m1-card); border-radius: var(--m1-r); margin-bottom: -56px; }
+.p1-rail-deltas, .changes { background: var(--m1-card); }
+
+/* The grids and the search: the same cards, lg.com's filter rail */
+.crumbs { font-size: 13.5px; }
+.view-title { font-size: 34px; font-weight: 800; }
+.m1-quick button .p1-art { background: var(--m1-card); }
+#slot-grid-promo .p1-promo { background: var(--m1-card); border-radius: var(--m1-r); }
+.m1-filters-head { border-bottom-color: #111; }
+.m1-fgroup { border-bottom-color: var(--m1-rule); }
+.m1-toolbar { border-bottom-color: var(--m1-rule); }
+.m1-sort > button { background: var(--m1-card); border-color: var(--m1-rule); }
+.p1-fit { background: var(--m1-card); }
+.m1-seo { border-top-color: var(--m1-rule); }
+
+/* The product page's shared chrome on the page colour (M2's modules keep their own internals) */
+#view-product .pdp-stick { background: var(--m1-page); }
+#view-product .pdp-gallery { background: var(--m1-card); border-radius: 20px; }
+#view-product .pdp-gmain img { mix-blend-mode: multiply; }
+#view-product .card.pmod, #view-product .pdp-review, #view-product .pdp-fit-static, #view-product .pdp-feat, #view-product .pdp-qa-box { border-radius: var(--m1-r); }
+#view-product .pdp-review, #view-product .pdp-fit-static, #view-product .pdp-feat, #view-product .pdp-qa-box { background: var(--m1-card); }
+#view-product .pdp-sec, #view-product .pdp-cfg, #view-product .pdp-type { border-color: var(--m1-rule); }
+#view-product .buybox.pdp-bar { border-bottom-color: var(--m1-rule); }
+
+/* The product page in lg.com's proportions: the price bold with $X OFF over the struck price; the gallery half the page */
+#view-product .pdp-bar .bb-price { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; justify-content: end; align-items: center; column-gap: 10px; row-gap: 0; }
+#view-product .pdp-bar .bb-price .bb-now { grid-row: 1 / span 2; font-size: 30px; letter-spacing: -0.01em; }
+#view-product .pdp-bar .bb-price .off { grid-column: 2; grid-row: 1; align-self: end; font-size: 12.5px; line-height: 1.2; }
+#view-product .pdp-bar .bb-price .was { grid-column: 2; grid-row: 2; align-self: start; font-size: 12.5px; line-height: 1.2; color: #555; }
+@container site (min-width: 861px) { #view-product .pdp-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; } }
+@container site (max-width: 900px) { #view-product .pdp-bar .bb-price { justify-content: start; } }
+#view-product .pdp-gallery { max-height: none; aspect-ratio: 1 / .92; }
+#view-product .pdp-tabs button { font-size: 15.5px; }
+
+/* The footer on the band colour */
+.site-footer { background: var(--m1-band); border-top: 0; }
+.m1-foot-base { border-top-color: var(--m1-rule); }
+
+/* The grids in lg.com's order: the crumbs band, the title row with the expert button, a wide banner (the TV grid's decided
+ * promotion; the other grids' static room banners), the type row over a rule, then the filters and three cards a row. */
+.view--grid { gap: 28px; padding-top: 0; }
+.view--grid, .view--product { --m1-edge: max(16px, calc(50cqw - 696px)); width: min(1392px, calc(100cqw - 32px)); margin-left: calc(50% - min(696px, calc(50cqw - 16px))); }
+.view--grid > .crumbs, #view-product > .crumbs { width: 100cqw; margin-left: calc(50% - 50cqw); padding: 12px var(--m1-edge); background: #E9E4DA; border-bottom: 1px solid var(--m1-rule); font-size: 13.5px; color: #111; }
+.view--grid > .crumbs a, #view-product > .crumbs a { color: #111; }
+.view--grid .view-head { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; margin-top: -6px; }
+.view-head-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.view--grid .view-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.view--grid .view-head .p1-sub { font-size: 14px; }
+.m1-help { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; font-size: 14.5px; white-space: nowrap; flex: none; }
+.m1-help svg { width: 20px; height: 20px; }
+#mod-grid-promo .module-head { margin-bottom: 10px; }
+#mod-grid-promo .module-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#slot-grid-promo .p1-promo.m1-banner, .m1-banner { position: relative; display: block; width: 100cqw; margin-left: calc(50% - 50cqw); aspect-ratio: 1440 / 360; min-height: 300px; max-height: 440px; padding: 0; border: 0; border-radius: 0; overflow: hidden; background: #2B2342; cursor: default; }
+.m1-banner .m1-scene, .m1-banner-art { position: absolute; inset: 0; }
+.m1-banner .m1-scene .p1-art--scene { left: auto; right: max(40px, calc(50cqw - 600px)); width: 30%; top: 8%; height: 84%; }
+.m1-banner-prod { position: absolute; top: 9%; height: 82%; width: 22%; }
+.m1-banner-prod .p1-art--scene, .m1-banner .m1-banner-prod .p1-art--scene { left: 0; right: 0; top: 0; width: 100%; height: 100%; }
+.m1-banner-prod--0 { right: 30%; }
+.m1-banner-prod--1 { right: 6%; }
+
+.m1-banner-copy { position: absolute; z-index: 2; left: var(--m1-edge, max(24px, calc(50cqw - 640px))); top: 50%; transform: translateY(-50%); width: min(560px, 46%); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.m1-banner-copy h2, .m1-banner-copy h3, #slot-grid-promo .m1-banner-copy h3 { font-size: 38px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; color: #fff; margin: 0; }
+.m1-banner-copy .p1-sub { font-size: 15.5px; line-height: 1.45; color: rgba(255, 255, 255, .88); }
+.m1-banner-copy .p1-kicker { margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
+.m1-banner-copy .btn, .m1-banner-copy .p1-promo-cta { display: inline-flex; align-items: center; height: 44px; padding: 0 24px; margin-top: 6px; border: 0; border-radius: 4px; background: var(--brand); font-size: 15px; font-weight: 700; color: #fff; text-decoration: none; }
+.m1-banner-copy .btn:hover, .m1-banner-copy .p1-promo-cta:hover { background: var(--brand-deep); }
+.m1-banner .p1-receipt { position: absolute; z-index: 2; left: var(--m1-edge, max(24px, calc(50cqw - 640px))); right: 40%; bottom: 12px; margin: 0; padding: 0; font-size: 11px; color: rgba(255, 255, 255, .62); }
+.m1-banner .m1-hero-badge:not([data-zone]) { left: auto; right: max(16px, 2%); top: auto; bottom: 8%; }
+.m1-banner:has(.m1-ink-dark) .m1-banner-copy h2, .m1-banner:has(.m1-ink-dark) .m1-banner-copy h3 { color: #111; }
+.m1-banner:has(.m1-ink-dark) .m1-banner-copy .p1-sub, .m1-banner:has(.m1-ink-dark) .m1-banner-copy .p1-kicker, .m1-banner:has(.m1-ink-dark) .p1-receipt { color: #333; }
+.view--grid .m1-quick { justify-content: center; gap: 12px 44px; padding: 4px 0 28px; border-bottom: 1px solid var(--m1-rule); }
+.view--grid .m1-quick button { width: 104px; }
+.view--grid .m1-quick .p1-art--quick { width: 84px; }
+.view--grid .m1-quick button span:last-child { font-size: 15px; font-weight: 600; color: #444; }
+.m1-layout { grid-template-columns: 296px minmax(0, 1fr); gap: 40px; }
+.m1-filters-head { border-bottom: 1px solid var(--m1-rule); padding-bottom: 14px; }
+.m1-filters-head h2 { font-size: 20px; font-weight: 600; }
+.m1-fgroup { padding: 18px 0 14px; }
+.m1-fgroup h3 { font-size: 19px; font-weight: 500; margin-bottom: 10px; }
+.m1-fopt { font-size: 16px; gap: 14px; padding: 8px 0; }
+.m1-fopt::before { width: 20px; height: 20px; border: 1.5px solid #333; border-radius: 2px; }
+.m1-fopt em { font-size: 13px; }
+.m1-count { font-size: 18px; font-weight: 600; }
+.m1-sort > button { height: 44px; min-width: 240px; justify-content: space-between; border-radius: 4px; padding: 0 14px; font-size: 15px; }
+.view--grid .rail, .view--grid #rail-tv-grid, .view--grid .m1-grid-cards { grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 20px 16px; }
+.view--grid .pcard { padding: 20px 20px 18px; border-radius: 20px; }
+.view--grid .pcard .pname { font-size: 17px; -webkit-line-clamp: 2; }
+
+/* Narrower: the slide shows its copy below the picture, the bento stacks, the band wraps */
+@container site (max-width: 1060px) {
+  .m1-hero-track { --sw: calc(100cqw - 96px); }
+  .m1-layout { grid-template-columns: 236px minmax(0, 1fr); gap: 28px; }
+  .view--grid .rail, .view--grid #rail-tv-grid, .view--grid .m1-grid-cards { grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); }
+  #slot-hero .p1-hero-copy { left: 40px; width: 50%; }
+  #slot-hero .p1-hero h3 { font-size: 36px; }
+  #slot-hero .p1-receipt { left: 40px; }
+  .m1-hero-badge { left: 40px; }
+  #view-home .svc-strip { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .m1-svc { font-size: 14px; padding: 18px 8px; }
+  .m1-expert-disc { width: 104px; height: 104px; }
+}
+@container site (max-width: 860px) {
+  #view-home { gap: 56px; }
+  .m1-hero-track { --sw: calc(100cqw - 48px); --gap: 10px; }
+  #slot-hero .p1-hero { aspect-ratio: auto; min-height: 560px; }
+  #slot-hero .p1-hero .m1-scene .p1-art--scene { left: 15%; right: 15%; width: auto; top: 4%; height: 46%; }
+  #slot-hero .p1-hero-copy { top: auto; bottom: 48px; transform: none; left: 22px; right: 22px; width: auto; }
+  #slot-hero .p1-hero h3 { font-size: 30px; }
+  #slot-hero .p1-hero:has(.m1-scene--art)::before, .m1-banner:has(.m1-scene--art)::before { left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: 58%; border-radius: 50% 50% 0 0 / 28px 28px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
+  #slot-hero .p1-hero:has(.m1-scene--art) .m1-scene--art img, .m1-banner:has(.m1-scene--art) .m1-scene--art img { height: 46%; object-position: 78% 50%; }
+  #slot-continue .p1-continue:has(.m1-scene--art) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "list" "clock" "ctas" "rec"; padding: 28px 20px 14px; }
+  #slot-continue .p1-continue:has(.m1-scene--art)::before { left: -30%; width: 160%; top: -10%; height: 70%; border-radius: 0 0 50% 50% / 0 0 40px 40px; }
+  #slot-continue .p1-continue:has(.m1-scene--art) .p1-receipt { max-width: none; color: rgba(255, 255, 255, .7); }
+  #slot-hero .m1-hero-badge, .m1-banner .m1-hero-badge { left: 16px !important; right: auto !important; top: 16px !important; bottom: auto !important; }
+  #slot-hero .p1-hero:has(.m1-scene--art) .p1-receipt, .m1-banner:has(.m1-scene--art) .p1-receipt { right: 22px; }
+  #slot-hero .p1-receipt { left: 22px; right: 22px; bottom: 12px; }
+  .m1-hero-badge { left: auto; right: 16px; top: 16px; bottom: auto; font-size: 12.5px; }
+  #view-home .svc-strip { margin-top: -36px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #view-home .module-head h2, .m1-cats-wrap h2, .m1-showcase h2, .m1-benefits-wrap h2 { font-size: 30px; }
+  .m1-cats { justify-content: flex-start; }
+  #slot-deals.cards { width: auto; margin-left: 0; grid-template-columns: minmax(0, 1fr); }
+  .p1-deal--0, .p1-deal--3 { grid-row: auto; grid-column: auto; }
+  .p1-deal--0 .p1-deal-tile, .p1-deal-tile { min-height: 360px; }
+  .p1-deal--3 .p1-deal-body { right: 24px; top: auto; bottom: 74px; transform: none; }
+  .p1-deal--3 .p1-deal-tile .m1-scene .p1-art--scene { left: 18%; right: 18%; width: auto; height: 50%; }
+  .p1-deal-body { right: 24px; bottom: 76px; }
+  .p1-deal--0 .p1-deal-body h3 { font-size: 26px; }
+  #view-home .m1-expert { grid-template-columns: minmax(0, 1fr); padding: 40px 20px; gap: 24px; }
+  #view-home .m1-expert h2 { font-size: 28px; }
+  .m1-expert-disc { width: 84px; height: 84px; }
+  .m1-expert-art .m1-expert-mark { width: 56px; height: 56px; }
+  .m1-deal-tabs { gap: 4px 20px; }
+}
+@container site (max-width: 860px) {
+  #slot-grid-promo .p1-promo.m1-banner, .m1-banner { aspect-ratio: auto; min-height: 420px; max-height: none; }
+  .m1-banner .m1-scene .p1-art--scene { left: 20%; right: 20%; width: auto; top: 5%; height: 42%; }
+  .m1-banner-prod { top: 6%; height: 40%; width: 40%; }
+  .m1-banner-prod--0 { right: 52%; }
+  .m1-banner-prod--1 { right: 8%; }
+  .m1-banner-copy { top: auto; bottom: 40px; transform: none; left: 20px; right: 20px; width: auto; }
+  .m1-banner-copy h2, .m1-banner-copy h3, #slot-grid-promo .m1-banner-copy h3 { font-size: 28px; }
+  .m1-banner .p1-receipt { left: 20px; right: 20px; bottom: 10px; }
+  .m1-banner .m1-hero-badge:not([data-zone]) { left: auto; right: 16px; top: 16px; bottom: auto; }
+  .view--grid .view-head { flex-direction: column; align-items: flex-start; }
+  .view--grid .m1-quick { justify-content: flex-start; gap: 12px 20px; }
+  .m1-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@container site (max-width: 640px) {
+  #slot-hero .p1-hero { min-height: 540px; }
+  .view--grid .rail, .view--grid #rail-tv-grid, .view--grid .m1-grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+  .view--grid .pcard { padding: 12px 12px 14px; border-radius: 16px; }
+  .view--grid .pcard .pname { font-size: 14.5px; }
+  .view--grid .m1-quick button { width: 84px; }
+  .view--grid .m1-quick .p1-art--quick { width: 68px; }
+  .m1-sort > button { min-width: 0; }
+  #slot-hero .p1-hero-sub { font-size: 14.5px; }
+  #view-home .svc-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: -32px; }
+  .m1-svc { justify-content: flex-start; }
+  .m1-cat { flex-basis: 112px; height: 146px; padding: 14px 8px 10px; }
+  .p1-art--cat { width: 76px; }
+  .pcard, .p1-pcard { padding: 12px 12px 14px; }
+  .pcard .pprice, .p1-pcard .pprice { font-size: 20px; column-gap: 6px; }
+  .m1-cardbtn .btn, .m1-cardbtn .btn--sm { height: 40px; font-size: 13.5px; }
+  .m1-tile-go span { max-width: 96px; }
 }
 
 /* ══ The product page in lg.com’s anatomy: lane M2’s block (P2_CSS in oh.js), appended verbatim at the end of this sheet

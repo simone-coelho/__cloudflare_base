@@ -677,6 +677,59 @@ No card or renderer in the P1 section says “LG packages”; those lines are P2
 
 **Seed and restore.** The nineteen beat documents were snapshotted by hash at 15:06, and again after `730eaa3` regenerated them. Every seed of mine went to the scratchpad with `--out`, so I never wrote `public/oh/beats/`; they equal HEAD (`4e71874` regenerated them again at 17:30). The rig is stopped; `.wrangler/state-m1` and `state-m1b` are kept.
 
+### M1b: visual parity with lg.com (design §10)
+
+**Lane M1b, builder, 2026-10-02, 19:15–21:05 EDT. The homepage, the four room grids, the search results and the product page's shared chrome rebuilt to §10.1 over lane A1's committed art (`890d76d`), judged side by side with lg.com at 1440 and 390. Every decided slot stays decided in the engine's order; every control works by hand; the sixteen beats perform; the director stays docked. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### Results (rig 9132, `.wrangler/state-m1b`, inspector 9282; restarted at 20:12 so it serves A1's new files)
+
+| Check | Result |
+|---|---|
+| `check-demo --config oh --base http://localhost:9132`, 20:31–20:41, on the final pages but for two CSS lines (the hero receipt kept on the panel) that landed during the run; the probe and the screenshots came after them | generated ✓, typecheck ✓, credentials ✓ (2,130 files), **request level 224 of 224**, **DOM 460 of 463**. The three are S2's §9.1 look checks, which §10 overturns: "the boot page: white, in Inter …" (the page is lg.com's #F0ECE4 now; Inter is still in the font stack, the wordmark is #A50034), "a white header …" (the header sits on the page colour, as lg.com's does), "the service strip sits on #F5F5F5" (it sits on lg.com's band, #E6E1D8). Everything else passes, among it: no yellow and no black bar on the boot page, the TVs grid, both product pages, the cart and her homepage; every filled button the brand colour, white text, 4 px radius (25 on the boot page); no visitor minted on load (one call, `GET /oh/api/coldstart`); nothing decided before anyone arrives; no overflow and no broken image at 1440 and 1366; the director's 16 beats |
+| M1's probe (sizes and the manual path, fresh profiles), twice | **44 of 44**, all passed both times (20:10 and 20:38): every M1 page at 1440, 1366 and 390 ready, no visitor on load, no overflow, no broken image, no script error; the manual path's eighteen steps by real clicks and keystrokes |
+| The never-ranks guard over `oh.js` | M1b added no `.sort(`: the list of sort sites is identical before and after (13); the art, the zones and the badges are placed, never ordered |
+| The continue hero over `hero_continue`'s art | walked to beat 13 under `?debug=1`: the copy on the panel, her eight-item shortlist drawn in the art's product zone, at 1440 and 390; the local tenant reset after (`POST /oh/api/reset`, opening slots and catalog) |
+
+#### Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`
+
+`M1b-1440-home.png` (header, hero, service strip, categories), `M1b-1440-home-deals.png` (deals, expert band, Recommended for you), `M1b-1440-tvs.png`, `M1b-1440-product.png`, `M1b-390-home.png`, `M1b-390-tvs.png`, `M1b-390-product.png`. lg.com was captured read-only tonight with its sign-up and chat pop-ups hidden by a style; nothing on it was clicked or submitted. M1's five `M1-*.png` are refreshed to the new look by the probe.
+
+**My judgement.** At 1440 a room reads OH as a site in lg.com's family: the same page colour, the slim header, campaign art with a heavy headline on a white panel and a red button, the service band, the category tiles, the deals bento of pictures under centred heavy headings and tabs, the wide expert band, white product cards with 16 px corners in lg.com's card grammar, and on the TVs page the crumbs band, the title row with the red expert button, the wide banner, the type row, the filter rail and three cards a row. The product page matches lg.com's bar (title, model and stars; the price bold with $X OFF over the struck price; Add to Cart and Special Offers), its tabs and its half-page gallery. At 390 the three pages stack as lg.com's do: the picture above a white panel with the copy, then the band, the tiles and the cards.
+
+#### What is built
+
+- **Over A1's art, as its index says.** `img/art/index.json` is read with the page's documents: slides for the hero carousel, tall art for the bento's portrait positions (the engine decides which piece lands there, so every deals piece has one), tile art for its wide position and the room tiles, the room banners for the grids, `hero_continue` for the continue hero. `<picture>` with the AVIF first and the WebP as the src. The copy is the piece's own, drawn in the art's text zone; a badge goes in the corner the file names (`zones.badge`, anchored to its nearer edges) and never over the recorded product box; a file that names no badge corner (the room banners) keeps it in the free corner right of the product. At phone width the art sits above the panel, cropped, so the badge goes to its calm top-left. A piece without art falls back to a dark scene in its room's colour with the product cutout on it.
+- **lg.com's current heroes (A1's question).** Tonight lg.com's TVs hero and its NFL home slide set dark type on a white panel with a curved edge over the left of the slide; OH's hero slides, the grid banners and the continue hero do the same over the art's calm left. The deal tiles keep white type over the art's dark lower band, as lg.com's bento does.
+- **The homepage.** The promo line, the 56 px header on the page colour, the hero carousel (wide slides, neighbours peeking, dots and arrows; it never rotates by itself), the service band with line icons, "Shop top appliances and electronics" (13 white tiles), "Shop by room" (the category-rail slot as three picture cards), "Discover OH. deals" (View all deals, tabs that open the Offers grid filtered by room, the bento), the expert band, Recommended for you, the showcase, the benefits, the footer band; centred heavy headings about 80 px apart; Figtree from Google Fonts with Inter kept behind it.
+- **The grids and the search.** As wide as lg.com's (16 px from the edges, at most 1,392); the crumbs band; the title row with "Get expert help" (the expert sheet); a wide banner: the TV grid's decided promotion (`grid-promo`, its copy, button and receipt) over the living room's banner, and static room banners on laundry, the kitchen and offers, each with a button that opens its grid filtered (`banner-<view>`); the type row over a rule; lg.com's filter rail (20 px checkboxes, heads at 19 px, counts kept); "N results" and a Sort by box; three cards a row.
+- **The product card, in lg.com's grammar.** Badges, the picture, the name (two lines), the model and the stars on one line, the price bold with "$X OFF" over the struck list price beside it, delivery and pickup lines with their icons, the button, and the card's receipt. The old card drew "$X OFF" over the struck price because the price was a bare text node; it is wrapped now.
+- **The product page's chrome.** The crumbs band, the bar's price as lg.com sets it, the gallery half the page (M2's gallery internals kept), the tabs; two columns only where the page is wide (M2's narrow rule stacks them).
+- **The header at phone width.** M1b's wide-screen sizes had held the mast at 56 px and spilled the search and the nav over the hero at 390; they now apply only at wide widths.
+
+#### What still differs from lg.com, and why
+
+1. **The promo line** is light grey with black text, as §10.1 describes; lg.com's tonight is a charcoal bar with white text. A one-line change if the lead prefers tonight's bar (#333 passes S2's black-bar rule; pure black does not).
+2. **The hero** peeks its neighbours as §10.1 asks; lg.com's slide tonight runs full-bleed. lg.com bakes logos and badges ("NFL Shop $200", "CNET People's Pick") into its pictures; OH's art has no text by A1's rule, so badges are page content.
+3. **The header** shows a search box and the region name; lg.com shows a search icon and a ZIP. OH's chip is the region read from the request: no ZIP is ever read. The nav words are OH's rooms, not lg.com's "Shop / Parts & Accessories / Business".
+4. **The deals bento** has four tiles (the slot's take: one tall, two small, one wide) with white pill buttons; lg.com's has five with red arrow buttons. The tabs are four (Top deals for you and the three rooms), each opening the Offers grid filtered.
+5. **The expert band** is burgundy with three product discs; lg.com's is black with a photograph of an agent. No stock photograph of a person is used, and S2's rule forbids a black bar.
+6. **Recommended for you** shows the rail's twelve in a grid; lg.com's is a four-card carousel. Every item the engine (or the template) answers stays on screen.
+7. **The lower homepage.** lg.com runs more picture bentos ("Home appliances you can count on", "Take your home entertainment to new heights", "Life's Good", "For LG Owners"); OH has the showcase tabs of product cards and the benefits as icon cards. A1's set has no art for them.
+8. **The TVs page.** lg.com adds a three-card offer carousel under its banner, outline type icons, toggles (On-Sale, In-Stock), an AI question box, size chips and a Compare toggle on each card. OH has the type discs, checkboxes with counts, the declared width ("Your space") and no control that does nothing. lg.com's banner is about 540 px tall; A1's banner format is 1440×360.
+9. **The product page.** lg.com's gallery has a thumbnail column with video and 3D, and an "Ask away" chat block; OH's gallery is one picture (M2's internals) and has no chat. lg.com has seven tabs; OH five (M2's). lg.com's buttons are pills; OH's are 4 px, as §10.1 and S2 require.
+10. **The type** is Figtree, the nearest Google Fonts face to LG's own; the demo's honesty lines (the slot line above each module, the receipts) are small print lg.com does not have, by design.
+
+#### For the lead
+
+1. **S2's three §9.1 look checks** should read §10's values: the page and header on #F0ECE4, the service band #E6E1D8, the font stack starting Figtree. I did not edit the suite.
+2. **A rig started before 20:08 serves A1's art as 403** (`/oh/img/art/*`): wrangler's dev assets list new files only at start. Restart a rig before judging the art on it.
+3. **The arrival line's wording** ("… census shown, not scored") is not the P1 section's; it comes with the cold-start panel's sentence from `src/demos/oh.config.ts`, reported earlier.
+4. **Line endings.** `index.html` and `oh.css` are LF in the working tree, `oh.js` CRLF (another lane's write, reported before); my edits keep each file's endings.
+
+#### Files
+
+`public/oh/index.html` (the homepage order; the grids' title rows, the room banners, the TV grid's promotion above its type row), `public/oh/oh.css` (the M1b block before M2's appended block: 1,003 → 1,125 lines), the P1 section of `public/oh/oh.js` (1,661 → 1,789 lines: A1's index reader, the badge zones, the hero carousel, the room tiles, the deals bento, the banners, the card, the continue hero's art), seven side-by-sides `docs/lg/lanes/shots/M1b-*.png`, M1's five `M1-*.png` refreshed, and this section. Not touched: A1's art and `scripts/generate-oh-art.mjs`, `product.html`, `m.html`, `oh-store.js`, the shared, P2 and P3 sections, `src/**`, the suites, `public/demo-kit/**`, `public/vantage/**`, `public/oh/beats/` (no seed this lane; they equal HEAD). The rig is stopped; `.wrangler/state-m1b` is kept, its tenant reset to the opening state.
+
 ### S2: the manual session and the boot assertions; the sixteen beats on the working store
 
 **Lane S2, builder, 2026-10-02, 14:59–18:30 EDT.**
