@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#E4F0DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08251A" media="(prefers-color-scheme: dark)">
+<title>How it works, with every constant on a slider · Optimizely enablement</title>
+<!-- The solutions engineers' interactive page. Its text is docs/enablement/content/how-it-works-interactive.md, sentence for sentence. Its instruments are drawn by /how-it-works-interactive.js from nodes and textContent: no network call, no storage, no form and no inline style or script. The text reads in full without the script. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/how-it-works-interactive.css">
+<script src="/how-it-works-interactive.js" defer></script>
+</head>
+<body class="hiw-page">
+<a class="skip" href="#main">Skip to the page</a>
+<header class="masthead">
+<div class="wrap masthead-inner">
+<p class="eyebrow">Internal · Optimizely</p>
+<nav class="sitenav" aria-label="Pages"><ul><li><a href="/">All pages</a></li><li><a href="/what-it-is">What it is</a></li><li><a href="/see-it-work">See it work</a></li><li><a href="/selling-it">Selling it</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/how-it-works-interactive" aria-current="page">How it works, interactive</a></li><li><a href="/credits">AI credits</a></li><li><a href="/glossary">Glossary</a></li><li><a href="/demos">Demo map</a></li></ul></nav>
+</div>
+</header>
+
+<div class="hiw-layout">
+<nav class="hiw-toc" id="toc" aria-label="Sections on this page">
+  <p class="hiw-toc-k">The story</p>
+  <ol>
+    <li><a href="#p1"><span class="n">&middot;</span>The problem</a></li>
+    <li><a href="#p2"><span class="n">&middot;</span>What it is</a></li>
+    <li><a href="#p3"><span class="n">&middot;</span>What it does</a></li>
+    <li><a href="#p4"><span class="n">&middot;</span>Why customers choose it</a></li>
+  </ol>
+  <p class="hiw-toc-k">How it works</p>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>The one idea</a></li>
+    <li><a href="#s2"><span class="n">2</span>Interest is a quantity</a></li>
+    <li><a href="#s3"><span class="n">3</span>One click, four coordinates</a></li>
+    <li><a href="#s4"><span class="n">4</span>Scoring every candidate</a></li>
+    <li><a href="#s5"><span class="n">5</span>The first page feels local</a></li>
+    <li><a href="#s6"><span class="n">6</span>Two memories, two speeds</a></li>
+    <li class="hiw-toc-ex"><a href="#ex"><span class="n">ex</span>The chain, end to end</a></li>
+    <li><a href="#s7"><span class="n">7</span>Learning what works</a></li>
+    <li><a href="#s8"><span class="n">8</span>The published documents</a></li>
+    <li><a href="#s9"><span class="n">9</span>The receipt</a></li>
+    <li><a href="#s10"><span class="n">10</span>What a customer provides</a></li>
+  </ol>
+  <p class="hiw-toc-k">This page</p>
+  <ol>
+    <li><a href="#about"><span class="n">&middot;</span>About this page</a></li>
+  </ol>
+</nav>
+
+<main id="main" class="hiw-main">
+<div class="piece-meta"><p class="reader-tag" data-reader="se">For solutions engineers</p><p class="stamp">Updated October 2, 2026</p></div>
+<article class="piece hiw" data-source="docs/enablement/content/how-it-works-interactive.md">
+<h1 class="title"><span class="kicker"><span id="package-name">Behavioral Targeting and Intelligence</span>:</span> <span class="title-main">how it works, with every constant on a slider</span></h1>
+<p class="reader-line"><strong>For pre-sales solutions engineers.</strong> You explain the engine to a customer&rsquo;s technical team. This page is the companion to <a href="/how-it-works">How it works and where it runs</a>: it runs the engine&rsquo;s own arithmetic in your browser, so you, or the customer&rsquo;s engineers beside you, can move any constant and watch every number answer.</p>
+<div class="rule"><p class="rule-label" data-chrome="rule label">The one rule</p><p class="rule-text"><strong>The engine keeps each visitor&rsquo;s interest per dimension value, scores every candidate in a slot with one published formula, and writes the arithmetic of each decision on a receipt a person can recompute.</strong></p></div>
+<div class="hiw-about">
+  <p><strong>What this page is.</strong> Every number on this page is computed in your browser by the engine&rsquo;s arithmetic, on the published documents of an example brand, Wrenfield, a store that sells phones, plans and home internet. The constants are the engine&rsquo;s defaults: K = 1.8, an entry line at 0.60, an exit line under 0.45, and a memory &tau; of 14 days, which a brand sets for each dimension. The regional sales behind the first page are synthetic, made up for the example, and the page says so wherever they appear. Read it from the top down: each section says its idea in words and formulas first, and above every instrument a short paragraph says what you are looking at, what to try and what to watch for. Every group of controls and every instrument carries a circled question mark; hover over it, focus it or tap it to see what it is, the constant it sets, where that constant is published, and what moves when it changes.</p>
+</div>
+
+<!-- the story ============================================================== -->
+<section class="hsec hsec--story" id="p1" aria-labelledby="most-visitors-are-strangers-and-the-page-still-has-to-decide">
+  <p class="hsec-k" data-chrome="section label"><span class="hsec-n hsec-n--story">&middot;</span>The problem</p>
+  <h2 id="most-visitors-are-strangers-and-the-page-still-has-to-decide">Most visitors are strangers, and the page still has to decide</h2>
+  <p class="big-p">Most of a site&rsquo;s visitors are strangers, and most buying happens before any profile exists. Tools built for known customers are blind in that window, so teams write rules to make up for it, and the rules go stale, multiply and fight. The engine decides for the stranger and the regular alike, from what each visitor is doing now.</p>
+</section>
+
+<section class="hsec hsec--story" id="p2" aria-labelledby="the-engine-is-a-personal-stylist-for-every-visitor">
+  <p class="hsec-k" data-chrome="section label"><span class="hsec-n hsec-n--story">&middot;</span>What it is</p>
+  <h2 id="the-engine-is-a-personal-stylist-for-every-visitor">The engine is a personal stylist for every visitor</h2>
+  <p class="big-p">Think of a personal stylist for every visitor, at internet scale. It reads the room, watches without interrogating, rearranges the table and pivots when attention moves. Recommendations rank the past; the engine decides the page at the point in time, and the two work side by side. It is not a recommendations engine and does not replace one: it organizes the page by interest around whatever recommendations a brand runs, and a recommendations carousel is one of the modules it orders.</p>
+</section>
+
+<section class="hsec hsec--story" id="p3" aria-labelledby="what-it-does-and-where-this-page-shows-it">
+  <p class="hsec-k" data-chrome="section label"><span class="hsec-n hsec-n--story">&middot;</span>What it does</p>
+  <h2 id="what-it-does-and-where-this-page-shows-it">What it does, and where this page shows it</h2>
+  <ul class="caps">
+    <li><strong>The first page feels local before the first click.</strong> A stranger&rsquo;s first page leans on what visitors in their region are interested in, from the brand&rsquo;s own regional sales, and steps back as the visitor&rsquo;s own interests grow. <a href="#a-stranger-is-scored-on-their-regions-lean-until-their-own-evidence-outweighs-it">Section 5</a> shows it.</li>
+    <li><strong>The first click changes the page.</strong> With the visitor&rsquo;s consent, a first product view raises every dimension value it carries, and the next answer reflects it. <a href="#a-product-view-is-a-touch-on-every-dimension-the-item-carries">Section 3</a> and <a href="#nothing-is-set-per-product-everything-is-per-dimension-and-per-slot">section 4</a> show it.</li>
+    <li><strong>Channels seed the visit.</strong> How the visitor arrived, from an email, an ad, a social post, a partner&rsquo;s quiz or the campaign term on a link, lifts matching pieces on the first page. <a href="#a-stranger-is-scored-on-their-regions-lean-until-their-own-evidence-outweighs-it">Section 5</a> shows it.</li>
+    <li><strong>Interest fills and drains like a bucket.</strong> For each dimension value, every action adds its weight and the level fades on that dimension&rsquo;s memory; a visitor enters an audience at one line and is released below a lower one, and saturation caps how much any one value can count. Nobody writes expiration rules, and the release is on the record. <a href="#interest-measures-how-much-evidence-there-is-and-how-fresh-it-is">Section 2</a> and <a href="#each-dimension-forgets-at-the-speed-the-brand-sets">section 6</a> show it.</li>
+    <li><strong>The page reorganizes by interest.</strong> The engine orders a page&rsquo;s sections and modules for each visitor, not only what goes inside a slot, and a recommendations carousel is one of the modules it orders. <a href="#nothing-is-set-per-product-everything-is-per-dimension-and-per-slot">Section 4</a> and the slots document in <a href="#three-published-documents-decide-everything-above">section 8</a> show it.</li>
+    <li><strong>Merchandisers keep the wheel.</strong> Gates remove what may not show, pins hold the sections the brand sells, and only then does ranking run; every override and every decision is written out as arithmetic on a receipt. <a href="#nothing-is-set-per-product-everything-is-per-dimension-and-per-slot">Section 4</a> and <a href="#every-decision-writes-its-own-arithmetic-down">section 9</a> show it.</li>
+    <li><strong>Every constant is tuned in the open.</strong> Marketers and data scientists change weights, memories, lines, seeds, pins and dials in published, versioned documents, in the console or through the API, in force without a release. <a href="#three-published-documents-decide-everything-above">Section 8</a> shows it.</li>
+    <li><strong>It learns from outcomes behind a dial the brand controls.</strong> It records what works from the first day and changes nothing until the brand turns the dial. Holdouts measure its lift on the brand&rsquo;s own numbers. <a href="#learning-is-a-counted-multiplier-behind-a-dial-that-starts-at-zero">Section 7</a> shows it.</li>
+    <li><strong>Opal works with it.</strong> Opal authors audiences and tests, explains results, tags content, and proposes and launches experiments and CMAB tests on signals. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply.</li>
+    <li><strong>It links with ODP and Feature Experimentation.</strong> The audiences and interests the engine forms reach the brand&rsquo;s customer data in ODP, and a Feature Experimentation test or contextual bandit can run on any slot.</li>
+    <li><strong>AI add-ons for shoppers are optional.</strong> AI search, the style concierge and generated imagery are there for a brand that switches them on with its credits.</li>
+    <li><strong>Identity carries across sign-in.</strong> When a visitor signs in, their anonymous and known profiles merge, adding interests and overriding nothing.</li>
+    <li><strong>It runs at the edge.</strong> Each decision is made on Cloudflare&rsquo;s network, in the data center nearest the visitor, and the decisions land in the brand&rsquo;s own warehouse. We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.</li>
+  </ul>
+</section>
+
+<section class="hsec hsec--story" id="p4" aria-labelledby="each-customer-weighs-the-reasons-differently">
+  <p class="hsec-k" data-chrome="section label"><span class="hsec-n hsec-n--story">&middot;</span>Why customers choose it</p>
+  <h2 id="each-customer-weighs-the-reasons-differently">Each customer weighs the reasons differently</h2>
+  <p>Customers choose the engine for these reasons, and each customer weighs them differently:</p>
+  <ul class="reasons">
+    <li>They can control it.</li>
+    <li>It decides at the point in time.</li>
+    <li>It is performant at the edge.</li>
+    <li>Every decision is explainable.</li>
+    <li>It hooks to Opal.</li>
+    <li>AI is theirs to use or not.</li>
+    <li>It learns to the degree they govern.</li>
+    <li>It links with ODP.</li>
+    <li>It works alongside their recommendations.</li>
+    <li>It honors the placements they sell.</li>
+  </ul>
+</section>
+
+<!-- 1 ==================================================================== -->
+<section class="hsec" id="s1" aria-labelledby="the-unit-of-state-is-the-dimension-value-not-the-click">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">1</span>The one idea</p>
+  <h2 id="the-unit-of-state-is-the-dimension-value-not-the-click">The unit of state is the dimension value, not the click</h2>
+  <p class="big-p">The engine does not remember products. For each visitor it keeps a small vector of graded interests, one coordinate per dimension value the visitor has touched (brand samsung, ecosystem android, price band core), each a number between 0 and 1. Products, promotions and page modules carry tags in the same dimensions, so a candidate&rsquo;s score is its tags dotted with the visitor&rsquo;s vector, weighted by the slot it competes in. Nothing is configured per product: an offer published a minute ago is scored the moment it carries tags, and one view of one phone moves every candidate that shares any of its values.</p>
+  <p class="lead"><strong>What you are looking at:</strong> one candidate&rsquo;s score, taken apart. Each row is one tag of the Galaxy S26 offer, with the visitor&rsquo;s interest in that tag&rsquo;s value (read from their vector), the deals slot&rsquo;s weight for the tag&rsquo;s dimension, and their product, a &times; w; the bottom line adds the rows into the candidate&rsquo;s score. <strong>Try:</strong> find a row that scores and one that does not, and see which of its two numbers is zero. <strong>Watch for:</strong> a tag scores only when the visitor has some interest in its value and the slot weighs its dimension; the values in the vector that this offer does not carry are listed under it, because they score other candidates.</p>
+  <figure class="hfig">
+    <div class="diagram" id="s1-diagram" role="img" aria-label="The visitor&rsquo;s vector of graded interests, one candidate&rsquo;s tags in the same dimensions, the slot&rsquo;s weights, and the sum of products that scores the candidate."></div>
+    <figcaption id="s1-caption">The visitor&rsquo;s own vector after the worked example&rsquo;s fourth step (three Samsung views and a Pixel view), before the regional prior of section 5. The candidate is the Galaxy S26 offer as published; the weights are the deals slot&rsquo;s. Every number is computed on this page by the arithmetic the sections below explain.</figcaption>
+  </figure>
+  <aside class="why">
+    <p><strong>Why this unit.</strong> Keyed on the dimension value, one Galaxy view raises every Android candidate, including one nobody has been shown yet, and the receipt can name the coordinate that did it. Nothing has to be learned per product before a view of one product says something about another.</p>
+    <p>Read quickly, the mechanism sounds like &ldquo;the visitor clicked Samsung, so show Samsung&rdquo;. The sections below show where the arithmetic goes further: interest is graded and fades (section 2); one click moves several coordinates (section 3); the slot weighs them (section 4); a stranger starts from a prior that gives way (section 5); and each dimension forgets at the speed the brand sets (section 6).</p>
+  </aside>
+</section>
+
+<!-- 2 ==================================================================== -->
+<section class="hsec" id="s2" aria-labelledby="interest-measures-how-much-evidence-there-is-and-how-fresh-it-is">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">2</span>Interest is a quantity</p>
+  <h2 id="interest-measures-how-much-evidence-there-is-and-how-fresh-it-is">Interest measures how much evidence there is, and how fresh it is</h2>
+  <p>A flag records that something happened. A quantity records how much evidence there is and how old it is, which is what lets interest rise with repetition, fade with time, and release a visitor from an audience at a moment computed in advance. Each coordinate stores two numbers, the raw evidence R and the time of the last touch t. Nothing is faded in storage: every read computes the fading from the clock, so a replay of the same events gives the same answer.</p>
+  <div class="eqs">
+    <div class="eq">
+      <p class="eq-f">R(t) = R &middot; e^(&minus;&Delta;t/&tau;)</p>
+      <p class="eq-w">The evidence left now: what was stored, faded by a factor of e for every &tau; since the last touch. &tau; is the dimension&rsquo;s memory: 14 days by default, set by the brand for each dimension, and never more than 90 days.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">R &larr; R(t) + w</p>
+      <p class="eq-w">A touch adds its action&rsquo;s weight to whatever is left. The brand&rsquo;s registry names every weight; in the example, a view or a page view adds 1, a search 1.5, a selector, filter or compare 2, a cart add or a started order 3, and a purchase 5. An action the registry does not name adds 0. A custom event is named by its <code>data.action</code>, <code>data.eventName</code> or <code>data.event</code>, so a selector sent as custom weighs 2.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">a = R(t) / (R(t) + K)</p>
+      <p class="eq-w">Interest is the evidence over the evidence plus a constant. It is &frac12; when R = K, 1.8 by default, and never reaches 1, so more evidence always counts, by less each time.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">enter when a &ge; &theta;_in; leave when a &lt; &theta;_out</p>
+      <p class="eq-w">Two lines, not one, so a visitor sitting near a line does not flicker in and out of an audience on every read: they join at 0.60 (evidence R &ge; 2.7) and stay until they fall under 0.45 (R &lt; 1.4727). Time alone can release them, never admit them. The engine refuses a registry whose exit line is not below its entry line.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">t* = t + &tau; &middot; ln(R &middot; (1 &minus; &theta;_out) / (K &middot; &theta;_out))</p>
+      <p class="eq-w">The instant the visitor leaves if nothing else happens, solved in closed form, so it can be scheduled instead of polled.</p>
+    </div>
+  </div>
+  <p class="lead"><strong>What you are looking at:</strong> one coordinate of one visitor, for example brand samsung, on the engine&rsquo;s default constants. The sliders set K, the memory &tau;, the two audience lines and the weight of the next touch. The first chart shows interest against the number of touches, with no time between them; the second shows it against time as you press, on a clock you can run fast; under them are the readout and the three worked numbers. <strong>Try:</strong> press the touch button three times quickly, then stop and let the clock run. <strong>Watch for:</strong> the third press carrying the visitor over the entry line, the dashed projection fading once you stop, and <code>t*</code>, the instant they leave the audience, worked out in advance rather than found by polling.</p>
+  <div class="inst" id="s2-inst"></div>
+</section>
+
+<!-- 3 ==================================================================== -->
+<section class="hsec" id="s3" aria-labelledby="a-product-view-is-a-touch-on-every-dimension-the-item-carries">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">3</span>One click, four coordinates</p>
+  <h2 id="a-product-view-is-a-touch-on-every-dimension-the-item-carries">A product view is a touch on every dimension the item carries</h2>
+  <p>The Galaxy S26 as the example&rsquo;s catalog lists it: brand samsung, ecosystem android, $899.99, category phones. The engine derives the price band from <code>price_usd</code> with the registry&rsquo;s own cuts, $400 and $900, so $899.99 is <strong>core</strong> and the same phone at 512 GB ($1,099.99) is <strong>premium</strong>. One view is therefore four touches, and each lands on a coordinate with its own memory.</p>
+  <p class="lead"><strong>What you are looking at:</strong> one product view, three ways. First, the event the site sends when the visitor views a phone, then the touches the engine takes from it; under them, a live visitor: a row of phone buttons, a meter for every coordinate they have, and their whole stored state as a table. <strong>Try:</strong> press the Galaxy S26, then the Pixel 11. <strong>Watch for:</strong> four meters moving on each press; ecosystem android, price band core and category phones taking a second touch from the Pixel while brand splits across two makers; and the table holding only two numbers per value, the evidence and the time of its last touch. This visitor carries on into sections 4 and 5.</p>
+  <div class="two">
+    <div>
+      <p class="code-k" id="s3-event-k">The event the site sends when the visitor views a phone:</p>
+<pre class="code" id="s3-event">POST /realtime/action
+{
+  "type": "product_view",
+  "data": {
+    "productId": "galaxy-s26",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 899.99,
+    "view": "card"
+  }
+}
+
+(the visitor's session and the landing link
+ ride beside type and data)</pre>
+    </div>
+    <div>
+      <p class="code-k" id="s3-touches-k">The touches the engine extracts from it:</p>
+<pre class="code" id="s3-touches">category    phones    &larr; category
+brand       samsung   &larr; brand
+ecosystem   android   &larr; ecosystem
+priceBand   core      &larr; price_usd 899.99: 400 &le; price &lt; 900
+
+os          no dimension reads it: ignored
+productId   names the product on the answer
+view        not a registry source</pre>
+      <p class="note">One touch per registry dimension whose source field is on the event: a string is one value, a list is several, and a number is banded. The <code>os</code> field rides beside <code>ecosystem</code> and is ignored, because no dimension names it as its source. The engine holds the brand&rsquo;s content, not its phone catalog, so it scores the attributes the event carries, bounded to the registry&rsquo;s dimensions (at most 8 values per list, 64 characters each) and to the values the brand&rsquo;s catalog names. Storage is not a dimension: the configured price rides the event, so the 512 GB step touches premium.</p>
+    </div>
+  </div>
+  <div class="inst" id="s3-inst"></div>
+</section>
+
+<!-- 4 ==================================================================== -->
+<section class="hsec" id="s4" aria-labelledby="nothing-is-set-per-product-everything-is-per-dimension-and-per-slot">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">4</span>Scoring every candidate</p>
+  <h2 id="nothing-is-set-per-product-everything-is-per-dimension-and-per-slot">Nothing is set per product; everything is per dimension and per slot</h2>
+  <p>Every candidate in a slot is scored the same way: for each of its tags, the visitor&rsquo;s interest in that value times the slot&rsquo;s weight for that dimension, summed. The weights belong to the slot, so the same interest in samsung counts 0.2 in the homepage deals module and 1 in the phones list. Then the slot&rsquo;s rules take the top N: gates first, so only eligible pieces compete; pinned pieces next, never ranked; then the ranking, with a diversity cap under which a third piece of one brand yields its place to the next ranked piece. A pin is a required prefix: if the pinned piece is not eligible for the request, the whole slot serves nothing, so a pin needs care. Only slots are decided: the buy box is not a slot, and the engine is never asked about it. The same arithmetic orders a page&rsquo;s modules when they are the pieces of one slot, and reorders a product list that the commerce platform or a recommendations system supplies, removing nothing.</p>
+  <div class="eqs eqs--one">
+    <div class="eq">
+      <p class="eq-f">score = &Sigma; over the tags (d, v) of a[d][v] &times; w_slot[d]</p>
+      <p class="eq-w">For each tag on the candidate: the visitor&rsquo;s interest in that value, times what this slot says that dimension is worth (0 to 1). Two values on one dimension both count; there is no per-tag weight, mean or normalization. A dimension the slot does not weigh contributes nothing; a value the visitor has no interest in contributes nothing.</p>
+    </div>
+  </div>
+  <p class="lead"><strong>What you are looking at:</strong> one slot scored in full, for the visitor from section 3. Choose the homepage deals module or the phones list. For deals, the controls set how it scores (as served, or the tag sum alone), the condition the page sends, the diversity cap, a pin and the slot&rsquo;s weights; the four containers show what it serves, and the table writes out every candidate&rsquo;s sum, term by term. <strong>Try:</strong> press a phone, lower the brand weight, set the cap to one per brand, or pin an upgrade offer under intent new. <strong>Watch for:</strong> a piece over the cap yielding its place to the next ranked piece, and an ineligible pin emptying the whole slot. The last button scores 10,000 synthetic candidates in your browser and counts the work; it times nothing.</p>
+  <div class="inst" id="s4-inst"></div>
+</section>
+
+<!-- 5 ==================================================================== -->
+<section class="hsec" id="s5" aria-labelledby="a-stranger-is-scored-on-their-regions-lean-until-their-own-evidence-outweighs-it">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">5</span>The first page feels local</p>
+  <h2 id="a-stranger-is-scored-on-their-regions-lean-until-their-own-evidence-outweighs-it">A stranger is scored on their region&rsquo;s lean until their own evidence outweighs it</h2>
+  <p>A stranger&rsquo;s vector is empty, so every tag sum is zero and the slot would answer its catalog order. Instead of a second model for strangers, the engine blends a population prior into a copy of the visitor&rsquo;s vector before scoring, at a weight that falls as their own evidence grows. The population is the brand&rsquo;s own: its regional sales from its warehouse, and the regional interest its site&rsquo;s events build, which carries no visitor ids and has a memory of one day. In this example the sales are synthetic, made up for two example regions, Region A and Region B. The region is the visitor&rsquo;s real one, read from the request at the edge.</p>
+  <div class="eqs">
+    <div class="eq">
+      <p class="eq-f">&lambda; = k / (k + &Sigma;a)</p>
+      <p class="eq-w">How much the population speaks: 1 for a stranger, falling as the sum of all the visitor&rsquo;s own interests, on every dimension, grows. Here k is <code>kBlend</code>, 1 by default: &Sigma;a = 1 gives &lambda; = 0.5, and &Sigma;a = 3 gives 0.25. A learn document without a <code>regional</code> block turns the prior off.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">&atilde; = (1 &minus; &lambda;) &middot; a + &lambda; &middot; share</p>
+      <p class="eq-w">The visitor&rsquo;s blended interest in a value: their own, plus the region&rsquo;s share of that value, mixed by &lambda;. The stored vector is never written to; the blend is a copy made for this decision.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">share = R_value / R_leader</p>
+      <p class="eq-w">Within each dimension the region&rsquo;s leading value is 1 and the others are fractions of it: shares, not probabilities. Only the dimensions the brand names blend (here brand, ecosystem, price band and category); a dimension left out takes nothing from the region and keeps (1 &minus; &lambda;) of the visitor&rsquo;s own.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">region &rarr; country &rarr; everyone, at 30 events or more</p>
+      <p class="eq-w">The finest level with enough evidence answers, so a region the brand has barely seen still opens on a real prior rather than a blank.</p>
+    </div>
+  </div>
+  <p>Seeds act on the arrival itself, before the visitor has shown any interest. The <strong>campaign seed</strong> reads <code>utm_term</code> from the landing link, which the page resends with every request, and adds 0.2 on the campaign tag, which only the launch offer and the launch hero carry: through the deals slot&rsquo;s campaign weight of 0.3 that is +0.06, and through the launch offer&rsquo;s promotion multiplier of 1.1 it lands on the receipt as +0.066. The <strong>OS-family seed</strong> reads only iOS or Android from the request and adds 1 on that ecosystem tag (&times; 0.15 = +0.15), halved while the visitor holds an interest in switching and withdrawn once they hold the other ecosystem. A laptop sends neither, so on a laptop no platform seed fires. Public census figures can explain a region&rsquo;s lean on screen, and they never enter a score.</p>
+  <p class="lead"><strong>What you are looking at:</strong> the prior at work on the same visitor. The controls set their region (its synthetic sales), whether they arrived from the campaign link, their device, the prior&rsquo;s strength, and their evidence, live from section 3 or set by hand. The chart shows how much the region speaks, &lambda;, against the visitor&rsquo;s evidence, and a panel shows the region&rsquo;s shares; under them come the blended vector value by value, the seeds this arrival fires, a stranger&rsquo;s receipt for the launch offer, and the hinge: the launch offer and the Galaxy S26 offer across the visitor&rsquo;s steps. <strong>Try:</strong> switch Region A to Region B, turn the campaign link off, or set the evidence by hand. <strong>Watch for:</strong> &lambda; falling from 1 as the evidence grows, the region&rsquo;s part of each blended value shrinking with it, and the line where the best Android offer overtakes the launch offer.</p>
+  <div class="inst" id="s5-inst"></div>
+</section>
+
+<!-- 6 ==================================================================== -->
+<section class="hsec" id="s6" aria-labelledby="each-dimension-forgets-at-the-speed-the-brand-sets">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">6</span>Two memories, two speeds</p>
+  <h2 id="each-dimension-forgets-at-the-speed-the-brand-sets">Each dimension forgets at the speed the brand sets</h2>
+  <p>&tau; is set per dimension, so one visitor carries memories of different lengths at once. The engine&rsquo;s default is 14 days on every dimension, and a brand may set any dimension&rsquo;s memory up to 90 days: a fleeting claim, such as a brand the visitor is comparing, on a short memory, and a lasting lean, such as the ecosystem their phones run on, on a long one. Stop pressing and the short claim withdraws while the long lean holds. When a brand claim is released, that brand&rsquo;s offers lose their brand term and keep their ecosystem term, so the release does not by itself reorder a slot where the ecosystem still carries them.</p>
+  <p class="lead"><strong>What you are looking at:</strong> one visitor with two memories on one clock: brand on a short memory a brand might set, and ecosystem on the engine&rsquo;s 14-day default. The two buttons view a Galaxy or a Pixel, each touching its brand and ecosystem android together; the chart shows the three interests over time with the two audience lines, and the meters show each claim and when it leaves. <strong>Try:</strong> press the Galaxy three times close together, then stop and let the clock run. <strong>Watch for:</strong> brand samsung falling under 0.45 and leaving while ecosystem android holds.</p>
+  <div class="inst" id="s6-inst"></div>
+</section>
+
+<!-- ex =================================================================== -->
+<section class="hsec hsec--ex" id="ex" aria-labelledby="one-visitor-every-term-at-every-step">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n hsec-n--ex">ex</span>The chain, end to end</p>
+  <h2 id="one-visitor-every-term-at-every-step">One visitor, every term at every step</h2>
+  <p>One example visit, from arrival to a return days later: a stranger lands from a paid social ad for the iPhone 18 Pro, looks at a Galaxy S26 card, opens its page, looks at the S26 Ultra, opens a Pixel 11 and goes home, then returns directly on a later visit. Each step recomputes the whole chain on the published documents: touches, fading, the visitor&rsquo;s vector, &lambda;, the blended vector, the seeds, the multiplier, the sum and the take.</p>
+  <p class="lead"><strong>What you are looking at:</strong> the example visit, recomputed step by step. The step buttons choose the moment; the controls set the region, the arrival, the device and the days before the return. The first panel shows what the engine computes at that step; the second shows the receipt&rsquo;s drivers for container 1, the piece that leads. <strong>Try:</strong> step from 0 to 5, then slide the days before the return. <strong>Watch for:</strong> the launch offer leading at the landing and the Galaxy S26 offer leading at the hinge, and on the return, brand samsung released while ecosystem android still holds.</p>
+  <div class="inst" id="ex-inst"></div>
+</section>
+
+<!-- 7 ==================================================================== -->
+<section class="hsec" id="s7" aria-labelledby="learning-is-a-counted-multiplier-behind-a-dial-that-starts-at-zero">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">7</span>Learning what works</p>
+  <h2 id="learning-is-a-counted-multiplier-behind-a-dial-that-starts-at-zero">Learning is a counted multiplier behind a dial that starts at zero</h2>
+  <p>The second term is a count, not a model. For each piece in each context the engine keeps faded exposures n and successes s on the same lazy fading as the vector, with a 21-day memory. It pulls the piece&rsquo;s rate toward the slot&rsquo;s rate in that context, turns the ratio into a clamped multiplier, and raises it to the learning dial &gamma;, from 0 to 1 per slot. It records what works from the first day and changes nothing until the brand turns the dial. Every slot&rsquo;s dial starts at 0: the lift is computed and recorded on the receipt and changes nothing, and until a context has a lift in force the receipt reads <code>lift: null</code>. A holdout keeps a stable share of visitors on the site&rsquo;s own defaults, so the lift is measured on the brand&rsquo;s own numbers. Exploration, which deliberately shows a less-tried piece, stays off unless the brand turns it on.</p>
+  <div class="eqs">
+    <div class="eq">
+      <p class="eq-f">p&#770; = (s + n0 &middot; p0) / (n + n0)</p>
+      <p class="eq-w">The piece&rsquo;s rate in this context, pulled toward the slot&rsquo;s rate p0 with the strength of n0 = 30 observations, so a handful of lucky clicks cannot move it far.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">p0 = (s_slot + n0 &middot; p0_parent) / (n_slot + n0)</p>
+      <p class="eq-w">The slot&rsquo;s own rate in the context, pulled toward the next coarser context&rsquo;s rate the same way.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">lift = clamp(p&#770; / p0, 0.5, 2)</p>
+      <p class="eq-w">How this piece does against the slot in the same context, never more than double and never less than half.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">score = base &times; lift^&gamma;</p>
+      <p class="eq-w">At &gamma; = 0 any lift to the power 0 is 1, so the learned term is computed, recorded and ignored. At &gamma; = 1 it applies in full.</p>
+    </div>
+    <div class="eq">
+      <p class="eq-f">everyone &rarr; channel &rarr; + visit &rarr; + journey stage &rarr; + region &rarr; + leading interest</p>
+      <p class="eq-w">Six pooling levels from coarse to fine: the channel (direct, paid social, paid search, email, organic, referral), the visit band (first, second or third, fourth or later), the journey stage (early, mid, late), the region, and the visitor&rsquo;s leading interest above the entry line. The finest level where the piece has at least 30 exposures answers, so thin contexts borrow from wider ones instead of waiting.</p>
+    </div>
+  </div>
+  <p class="lead"><strong>What you are looking at:</strong> one piece in one context, with every input yours to set: its exposures and clicks, the slot&rsquo;s rate, the shrinkage strength, the learning dial &gamma; and the score it multiplies. The readout gives the pooled rate, the lift, and the score before and after the dial; the chart shows the pooled rate moving toward the piece&rsquo;s own rate as exposures grow; the pooling levels show which of six contexts has enough exposures to answer. <strong>Try:</strong> give the piece many clicks on few exposures, then on many; then turn &gamma; up from 0. <strong>Watch for:</strong> the lift staying between 0.5 and 2, and the score not moving at all while &gamma; is 0, which is how every slot starts.</p>
+  <div class="inst" id="s7-inst"></div>
+</section>
+
+<!-- 8 ==================================================================== -->
+<section class="hsec" id="s8" aria-labelledby="three-published-documents-decide-everything-above">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">8</span>The published documents</p>
+  <h2 id="three-published-documents-decide-everything-above">Three published documents decide everything above</h2>
+  <p>Every term on the receipt is arithmetic over the brand&rsquo;s published documents. The engine calls no AI model to decide. Opal is where people ask and generative AI creates, and that is where credits apply. Three documents decide everything above: the dimension registry, the slots document and the learn document, while the catalog holds the pieces and their tags. The brand&rsquo;s team changes them in the console or through the API. Every save is validated whole, stamped with a revision, attributed and kept, and a rollback writes an old body forward as a new revision, so the history is never rewritten. A change is in force without a release: at once where it is written, and everywhere within the documents&rsquo; 30-second cache.</p>
+  <p class="lead"><strong>What you are looking at:</strong> the example brand&rsquo;s three documents, each line of JSON beside a note in words: the dimension registry, the slots document and the learn document. The first is shown expanded; the other two expand with a click. <strong>Try:</strong> find K and the two audience lines in the registry, the deals slot&rsquo;s weights in the slots document, and <code>kBlend</code> and <code>gamma</code> in the learn document. <strong>Watch for:</strong> every constant the instruments above take from these documents appearing here as one line, which its hint names by document and field; the phones list&rsquo;s dials, sent with each request, and the catalog&rsquo;s tags and rules, shown in section 4, are the exceptions. Nothing here is set per product.</p>
+  <div id="s8-docs"></div>
+</section>
+
+<!-- 9 ==================================================================== -->
+<section class="hsec" id="s9" aria-labelledby="every-decision-writes-its-own-arithmetic-down">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">9</span>The receipt</p>
+  <h2 id="every-decision-writes-its-own-arithmetic-down">Every decision writes its own arithmetic down</h2>
+  <p>Every served position writes one record, and every term it lists carries its contribution: the four strongest tag terms, the region&rsquo;s part and every adjustment, so a receipt like the one below can be recomputed by hand. The site&rsquo;s own answer carries the shorter drivers; the receipt adds the scores, the revisions of every document in force and what is needed to replay the decision. Below is an example record: the launch offer, served in container 1 to a stranger in Region A who arrived from the campaign link, with the visitor id and the nonce left out.</p>
+  <p class="lead"><strong>What you are looking at:</strong> the example record, with a note in words beside every field. Under it, the same decision is recomputed twice, from the record&rsquo;s own terms and from the documents on this page, and the record&rsquo;s ten candidates are set beside the page&rsquo;s. <strong>Try:</strong> follow the drivers, <code>score_base</code> and <code>score_final</code> down the record, then check them against the two recomputations. <strong>Watch for:</strong> how many candidates agree to the third decimal, in the same order; the count is computed, not typed.</p>
+  <div id="s9-receipt"></div>
+</section>
+
+<!-- 10 =================================================================== -->
+<section class="hsec" id="s10" aria-labelledby="a-customer-provides-attributes-a-mapping-events-and-regional-sales">
+  <p class="hsec-k" data-chrome="section number"><span class="hsec-n">10</span>What a customer provides</p>
+  <h2 id="a-customer-provides-attributes-a-mapping-events-and-regional-sales">A customer provides attributes, a mapping, events and regional sales</h2>
+  <p class="big-line"><strong>Per product: attributes.</strong> <strong>Per slot: weights and rules.</strong> Nothing else is configured.</p>
+  <p>Per slot: the weights, the take, the journey-stage rule, the seeds, the merchandising weights, the diversity cap, pins, exclusions and the learning dials. Per piece of content: its tags, window, eligibility rule, merchandising signals and journey-stage fit.</p>
+  <p class="lead"><strong>What you are looking at:</strong> what a customer provides, each with what we use it for. The second carries two tables: one line per dimension, naming the feed field it reads and how, and a promotion feed&rsquo;s fields with what the engine does with each. <strong>Try:</strong> hold each line against your customer&rsquo;s product feed: which field would fill it, spelled the registry&rsquo;s way. <strong>Watch for:</strong> the last column of the second table; several fields decide eligibility or are only displayed, and are never scored.</p>
+  <ol class="needs">
+    <li><p><strong>What we need: attributes in the registry&rsquo;s vocabulary.</strong> Each product, offer and module carries values on the registered dimensions, exactly as the registry spells them: <code>brand: samsung</code>, not <code>Samsung Electronics</code>. On a dimension the brand&rsquo;s catalog names values on, a value outside them is simply not scored. The event&rsquo;s answer names the product ids the engine does not know; it does not flag an unknown attribute value. A content piece needs <code>id</code>, <code>customerContentId</code>, <code>type</code>, <code>title</code>, <code>tags</code> (dimension to a list of values) and <code>slotTypes</code>; a window, an eligibility rule (1 to 64 regions, 1 to 8 conditions), merchandising signals from 0 to 1, a journey-stage fit, featured products and a stock flag are optional. The offer book (terms, badges, calls to action) goes to the page, never to the engine.</p>
+      <p><strong>What we use them for:</strong> every attribute is a tag. A candidate&rsquo;s score is the visitor&rsquo;s interest in each of its tag values times the slot&rsquo;s weight for that dimension (section 4), so a piece is scored the moment it carries tags, with nothing set per product.</p></li>
+    <li><p><strong>What we need: the feed-to-dimension mapping.</strong> One line per dimension: which field of the feed it reads and how; then a promotion feed&rsquo;s fields and what the engine does with each. Most are a field read as it stands; the price band is derived from the price with the registry&rsquo;s cuts; several fields are display only or eligibility, never scored.</p>
+      <p><strong>What we use it for:</strong> to turn each product&rsquo;s fields into the registry&rsquo;s values, so that an event and a candidate&rsquo;s tags name the same value the same way, and to keep the fields that decide (scored, or eligibility) apart from those the page only displays.</p>
+      <div id="s10-map"></div></li>
+    <li><p><strong>What we need: events that carry the product id and its attributes.</strong> A view, a compare, a selector, a cart add: each names the product (<code>productId</code>, <code>product_id</code> or <code>sku</code>) and carries the attributes the registry reads, so the engine never needs a copy of the catalog.</p>
+      <p><strong>What we use them for:</strong> each event becomes touches on the visitor&rsquo;s vector, weighted by its action (sections 2 and 3); the product id lets the engine use the attributes it holds for that product, and its answer names any id it does not know.</p></li>
+    <li><p><strong>What we need: regional sales from the brand&rsquo;s warehouse.</strong> What the brand&rsquo;s customers in each region have bought, on the dimensions the prior blends.</p>
+      <p><strong>What we use them for:</strong> each region&rsquo;s starting lean, so a stranger&rsquo;s first page is local from the first day (section 5), labeled with its source.</p></li>
+  </ol>
+</section>
+
+<!-- about ================================================================ -->
+<section class="hsec hsec--about" id="about" aria-labelledby="everything-on-this-page-is-an-example-computed-in-your-browser">
+  <p class="hsec-k" data-chrome="section label"><span class="hsec-n hsec-n--story">&middot;</span>About this page</p>
+  <h2 id="everything-on-this-page-is-an-example-computed-in-your-browser">Everything on this page is an example, computed in your browser</h2>
+  <ul class="aboutlist">
+    <li>The arithmetic is the engine&rsquo;s own, step for step, on the engine&rsquo;s default constants and the example brand&rsquo;s published documents.</li>
+    <li>The example brand, Wrenfield, its two regions and their regional sales are made up for this page; the phones are real products.</li>
+    <li>The inputs you set on this page (exposures, clicks, weights, days) are yours, not measurements.</li>
+    <li>The page holds no credential, stores nothing and sends nothing; every number is computed in your browser, and the page counts work and times nothing.</li>
+  </ul>
+  <p>The companion piece, <a href="/how-it-works">How it works and where it runs</a>, tells the same mechanism in prose, with the architecture on Cloudflare, configuration, integration and privacy.</p>
+  <div class="rule rule-close"><p class="rule-text"><strong>The engine keeps each visitor&rsquo;s interest per dimension value, scores every candidate in a slot with one published formula, and writes the arithmetic of each decision on a receipt a person can recompute.</strong></p></div>
+</section>
+</article>
+</main>
+</div>
+
+<a class="hiw-to-sections" href="#toc">Sections</a>
+
+<footer class="foot">
+<div class="wrap">
+<nav class="pieces" aria-labelledby="pieces-title"><h2 class="pieces-title" id="pieces-title">Every piece, by title</h2><ul><li><a href="/what-it-is"><span class="pieces-name">What it is</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/see-it-work"><span class="pieces-name">See it work</span><span class="pieces-reader">For marketing</span></a></li><li><a href="/selling-it"><span class="pieces-name">Selling it</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/how-it-works"><span class="pieces-name">How it works and where it runs</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/how-it-works-interactive" aria-current="page"><span class="pieces-name">How it works, with every constant on a slider</span><span class="pieces-reader">For solutions engineers</span></a></li><li><a href="/credits"><span class="pieces-name">Where Opal and AI Credits Fit, and Where They Never Do</span><span class="pieces-reader">For account executives</span></a></li><li><a href="/glossary"><span class="pieces-name">The glossary</span><span class="pieces-reader">For everyone</span></a></li><li><a href="/demos"><span class="pieces-name">Which demo shows which story</span><span class="pieces-reader">For account executives</span></a></li></ul></nav>
+<p class="internal">Internal · Optimizely · do not forward outside Optimizely</p>
+</div>
+</footer>
+</body>
+</html>
