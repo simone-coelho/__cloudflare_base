@@ -97,6 +97,11 @@
 //     document as it was, preload a seeded Math.random (node --import) for both
 //     builds and compare the XML parts; only docProps/core.xml, which carries
 //     the build time, still differs.
+// 14. A link inside bold, **[text](url)**, is a bold link. The bold was matched
+//     first, so its inside printed as literal markdown, address and all, with
+//     no link. Now the text around the link stays bold and the link's own run
+//     is bold too. And every heading keeps with the next paragraph, so a tall
+//     figure can no longer leave its heading alone at the foot of a page.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -162,17 +167,17 @@ function outline() {
 }
 const outlined = outline();
 
-const linkRun = (text) => new TextRun({ text, font: BODY, size: 21, color: BLUE, underline: {} });
+const linkRun = (text, extra = {}) => new TextRun({ text, font: BODY, size: 21, color: BLUE, underline: {}, ...extra });
 
 // Rule 11: a link lands on the bookmark of the heading its anchor names, or the build fails.
-function jump(text, href) {
+function jump(text, href, extra) {
   const a = anchorOf(href.slice(1)), h = outlined.bySlug.get(a);
   if (!h) {
     const bare = (s) => s.toLowerCase().replace(/[^\p{Alphabetic}\p{M}\p{Nd}]/gu, '');
     const near = outlined.heads.find((x) => bare(x.slug) === bare(a));
     problem(`link "${text}" points to ${href}, but no heading has that anchor${near ? `; did you mean #${near.slug}?` : ''}`, `](${href})`);
   }
-  return new InternalHyperlink({ anchor: h ? h.mark : a, children: [linkRun(text)] });
+  return new InternalHyperlink({ anchor: h ? h.mark : a, children: [linkRun(text, extra)] });
 }
 
 function runs(text, opts = {}) {
@@ -183,12 +188,15 @@ function runs(text, opts = {}) {
   while ((m = re.exec(text))) {
     push(text.slice(last, m.index));
     const tok = m[0];
-    if (tok.startsWith('**')) push(tok.slice(2, -2), { bold: true });
-    else if (tok.startsWith('`')) out.push(new TextRun({ text: tok.slice(1, -1), font: MONO, size: 19, color: '0B3D63', ...opts }));
+    if (tok.startsWith('**')) {
+      const inner = tok.slice(2, -2);
+      if (/\[[^\]]+\]\([^)]+\)/.test(inner)) out.push(...runs(inner, { ...opts, bold: true }));   // rule 14: a link inside bold
+      else push(inner, { bold: true });
+    } else if (tok.startsWith('`')) out.push(new TextRun({ text: tok.slice(1, -1), font: MONO, size: 19, color: '0B3D63', ...opts }));
     else if (tok.startsWith('[')) {
-      const q = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok);
+      const q = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok), b = opts.bold ? { bold: true } : undefined;   // rule 14: bold only inside bold
       if (text[m.index - 1] === '!') problem(`figure "${q[1]}" must stand on a line of its own, outside lists, tables and callouts`, `![${q[1]}](`);
-      out.push(q[2].startsWith('#') ? jump(q[1], q[2]) : new ExternalHyperlink({ link: q[2], children: [linkRun(q[1])] }));
+      out.push(q[2].startsWith('#') ? jump(q[1], q[2], b) : new ExternalHyperlink({ link: q[2], children: [linkRun(q[1], b)] }));
     } else push(tok.slice(1, -1), { italics: true });
     last = m.index + tok.length;
   }
@@ -209,6 +217,7 @@ const heading = (lvl, txt) => {
   return new Paragraph({
     heading: [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5][lvl],
     pageBreakBefore: lvl === 1,
+    keepNext: true,   // rule 14: a heading never ends a page apart from what follows it
     spacing: { before: lvl === 1 ? 0 : lvl === 2 ? 320 : 240, after: lvl <= 2 ? 160 : 100 },
     border: lvl === 1 ? { bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE, space: 6 } } : undefined,
     children: id ? [new BookmarkStart(id, n), run, new BookmarkEnd(n)] : [run],
