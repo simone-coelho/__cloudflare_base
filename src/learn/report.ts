@@ -873,7 +873,15 @@ export interface DayReport {
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
   /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
-  hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number };
+  hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number;
+    /**
+     * Lane E6: the hours of `built` summed from an open hour's WORKING
+     * aggregate — the hour still open, or just closed and not yet folded — and
+     * not from its final one. They are what the ledger held when the report was
+     * built; the hour's final fold replaces them. Absent when every built hour is
+     * final, which is every report written before it existed.
+     */
+    open?: number[] };
   coverage?: ReportCoverage;
   /** Null/absent means unknown. Equality is not experimental compatibility. */
   computation?: ComputationBasis | null;
@@ -917,6 +925,9 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const source = report.hours?.source === 'aggregates' || report.hours?.source === 'ledger' ? report.hours.source
     : report.hours === undefined && e.version === 1 && e.source === 'ledger' ? 'ledger' : 'unknown';
   const built = knownHours(report.hours?.built), missing = knownHours(report.hours?.missing);
+  // Lane E6: an hour summed from its working aggregate is not final, so a day
+  // that holds one is incomplete by its own account.
+  const open = knownHours(report.hours?.open).filter(h => built.includes(h));
   // W21 C1.08 (R149): optional in the evidence, because a report written before
   // this release cannot carry it and is not thereby invalid. Present, it is a
   // list of built hours or the explicit unknown.
@@ -938,7 +949,7 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const visitorsIncomplete = e.visitorsIncomplete === true ? true : valid ? e.visitorsIncomplete as boolean | null : null;
   const truncated = report.counts?.truncated === true || e.truncated === true || truncatedHours.length > 0;
   return {
-    version: 1, source, metadata, status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length ? 'incomplete' : 'unknown',
+    version: 1, source, metadata, status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length || open.length ? 'incomplete' : 'unknown',
     maturity: 'unknown', truncated, visitorsIncomplete, missingHours, truncatedHours, unadvancedHours, unknownHours, horizons,
     // Stated only where the source really states it: an absent, unknown or
     // unreadable evidence block reads `null`, never an empty list, which would

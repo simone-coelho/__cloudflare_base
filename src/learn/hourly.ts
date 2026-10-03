@@ -18,7 +18,7 @@
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import type { SlotLearnConfig } from './fan';
 import { hidden, loadTombstones, withoutErased, type Tombstone } from '@/ledger/erasure';
-import { isLearningKey, parseId, type OutcomeRecord, type RewardType } from '@/ledger/records';
+import { isLearningKey, parseId, ts36, type OutcomeRecord, type RewardType } from '@/ledger/records';
 import type { R2Like } from '@/ledger/writer';
 import { readRetention, requireRetention, mergeRetention, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
@@ -380,6 +380,60 @@ export function mergeBrand(a: HourBrand, b: HourBrand, tau: number): HourBrand {
     }
   }
   return out;
+}
+
+/**
+ * Lane E6: one more hour into the day's running total, in place. The same
+ * arithmetic as `mergeBrand`, value for value and key for key — every number is
+ * merged by the same function in the same order — without copying the total
+ * the day has already accumulated. `mergeBrand(total, hour)` rebuilds the whole
+ * total for every hour summed, so a day of H hours copied its first hour H
+ * times; here each hour's members are visited once, when that hour is summed.
+ */
+function mergeStatsInto(into: StatsState, from: StatsState, tau: number): void {
+  for (const [item, levels] of Object.entries(from.items)) {
+    const out = (into.items[item] ??= {});
+    for (const [k, c] of Object.entries(levels)) out[k] = mergeCounter(out[k], c, tau);
+  }
+  for (const [k, c] of Object.entries(from.slot)) into.slot[k] = mergeCounter(into.slot[k], c, tau);
+  into.events += from.events; into.updatedAt = Math.max(into.updatedAt, from.updatedAt);
+}
+function mergeAssignmentsInto(into: HourAssignments, from: HourAssignments): void {
+  for (const [slot, arms] of Object.entries(from.decisions)) addCounts((into.decisions[slot] ??= {}), arms);
+  for (const [name, credits] of Object.entries(from.credits)) addCounts((into.credits[name] ??= {}), credits);
+  maxCounts(into.visitors, from.visitors);
+  for (const [arm, byType] of Object.entries(from.outcomes)) maxCounts((into.outcomes[arm] ??= {}), byType);
+}
+/** `total = mergeBrand(total, hour)`, without rebuilding `total`. Counts merge only after reportFromHours has admitted the recorded computation basis. */
+export function mergeBrandInto(into: HourBrand, b: HourBrand, tau: number): void {
+  into.decisions = into.decisions + b.decisions;
+  into.outcomes = into.outcomes + b.outcomes;
+  into.visitorsDay = Math.max(into.visitorsDay, b.visitorsDay);
+  if (b.visitorsIncomplete) into.visitorsIncomplete = true;
+  into.rows_hidden = into.rows_hidden + b.rows_hidden;
+  if (into.duplicates || b.duplicates) into.duplicates = { decisions: (into.duplicates?.decisions ?? 0) + (b.duplicates?.decisions ?? 0),
+    outcomes: (into.duplicates?.outcomes ?? 0) + (b.duplicates?.outcomes ?? 0) };
+  if (into.duplicates && !validDuplicateCounts(into.duplicates)) unavailable();
+  if (b.assignments) mergeAssignmentsInto((into.assignments ??= emptyAssignments()), b.assignments);
+  for (const [slot, arms] of Object.entries(b.arms)) addCounts((into.arms[slot] ??= {}), arms);
+  for (const [slot, e] of Object.entries(b.exploration)) { const x = (into.exploration[slot] ??= { decisions: 0, explored: 0 }); x.decisions += e.decisions; x.explored += e.explored; }
+  for (const [name, p] of Object.entries(b.policies)) {
+    const cur = into.policies[name];
+    if (!cur) { into.policies[name] = { policy: p.policy, role: p.role, credits: p.credits,
+      ...(p.legacyCredits !== undefined ? { legacyCredits: p.legacyCredits } : {}),
+      armCredits: { ...p.armCredits }, stats: Object.fromEntries(Object.entries(p.stats).map(([s, st]) => [s, mergeStats(st, emptyStats(), tau)])) }; continue; }
+    if (cur.role !== p.role || JSON.stringify(effectiveReportPolicy(cur.policy)) !== JSON.stringify(effectiveReportPolicy(p.policy))) unavailable();
+    cur.credits += p.credits;
+    // W26 R1.01 (R149): as in `mergeBrand` — the legacy share sums only where
+    // both can say it, and once one hour cannot, the day cannot.
+    if (cur.legacyCredits === undefined || p.legacyCredits === undefined) delete cur.legacyCredits;
+    else cur.legacyCredits += p.legacyCredits;
+    addCounts(cur.armCredits, p.armCredits);
+    for (const [slot, st] of Object.entries(p.stats)) {
+      const held = cur.stats[slot];
+      if (held) mergeStatsInto(held, st, tau); else cur.stats[slot] = mergeStats(emptyStats(), st, tau);
+    }
+  }
 }
 
 // ── the fold, pure ────────────────────────────────────────────────────────────
@@ -875,14 +929,20 @@ function aggregateIdentity(v: unknown, ids: { tenant: string; date: string }, ex
   aggregateMap(a.brands);
 }
 
-/** Admission precedes sorting, repeated merge copies and snapshot parent expansion. */
+/** Admission precedes sorting, the day's merge and snapshot parent expansion. */
 function admitHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand: string; date: string }): void {
   if (!Array.isArray(aggs)) unavailable();
   aggregateBound('aggregateObjects', aggs.length);
   aggregateName(ids.tenant); aggregateName(ids.brand);
   let work = 0, bytes = 0;
-  // mergeBrand copies accumulated containers and remerges overlaps on every hour.
-  const visit = () => aggregateBound('work', work += 4 * Math.max(1, aggs.length));
+  // Lane E6: each visited member is merged once, into the day's running total
+  // (`mergeBrandInto`), and expanded once into its snapshot. The day used to be
+  // rebuilt for every hour summed (`mergeBrand` copied the accumulated total), and
+  // admission charged that copy for every hour of the day: a member cost four
+  // times the day's hour count, so the same traffic was refused later in the day
+  // that it was admitted earlier. A member now costs what one hour's member always
+  // cost, four, because it is merged once.
+  const visit = () => aggregateBound('work', work += 4);
   const policies = new Set<string>(), slots = new Set<string>(), hours = new Set<number>();
   const cells = new Set<string>();
   const cell = (policy: string, slot: string, item: string | null, key: string) => {
@@ -1038,18 +1098,21 @@ function assignmentsAgree(b: HourBrand): boolean {
 }
 
 /** The day report, in the shape `buildReport` makes, from whichever hours are built. */
-export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, opts: { pending: number; missing: number[] }): DayReport {
+export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, opts: { pending: number; missing: number[]; open?: number[] }): DayReport {
   validateReportIds(ids);
   if (!Array.isArray(opts.missing) || opts.missing.length > 24 || new Set(opts.missing).size !== opts.missing.length
     || !Array.from(opts.missing).every(h => Number.isInteger(h) && h >= 0 && h < 24)) unavailable();
+  // Lane E6: the hours summed from a working aggregate, each one of the hours given.
+  const open = opts.open ?? [];
+  if (!Array.isArray(open) || new Set(open).size !== open.length || !open.every(h => Array.isArray(aggs) && aggs.some(a => a?.hour === h))) unavailable();
   aggregateNumber(opts.pending);
   admitHours(aggs, ids);
   const statsCfg: StatsConfig = learn.stats ?? DEFAULT_STATS, slotCfg = slotConfigsOf(learn), tau = statsCfg.tauLearnMs;
   if (!Number.isFinite(now) || !Number.isFinite(tau) || tau <= 0 || !Number.isFinite(statsCfg.n0) || statsCfg.n0 <= 0) unavailable();
   const sorted = [...aggs].sort((a, b) => a.hour - b.hour);
   const computation = compatibleHours(sorted, ids.brand, learn);
-  let hb = emptyBrand();
-  for (const a of sorted) { const b = a.brands[ids.brand]; if (b) hb = mergeBrand(hb, b, tau); }
+  const hb = emptyBrand();
+  for (const a of sorted) { const b = a.brands[ids.brand]; if (b) mergeBrandInto(hb, b, tau); }
   finiteMerged(hb);
   // W21 C1.08 (R108, F25 §7): which of the summed hours can say what the
   // ASSIGNMENT was. An hour that carries this brand but not the member was
@@ -1113,7 +1176,8 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const last = sorted[sorted.length - 1];
   const counts = { decisions: hb.decisions, outcomes: hb.outcomes, visitors: hb.visitorsDay, truncated: sorted.some((a) => a.truncated) || !!hb.visitorsIncomplete,
     ...(hb.duplicates ? { duplicates: hb.duplicates } : {}) };
-  const hours = { source: 'aggregates' as const, built: sorted.map((a) => a.hour), missing: [...opts.missing], ...(last ? { horizonMs: last.horizonMs } : {}) };
+  const hours = { source: 'aggregates' as const, built: sorted.map((a) => a.hour), missing: [...opts.missing],
+    ...(open.length ? { open: [...open].sort((a, b) => a - b) } : {}), ...(last ? { horizonMs: last.horizonMs } : {}) };
   const report: DayReport = {
     tenant: ids.tenant, brand: ids.brand, date: ids.date, builtAt: now,
     // Truncated also signals incomplete visitor coverage after conservative legacy erasure.
@@ -1176,9 +1240,48 @@ async function listKeys(r2: R2Like, prefix: string): Promise<string[]> {
 /** Where an object's name says it starts, so both streams read in time order under a cap; a name without one sorts last. */
 const startOf = (key: string): string => /\/(?:decision|outcome)\/([0-9a-z]{9})-/.exec(key)?.[1] ?? '~';
 
-/** The hour's ledger objects, one at a time and in time order, each decision reduced to what the fold keeps before the next object is opened; at most `cap` of them. */
-export async function loadHourRecords(r2: R2Like, tenant: string, date: string, hour: number, cap = MAX_HOUR_OBJECTS): Promise<{ decisions: CompactDecision[]; outcomes: OutcomeRecord[]; objects: number; read: number; truncated: boolean; source: string; duplicates?: DuplicateWitness[] }> {
-  const all = (await listKeys(r2, `${tenant}/${date}/${pad2(hour)}/`)).filter(isLearningKey).sort((a, b) => (startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : a < b ? -1 : 1));
+/**
+ * Lane E6: one ledger object as an open hour's working fold read it — its name,
+ * the identity storage gave it, and its text exactly as the ledger holds it.
+ */
+export interface LedgerCopy { key: string; etag: string | null; size: number; text: string }
+/** The listing's own word on an object, where storage gives one: a copy taken of another version is not used. */
+interface Listed { etag?: string; size?: number }
+const sameObject = (copy: LedgerCopy, listed: Listed | undefined): boolean =>
+  listed !== undefined && (listed.etag !== undefined ? copy.etag === listed.etag : listed.size !== undefined ? copy.size === listed.size : true);
+async function listObjects(r2: R2Like, prefix: string): Promise<Map<string, Listed>> {
+  const out = new Map<string, Listed>(), cursors = new Set<string>();
+  let cursor: string | undefined, visited = 0;
+  do {
+    aggregateBound('work', ++visited);
+    const page = await r2.list({ prefix, cursor, limit: 1000 });
+    for (const o of page.objects) {
+      aggregateBound('work', ++visited);
+      const meta = o as { key: string; etag?: unknown; size?: unknown };
+      out.set(o.key, { ...(etagShape(meta.etag) ? { etag: meta.etag } : {}), ...(Number.isSafeInteger(meta.size) && Number(meta.size) >= 0 ? { size: Number(meta.size) } : {}) });
+    }
+    if (page.truncated && (!page.cursor || cursors.has(page.cursor))) throw new ReportInputError();
+    cursor = page.truncated ? page.cursor : undefined;
+    if (cursor) cursors.add(cursor);
+  } while (cursor);
+  return out;
+}
+
+/**
+ * The hour's ledger objects, one at a time and in time order, each decision reduced to what the fold keeps before the next object is opened; at most `cap` of them.
+ *
+ * Lane E6: `copies`, given only by an open hour's working fold, holds the
+ * objects that fold has already read. An object the listing still names with the
+ * same identity is taken from there instead of from storage, and charged to the
+ * same raw budgets exactly as if it had been read, so the rows, the order, the
+ * refusals and the aggregate are the ones a read of the ledger gives. Every
+ * object used is handed back in `copies.read`. Without it — the closed hour's
+ * fold — nothing here changes.
+ */
+export async function loadHourRecords(r2: R2Like, tenant: string, date: string, hour: number, cap = MAX_HOUR_OBJECTS,
+  copies?: { held: ReadonlyMap<string, LedgerCopy>; read: LedgerCopy[] }): Promise<{ decisions: CompactDecision[]; outcomes: OutcomeRecord[]; objects: number; read: number; truncated: boolean; source: string; duplicates?: DuplicateWitness[] }> {
+  const listed = copies ? await listObjects(r2, `${tenant}/${date}/${pad2(hour)}/`) : undefined;
+  const all = (listed ? [...listed.keys()] : await listKeys(r2, `${tenant}/${date}/${pad2(hour)}/`)).filter(isLearningKey).sort((a, b) => (startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : a < b ? -1 : 1));
   const keys = all.slice(0, cap);
   const decisions: CompactDecision[] = [], outcomes: OutcomeRecord[] = [];
   const identity = new ReportRowIdentity(tenant), budget = { objects: 0, bytes: 0 };
@@ -1186,9 +1289,11 @@ export async function loadHourRecords(r2: R2Like, tenant: string, date: string, 
   let lines = 0;
   for (const key of keys) {
     const stream = key.includes('/decision/') ? 'decision' : key.includes('/outcome/') ? 'outcome' : null;
-    const obj = await r2.get(key);
+    const copy = copies?.held.get(key), held = copy !== undefined && sameObject(copy, listed?.get(key)) ? copy : undefined;
+    const obj = held ? { size: held.size, text: async () => held.text } : await r2.get(key);
     if (!obj) throw new ReportUnavailableError();
     const text = await rawText(obj, budget);
+    if (copies) copies.read.push(held ?? { key, etag: etagShape(obj.etag) ? obj.etag : null, size: aggregateBytes(text), text });
     contents.push(await fingerprint(text));
     if (!stream) continue;
     let offset = 0;
@@ -1490,6 +1595,93 @@ export async function cleanupHourlyState(r2: R2Agg, tenant: string, shards = SHA
   await conditionalBody(r2, shardKey(tenant, 0), plan.targets[0]!, coordinator.etag);
 }
 
+/**
+ * The rows of a loaded hour the fold counts: an erased visitor's rows hidden, a
+ * decision recorded under another measurement basis than its slot's set aside.
+ * Shared by the closed hour's fold and the open hour's working fold, so the two
+ * read one hour the same way.
+ */
+function foldableRows(loaded: { decisions: CompactDecision[]; outcomes: OutcomeRecord[] }, tombs: ReadonlyMap<string, Tombstone>,
+  slotCfg: Record<string, SlotLearnConfig>): { decisions: CompactDecision[]; outcomes: OutcomeRecord[] } {
+  const decisions = withoutErased(loaded.decisions, tombs).filter(d => (d.entry.measurementBasis ?? 'served-v1') === (slotCfg[d.entry.slot]?.measurementBasis ?? 'served-v1')), outcomes = withoutErased(loaded.outcomes, tombs);
+  return { decisions, outcomes };
+}
+
+/** Phase one over the hour's rows, before any shard is visited: the decisions' counts and exposures, the duplicates, the outcomes and named outcomes, the rows an erasure hid. */
+function hourBrands(loaded: { decisions: CompactDecision[]; outcomes: OutcomeRecord[]; duplicates?: DuplicateWitness[] }, decisions: readonly CompactDecision[],
+  outcomes: readonly OutcomeRecord[], tombs: ReadonlyMap<string, Tombstone>, policies: readonly RolePolicy[], statsCfg: StatsConfig): Record<string, HourBrand> {
+  const brands = foldDecisions(decisions, policies, statsCfg);
+  for (const duplicate of loaded.duplicates ?? []) if (!hidden(tombs, duplicate)) {
+    const counts = (brands[duplicate.brand] ??= emptyBrand()).duplicates ??= { decisions: 0, outcomes: 0 };
+    counts[duplicate.stream === 'decision' ? 'decisions' : 'outcomes'] += duplicate.count;
+  }
+  for (const o of outcomes) {
+    const hb = (brands[o.brand] ??= emptyBrand());
+    hb.outcomes += 1;
+    const named = namedOutcomeRow((hb.named ??= emptyNamedOutcomes()), o);
+    if (named) named.outcomes += 1;
+  }
+  if (tombs.size) {
+    for (const d of loaded.decisions) if (hidden(tombs, d)) (brands[d.entry.brand] ??= emptyBrand()).rows_hidden += 1;
+    for (const o of loaded.outcomes) if (hidden(tombs, o)) (brands[o.brand] ??= emptyBrand()).rows_hidden += 1;
+  }
+  for (const hb of Object.values(brands)) for (const p of policies) policyHour(hb, p);
+  return brands;
+}
+
+/** After one shard has folded the hour: the date's distinct visitors it holds, by brand and by assignment. */
+function countMembership(brands: Record<string, HourBrand>, unaccounted: Set<string>, state: ShardState, date: string): void {
+  // W22 R1.02: the day this hour belongs to, which for a repaired older hour
+  // is its own date's membership and not the newer one the shard has moved on
+  // to. The per-brand uncertainty flag belongs to the current date, which is
+  // the only date that carries the witnesses it is derived from.
+  for (const [brand, ids] of Object.entries(seenOn(state, date))) {
+    const hb = (brands[brand] ??= emptyBrand());
+    hb.visitorsDay += ids.length;
+    // W21 C1.08: the same membership, split by ASSIGNMENT. A shard that cannot
+    // account for every id it just counted — a state written before this
+    // release holds the ids and not the assignments — makes the whole brand's
+    // hour unable to say, because a denominator drawn from part of a
+    // membership is a wrong number, not a smaller one.
+    const record = state.enrollment?.[date]?.[brand] ?? {};
+    if (ids.some(visitor => !record[visitor]?.arms.length)) { unaccounted.add(brand); continue; }
+    const ha = (hb.assignments ??= emptyAssignments());
+    for (const visitor of ids) {
+      const enrolled = record[visitor]!;
+      for (const arm of enrolled.arms) ha.visitors[arm] = (ha.visitors[arm] ?? 0) + 1;
+      for (const [arm, types] of Object.entries(enrolled.outcomes ?? {})) {
+        const byType = (ha.outcomes[arm] ??= {});
+        for (const type of types) byType[type] = (byType[type] ?? 0) + 1;
+      }
+    }
+  }
+  if (state.seenDate === date) for (const brand of Object.keys(state.seenIncomplete ?? {})) (brands[brand] ??= emptyBrand()).visitorsIncomplete = true;
+}
+
+/** Every shard visited: each brand's policies, assignments, named outcomes and recorded computation, as the aggregate carries them. */
+function closeBrands(brands: Record<string, HourBrand>, policies: readonly RolePolicy[], learn: LearnConfig, unaccounted: ReadonlySet<string>,
+  creditedSlots: ReadonlyMap<string, Set<string>>, horizonMs: number, ringCap: number): void {
+  for (const [brand, b] of Object.entries(brands)) {
+    for (const p of policies) policyHour(b, p);
+    // W21 C1.08: the hour says what the assignment was, or it says nothing at
+    // all. An hour with no decisions still says so — its empty answer is the
+    // truth — and one whose membership this fold could not account for withdraws
+    // the member entirely, which is what `coverage.unassignedHours` then names.
+    if (unaccounted.has(brand)) delete b.assignments; else b.assignments ??= emptyAssignments();
+    b.named ??= emptyNamedOutcomes();
+    try {
+      b.computation = computationBasis(learn,
+        Object.entries(b.policies).map(([name, p]) => ({ name, role: p.role, policy: p.policy })),
+        [...Object.keys(b.arms), ...Object.keys(b.exploration), ...Object.values(b.policies).flatMap(p => Object.keys(p.stats)), ...(creditedSlots.get(brand) ?? [])],
+        { source: 'hourly-ring', horizonMs, ringCap });
+    } catch (error) {
+      // Preserve numeric data with explicitly unknown metadata; day construction refuses it.
+      if (!(error instanceof ReportInputError) && !(error instanceof ReportBudgetExceeded && error.budget === 'summaryBytes')) throw error;
+      b.computation = null;
+    }
+  }
+}
+
 /** One hour, folded: its ledger objects read once, every shard visited, the aggregate written. Re-running an hour never doubles it. */
 export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; hour: number }, learn: LearnConfig, now = Date.now(), opts: BuildOptions = {}, retentionEnv?: RetentionEnv): Promise<HourAggregate> {
   validateReportIds({ tenant, brand: tenant, date: at.date });
@@ -1552,7 +1744,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     if (cached.generation !== pending.generation || cached.objects !== loaded.objects || cached.objectsRead !== loaded.read
       || (aggregate.body !== pending.aggregate && aggregate.etag !== pending.aggregateEtag)) recoveryConflict();
   }
-  const decisions = withoutErased(loaded.decisions, tombs).filter(d => (d.entry.measurementBasis ?? 'served-v1') === (slotCfg[d.entry.slot]?.measurementBasis ?? 'served-v1')), outcomes = withoutErased(loaded.outcomes, tombs);
+  const { decisions, outcomes } = foldableRows(loaded, tombs, slotCfg);
   const admittedRetention: RetentionStamp[] = [];
   if (retentionEnv && !pending) {
     for (const record of [...decisions.map(row => row.entry), ...outcomes]) {
@@ -1567,22 +1759,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
         admittedRetention.push(requireRetention(retentionEnv, state.seenRetention?.[brand]?.[visitor], tenant, 'hourly'));
     }
   }
-  const brands = foldDecisions(decisions, policies, statsCfg);
-  for (const duplicate of loaded.duplicates ?? []) if (!hidden(tombs, duplicate)) {
-    const counts = (brands[duplicate.brand] ??= emptyBrand()).duplicates ??= { decisions: 0, outcomes: 0 };
-    counts[duplicate.stream === 'decision' ? 'decisions' : 'outcomes'] += duplicate.count;
-  }
-  for (const o of outcomes) {
-    const hb = (brands[o.brand] ??= emptyBrand());
-    hb.outcomes += 1;
-    const named = namedOutcomeRow((hb.named ??= emptyNamedOutcomes()), o);
-    if (named) named.outcomes += 1;
-  }
-  if (tombs.size) {
-    for (const d of loaded.decisions) if (hidden(tombs, d)) (brands[d.entry.brand] ??= emptyBrand()).rows_hidden += 1;
-    for (const o of loaded.outcomes) if (hidden(tombs, o)) (brands[o.brand] ??= emptyBrand()).rows_hidden += 1;
-  }
-  for (const hb of Object.values(brands)) for (const p of policies) policyHour(hb, p);
+  const brands = hourBrands(loaded, decisions, outcomes, tombs, policies, statsCfg);
   const byShardD = new Map<number, CompactDecision[]>(), byShardO = new Map<number, OutcomeRecord[]>();
   for (const d of decisions) { const s = shardOf(d.visitor_id, shards); const list = byShardD.get(s) ?? []; list.push(d); byShardD.set(s, list); }
   for (const o of outcomes) { const s = shardOf(o.visitor_id, shards); const list = byShardO.get(s) ?? []; list.push(o); byShardO.set(s, list); }
@@ -1622,31 +1799,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     }
     const r = foldShard(state, byShardD.get(s) ?? [], byShardO.get(s) ?? [], ctx);
     if (!r.folded) ringsFolded = false;
-    // W22 R1.02: the day this hour belongs to, which for a repaired older hour
-    // is its own date's membership and not the newer one the shard has moved on
-    // to. The per-brand uncertainty flag belongs to the current date, which is
-    // the only date that carries the witnesses it is derived from.
-    for (const [brand, ids] of Object.entries(seenOn(r.state, at.date))) {
-      const hb = (brands[brand] ??= emptyBrand());
-      hb.visitorsDay += ids.length;
-      // W21 C1.08: the same membership, split by ASSIGNMENT. A shard that cannot
-      // account for every id it just counted — a state written before this
-      // release holds the ids and not the assignments — makes the whole brand's
-      // hour unable to say, because a denominator drawn from part of a
-      // membership is a wrong number, not a smaller one.
-      const record = r.state.enrollment?.[at.date]?.[brand] ?? {};
-      if (ids.some(visitor => !record[visitor]?.arms.length)) { unaccounted.add(brand); continue; }
-      const ha = (hb.assignments ??= emptyAssignments());
-      for (const visitor of ids) {
-        const enrolled = record[visitor]!;
-        for (const arm of enrolled.arms) ha.visitors[arm] = (ha.visitors[arm] ?? 0) + 1;
-        for (const [arm, types] of Object.entries(enrolled.outcomes ?? {})) {
-          const byType = (ha.outcomes[arm] ??= {});
-          for (const type of types) byType[type] = (byType[type] ?? 0) + 1;
-        }
-      }
-    }
-    if (r.state.seenDate === at.date) for (const brand of Object.keys(r.state.seenIncomplete ?? {})) (brands[brand] ??= emptyBrand()).visitorsIncomplete = true;
+    countMembership(brands, unaccounted, r.state, at.date);
     // Preserve the established no-change through/seen body. Changed bodies get a
     // nonce too: a later replay must never recreate an old conditional-write ETag.
     let body = original;
@@ -1663,25 +1816,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     await finishHour(r2, tenant, coordinator, staged[0]!, pending, states, staged, aggregate);
     return cached!;
   }
-  for (const [brand, b] of Object.entries(brands)) {
-    for (const p of policies) policyHour(b, p);
-    // W21 C1.08: the hour says what the assignment was, or it says nothing at
-    // all. An hour with no decisions still says so — its empty answer is the
-    // truth — and one whose membership this fold could not account for withdraws
-    // the member entirely, which is what `coverage.unassignedHours` then names.
-    if (unaccounted.has(brand)) delete b.assignments; else b.assignments ??= emptyAssignments();
-    b.named ??= emptyNamedOutcomes();
-    try {
-      b.computation = computationBasis(learn,
-        Object.entries(b.policies).map(([name, p]) => ({ name, role: p.role, policy: p.policy })),
-        [...Object.keys(b.arms), ...Object.keys(b.exploration), ...Object.values(b.policies).flatMap(p => Object.keys(p.stats)), ...(creditedSlots.get(brand) ?? [])],
-        { source: 'hourly-ring', horizonMs, ringCap });
-    } catch (error) {
-      // Preserve numeric data with explicitly unknown metadata; day construction refuses it.
-      if (!(error instanceof ReportInputError) && !(error instanceof ReportBudgetExceeded && error.budget === 'summaryBytes')) throw error;
-      b.computation = null;
-    }
-  }
+  closeBrands(brands, policies, learn, unaccounted, creditedSlots, horizonMs, ringCap);
   const agg: HourAggregate = { version: 1, generation, tenant, date: at.date, hour: at.hour, from, to, builtAt: now, objects: loaded.objects, objectsRead: loaded.read, truncated: loaded.truncated, horizonMs, shards, ringsFolded, brands };
   const body = JSON.stringify(agg);
   preparedAggregate(body, tenant, at, options, learn);
@@ -1758,17 +1893,27 @@ async function staleHour(r2: R2Agg, tenant: string, which: { date: string; hour:
   return earlierBuiltInRun || [...builtAt].some(([from, when]) => from < at.from && when > mine);
 }
 
-/** A saved summary proves only exact known hour membership, not content or policy freshness. */
+/**
+ * A saved summary proves only exact known hour membership, not content or policy freshness.
+ * Lane E6: an hour the summary names as `open` was summed from its working aggregate, which
+ * the open-hour fold republishes as it changes; only the final hours are compared here.
+ */
 function hasReportedHours(report: DayReport | null, expected: ReadonlySet<number>): boolean {
   const hours = report?.hours;
-  if (hours?.source !== 'aggregates' || !Array.isArray(hours.built) || hours.built.length > 24 || hours.built.length !== expected.size) return false;
+  if (hours?.source !== 'aggregates' || !Array.isArray(hours.built) || hours.built.length > 24) return false;
+  const open: unknown = hours.open ?? [];
+  if (!Array.isArray(open) || open.length > 24) return false;
   const seen = new Set<number>();
+  let final = 0;
   for (let i = 0; i < hours.built.length; i++) {
     const h = hours.built[i];
-    if (!Object.hasOwn(hours.built, i) || typeof h !== 'number' || !Number.isInteger(h) || h < 0 || h > 23 || seen.has(h) || !expected.has(h)) return false;
+    if (!Object.hasOwn(hours.built, i) || typeof h !== 'number' || !Number.isInteger(h) || h < 0 || h > 23 || seen.has(h)) return false;
     seen.add(h);
+    if (open.includes(h)) continue;
+    if (!expected.has(h)) return false;
+    final++;
   }
-  return true;
+  return final === expected.size && open.every(h => seen.has(h as number));
 }
 
 /**
@@ -1903,14 +2048,319 @@ export async function loadHours(r2: R2Like, tenant: string, date: string, now: n
   return { aggs, missing };
 }
 
+// ── the open hour (lane E6) ───────────────────────────────────────────────────
+//
+// A closed hour is folded once, five minutes after it ends, and until then its
+// records are only on the ledger: a day report either left that hour out or —
+// on a day with no folded hour yet — read the whole day's raw, which one busy
+// day is more than a report may read. So the five-minute job also folds the hour
+// that is still open into a WORKING aggregate, beside the final ones: the same
+// fold, over the objects the queue has written so far, against the shards as
+// they stand, written to its own key and never into the shards. The fold keeps
+// a copy of every ledger object it read (the hour's ledger copy), so each run
+// reads from the ledger only what the queue wrote since the last one; a report
+// build refreshes the working aggregate the same way, reading only those
+// minutes of raw. The hour's final fold is untouched: it reads the ledger
+// itself, as it always has, and once the hour's final fold is due the working
+// objects are removed.
+
+/** An open hour's working aggregate: an `HourAggregate`, the shape a final hour has. */
+export const openKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/open/${date}/${pad2(hour)}.json`;
+/**
+ * An open hour's ledger copy, in segments: each five-minute run writes one, holding the objects it read from
+ * the ledger, as the ledger holds them. `openLedgerKey` names the hour's segments; each is `<that>.<id>`.
+ */
+export const openLedgerKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/open/${date}/${pad2(hour)}.ledger`;
+const openPrefix = (tenant: string) => `aggregates/${tenant}/open/`;
+
+/**
+ * The hours a working aggregate stands for at `now`, oldest first: the hour that
+ * is open, and the hour before it until its own fold is due — `CLOSE_GRACE_MS`
+ * after it ends, the moment `closedHours` and `loadHours` first name it. Pure.
+ */
+export function openHours(now: number): Array<{ date: string; hour: number; from: number }> {
+  const current = hourOf(now), out: Array<{ date: string; hour: number; from: number }> = [];
+  if (now < current.from + CLOSE_GRACE_MS) { const previous = hourOf(current.from - HOUR_MS); out.push({ date: previous.date, hour: previous.hour, from: previous.from }); }
+  out.push({ date: current.date, hour: current.hour, from: current.from });
+  return out;
+}
+
+/** A segment's body: one header line naming each object, then the objects' text back to back, unescaped, so it is the size of what it copies. */
+function ledgerSegmentBody(tenant: string, at: { date: string; hour: number }, copies: readonly LedgerCopy[]): string {
+  const header = { version: 1, tenant, date: at.date, hour: at.hour, objects: copies.map(c => ({ key: c.key, etag: c.etag, size: c.size, length: c.text.length })) };
+  return JSON.stringify(header) + '\n' + copies.map(c => c.text).join('');
+}
+/** The hour's segments among the working area's keys, in the order they were written. */
+const ledgerSegments = (keys: Iterable<string>, tenant: string, at: { date: string; hour: number }): string[] => {
+  const base = openLedgerKey(tenant, at.date, at.hour) + '.';
+  return [...keys].filter(key => key.startsWith(base) && /^[0-9a-z]{1,16}$/.test(key.slice(base.length))).sort();
+};
+/**
+ * What the hour's segments hold: each object once, and which segment holds it. A segment that cannot be read
+ * exactly is not read at all, and its objects are read from the ledger instead; together they are read under
+ * one `aggregateBytes` budget, past which the rest are read from the ledger too.
+ */
+async function readLedgerCopy(r2: R2Like, tenant: string, at: { date: string; hour: number }, segments: readonly string[]):
+  Promise<{ held: Map<string, LedgerCopy>; holds: Map<string, string[]> }> {
+  const held = new Map<string, LedgerCopy>(), holds = new Map<string, string[]>(), budget = { bytes: 0, cells: 0 };
+  const prefix = `${tenant}/${at.date}/${pad2(at.hour)}/`;
+  for (const segment of segments) {
+    try {
+      const obj = await r2.get(segment);
+      if (obj === null) continue;
+      const body = await storedReportText(obj, budget, 'aggregateBytes', 'aggregateBytes');
+      const end = body.indexOf('\n');
+      if (end < 0) continue;
+      const header: unknown = JSON.parse(body.slice(0, end));
+      if (!objectMap(header) || header.version !== 1 || header.tenant !== tenant || header.date !== at.date || header.hour !== at.hour
+        || !Array.isArray(header.objects) || header.objects.length > MAX_HOUR_OBJECTS) continue;
+      const copies: LedgerCopy[] = [];
+      let offset = end + 1, exact = true;
+      for (const entry of header.objects as unknown[]) {
+        if (!objectMap(entry) || typeof entry.key !== 'string' || !entry.key.startsWith(prefix) || !isLearningKey(entry.key)
+          || (entry.etag !== null && !etagShape(entry.etag)) || !Number.isSafeInteger(entry.size) || Number(entry.size) < 0
+          || !Number.isSafeInteger(entry.length) || Number(entry.length) < 0) { exact = false; break; }
+        const text = body.slice(offset, offset + Number(entry.length));
+        offset += Number(entry.length);
+        if (text.length !== entry.length || aggregateBytes(text) !== entry.size) { exact = false; break; }
+        copies.push({ key: entry.key, etag: entry.etag as string | null, size: Number(entry.size), text });
+      }
+      if (!exact || offset !== body.length) continue;
+      for (const copy of copies) held.set(copy.key, copy);
+      holds.set(segment, copies.map(c => c.key));
+    } catch (error) { if (error instanceof ReportBudgetExceeded) break; }
+  }
+  return { held, holds };
+}
+
+/** A fold of the open hour is waiting for the closed hour's own transaction, which always comes first. */
+class OpenHourDeferred extends Error { constructor() { super('Hourly fold in progress'); } }
+
+/**
+ * The shards as the next final fold will find them: read and checked as it
+ * reads them, and cleaned in memory exactly as `cleanupHourlyState` would clean
+ * them. Never written. A final fold left half way is finished by the catch-up,
+ * and an open hour is not folded against it until then.
+ */
+async function committedShards(r2: R2Like, tenant: string, shards: number, tombs: ReadonlyMap<string, Tombstone>, now: number): Promise<ShardState[]> {
+  const budget = { bytes: 0, cells: 0 }, states: ShardState[] = [];
+  for (let s = 0; s < shards; s++) {
+    const state = shardState((await readHourBody(r2, shardKey(tenant, s), budget)).body, s);
+    if (state.pending !== undefined || state.cleanup !== undefined) throw new OpenHourDeferred();
+    states.push(cleanupShard(state, tenant, tombs, now));
+  }
+  return states;
+}
+
+/**
+ * The working aggregate of one open hour: `buildHour`'s fold, step for step, over
+ * the records loaded so far and against `states`, which it advances exactly as
+ * the final fold advances the shards it writes — so the next open hour, folded
+ * after it, sees this one in its rings. Nothing is written here.
+ */
+function foldWorkingHour(tenant: string, at: { date: string; hour: number }, learn: LearnConfig, now: number, options: Required<BuildOptions>,
+  loaded: Awaited<ReturnType<typeof loadHourRecords>>, tombs: ReadonlyMap<string, Tombstone>, states: ShardState[], retentionEnv?: RetentionEnv): HourAggregate {
+  const from = hourStart(at.date, at.hour), to = from + HOUR_MS;
+  const { shards, horizonMs, ringCap } = options;
+  const statsCfg: StatsConfig = learn.stats ?? DEFAULT_STATS, slotCfg = slotConfigsOf(learn), policies = policiesOf(learn);
+  computationBasis(learn, policies.map(p => ({ name: p.name, role: p.role, policy: p })), [], { source: 'hourly-ring', horizonMs, ringCap });
+  if (!Number.isFinite(statsCfg.tauLearnMs) || statsCfg.tauLearnMs <= 0) unavailable();
+  for (const cfg of Object.values(slotCfg)) if (!['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'].includes(cfg.reward)
+    || !['unit', 'revenue', 'margin'].includes(cfg.objective ?? 'unit')) unavailable();
+  const { decisions, outcomes } = foldableRows(loaded, tombs, slotCfg);
+  if (retentionEnv) {
+    for (const record of [...decisions.map(row => row.entry), ...outcomes]) {
+      requireRetention(retentionEnv, record.retention?.ledger, tenant, 'ledger');
+      requireRetention(retentionEnv, record.retention?.hourly, tenant, 'hourly');
+    }
+    // Untagged cumulative history cannot be mixed into a newly expirable shard.
+    for (const state of states) {
+      for (const ring of Object.values(state.rings)) for (const row of ring) requireRetention(retentionEnv, row.retention?.hourly, tenant, 'hourly');
+      for (const [brand, ids] of Object.entries(state.seen)) for (const visitor of ids)
+        requireRetention(retentionEnv, state.seenRetention?.[brand]?.[visitor], tenant, 'hourly');
+    }
+  }
+  const brands = hourBrands(loaded, decisions, outcomes, tombs, policies, statsCfg);
+  const byShardD = new Map<number, CompactDecision[]>(), byShardO = new Map<number, OutcomeRecord[]>();
+  for (const d of decisions) { const s = shardOf(d.visitor_id, shards); const list = byShardD.get(s) ?? []; list.push(d); byShardD.set(s, list); }
+  for (const o of outcomes) { const s = shardOf(o.visitor_id, shards); const list = byShardO.get(s) ?? []; list.push(o); byShardO.set(s, list); }
+  const creditedSlots = new Map<string, Set<string>>();
+  // An open hour has no aggregate of its own, so this is a first fold, never a re-fold.
+  const ctx: FoldContext = { tenant, date: at.date, from, to, now, refold: false, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
+    retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
+  let ringsFolded = true;
+  const unaccounted = new Set<string>();
+  for (let s = 0; s < shards; s++) {
+    const r = foldShard(states[s]!, byShardD.get(s) ?? [], byShardO.get(s) ?? [], ctx);
+    if (!r.folded) ringsFolded = false;
+    countMembership(brands, unaccounted, r.state, at.date);
+  }
+  closeBrands(brands, policies, learn, unaccounted, creditedSlots, horizonMs, ringCap);
+  const agg: HourAggregate = { version: 1, generation: crypto.randomUUID(), tenant, date: at.date, hour: at.hour, from, to, builtAt: now,
+    objects: loaded.objects, objectsRead: loaded.read, truncated: loaded.truncated, horizonMs, shards, ringsFolded, brands };
+  preparedAggregate(JSON.stringify(agg), tenant, at, options, learn);
+  return agg;
+}
+
+/**
+ * The job's part of the copy, after a fold: one new segment with what this run read from the ledger, and the
+ * segments it can no longer use removed — one holding an object storage has since changed or no longer names,
+ * or one naming an erased visitor. An object that names an erased visitor is never kept: it is read from the
+ * ledger at each fold, exactly as the final fold reads it, so the copy holds no row an erasure has hidden after
+ * the fold that first saw the erasure, and nothing it says differs from the ledger. The objects of a removed
+ * segment that are still good go into the new one, which is written before anything is removed.
+ */
+async function keepLedgerCopy(r2: R2Agg & { delete?(key: string): Promise<unknown> }, tenant: string, at: { date: string; hour: number }, now: number,
+  read: readonly LedgerCopy[], held: ReadonlyMap<string, LedgerCopy>, holds: ReadonlyMap<string, string[]>, tombs: ReadonlyMap<string, Tombstone>): Promise<void> {
+  const erasedIds = [...tombs.keys()];
+  const names = (c: LedgerCopy) => erasedIds.some(visitor => c.text.includes(visitor));
+  const used = new Set(read.filter(c => held.get(c.key) === c).map(c => c.key));
+  const drop = [...holds].filter(([, keys]) => keys.some(key => !used.has(key) || names(held.get(key)!))).map(([segment]) => segment);
+  const dropped = new Set(drop.flatMap(segment => holds.get(segment)!));
+  const fresh = read.filter(c => (held.get(c.key) !== c || dropped.has(c.key)) && !names(c));
+  if (fresh.length) {
+    const body = ledgerSegmentBody(tenant, at, fresh);
+    // A segment too large to read back is not written: its objects are read from the ledger at the next fold.
+    if (aggregateBytes(body) <= REPORT_LIMITS.aggregateBytes) {
+      await r2.put(`${openLedgerKey(tenant, at.date, at.hour)}.${ts36(now)}`, body, { httpMetadata: { contentType: 'text/plain' } });
+    }
+  }
+  if (typeof r2.delete === 'function') for (const segment of drop) await r2.delete(segment);
+}
+
+/** The working aggregate without its write identity and build time: what it says, to tell a changed one from a rewrite. */
+const workingContent = (agg: unknown): string => {
+  if (!objectMap(agg)) return '';
+  const { generation: _generation, builtAt: _builtAt, ...rest } = agg;
+  void _generation; void _builtAt;
+  return JSON.stringify(rest);
+};
+
+export interface OpenHourResult {
+  /** The open hours folded this run; `copied` of their `read` objects came from the ledger copy, the rest from the ledger. */
+  folded: Array<{ date: string; hour: number; objects: number; read: number; copied: number; truncated: boolean; decisions: number; outcomes: number; changed: boolean }>;
+  failed: Array<{ date: string; hour: number; error: string }>;
+  /** Dates whose day report was published again because an open hour changed (the job only). */
+  published: string[];
+  /** Working objects removed because their hour is no longer open (the job only). */
+  removed: number;
+}
+
+/**
+ * Fold the open hours into their working aggregates. The five-minute job calls
+ * it with `start` and `publish`: it starts the working aggregate of an open hour
+ * the queue has written to, refreshes the ones it has started, publishes the
+ * day again where one changed, and removes the working objects of an hour that
+ * is no longer open. A report build calls it for its own date without either: it
+ * refreshes only what the job has started, and publishes the day itself.
+ */
+export async function foldOpenHours(r2: R2Agg & { delete?(key: string): Promise<unknown> }, tenant: string, learn: LearnConfig, now = Date.now(),
+  opts: BuildOptions & { date?: string; start?: boolean; publish?: boolean } = {}, retentionEnv?: RetentionEnv): Promise<OpenHourResult> {
+  validateReportIds({ tenant, brand: tenant, date: opts.date ?? hourOf(now).date });
+  if (!Number.isSafeInteger(now) || now < 0 || !Number.isFinite(new Date(now).getTime())) throw new ReportInputError();
+  const options = buildOptions(opts);
+  const result: OpenHourResult = { folded: [], failed: [], published: [], removed: 0 };
+  const stored = new Set(await listKeys(r2, openPrefix(tenant)));
+  const open = openHours(now), live = new Set<string>();
+  let targets: typeof open = [];
+  for (const at of open) {
+    if (!opts.start && !stored.has(openKey(tenant, at.date, at.hour))) continue;           // a report refreshes what the job started
+    const final = hourKey(tenant, at.date, at.hour);
+    if ((await r2.list({ prefix: final, limit: 1 })).objects.some(o => o.key === final)) continue;   // a final hour is never worked on
+    targets.push(at); live.add(`${at.date}/${pad2(at.hour)}`);
+  }
+  // A report of one date folds only when an open hour is on it — and then every
+  // open hour, in order, because the later one is folded on the earlier's rings.
+  if (opts.date !== undefined && !targets.some(at => at.date === opts.date)) targets = [];
+  const changedDates = new Set<string>();
+  if (targets.length) {
+    let states: ShardState[] | undefined, tombs: Map<string, Tombstone> | undefined;
+    for (const at of targets) {
+      try {
+        // The shards as the final folds will find them. After an hour that could
+        // not be folded they are read again, without it, which is how its final
+        // fold leaves them while it stays unfolded.
+        tombs ??= await loadTombstones(r2, tenant);
+        states ??= await committedShards(r2, tenant, options.shards, tombs, now);
+        const { held, holds } = await readLedgerCopy(r2, tenant, at, ledgerSegments(stored, tenant, at)), read: LedgerCopy[] = [];
+        const loaded = await loadHourRecords(r2, tenant, at.date, at.hour, options.maxObjects, { held, read });
+        const key = openKey(tenant, at.date, at.hour);
+        if (!loaded.objects && !stored.has(key)) continue;                                   // nothing written to it yet
+        const agg = foldWorkingHour(tenant, at, learn, now, options, loaded, tombs, states, retentionEnv);
+        const copied = read.filter(c => held.get(c.key) === c).length;
+        // The job keeps the copy; a report build reads it and leaves it as it is.
+        if (opts.start) await keepLedgerCopy(r2, tenant, at, now, read, held, holds, tombs);
+        // The job compares, to publish the day again only when the hour changed; a report build publishes it anyway.
+        let previous = '';
+        if (opts.start) {
+          try { const obj = await r2.get(key); if (obj) previous = workingContent(JSON.parse(await storedReportText(obj, { bytes: 0, cells: 0 }, 'aggregateBytes', 'aggregateBytes'))); }
+          catch { previous = ''; }
+        }
+        const changed = previous !== workingContent(agg);
+        if (changed) { await r2.put(key, JSON.stringify(agg), { httpMetadata: { contentType: 'application/json' } }); changedDates.add(at.date); }
+        const sum = (k: 'decisions' | 'outcomes') => Object.values(agg.brands).reduce((n, b) => n + b[k], 0);
+        result.folded.push({ date: at.date, hour: at.hour, objects: agg.objects, read: agg.objectsRead, copied, truncated: agg.truncated,
+          decisions: sum('decisions'), outcomes: sum('outcomes'), changed });
+      } catch (error) {
+        result.failed.push({ date: at.date, hour: at.hour, error: error instanceof Error ? error.message : String(error) });
+        // The shards in memory may be half folded: the next hour reads them again.
+        states = undefined;
+      }
+    }
+  }
+  if (opts.publish) for (const date of [...changedDates].sort()) {
+    try { await publishAggregateDay(r2, { tenant, brand: tenant, date }, learn, now, true); result.published.push(date); }
+    catch (error) { result.failed.push({ date, hour: -1, error: error instanceof Error ? error.message : String(error) }); }
+  }
+  // The job keeps the working objects of the open hours only: an hour whose
+  // final fold is due, or done, keeps none, so neither the copy nor the
+  // working aggregate outlives the hour by more than one run.
+  if (opts.start && typeof r2.delete === 'function') {
+    const prefix = openPrefix(tenant);
+    for (const key of stored) {
+      const m = /^(\d{4}-\d{2}-\d{2})\/(\d{2})\.(?:json|ledger(?:\.[0-9a-z]+)?)$/.exec(key.slice(prefix.length));
+      if (m && live.has(`${m[1]}/${m[2]}`)) continue;
+      await r2.delete(key); result.removed++;
+    }
+  }
+  return result;
+}
+
+/**
+ * The working aggregates a date's report sums beside its final hours: one per
+ * open hour of the date that has no final aggregate. An unreadable one is left
+ * out, exactly as an open hour always was; it never refuses the day.
+ */
+async function loadWorkingHours(r2: R2Like, tenant: string, date: string, now: number, finals: readonly HourAggregate[]): Promise<HourAggregate[]> {
+  const out: HourAggregate[] = [], have = new Set(finals.map(a => a.hour));
+  const hours = openHours(now).filter(at => at.date === date && !have.has(at.hour));
+  if (!hours.length) return out;
+  // One listing says which working aggregates exist; only those are read.
+  let present: Set<string>;
+  try { present = new Set(await listKeys(r2, `${openPrefix(tenant)}${date}/`)); } catch { return out; }
+  for (const at of hours) {
+    if (!present.has(openKey(tenant, date, at.hour))) continue;
+    try {
+      const obj = await r2.get(openKey(tenant, date, at.hour));
+      if (obj === null) continue;
+      const a: unknown = JSON.parse(await storedReportText(obj, { bytes: 0, cells: 0 }, 'aggregateBytes', 'aggregateBytes'));
+      aggregateIdentity(a, { tenant, date }, at.hour);
+      out.push(a);
+    } catch { /* left out */ }
+  }
+  return out;
+}
+
 export { ReportTooLarge } from './report';
 
 /** Scheduler writes must acknowledge persistence and must never fall back to raw records. */
 async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, now: number, strict: boolean): Promise<DayReport | null> {
   const { aggs, missing } = await loadHours(r2, ids.tenant, ids.date, now);
-  if (!aggs.length) { if (strict) unavailable(); return null; }
+  // Lane E6: the open hours' working aggregates, beside the final ones and named as open.
+  const working = await loadWorkingHours(r2, ids.tenant, ids.date, now, aggs);
+  if (!aggs.length && !working.length) { if (strict) unavailable(); return null; }
   const tombs = await loadTombstones(r2, ids.tenant);
-  const report = reportFromHours(aggs, ids, learn, now, { pending: tombs.size, missing });
+  const report = reportFromHours([...aggs, ...working], ids, learn, now, { pending: tombs.size, missing, ...(working.length ? { open: working.map(a => a.hour) } : {}) });
   const body = canonicalReportJson(report);
   try { await r2.put(reportKey(ids.tenant, ids.brand, ids.date), body, { httpMetadata: { contentType: 'application/json' } }); }
   catch (error) { if (strict) throw error; /* The public response still carries the computation. */ }
@@ -1924,6 +2374,11 @@ async function publishAggregateDay(r2: R2Agg, ids: { tenant: string; brand: stri
  */
 export async function runDayReport(r2: R2Agg, ids: { tenant: string; brand: string; date: string }, learn: LearnConfig, reporting: ReportPolicy[] | null, now = Date.now(), opts: { maxObjects?: number } = {}, retentionEnv?: RetentionEnv, resolved?: ResolvedConflicts): Promise<DayReport> {
   if (reporting === null) {
+    // Lane E6: an open hour the five-minute job has started is brought up to
+    // the second first — the minutes of raw the queue has written since that
+    // run, and nothing before them. A refusal leaves the job's last working
+    // aggregate standing, as a closed hour's failed fold leaves its last one.
+    try { await foldOpenHours(r2, ids.tenant, learn, now, { date: ids.date }, retentionEnv); } catch { /* the job's last working aggregate stands */ }
     const report = await publishAggregateDay(r2, ids, learn, now, false);
     if (report) return report;
   }

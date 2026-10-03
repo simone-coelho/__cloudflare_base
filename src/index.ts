@@ -1,6 +1,6 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
-import { catchUp, runDayReport } from '@/learn/hourly';
+import { catchUp, foldOpenHours, runDayReport } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
@@ -287,7 +287,8 @@ export default {
           ));
         }
         // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;
-        // Then retry missing/stale day publications within the bounded aggregate-backed lookback.
+        // Then retry missing/stale day publications within the bounded aggregate-backed lookback,
+        // then fold the open hour into its working aggregate (lane E6).
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
@@ -295,6 +296,11 @@ export default {
             if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
             if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
             if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
+            // Lane E6: then the hour that is still open, into its working aggregate, so a day report
+            // reads one aggregate per hour and only the minutes of raw the queue has written since.
+            const open = await foldOpenHours(env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], tenant, learn, Date.now(), { start: true, publish: true }, env)
+              .catch(() => { console.error('open hour fold failed'); return null; });
+            if (open && (open.folded.length || open.failed.length || open.removed)) console.log('open hour fold; hours/objects/copied/failed/published/removed', open.folded.length, open.folded.reduce((n, h) => n + h.read, 0), open.folded.reduce((n, h) => n + h.copied, 0), open.failed.length, open.published.length, open.removed);
           })().catch((e) => console.error('hourly fold failed')));
         }
         break;
