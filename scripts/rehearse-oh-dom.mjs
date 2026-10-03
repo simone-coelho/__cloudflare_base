@@ -200,7 +200,10 @@ function pageHelpers({ vis, txt, own, shown }) {
       if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius });
     }
     const wm = document.getElementById('wordmark');
+    const siteEl = document.getElementById('site') || document.body, navBtn = document.querySelector('#site .site-header .mainnav button');
     return { yellows: [...new Set(yellows)], bars, fills, body: getComputedStyle(document.body).backgroundColor, font: getComputedStyle(document.body).fontFamily,
+      site: getComputedStyle(siteEl).backgroundColor, siteFont: getComputedStyle(siteEl).fontFamily, navFont: navBtn ? getComputedStyle(navBtn).fontFamily : '',
+      fontLoaded: Boolean(document.fonts && document.fonts.check('500 16px Figtree')),
       ink: getComputedStyle(document.querySelector('#site') || document.body).color, wordmark: wm ? { text: txt(wm), color: getComputedStyle(wm).color, shown: vis(wm).ok } : null };
   };
   window.__s1 = { vis, txt, snapshot, framePixels, scrollThrough, pendingLoad, store: storeView, look: lookOf };
@@ -690,8 +693,13 @@ async function lgLook(label, { full = false } = {}) {
   ok(`${label}: every filled button is the brand colour, white text, 4 px radius`, other.length === 0 && brandFills.every((f) => f.color === 'rgb(255, 255, 255)' && f.radius === '4px') && (!full || brandFills.length > 0),
     other.length ? other.slice(0, 3).map((f) => `${f.el} “${f.text}” ${f.bg}`).join(' ~ ') : `${brandFills.length} brand button(s)${brandFills.filter((f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '4px').map((f) => ` · ${f.el} ${f.color} r${f.radius}`).join('')}`);
   if (full) {
-    ok(`${label}: white, in Inter, the wordmark “OH.” in the brand colour #A50034`, L.body === 'rgb(255, 255, 255)' && /\bInter\b/.test(L.font) && Boolean(L.wordmark && L.wordmark.shown && L.wordmark.text === 'OH.' && L.wordmark.color === rgb('#A50034')),
-      `${L.body} · ${L.font.slice(0, 40)} · ${L.wordmark ? `${L.wordmark.text} ${L.wordmark.color}` : 'no wordmark'}`);
+    // Design §10 (M1b): lg.com's warm page, #F0ECE4, under the whole site; a geometric sans close to LG's (Figtree), loaded, first
+    // in the site's and the nav's computed family, never Inter; the wordmark in the brand colour.
+    const first = (f) => String(f || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
+    ok(`${label}: lg.com’s warm page #F0ECE4 under the site, set in Figtree (a geometric sans close to LG’s, loaded), the wordmark “OH.” in the brand colour #A50034`,
+      L.body === rgb('#F0ECE4') && L.site === rgb('#F0ECE4') && first(L.siteFont) === 'Figtree' && first(L.navFont || L.siteFont) === 'Figtree' && L.fontLoaded
+        && Boolean(L.wordmark && L.wordmark.shown && L.wordmark.text === 'OH.' && L.wordmark.color === rgb('#A50034')),
+      `body ${L.body} · site ${L.site} · ${first(L.siteFont)}${L.fontLoaded ? ' (loaded)' : ' (not loaded)'} · nav ${first(L.navFont)} · ${L.wordmark ? `${L.wordmark.text} ${L.wordmark.color}` : 'no wordmark'}`);
   }
   return L;
 }
@@ -1176,10 +1184,49 @@ try {
   }
   await lgLook('the boot page', { full: true });
   {
+    // Design §10: the hero slide on screen (the one under the viewport's centre) carries A1's art from /oh/img/art/, loaded,
+    // and lg.com's headline panel: a white panel with a curved edge (the slide's ::before, as computed) and dark type on it,
+    // the headline on the panel's side of the slide.
+    const H = await evaluate(`(() => { const { vis, txt } = window.__s1;
+      const slides = [...document.querySelectorAll('#slot-hero .p1-hero')].filter((e) => vis(e).ok);
+      const slide = slides.find((e) => { const r = e.getBoundingClientRect(); return r.left <= innerWidth / 2 && r.right >= innerWidth / 2; }) || slides[0];
+      if (!slide) return null;
+      const r = slide.getBoundingClientRect();
+      const img = [...slide.querySelectorAll('.m1-scene--art img')].find((i) => vis(i).ok) || null;
+      const ir = img ? img.getBoundingClientRect() : null;
+      const pb = getComputedStyle(slide, '::before');
+      const h = slide.querySelector('h3'); const hr = h ? h.getBoundingClientRect() : null;
+      const lum = (c) => { const m = /rgba?\\(([^)]+)\\)/.exec(c || ''); if (!m) return 1; const [R, G, B] = m[1].split(',').map(Number); return (0.2126 * R + 0.7152 * G + 0.0722 * B) / 255; };
+      return { cid: (slide.closest('[data-cid]') || slide).dataset.cid || '', src: img ? new URL(img.currentSrc || img.src, location.href).pathname : '', loaded: Boolean(img && img.complete && img.naturalWidth > 0),
+        covers: Boolean(ir && ir.width >= r.width * 0.9 && ir.height >= r.height * 0.9),
+        panel: { on: pb.content !== 'none' && pb.content !== 'normal', white: /rgb\\(255, 255, 255\\)/.test(\`\${pb.backgroundImage} \${pb.backgroundColor}\`), radius: pb.borderTopRightRadius },
+        head: h ? { text: txt(h), shown: vis(h).ok, color: getComputedStyle(h).color, dark: lum(getComputedStyle(h).color) < 0.25, left: Boolean(hr && hr.left >= r.left - 1 && hr.right <= r.left + r.width * 0.55) } : null };
+    })()`);
+    ok('the hero slide carries A1’s art from /oh/img/art/, loaded and filling the slide', Boolean(H && H.src.startsWith('/oh/img/art/') && H.loaded && H.covers), H ? `${H.cid} · ${H.src || 'no art image'}${H.loaded ? '' : ' (not loaded)'}` : 'no hero slide on screen');
+    ok('and lg.com’s headline panel: a white panel with a curved edge, the headline dark on it, on the panel’s side', Boolean(H && H.panel.on && H.panel.white && H.panel.radius && H.panel.radius !== '0px' && H.head && H.head.shown && H.head.dark && H.head.left),
+      H ? `panel ${H.panel.on ? 'on' : 'none'}, ${H.panel.white ? 'white' : 'not white'}, radius ${H.panel.radius} · “${H.head ? H.head.text.slice(0, 50) : ''}” ${H.head ? H.head.color : ''}` : 'no hero slide');
+    // Design §10: "Discover OH. deals" is a bento of picture tiles with headlines over them: every tile an art image from
+    // /oh/img/art/ covering the tile, loaded, its headline drawn inside the tile, the tiles of more than one size.
+    const D = await evaluate(`(() => { const { vis, txt } = window.__s1;
+      return [...document.querySelectorAll('#slot-deals .p1-deal')].filter((d) => vis(d).ok).map((d) => {
+        const tile = d.querySelector('.p1-deal-tile'); const tr = tile ? tile.getBoundingClientRect() : null;
+        const img = tile ? [...tile.querySelectorAll('.m1-scene--art img')].find((i) => vis(i).ok) || null : null; const ir = img ? img.getBoundingClientRect() : null;
+        const h = tile ? tile.querySelector('h3') : null; const hr = h && vis(h).ok ? h.getBoundingClientRect() : null;
+        return { cid: d.dataset.cid || '', w: tr ? Math.round(tr.width) : 0, h: tr ? Math.round(tr.height) : 0, src: img ? new URL(img.currentSrc || img.src, location.href).pathname : '',
+          loaded: Boolean(img && img.complete && img.naturalWidth > 0), covers: Boolean(ir && tr && ir.width >= tr.width * 0.95 && ir.height >= tr.height * 0.95),
+          head: h ? txt(h) : '', over: Boolean(hr && tr && hr.left >= tr.left - 1 && hr.right <= tr.right + 1 && hr.top >= tr.top - 1 && hr.bottom <= tr.bottom + 1) };
+      });
+    })()`);
+    const bad = D.filter((t) => !(t.src.startsWith('/oh/img/art/') && t.loaded && t.covers && t.head && t.over));
+    const sizes = new Set(D.map((t) => `${Math.round(t.w / 20)}x${Math.round(t.h / 20)}`));
+    ok(`the deals bento’s ${D.length} tiles are pictures with headlines over them: A1’s art filling each tile, its headline drawn inside it, the tiles of more than one size`, D.length === 4 && bad.length === 0 && sizes.size > 1,
+      bad.map((t) => `${t.cid}: ${t.src || 'no art image'}${t.loaded ? '' : ' unloaded'}${t.covers ? '' : ' not filling'}${t.over ? '' : ' headline outside'}`).join(' ~ ') || D.map((t) => `${t.cid} ${t.w}×${t.h}`).join(' · '));
+  }
+  {
     const H = (await storeNow()).header;
-    ok('a white header with the category nav, the search box, Sign in and the cart with its count', H.ok && H.bg === 'rgb(255, 255, 255)' && (await storeNow()).cartCount.length > 0
+    ok('the header on the page colour, #F0ECE4, with the category nav, the search box, Sign in and the cart with its count', H.ok && H.bg === rgb('#F0ECE4') && (await storeNow()).cartCount.length > 0
       && await evaluate("Boolean(document.querySelector('#site .site-header form[data-store-search] input[name=\"q\"]')) && window.__s1.vis('#site .site-header [data-act=\"store-cart-open\"]').ok"), `${H.bg} · ${H.h}px · cart ${(await storeNow()).cartCount.join(',') || 'no count'}`);
-    ok('the service strip sits on the panel colour, #F5F5F5', BOOT['the service strip'].bg === rgb('#F5F5F5'), BOOT['the service strip'].bg || 'not on screen');
+    ok('the service strip sits on lg.com’s service band, #E6E1D8', BOOT['the service strip'].bg === rgb('#E6E1D8'), BOOT['the service strip'].bg || 'not on screen');
     const D = await SITE_TOOLS();
     ok('the director is a presenter’s tool: on a stranger’s load it is collapsed to its slim rail, the machine panel put away', D.collapsed && D.rail && !D.machine, `collapsed ${D.collapsed} · rail ${D.rail} · machine ${D.machine} · the site ${D.site} of ${D.vw}px`);
   }

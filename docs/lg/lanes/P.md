@@ -937,3 +937,21 @@ Each claim is kept unless a ruling changed it.
 - **The three known items** above, for the config's owner.
 - **The engine's ledger stall on local rigs** (finding 4).
 - **The hosted run** of both suites, on the owner's go.
+
+#### Addendum, 20:53–21:02: the look is design §10 (M1b's parity restyle, `fa063e7`)
+
+**The three look checks, rewritten to §10's values, read as computed style.** Each fails for the right reason on the previous look.
+- **The page.** `body` and `#site` are lg.com's warm #F0ECE4. The site's and the nav's computed font family starts with Figtree (a geometric sans close to LG's), and `document.fonts` reports it loaded. The wordmark is still #A50034. This replaces "white, in Inter".
+- **The header** sits on the page colour, #F0ECE4. This replaces "a white header".
+- **The service strip** sits on lg.com's band, #E6E1D8. This replaces "#F5F5F5".
+- **Kept unchanged:** no yellow and no black bar, and every labelled, enabled, filled button in the brand colour with white text and a 4 px radius (25 on the boot page).
+
+**Two new checks on the boot page.**
+- **The hero slide under the viewport's centre** carries A1's art from `/oh/img/art/`, loaded and filling the slide (`hero_nfl_gift_card.avif`). It has lg.com's headline panel: the slide's computed `::before` is white with a curved edge (radius 50%), and the headline is dark (#111) and sits on the panel's side.
+- **The deals bento's four tiles** are each A1's art filling the tile, loaded, with the headline drawn inside the tile. The tiles come in more than one size: 668×901, 334×420, 334×420 and 684×420.
+
+**The run.** I restarted the rig first, so it lists `/oh/img/art/` (the art answered 200 `image/webp`), on `state-s2b`, now on the new UTC day.
+- **DOM: 466 of 466.**
+- The beat documents were re-anchored in place at 20:52:41 by another session's seed (the hosted restyle). They are not my bytes, and I left them.
+- My rig is stopped; 9134, 9284 and 9184 are free.
+- `scripts/rehearse-oh-dom.mjs` is now 1,983 lines, sha256 `3a3203a271c1…`.
