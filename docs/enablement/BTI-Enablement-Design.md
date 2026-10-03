@@ -15,7 +15,7 @@
 
 ## 1. Purpose and readers
 
-**What we are making.** An internal enablement package that tells the finished product as one story, at each reader's depth: marketing, account executives (AEs), pre-sales solutions engineers (SEs) and the engineers an SE brings. It is published on the internal site `https://edge-platform-bti.expedge.workers.dev`, behind a passphrase gate (§7), and every piece with words to read also exists as a Word document for sharing in Teams. We provide the content; the receiving teams decide how they present it. There are no slide decks.
+**What we are making.** An internal enablement package that tells the finished product as one story, at each reader's depth: marketing, account executives (AEs), pre-sales solutions engineers (SEs) and the engineers an SE brings. It is published on the internal site `https://edge-platform-bti.expedge.workers.dev`, behind a passphrase gate (§7), and six pieces also exist as Word documents for sharing in Teams (§6). We provide the content; the receiving teams decide how they present it. There are no slide decks.
 
 **What the material describes.** The finished product, Behavioral Targeting and Intelligence, as it is when the current work is complete: its capabilities in the present tense. Every capability we can deliver counts, including one built once for a customer or shown in an earlier demo. The AI add-ons a customer may switch on with credits (AI search, the style concierge, generated imagery) count too, told as optional. Nothing about build state, plans, stages, rollout order, "designed", "not yet", "today versus later" or "open" appears anywhere in the material (the brief's §1; §9's gate).
 
@@ -36,13 +36,13 @@
 | (b) The marketing narrative | A marketer | `content/what-it-is.md` | `/what-it-is` | `word/Enablement-What-It-Is-v2.0.docx` |
 | (c) The account executives' narrative | An account executive | `content/selling-it.md` | `/selling-it` | `word/Enablement-Selling-It-v2.0.docx` |
 | (d) The solutions engineers' narrative | A solutions engineer | `content/how-it-works-and-where-it-runs.md` | `/how-it-works` | `word/Enablement-How-It-Works-and-Where-It-Runs-v2.0.docx` |
-| (e) How it works, interactive | A solutions engineer, or the engineer they bring | `content/how-it-works-interactive.md` for its words; its own page, script and stylesheet for its instruments | `/how-it-works-interactive` | `word/Enablement-How-It-Works-Interactive-v2.0.docx` |
-| (f) See it work | A marketer | `content/see-it-work.md` for its words; its own page, script and stylesheet for its instruments | `/see-it-work` | `word/Enablement-See-It-Work-v2.0.docx` |
+| (e) How it works, interactive | A solutions engineer, or the engineer they bring | `content/how-it-works-interactive.md` for its words; its own page, script and stylesheet for its instruments | `/how-it-works-interactive` | none |
+| (f) See it work | A marketer | `content/see-it-work.md` for its words; its own page, script and stylesheet for its instruments | `/see-it-work` | none |
 | (g) Where Opal and AI Credits Fit, and Where They Never Do | An account executive who quotes the engine beside Opal | `content/credits-source.html` for the page; `content/credits.md`, the same text, for Word | `/credits` | `word/Enablement-Where-Opal-and-AI-Credits-Fit-v2.0.docx` |
 | (h) The glossary | A marketer; every entry holds for the other readers | `GLOSSARY.md` | `/glossary` | `word/Enablement-Glossary-v2.0.docx` |
 | (i) Which demo shows which story | An account executive | `content/demos.md` | `/demos` | `word/Enablement-Which-Demo-Shows-Which-Story-v2.0.docx` |
 
-Paths are relative to `docs/enablement/`; pages are addresses on the site. The Word copies of the two interactive pages carry their words, the explanation above each instrument included; the instruments themselves live on the pages.
+Paths are relative to `docs/enablement/`; pages are addresses on the site. The two interactive pages have no Word copy: their point is the instruments, and their markdown exists for the text check only.
 
 ---
 
@@ -180,7 +180,7 @@ Paths are relative to `docs/enablement/`; pages are addresses on the site. The W
 
 ### 3.5 (e) How it works, interactive
 
-- **Reader:** a solutions engineer, or the engineer they bring. **Owner:** H1, which builds the page (`enablement/site/how-it-works-interactive.html`, `.js` and `.css`) and writes its visible text as `content/how-it-works-interactive.md`. **Address:** `/how-it-works-interactive`. **Word copy:** `word/Enablement-How-It-Works-Interactive-v2.0.docx`, from the markdown text.
+- **Reader:** a solutions engineer, or the engineer they bring. **Owner:** H1, which builds the page (`enablement/site/how-it-works-interactive.html`, `.js` and `.css`) and writes its visible text as `content/how-it-works-interactive.md`. **Address:** `/how-it-works-interactive`. **Word copy:** none; the markdown text exists for the text check only.
 - **Rule:** the lane's, first and last.
 - **What it is:** the Vantage page (`public/vantage/how-it-works.html`, `.js` and `.css`; how it was built and reviewed is in `docs/verizon/lanes/W3.md`), grown for the product. Its storefront becomes a neutral example brand; its demo beats become examples; its demo-specific sentences are removed or made general; its constants are the engine's defaults from `docs/verizon/explainer/FACTS.md` §2: K of 1.8, a memory of 14 days by default with the note that a brand sets each dimension's memory, and the entry and exit lines at 0.60 and 0.45.
 - **The instruments, kept from the Vantage page, in its order:** interest on sliders for K, the memory, the entry and exit lines and the next touch's weight; a live visitor with meters; one slot scored in full, with its weights, its cap and its pins; the regional prior and how it blends away; memory on two horizons; learning behind the dial; the published documents; the receipt, recomputed; and the self-test, which recomputes the published arithmetic on the page's own worked example, a record the page names as an example.
@@ -188,7 +188,7 @@ Paths are relative to `docs/enablement/`; pages are addresses on the site. The W
 
 ### 3.6 (f) See it work
 
-- **Reader:** a marketer who has never seen the product. **Owner:** M1, which builds the page (`enablement/site/see-it-work.html`, `.js` and `.css`) and writes its visible text as `content/see-it-work.md`. **Address:** `/see-it-work`. **Word copy:** `word/Enablement-See-It-Work-v2.0.docx`, from the markdown text.
+- **Reader:** a marketer who has never seen the product. **Owner:** M1, which builds the page (`enablement/site/see-it-work.html`, `.js` and `.css`) and writes its visible text as `content/see-it-work.md`. **Address:** `/see-it-work`. **Word copy:** none; the markdown text exists for the text check only.
 - **Rule:** the lane's, first and last.
 - **What it is:** the stylist's four moves, happening on a mock storefront of a fictional fashion-and-home brand as the reader clicks. Each move is explained above its instrument in plain words before anything is shown.
 - **The four scenes, in order:**
@@ -373,13 +373,13 @@ No other performance figure appears, no SLA language, and no comparison figure f
 **One source per piece.** Each piece's text lives in one source, and its renderings are made from it:
 
 - (b), (c) and (d): `docs/enablement/content/<piece>.md`.
-- (e) and (f): the page's visible text, in order, as `content/how-it-works-interactive.md` and `content/see-it-work.md`. The instruments are the page's own HTML, script and stylesheet, which the lane builds by hand.
+- (e) and (f): the page's visible text, in order, as `content/how-it-works-interactive.md` and `content/see-it-work.md`, for the text check only; neither has a Word copy. The instruments are the page's own HTML, script and stylesheet, which the lane builds by hand.
 - (g): two sources. The page is built from the corrected HTML `content/credits-source.html`, and the Word copy from `content/credits.md`, the same text in markdown (§3.7). The text check holds the page to both.
 - (h): `docs/enablement/GLOSSARY.md`.
 - (i): `content/demos.md`, which P1 writes from §3.9.
 - (a): its words in the page builder (§3.1).
 
-The page and the Word copy are renderings of the source. A change is made in the source first; the page is then re-rendered, or for (e) and (f) edited by its lane together with its text, and the Word copy is rebuilt. A Word file is never edited by hand.
+The page and the Word copy are renderings of the source. A change is made in the source first; the page is then re-rendered, or for (e) and (f) edited by its lane together with its text, and any Word copy is rebuilt. A Word file is never edited by hand.
 
 **The markdown, written for both renderings.**
 
@@ -398,7 +398,7 @@ node scripts/md2docx.mjs <source.md> docs/enablement/word/Enablement-<Title>-v2.
   "2.0" "<Month D, YYYY>" "Internal: Optimizely only"
 ```
 
-The subtitle is the reader, for example "For marketing"; it names no code commit. "Prepared for" is the reader's team, for example "Optimizely marketing". The version is the bare number, because the converter prints its own "Version" label. File names are `Enablement-<Title>-v2.0.docx`, the piece's title in capitalized words: they carry no package name, so a rename does not rename files, and they carry their version. There are eight, one for each piece but the landing page: `Enablement-What-It-Is`, `Enablement-Selling-It`, `Enablement-How-It-Works-and-Where-It-Runs`, `Enablement-How-It-Works-Interactive`, `Enablement-See-It-Work`, `Enablement-Where-Opal-and-AI-Credits-Fit` (built from `content/credits.md`), `Enablement-Glossary` and `Enablement-Which-Demo-Shows-Which-Story`, each `-v2.0.docx`. The seven `-v1.0.docx` files are superseded, the status piece's and the old demo map's among them; the lead removes them, since lanes delete nothing. The converter needs the `docx` package installed once per machine, outside the repository (its header says how); W uses an existing install and installs nothing.
+The subtitle is the reader, for example "For marketing"; it names no code commit. "Prepared for" is the reader's team, for example "Optimizely marketing". The version is the bare number, because the converter prints its own "Version" label. File names are `Enablement-<Title>-v2.0.docx`, the piece's title in capitalized words: they carry no package name, so a rename does not rename files, and they carry their version. There are six: `Enablement-What-It-Is`, `Enablement-Selling-It`, `Enablement-How-It-Works-and-Where-It-Runs`, `Enablement-Where-Opal-and-AI-Credits-Fit` (built from `content/credits.md`), `Enablement-Which-Demo-Shows-Which-Story` and `Enablement-Glossary`, each `-v2.0.docx`. The landing page and the two interactive pages have none: the landing page is navigation, and the interactive pages' point is their instruments. The seven `-v1.0.docx` files are superseded, the status piece's and the old demo map's among them; the lead removes them, since lanes delete nothing. The converter needs the `docx` package installed once per machine, outside the repository (its header says how); W uses an existing install and installs nothing.
 
 **The page, a designed rendering of the same text.** Each content page wraps its text in `<article data-source="…">`, naming its source or sources. Everything inside the article is the source's text; everything outside it is the chrome in §7. A page may choose any layout, type and color inside the brand, but may not drop or reword text inside the article. Words that are not the source's are marked on the page as additions: `data-chrome` for a rule's label or a scroll hint, `data-lead` for a lead line above an interactive element, `data-added` for an addition a ruling made, with its reason. A figure's own text sits inside its inline SVG, outside the comparison; its caption is a `<figcaption>`, inside it. The interactive pages follow the same rule: the article names their markdown text, and the words their scripts draw are either in that text or held as data the check can read without running a script.
 
@@ -491,7 +491,7 @@ One writer per path. Every lane reads anything and writes only its own paths; no
 | **D1** figures | `docs/enablement/figures/**`, `docs/enablement/lanes/D1.md` | The three figures, redrawn (§3.10) |
 | **P1** pages and site | `enablement/site/**` except M1's and H1's files, `enablement/render-pages.mjs`, `enablement/render-check.mjs`, `docs/enablement/content/credits-source.html`, `docs/enablement/content/credits.md`, `docs/enablement/content/demos.md`, `docs/enablement/lanes/P1.md` | (a); (i), rewritten from §3.9; (g)'s corrections; the chrome; the pages for (b), (c), (d), (g), (h) and (i); the builder and the text check, extended to (e) and (f) |
 | **E2** worker, gate and preflight | `enablement/worker.mjs`, `enablement/worker.test.mjs`, `wrangler.enablement.toml`, `enablement/check-site.mjs`, `docs/enablement/lanes/E2.md` | The preflight, widened for version 2 (§7) |
-| **W** Word builds | `docs/enablement/word/**`, `docs/enablement/lanes/W.md` | Eight Word copies, `-v2.0.docx` (§6) |
+| **W** Word builds | `docs/enablement/word/**`, `docs/enablement/lanes/W.md` | Six Word copies, `-v2.0.docx` (§6) |
 | **R** independent review | `docs/enablement/lanes/R.md` (rounds appended) | A verdict per piece, page, figure and Word copy |
 
 **The lead** commits by path at each integration point; moves the retired records into `research/` and removes the superseded Word copies (§8); answers any fact that none of S5, S4 and S2 holds; deploys the site's worker with lane E2's command and checks from outside (§7).
@@ -631,7 +631,7 @@ Rows before the one marked **Version 2 begins** are the first version's history.
 | 2026-10-02 | **This design is rewritten as version 2,** §1 to §12 describing the rebuilt package. The first version, committed at `d41b4f6`, is kept whole as an engineering record, with its master rows and verdicts, facts discipline, carried paragraphs, open decisions, list of superseded documents and follow-ups, for the lead to file under `research/` (§8) | E1, on the lead's brief |
 | 2026-10-02 | **The glossary for version 2.** Removed: the three label entries (Built, Designed, Open), "Demo only", "Durable recovery", "Generation 1, Generation 2" (whose words the text check's state-word scan fails on any page), the deprecation of "real-time", and the sentence on labels in "How to read it". Rewritten in the present tense: every entry that carried build state, among them Opal, ODP, Feature Experimentation, CMAB, Learning, Recording, Receipt, Memory, Console, Action weight and Typed search; the clauses that forbade a speed or a timing figure are gone from Edge and First paint. "Bucket" becomes the story's image of an interest, and "Before, during, after" no longer claims to be every piece's order. Kept: the bans on "stage" and "phase" as build words, with "Stage" now naming delivery too, and everything else. With the placement ruling below, 120 entries, 100 defined and 20 deprecated. This goes beyond the literal instruction, which named only what forbids a performance figure or the story's words, because version 2 bars build-state words anywhere and the review gate checks for labels (§3.8) | E1, on the lead's brief |
 | 2026-10-02 | **Only the four fixed sentences are carried word for word.** The first version's carried paragraphs, P1 to P10, are retired; each narrative writes "what it is" and "where AI fits" in its own words to §4.6's points | E1 |
-| 2026-10-02 | **Eight Word copies, version 2.0,** the two interactive pages' texts included, since their lanes' briefs name a Word copy; the seven `-v1.0.docx` files are superseded, and the lead removes them (§6) | E1, from the lanes' briefs |
+| 2026-10-02 | **Six Word copies, version 2.0:** what it is, selling it, how it works and where it runs, the credits page, the demo map and the glossary. The two interactive pages have no Word copy; their markdown exists for the text check only. The seven `-v1.0.docx` files are superseded, and the lead removes them (§6) | lead |
 | 2026-10-02 | **The demo map is rewritten under version 2** by P1 as `content/demos.md`, its page's only source: each part of the story with the demos that show it, then each demo's beats, agreeing with (c)'s demo table, with OH by its address and the storefront for internal viewing only; §3.9 describes it as written | P1; recorded by E1 |
 | 2026-10-02 | **The preflight widens for version 2** (§7): the page list loses `status` and gains the two interactive pages; each interactive page may load its own stylesheet and script from the site; the link allowlist adds OH's worker, which (c) links | E1, for lane E2 |
 | 2026-10-02 | **Placement is defined, not deprecated.** The brief's reason "it honors the placements they sell" uses the word, so the glossary defines a placement as a section of a page that a merchandiser sells or reserves, honored through a pin; "slot" stays the word for the place the engine decides, and the pin entry names placements (§3.8) | lead |
