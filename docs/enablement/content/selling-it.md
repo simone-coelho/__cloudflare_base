@@ -72,13 +72,15 @@ Ask the question first; the number follows.
 
 ## Objections have short, true answers
 
-![Each objection comes with the sentence to say and the sentence never to say.](../figures/shot-ae-objections.png)
+Each objection comes with the sentence to say and the sentence never to say.
 
 > "How else would it learn? I don't understand."
 
 A program lead at a luxury retailer, on how a page could learn its order without versions to learn from.
 
 The answer was one sentence: an ordering is a ranking.
+
+![The first seven cover what the engine is, how fast it decides and who stays in control.](../figures/shot-ae-objections-1.png)
 
 **Isn't this a recommendations engine?**
 
@@ -121,6 +123,8 @@ Never say: "Trust the model."
 Say: It records what works from the first day and changes nothing until the brand turns the dial.
 
 Never say: "It optimizes itself."
+
+![The other six cover identity, privacy, the rest of the suite, credits, the mobile app and timing.](../figures/shot-ae-objections-2.png)
 
 **Do we need to know who the visitor is?**
 

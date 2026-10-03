@@ -19,7 +19,7 @@
 
 ## One visitor's first click becomes the slot's answer in five steps
 
-A stranger in Illinois arrives from a paid-social ad for a wool coat and views a tailored wool coat. The figure follows that one view to the edit, a four-piece slot on the homepage; the lines under it give this visitor's numbers.
+A stranger in Illinois, arriving from a paid-social ad for a wool coat, views a tailored wool coat, and the figure follows that one view to the edit, a four-piece slot on the homepage.
 
 ![One click, from the event to the slot's answer](../figures/se-signal-chain.png)
 
@@ -39,9 +39,9 @@ Every decision runs the same ten steps, from identity and consent to outcomes an
 
 ## Six quantities carry the mechanism, and each one can be worked by hand
 
-Each card is one quantity: its formula, a drawing, one moment of the same visitor worked by hand, and what it means. The engine's defaults are K = 1.8, an entry line at 0.60, an exit line at 0.45, a memory τ of 14 days and a blend constant k of 1; the example brand weighs a view 1, as the engine's own table does, and its slot weights and its region's shares are invented for this page.
+Each card shows one quantity at the engine's defaults, worked by hand on an example invented for this page.
 
-![Six instruments, each worked at the engine's defaults.](../figures/shot-se-instruments.png)
+![Interest rises with evidence and reaches half strength at K = 1.8.](../figures/shot-se-instrument-interest.png)
 
 **Interest**
 
@@ -53,6 +53,8 @@ An impression weighs nothing: seeing is not choosing.
 
 Interest is graded and never reaches 1, so every click counts and the tenth counts for less than the first.
 
+![Twelve quiet days drain coats from R = 3 to R = 1.27.](../figures/shot-se-instrument-decay.png)
+
 **Decay**
 
 `R(t) = R · e^(−Δt/τ)`
@@ -61,6 +63,8 @@ Coats stands at R = 3 when the visitor leaves. After 12 quiet days at τ = 14 da
 
 Interest drains on its own, its evidence halving about every 9.7 days at the default memory, so nobody writes an expiration rule.
 
+![Three views cross the entry line, and quiet days drain coats below the exit line.](../figures/shot-se-instrument-entry-release.png)
+
 **Entry and release**
 
 `join at a ≥ 0.60; leave only at a < 0.45`
@@ -68,6 +72,8 @@ Interest drains on its own, its evidence halving about every 9.7 days at the def
 At 0.625 the visitor joins the coats audience, since a ≥ 0.60 means R ≥ 2.7. Left alone, coats falls below 0.45, where R < 1.4727, after 14 × ln(3/1.4727) = 9.96 days, and the visitor is released.
 
 The gap stops a visitor flickering in and out; time alone can release a visitor but never admit one, and the release is on the receipt like the entry.
+
+![The grid scores the hero's coat story term by term on arrival.](../figures/shot-se-instrument-score.png)
 
 **A piece's score**
 
@@ -89,6 +95,8 @@ Every score follows one order:
 8. Merchandising multiplies, held between half and double by default.
 9. Learning multiplies by lift^γ.
 
+![The region's share of the blend fades as the visitor's own interests grow.](../figures/shot-se-instrument-prior.png)
+
 **The regional prior**
 
 `λ = k / (k + Σa)`
@@ -98,6 +106,8 @@ Every score follows one order:
 A stranger has Σa = 0, so λ = 1 and each ã is the region's share: coats 1, boots 0.6, casual 1, tailored 0.8. After the first view, Σa = 1.07 and λ = 1/(1 + 1.07) = 0.48; after three views, Σa = 2.13 and λ = 0.32.
 
 The region speaks for a stranger and steps back as the visitor's own interests grow; its counts carry no visitor ids, and a thin region falls back to its country, then everyone.
+
+![On arrival the pinned campaign holds place 1, and the cap allows two coats.](../figures/shot-se-instrument-cap-pin.png)
 
 **The diversity cap and the pin**
 
@@ -109,13 +119,15 @@ The edit weighs category 0.3 and style 0.2, carries the ad's seed and allows two
 
 The brand's rules come first: a pin holds the place a merchandiser sold, a pinned piece that may not show is simply not shown, and the cap keeps one value from filling a slot.
 
-## Learning waits behind the dial, and every decision keeps a receipt
+The engine's defaults are K = 1.8, an entry line at 0.60, an exit line at 0.45, a memory τ of 14 days and a blend constant k of 1; the example brand weighs a view 1, as the engine's own table does, and its slot weights and its region's shares are invented for this page.
 
-It records what works from the first day and changes nothing until the brand turns the dial.
+## Learning waits behind the dial, and every decision keeps a receipt
 
 The figure shows the learning dial, the holdout that keeps a comparison, and the receipt for the tailored coats after the first click.
 
 ![Learning behind the dial, and the receipt](../figures/se-learning-and-receipt.png)
+
+It records what works from the first day and changes nothing until the brand turns the dial.
 
 - An outcome is credited to the last decision before it for the same visitor, session and piece: by default within 30 minutes for a click, 6 hours for an add to cart and 7 days for a purchase.
 - If the visitor buys the tailored boots the edit served, the purchase is credited to that decision and counted for that piece in its context.
@@ -126,25 +138,29 @@ The figure shows the learning dial, the holdout that keeps a comparison, and the
 
 ## It runs at the edge, and every setting is a published document
 
-The engine is one Worker per deployment, in the data center nearest each request. Each customer has its own deployment for staging and for production, and each brand inside it is a tenant whose data never pools with another's.
-
-We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.
-
 The figure shows what runs where: the Worker, what each Worker keeps, each deployment's own storage, and the products beside it.
 
 ![Where the engine runs on Cloudflare](../figures/architecture.png)
 
+The engine is one Worker per deployment, in the data center nearest each request. Each customer has its own deployment for staging and for production, and each brand inside it is a tenant whose data never pools with another's.
+
+We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.
+
 A decision is arithmetic over the visitor's state and the brand's published settings, held at the edge, with no AI model and no round trip to a central database. Every decision and outcome also lands in the brand's own warehouse, on a cadence the brand sets, from a minute to a day.
 
-Four published documents hold everything the brand tunes; the console and the API change them, every save becomes a new revision, and a change is in force without a software release. Imported priors, a warehouse's starting beliefs per piece and context, sit beside them.
+Four published documents hold everything the brand tunes; the console and the API change them, every save becomes a new revision, and a change is in force without a software release.
 
 ![How the engine is configured](../figures/se-published-documents.png)
 
+Imported priors, a warehouse's starting beliefs per piece and context, sit beside them.
+
 ## The site connects once, and privacy holds on every request
 
-One script starts the visitor's session, sends events or reads the brand's existing data layer, and receives every slot's decision by id in one call. When no answer arrives in time, the site's own default stands, and the brand's server can fetch the first page's decisions before the page is sent.
+One script starts the visitor's session, sends events or reads the brand's existing data layer, and receives every slot's decision by id in one call.
 
 ![One connection, three products beside the engine](../figures/se-integration.png)
+
+When no answer arrives in time, the site's own default stands, and the brand's server can fetch the first page's decisions before the page is sent.
 
 The front end is built once, and every other capability is switched on in configuration. Developers work from the integration kit: the SDK, the API reference, the payload schemas and a staging connection check.
 
@@ -165,9 +181,7 @@ The engine calls no AI model to decide. Opal is where people ask and generative 
 
 ## Every ask says what we need and what we use it for
 
-Each row names what the engine needs, what it is used for and who provides it.
-
-![What a customer provides, and what we use it for.](../figures/shot-se-asks.png)
+![Each row names what the engine needs, what it is used for and who provides it.](../figures/shot-se-asks.png)
 
 | What we need | What we use it for | Who provides it |
 |---|---|---|
@@ -187,6 +201,6 @@ Optional, each with its use: candidate product lists from the commerce platform,
 
 ## The interactive page puts every constant on a slider
 
-**[How it works, interactive](https://edge-platform-bti.expedge.workers.dev/how-it-works-interactive)**
+![The companion page recomputes the engine's own arithmetic in the browser as each constant moves: interest, decay, the two lines, a slot scored in full, the regional prior, learning and a receipt.](../figures/shot-se-next.png)
 
-The engine's own arithmetic, recomputed in the browser as each constant moves: interest, decay, the two lines, a slot scored in full, the regional prior, learning and a receipt.
+**[How it works, interactive](https://edge-platform-bti.expedge.workers.dev/how-it-works-interactive)**

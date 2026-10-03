@@ -135,6 +135,9 @@
 .ae .ae-quote-who { margin: 0 0 8px; font-size: .9375rem; }
 .ae .ae-quote-a { margin: 0; color: var(--rule-accent); font-weight: 700; }
 @media (prefers-color-scheme: dark) { .ae-quote { border-color: var(--lf-green); } }
+/* the pairs come in two parts, seven and six, each its own picture for the Word copy, each opening with its caption */
+.ae-objs-part + .ae-objs-part { margin-top: 26px; }
+.ae .ae-objs-cap { max-width: var(--measure); margin: 0 0 10px; color: var(--muted); font: 700 .9375rem/1.4 var(--body); }
 .ae-objs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 760px) { .ae-objs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ae .ae-obj {
