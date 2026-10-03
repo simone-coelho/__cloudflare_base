@@ -2160,3 +2160,11 @@ The full report is `docs/lg/lanes/K8.md`. This lane carried out the coordinator'
   - The changed caption says "the hour in progress (21:00 UTC) is counted through 21:26 UTC, and 00 … 20 UTC are not folded yet".
 - **Test.** A unit test of the caption through `renderReport` passes 8 of 8, rerun after the wording touch (hand-made current, refused and grace answers, plus E6's real one). The `panels.js` hash is `991d967a…`.
 - **Housekeeping.** That rig is stopped, the E6 worktree is clean, and nothing is committed. Details are in `K8.md`'s third pass.
+
+#### K8, fourth pass (the caption reads `through` in any form)
+
+- **The change.** `public/demo-kit/panels.js` +8 −2 against `887e6c68`: `throughMs` at 485–488, used at 512–514. `through` may now be a number of milliseconds or seconds, a numeric string or an ISO string, and the time is printed whenever one is present. "Is counted" stays alone only when it is truly absent.
+- **The hosted check.** I read the saved day's copy from `edge-platform-oh` through the page's own call, with `build: false`. It carries `open: [{ hour: 22, status: "current", through: 1791068125418 }]`, a number of milliseconds, and the caption reads "… is counted through 22:55 UTC".
+  - The hosted worker serves the `panels.js` committed in `eede991a`, which already prints a numeric `through`. So the answer behind the caption without a time had no numeric `through` at that moment.
+  - The engine types `through` as number or null, and the demo route re-reads the stored report after a build.
+- **Tests.** 12 of 12 pass. Nothing is committed.

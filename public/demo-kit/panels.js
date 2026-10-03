@@ -481,6 +481,11 @@ export function createPanels(k) {
   }
   /** A time as the report's hours are named: HH:MM UTC. */
   const utcClock = (t) => { const d = new Date(t); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`; };
+  /** An open hour's through as milliseconds: a number of milliseconds or of seconds, or an ISO string; null when absent. */
+  const throughMs = (v) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d+(\.\d+)?$/.test(v.trim()) ? Number(v) : typeof v === 'string' ? Date.parse(v) : NaN;
+    return Number.isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : null;
+  };
   /** Why the engine refused an open hour's working fold, in words: its budget with the figures, or the conflicting stream. */
   function refusalWords(r) {
     const x = r || {}, words = (s) => String(s).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();
@@ -504,8 +509,9 @@ export function createPanels(k) {
     const two = (n) => String(n).padStart(2, '0');
     return open.map((o, i) => {
       const which = i === open.length - 1 ? `the hour in progress (${two(o.hour)}:00 UTC)` : `the hour just ended (${two(o.hour)}:00 UTC, not folded yet)`;
-      if (o.status === 'current') return `${which} is counted${typeof o.through === 'number' ? ` through ${utcClock(o.through)}` : ''}`;
-      return `${which} is refused, ${refusalWords(o.refusal)}: ${typeof o.through === 'number' ? `counted only through ${utcClock(o.through)}, an earlier fold` : 'none of it is counted'}`;
+      const at = throughMs(o.through);
+      if (o.status === 'current') return `${which} is counted${at !== null ? ` through ${utcClock(at)}` : ''}`;
+      return `${which} is refused, ${refusalWords(o.refusal)}: ${at !== null ? `counted only through ${utcClock(at)}, an earlier fold` : 'none of it is counted'}`;
     }).join('; ');
   }
   /** The report's own window, as the report states it: its UTC day, what it was read from, when it was built, what it holds. */
