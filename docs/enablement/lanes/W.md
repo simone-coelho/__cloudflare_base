@@ -1,6 +1,6 @@
 # Lane W: the Word copies of the enablement package
 
-**Status, 2026-10-02, version 2.0 built at 20:18 and 20:20, the demo map rebuilt and renamed at 20:28, the glossary rebuilt at 20:31 after its source changed at 20:30, confirmed against HEAD `c4f4f5f` at 20:32: six Word documents sit in `docs/enablement/word/`, exactly these six and nothing else, as `Enablement-…-v2.0.docx`. They tell the finished product as a story (`LANE-BRIEF-V2.md`). The documented steps ran: sources snapshotted, each source's title line stripped for the build, covers per design section 6 (the subtitle is the reader alone, the version is 2.0). All seven `-v1.0.docx` files, the retired status piece's included, were moved to the scratchpad, none deleted. All six sources are committed and final, and every document was built from text that is byte-identical to its committed blob (section 1). All six pass all 16 checks (96 of 96). Two rulings from the coordinator are in: check 15 allow-lists the exact phrases "built for", "built on", "built once", "middle stage" and the glossary's "Stage." entry, which clears the six hits in the engineers' piece and the four in the glossary with no source change (section 4); and the demo map is rebuilt with "Prepared for: Account executives" and renamed `Enablement-Which-Demo-Shows-Which-Story-v2.0.docx` (section 1). Every embedded image is byte-identical to the redrawn figure in the repository, which equals HEAD, and the name scan of every part of every document is zero.** I committed, pushed, installed and deployed nothing, and edited no source. Two earlier slips are recorded in section 7; this round had none.
+**Status, 2026-10-02, review round three built at 21:54 from HEAD `b36098c`: six Word documents sit in `docs/enablement/word/`, exactly these six and nothing else, as `Enablement-…-v2.0.docx`. They tell the finished product as a story (`LANE-BRIEF-V2.md`). Round three's committed edits changed five of the six sources (the marketing, sellers' and engineers' pieces, the credits page and the glossary), so those five documents were rebuilt in place; the demo map's source is unchanged by hash (`d4ab29196b9961d5`) and its document is unchanged by hash (`f440d4707df6eeb9`), so it was not rebuilt. The documented steps ran: sources snapshotted from their HEAD blobs, each source's title line stripped for the build, covers per design section 6 (the subtitle is the reader alone, the version is 2.0). All six pass all 16 checks (96 of 96), the vocabulary check (check 15) included, with the coordinator's allow-list (section 4). The credits page, having lost its legend row, is back to 7 pages after spilling onto an eighth. The three figures are unchanged and equal HEAD, and every embedded image is byte-identical to its repository PNG. The name scan of every part of every document is zero. The seven `-v1.0.docx` files, the retired status piece's included, stay in the scratchpad, none deleted.** I committed, pushed, installed and deployed nothing, and edited no source. Two earlier slips are recorded in section 7; this round had none.
 
 This lane's files: the six documents in `docs/enablement/word/`, and this note. The tools stay in the session scratchpad (section 7); none is in the repository.
 
@@ -10,27 +10,27 @@ All six carry "Prepared by Optimizely" (the converter's fixed line), version "2.
 
 | Word document | Bytes | Pages | Prepared for | Subtitle on the cover |
 |---|---|---|---|---|
-| `Enablement-What-It-Is-v2.0.docx` | 19,838 | 7 | Marketing | For marketing |
-| `Enablement-Selling-It-v2.0.docx` | 543,284 | 12 | Account executives | For account executives |
-| `Enablement-How-It-Works-and-Where-It-Runs-v2.0.docx` | 831,947 | 16 | Solutions engineers | For solutions engineers |
-| `Enablement-Where-Opal-and-AI-Credits-Fit-v2.0.docx` | 314,542 | 8 | Account executives | For account executives |
+| `Enablement-What-It-Is-v2.0.docx` | 19,976 | 7 | Marketing | For marketing |
+| `Enablement-Selling-It-v2.0.docx` | 543,293 | 12 | Account executives | For account executives |
+| `Enablement-How-It-Works-and-Where-It-Runs-v2.0.docx` | 832,009 | 16 | Solutions engineers | For solutions engineers |
+| `Enablement-Where-Opal-and-AI-Credits-Fit-v2.0.docx` | 314,436 | 7 | Account executives | For account executives |
 | `Enablement-Which-Demo-Shows-Which-Story-v2.0.docx` | 21,640 | 8 | Account executives | For account executives |
-| `Enablement-Glossary-v2.0.docx` | 24,994 | 12 | Everyone at Optimizely | For everyone at Optimizely |
+| `Enablement-Glossary-v2.0.docx` | 25,206 | 12 | Everyone at Optimizely | For everyone at Optimizely |
 
-The cover title is each source's first line, verbatim. These are the sources, all committed. Five were snapshotted at HEAD `890d76d` at 20:25 and again, with the same hashes, at 20:28 (HEAD `9a86d0c`) and 20:31; the glossary's changed in `c4f4f5f` at 20:30 and was snapshotted at 20:31. The six hashes are the ones every document was built from, confirmed against HEAD `c4f4f5f` at 20:32:
+The cover title is each source's first line, verbatim. These are the sources, all committed, taken from their HEAD blobs at 21:54 (HEAD `b36098c`). Five changed in review round three and one did not; the earlier commit and hash of each changed source, as of the 20:31 build, is in the State column. The six hashes below are the ones every document in the folder was built from:
 
 | Source | Cover title | State | sha-256 (first 16 hex) |
 |---|---|---|---|
-| `docs/enablement/content/what-it-is.md` | Behavioral Targeting and Intelligence: what it is | committed, 9fef834 | `6c87a3edc6e408e3` |
-| `docs/enablement/content/selling-it.md` | Behavioral Targeting and Intelligence: selling it | committed, 9d615d1 | `5421ef594a706153` |
-| `docs/enablement/content/how-it-works-and-where-it-runs.md` | Behavioral Targeting and Intelligence: how it works and where it runs | committed, 4670c3a | `c296543ef69e38ff` |
-| `docs/enablement/content/credits.md` | Behavioral Targeting and Intelligence: Where Opal and AI Credits Fit, and Where They Never Do | committed, c0be7ae (20:23) | `e38f7913b5bf0e71` |
-| `docs/enablement/content/demos.md` | Behavioral Targeting and Intelligence: which demo shows which story | committed, c0be7ae (20:23) | `d4ab29196b9961d5` |
-| `docs/enablement/GLOSSARY.md` | Behavioral Targeting and Intelligence: the glossary | committed, c4f4f5f (20:30; was 0f98fb7, `ff13f1aa7a49e2fb`) | `c1cc85bd480acee8` |
+| `docs/enablement/content/what-it-is.md` | Behavioral Targeting and Intelligence: what it is | committed, 025aa29 (21:37; was 9fef834, `6c87a3edc6e408e3`) | `63ffb02d5fd96aeb` |
+| `docs/enablement/content/selling-it.md` | Behavioral Targeting and Intelligence: selling it | committed, af02596 (21:37; was 9d615d1, `5421ef594a706153`) | `a447033ba914f917` |
+| `docs/enablement/content/how-it-works-and-where-it-runs.md` | Behavioral Targeting and Intelligence: how it works and where it runs | committed, a4036c3 (21:37; was 4670c3a, `c296543ef69e38ff`) | `97f5c3dd2b038182` |
+| `docs/enablement/content/credits.md` | Behavioral Targeting and Intelligence: Where Opal and AI Credits Fit, and Where They Never Do | committed, 3a6c45e (21:38; was c0be7ae, `e38f7913b5bf0e71`) | `1cb802a9de306ca2` |
+| `docs/enablement/content/demos.md` | Behavioral Targeting and Intelligence: which demo shows which story | committed, c0be7ae (20:23); unchanged | `d4ab29196b9961d5` |
+| `docs/enablement/GLOSSARY.md` | Behavioral Targeting and Intelligence: the glossary | committed, 354eafd (21:36; was c4f4f5f, `c1cc85bd480acee8`) | `c030f69ed7d4371b` |
 
 **Two sources were uncommitted when I built, and are committed now.** The first instruction was to build from committed sources, but at 20:17 the committed blobs of `credits.md` and `demos.md` were the text before the rewrite, so building from HEAD would have produced stale documents. I built them from the working copies, said so in the snapshot step (the `--working` option, which prints "WORKING COPY, UNCOMMITTED" unless the copy equals HEAD), and recorded the hashes. `credits.md` changed after my first snapshot: at 20:17 I snapshotted `fcefca82…` and built from it at 20:18; at 20:19 the file was modified (it gained the fixed AI sentence and the "style concierge" and "generated imagery" wording), and I rebuilt the credits document at 20:20 from `e38f7913…`. `demos.md` did not change after 20:16. The coordinator then committed both at `c0be7ae` (20:23) and asked for the two documents to be built from HEAD. I snapshotted again at 20:25 with no `--working`: the committed blobs hash to `e38f7913b5bf0e71` and `d4ab29196b9961d5`, the same as the working copies I had built from, so the two documents already in the folder are built from the committed text and were not rebuilt. To be sure, I rebuilt both from the HEAD snapshot into scratch and compared them with the documents in the folder part by part: every part is equal once the converter's random link ids and build timestamps are set aside (the demos file differs by 3 bytes from those, the credits file by none).
 
-The converter is `scripts/md2docx.mjs`, sha-256 `0b2159ee…`, the version that numbers bookmarks uniquely; `docx` 9.7.2 from `~/.md2docx`; Node 22.15.0 in WSL Ubuntu-22.04. Document hashes, to tell whether a later build replaced a file (first 16 hex digits of the sha-256): What-It-Is `a50056f37009b3cf`, Selling-It `d6e1e0ca4bf22bb0`, How-It-Works `8e026e67bdea72ff`, Credits `f775061badf560a5`, Demos `f440d4707df6eeb9` (the file built at 20:20 under the earlier name was `2e46d051100dc7ab`), Glossary `a6ccf13d7ff9bc9b` (was `10d16ca60c0724f9` until the 20:31 rebuild). At 20:28 the other five documents were checked again, and at 20:32 the four not rebuilt since 20:20 once more: same bytes, same hashes and same modification times as before.
+The converter is `scripts/md2docx.mjs`, sha-256 `0b2159ee…`, the version that numbers bookmarks uniquely; `docx` 9.7.2 from `~/.md2docx`; Node 22.15.0 in WSL Ubuntu-22.04. Document hashes, to tell whether a later build replaced a file (first 16 hex digits of the sha-256): What-It-Is `2d6fd285a1fefe6d`, Selling-It `9070b93553902422`, How-It-Works `9c7062fa3c7a4ad2`, Credits `d22c979ce42b338f`, Demos `f440d4707df6eeb9`, Glossary `6ad12ffe19bf1629`. Before round three the five that changed were What-It-Is `a50056f37009b3cf`, Selling-It `d6e1e0ca4bf22bb0`, How-It-Works `8e026e67bdea72ff`, Credits `f775061badf560a5` and Glossary `a6ccf13d7ff9bc9b`; the demo map's has been `f440d4707df6eeb9` since its 20:28 rebuild (the file built at 20:20 under its earlier name was `2e46d051100dc7ab`). If a content lane commits a change to a source after 21:54, the matching document is stale: compare the hash above.
 
 **Line endings.** The sources are LF in the index and the working copy; the snapshot removes any carriage return anyway, because `core.autocrlf=true` here and the converter fails on CRLF.
 
@@ -48,13 +48,13 @@ The converter is `scripts/md2docx.mjs`, sha-256 `0b2159ee…`, the version that 
 
 **The demo map's name, 20:28.** I first named it as the coordinator had, `Enablement-Which-Demo-to-Show-to-Whom-v2.0.docx`. The design's section 6 names it `Enablement-Which-Demo-Shows-Which-Story-v2.0.docx`, which is what its source and page are titled ("which demo shows which story"), and at about 20:27 the coordinator ruled that the Word copy takes that name. I moved the file with `mv -n` at 20:28: the bytes were the same (sha-256 `2e46d051100dc7ab`, 21,676 bytes, before and after the move), and its cover title, which comes from the source's first line, already read "Behavioral Targeting and Intelligence: which demo shows which story", so the move alone needed no rebuild. The same coordinator's earlier ruling asked for one rebuild with "Prepared for: Account executives" (section 2.1), and that rebuild then wrote the file under the new name, so the file in the folder has the new hash. Both names are recorded here and in `pieces.txt`; the old name is gone from the folder, and no file was deleted.
 
-**History.** First build 13:58 as `BTI-…-v1.0.docx` (title repeated in the body, plain verdict words); moved to the `Enablement-` names at 14:09; rebuilt in place at 14:17 (title line stripped, covers per design section 6 of version 1, bold verdict words), at 14:56 (post-review sources, corrected figures, two new pieces), at 15:04 and at 15:27 (the final edits); the coordinator committed those at `a412113`, `b32f360` and later. At 20:12 the package was rewritten under `LANE-BRIEF-V2.md`; this note describes the build that followed. A set built in scratch for the first covers is superseded and sits in `scratchpad\w\superseded\alt-old-covers\`: it must not be copied over these files.
+**History.** First build 13:58 as `BTI-…-v1.0.docx` (title repeated in the body, plain verdict words); moved to the `Enablement-` names at 14:09; rebuilt in place at 14:17 (title line stripped, covers per design section 6 of version 1, bold verdict words), at 14:56 (post-review sources, corrected figures, two new pieces), at 15:04 and at 15:27 (the final edits); the coordinator committed those at `a412113`, `b32f360` and later. At 20:12 the package was rewritten under `LANE-BRIEF-V2.md`, and version 2.0 was built at 20:18 and rebuilt in part at 20:20, 20:28 and 20:31. At 21:54, after review round three's commits (`354eafd`, `a4036c3`, `af02596`, `025aa29` and `3a6c45e`), five documents were rebuilt in place from HEAD `b36098c`; the demo map was not, its source being unchanged. A set built in scratch for the first covers is superseded and sits in `scratchpad\w\superseded\alt-old-covers\`: it must not be copied over these files.
 
 ## 2. The rulings, and what each did
 
 ### 2.1 The brief, the sources and the covers
 
-`LANE-BRIEF-V2.md` changes what the sources say, not the method. The build is unchanged except where the rulings below say otherwise. Under the brief the documents carry no build-state words; section 4 shows that four of six are clean and which hits remain in two.
+`LANE-BRIEF-V2.md` changes what the sources say, not the method. The build is unchanged except where the rulings below say otherwise. Under the brief the documents carry no build-state words; section 4 shows that all six pass the vocabulary check, with the coordinator's allow-list.
 
 Covers, per the design's section 6 and the coordinator's rulings:
 
@@ -90,6 +90,8 @@ All three figures were redrawn as the finished product, with no legend, labels o
 | Credits | `before-during-after.png` | `1c2e5899de59` | 308,554 | 6.50 × 4.83 in |
 
 The captions are the figures' SVG titles ("From an event to a decision", "Where the engine runs on Cloudflare", "One visitor's session: what happens before, during and after").
+
+**Round three, 21:54.** The figures did not change: the repository's three PNGs still hash to `466c9e12146e`, `1c2e5899de59` and `9816ac3f772e`, equal HEAD, and the four embedded images in the rebuilt documents match them byte for byte (check 11, check 0, and the independent unzip and hash). The SVG text of the three figures was read again by check 15 and holds none of the forbidden words.
 
 ## 3. The documented build step, with the exact commands
 
@@ -221,7 +223,36 @@ The converter printed no warning: "md2docx: wrote docs/enablement/word/Enablemen
 
 **The glossary again, 20:31.** While I was writing this note the coordinator committed `c4f4f5f` at 20:30, "the journey stage entry without the bare word": the Journey stage entry now says "with the middle one reported as thinking" where it said "with the middle stage reported as thinking". The glossary's snapshot at 20:31 hashed `c1cc85bd480acee8` against the `ff13f1aa7a49e2fb` the document was built from, so I rebuilt it from HEAD (`snapshot-sources.sh`, then `build-word.sh --only glossary`, then `check-all.sh` on all six): "md2docx: wrote docs/enablement/word/Enablement-Glossary-v2.0.docx, 24 KB, 147 blocks from 290 markdown lines". The file is 24,994 bytes, twelve pages as before (the last 16 % full), the new sentence is in it and the old one is not, and the other five sources hashed as before. The Glossary's check 15 now meets one allowed phrase less ("middle stage" 0); the "Stage." entry is still there and still allowed.
 
-**Run first into scratch.** `--scratch` and `--out` point the same scripts away from the repository (the snapshot takes `--scratch` too, so that the build finds its sources). I ran the sequence into `scratchpad\w\dry3\` first (at 20:17; then the same four passed 16 of 16 and the same two failed check 15, on the same hits, which the ruling of about 20:26 has since allowed). For the 20:28 rebuild I made no dry run: it changed a cover argument and a file name, and the allow-list was proved with a control (section 4). The folder `docs/enablement/word/` is made by the script, and a document open in Word locks its file (the converter's rule 6). The moves of the v1.0 files were separate commands, `mv -n` each, run after the checks.
+**Round three, 21:54.** The coordinator committed review round three's edits and asked for the four narrative documents, and the credits page, to be rebuilt from HEAD, with the demo map's source confirmed unchanged by hash. I saved the hashes of the snapshots the folder was built from (`last-built-hashes-4.txt`), took a new snapshot from the HEAD blobs (HEAD `b36098c`, no `--working`), and compared. Five sources had changed and the demo map's had not:
+
+| Source | Hash it was built from | Hash at HEAD `b36098c` | |
+|---|---|---|---|
+| `what-it-is.md` | `6c87a3edc6e408e3` | `63ffb02d5fd96aeb` | changed (`025aa29`) |
+| `selling-it.md` | `5421ef594a706153` | `a447033ba914f917` | changed (`af02596`) |
+| `how-it-works-and-where-it-runs.md` | `c296543ef69e38ff` | `97f5c3dd2b038182` | changed (`a4036c3`) |
+| `credits.md` | `e38f7913b5bf0e71` | `1cb802a9de306ca2` | changed (`3a6c45e`) |
+| `demos.md` | `d4ab29196b9961d5` | `d4ab29196b9961d5` | **same** |
+| `GLOSSARY.md` | `c1cc85bd480acee8` | `c030f69ed7d4371b` | changed (`354eafd`) |
+
+```
+bash <w>/tools/snapshot-sources.sh
+wsl.exe -d Ubuntu-22.04 -e bash -lc "bash <w>/tools/build-word.sh --only what-it-is,selling-it,how-it-works,credits,glossary"
+bash <w>/tools/check-all.sh docs/enablement/word <w>/build
+```
+
+The converter printed no warning and no problem message:
+
+```
+md2docx: wrote docs/enablement/word/Enablement-What-It-Is-v2.0.docx, 20 KB, 71 blocks from 116 markdown lines
+md2docx: wrote docs/enablement/word/Enablement-Selling-It-v2.0.docx, 531 KB, 56 blocks from 141 markdown lines
+md2docx: wrote docs/enablement/word/Enablement-How-It-Works-and-Where-It-Runs-v2.0.docx, 813 KB, 135 blocks from 303 markdown lines
+md2docx: wrote docs/enablement/word/Enablement-Where-Opal-and-AI-Credits-Fit-v2.0.docx, 307 KB, 68 blocks from 148 markdown lines
+md2docx: wrote docs/enablement/word/Enablement-Glossary-v2.0.docx, 25 KB, 149 blocks from 294 markdown lines
+```
+
+The demo map was not rebuilt. Its source hash is the one it was built from, and the file in the folder is the 20:28 build, byte for byte: 21,640 bytes, sha-256 `f440d4707df6eeb9`, modified 20:28. The edits of round three, as the commits show them: the marketing piece says the retailer "chose to build it with us", rewords the sentence that says the engine is not a recommendations engine, adds the consent choice to what a customer provides, uses the fixed AI sentence in its never-say table and links to See it work, the credits page and the demo map by their titles; the sellers' piece names "the same customer", lists a catalog-search service, not a model key, among the optional items, and links the demo map by its title; the engineers' piece says time never switches a seed off and adds the dampening factor the brand publishes, and moves arrival seeds into the console's list; the credits page lost its legend row, the three bullets "Credits apply", "Deterministic engine · no credits" and "Conditional / exception" (the document has no list paragraphs now, where it had three, and the one "Credits apply" left is a table header); the glossary gained a Gate entry, under a new G heading (22 contents entries, where it had 21), and its Pin and Placement entries say a pin holds the place the brand sets.
+
+**Run first into scratch.** `--scratch` and `--out` point the same scripts away from the repository (the snapshot takes `--scratch` too, so that the build finds its sources). I ran the sequence into `scratchpad\w\dry3\` first (at 20:17; then the same four passed 16 of 16 and the same two failed check 15, on the same hits, which the ruling of about 20:26 has since allowed). For the 20:28 and 21:54 rebuilds I made no dry run: the first changed a cover argument and a file name, the allow-list was proved with a control (section 4), and round three changed only the sources, which the snapshot step pins to HEAD and check 0 compares with the document. The folder `docs/enablement/word/` is made by the script, and a document open in Word locks its file (the converter's rule 6). The moves of the v1.0 files were separate commands, `mv -n` each, run after the checks.
 
 ## 4. The checks
 
@@ -250,8 +281,8 @@ One script, `check-docx.mjs`, reads each document straight from its zip parts (`
 
 | Document | Hits | Allowed by the brief ("built it with us"; "journey stage") | Allowed by the ruling | Other uses of "open" (not labels) | Figure text read |
 |---|---|---|---|---|---|
-| What it is | 0 | 1; 0 | none | 0 | none |
-| Selling it | 0 | 1; 0 | none | 0 | `architecture.png`, 102 items, 0 hits |
+| What it is | 0 | 0; 0 (1; 0 before round three) | none | 0 | none |
+| Selling it | 0 | 0; 0 (1; 0 before round three) | none | 0 | `architecture.png`, 102 items, 0 hits |
 | How it works | 0 (6 before the ruling) | 0; 5 | "built for" 4, "built on" 1, "built once" 1 | 0 | `decision-path.png` 93 items and `architecture.png` 102, 0 hits |
 | Credits | 0 | 0; 0 | none | 0 | `before-during-after.png`, 53 items, 0 hits |
 | Demo map | 0 | 0; 0 | none | 4 ("open it from where you are" three times, in the rule at the top, in a bullet and in the rule repeated at the end; "in the open" once) | none |
@@ -268,18 +299,18 @@ What each document contains, as the checks counted it:
 
 | | What it is | Selling it | How it works | Credits | Demos | Glossary |
 |---|---|---|---|---|---|---|
-| Contents entries (all one level) | 10 | 10 | 18 | 6 | 12 | 21 |
-| Headings | 10 | 10 | 18 | 6 | 12 | 21 |
-| Bookmarks | 10 | 10 | 18 | 6 | 12 | 21 |
+| Contents entries (all one level) | 10 | 10 | 18 | 6 | 12 | 22 |
+| Headings | 10 | 10 | 18 | 6 | 12 | 22 |
+| Bookmarks | 10 | 10 | 18 | 6 | 12 | 22 |
 | Numbered lists | 0 | 0 | 0 | 0 | 5 (5, 5, 5, 9, 8 items) | 0 |
-| Bulleted lists | 4 | 1 | 2 | 1 | 2 | 0 |
+| Bulleted lists | 4 | 1 | 2 | 0 | 2 | 0 |
 | Tables, with the cover and the one-cell boxes | 4 | 8 | 17 | 10 | 5 | 3 |
 | Data tables | 1 | 5 | 9 | 6 | 2 | 0 |
 | Table rows, all tables | 18 | 57 | 82 | 40 | 30 | 7 |
 | In-document links in the body | 0 | 0 | 50 | 0 | 0 | 0 |
-| External links (distinct targets) | 5 (5) | 11 (11) | 4 (4) | 0 | 9 (9) | 0 |
+| External links (distinct targets) | 6 (6) | 11 (11) | 4 (4) | 0 | 9 (9) | 0 |
 | Figures | 0 | 1 | 2 | 1 | 0 | 0 |
-| Words in the build copy (W1's rule) | 2,245 | 3,750 | 4,831 | 1,449 | 2,536 | 4,375 |
+| Words in the build copy (W1's rule) | 2,287 | 3,748 | 4,850 | 1,441 | 2,536 | 4,492 |
 
 The engineers' piece has 50 in-document links, the walk and the detail pointing at each other. The demos piece has five numbered lists, each instance restarting at 1. The glossary has no data table: its three tables are the cover and the two one-cell callouts that carry the rule.
 
@@ -293,7 +324,7 @@ The engineers' piece has 50 in-document links, the walk and the detail pointing 
 - Check 8, asterisks: a document whose markdown lacks the asterisk the document carries fails it; against its own markdown it passes.
 - A dead link is stopped by the converter itself, which writes nothing: "md2docx: … NOT written; … has 1 problem(s): line 3: link "dead" points to #nowhere, but no heading has that anchor". None of the six hit it.
 
-In addition: `unzip -t` reports no errors on all six; a raw scan of every XML and relationship part of the six for the customer names, the owner's family and given names, the user name and local paths finds nothing in any; the whole-word scan found no customer name. The full output of the 16 checks on the six is saved as `final-check-output-v2b.txt` (after the credits rebuild) and again as `final-check-output-v2c.txt` (at 20:25, against the snapshot taken from HEAD `890d76d`): 94 PASS lines and 2 FAIL, both check 15, and the two runs agree line for line. After the ruling and the demo map's rebuild, the run of 20:29, `final-check-output-v2d.txt`, has 96 PASS lines and no FAIL; after the glossary's rebuild, the run of 20:31, `final-check-output-v2e.txt`, has the same 96 and no FAIL: all six documents pass all 16 checks.
+In addition, at 21:54: `unzip -t` reports no errors on all six; a raw scan of every XML and relationship part of the six, freshly unzipped, for the customer names, the owner's family and given names, the user name and local paths finds nothing in any (zero hits in each); the whole-word scan found no customer name. The full output of the 16 checks on the six is saved as `final-check-output-v2b.txt` (after the credits rebuild) and again as `final-check-output-v2c.txt` (at 20:25, against the snapshot taken from HEAD `890d76d`): 94 PASS lines and 2 FAIL, both check 15, and the two runs agree line for line. After the ruling and the demo map's rebuild, the run of 20:29, `final-check-output-v2d.txt`, has 96 PASS lines and no FAIL; after the glossary's rebuild, the run of 20:31, `final-check-output-v2e.txt`, has the same 96 and no FAIL; after round three's rebuild, the run of 21:54, `final-check-output-v2f.txt`, has 96 PASS lines and no FAIL: all six documents pass all 16 checks. In round three the brief's "built it with us" allowance is unused (the marketing piece now says "chose to build it with us" and the sellers' piece no longer carries the quotation); it stays in the check. The allowances in use at 21:54 are "journey stage" (five times in the engineers' piece, six in the glossary), "built for" four times, "built on" once and "built once" once in the engineers' piece, and the "Stage." entry (one paragraph, three uses of the word) in the glossary.
 
 ## 5. Page counts
 
@@ -304,22 +335,22 @@ In addition: `unzip -t` reports no errors on all six; a raw scan of every XML an
 - The Word-saved Scope of Services v7, the document W1 used: Word records 7 pages, the model gives 7 (last page 43 %).
 - W1's technical note v1.1, built by this converter: 21 pages, the last 98 % full, exactly W1's recorded measure.
 - W2's one-pager v1.3: 3 pages, the body page 95 % full, exactly W2's recorded measure.
-- The lead's rougher estimator (`pages-c3.mjs`, about ±15 %), run on the build copies, gives 7, 11, 15, 7, 8 and 12, within a page of the model on every document.
+- The lead's rougher estimator (`pages-c3.mjs`, about ±15 %), run on the build copies, gives 7, 11, 15, 7, 8 and 13, within a page of the model on every document.
 
 It is a layout measurement, not Word's own count: expect Word to differ by about a page. It models the contents as the cached entries without page numbers; Word adds the numbers and no lines.
 
 | Document | Pages | Cover | Contents | Body | Last page filled |
 |---|---|---|---|---|---|
-| What it is | 7 | 1 | 1 | pp. 3 to 7 | 58 % |
+| What it is | 7 | 1 | 1 | pp. 3 to 7 | 67 % |
 | Selling it | 12 | 1 | 1 | pp. 3 to 12 | 33 % |
 | How it works and where it runs | 16 | 1 | 1 | pp. 3 to 16: Part A pp. 3 to 5, Part B pp. 5 to 16 | 71 % |
-| Where Opal and AI credits fit | 8 | 1 | 1 | pp. 3 to 8 | 14 % |
+| Where Opal and AI credits fit | 7 | 1 | 1 | pp. 3 to 7 | 90 % |
 | Which demo shows which story | 8 | 1 | 1 | pp. 3 to 8 | 73 % |
-| Glossary | 12 | 1 | 1 | pp. 3 to 12 | 16 % |
+| Glossary | 12 | 1 | 1 | pp. 3 to 12 | 35 % |
 
-The credits document spills 14 % of a page onto an eighth page; it was 7 pages, the last 92 % full, before the fixed AI sentence was added at 20:19. About a seventh of a page less text, or a tighter table, would bring it back to 7. Against version 1: what it is 7 (was 7), selling it 12 (11), how it works 16 (20), credits 8 (9), demos 8 (5), glossary 12 (12).
+The credits document is back to 7 pages, the last 90 % full. It had spilled 14 % of a page onto an eighth page at 20:20, when the fixed AI sentence was added; round three's removal of the legend row took the room back. The glossary's last page went from 16 % to 35 % full with its new Gate entry and G heading, and the marketing piece's from 58 % to 67 %; the page counts did not change. Against the 20:31 build: what it is 7 (was 7), selling it 12 (12), how it works 16 (16), credits 7 (8), demos 8 (8), glossary 12 (12). Against version 1: what it is 7 (was 7), selling it 12 (11), how it works 16 (20), credits 7 (9), demos 8 (5), glossary 12 (12).
 
-**Gaps the figures leave.** An inline picture cannot split, so Word moves it, with its caption, to the top of the next page when it does not fit. "Selling it": the architecture figure (7.92 in, near the cap of 8 in) tops page 5 and leaves page 4 at 26 % full. "How it works": the decision-path figure (5.20 in) tops page 11 and the architecture figure tops page 12, leaving pages 10 and 11 at 63 % and 64 %. "Where Opal and AI credits fit": the session figure (4.83 in) lands on page 5 with no gap. A wider, shorter architecture figure would close the larger gaps.
+**Gaps the figures leave.** An inline picture cannot split, so Word moves it, with its caption, to the top of the next page when it does not fit. "Selling it": the architecture figure (7.92 in, near the cap of 8 in) tops page 5 and leaves page 4 at 26 % full. "How it works": the decision-path figure (5.20 in) tops page 11 and the architecture figure tops page 12, leaving pages 10 and 11 at 63 % and 64 %. "Where Opal and AI credits fit": the session figure (4.83 in) tops page 5, and page 4 is 98 % full, so there is no gap. The figure positions are the same as at 20:31 in "Selling it" and "How it works". A wider, shorter architecture figure would close the larger gaps.
 
 ## 6. Not verified, and things to know
 
@@ -332,7 +363,7 @@ The credits document spills 14 % of a page onto an eighth page; it was 7 pages, 
 
 ## 7. Process notes
 
-- **Scratch, all in the session scratchpad** (`<w>` as in section 3): `tools\` holds `pieces.txt`, `snapshot-sources.sh` and `build-word.sh` (texts in section 3), `check-docx.mjs` and `check-all.sh` (the checks), `pages.mjs` (W1's, unchanged) and `pages-fill.mjs`; `build\` holds the snapshots (`src\`), the stripped copies the converter read (`content\`) and the figure copies (`figures\`); `dry3\` and `dry3-build\` are the run into scratch; `unz\` holds each document unzipped for the page measure (`v2-…`, `v2b-…`, `v2c-…`, `v2d-Demos` for the demo map of 20:28, `v2e-Glossary` for the glossary of 20:31); `retired\v1.0\` holds the seven version 1.0 documents; `superseded\alt-old-covers\` is the set built for the first covers; `neg\`, `neg2\`, `neg3\`, `neg4\`, `neg5\` (the allow-list control), `trial\`, `landscape-try\` are the controls and trials. `final-check-output-v2.txt`, `-v2b.txt`, `-v2c.txt` and `-v2d.txt` are the full output of the checks at 20:18, after the credits rebuild, at 20:25 against the HEAD snapshot, at 20:29 after the ruling and the demo map's rebuild, and (`-v2e.txt`) at 20:31 after the glossary's; `last-built-hashes.txt`, `-2.txt` and `-3.txt` hold the source hashes before the snapshots of 20:24, 20:26 and 20:31; `dry4\` holds the credits and demos documents rebuilt from that snapshot for the comparison. Nothing there is needed by the repository, and nothing was added to it. If the coordinator wants the build step or the checker kept in the repo, it belongs beside the converter; say so and I will propose a path.
+- **Scratch, all in the session scratchpad** (`<w>` as in section 3): `tools\` holds `pieces.txt`, `snapshot-sources.sh` and `build-word.sh` (texts in section 3), `check-docx.mjs` and `check-all.sh` (the checks), `pages.mjs` (W1's, unchanged) and `pages-fill.mjs`; `build\` holds the snapshots (`src\`), the stripped copies the converter read (`content\`) and the figure copies (`figures\`); `dry3\` and `dry3-build\` are the run into scratch; `unz\` holds each document unzipped for the page measure (`v2-…`, `v2b-…`, `v2c-…`, `v2d-Demos` for the demo map of 20:28, `v2e-Glossary` for the glossary of 20:31, `v2f-…` for round three's six documents of 21:54); `retired\v1.0\` holds the seven version 1.0 documents; `superseded\alt-old-covers\` is the set built for the first covers; `neg\`, `neg2\`, `neg3\`, `neg4\`, `neg5\` (the allow-list control), `trial\`, `landscape-try\` are the controls and trials. `final-check-output-v2.txt`, `-v2b.txt`, `-v2c.txt` and `-v2d.txt` are the full output of the checks at 20:18, after the credits rebuild, at 20:25 against the HEAD snapshot, at 20:29 after the ruling and the demo map's rebuild, (`-v2e.txt`) at 20:31 after the glossary's, and (`-v2f.txt`) at 21:54 after round three; `last-built-hashes.txt`, `-2.txt`, `-3.txt` and `-4.txt` hold the source hashes before the snapshots of 20:24, 20:26, 20:31 and 21:54; `dry4\` holds the credits and demos documents rebuilt from that snapshot for the comparison. Nothing there is needed by the repository, and nothing was added to it. If the coordinator wants the build step or the checker kept in the repo, it belongs beside the converter; say so and I will propose a path.
 - **Rebuilding.** Run the snapshot, the build and the checks as in section 3, then unzip each document and run `node pages-fill.mjs <dir> --trace`. After a change to a source, to a figure or to the converter, run all of it again; `--only key,key` limits the build and the check to some pieces, and `--working key,key` names a source to take from the working tree.
 - **Two slips from earlier rounds, the same kind.** About 14:54, in a command that ran the dry run's snapshot, I included `rm -rf /tmp/none`, a leftover; the path does not exist, so nothing was removed. At 15:04, in a command that ran the demos checks, I included `rm -f /dev/null`, which had no purpose; it failed ("Operation not permitted") and `/dev/null` is intact. The rules forbid deletes, and I should not have typed either. Nothing was deleted. This round I typed no delete command: every file that left `docs/enablement/word/` was moved with `mv -n` and checked by hash.
 - **A false alarm, resolved earlier.** My first line-ending count of the sources came back as CRLF on every line: a shell quoting slip in the count, not the files (`od`, `tr -cd '\r'` and `git ls-files --eol` all show LF).
