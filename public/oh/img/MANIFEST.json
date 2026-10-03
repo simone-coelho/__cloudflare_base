@@ -24829,8 +24829,8 @@
   },
   "totals": {
     "files": 1947,
-    "bytes": 25982879,
-    "megabytes": 24.78,
+    "bytes": 26005800,
+    "megabytes": 24.8,
     "budgetMegabytes": 25
   },
   "unfetched": [
@@ -28829,32 +28829,33 @@
         "productFill": 0.88
       },
       "bytes": {
-        "png": 42981,
-        "webp": 32998,
-        "jpg": 47069
+        "png": 43184,
+        "webp": 36982,
+        "jpg": 49197
       },
-      "sha256": "79491cf661005ef4653e10eeac230b3e9eff7a8b364875b7d68642379af70053",
+      "sha256": "037036aa2aeba0f6c82114734e1b646e0c4242cea5c9007e5e38dbfb8d771ef4",
       "generated": false,
       "view": "LG's own product image, one hero per product, cut from its white studio ground",
-      "scale": 1.29,
+      "scale": 0.89,
       "sources": [
         {
           "role": "pair",
-          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/17bbad56-d426-408f-abef-b981d020a995/TVs_OLED77G6WUA_gallery-02_3000x3000",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGalleryZoom-1600x1062/17bbad56-d426-408f-abef-b981d020a995/TVs_OLED77G6WUA_gallery-02_3000x3000",
           "page": "https://www.lg.com/us/tvs/lg-oled77g6wua-oled-4k-tv",
-          "retrieved": "2026-10-02",
-          "sha256": "7b80b9aa7107fdf3ab2dc1445e81575f1843ecc4014b93d67b6b57cb45766b50",
-          "bytes": 28617,
-          "pixels": "730x730",
+          "retrieved": "2026-10-03",
+          "sha256": "46bda7cd67c1043a0a3131eb274cf28c0c71d8e3aeb5ccfbb0576c785d0976f1",
+          "bytes": 33973,
+          "pixels": "1600x1062",
           "touchesEdge": false,
-          "ground": "opaque 255,255,255 keyed from the border"
+          "ground": "opaque 255,255,255 keyed from the border",
+          "rendition": "LG's zoom rendition (ecomm-PDPGalleryZoom-1600x1062) of the same asset as the 420 file"
         }
       ],
       "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
       "gate": {
         "verdict": "accept",
         "checked": "2026-10-02",
-        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. LG's gallery rendition holds the TV at under 600 pixels wide, so it is drawn about 1.3x larger here: clean at 1:1, no artefact, a little soft at full size; sharp where the art draws it at 600 pixels or less."
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.89."
       }
     },
     {
@@ -28873,32 +28874,33 @@
         "productFill": 0.88
       },
       "bytes": {
-        "png": 44717,
-        "webp": 32980,
-        "jpg": 46010
+        "png": 44619,
+        "webp": 37706,
+        "jpg": 49637
       },
-      "sha256": "5db09b611916cfaae20b06cbfd055aa135c1699ecd3aec2205e17087486d82d9",
+      "sha256": "2a9a393d072b126ca8631d98b034ec9210eaecf5f6213fb438f79ee87a453531",
       "generated": false,
       "view": "LG's own product image, one hero per product, cut from its white studio ground",
-      "scale": 1.32,
+      "scale": 0.91,
       "sources": [
         {
           "role": "pair",
-          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/2d2188e8-c041-4b39-97ef-4c96aee29a28/TVs_OLED65C6PUA_gallery-02_3000x3000",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGalleryZoom-1600x1062/2d2188e8-c041-4b39-97ef-4c96aee29a28/TVs_OLED65C6PUA_gallery-02_3000x3000",
           "page": "https://www.lg.com/us/tvs/lg-oled65c6pua-oled-4k-tv",
-          "retrieved": "2026-10-02",
-          "sha256": "ed0b7b2b8ddba44b99bf0d2fcafd9d6f8a5dfe26caf6bacf9ed617fe111e66a9",
-          "bytes": 24041,
-          "pixels": "730x730",
+          "retrieved": "2026-10-03",
+          "sha256": "21e2e6d1c77c8c82e6ef894d47497a1c78288fc923043fe290f31897ac88732d",
+          "bytes": 40377,
+          "pixels": "1600x1062",
           "touchesEdge": false,
-          "ground": "opaque 255,255,255 keyed from the border"
+          "ground": "opaque 255,255,255 keyed from the border",
+          "rendition": "LG's zoom rendition (ecomm-PDPGalleryZoom-1600x1062) of the same asset as the 420 file"
         }
       ],
       "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
       "gate": {
         "verdict": "accept",
         "checked": "2026-10-02",
-        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. LG's gallery rendition holds the TV at under 600 pixels wide, so it is drawn about 1.3x larger here: clean at 1:1, no artefact, a little soft at full size; sharp where the art draws it at 600 pixels or less."
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.91."
       }
     },
     {
@@ -29005,32 +29007,33 @@
         "productFill": 0.88
       },
       "bytes": {
-        "png": 69222,
-        "webp": 56836,
-        "jpg": 68854
+        "png": 70301,
+        "webp": 60684,
+        "jpg": 71434
       },
-      "sha256": "46cd45b044dd55466d9ecd9d4eafac086e8719247d2379724916c345bdf85a50",
+      "sha256": "241bac4bb6c68064dbd6ddf5ba466aa4c376bc25437cd9344c98e3a48bfcc4d4",
       "generated": false,
       "view": "LG's own product image, one hero per product, cut from its white studio ground",
-      "scale": 1.04,
+      "scale": 0.71,
       "sources": [
         {
           "role": "pair",
-          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/bcd07587-91bd-4430-95dc-08fda676cdfc/TVs_75MRGB95BUA_gallery-02_3000x3000",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGalleryZoom-1600x1062/bcd07587-91bd-4430-95dc-08fda676cdfc/TVs_75MRGB95BUA_gallery-02_3000x3000",
           "page": "https://www.lg.com/us/tvs/lg-75mrgb95bua-mrgb-4k-tv",
-          "retrieved": "2026-10-02",
-          "sha256": "f4c5fc67a8a0b871d6e1c699d85d84df2286f3b3297c8b323f6c48a42dd80740",
-          "bytes": 50416,
-          "pixels": "730x730",
+          "retrieved": "2026-10-03",
+          "sha256": "c323d673995899a4f34ddc612c3ae90eec1f548baaba81980bd37ffd5ac748ff",
+          "bytes": 70997,
+          "pixels": "1600x1062",
           "touchesEdge": false,
-          "ground": "opaque 255,255,255 keyed from the border"
+          "ground": "opaque 255,255,255 keyed from the border",
+          "rendition": "LG's zoom rendition (ecomm-PDPGalleryZoom-1600x1062) of the same asset as the 420 file"
         }
       ],
       "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
       "gate": {
         "verdict": "accept",
         "checked": "2026-10-02",
-        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.04x the source's pixels."
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.71."
       }
     },
     {
@@ -29137,32 +29140,33 @@
         "productFill": 0.88
       },
       "bytes": {
-        "png": 11846,
-        "webp": 6852,
-        "jpg": 9095
+        "png": 11646,
+        "webp": 7712,
+        "jpg": 9279
       },
-      "sha256": "dea870ec198bd9580facd3110bc773b3786f7bdb3855ee7603093aeb7eb0632e",
+      "sha256": "54c36587e38f463b4443701d788b005c938b5df08a5866b1f69b71fc1c67449e",
       "generated": false,
       "view": "LG's own product image, one hero per product, cut from its white studio ground",
-      "scale": 1.21,
+      "scale": 0.83,
       "sources": [
         {
           "role": "pair",
-          "url": "https://media.us.lg.com/transform/ecomm-PDPGallery-1100x730/7d9dcfcd-7518-41ef-8fc4-abaff4b3e632/TV_27LX6TYGA_gallery_01_3000x3000",
+          "url": "https://media.us.lg.com/transform/ecomm-PDPGalleryZoom-1600x1062/7d9dcfcd-7518-41ef-8fc4-abaff4b3e632/TV_27LX6TYGA_gallery_01_3000x3000",
           "page": "https://www.lg.com/us/lifestyle-products/lg-27lx6tyga-lifestyle-screen",
-          "retrieved": "2026-10-02",
-          "sha256": "b37bd64ee48a2d741a44ec29f752bc1581a99bf1448856507b4d1647de3fffff",
-          "bytes": 2427,
-          "pixels": "730x730",
+          "retrieved": "2026-10-03",
+          "sha256": "603401500727f6ecc405a4a17575f83739d585152283d8dfd31e3a11f74f777a",
+          "bytes": 3547,
+          "pixels": "1600x1062",
           "touchesEdge": false,
-          "ground": "opaque 255,255,255 keyed from the border"
+          "ground": "opaque 255,255,255 keyed from the border",
+          "rendition": "LG's zoom rendition (ecomm-PDPGalleryZoom-1600x1062) of the same asset as the 420 file"
         }
       ],
       "licence": "Manufacturer product imagery: LG Electronics' own product image, published on lg.com/us and served from LG's media host (media.us.lg.com). © LG Electronics; LG and the product names are LG trademarks. No licence is granted by the page; demo use only, to identify the product in an internal demo; provenance recorded. Crop, scale and ground only.",
       "gate": {
         "verdict": "accept",
         "checked": "2026-10-02",
-        "note": "The same LG image as the 420 file, rendered at 840; edges intact and white surfaces kept at 1:1 on grey. Drawn at 1.21x the source's pixels."
+        "note": "Drawn from LG's zoom rendition of the same asset (1600x1062), from more pixels than it shows: sharp at full size, edges intact. Scale 0.83."
       }
     },
     {
