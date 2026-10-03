@@ -1,0 +1,1574 @@
+{
+ "about": "OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): white type in the format's text zone, a badge in its badge zone, never over the product zone. src is the WebP; avif and jpg are the same picture for <picture> sources and the fallback. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product's box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper's own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.",
+ "manifest": "/oh/img/MANIFEST.json",
+ "formats": {
+  "slide": {
+   "width": 1440,
+   "height": 640,
+   "textZone": [
+    0.04,
+    0.18,
+    0.56,
+    0.82
+   ],
+   "productZone": [
+    0.6,
+    0.08,
+    0.98,
+    0.96
+   ],
+   "badgeZones": [
+    [
+     0.82,
+     0.04,
+     0.98,
+     0.18
+    ],
+    [
+     0.6,
+     0.04,
+     0.76,
+     0.18
+    ],
+    [
+     0.82,
+     0.8,
+     0.98,
+     0.94
+    ]
+   ],
+   "use": "hero carousel slides"
+  },
+  "tile": {
+   "width": 720,
+   "height": 420,
+   "textZone": [
+    0.05,
+    0.58,
+    0.5,
+    0.94
+   ],
+   "productZone": [
+    0.5,
+    0.06,
+    0.98,
+    0.94
+   ],
+   "badgeZones": [
+    [
+     0.04,
+     0.05,
+     0.4,
+     0.2
+    ]
+   ],
+   "use": "deal bento tiles and room tiles"
+  },
+  "tall": {
+   "width": 720,
+   "height": 860,
+   "textZone": [
+    0.06,
+    0.7,
+    0.94,
+    0.95
+   ],
+   "productZone": [
+    0.06,
+    0.06,
+    0.94,
+    0.66
+   ],
+   "badgeZones": [
+    [
+     0.05,
+     0.03,
+     0.45,
+     0.12
+    ],
+    [
+     0.55,
+     0.03,
+     0.95,
+     0.12
+    ]
+   ],
+   "use": "the deal bento's tall positions"
+  },
+  "banner": {
+   "width": 1440,
+   "height": 360,
+   "textZone": [
+    0.04,
+    0.15,
+    0.56,
+    0.85
+   ],
+   "productZone": [
+    0.62,
+    0.04,
+    0.98,
+    0.98
+   ],
+   "badgeZones": [],
+   "use": "room grid banners"
+  }
+ },
+ "rooms": {
+  "tvs": "room_living_room",
+  "laundry": "room_laundry_room",
+  "kitchen": "room_kitchen"
+ },
+ "pieces": {
+  "hero_nfl_gift_card": {
+   "kind": "hero",
+   "title": "Score a $200 NFL Shop eGift Card with select TVs.",
+   "product": "OLED77G6WUA",
+   "slide": {
+    "src": "/oh/img/art/slide/hero_nfl_gift_card.webp",
+    "webp": "/oh/img/art/slide/hero_nfl_gift_card.webp",
+    "avif": "/oh/img/art/slide/hero_nfl_gift_card.avif",
+    "jpg": "/oh/img/art/slide/hero_nfl_gift_card.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.6,
+      0.075,
+      0.93,
+      0.634
+     ],
+     "badge": [
+      0.82,
+      0.8,
+      0.98,
+      0.94
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "hero_living_room": {
+   "kind": "hero",
+   "title": "The right screen for the room you have.",
+   "product": "OLED65C6PUA",
+   "slide": {
+    "src": "/oh/img/art/slide/hero_living_room.webp",
+    "webp": "/oh/img/art/slide/hero_living_room.webp",
+    "avif": "/oh/img/art/slide/hero_living_room.avif",
+    "jpg": "/oh/img/art/slide/hero_living_room.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.615,
+      0.155,
+      0.925,
+      0.705
+     ],
+     "badge": [
+      0.82,
+      0.8,
+      0.98,
+      0.94
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "hero_laundry_room": {
+   "kind": "hero",
+   "title": "Finish the laundry room.",
+   "product": "WM4000HWA",
+   "slide": {
+    "src": "/oh/img/art/slide/hero_laundry_room.webp",
+    "webp": "/oh/img/art/slide/hero_laundry_room.webp",
+    "avif": "/oh/img/art/slide/hero_laundry_room.avif",
+    "jpg": "/oh/img/art/slide/hero_laundry_room.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.674,
+      0.2,
+      0.885,
+      0.88
+     ],
+     "badge": [
+      0.82,
+      0.04,
+      0.98,
+      0.18
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "hero_kitchen": {
+   "kind": "hero",
+   "title": "One kitchen, one finish.",
+   "product": "LSGL6335X",
+   "slide": {
+    "src": "/oh/img/art/slide/hero_kitchen.webp",
+    "webp": "/oh/img/art/slide/hero_kitchen.webp",
+    "avif": "/oh/img/art/slide/hero_kitchen.avif",
+    "jpg": "/oh/img/art/slide/hero_kitchen.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.66,
+      0.23,
+      0.921,
+      0.93
+     ],
+     "badge": [
+      0.82,
+      0.04,
+      0.98,
+      0.18
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "pin_micro_rgb_evo": {
+   "kind": "hero",
+   "title": "New for 2026: Micro RGB evo.",
+   "product": "75MRGB95BUA",
+   "slide": {
+    "src": "/oh/img/art/slide/pin_micro_rgb_evo.webp",
+    "webp": "/oh/img/art/slide/pin_micro_rgb_evo.webp",
+    "avif": "/oh/img/art/slide/pin_micro_rgb_evo.avif",
+    "jpg": "/oh/img/art/slide/pin_micro_rgb_evo.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.606,
+      0.2,
+      0.935,
+      0.8
+     ],
+     "badge": [
+      0.82,
+      0.04,
+      0.98,
+      0.18
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tile": {
+    "src": "/oh/img/art/tile/pin_micro_rgb_evo.webp",
+    "webp": "/oh/img/art/tile/pin_micro_rgb_evo.webp",
+    "avif": "/oh/img/art/tile/pin_micro_rgb_evo.avif",
+    "jpg": "/oh/img/art/tile/pin_micro_rgb_evo.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.503,
+      0.181,
+      0.935,
+      0.781
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/pin_micro_rgb_evo.webp",
+    "webp": "/oh/img/art/tall/pin_micro_rgb_evo.webp",
+    "avif": "/oh/img/art/tall/pin_micro_rgb_evo.avif",
+    "jpg": "/oh/img/art/tall/pin_micro_rgb_evo.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.25,
+      0.2,
+      0.868,
+      0.62
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "hero_continue": {
+   "kind": "hero",
+   "title": "Pick up where you left off.",
+   "product": null,
+   "slide": {
+    "src": "/oh/img/art/slide/hero_continue.webp",
+    "webp": "/oh/img/art/slide/hero_continue.webp",
+    "avif": "/oh/img/art/slide/hero_continue.avif",
+    "jpg": "/oh/img/art/slide/hero_continue.jpg",
+    "width": 1440,
+    "height": 640,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.18,
+      0.56,
+      0.82
+     ],
+     "product": [
+      0.6,
+      0.08,
+      0.98,
+      0.96
+     ],
+     "badge": [
+      0.82,
+      0.04,
+      0.98,
+      0.18
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_nfl_gift_card": {
+   "kind": "deal",
+   "title": "Up to $200 NFL Shop eGift Card with select TVs",
+   "product": "OLED77G6WUA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_nfl_gift_card.webp",
+    "webp": "/oh/img/art/tile/deal_nfl_gift_card.webp",
+    "avif": "/oh/img/art/tile/deal_nfl_gift_card.avif",
+    "jpg": "/oh/img/art/tile/deal_nfl_gift_card.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.557,
+      0.14,
+      0.943,
+      0.64
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_nfl_gift_card.webp",
+    "webp": "/oh/img/art/tall/deal_nfl_gift_card.webp",
+    "avif": "/oh/img/art/tall/deal_nfl_gift_card.avif",
+    "jpg": "/oh/img/art/tall/deal_nfl_gift_card.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.25,
+      0.178,
+      0.95,
+      0.62
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_matching_soundbar": {
+   "kind": "deal",
+   "title": "Up to $200 off a matching soundbar with your TV",
+   "product": "S90TY",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_matching_soundbar.webp",
+    "webp": "/oh/img/art/tile/deal_matching_soundbar.webp",
+    "avif": "/oh/img/art/tile/deal_matching_soundbar.avif",
+    "jpg": "/oh/img/art/tile/deal_matching_soundbar.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.51,
+      0.217,
+      0.969,
+      0.681
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_matching_soundbar.webp",
+    "webp": "/oh/img/art/tall/deal_matching_soundbar.webp",
+    "avif": "/oh/img/art/tall/deal_matching_soundbar.avif",
+    "jpg": "/oh/img/art/tall/deal_matching_soundbar.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.251,
+      0.236,
+      0.91,
+      0.56
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_sound_suite_bundle": {
+   "kind": "deal",
+   "title": "Up to $400 off a TV and Sound Suite together",
+   "product": "M7-P4_H7_W7",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_sound_suite_bundle.webp",
+    "webp": "/oh/img/art/tile/deal_sound_suite_bundle.webp",
+    "avif": "/oh/img/art/tile/deal_sound_suite_bundle.avif",
+    "jpg": "/oh/img/art/tile/deal_sound_suite_bundle.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.51,
+      0.312,
+      0.969,
+      0.719
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_sound_suite_bundle.webp",
+    "webp": "/oh/img/art/tall/deal_sound_suite_bundle.webp",
+    "avif": "/oh/img/art/tall/deal_sound_suite_bundle.avif",
+    "jpg": "/oh/img/art/tall/deal_sound_suite_bundle.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.289,
+      0.305,
+      0.949,
+      0.59
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_free_wall_mounting": {
+   "kind": "deal",
+   "title": "Free wall mounting with select TVs",
+   "product": "OLED65C6PUA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_free_wall_mounting.webp",
+    "webp": "/oh/img/art/tile/deal_free_wall_mounting.webp",
+    "avif": "/oh/img/art/tile/deal_free_wall_mounting.avif",
+    "jpg": "/oh/img/art/tile/deal_free_wall_mounting.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.519,
+      0.119,
+      0.919,
+      0.6
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_free_wall_mounting.webp",
+    "webp": "/oh/img/art/tall/deal_free_wall_mounting.webp",
+    "avif": "/oh/img/art/tall/deal_free_wall_mounting.avif",
+    "jpg": "/oh/img/art/tall/deal_free_wall_mounting.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.278,
+      0.2,
+      0.96,
+      0.6
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_big_screens": {
+   "kind": "deal",
+   "title": "Up to $1,000 off big screens",
+   "product": "75MRGB95BUA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_big_screens.webp",
+    "webp": "/oh/img/art/tile/deal_big_screens.webp",
+    "avif": "/oh/img/art/tile/deal_big_screens.avif",
+    "jpg": "/oh/img/art/tile/deal_big_screens.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.499,
+      0.188,
+      0.939,
+      0.8
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_big_screens.webp",
+    "webp": "/oh/img/art/tall/deal_big_screens.webp",
+    "avif": "/oh/img/art/tall/deal_big_screens.avif",
+    "jpg": "/oh/img/art/tall/deal_big_screens.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.19,
+      0.241,
+      0.808,
+      0.66
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_xbox_controller": {
+   "kind": "deal",
+   "title": "A free Xbox controller with select TVs",
+   "product": "27LX6TYGA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_xbox_controller.webp",
+    "webp": "/oh/img/art/tile/deal_xbox_controller.webp",
+    "avif": "/oh/img/art/tile/deal_xbox_controller.avif",
+    "jpg": "/oh/img/art/tile/deal_xbox_controller.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.651,
+      0.06,
+      0.788,
+      0.86
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_xbox_controller.webp",
+    "webp": "/oh/img/art/tall/deal_xbox_controller.webp",
+    "avif": "/oh/img/art/tall/deal_xbox_controller.avif",
+    "jpg": "/oh/img/art/tall/deal_xbox_controller.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.494,
+      0.06,
+      0.704,
+      0.66
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_laundry_pair": {
+   "kind": "deal",
+   "title": "Save $200 on a washer and an eligible dryer",
+   "product": "WM4000HWA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_laundry_pair.webp",
+    "webp": "/oh/img/art/tile/deal_laundry_pair.webp",
+    "avif": "/oh/img/art/tile/deal_laundry_pair.avif",
+    "jpg": "/oh/img/art/tile/deal_laundry_pair.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.603,
+      0.162,
+      0.896,
+      0.881
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_laundry_pair.webp",
+    "webp": "/oh/img/art/tall/deal_laundry_pair.webp",
+    "avif": "/oh/img/art/tall/deal_laundry_pair.avif",
+    "jpg": "/oh/img/art/tall/deal_laundry_pair.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.428,
+      0.22,
+      0.811,
+      0.68
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_laundry_sets": {
+   "kind": "deal",
+   "title": "An extra $150 to $250 off select laundry sets",
+   "product": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_laundry_sets.webp",
+    "webp": "/oh/img/art/tile/deal_laundry_sets.webp",
+    "avif": "/oh/img/art/tile/deal_laundry_sets.avif",
+    "jpg": "/oh/img/art/tile/deal_laundry_sets.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.529,
+      0.16,
+      0.95,
+      0.9
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_laundry_sets.webp",
+    "webp": "/oh/img/art/tall/deal_laundry_sets.webp",
+    "avif": "/oh/img/art/tall/deal_laundry_sets.avif",
+    "jpg": "/oh/img/art/tall/deal_laundry_sets.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.258,
+      0.18,
+      0.842,
+      0.68
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_range_microwave": {
+   "kind": "deal",
+   "title": "Save $200 on a range and microwave together",
+   "product": "LSGL6335X",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_range_microwave.webp",
+    "webp": "/oh/img/art/tile/deal_range_microwave.webp",
+    "avif": "/oh/img/art/tile/deal_range_microwave.avif",
+    "jpg": "/oh/img/art/tile/deal_range_microwave.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.597,
+      0.19,
+      0.921,
+      0.85
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_range_microwave.webp",
+    "webp": "/oh/img/art/tall/deal_range_microwave.webp",
+    "avif": "/oh/img/art/tall/deal_range_microwave.avif",
+    "jpg": "/oh/img/art/tall/deal_range_microwave.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.299,
+      0.18,
+      0.8,
+      0.68
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_kitchen_packages": {
+   "kind": "deal",
+   "title": "Save up to $500 on select kitchen packages",
+   "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_kitchen_packages.webp",
+    "webp": "/oh/img/art/tile/deal_kitchen_packages.webp",
+    "avif": "/oh/img/art/tile/deal_kitchen_packages.avif",
+    "jpg": "/oh/img/art/tile/deal_kitchen_packages.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.507,
+      0.34,
+      0.932,
+      0.86
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_kitchen_packages.webp",
+    "webp": "/oh/img/art/tall/deal_kitchen_packages.webp",
+    "avif": "/oh/img/art/tall/deal_kitchen_packages.avif",
+    "jpg": "/oh/img/art/tall/deal_kitchen_packages.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.175,
+      0.24,
+      0.944,
+      0.7
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_fridge_dishwasher": {
+   "kind": "deal",
+   "title": "Up to $200 off an eligible refrigerator and dishwasher",
+   "product": "LDNPM654S",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_fridge_dishwasher.webp",
+    "webp": "/oh/img/art/tile/deal_fridge_dishwasher.webp",
+    "avif": "/oh/img/art/tile/deal_fridge_dishwasher.avif",
+    "jpg": "/oh/img/art/tile/deal_fridge_dishwasher.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.532,
+      0.26,
+      0.786,
+      0.86
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_fridge_dishwasher.webp",
+    "webp": "/oh/img/art/tall/deal_fridge_dishwasher.webp",
+    "avif": "/oh/img/art/tall/deal_fridge_dishwasher.avif",
+    "jpg": "/oh/img/art/tall/deal_fridge_dishwasher.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.342,
+      0.2,
+      0.757,
+      0.68
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_thinq_warranty": {
+   "kind": "deal",
+   "title": "A two-year limited warranty on select appliances",
+   "product": "WM4000HWA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_thinq_warranty.webp",
+    "webp": "/oh/img/art/tile/deal_thinq_warranty.webp",
+    "avif": "/oh/img/art/tile/deal_thinq_warranty.avif",
+    "jpg": "/oh/img/art/tile/deal_thinq_warranty.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.565,
+      0.181,
+      0.833,
+      0.84
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_thinq_warranty.webp",
+    "webp": "/oh/img/art/tall/deal_thinq_warranty.webp",
+    "avif": "/oh/img/art/tall/deal_thinq_warranty.avif",
+    "jpg": "/oh/img/art/tall/deal_thinq_warranty.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.351,
+      0.18,
+      0.767,
+      0.68
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "deal_wash1000": {
+   "kind": "deal",
+   "title": "An extra $100 off the WM6700HWA with code WASH1000",
+   "product": "WM6700HWA",
+   "tile": {
+    "src": "/oh/img/art/tile/deal_wash1000.webp",
+    "webp": "/oh/img/art/tile/deal_wash1000.webp",
+    "avif": "/oh/img/art/tile/deal_wash1000.avif",
+    "jpg": "/oh/img/art/tile/deal_wash1000.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.508,
+      0.181,
+      0.853,
+      0.9
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   },
+   "tall": {
+    "src": "/oh/img/art/tall/deal_wash1000.webp",
+    "webp": "/oh/img/art/tall/deal_wash1000.webp",
+    "avif": "/oh/img/art/tall/deal_wash1000.avif",
+    "jpg": "/oh/img/art/tall/deal_wash1000.jpg",
+    "width": 720,
+    "height": 860,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.06,
+      0.7,
+      0.94,
+      0.95
+     ],
+     "product": [
+      0.314,
+      0.18,
+      0.785,
+      0.66
+     ],
+     "badge": [
+      0.05,
+      0.03,
+      0.45,
+      0.12
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_tvs": {
+   "kind": "tile",
+   "title": "TVs",
+   "product": "OLED65C6PUA",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_tvs.webp",
+    "webp": "/oh/img/art/tile/tile_tvs.webp",
+    "avif": "/oh/img/art/tile/tile_tvs.avif",
+    "jpg": "/oh/img/art/tile/tile_tvs.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.546,
+      0.14,
+      0.953,
+      0.69
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_audio": {
+   "kind": "tile",
+   "title": "Soundbars & Sound Suite",
+   "product": "S90TY",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_audio.webp",
+    "webp": "/oh/img/art/tile/tile_audio.webp",
+    "avif": "/oh/img/art/tile/tile_audio.avif",
+    "jpg": "/oh/img/art/tile/tile_audio.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.51,
+      0.226,
+      0.969,
+      0.69
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_laundry": {
+   "kind": "tile",
+   "title": "Washers & dryers",
+   "product": "WM4000HWA",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_laundry.webp",
+    "webp": "/oh/img/art/tile/tile_laundry.webp",
+    "avif": "/oh/img/art/tile/tile_laundry.avif",
+    "jpg": "/oh/img/art/tile/tile_laundry.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.613,
+      0.181,
+      0.906,
+      0.9
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_washtower": {
+   "kind": "tile",
+   "title": "WashTower & all-in-one",
+   "product": "WKE100HWA",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_washtower.webp",
+    "webp": "/oh/img/art/tile/tile_washtower.webp",
+    "avif": "/oh/img/art/tile/tile_washtower.avif",
+    "jpg": "/oh/img/art/tile/tile_washtower.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.614,
+      0.1,
+      0.824,
+      0.919
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_cooking": {
+   "kind": "tile",
+   "title": "Ranges & microwaves",
+   "product": "LSGL6335X",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_cooking.webp",
+    "webp": "/oh/img/art/tile/tile_cooking.webp",
+    "avif": "/oh/img/art/tile/tile_cooking.avif",
+    "jpg": "/oh/img/art/tile/tile_cooking.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.514,
+      0.219,
+      0.847,
+      0.9
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_dishwashers": {
+   "kind": "tile",
+   "title": "Dishwashers",
+   "product": "LDNPM654S",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_dishwashers.webp",
+    "webp": "/oh/img/art/tile/tile_dishwashers.webp",
+    "avif": "/oh/img/art/tile/tile_dishwashers.avif",
+    "jpg": "/oh/img/art/tile/tile_dishwashers.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.592,
+      0.26,
+      0.846,
+      0.86
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "tile_packages": {
+   "kind": "tile",
+   "title": "Kitchen packages & laundry sets",
+   "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+   "tile": {
+    "src": "/oh/img/art/tile/tile_packages.webp",
+    "webp": "/oh/img/art/tile/tile_packages.webp",
+    "avif": "/oh/img/art/tile/tile_packages.avif",
+    "jpg": "/oh/img/art/tile/tile_packages.jpg",
+    "width": 720,
+    "height": 420,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.05,
+      0.58,
+      0.5,
+      0.94
+     ],
+     "product": [
+      0.511,
+      0.3,
+      0.969,
+      0.86
+     ],
+     "badge": [
+      0.04,
+      0.05,
+      0.4,
+      0.2
+     ]
+    },
+    "verdict": "accept"
+   }
+  },
+  "room_living_room": {
+   "kind": "room",
+   "title": "TVs",
+   "product": "OLED65C6PUA",
+   "banner": {
+    "src": "/oh/img/art/banner/room_living_room.webp",
+    "webp": "/oh/img/art/banner/room_living_room.webp",
+    "avif": "/oh/img/art/banner/room_living_room.avif",
+    "jpg": "/oh/img/art/banner/room_living_room.jpg",
+    "width": 1440,
+    "height": 360,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.655,
+      0.044,
+      0.845,
+      0.644
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   }
+  },
+  "room_laundry_room": {
+   "kind": "room",
+   "title": "Laundry",
+   "product": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+   "banner": {
+    "src": "/oh/img/art/banner/room_laundry_room.webp",
+    "webp": "/oh/img/art/banner/room_laundry_room.webp",
+    "avif": "/oh/img/art/banner/room_laundry_room.avif",
+    "jpg": "/oh/img/art/banner/room_laundry_room.jpg",
+    "width": 1440,
+    "height": 360,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.7,
+      0.1,
+      0.9,
+      0.919
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   }
+  },
+  "room_kitchen": {
+   "kind": "room",
+   "title": "Kitchen",
+   "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+   "banner": {
+    "src": "/oh/img/art/banner/room_kitchen.webp",
+    "webp": "/oh/img/art/banner/room_kitchen.webp",
+    "avif": "/oh/img/art/banner/room_kitchen.avif",
+    "jpg": "/oh/img/art/banner/room_kitchen.jpg",
+    "width": 1440,
+    "height": 360,
+    "ink": "light",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.633,
+      0.1,
+      0.927,
+      0.939
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   }
+  }
+ }
+}
