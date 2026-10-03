@@ -1,6 +1,6 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
-import { catchUp, runDayReport } from '@/learn/hourly';
+import { catchUp, countedStorage, foldOpenHours, runDayReport, RUN_BUDGET } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
@@ -287,14 +287,29 @@ export default {
           ));
         }
         // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;
-        // Then retry missing/stale day publications within the bounded aggregate-backed lookback.
+        // Then retry missing/stale day publications within the bounded aggregate-backed lookback,
+        // then fold the open hour into its working aggregate (lane E6).
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            const r = await catchUp(env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, learn, Date.now(), {}, env);
-            if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
-            if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
-            if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
+            // Lane E6: the run's storage calls are counted against one budget, the catch-up's
+            // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is
+            // passed through whole, so the catch-up's range reads stay range reads.
+            const counted = countedStorage(env.STORAGE as unknown as Parameters<typeof catchUp>[0]);
+            try {
+              const r = await catchUp(counted.storage, tenant, learn, Date.now(), {}, env);
+              if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
+              if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
+              if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
+            } catch { console.error('hourly fold failed'); }
+            // Lane E6: then the hour that is still open, into its working aggregate, so a day report
+            // reads one aggregate per hour and only the minutes of raw the queue has written since.
+            // It runs whether or not the catch-up got through: it applies the erasures to the open
+            // hour's ledger copy first, on every run, and folds only what the budget left covers.
+            const open = await foldOpenHours(env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], tenant, learn, Date.now(),
+              { start: true, publish: true, budget: Math.max(0, RUN_BUDGET - counted.calls()) }, env)
+              .catch(() => { console.error('open hour fold failed'); return null; });
+            if (open && (open.folded.length || open.failed.length || open.deferred.length || open.removed || open.pruned)) console.log('open hour fold; hours/objects/copied/unchanged/deferred/failed/published/removed/pruned/calls', open.folded.length, open.folded.reduce((n, h) => n + h.read, 0), open.folded.reduce((n, h) => n + h.copied, 0), open.unchanged.length, open.deferred.length, open.failed.length, open.published.length, open.removed, open.pruned, counted.calls() + open.calls);
           })().catch((e) => console.error('hourly fold failed')));
         }
         break;
