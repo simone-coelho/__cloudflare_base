@@ -9,19 +9,19 @@
 //
 // No dependencies, nothing evaluated: it reads files, parses markdown, HTML and JSON as text, and writes .html and
 // .svg files. What it reads, and what each source becomes:
-//   docs/enablement/content/what-it-is.md, selling-it.md, how-it-works-and-where-it-runs.md, status.md
-//                                        the four pieces, each a designed rendering of the same text
-//   docs/enablement/content/demos.md     the demo map (the design's section 3.8, with its additions as built)
+//   docs/enablement/content/what-it-is.md, selling-it.md, how-it-works-and-where-it-runs.md
+//                                        the three pieces, each a designed rendering of the same text
+//   docs/enablement/content/demos.md     the demo map: which demo shows which story
 //   docs/enablement/content/credits-source.html
 //                                        the credits page: the page leadership saw, corrected; its structure is
 //                                        mapped element by element, and its timeline rows are its JSON block
 //   docs/enablement/GLOSSARY.md          the glossary
-//   docs/enablement/BTI-Enablement-Design.md
-//                                        paragraph C for the landing page
 //   docs/enablement/figures/*.svg        inlined verbatim, and copied byte for byte to enablement/site/figures/
+// It does not write the two interactive pages (lanes M1 and H1 build see-it-work.* and
+// how-it-works-interactive.*), and it writes no status page: LANE-BRIEF-V2 retired it from the site.
 // Every page links /site.css, and /site.js where it has something to enhance; no page carries an inline style or
-// script. Anything a page adds to its source's text is marked (data-chrome, data-lead or data-added, with a
-// reason), so the text check can list it instead of comparing it.
+// script, and none shows a label, a chip or a legend (LANE-BRIEF-V2). Anything a page adds to its source's text is
+// marked (data-chrome, data-lead or data-added, with a reason), so the text check can list it instead of comparing it.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,57 +35,60 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g
 const notes = [];
 
 const NAME = 'Behavioral Targeting and Intelligence';
-const STAMP = 'Updated October 2, 2026 · engine facts as of commit 8b4f74c';
+// The stamp names the day the pages last changed. Under LANE-BRIEF-V2 the material describes the finished
+// product, so it no longer names the code commit the old facts sheet was pinned to.
+const STAMP = 'Updated October 2, 2026';
 const FOOTLINE = 'Internal · Optimizely · do not forward outside Optimizely';
 const ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23ABFF44'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%2308251A'/%3E%3C/svg%3E";
 const CREDITS_SRC = 'docs/enablement/content/credits-source.html';
 const CREDITS_MD = 'docs/enablement/content/credits.md';
 const DEMOS_MD = 'docs/enablement/content/demos.md';
-const DEMOS_SPEC = 'docs/enablement/BTI-Enablement-Design.md#38-g-the-demo-map';
 
+// The status page is retired from the site (LANE-BRIEF-V2); its markdown stays in the repository as an
+// engineering record. The two interactive pages are built by lanes M1 and H1, not by this builder.
 const NAV = [
   ['/', 'All pages'],
   ['/what-it-is', 'What it is'],
+  ['/see-it-work', 'See it work'],
   ['/selling-it', 'Selling it'],
   ['/how-it-works', 'How it works'],
-  ['/status', 'Status'],
+  ['/how-it-works-interactive', 'How it works, interactive'],
   ['/credits', 'AI credits'],
   ['/glossary', 'Glossary'],
   ['/demos', 'Demo map'],
 ];
 const PIECES = [
   ['/what-it-is', 'What it is', 'For marketing'],
+  ['/see-it-work', 'See it work', 'For marketing'],
   ['/selling-it', 'Selling it', 'For account executives'],
   ['/how-it-works', 'How it works and where it runs', 'For solutions engineers'],
-  ['/status', 'What is built, designed and open', 'For everyone'],
+  ['/how-it-works-interactive', 'How it works, interactive', 'For solutions engineers'],
   ['/credits', 'Where Opal and AI Credits Fit, and Where They Never Do', 'For account executives'],
   ['/glossary', 'The glossary', 'For everyone'],
-  ['/demos', 'Which demo to show to whom', 'For account executives'],
+  ['/demos', 'Which demo shows which story', 'For account executives'],
 ];
+// The two interactive pages are titled by their own lanes (M1, H1): the list takes each title from the page's text
+// when the text is there, as "# Behavioral Targeting and Intelligence: <title>", and keeps the name above otherwise.
+for (const [href, src] of [['/see-it-work', 'docs/enablement/content/see-it-work.md'], ['/how-it-works-interactive', 'docs/enablement/content/how-it-works-interactive.md']]) {
+  let m = null;
+  try { m = new RegExp(`^# ${NAME}: (.+)$`, 'm').exec(fs.readFileSync(path.join(ROOT, src), 'utf8')); } catch { m = null; }
+  const row = PIECES.find((p) => p[0] === href);
+  if (m && row) row[1] = m[1].trim().charAt(0).toUpperCase() + m[1].trim().slice(1);
+}
 // Italic titles in the sources that name another piece become links to it; their text is unchanged.
 const TITLE_LINKS = new Map([
   ['What it is', '/what-it-is'],
+  ['See it work', '/see-it-work'],
   ['Selling it', '/selling-it'],
   ['How it works and where it runs', '/how-it-works'],
-  ['What is built, designed and open', '/status'],
+  ['How it works, interactive', '/how-it-works-interactive'],
   ['Where Opal and AI Credits Fit, and Where They Never Do', '/credits'],
   ['Where Opal and AI credits fit, and where they never do', '/credits'],
   ['The glossary', '/glossary'],
   ['Glossary', '/glossary'],
+  ['Which demo shows which story', '/demos'],
   ['Which demo to show to whom', '/demos'],
-  ['Which demo to show, and to whom', '/demos'],
 ]);
-// The demo map's three additions, as built: each is marked on the page with its reason. The design's section 3.8
-// records each one as "Addition, as built".
-const DEMOS_ADDED = new Map([
-  ['Its hands-off change is the fading arithmetic checked again on a timer. Never call it a push from the engine.',
-    "selling-it.md's caution for this demo; section 3.8 gives no never-claims text for the older demos, and records this as an addition, as built"],
-  ["It runs on the shared demo deployment's older build, not today's engine. Never present it as the product.",
-    "selling-it.md's caution for this demo; section 3.8 gives no never-claims text for the older demos, and records this as an addition, as built"],
-  ['Sentences never to say, and what to say instead',
-    'a heading for the never-say table, which section 3.8 lists without one; recorded there as an addition, as built'],
-]);
-
 // ---------- text helpers ----------
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const attr = (s) => esc(s).replace(/"/g, '&quot;');
@@ -107,19 +110,15 @@ function slugger() {
     return s;
   };
 }
-const LABEL_CLASS = { Built: 'built', Designed: 'designed', Open: 'open' };
-const chip = (w) => `<span class="chip chip-${LABEL_CLASS[w]}">${w}</span>`;
-const LEGEND_INNER = `${chip('Built')}: in the code and exercised. ${chip('Designed')}: in an architecture document, not in the code. ${chip('Open')}: no decision yet.`;
-const LEGEND_CHROME = `<aside class="legend" aria-label="How to read the labels" data-chrome="legend"><p class="legend-text">${LEGEND_INNER}</p></aside>`;
-const LEGEND_SOURCE = `<aside class="legend" aria-label="How to read the labels"><p class="legend-text">${LEGEND_INNER}</p></aside>`;
-const LEGEND_SENTENCE = 'Built: in the code and exercised. Designed: in an architecture document, not in the code. Open: no decision yet.';
+// LANE-BRIEF-V2: the site shows no label, no chip and no legend. A label word left in a source renders as the words
+// it is, and the text check's state-word scan fails the page until the source changes.
 
 // A link to the site itself becomes a path; a link to a demo worker stays whole; anything else stops the build.
 function mapHref(u) {
   if (u.startsWith('#')) return u;
   const site = /^https:\/\/edge-platform-(?:bti|enablement)\.expedge\.workers\.dev(\/[^#?]*)?(#.*)?$/.exec(u);
   if (site) return ((site[1] || '/').replace(/\/+$/, '') || '/') + (site[2] || '');
-  if (!/^https:\/\/edge-platform(?:-vantage|-top-offers)?\.expedge\.workers\.dev(\/|$)/.test(u)) throw new Error(`a link outside the allowlist: ${u}`);
+  if (!/^https:\/\/edge-platform(?:-vantage|-top-offers|-oh)?\.expedge\.workers\.dev(\/|$)/.test(u)) throw new Error(`a link outside the allowlist: ${u}`);
   return u;
 }
 function emph(s) {
@@ -141,12 +140,8 @@ function inline(md, ctx = {}) {
   s = emph(esc(s));
   s = s.replace(/\u0002(\d+)\u0002/g, (_, i) => { const [t, u] = links[+i]; return `<a href="${attr(mapHref(u))}">${emph(esc(t))}</a>`; });
   s = s.replace(/\u0001(\d+)\u0001/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
-  s = s.replace(/<strong>(Built|Designed|Open)(:?)<\/strong>/g, (_, w, colon) => chip(w) + colon);
   return titleLinks(s, ctx.self);
 }
-const leadingChip = (html) => html.replace(/^(Built|Designed|Open)(?=$|[\s:,;.])/, (w) => chip(w));
-// The labels a rule names are shown as chips; the text is unchanged.
-const chipLabels = (html) => html.split(/(<[^>]+>)/).map((seg) => (seg.startsWith('<') ? seg : seg.replace(/\b(Built|Designed|Open)\b/g, (w) => chip(w)))).join('');
 const addedAttr = (ctx, md) => {
   const why = ctx.added && ctx.added.get(squash(plainMd(md)));
   return why ? ` data-added="${attr(why)}"` : '';
@@ -205,7 +200,7 @@ function titleHtml(fullTitle) {
   return `<h1 class="title"><span class="kicker"><span id="package-name">${NAME}</span>:</span> <span class="title-main">${esc(rest)}</span></h1>`;
 }
 function ruleHtml(text, ctx, close) {
-  return `<div class="rule${close ? ' rule-close' : ''}"><p class="rule-label" data-chrome="rule label">${close ? 'The one rule, again' : 'The one rule'}</p><p class="rule-text">${chipLabels(inline(`**${text}**`, ctx))}</p></div>`;
+  return `<div class="rule${close ? ' rule-close' : ''}"><p class="rule-label" data-chrome="rule label">${close ? 'The one rule, again' : 'The one rule'}</p><p class="rule-text">${inline(`**${text}**`, ctx)}</p></div>`;
 }
 const svgCache = new Map();
 function svgOf(name) {
@@ -214,6 +209,9 @@ function svgOf(name) {
   return svgCache.get(name);
 }
 const svgTitle = (svg) => decode(/<title\b[^>]*>([^<]*)<\/title>/.exec(svg)[1].trim());
+// LANE-BRIEF-V2 allows no label. A figure that still shows one is not added by a ruling until it is redrawn
+// without it; a figure a source places stays, and the text check names it.
+const figureLabeled = (name) => /<text\b[^>]*>\s*(?:Built|Designed|Open)\s*<\/text>/.test(svgOf(name));
 function figureHtml(name, { lead, sw, added } = {}) {
   const svg = svgOf(name);
   const attrs = [`class="figure${sw ? ' figure-switch' : ''}"`, `data-figure="${name}"`];
@@ -239,16 +237,10 @@ function tableHtml(t, ctx) {
   const whenCol = plainHead.indexOf('When');
   const head = `<thead><tr>${t.head.map((h, i) => `<th scope="col"${verdictCols.includes(i) ? ' class="c-verdict"' : ''}>${inline(h, ctx)}</th>`).join('')}</tr></thead>`;
   const rows = t.body.map((r) => {
-    let rowClass = '';
     const cells = r.map((c, i) => {
       let html = inline(c, ctx);
       const classes = [];
-      if (verdictCols.includes(i)) {
-        html = leadingChip(html);
-        classes.push('c-verdict');
-        const w = /^(?:<span class="chip chip-(built|designed|open)">)/.exec(html);
-        if (w && !rowClass) rowClass = `v-${w[1]}`;
-      }
+      if (verdictCols.includes(i)) classes.push('c-verdict');
       if (i === whenCol && /^(Before|During|After)$/.test(c)) html = `<span class="phase">${html}</span>`;
       if (!c) classes.push('c-empty');
       if (isNever) classes.push(i === 0 ? 'c-never' : 'c-say');
@@ -258,7 +250,7 @@ function tableHtml(t, ctx) {
       if (isObjections && i === 0) return `<th scope="row"${label}${added}>${html}</th>`;
       return `<td${classes.length ? ` class="${classes.join(' ')}"` : ''}${label}${added}>${html}</td>`;
     });
-    return `<tr${rowClass ? ` class="${rowClass}"` : ''}>${cells.join('')}</tr>`;
+    return `<tr>${cells.join('')}</tr>`;
   });
   const FULL = new Set(['Demo', 'Address', 'The question it answers']);
   const cols = isCards ? ` data-cols="${plainHead.filter((h) => !FULL.has(h)).length}"` : '';
@@ -279,6 +271,9 @@ function paraHtml(text, ctx) {
 
 // ---------- a markdown piece ----------
 function renderPiece(md, cfg) {
+  for (const ins of cfg.insert || []) {
+    if (ins.figure && figureLabeled(ins.figure)) { ins.skip = true; notes.push(`${cfg.src}: the ${ins.figure} figure still shows labels, so the ruling's copy is left out until it is redrawn`); }
+  }
   const blocks = parseBlocks(md);
   const slug = slugger();
   const ctx = { self: cfg.url, added: cfg.added };
@@ -296,7 +291,6 @@ function renderPiece(md, cfg) {
   for (let i = blocks.length - 1; i >= 0; i--) if (ruleOf(blocks[i]) === rule) { closeIdx = i; break; }
   if (closeIdx < 0) throw new Error(`${cfg.src}: the rule is not repeated last`);
   if (closeIdx !== blocks.length - 1) notes.push(`${cfg.src}: the closing rule is not the very last block`);
-  if (cfg.legend === 'chrome') out.push(LEGEND_CHROME);
 
   let open = false;
   let subOpen = false;
@@ -306,7 +300,7 @@ function renderPiece(md, cfg) {
   const closeSection = () => {
     closeSub();
     if (open) {
-      for (const ins of cfg.insert || []) if (ins.afterSection === currentSection) { out.push(ins.html); ins.used = true; }
+      for (const ins of cfg.insert || []) if (!ins.skip && ins.afterSection === currentSection) { out.push(ins.html); ins.used = true; }
       out.push('</section>');
       open = false;
     }
@@ -331,7 +325,6 @@ function renderPiece(md, cfg) {
       return;
     }
     if (b.type === 'p') {
-      if (cfg.legend === 'source' && plainMd(b.text) === LEGEND_SENTENCE) { out.push(LEGEND_SOURCE); return; }
       out.push(paraHtml(b.text, ctx));
       return;
     }
@@ -356,7 +349,7 @@ function renderPiece(md, cfg) {
   });
   closeSection();
   // An addition whose section has gone stops the build, so a renamed heading can never drop it silently.
-  for (const ins of cfg.insert || []) if (!ins.used) throw new Error(`${cfg.src}: no section #${ins.afterSection} for the marked addition placed after it; update its anchor in render-pages.mjs`);
+  for (const ins of cfg.insert || []) if (!ins.used && !ins.skip) throw new Error(`${cfg.src}: no section #${ins.afterSection} for the marked addition placed after it; update its anchor in render-pages.mjs`);
   out.push(ruleHtml(rule, ctx, true));
   return { html: out.join('\n'), rule };
 }
@@ -372,7 +365,6 @@ function renderGlossary(md, cfg) {
   const rule = ruleOf(blocks.shift());
   if (!rule) throw new Error('glossary: no rule');
   out.push(ruleHtml(rule, ctx, false));
-  out.push(LEGEND_CHROME);
   if (ruleOf(blocks[blocks.length - 1]) !== rule) throw new Error('glossary: the rule is not last');
   blocks.pop();
   const letters = blocks.filter((b) => b.type === 'heading' && /^[A-Z]$/.test(b.text)).map((b) => b.text);
@@ -407,7 +399,7 @@ function renderGlossary(md, cfg) {
     if (entryIds.has(id) || /^letter-|^how-to-read-it$/.test(id)) throw new Error(`glossary: id clash ${id}`);
     entryIds.add(id);
     const deprecated = /^Deprecated\b/.test(m[2]);
-    const dt = LABEL_CLASS[word] ? `${chip(word)}.` : esc(term);
+    const dt = esc(term);
     out.push(`<div class="entry${deprecated ? ' deprecated' : ''}" id="${id}"><dt>${dt}</dt><dd>${inline(m[2], ctx)}</dd></div>`);
   }
   close();
@@ -475,12 +467,7 @@ function inl(node, opts = {}) {
     if (['b', 'strong', 'em', 'i'].includes(c.tag)) { out += `<${c.tag}>${inl(c, opts)}</${c.tag}>`; continue; }
     if (c.tag === 'span') {
       const cls = classesOf(c);
-      if (cls.includes('lbl')) {
-        const w = squash(textOf(c));
-        if (!LABEL_CLASS[w]) crFail(`a label that is not Built, Designed or Open: "${w}"`);
-        out += chip(w);
-        continue;
-      }
+      if (cls.includes('lbl')) crFail(`a label, "${squash(textOf(c))}": LANE-BRIEF-V2 allows no label on the site`);
       const k = cls.find((x) => INLINE_CLASS[x]);
       if (k) { out += `<span class="${INLINE_CLASS[k]}">${inl(c, opts)}</span>`; continue; }
       const sk = cls.find((x) => INLINE_STRONG[x]);
@@ -636,7 +623,7 @@ function renderCredits() {
   let n = 0;
   for (const el of kidsOf(wrap)) {
     if (el.tag === 'header' && has(el, 'mast')) out.push(crMast(el));
-    else if (el.tag === 'div' && has(el, 'rule')) out.push(crRule(el), LEGEND_CHROME);
+    else if (el.tag === 'div' && has(el, 'rule')) out.push(crRule(el));
     else if (el.tag === 'section') {
       n += 1;
       const isFaq = kidsOf(el).some((c) => c.tag === 'details');
@@ -660,8 +647,9 @@ function renderCredits() {
         else crFail(`a section element the page does not know: <${c.tag} class="${classesOf(c).join(' ')}">`);
       }
       if (el.attrs.id === 'timeline') {
-        sec.push(figureHtml('before-during-after', {
-          lead: 'The same session as one figure, with each card&rsquo;s label: Built, Designed or Open.',
+        if (figureLabeled('before-during-after')) notes.push(`${CREDITS_SRC}: the before-during-after figure still shows labels, so the ruling's copy is left out until it is redrawn`);
+        else sec.push(figureHtml('before-during-after', {
+          lead: 'The same session as one figure.',
           added: "the session figure, by the coordinator's ruling of 2026-10-02 (design section 3.6); credits.md carries it for Word",
         }));
       }
@@ -741,56 +729,48 @@ ${chromeFoot(null)}
 }
 
 // ---------- the landing page ----------
-// The text is the design's section 3.2, verbatim, in its order; each card also carries its piece's rule, by the
-// lead's brief, read from the piece's own source so the two cannot drift. The legend appears only on a page that
-// shows a label (the coordinator's ruling), so the landing page carries it only if a card's rule names one.
-function renderLanding(rules, paragraphC) {
-  const card = (n, reader, srcPath, href, linkText, gives) => `<li class="card">
+// LANE-BRIEF-V2's framing: the reader picks their audience. The lede is V2 §2's own two sentences on what the engine
+// is, first and last. Each card carries its piece's one rule, read from the piece's source, says what the piece
+// gives, and links the piece and, for marketing and solutions engineers, its interactive companion.
+const LANDING_LEDE = 'A personal stylist for every visitor at internet scale. It decides the page at the point in time from what the visitor is doing now.';
+function renderLanding(rules) {
+  const card = (n, reader, srcPath, gives, links) => `<li class="card">
 <span class="num" aria-hidden="true">${n}</span>
 <h3>${esc(reader)}</h3>
-<p class="card-rule" data-rule-of="${srcPath}">${chipLabels(esc(rules[srcPath]))}</p>
+<p class="card-rule" data-rule-of="${srcPath}">${esc(rules[srcPath])}</p>
 <p class="card-gives">${esc(gives)}</p>
-<p class="card-link"><a href="${href}">${esc(linkText)}</a></p>
+<ul class="card-links">${links.map(([href, text]) => `<li><a href="${href}">${esc(text)}</a></li>`).join('')}</ul>
 </li>`;
-  const cards = [
-    card(1, 'For marketing', 'docs/enablement/content/what-it-is.md', '/what-it-is', 'What it is', "What the engine does before, during and after a visitor's session, and the words to use about it."),
-    card(2, 'For account executives', 'docs/enablement/content/selling-it.md', '/selling-it', 'Selling it', 'What is built, designed and open, the questions customers ask, and the sentences to say and never to say.'),
-    card(3, 'For solutions engineers', 'docs/enablement/content/how-it-works-and-where-it-runs.md', '/how-it-works', 'How it works and where it runs', "How a decision is made, where it runs on Cloudflare's network, and what a customer provides."),
-  ].join('\n');
-  const legend = cards.includes('class="chip ') ? `\n<div class="landing-legend">${LEGEND_CHROME}</div>` : '';
-  return `<div class="hero" data-landing="the design document's section 3.2, with the lead's brief">
+  return `<div class="hero" data-landing="LANE-BRIEF-V2: the reader picks their audience">
 <h1><span id="package-name">${NAME}</span></h1>
-<p class="lede" data-paragraph="C">${esc(paragraphC)}</p>
+<p class="lede" data-quote-of="docs/enablement/LANE-BRIEF-V2.md">${esc(LANDING_LEDE)}</p>
 <p class="signin">This site is for Optimizely employees; it opens with the passphrase you were given.</p>
 </div>
 <h2 class="landing-h2">Each page is written for one reader</h2>
 <ul class="cards">
-${cards}
-</ul>${legend}
-<h2 class="landing-h2">Four references serve every reader</h2>
-<ul class="refs">
-<li class="ref"><a href="/status">What is built, designed and open</a><p>Every capability with its verdict, and every open decision with its owner.</p></li>
-<li class="ref"><a href="/credits">Where Opal and AI credits fit</a><p>Where AI and its cost live, and the sentences that settle the question.</p></li>
-<li class="ref"><a href="/glossary">Glossary</a><p>One word for each meaning, defined once.</p></li>
-<li class="ref"><a href="/demos">Demo map</a><p>Which demo to show, to whom, and what each one proves.</p></li>
+${card(1, 'For marketing', 'docs/enablement/content/what-it-is.md', 'The story with the stylist and the buckets, the use cases as short scenes, the reasons customers choose it, the words to use and to avoid, and the questions marketing will be asked.', [['/what-it-is', 'What it is'], ['/see-it-work', 'See it work']])}
+${card(2, 'For account executives', 'docs/enablement/content/selling-it.md', 'The story with the use cases, the reasons customers choose it, the outcomes a customer can measure, the discovery questions, what a customer provides, the objections, and which demo to show for which story.', [['/selling-it', 'Selling it']])}
+${card(3, 'For solutions engineers', 'docs/enablement/content/how-it-works-and-where-it-runs.md', 'The story, then how it works: one visitor, the mechanism, the arithmetic, the architecture on Cloudflare, configuration, integration and privacy.', [['/how-it-works', 'How it works and where it runs'], ['/how-it-works-interactive', 'How it works, interactive']])}
 </ul>
-<div class="rule rule-close"><p class="rule-text" data-paragraph="C">${esc(paragraphC)}</p></div>`;
+<h2 class="landing-h2">Three references serve every reader</h2>
+<ul class="refs">
+<li class="ref"><a href="/credits">Where Opal and AI Credits Fit, and Where They Never Do</a><p>Where AI and its cost live, and the sentences that settle the question.</p></li>
+<li class="ref"><a href="/glossary">Glossary</a><p>One word for each meaning, defined once.</p></li>
+<li class="ref"><a href="/demos">Which demo shows which story</a><p>The demo for each part of the story, and what the room sees.</p></li>
+</ul>
+<div class="rule rule-close"><p class="rule-text" data-quote-of="docs/enablement/LANE-BRIEF-V2.md">${esc(LANDING_LEDE)}</p></div>`;
 }
 
 // ---------- build ----------
-const design = read('docs/enablement/BTI-Enablement-Design.md');
-const paragraph = (id) => { const m = new RegExp(`^\\| ${id} \\| (.+?) \\| `, 'm').exec(design); if (!m) throw new Error(`design: no paragraph ${id}`); return m[1]; };
-const paragraphC = paragraph('C');
 
 const PAGES = [
-  { file: 'what-it-is.html', url: '/what-it-is', src: 'docs/enablement/content/what-it-is.md', title: 'What it is', reader: 'For marketing', readerKey: 'marketing', legend: 'chrome', js: true,
-    insert: [{ afterSection: 'where-ai-and-credits-fit', html: figureHtml('before-during-after', {
-      lead: 'The figure follows one session in three parts, before, during and after, and shows where AI and credits apply in each, with each card&rsquo;s label.',
+  { file: 'what-it-is.html', url: '/what-it-is', src: 'docs/enablement/content/what-it-is.md', title: 'What it is', reader: 'For marketing', readerKey: 'marketing', js: true,
+    insert: [{ afterSection: 'short-scenes-show-what-it-does', figure: 'before-during-after', html: figureHtml('before-during-after', {
+      lead: 'The figure follows one session in three parts, before, during and after, and shows where AI and credits apply in each.',
       sw: 'before during after', added: "the session figure, by the coordinator's ruling of 2026-10-02" }) }] },
-  { file: 'selling-it.html', url: '/selling-it', src: 'docs/enablement/content/selling-it.md', title: 'Selling it', reader: 'For account executives', readerKey: 'ae', legend: 'chrome', js: true },
-  { file: 'how-it-works.html', url: '/how-it-works', src: 'docs/enablement/content/how-it-works-and-where-it-runs.md', title: 'How it works and where it runs', reader: 'For solutions engineers', readerKey: 'se', legend: 'chrome', js: true },
-  { file: 'status.html', url: '/status', src: 'docs/enablement/content/status.md', title: 'What is built, designed and open', reader: 'For everyone', readerKey: 'all', legend: 'source' },
-  { file: 'demos.html', url: '/demos', src: DEMOS_MD, also: DEMOS_SPEC, title: 'Which demo to show to whom', reader: 'For account executives', readerKey: 'ae', legend: 'none', added: DEMOS_ADDED },
+  { file: 'selling-it.html', url: '/selling-it', src: 'docs/enablement/content/selling-it.md', title: 'Selling it', reader: 'For account executives', readerKey: 'ae', js: true },
+  { file: 'how-it-works.html', url: '/how-it-works', src: 'docs/enablement/content/how-it-works-and-where-it-runs.md', title: 'How it works and where it runs', reader: 'For solutions engineers', readerKey: 'se', js: true },
+  { file: 'demos.html', url: '/demos', src: DEMOS_MD, title: 'Which demo shows which story', reader: 'For account executives', readerKey: 'ae' },
 ];
 
 fs.mkdirSync(path.join(OUT, 'figures'), { recursive: true });
@@ -816,7 +796,7 @@ for (const p of PAGES) {
   notes.push(`glossary: ${g.entries} entries under ${g.letters} letters`);
 }
 write('credits.html', pageHtml({ url: '/credits', title: 'Where Opal and AI Credits Fit, and Where They Never Do', readerTag: 'For account executives', readerKey: 'ae', article: renderCredits(), js: true }));
-write('index.html', pageHtml({ url: '/', title: 'All pages', article: renderLanding(rules, paragraphC) }));
+write('index.html', pageHtml({ url: '/', title: 'All pages', article: renderLanding(rules) }));
 write('404.html', notFoundHtml());
 
 console.log(`render-pages: wrote into ${path.relative(ROOT, OUT) || '.'}:\n  ${written.join('\n  ')}`);

@@ -12,7 +12,7 @@
 // splits both into sentences, and compares them in both directions:
 //   forward  every sentence of the source is on the page, anywhere in its article;
 //   reverse  every sentence of the page is in the source, except what the page marks as an addition: an element
-//            with data-chrome (the legend, the rule's label, a scroll hint, the glossary's letters), data-lead (a
+//            with data-chrome (the rule's label, a scroll hint, the glossary's letters), data-lead (a
 //            lead line above an interactive element) or data-added (an addition a ruling made, with its reason).
 // Marked additions are listed, never compared. A source is read by its kind:
 //   a markdown file             the whole file
@@ -20,13 +20,15 @@
 //                               <script type="application/json" id="tl-data"> (read with JSON.parse, never run)
 //   a design document section   (path#anchor) the section's verbatim items must be on the page, and every page
 //                               sentence must come from the section, compared without regard to case
-//   the landing page            each card's rule must equal its piece's rule, and paragraph C the design's
+//   the landing page            each card's rule must equal its piece's rule, and every element marked
+//                               data-quote-of must say only what its named source says
 //
-// It also checks the chrome (the package name, the stamp, the footer line, the skip link, the legend wherever a
-// label is shown), every inline figure against its file and every caption against its figure's title, and scans
-// every page, and the sources lane P1 writes, for gendered pronouns, customer names, timing figures and the
-// abbreviation the design keeps out of visible text. It exits non-zero on any failure. No dependencies; it reads
-// files and changes nothing.
+// It also checks the chrome (the package name, the stamp, the footer line, the skip link), that no page shows a
+// label, a chip or a legend and no inlined figure shows a label (LANE-BRIEF-V2), every inline figure against its
+// file and every caption against its figure's title. It scans every page, and the sources lane P1 writes, for
+// gendered pronouns, customer names, timing figures beyond V2's one fixed performance sentence, state words (V2 §1:
+// no build state, stage, "designed", "not yet", "open" or label) and the abbreviation kept out of visible text.
+// It exits non-zero on any failure. No dependencies; it reads files and changes nothing.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,8 +40,7 @@ const siteDir = siteAt > 0 && process.argv[siteAt + 1] ? resolve(process.argv[si
 const verbose = process.argv.includes('--verbose');
 const read = (p) => readFileSync(p, 'utf8').replace(/\r\n?/g, '\n');
 const NAME = 'Behavioral Targeting and Intelligence';
-const LEGEND = 'Built: in the code and exercised. Designed: in an architecture document, not in the code. Open: no decision yet.';
-const STAMP = 'Updated October 2, 2026 · engine facts as of commit 8b4f74c';
+const STAMP = 'Updated October 2, 2026';
 const FOOTLINE = 'Internal · Optimizely · do not forward outside Optimizely';
 // Pages that are not pieces: their chrome is checked and they are scanned; their text is not compared.
 const NOT_PIECES = new Map([['404.html', 'the not-found page']]);
@@ -57,14 +58,34 @@ const RULED_FIGURES = new Map([
   ['what-it-is.html', ['before-during-after']],
   ['credits.html', ['before-during-after']],
 ]);
+// The two interactive pages, built by other lanes. Until their notes say what this check compares, such a page that
+// is present without an <article data-source> fails, naming the lane it waits for.
+const PENDING_PAGES = new Map([['see-it-work.html', 'lane M1'], ['how-it-works-interactive.html', 'lane H1']]);
+// LANE-BRIEF-V2 §3: the one performance sentence the material may carry; any other timing figure fails the scan.
+const FIXED_PERFORMANCE = 'We aim to make each decision within about 200 milliseconds at the edge; on average we see 50 to 250 milliseconds, and tens of milliseconds once the engine has seen the visitor.';
+// LANE-BRIEF-V2 §1: no build state, build plan, remediation, stage, rollout order, "designed", "not yet", "today
+// versus later" or "open", and no label, anywhere on the site. Phrases, so that ordinary words ("open it from where
+// you are", "it opens with the passphrase", "journey stage") pass.
+const STATE_WORDS = [
+  /\bBuilt\b/, /\b[Dd]esigned\b/, /\bOpen\b(?=[.:])/, /\b(?:is|are|remains?|still|stays?|left) open\b/i, /\bopen (?:decision|item|question|point)s?\b/i,
+  /\bnot yet\b/i, /\bdemo only\b/i, /\bnot (?:wired|built|connected)\b/i, /\btoday's engine\b/i, /\bengine today\b/i,
+  /\b(?:older|newer) (?:pipeline|build)\b/i, /\bolder demo pipeline\b/i, /\bGeneration [12]\b/i, /\bdemo seams?\b/i,
+  /\bbuild items?\b/i, /\broadmap\b/i, /\bremediation\b/i, /\brollout\b/i, /\bstage [1-4]\b/i, /\(stage\b/i, /\bphase [0-9]\b/i,
+];
 // The sources lane P1 writes, scanned with the pages.
 const OWN_SOURCES = ['docs/enablement/content/credits-source.html', 'docs/enablement/content/credits.md', 'docs/enablement/content/demos.md'];
 
 // ---------- HTML: a small tokenizer and tree, enough for these pages ----------
-const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '·', mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', hellip: '…', rarr: '→', larr: '←', uarr: '↑', darr: '↓', times: '×', minus: '−', bull: '•' };
-const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '·', mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', hellip: '…', rarr: '→', larr: '←', uarr: '↑', darr: '↓', times: '×', minus: '−', bull: '•',
+  // Greek letters and mathematical signs, for the formulas on the interactive pages; looked up case-sensitively first
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', kappa: 'κ', lambda: 'λ', mu: 'μ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', omega: 'ω',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Pi: 'Π', Sigma: 'Σ', Phi: 'Φ', Omega: 'Ω',
+  le: '≤', ge: '≥', ne: '≠', asymp: '≈', sum: '∑', infin: '∞', sdot: '⋅', plusmn: '±', divide: '÷', deg: '°', prime: '′',
+  frac12: '½', frac14: '¼', frac34: '¾', sup2: '²', sup3: '³', atilde: 'ã', harr: '↔', rArr: '⇒', hArr: '⇔',
+  laquo: '«', raquo: '»', sect: '§', copy: '©', thinsp: ' ', ensp: ' ', emsp: ' ' };
+const decode = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (m, e) => {
   if (e[0] === '#') return String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
-  return ENT[e.toLowerCase()] ?? m;
+  return ENT[e] ?? ENT[e.toLowerCase()] ?? m;
 });
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 function parseHtml(html) {
@@ -261,6 +282,7 @@ const designPara = (id) => { const m = new RegExp(`^\\| ${id} \\| (.+?) \\| `, '
 
 const pages = readdirSync(siteDir).filter((f) => f.endsWith('.html')).sort();
 const pageText = {};
+const heardText = {};
 for (const file of pages) {
   const html = read(join(siteDir, file));
   const tree = parseHtml(html);
@@ -278,6 +300,10 @@ for (const file of pages) {
   })(tree);
   pageText[file] = norm(all.join(' '));
   const visible = norm(blocksOf(body).join(' '));
+  const heard = [visible];
+  for (const svg of find(body, (n) => n.tag === 'svg')) heard.push(textOf(svg));
+  for (const n of find(body, (x) => x.attrs && (x.attrs['aria-label'] || x.attrs.title || x.attrs.alt))) heard.push(n.attrs['aria-label'] || n.attrs.title || n.attrs.alt);
+  heardText[file] = norm(heard.join(' '));
 
   // the chrome every page carries
   if (!visible.includes('Skip to the page')) fail(`${file}: no skip link`);
@@ -291,18 +317,24 @@ for (const file of pages) {
   const ids = find(tree, (n) => n.attrs.id === 'package-name');
   if (ids.length !== 1 || norm(textOf(ids[0])) !== NAME || !find(tree, (n) => n.tag === 'h1').some((h) => find(h, (x) => x.attrs.id === 'package-name').length)) fail(`${file}: exactly one #package-name, inside the h1, reading "${NAME}"`);
   if (visible.split(NAME).length - 1 !== 1) fail(`${file}: the package name is written ${visible.split(NAME).length - 1} times in the visible text`);
-  if (!visible.includes(STAMP)) fail(`${file}: no version stamp "${STAMP}"`);
-  // A page that shows a label anywhere, in a chip or in a figure, carries the one legend, once, verbatim.
-  const legends = find(tree, (n) => n.tag === 'aside' && /\blegend\b/.test(n.attrs.class || ''));
-  const svgLabels = find(tree, (n) => n.tag === 'text' && /^(Built|Designed|Open)$/.test(norm(textOf(n)))).length;
-  const chips = svgLabels + find(tree, (n) => /\bchip\b/.test(n.attrs.class || '')).length - legends.reduce((k, l) => k + find(l, (n) => /\bchip\b/.test(n.attrs.class || '')).length, 0);
-  if (chips > 0 && (legends.length !== 1 || norm(textOf(legends[0])) !== LEGEND)) fail(`${file}: shows ${chips} labels, so carries the legend once, verbatim (found ${legends.length})`);
-  // ... and only such a page: the legend appears only where a label is shown (the coordinator's ruling).
-  if (chips === 0 && legends.length) fail(`${file}: carries the legend but shows no label`);
+  const stamps = find(tree, (n) => /\bstamp\b/.test(n.attrs.class || ''));
+  if (stamps.length !== 1 || norm(textOf(stamps[0])) !== STAMP) fail(`${file}: the stamp must read "${STAMP}" exactly, once (found ${stamps.map((x) => `"${norm(textOf(x))}"`).join(', ') || 'none'})`);
+  // No label, chip or legend anywhere (LANE-BRIEF-V2): none on the page, and none in a figure it inlines.
+  const chipped = find(tree, (n) => /\b(?:chip|legend)\b/.test(n.attrs.class || '') && !/\bcr-tl-legend\b/.test(n.attrs.class || '')).length;
+  if (chipped) fail(`${file}: shows ${chipped} label chips or legends; LANE-BRIEF-V2 allows none`);
+  const figureLabels = find(tree, (n) => n.tag === 'text' && /^(Built|Designed|Open)$/.test(norm(textOf(n))));
+  if (figureLabels.length) fail(`${file}: an inlined figure shows ${figureLabels.length} labels (Built, Designed or Open); LANE-BRIEF-V2 allows none, so the figure needs its redraw`);
 
   // figures
   const onPage = find(tree, (n) => n.tag === 'figure' && n.attrs['data-figure']).map((f) => f.attrs['data-figure']);
-  for (const name of RULED_FIGURES.get(file) || []) if (!onPage.includes(name)) fail(`${file}: the ${name} figure a ruling places on this page is missing`);
+  for (const name of RULED_FIGURES.get(file) || []) {
+    if (onPage.includes(name)) continue;
+    // A ruled figure that still shows a label is left out until it is redrawn (LANE-BRIEF-V2); once it shows none,
+    // the page must carry it again.
+    const labeled = /<text\b[^>]*>\s*(?:Built|Designed|Open)\s*<\/text>/.test(read(join(root, 'docs', 'enablement', 'figures', `${name}.svg`)));
+    if (labeled) notes.push(`${file}: the ${name} figure a ruling places here is left out until it is redrawn without labels`);
+    else fail(`${file}: the ${name} figure a ruling places on this page is missing`);
+  }
   for (const fig of find(tree, (n) => n.tag === 'figure' && n.attrs['data-figure'])) {
     const name = fig.attrs['data-figure'];
     const want = read(join(root, 'docs', 'enablement', 'figures', `${name}.svg`)).trim();
@@ -320,6 +352,7 @@ for (const file of pages) {
   const article = find(tree, (n) => n.tag === 'article' && 'data-source' in n.attrs)[0];
   if (!article) {
     const hero = find(tree, (n) => 'data-landing' in n.attrs)[0];
+    if (!hero && PENDING_PAGES.has(file)) { fail(`${file}: not yet compared: waiting for ${PENDING_PAGES.get(file)}'s note on what the page holds`); rows.push([file, 'waiting', PENDING_PAGES.get(file), '-', '-', '-', '-', '-']); continue; }
     if (!hero) { fail(`${file}: no <article data-source> and not the landing page`); continue; }
     let checked = 0;
     for (const el of find(tree, (n) => 'data-rule-of' in n.attrs)) {
@@ -327,11 +360,13 @@ for (const file of pages) {
       const want = mdRule(read(join(root, el.attrs['data-rule-of'])));
       if (norm(textOf(el)) !== want) fail(`${file}: the card rule for ${el.attrs['data-rule-of']} is not that piece's rule ("${want}")`);
     }
-    for (const el of find(tree, (n) => n.attrs['data-paragraph'] === 'C')) { checked++; if (norm(textOf(el)) !== designPara('C')) fail(`${file}: paragraph C differs from the design's`); }
-    const s32 = designSection(join(root, 'docs', 'enablement', 'BTI-Enablement-Design.md'), '32-a-the-landing-page');
-    for (const q of [...s32.matchAll(/"([^"\n]+)"/g)].map((m) => norm(m[1]))) { checked++; if (!visible.includes(q)) fail(`${file}: the design's landing text "${q}" is not on the page`); }
-    for (const h of [...s32.matchAll(/`##\s+([^`]+)`/g)].map((m) => norm(m[1]))) { checked++; if (!visible.includes(h)) fail(`${file}: the design's landing heading "${h}" is not on the page`); }
-    rows.push([file, 'landing', 'section 3.2, the pieces\' rules', String(checked), '0', '-', '-', '-']);
+    for (const el of find(tree, (n) => 'data-quote-of' in n.attrs)) {
+      const src = el.attrs['data-quote-of'];
+      if (!existsSync(join(root, src))) { fail(`${file}: its quoted source ${src} does not exist`); continue; }
+      const hay = ` ${norm(mdInline(read(join(root, src))))} `;
+      for (const q of sentences(norm(textOf(el)))) { checked++; if (!hay.includes(q.replace(/[.;:,]+$/, ''))) fail(`${file}: "${q}" is not in ${src}`); }
+    }
+    rows.push([file, 'landing', "V2's lede, the pieces' rules", String(checked), '0', '-', '-', '-']);
     continue;
   }
   const allowed = [];
@@ -382,16 +417,37 @@ for (const file of pages) {
 const SCANS = [
   ['gendered pronouns', /\b(she|her|hers|he|him|his)\b/gi],
   ['customer names', /\b(tapestry|verizon|coach|qvc|mandeep)\b/gi],
-  ['timing figures (digits and ms or millisecond)', /\b\d[\d,.]*\s*(?:ms|milliseconds?)\b/gi],
+  ['timing figures beyond the fixed performance sentence', /\b\d[\d,.]*\s*(?:ms|milliseconds?)\b/gi],
 ];
 const scanTexts = { ...pageText };
 for (const s of OWN_SOURCES) if (existsSync(join(root, s))) scanTexts[s] = norm(read(join(root, s)).replace(/<style\b[\s\S]*?<\/style>/gi, ' '));
+const heardTexts = { ...heardText };
+for (const s of OWN_SOURCES) if (existsSync(join(root, s))) { try { heardTexts[s] = norm(s.endsWith('.html') ? htmlSource(join(root, s)).join(' ') : mdBlocks(read(join(root, s)), [], s).join(' ')); } catch (e) { fail(`scan: ${s} could not be read: ${e.message}`); } }
+const fixed = norm(FIXED_PERFORMANCE);
 const scanRows = [];
 for (const [label, re] of SCANS) {
   const hits = [];
-  for (const [file, text] of Object.entries(scanTexts)) for (const m of text.matchAll(re)) hits.push(`${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`);
+  for (const [file, raw] of Object.entries(scanTexts)) {
+    const text = label.startsWith('timing') ? raw.split(fixed).join(' ') : raw;
+    for (const m of text.matchAll(re)) hits.push(`${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`);
+  }
   scanRows.push(`${label}: ${hits.length}`);
   for (const h of hits) fail(`scan, ${label}: ${h}`);
+}
+// State words (LANE-BRIEF-V2 §1), in what a reader sees or hears on each page and in the sources lane P1 writes.
+{
+  const hits = [];
+  for (const [file, text] of Object.entries(heardTexts)) {
+    for (const re of STATE_WORDS) {
+      const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+      for (const m of text.matchAll(g)) hits.push(`${file}: "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30)}"`);
+    }
+  }
+  for (const src of OWN_SOURCES.filter((x) => x.endsWith('.html'))) {
+    if (existsSync(join(root, src)) && /class=["'][^"']*\blbl\b/.test(read(join(root, src)))) hits.push(`${src}: a label element (class "lbl")`);
+  }
+  scanRows.push(`state words: ${hits.length}`);
+  for (const h of hits) fail(`scan, state words: ${h}`);
 }
 // customer names in anything else that is served (the stylesheet, the script, the figure copies)
 const served = readdirSync(siteDir, { recursive: true }).map(String).filter((f) => /\.(css|js|svg)$/.test(f));

@@ -4,10 +4,8 @@
    Palette: the current green-led Optimizely brand, as the landing page placeholder set it (lane E0).
    Type: system stacks that name the brand's Roboto family first, so it shows where installed and nothing
    is fetched. Light and dark follow prefers-color-scheme; print has its own rules at the end.
-   Verdict colors, the same on every page and in every figure: Built LF green, Designed light blue,
-   Open a dashed outline. Every chip also carries its word, so the meaning never rests on color alone.
-   Built, Designed and Open are the only chips anywhere. The credits page gives every credit verdict as bold
-   words in the ink color, with no fill and no color of its own (design sections 3.6 and 3.9). */
+   No page shows a label, a chip or a legend (LANE-BRIEF-V2). The credits page gives every credit verdict as
+   bold words in the ink color, with no fill and no color of its own. */
 
 :root {
   --fir: #08251A; --mid-fir: #0D3A29; --light-fir: #197050;
@@ -38,10 +36,6 @@
   --nav-on-bg: var(--fir);
   --nav-on-ink: var(--white);
 
-  /* The three labels. */
-  --built-bg: var(--lf-green); --built-ink: var(--fir);
-  --designed-bg: var(--light-blue); --designed-ink: var(--fir);
-  --open-line: var(--fir);
 
   /* Readers, matched to the landing page's three cards. */
   --reader-marketing: var(--lf-green);
@@ -83,7 +77,6 @@
     --foot-muted: var(--neutral-5);
     --nav-on-bg: var(--lf-green);
     --nav-on-ink: var(--fir);
-    --open-line: var(--white);
   }
 }
 
@@ -170,26 +163,7 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
 .rule-text { margin: 0; font: 800 clamp(1.2rem, 2.8vw, 1.625rem)/1.28 var(--head); letter-spacing: -.01em; text-wrap: pretty; }
 .rule-text strong { font-weight: inherit; }
 .rule-close { margin-top: 56px; }
-.rule .chip-open { color: var(--rule-ink); border-color: var(--rule-ink); }
 @media (prefers-color-scheme: dark) { .rule { border-color: var(--lf-green); } }
-
-/* the legend: one component, the same on every page that uses the labels */
-.legend {
-  margin: 0 0 34px; padding: 14px 20px; border-radius: var(--radius-m); background: var(--surface);
-  border: 1px solid var(--line-soft);
-}
-.piece .legend-text, .legend-text { max-width: none; margin: 0; font-size: .9375rem; line-height: 1.9; }
-.legend-text .chip { margin-right: 2px; }
-
-/* verdict chips */
-.chip {
-  display: inline-block; padding: .06em .62em; border-radius: 999px; border: 1.5px solid transparent;
-  font: 700 .8em/1.45 var(--body); letter-spacing: .01em; white-space: nowrap; vertical-align: .06em;
-  -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.chip-built { background: var(--built-bg); color: var(--built-ink); border-color: var(--built-bg); }
-.chip-designed { background: var(--designed-bg); color: var(--designed-ink); border-color: var(--designed-bg); }
-.chip-open { background: transparent; color: var(--ink); border: 1.5px dashed var(--open-line); }
 
 /* ---------- article text ---------- */
 :where(.piece) h2 {
@@ -260,9 +234,6 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
 .rt td code { overflow-wrap: anywhere; }
 .rt tbody tr:first-child td { border-top: 0; }
 .rt td a { overflow-wrap: anywhere; }
-.rt tr.v-built td:first-child { box-shadow: inset 5px 0 0 var(--lf-green); }
-.rt tr.v-designed td:first-child { box-shadow: inset 5px 0 0 var(--light-blue); }
-.rt tr.v-open td:first-child { box-shadow: inset 5px 0 0 var(--neutral-5); }
 .rt th.c-verdict { white-space: nowrap; }
 .rt td.c-empty { color: var(--muted); }
 .phase { display: inline-block; white-space: nowrap; padding: 2px 9px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); font: 700 .78rem/1.4 var(--mono); }
@@ -315,10 +286,6 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
     content: attr(data-label); display: block; margin: 0 0 2px; color: var(--muted);
     font: 700 .6875rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase;
   }
-  .rt tr.v-built, .rt tr.v-designed, .rt tr.v-open { border-left: 6px solid var(--neutral-5); }
-  .rt tr.v-built { border-left-color: var(--lf-green); }
-  .rt tr.v-designed { border-left-color: var(--light-blue); }
-  .rt tr.v-built td:first-child, .rt tr.v-designed td:first-child, .rt tr.v-open td:first-child { box-shadow: none; }
   .t-never td.c-never, .t-never td.c-say, .t-objections td.c-say, .t-objections td.c-never {
     width: 100%; margin-top: 6px; padding: 26px 12px 10px 44px; border-radius: var(--radius-s);
   }
@@ -394,14 +361,13 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
 .card h3 { margin: 0; font: 800 1.5rem/1.1 var(--head); letter-spacing: -.02em; }
 .card-rule { margin: 0; font: 700 1.0625rem/1.45 var(--body); }
 .card-gives { flex: 1; margin: 0; color: var(--ink); font-size: .9375rem; line-height: 1.45; }
-.card-link { margin: 0; }
-.card-link a, .ref a { font: 700 1.0625rem/1.3 var(--head); }
-.card-link a::after, .ref a::after { content: " \2192"; }
+.card-links { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.card-links a, .ref a { font: 700 1.0625rem/1.3 var(--head); }
+.card-links a::after, .ref a::after { content: " \2192"; }
 .refs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 720px) { .refs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ref { padding: 18px 22px; border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); }
 .ref p { margin: 6px 0 0; font-size: .9375rem; color: var(--ink); }
-.landing-legend { margin-top: 36px; }
 
 /* ---------- glossary ---------- */
 .az { margin: 8px 0 8px; }
@@ -583,12 +549,11 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
   :root {
     --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F6F8F3; --ink: #000000; --muted: #2F4F3F; --line: #9AA88C;
     --line-soft: #C9D3BE; --link: #000000; --tint: #FFFFFF; --th-bg: var(--fir); --th-ink: #FFFFFF;
-    --open-line: #000000;
   }
   body { display: block; font-size: 10.5pt; line-height: 1.45; background: #FFFFFF; color: #000000; }
   .skip, .sitenav, .figure-scroll-hint, .figure-switch-buttons, .figure-switch-help, .cr-tl-tabs, .az { display: none !important; }
   .masthead { border: 0; }
-  .card, .ref, .step, .qa, .entry, .legend, .say-list li, .signin { border: 1px solid #9AA88C; }
+  .card, .ref, .step, .qa, .entry, .say-list li, .signin { border: 1px solid #9AA88C; }
   .masthead-inner { padding: 0 0 8pt; }
   main { padding: 8pt 0 0; }
   .wrap { max-width: none; padding: 0; }
@@ -597,7 +562,7 @@ main { flex: 1; padding-top: clamp(28px, 5vw, 56px); padding-bottom: clamp(48px,
   .piece a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .85em; overflow-wrap: anywhere; }
   .piece h2 { break-after: avoid; page-break-after: avoid; margin-top: 22pt; }
   .piece h3 { break-after: avoid; page-break-after: avoid; }
-  .rule, .legend, .step, .qa, .exception, .say-list li, .entry, .rt tr, .figure, .cr-rule, .cr-tp, .cr-meter, .cr-script, .cr-order-row, .cr-scalecard, .card, .ref { break-inside: avoid; page-break-inside: avoid; }
+  .rule, .step, .qa, .exception, .say-list li, .entry, .rt tr, .figure, .cr-rule, .cr-tp, .cr-meter, .cr-script, .cr-order-row, .cr-scalecard, .card, .ref { break-inside: avoid; page-break-inside: avoid; }
   .rule { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .figure-frame > svg { width: 100% !important; min-width: 0 !important; }
   .figure-frame { overflow: visible !important; }
