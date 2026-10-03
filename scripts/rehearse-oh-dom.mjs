@@ -224,7 +224,7 @@ function pageHelpers({ vis, txt, own, shown }) {
       const r = e.getBoundingClientRect();
       if (r.width >= innerWidth * 0.5 && r.height >= 16 && nearBlack(cs.backgroundColor) && !e.closest('#m1Pencil')) bars.push(name(e) + ' ' + Math.round(r.width) + '×' + Math.round(r.height) + ' ' + cs.backgroundColor);
       const isButton = e.matches('button, .btn, a.btn, [role="button"], input[type="submit"]') && !e.disabled && e.getAttribute('aria-disabled') !== 'true' && (txt(e).length >= 2 || (e.value || '').length >= 2);
-      if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius, h: Math.round(r.height) });
+      if (isButton && !light(cs.backgroundColor)) fills.push({ el: name(e), text: txt(e).slice(0, 40), bg: cs.backgroundColor, color: cs.color, radius: cs.borderTopLeftRadius, h: Math.round(r.height), card: Boolean(e.closest('.m1-cardbtn')) });
       if (e instanceof HTMLElement && !e.children.length && /^\$[\d,]+(?:\.\d{2})?\s+OFF$/i.test(txt(e))) offs.push({ el: name(e), text: txt(e), color: cs.color });
     }
     const wm = document.getElementById('wordmark');
@@ -693,7 +693,7 @@ const carries = (data, p, over = {}) => { const want = { ...attrsOf(p), ...over 
 // total, the modal's lists against the catalog, and at the end the homepage moved for her, with receipts naming her clicks.
 const BOOT_MODULES = [
   ['the pencil banner', '#m1Pencil'], ['the header', '#site .site-header'], ['the category nav', '#m1Cats'], ['the hero', '#slot-hero'],
-  ['the service strip', '#view-home .svc-strip'], ['the room tiles', '#slot-category-rail'], ['the deals four', '#slot-deals'], ['Shop with an expert', '#view-home .m1-expert'],
+  ['the service strip', '#view-home .svc-strip'], ['the room tiles', '#slot-category-rail'], ['the deals bento', '#slot-deals'], ['Shop with an expert', '#view-home .m1-expert'],
   ['Recommended for you', '#rail-for-you'], ['the showcase', '#m1Showcase'], ['the benefits', '#view-home .m1-benefits-wrap'], ['the footer', '#site footer.site-footer'],
 ];
 const BOOT_READ = `(() => {
@@ -720,7 +720,7 @@ const BOOT_CLAIMS = {
   'the hero': (m) => m.cards.length >= 1 && m.cards[0].title.trim().length >= 2 && m.cards[0].text.length > m.cards[0].title.length + 10,
   'the service strip': (m) => ['deliver', 'return', 'cover', 'haul', 'expert'].every((w) => has(m.text, w)),
   'the room tiles': (m) => titled(m, 3),
-  'the deals four': (m) => titled(m, 4),
+  'the deals bento': (m) => titled(m, DEALS_TAKE),
   'Shop with an expert': (m) => has(m.text, 'expert') && m.text.length > 60,
   'Recommended for you': (m) => m.products.length >= 4 && m.products.every((x) => /\$\d/.test(x.text) && x.img.some((i) => i.ok)),
   'the showcase': (m) => has(m.text, 'appliances') && has(m.text, 'entertainment') && m.products.length + m.cards.length >= 1,
@@ -740,6 +740,11 @@ const inForceFor = (cid, slot) => { const p = OPEN_PIECES.get(cid); if (!p) retu
  * the slot's own diversity rule from the opening slots. The boot page must show exactly these, in this order.
  */
 const OPEN_SLOTS = (await getJson('beats/open-slots.json').catch(() => ({ publish: { document: { pages: {} } } }))).publish.document;
+/** The deals bento's take and its diversity rule, as the page asks with them (demo.config.json, M1e: five decided tiles), else as the opening slots publish them. */
+const DEALS_CFG = ((((demoConfig.pages || []).find((p) => p.entry === 'home') || {}).slots || []).find((s) => s.slot === 'deals')) || {};
+const DEALS_SLOT = DEALS_CFG.diversity ? DEALS_CFG : ((OPEN_SLOTS.pages || {}).home || []).find((s) => s.slot === 'deals') || {};
+const DEALS_TAKE = Number(DEALS_CFG.take) || Number((((OPEN_SLOTS.pages || {}).home || []).find((s) => s.slot === 'deals') || {}).take) || 4;
+const DEALS_MAX = Number((DEALS_SLOT.diversity || {}).max) || 2, DEALS_DIM = (DEALS_SLOT.diversity || {}).dimension || 'room';
 function templateOf(slot, take) {
   const def = Object.values(OPEN_SLOTS.pages || {}).flat().find((s) => s.slot === slot) || {};
   const div = def.diversity || null, counts = {}, out = [], now = Date.now();
@@ -777,9 +782,9 @@ async function lgLook(label, { full = false } = {}) {
   // R5's ruling (1281db3): lg.com's action red, #EA1917, as a 32 px pill 42–44 px tall on every button; #A50034 is the wordmark's alone.
   const ACTION = rgb('#EA1917');
   const action = L.fills.filter((f) => f.bg === ACTION), other = L.fills.filter((f) => f.bg !== ACTION);
-  const unlike = (f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '32px' || f.h < 42 || f.h > 44;
+  const unlike = (f) => f.color !== 'rgb(255, 255, 255)' || f.radius !== '32px' || (f.card ? f.h !== 30 : (f.h < 42 || f.h > 44));
   ok(`${label}: no yellow anywhere and no black bar (the charcoal top bar is lg.com’s, R5’s ruling)`, L.yellows.length === 0 && L.bars.length === 0, [...L.yellows.slice(0, 3), ...L.bars.slice(0, 3)].join(' ~ ') || 'none');
-  ok(`${label}: every filled button is lg.com’s action red #EA1917, white text, a 32 px pill 42 to 44 px tall`, other.length === 0 && action.every((f) => !unlike(f)) && (!full || action.length > 0),
+  ok(`${label}: every filled button is lg.com’s action red #EA1917, white text, a 32 px pill 42 to 44 px tall, 30 px on a product card`, other.length === 0 && action.every((f) => !unlike(f)) && (!full || action.length > 0),
     other.length ? other.slice(0, 3).map((f) => `${f.el} “${f.text}” ${f.bg}`).join(' ~ ') : `${action.length} action button(s)${action.filter(unlike).slice(0, 3).map((f) => ` · ${f.el} “${f.text}” ${f.color} r${f.radius} h${f.h}`).join('')}`);
   ok(`${label}: every “$X OFF” is in the action red #EA1917`, L.offs.every((o) => o.color === ACTION),
     `${L.offs.length} on screen${L.offs.filter((o) => o.color !== ACTION).slice(0, 3).map((o) => ` · ${o.el} “${o.text}” ${o.color}`).join('')}`);
@@ -1112,7 +1117,7 @@ async function manualSession() {
       rail: ((S.railsOn || []).find((r) => r.rail === 'for-you') || { cards: [] }).cards.map((c) => String(c.sku)) };
     const boot = S2.boot || { tiles: [], deals: [], rail: [] };
     ok('the room tiles’ order moved for her from the template', now.tiles.length > 0 && !sameJSON(now.tiles, boot.tiles), `${boot.tiles.join(', ')} → ${now.tiles.join(', ')}`);
-    ok('the deals four moved for her', now.deals.length === 4 && !sameJSON(now.deals, boot.deals), `${boot.deals.join(', ')} → ${now.deals.join(', ')}`);
+    ok(`the deals bento’s ${DEALS_TAKE} moved for her`, now.deals.length === DEALS_TAKE && !sameJSON(now.deals, boot.deals), `${boot.deals.join(', ')} → ${now.deals.join(', ')}`);
     ok('Recommended for you moved for her', now.rail.length >= 4 && !sameJSON(now.rail, boot.rail.slice(0, now.rail.length)), `${boot.rail.slice(0, 4).join(', ')} → ${now.rail.slice(0, 4).join(', ')}`);
     // Receipts naming her own clicks: a card's receipt on screen names a value her own events carried, and the engine's
     // decision for that card holds it among its drivers.
@@ -1454,6 +1459,61 @@ async function persistenceWalk() {
     `${tabUser ? (tabUser === one.ids[0] ? 'the same userId' : 'another userId') : 'no event seen'} · ${tabMints} identity call(s) in the new tab`);
 }
 
+
+// ── Lane S2: M2b's product page, as computed layout (stuck chrome, the gallery, the phone order) ──
+const IMG_INDEX = await getJson('img/index.json').catch(() => ({ products: {} }));
+/** The pictures the image index lists for a product: its gallery when D2b has written one, else the one accepted file. */
+const picturesListed = (p) => { const all = IMG_INDEX.products || {}; const e = all[p.sku] || all[String(p.sku).toUpperCase()] || Object.values(all).find((x) => x && x.id === String(p.sku).toLowerCase()) || null;
+  if (e && Array.isArray(e.gallery)) return { n: e.gallery.length, from: 'its gallery field' };
+  if (e && e.verdict === 'accept' && e.src) return { n: 1, from: 'one accepted picture, no gallery field yet' };
+  return { n: p.image && !/placeholder/.test(String(p.image)) ? 1 : 0, from: 'the feed’s own link' }; };
+const STUCK_READ = `(() => { const { vis } = window.__s1;
+  const stuck = [...document.querySelectorAll('#site *')].filter((e) => { const cs = getComputedStyle(e); if (cs.position !== 'sticky' && cs.position !== 'fixed') return false;
+    const r = e.getBoundingClientRect(); return vis(e).ok && r.height > 0 && r.top <= 1 && r.bottom > 0 && r.top < innerHeight / 2; });
+  const top = stuck.filter((e) => !stuck.some((o) => o !== e && o.contains(e)));
+  const bottom = top.reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+  const tabs = document.getElementById('pdpTabs'), tr = tabs ? tabs.getBoundingClientRect() : null;
+  return { y: Math.round(scrollY), bottom: Math.round(bottom), names: top.map((e) => (e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]) + ' ' + Math.round(e.getBoundingClientRect().height)),
+    tabsStuck: Boolean(tr && vis(tabs).ok && tr.top >= -1 && tr.bottom <= bottom + 1) };
+})()`;
+async function productPage() {
+  console.log('\n── The product page, as M2b laid it out: the stuck chrome, the gallery, the phone order');
+  const picks = [rowsAll.find((p) => p.family === 'front-load-washer' && p.cta === 'cart' && p.inStock !== false), rowsAll.find((p) => p.attributes && p.attributes.category === 'tvs' && p.cta === 'cart' && p.inStock !== false)].filter(Boolean);
+  for (const p of picks) {
+    for (const [w, h] of SIZES) {
+      press = `product page · ${p.sku} · ${w}`;
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false });
+      await cdp('Page.navigate', { url: `${base}/${SLUG}/product?id=${encodeURIComponent(p.sku)}&debug=1&present=0` });
+      await booted();
+      await waitFor("/decided live|error|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
+      await evaluate(inPage(pageHelpers));
+      await sleep(600);
+      if (w === WIDTH) {
+        const want = picturesListed(p);
+        const G = await evaluate("(() => ({ thumbs: [...document.querySelectorAll('#pdpGallery .pdp-gthumb')].filter((b) => window.__s1.vis(b).ok).length, main: window.__s1.vis('#pdpGallery .pdp-gmain').ok }))()");
+        ok(`the ${p.sku} page’s gallery shows one thumbnail per picture the image index lists for it: ${want.n} (${want.from})`, G.main && G.thumbs === want.n, `${G.thumbs} thumbnail(s) on screen`);
+      }
+      await evaluate('window.scrollTo(0, Math.min(1600, document.documentElement.scrollHeight - innerHeight))');
+      await sleep(500);
+      const T = await evaluate(STUCK_READ);
+      ok(`the ${p.sku} page at ${w}, scrolled: the chrome stuck at the top is at most 100 px, the title bar and tabs among it`, T.y > 200 && T.bottom > 0 && T.bottom <= 100 && T.tabsStuck,
+        `scrolled ${T.y} px · stuck to ${T.bottom} px: ${T.names.join(", ") || "nothing stuck"}${T.tabsStuck ? "" : " · the tabs are not in it"}`);
+    }
+    // At 390, lg.com's phone order: the tabs, then the title, then the picture.
+    press = `product page · ${p.sku} · 390`;
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await cdp('Page.navigate', { url: `${base}/${SLUG}/product?id=${encodeURIComponent(p.sku)}&debug=1&present=0` });
+    await booted();
+    await waitFor("/decided live|error|failed/i.test((document.getElementById('status') || {}).textContent || '')", 30000);
+    await evaluate(inPage(pageHelpers));
+    await sleep(600);
+    const O = await evaluate("(() => { const at = (sel) => { const e = document.querySelector(sel); return e && window.__s1.vis(e).ok ? Math.round(e.getBoundingClientRect().top + scrollY) : null; }; return { tabs: at('#pdpTabs'), title: at('#bbTitle'), picture: at('#pdpGallery .pdp-gmain') }; })()");
+    ok(`the ${p.sku} page at 390: the tabs sit above the title, which sits above the picture (lg.com’s phone order)`, O.tabs !== null && O.title !== null && O.picture !== null && O.tabs < O.title && O.title < O.picture,
+      `tabs ${O.tabs} · title ${O.title} · picture ${O.picture} (px from the top)`);
+  }
+  await cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+}
+
 // ── Compare (the kit's widget): real pixels on every press ───────────────────
 const INK_MIN = 0.05, DIFFER_MIN = 0.01;
 const pct = (x) => (x == null ? '?' : `${Math.round(x * 1000) / 10}%`);
@@ -1546,7 +1606,7 @@ try {
     ok(`${name}: on screen with real content`, m.ok && BOOT_CLAIMS[name](m), m.ok ? `${m.cards.length ? `${m.cards.length} card(s): ${m.cards.map((c) => c.title || c.cid).join(' | ').slice(0, 140)}` : m.products.length ? `${m.products.length} product(s): ${m.products.slice(0, 3).map((x) => x.text.slice(0, 40)).join(' | ')}` : m.text.slice(0, 140)}` : m.why);
   }
   {
-    const slots = [['hero', 'the hero'], ['category-rail', 'the room tiles'], ['deals', 'the deals four']];
+    const slots = [['hero', 'the hero'], ['category-rail', 'the room tiles'], ['deals', 'the deals bento']];
     const bad = slots.flatMap(([slot, name]) => BOOT[name].cards.filter((c) => c.decided || !inForceFor(c.cid, slot)).map((c) => `${slot}: ${c.cid}${c.decided ? ' (decided)' : ' (not an opening piece in force for the slot)'}`));
     ok('the decided slots show the published template: the opening catalog’s pieces in force for each slot, none of them decided', slots.every(([, n]) => BOOT[n].cards.length > 0) && bad.length === 0,
       bad.join(' ~ ') || slots.map(([s, n]) => `${s} ${BOOT[n].cards.map((c) => c.cid).join(', ')}`).join(' · ').slice(0, 260));
@@ -1554,7 +1614,7 @@ try {
     const order = slots.map(([slot, name]) => { const want = templateOf(slot, TAKE[slot] || 1), got = BOOT[name].cards.map((c) => c.cid).slice(0, want.length); return { slot, want, got, same: sameJSON(want, got) }; });
     ok('in the template’s own order: the catalog’s order, the first of each slot’s take in force, under the slot’s diversity rule', order.every((x) => x.same && x.want.length > 0),
       order.map((x) => `${x.slot} ${x.same ? x.got.join(', ') : `on screen ${x.got.join(', ')} · the template ${x.want.join(', ')}`}`).join(' · ').slice(0, 300));
-    S2.boot = { tiles: BOOT['the room tiles'].cards.map((c) => c.cid), deals: BOOT['the deals four'].cards.map((c) => c.cid), rail: BOOT['Recommended for you'].products.map((x) => x.sku), hero: BOOT['the hero'].cards.map((c) => c.cid) };
+    S2.boot = { tiles: BOOT['the room tiles'].cards.map((c) => c.cid), deals: BOOT['the deals bento'].cards.map((c) => c.cid), rail: BOOT['Recommended for you'].products.map((x) => x.sku), hero: BOOT['the hero'].cards.map((c) => c.cid) };
   }
   await lgLook('the boot page', { full: true });
   {
@@ -1593,7 +1653,7 @@ try {
     })()`);
     const bad = D.filter((t) => !(t.src.startsWith('/oh/img/art/') && t.loaded && t.covers && t.head && t.over));
     const sizes = new Set(D.map((t) => `${Math.round(t.w / 20)}x${Math.round(t.h / 20)}`));
-    ok(`the deals bento’s ${D.length} tiles are pictures with headlines over them: A1’s art filling each tile, its headline drawn inside it, the tiles of more than one size`, D.length === 4 && bad.length === 0 && sizes.size > 1,
+    ok(`the deals bento’s ${D.length} tiles are pictures with headlines over them: A1’s art filling each tile, its headline drawn inside it, the tiles of more than one size`, D.length === DEALS_TAKE && bad.length === 0 && sizes.size > 1,
       bad.map((t) => `${t.cid}: ${t.src || 'no art image'}${t.loaded ? '' : ' unloaded'}${t.covers ? '' : ' not filling'}${t.over ? '' : ' headline outside'}`).join(' ~ ') || D.map((t) => `${t.cid} ${t.w}×${t.h}`).join(' · '));
   }
   {
@@ -1629,6 +1689,7 @@ try {
   await persistenceWalk().catch((error) => checks.fail(`one visitor across full page loads: the walk threw: ${error.message}`));
   await signalsWalk().catch((error) => checks.fail(`her signals, by hand: the walk threw: ${error.message}`));
   await phoneWidth().catch((error) => checks.fail(`at phone width, the checks threw: ${error.message}`));
+  await productPage().catch((error) => checks.fail(`the product page’s layout checks threw: ${error.message}`));
 
   walkBlock: { if (ONLY_STORE) { info('--only store: the walk is not run'); break walkBlock; }
   // ── The walk ───────────────────────────────────────────────────────────────
@@ -1688,7 +1749,7 @@ try {
         else ok(`${s.slot} shows what the engine decided, on screen`, s.shown && s.cards.length > 0 && s.cards.every((c) => c.decided), s.cards.map((c) => c.title).join(' | ').slice(0, 200));
       }
       const deals = S.slots.find((s) => s.slot === 'deals');
-      ok('the arrival four are on screen', Boolean(deals) && deals.cards.length === 4, deals ? deals.cards.map((c) => c.cid).join(', ') : 'no deals');
+      ok(`the arrival deals are on screen, the slot’s take of ${DEALS_TAKE}`, Boolean(deals) && deals.cards.length === DEALS_TAKE, deals ? deals.cards.map((c) => c.cid).join(', ') : 'no deals');
       const own = await evaluate(`(() => { const s = window.${HOOK}.state; return s && s.own ? { key: s.own.key || null, label: s.own.label || null } : null; })()`);
       // The kit's panel copy (public/demo-kit/panels.js) is going gender neutral (lane C3): “the edge located her” or “… the visitor”.
       const fromRequest = has(S.cold.text, 'from the request') && (LOOPBACK ? has(S.cold.text, 'local runtime') : (has(S.cold.text, 'the edge located her') || has(S.cold.text, 'the edge located the visitor')));
@@ -1744,7 +1805,7 @@ try {
           const now = (S.railsOn.find((x) => x.rail === rail) || { cards: [] }).cards.map((c) => c.sku);
           if (was.length && now.length && !sameJSON(was, now)) moved.push(`the ${rail} rail`);
         }
-        ok(`${region}’s sales lean the page another way than ${ownKey}’s, on screen: the room tiles, the four or the rail across rooms`, moved.length > 0, moved.join(' and ') || 'nothing moved');
+        ok(`${region}’s sales lean the page another way than ${ownKey}’s, on screen: the room tiles, the deals or the rail across rooms`, moved.length > 0, moved.join(' and ') || 'nothing moved');
         const rail = S.railsOn.find((x) => x.rail === 'for-you');
         ok(`and the rail says so, labelled: “leans with ${(b.census || {}).label || region}’s sales (asserted) · synthetic → warehouse”`, Boolean(rail) && rail.lean === `leans with ${(b.census || {}).label || region}’s sales (asserted) · synthetic → warehouse`, rail ? rail.lean || 'no lean line' : 'no rail');
       } else info(`the two regions’ leaders are the same (${ownKey} and ${region}): no difference on screen is claimed`);
@@ -1787,8 +1848,8 @@ try {
         // Lane P1's checks for this beat (P1 wrote them; S1 runs them after its own, in the beat's order).
         const deals = (S.slots.find((s) => s.slot === 'deals') || { cards: [] }).cards.map((c) => c.cid);
         const rooms = deals.map(pieceRoom);
-        ok('the deals four hold both rooms on screen, at most two each (the slot’s own rule)', rooms.includes('living-room') && rooms.includes('laundry-room')
-          && ['living-room', 'laundry-room', 'kitchen'].every((r) => rooms.filter((x) => x === r).length <= 2), deals.join(', '));
+        ok(`the deals bento holds both rooms on screen, at most ${DEALS_MAX} each (the slot’s own rule on ${DEALS_DIM})`, rooms.includes('living-room') && rooms.includes('laundry-room')
+          && ['living-room', 'laundry-room', 'kitchen'].every((r) => rooms.filter((x) => x === r).length <= DEALS_MAX), deals.join(', '));
       }
     },
     'fresh-visitor': async (S, i) => {
@@ -1810,7 +1871,7 @@ try {
       const was = snaps[i - 1];
       const mine = (x) => ({ view: x.view, slots: x.slots.map((s) => [s.slot, s.cards.map((c) => c.cid)]), rails: x.railsOn.map((r) => [r.rail, r.cards.map((c) => c.sku)]), address: x.address });
       const moved = Object.keys(mine(after)).filter((k) => !sameJSON(mine(after)[k], mine(was)[k]));
-      ok('after it closes her homepage is hers: the hero, the tiles, the four, the rails and the address', moved.length === 0, moved.map((k) => `${k} changed`).join(', ') || after.address);
+      ok('after it closes her homepage is hers: the hero, the tiles, the deals, the rails and the address', moved.length === 0, moved.map((k) => `${k} changed`).join(', ') || after.address);
       ok('and the page’s current visitor is still her', (await herCap()) === cap && Boolean(cap));
       snaps[i] = after;
       {

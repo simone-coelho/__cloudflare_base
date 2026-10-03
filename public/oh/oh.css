@@ -75,8 +75,8 @@ body { color: var(--ink); }
 .m1-pencil-nav button { width: 26px; height: 26px; border: 0; background: none; border-radius: 4px; cursor: pointer; color: var(--ink); font-size: 15px; line-height: 1; }
 .m1-pencil-nav button:hover { background: var(--soft-2); }
 
-/* ══ The header: 64 px, white (static) ══════════════════════════════════ */
-.site-header { position: sticky; top: 0; z-index: 50; background: var(--paper); border-bottom: 1px solid var(--line); }
+/* ══ The header: 64 px, white (static); it scrolls away with the page, as lg.com's does (M1e) ═══════════ */
+.site-header { position: relative; top: 0; z-index: 50; background: var(--paper); border-bottom: 1px solid var(--line); }
 .site-header .utility { display: none; }       /* the scaffold's utility row: its controls live in the mast now */
 .mast { max-width: calc(var(--m1-max) + 2 * var(--m1-gut)); margin: 0 auto; padding: 0 var(--m1-gut); height: var(--m1-head); display: flex; align-items: center; gap: 28px; background: var(--paper); border: 0; }
 .wordmark { display: flex; align-items: baseline; gap: 8px; text-decoration: none; cursor: pointer; flex: none; }
@@ -274,7 +274,7 @@ body:not(.m1-live) .p1-changes, body:not(.m1-live) #p1RailDeltas, body:not(.m1-l
 .p1-tile-cta { font-size: 14px; font-weight: 700; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; margin-top: 2px; }
 .p1-tile .p1-receipt { margin: 6px 0 0; }
 
-/* Discover OH deals: the deals four */
+/* Discover OH deals: the five deals */
 #slot-deals.cards { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .p1-deal { padding: 0; overflow: visible; cursor: default; gap: 0; border: 1px solid var(--line); }
 .p1-deal-art { position: relative; }
@@ -343,7 +343,7 @@ body:not(.m1-live) .p1-changes, body:not(.m1-live) #p1RailDeltas, body:not(.m1-l
 .m1-quick button span:last-child { font-size: 13px; font-weight: 500; text-align: center; line-height: 1.3; }
 .m1-quick button[aria-pressed="true"] .p1-art { box-shadow: 0 0 0 2px var(--ink); }
 .m1-layout { display: grid; grid-template-columns: 228px minmax(0, 1fr); gap: 32px; align-items: start; }
-.m1-filters { position: sticky; top: calc(var(--m1-head) + 16px); display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - var(--m1-head) - 32px); overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.m1-filters { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 .m1-filters-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
 .m1-filters-head h2 { font-size: 16px; font-weight: 700; }
 .m1-filters-head button { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: var(--ink); text-decoration: underline; cursor: pointer; }
@@ -415,7 +415,7 @@ body:not(.m1-live) .p1-changes, body:not(.m1-live) #p1RailDeltas, body:not(.m1-l
 .m1-sheet-list { display: grid; gap: 10px; margin-top: 14px; }
 .m1-sheet-list li { font-size: 14px; }
 
-/* The full-size before rows of the tiles and the four */
+/* The full-size before rows of the tiles and the deals */
 .p1-before-cards { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); opacity: .72; }
 .p1-before { position: relative; border: 1px dashed var(--line-2); border-radius: var(--radius); padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--paper); }
 .p1-before h4 { font-size: 12.5px; font-weight: 700; color: var(--ink); }
@@ -745,7 +745,7 @@ body { font-size: 16px; color: #111; }
 .p1-deal:not(.p1-deal--0):not(.p1-deal--3) .p1-fine { display: none; }
 @container site (min-width: 861px) { .p1-deal--1 .p1-deal-body .p1-sub, .p1-deal--2 .p1-deal-body .p1-sub { display: none; } }
 .m1-tile-go { position: absolute; z-index: 3; left: 24px; bottom: 22px; height: 44px; border: 0; border-radius: 22px; padding: 0 18px; background: var(--m1-card); color: #111; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .14); white-space: nowrap; }
-.m1-tile-go span { max-width: 140px; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.m1-tile-go span { display: inline; }   /* the whole label, never cut (M1e: R5's "See Micro R…") */
 .m1-tile-go:hover { background: #F7F4EF; }
 .p1-deal-tile:has(.m1-scene--art:not(.m1-ink-dark))::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(0deg, rgba(10, 8, 20, .62) 0%, rgba(10, 8, 20, .2) 45%, rgba(10, 8, 20, 0) 70%); pointer-events: none; }
 .p1-deal-tile:has(.m1-ink-dark) .p1-deal-body h3, .p1-deal-tile:has(.m1-ink-dark) .p1-deal-body .p1-sub, .p1-deal-tile:has(.m1-ink-dark) .p1-deal-body .p1-fine { color: #111; }
@@ -966,7 +966,6 @@ body { font-size: 16px; color: #111; }
   .pcard, .p1-pcard { padding: 12px 12px 14px; }
   .pcard .pprice, .p1-pcard .pprice { font-size: 20px; column-gap: 6px; }
   .m1-cardbtn .btn, .m1-cardbtn .btn--sm { height: 40px; font-size: 13.5px; }
-  .m1-tile-go span { max-width: 96px; }
 }
 
 /* ══ M1c: R5's list as the lead ruled it (2026-10-02) ═══════════════════════════════════════════════════════════════
@@ -1156,6 +1155,153 @@ body { font-size: 16px; color: #111; }
   .svc-strip > .m1-pager .m1-pg { width: 36px; height: 36px; font-size: 24px; }
 }
 
+/* ══ M1e: R5's second look, items 2 to 9 (2026-10-03) ══════════════════════════════════════════════════════════════
+ * The header scrolls away at every width (line 79; the filter rail sticks 16 px from the top). No deal-tile label is cut.
+ * At a desk the deals are lg.com's bento: the tall tile beside a 2 × 2 block of small tiles with round red arrows (five
+ * decided pieces, the slot's take of 5), then one honesty line and each tile's receipt under the whole
+ * set: each article spans the set as a subgrid, so its receipt stays in its own container while the layout sets it in a
+ * row below. The product card's button is lg.com's, 30 px with 12 px type; every other button keeps the 44 px pill.
+ * The banners are taller, and lg.com's row of offer cards sits under the TVs banner; at a phone's width the banners take
+ * the hero's phone order under a slimmer title. The service strip at a phone's width is one centred item between two
+ * arrows. Recommended for you at a desk is a four-card carousel over the twelve, in their order. The hero's and the
+ * banners' headlines at 500, as lg.com's. */
+
+/* The deal tiles' button: the whole label, wrapping rather than cut on a narrow tile */
+#site .m1-tile-go { height: auto; min-height: 44px; max-width: calc(100% - 48px); white-space: normal; text-align: left; line-height: 1.2; padding: 10px 20px; }
+
+/* The deals at a desk: the tall tile, the 2 × 2 block (five decided pieces: the slot takes 5), then the honesty line and the receipts under the set */
+.m1-deal-set { display: none; }
+@container site (min-width: 861px) {
+  #slot-deals.cards { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: clamp(240px, 23cqw, 340px) 16px clamp(240px, 23cqw, 340px) 18px auto auto auto auto auto auto; grid-auto-rows: auto; column-gap: 16px; row-gap: 0; }
+  #slot-deals > .p1-deal { grid-column: 1 / -1; grid-row: 1 / -1; display: grid; grid-template-columns: subgrid; grid-template-rows: subgrid; gap: 0 16px; position: relative; pointer-events: none; }
+  #slot-deals > .p1-deal > * { pointer-events: auto; }
+  #slot-deals > .p1-deal--0 { --m1-c: 1 / 3; --m1-r: 1 / 4; --m1-rr: 6; }
+  #slot-deals > .p1-deal--1 { --m1-c: 3; --m1-r: 1; --m1-rr: 7; }
+  #slot-deals > .p1-deal--2 { --m1-c: 4; --m1-r: 1; --m1-rr: 8; }
+  #slot-deals > .p1-deal--3 { --m1-c: 3; --m1-r: 3; --m1-rr: 9; }
+  #slot-deals > .p1-deal--4 { --m1-c: 4; --m1-r: 3; --m1-rr: 10; }
+  #slot-deals > .p1-deal > .p1-deal-tile, #slot-deals > .p1-deal > .delta-chip { grid-column: var(--m1-c); grid-row: var(--m1-r); }
+  #slot-deals > .p1-deal > .p1-deal-tile, #slot-deals > .p1-deal--0 > .p1-deal-tile { min-height: 0; }
+  #slot-deals > .p1-deal > .delta-chip { align-self: start; justify-self: end; margin: 12px; }
+  #slot-deals > .p1-deal > .p1-receipt { grid-column: 1 / -1; grid-row: var(--m1-rr); margin: 0; padding: 3px 0 0; font-size: 11.5px; }
+  #slot-deals > .p1-deal > .p1-receipt::before { content: attr(data-of) ": "; font-weight: 600; color: #111; }
+  #slot-deals > .m1-deal-set { display: block; grid-column: 1 / -1; grid-row: 5; margin: 0; padding: 0 0 2px; font-size: 12px; line-height: 1.5; color: #555; }
+  #slot-deals > .m1-deal-set b { color: #111; font-weight: 600; }
+  #slot-deals > .m1-deal-set .p1-lean { white-space: normal; }
+  /* The tall tile: the headline, the sub and the labelled pill */
+  #slot-deals .p1-deal--0 .p1-deal-body { left: 28px; right: 34%; bottom: 92px; }
+  #slot-deals .p1-deal--0 .p1-deal-body h3 { font-size: 30px; }
+  #site #slot-deals .p1-deal--0 .m1-tile-go { left: 28px; bottom: 28px; }
+  /* The small tiles: the headline at the bottom left, a round red arrow at the bottom right (its label kept for readers) */
+  #slot-deals .p1-deal:not(.p1-deal--0) .p1-deal-body { left: 22px; right: 80px; top: auto; bottom: 22px; transform: none; }
+  #slot-deals .p1-deal:not(.p1-deal--0) .p1-deal-body h3 { font-size: 18px; line-height: 1.25; }
+  #slot-deals .p1-deal:not(.p1-deal--0) .p1-sub, #slot-deals .p1-deal:not(.p1-deal--0) .p1-fine { display: none; }
+  #slot-deals .p1-deal--3 .p1-deal-tile .m1-scene .p1-art--scene, #slot-deals .p1-deal--4 .p1-deal-tile .m1-scene .p1-art--scene { left: 22%; right: 22%; width: auto; top: 7%; height: 36%; }
+  #site #slot-deals .p1-deal:not(.p1-deal--0) .m1-tile-go { left: auto; right: 18px; bottom: 18px; width: 44px; height: 44px; min-height: 44px; max-width: none;
+    padding: 0; border-radius: 32px; display: grid; place-items: center; font-size: 26px; line-height: 1; }
+  #site #slot-deals .p1-deal:not(.p1-deal--0) .m1-tile-go span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* The product card's button: lg.com's, 30 px tall with 12 px type, on product cards only */
+#site .m1-cardbtn .btn, #site .m1-cardbtn .btn--brand, #site .m1-cardbtn .btn--line, #site .m1-cardbtn .btn--sm { height: 30px; min-height: 30px; padding: 0 14px; font-size: 12px; line-height: 1; font-weight: 700; border-radius: 32px; }
+
+/* Recommended for you at a desk: a carousel of four a view (two on a tablet) over the twelve, in their order, with a pager */
+@container site (min-width: 641px) {
+  #rail-for-you { display: grid; grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: calc((100% - 3 * 20px) / 4); gap: 20px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 10px; }
+  #rail-for-you::-webkit-scrollbar { display: none; }
+  #rail-for-you > * { scroll-snap-align: start; }
+  #mod-for-you .m1-pager { display: flex; }
+}
+@container site (min-width: 641px) and (max-width: 960px) { #rail-for-you { grid-auto-columns: calc((100% - 20px) / 2); } }
+
+/* The header scrolls away at a desk too; the filter rail sticks under nothing */
+@container site (min-width: 861px) { .m1-filters { top: 16px; max-height: calc(100vh - 32px); } }
+
+/* The banners at a desk: taller, the art never stretched (the marks ruling, coordinator 2026-10-03). A1b's 1440 × 520
+ * `banner-tall` (the 360 banner's scene extended upward, each product at its 360 pixel size) is drawn from 861 px up in a box
+ * of its own proportion: 506 px at 1440 (lg.com's is about 540), the art at ×0.97. oh.js marks a banner m1-banner--tall only
+ * when the index has that file for its room; otherwise M1b's 1440 × 360 box stands (line 858). The 360 files serve the phone. */
+@container site (min-width: 861px) {
+  #slot-grid-promo .p1-promo.m1-banner.m1-banner--tall, .m1-banner.m1-banner--tall { aspect-ratio: 1440 / 520; min-height: 0; max-height: 520px; }
+}
+/* The art bands capped (the lead's ruling, 2026-10-03): the hero's and the banners' art never above its own scale at a wide
+ * window. Each band is at most 1,400 px, its width at a 1440 window, centred on the page's own ground beyond it, so at any
+ * wider window the art is drawn as at 1440 (×0.972 at most), where A1b measured every product mark below the wordmark. */
+.m1-hero-bleed { width: min(100cqw, 1400px); margin-left: calc(50% - min(50cqw, 700px)); }
+.m1-hero-track { --sw: min(100cqw, 1400px); transform: translateX(calc(-1 * var(--i, 0) * (var(--sw) + var(--gap)))); }
+#slot-grid-promo .p1-promo.m1-banner, .m1-banner { width: min(100cqw, 1400px); margin-left: calc(50% - min(50cqw, 700px)); }
+@container site (min-width: 861px) {
+  #slot-hero .p1-hero { height: clamp(440px, 37.5cqw, 525px); }
+  /* the banner's copy and receipt keep the grid's own left edge inside a capped band */
+  .m1-banner-copy, .m1-banner .p1-receipt { left: max(16px, calc(var(--m1-edge, max(24px, calc(50cqw - 640px))) - (100cqw - min(100cqw, 1400px)) / 2)); }
+}
+/* The hero's and the banners' headlines at 500, as lg.com's */
+#slot-hero .p1-hero h3, #slot-hero .p1-hero:has(.m1-scene--art) h3, .m1-banner-copy h2, .m1-banner-copy h3, #slot-grid-promo .m1-banner-copy h3 { font-weight: 500; }
+
+/* lg.com's row of offer cards under the TVs banner: three a view at a desk, a pager; the picture at the left of each */
+.m1-offers { display: flex; flex-direction: column; gap: 12px; margin-top: -6px; }
+.m1-offers[hidden] { display: none; }
+.m1-offers-track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 2 * 16px) / 3); gap: 16px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+  scrollbar-width: none; padding: 2px; }
+.m1-offers-track::-webkit-scrollbar { display: none; }
+.m1-offer { scroll-snap-align: start; display: grid; grid-template-columns: 42% minmax(0, 1fr); min-height: 172px; background: #FFFFFF; border-radius: 16px; overflow: hidden; }
+.m1-offer-pic { position: relative; display: block; overflow: hidden; background: #2B2342; min-height: 140px; }
+.m1-offer-pic .m1-scene { position: absolute; inset: 0; }
+.m1-offer-pic .m1-scene--art img { object-fit: cover; }
+.m1-offer-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 18px 16px; min-width: 0; }
+.m1-offer-ends { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #333; margin: 0; }
+.m1-offer-body h3 { font-size: 16.5px; line-height: 1.3; font-weight: 500; color: #111; margin: 0; }
+.m1-offer-body .btn { margin-top: auto; padding-left: 20px; padding-right: 20px; }
+.m1-offers-foot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.m1-offers-foot .m1-pager { margin-top: 0; }
+.m1-offers-note { font-size: 11.5px; color: #666; text-align: center; }
+@container site (max-width: 960px) { .m1-offers-track { grid-auto-columns: calc((100% - 16px) / 2); } }
+/* Narrower than a desk the tall tile's copy takes the tile's width, as the others' does (M1b's 40% held it to a narrow column) */
+@container site (max-width: 860px) { #slot-deals .p1-deal--0 .p1-deal-body { right: 24px; } }
+
+@container site (max-width: 640px) {
+  /* The title block slimmer: the title and the expert pill on one row, the description left to the page's own copy */
+  .view--grid .view-head:has(.view-head-text) { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; margin-top: -10px; }
+  .view--grid .view-head-text .p1-sub { display: none; }
+  .view--grid .view-title { font-size: 22px; }
+  #site .view--grid .m1-help { padding: 0 16px; font-size: 13.5px; }
+  #mod-grid-promo .module-head { margin-bottom: 6px; }
+  /* The banners in the hero's phone order: the copy and a full-width pill on a light ground tinted for the room, the art
+     as a rounded 4:3 picture under it (the product kept in the crop), the receipt under the art */
+  #slot-grid-promo .p1-promo.m1-banner, .m1-banner { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "copy" "art" "rec";
+    height: auto; min-height: 0; max-height: none; aspect-ratio: auto; padding: 26px 16px 14px; gap: 0; background: linear-gradient(180deg, #FFFFFF 0%, #F3EFE8 100%); }
+  .m1-banner[data-room="living-room"] { background: linear-gradient(180deg, #F4F0FB 0%, #E5DDF4 100%); }
+  .m1-banner[data-room="laundry-room"] { background: linear-gradient(180deg, #F0F6F8 0%, #DCEAEF 100%); }
+  .m1-banner[data-room="kitchen"] { background: linear-gradient(180deg, #FBF5EE 0%, #F0E4D4 100%); }
+  .m1-banner:has(.m1-scene--art)::before, .m1-banner::before { display: none; }
+  .m1-banner .m1-banner-copy { grid-area: copy; position: static; transform: none; left: auto; right: auto; top: auto; bottom: auto; width: auto; gap: 10px; padding: 0 0 20px; }
+  .m1-banner .m1-banner-copy h2, .m1-banner .m1-banner-copy h3, #slot-grid-promo .m1-banner .m1-banner-copy h3, .m1-banner:has(.m1-scene--art) .m1-banner-copy h2, .m1-banner:has(.m1-scene--art) .m1-banner-copy h3 { font-size: 26px; line-height: 1.2; color: #111; }
+  .m1-banner .m1-banner-copy .p1-sub, .m1-banner:has(.m1-scene--art) .m1-banner-copy .p1-sub { font-size: 15px; color: #333; }
+  .m1-banner .m1-banner-copy .p1-kicker { color: var(--brand); }   /* over light art M1b's contrast rule (line 875) keeps it dark grey, as ruled */
+  #site .m1-banner-copy .btn, #site .m1-banner-copy .p1-promo-cta { width: 100%; justify-content: center; margin-top: 6px; }
+  .m1-banner > .m1-scene, .m1-banner > .m1-banner-art { grid-area: art; position: relative; inset: auto; z-index: 0; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; }
+  .m1-banner > .m1-banner-art > .m1-scene { position: absolute; inset: 0; }
+  .m1-banner .m1-scene--art img, .m1-banner:has(.m1-scene--art) .m1-scene--art img { height: 100%; object-position: 87% 50%; }   /* a 4:3 crop shows a third of the width: at 87 % it is 0.58–0.91, where the three rooms' products sit (0.60–0.89) */
+  .m1-banner .m1-scene .p1-art--scene { left: 14%; right: 14%; width: auto; top: 8%; height: 84%; }
+  .m1-banner .m1-banner-prod { top: 8%; height: 84%; width: 42%; }
+  .m1-banner > .m1-hero-badge, .m1-banner .m1-hero-badge:not([data-zone]) { grid-area: art; position: relative; z-index: 3; align-self: end; justify-self: start; margin: 12px;   /* the calm foot of the art, clear of the product's screen */
+    left: 0 !important; top: 0 !important; right: auto !important; bottom: auto !important; }
+  .m1-banner .p1-receipt, .m1-banner:has(.m1-scene--art) .p1-receipt { grid-area: rec; position: static; margin: 10px 0 0; color: rgba(0, 0, 0, .55); }
+  /* The offer cards one at a time, the next peeking: the picture over the copy, as lg.com's phone */
+  .m1-offers-track { grid-auto-columns: 86%; gap: 12px; }
+  .m1-offer { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .m1-offer-pic { aspect-ratio: 16 / 9; min-height: 0; }
+  #site .m1-offer-body .btn { width: 100%; justify-content: center; }
+  /* The service strip: one centred item between two arrows, one slim row on the band */
+  #view-home .svc-strip:has(> .m1-svc-track) { position: relative; padding: 0; }
+  .m1-svc-track { gap: 0; padding: 0 44px; scroll-padding: 0 44px; }
+  .m1-svc-track .m1-svc { flex: 0 0 100%; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 4px; font-size: 15px; }
+  .m1-svc-track .m1-svc svg { width: 22px; height: 22px; }
+  .svc-strip > .m1-pager { position: absolute; inset: 0; margin: 0; padding: 0 2px; justify-content: space-between; pointer-events: none; }
+  .svc-strip > .m1-pager .m1-pg { pointer-events: auto; width: 40px; height: 40px; font-size: 24px; }
+  .svc-strip > .m1-pager .m1-pg-n { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
 /* ══ The product page in lg.com’s anatomy: lane M2’s block (P2_CSS in oh.js), appended verbatim at the end of this sheet
  * so it keeps the cascade position it had when injected after it. Once M2 drops the injection the page carries no
  * injected styles; until then the same rules apply twice, harmlessly. ══ */
@@ -1314,4 +1460,51 @@ body.shell--phone .bb-vars,body.shell--phone .pdp-svcs,body.shell--phone .ptiles
 /* ══ The product page, lane M2's second block (P2_CSS in oh.js: the buy bar's dock and lg.com's phone order, R5's
  * rulings, lane M2b), appended verbatim after its first block; once M2 drops its injection (p2Style()) this is the one copy. ══ */
 .bb-dock{display:contents}
-@media (max-width:640px){#view-product .pdp-top,#view-product .pdp-left{display:contents}#view-product>*{order:10}#view-product>.offlimits-note,#view-product>.pdp-crumbs{order:0}#view-product .pdp-gallery{order:1;aspect-ratio:1/1;max-height:none}#view-product .pdp-gmain img{width:90%;height:90%}#view-product>#buyBox{order:2}#view-product>.pdp-stick{order:3;position:sticky;margin-top:-14px}#view-product .pdp-offers{order:4}#view-product .pdp-config{order:5}#view-product .bb-dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14)}body.kit-dock:not(.kit-dock--collapsed) #view-product .bb-dock{bottom:var(--dock-bar-h,0px)}body:not(.kit-dock) #view-product .bb-dock{bottom:var(--bar-h,0px)}#view-product .bb-dock .bb-pricebox{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;max-width:none;text-align:left}#view-product .pdp-bar .bb-dock .bb-price{justify-content:start;flex:none}#view-product .pdp-bar .bb-dock .bb-price .bb-now{font-size:24px}#view-product .pdp-bar .bb-dock .bb-fin{justify-content:flex-end;text-align:right;font-size:11.5px;line-height:1.35;min-width:0}#view-product .pdp-bar .bb-dock .bb-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;margin:0}#view-product .bb-dock .bb-actions [data-ctl="special-offers"]{order:-1}body:has(#view-product:not([hidden])) .site{padding-bottom:150px}}
+@media (max-width:640px){#view-product .pdp-top,#view-product .pdp-left{display:contents}#view-product>*{order:10}#view-product>.offlimits-note,#view-product>.pdp-crumbs{order:0}#view-product>.pdp-stick{order:1;position:sticky;margin-top:-14px}#view-product>#buyBox{order:2}#view-product .pdp-gallery{order:3;max-height:none}#view-product .pdp-offers{order:4}#view-product .pdp-config{order:5}#view-product .bb-dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14)}body.kit-dock:not(.kit-dock--collapsed) #view-product .bb-dock{bottom:var(--dock-bar-h,0px)}body:not(.kit-dock) #view-product .bb-dock{bottom:var(--bar-h,0px)}#view-product .bb-dock .bb-pricebox{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;max-width:none;text-align:left}#view-product .pdp-bar .bb-dock .bb-price{justify-content:start;flex:none}#view-product .pdp-bar .bb-dock .bb-price .bb-now{font-size:24px}#view-product .pdp-bar .bb-dock .bb-fin{justify-content:flex-end;text-align:right;font-size:11.5px;line-height:1.35;min-width:0}#view-product .pdp-bar .bb-dock .bb-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;margin:0}#view-product .bb-dock .bb-actions [data-ctl="special-offers"]{order:-1}body:has(#view-product:not([hidden])) .site{padding-bottom:150px}}
+
+/* M2b, R5's second look (2026-10-03): the stuck row at a desk is one line, so the twin and the tabs stand about 100 px
+ * together, as lg.com's title bar and tabs; the gallery is lg.com's, a thumbnail for each of the product's pictures (a
+ * column at the picture's left at a desk, a row under it on a phone); at a phone's width the title block comes before
+ * the picture, after the crumbs and the tabs, as lg.com orders it. */
+#view-product .pdp-stick-bar{grid-template-columns:minmax(0,1fr) auto auto auto;gap:22px;padding:6px 0;align-items:center}
+#view-product .pdp-stick-bar .bb-head{gap:1px}
+#view-product .pdp-stick-bar .bb-title{font-size:15px;line-height:1.3}
+#view-product .pdp-stick-bar .bb-sku{font-size:12px;line-height:1.3}
+#view-product .pdp-stick-bar .bb-price{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;justify-content:end;align-items:center;column-gap:8px;row-gap:0;font-size:22px;line-height:1.1}
+#view-product .pdp-stick-bar .bb-price .bb-now{grid-row:1/span 2;font-size:22px;letter-spacing:-.01em}
+#view-product .pdp-stick-bar .bb-price .off{grid-column:2;grid-row:1;align-self:end;font-size:11.5px;line-height:1.2}
+#view-product .pdp-stick-bar .bb-price .was{grid-column:2;grid-row:2;align-self:start;font-size:11.5px;line-height:1.2}
+#view-product .pdp-stick-bar .bb-price .bb-retail{grid-row:1/span 2;font-size:16px}
+#view-product .pdp-stick-bar .bb-fin{display:grid;justify-items:start;gap:0;max-width:210px;font-size:11.5px;line-height:1.35;text-align:left}
+#view-product .pdp-stick-bar .bb-actions .btn{min-width:150px;padding-left:22px;padding-right:22px}
+#view-product .pdp-tabs button{padding:10px 0 10px;line-height:22px}
+#view-product .pdp-gallery{display:grid;grid-template-columns:96px minmax(0,1fr);grid-template-rows:minmax(0,1fr);column-gap:20px;place-items:stretch;padding:24px}
+#view-product .pdp-gallery.pdp-gallery--bare{grid-template-columns:minmax(0,1fr)}
+#view-product .pdp-gmain{grid-column:-2/-1;grid-row:1;position:relative;width:100%;height:100%;min-width:0;min-height:0;display:grid;place-items:center}
+#view-product .pdp-gmain img{position:absolute;inset:3%;width:94%;height:94%;object-fit:contain}
+#view-product .pdp-gthumbs{grid-column:1;grid-row:1;align-self:start;margin-top:40px;display:flex;flex-direction:column;gap:8px;max-height:calc(100% - 40px);overflow:auto;scrollbar-width:none;padding:1px}
+#view-product .pdp-gthumbs::-webkit-scrollbar{display:none}
+.pdp-gthumb{flex:none;width:96px;height:96px;padding:6px;border:1px solid var(--line-2);border-radius:4px;background:#FFFFFF;display:grid;place-items:center;cursor:pointer;overflow:hidden}
+.pdp-gthumb img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
+.pdp-gthumb .ph-tile{width:100%;height:100%;font-size:9px;line-height:1.2;padding:4px;overflow:hidden}
+.pdp-gthumb:hover{border-color:var(--ink)}
+.pdp-gthumb[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+#view-product .pdp-gallery .pdp-gbadges{top:20px;left:140px;max-width:calc(100% - 210px)}
+#view-product .pdp-gallery--bare .pdp-gbadges{left:16px;max-width:calc(100% - 90px)}
+@media (max-width:900px){
+  #view-product .pdp-gallery{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;row-gap:12px;aspect-ratio:auto;padding:16px 16px 14px}
+  #view-product .pdp-gmain{grid-column:1;grid-row:1;height:auto;aspect-ratio:1/.86}
+  #view-product .pdp-gthumbs{grid-column:1;grid-row:2;align-self:auto;margin-top:0;flex-direction:row;justify-content:center;max-height:none;overflow-x:auto;overflow-y:hidden}
+  #view-product .pdp-gthumb{width:52px;height:52px;padding:4px}
+  #view-product .pdp-gallery .pdp-gbadges{top:16px;left:16px;max-width:calc(100% - 90px)}
+}
+body.shell--phone #view-product .pdp-gallery{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;row-gap:12px;aspect-ratio:auto;padding:16px 16px 14px}
+body.shell--phone #view-product .pdp-gmain{grid-column:1;grid-row:1;height:auto;aspect-ratio:1/.86}
+body.shell--phone #view-product .pdp-gthumbs{grid-column:1;grid-row:2;align-self:auto;margin-top:0;flex-direction:row;justify-content:center;max-height:none;overflow-x:auto;overflow-y:hidden}
+body.shell--phone #view-product .pdp-gthumb{width:52px;height:52px;padding:4px}
+body.shell--phone #view-product .pdp-gallery .pdp-gbadges{top:16px;left:16px}
+@media (max-width:640px){
+  #view-product>.pdp-stick{margin-top:-18px;margin-bottom:-12px}
+  #view-product .pdp-bar .bb-title{font-size:18px;line-height:1.35;font-weight:600}
+  #view-product .buybox.pdp-bar{padding-bottom:12px}
+}

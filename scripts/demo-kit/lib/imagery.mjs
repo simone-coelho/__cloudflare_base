@@ -286,20 +286,38 @@ export function writeManifest(file, manifest, { dir, budgetMegabytes }) {
   return manifest.totals;
 }
 
-/** What is wrong with a row's shape, against the shape the Vantage manifest carries; empty when sound. */
-export function manifestRowProblems(row) {
+/**
+ * The manifest section of a product's second picture (OH, Lane D2b): one row per picture, id `<id>-2`, `of` the
+ * row it follows, encoded WebP (transparent) and JPEG (on white) only, so `files { webp, white }` and
+ * `bytes { webp, jpg }`, no PNG; otherwise the kit's row. fetchImagery never writes it and keeps it as read.
+ *
+ * The image index, `<imagery.dir>/index.json`, is written by a demo's imagery lane beside the manifest; fetchImagery
+ * never reads or writes it, so a kit rerun leaves it, every field included, exactly as it was. `products` maps sku
+ * → { id, name, found, verdict, src, webp, png, jpg, size }, `src` the path a page renders (the accepted WebP,
+ * else the placeholder), with `large` where a larger rendition exists, and:
+ *   gallery: the accepted pictures' paths in order, the first equal to `src`; two entries with a second picture (`products/<id>-2.webp`, its JPEG beside it), one without, `[]` for a placeholder product.
+ */
+export const GALLERY_SECTION = 'gallery';
+
+/**
+ * What is wrong with a row's shape, against the shape the Vantage manifest carries; empty when sound. A row of
+ * the `gallery` section (`{ section: 'gallery' }`) carries no PNG and names the row it follows (`of`).
+ */
+export function manifestRowProblems(row, { section = null } = {}) {
   const out = [];
+  const gallery = section === GALLERY_SECTION;
   const str = (k) => { if (typeof row[k] !== 'string' || !row[k]) out.push(`${row.id ?? '?'}: ${k} must be a non-empty string`); };
   ['id', 'name', 'maker'].forEach(str);
+  if (gallery) str('of');
   if (row.files === null) {
     if (typeof row.placeholder !== 'string' || row.gate?.verdict !== 'missing') out.push(`${row.id}: a row without files names its placeholder and a "missing" verdict`);
     return out;
   }
   ['view', 'licence', 'sha256'].forEach(str);
   if (!/^[0-9a-f]{64}$/.test(row.sha256 ?? '')) out.push(`${row.id}: sha256 must be 64 hex characters`);
-  for (const k of ['png', 'webp', 'white']) if (typeof row.files?.[k] !== 'string') out.push(`${row.id}: files.${k} must be a path`);
+  for (const k of gallery ? ['webp', 'white'] : ['png', 'webp', 'white']) if (typeof row.files?.[k] !== 'string') out.push(`${row.id}: files.${k} must be a path`);
   if (!Number.isInteger(row.size?.width) || !Number.isInteger(row.size?.height) || typeof row.size?.productFill !== 'number') out.push(`${row.id}: size is { width, height, productFill }`);
-  for (const k of ['png', 'webp', 'jpg']) if (!Number.isInteger(row.bytes?.[k])) out.push(`${row.id}: bytes.${k} must be a whole number`);
+  for (const k of gallery ? ['webp', 'jpg'] : ['png', 'webp', 'jpg']) if (!Number.isInteger(row.bytes?.[k])) out.push(`${row.id}: bytes.${k} must be a whole number`);
   if (row.generated !== false) out.push(`${row.id}: generated must be false (a fetched render)`);
   if (!Array.isArray(row.sources) || !row.sources.length) out.push(`${row.id}: sources must list where each part came from`);
   for (const s of row.sources ?? []) {
@@ -316,10 +334,12 @@ export function manifestRowProblems(row) {
  * Fetch what is missing (or everything with `force`), normalise, encode, write the three files per item
  * under <outDir>/<subdir>/, and write the manifest's section with provenance and verdicts. Rows outside
  * `only` and rows already on disk are kept as they are. `gateFrom` reads verdicts from another manifest
- * (read-only), still bound to each file's sha256.
+ * (read-only), still bound to each file's sha256. Every other manifest section (the `gallery` section among
+ * them) is kept as read, and the image index (index.json, its `gallery` field included) is never touched.
  */
 export async function fetchImagery({ imagery, outDir, manifestPath, cacheDir, only = [], force = false, refetch = false,
   retrieved = new Date().toISOString().slice(0, 10), gateFrom = null, log = console.log, fetchImpl = fetch }) {
+  if (imagery.section === GALLERY_SECTION) throw new Error(`imagery.section cannot be "${GALLERY_SECTION}": that section holds the second pictures, which the kit keeps as read`);
   const render = renderOf(imagery);
   const out = join(outDir, imagery.subdir);
   mkdirSync(out, { recursive: true });

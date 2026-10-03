@@ -45,7 +45,7 @@
      },
      {
       "slot": "deals",
-      "take": 4,
+      "take": 5,
       "weights": {
        "category": 0.3,
        "type": 0.3,

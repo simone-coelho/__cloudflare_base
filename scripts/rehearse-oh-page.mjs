@@ -432,6 +432,9 @@ const PUBLISHABLE = kitConfig.seed.beats.publishable || {};
 // ── The walk ─────────────────────────────────────────────────────────────────
 const home = demo.pages.find((p) => p.entry === 'home');
 const homeSlots = home.slots || [];
+/** The deals slot as the opening slots publish it: how many the engine's answer carries, and its diversity rule (M1e: five). */
+const OPEN_DEALS = ((((await assetJson('beats/open-slots.json')).publish.document.pages || {}).home) || []).find((s) => s.slot === 'deals') || {};
+const DEALS_N = Number(OPEN_DEALS.take) || 4, DEALS_MAX = Number((OPEN_DEALS.diversity || {}).max) || 2;
 const openCatalog = (await assetJson('beats/open-catalog.json')).publish.document;
 const opening = new Set((openCatalog.pieces || []).map((p) => p.customerContentId));
 const cidOf = new Map((openCatalog.pieces || []).map((p) => [p.id, p.customerContentId]));
@@ -657,8 +660,8 @@ const OUTCOMES = {
     ok('every piece decided comes from the opening catalog', s.all.every((d) => opening.has(d.customerContentId)), s.all.filter((d) => !opening.has(d.customerContentId)).map((d) => d.customerContentId).join(', '));
     const four = s.slot('deals');
     if (page.own) {
-      ok(`the arrival four are decided on ${page.own}’s own sales: each carries the regional driver for the request’s region, nothing asserted`,
-        s.asked.region === null && four.length === 4 && four.every((d) => { const g = regionalOf(d); return g && g.value === page.own; }),
+      ok(`the arrival deals (${DEALS_N}) are decided on ${page.own}’s own sales: each carries the regional driver for the request’s region, nothing asserted`,
+        s.asked.region === null && four.length === DEALS_N && four.every((d) => { const g = regionalOf(d); return g && g.value === page.own; }),
         four.map((d) => { const g = regionalOf(d); return `${d.customerContentId} ${g ? `${g.value} ${Number(g.a).toFixed(2)}` : 'no regional driver'}`; }).join(' · '));
       ok(`and the room tiles lean the same way: the category rail is decided on ${page.own}’s sales`, s.slot('category-rail').every((d) => { const g = regionalOf(d); return g && g.value === page.own; }),
         s.slot('category-rail').map((d) => `${d.customerContentId} ${(regionalOf(d) || {}).value || 'none'}`).join(' · '));
@@ -725,7 +728,7 @@ const OUTCOMES = {
     info(`hero ${fmt(t.slot('hero'))} | rooms ${fmt(t.slot('category-rail'))} | deals ${fmt(t.slot('deals'))}`);
     ok(`the homepage is decided with ctx.region = ${contrast} asserted on the request`, t.all.length > 0 && t.asked.region === contrast);
     const four = t.slot('deals');
-    ok(`the four answer ${contrast}’s sales: each carries the regional driver for the asserted region`, four.length === 4 && four.every((d) => { const g = regionalOf(d); return g && g.value === contrast; }),
+    ok(`the deals (${DEALS_N}) answer ${contrast}’s sales: each carries the regional driver for the asserted region`, four.length === DEALS_N && four.every((d) => { const g = regionalOf(d); return g && g.value === contrast; }),
       four.map((d) => `${d.customerContentId} ${(regionalOf(d) || {}).value || 'none'}`).join(' · '));
     const m = await client.meters(her);
     ok('her meters did not move: a region is context, never evidence', Object.keys(m.dims).length === 0, Object.keys(m.dims).join(', '));
@@ -764,7 +767,7 @@ const OUTCOMES = {
         Boolean(pick) && /p1Contrast/.test(JSON.stringify((beatsDoc.beats.find((x) => x.key === 'contrast') || {}).run || [])), `${sig(own)} → ${sig(lead)}`);
       page.region = pick;                                       // the walk follows the page's own assertion from here
       const t = await ask(her, home.page);
-      ok(`asserted ${pick}: the four carry ${pick}’s regional driver`, t.slot('deals').length === 4 && t.slot('deals').every((d) => (regionalOf(d) || {}).value === pick), fmt(t.slot('deals')));
+      ok(`asserted ${pick}: the deals (${DEALS_N}) carry ${pick}’s regional driver`, t.slot('deals').length === DEALS_N && t.slot('deals').every((d) => (regionalOf(d) || {}).value === pick), fmt(t.slot('deals')));
       const grid = await sortRail('tv-grid', gridPool());
       ok(`and the TV grid leans with ${pick}’s sales, labelled asserted, opening on what ${pick} buys (${lead ? `${lead.type}, ${lead.sizeBand}` : 'no lean'})`,
         Boolean(grid.regional && grid.regional.region === pick && grid.regional.asserted === true) && firstIs(grid.ids[0], lead),
@@ -813,7 +816,7 @@ const OUTCOMES = {
       const s = last;
       const rooms = s.slot('deals').map((d) => pieceRoom(d.customerContentId)[0]);
       const per = rooms.reduce((x, r) => ({ ...x, [r]: (x[r] || 0) + 1 }), {});
-      ok('the deals four hold both rooms, at most two each, by the slot’s own diversity rule', rooms.includes('living-room') && rooms.includes('laundry-room') && Object.values(per).every((n) => n <= 2),
+      ok(`the deals hold both rooms, at most ${DEALS_MAX} each, by the slot’s own diversity rule`, rooms.includes('living-room') && rooms.includes('laundry-room') && Object.values(per).every((n) => n <= DEALS_MAX),
         Object.entries(per).map(([r, n]) => `${r} ${n}`).join(' · '));
       {
         // The control: one question over every room's products swaps wholesale to her strongest room; the rail asks per room instead.
@@ -828,7 +831,7 @@ const OUTCOMES = {
     const fresh = await client.mintVisitor({}, 'Fresh visitor');   // direct, consent granted, nothing sent
     const theirs = await ask(fresh, home.page);
     info(`hers ${fmt(mine.slot('deals'))} | the fresh visitor’s ${fmt(theirs.slot('deals'))}`);
-    ok('a fresh visitor in the same region, who sent nothing, is decided on the region’s prior alone', theirs.slot('deals').length === 4
+    ok('a fresh visitor in the same region, who sent nothing, is decided on the region’s prior alone', theirs.slot('deals').length === DEALS_N
       && theirs.slot('deals').every((d) => { const g = regionalOf(d); return g && g.value === page.own; }), ids(theirs.slot('deals')).join(', '));
     const slots = ['hero', 'category-rail', 'deals'];
     const differ = slots.filter((x) => JSON.stringify(ids(mine.slot(x))) !== JSON.stringify(ids(theirs.slot(x))));
@@ -1329,7 +1332,7 @@ const OUTCOMES = {
     info(`on a surface she can see before the press: ${seen.join(' · ') || `none of ${closing.join(', ')}`}`);
     ok('and none of them is on any surface on the next decision: the homepage, the grid and each room’s product page', still.length === 0, still.join(' · ') || `${now2.length} surfaces asked`);
     const four = now2[0][1].slot('deals');
-    ok('the deals still answer four, the next offers taking the places', four.length === 4, ids(four).join(', '));
+    ok(`the deals still answer ${DEALS_N}, the next offers taking the places`, four.length === DEALS_N, ids(four).join(', '));
     last = now2[0][1];
     {
       // Lane P1's checks for this beat (P1 wrote them; S1 runs them after its own, in the beat's order).
@@ -1383,7 +1386,7 @@ const OUTCOMES = {
     const pinRec = four[0] ? recs.get(four[0].decisionId) : null;
     ok('its receipt says the merchandiser placed it and ranking never ran for it', Boolean(pinRec && pinRec.authority === 'pin' && /ranking never ran/.test(String((pinRec.explain || {}).note))),
       pinRec ? `authority ${pinRec.authority} · “${(pinRec.explain || {}).note}”` : 'no record');
-    ok('and the other three are still the engine’s, ranked for her', four.length === 4 && four.slice(1).every((d) => d.strategy !== 'tenant-pinned' && (recs.get(d.decisionId) || {}).authority === 'engine'),
+    ok(`and the other ${DEALS_N - 1} are still the engine’s, ranked for her`, four.length === DEALS_N && four.slice(1).every((d) => d.strategy !== 'tenant-pinned' && (recs.get(d.decisionId) || {}).authority === 'engine'),
       four.slice(1).map((d) => `${d.customerContentId} ${(recs.get(d.decisionId) || {}).authority || '?'}`).join(' · '));
     last = s;
     {

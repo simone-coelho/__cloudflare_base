@@ -8,13 +8,13 @@
 // source and scripts/fetch-vantage-devices.mjs a wrapper over it.)
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadValidConfig } from './config.mjs';
 import {
-  RENDER_DEFAULTS, cacheFileOf, cutout, download, failedRow, fetchImagery, gateOf, loadSharp, manifestRow, manifestRowProblems, place, renderOf,
+  GALLERY_SECTION, RENDER_DEFAULTS, cacheFileOf, cutout, download, failedRow, fetchImagery, gateOf, loadSharp, manifestRow, manifestRowProblems, place, renderOf,
   reviewFor, sha256, sourceRecord, totals, writeManifest,
 } from './imagery.mjs';
 
@@ -60,6 +60,73 @@ test('every committed device row passes the shape check, and a broken one names 
   const failed = failedRow(sourceOf('galaxy-s26'), imagery.placeholder.file, 'HTTP 404');
   assert.deepEqual(failed, { id: 'galaxy-s26', name: 'Samsung Galaxy S26', maker: 'samsung', files: null, placeholder: 'placeholder-device.svg', generated: false, gate: { verdict: 'missing', note: 'HTTP 404' } });
   assert.deepEqual(manifestRowProblems(failed), []);
+});
+
+/** A second picture's row, as the `gallery` section carries it: the kit's row with WebP and JPEG only, naming the row it follows. */
+const galleryRowOf = (row) => {
+  const { files, bytes, ...rest } = row;
+  return { ...rest, id: `${row.id}-2`, of: row.id, files: { webp: files.webp.replace('.webp', '-2.webp'), white: files.white.replace('.jpg', '-2.jpg') },
+    bytes: { webp: bytes.webp, jpg: bytes.jpg } };
+};
+
+test('a gallery row (a second picture, WebP and JPEG only) passes the shape check for its section; without the section, or without `of`, it does not', () => {
+  const g = galleryRowOf(byId.get('galaxy-s26'));
+  assert.deepEqual(manifestRowProblems(g, { section: GALLERY_SECTION }), []);
+  assert.match(manifestRowProblems(g).join(), /files\.png must be a path/, 'outside its section a row still needs its PNG');
+  assert.match(manifestRowProblems(g).join(), /bytes\.png must be a whole number/);
+  const { of: _of, ...orphan } = g;
+  assert.match(manifestRowProblems(orphan, { section: GALLERY_SECTION }).join(), /of must be a non-empty string/, 'a second picture names the row it follows');
+  assert.match(manifestRowProblems({ ...g, files: { webp: g.files.webp } }, { section: GALLERY_SECTION }).join(), /files\.white must be a path/);
+  assert.match(manifestRowProblems({ ...g, bytes: { webp: 1 } }, { section: GALLERY_SECTION }).join(), /bytes\.jpg must be a whole number/);
+  for (const row of committed.devices) assert.deepEqual(manifestRowProblems(row, { section: GALLERY_SECTION }).filter((p) => !/: of must be/.test(p)), [], `${row.id}: a full row also satisfies the gallery's files and bytes`);
+});
+
+// OH's second pictures (Lane D2b), where the working tree carries them: every row passes the gallery shape check,
+// follows a product row, and the index's `gallery` field has the shape imagery.mjs documents.
+const ohImg = fileURLToPath(new URL('../../../public/oh/img/', import.meta.url));
+const ohManifest = existsSync(join(ohImg, 'MANIFEST.json')) ? JSON.parse(readFileSync(join(ohImg, 'MANIFEST.json'), 'utf8')) : null;
+const ohIndex = existsSync(join(ohImg, 'index.json')) ? JSON.parse(readFileSync(join(ohImg, 'index.json'), 'utf8')) : null;
+test('OH\'s gallery section and the index\'s gallery field: rows of the gallery shape, the first entry equal to src, two with a second picture, one without, [] for a placeholder', { skip: !(ohManifest?.[GALLERY_SECTION] && ohIndex) && 'no OH gallery in this checkout' }, () => {
+  const rows = ohManifest[GALLERY_SECTION];
+  const productIds = new Set(ohManifest.products.map((r) => r.id));
+  for (const r of rows) {
+    assert.deepEqual(manifestRowProblems(r, { section: GALLERY_SECTION }), [], r.id);
+    assert.ok(productIds.has(r.of) && r.id === `${r.of}-2`, `${r.id} follows a product row`);
+    assert.equal(sha256(readFileSync(join(ohImg, r.files.webp))), r.sha256, `${r.id}: the file is the one reviewed`);
+  }
+  const second = new Map(rows.map((r) => [r.of, `/oh/img/${r.files.webp}`]));
+  for (const [sku, e] of Object.entries(ohIndex.products)) {
+    assert.ok(Array.isArray(e.gallery), `${sku}: gallery is an array`);
+    if (e.verdict !== 'accept') { assert.deepEqual(e.gallery, [], `${sku}: a placeholder product has no pictures`); continue; }
+    assert.equal(e.gallery[0], e.src, `${sku}: the first entry is src`);
+    assert.deepEqual(e.gallery.slice(1), second.has(e.id) ? [second.get(e.id)] : [], `${sku}: the second entry is the gallery row's WebP, or none`);
+  }
+  assert.equal(Object.values(ohIndex.products).filter((e) => e.gallery.length === 2).length, rows.length);
+});
+
+test('a kit rerun keeps the manifest\'s gallery section and the index\'s gallery field as they were, and no demo section may be called "gallery"', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'demo-kit-gallery-'));
+  mkdirSync(join(out, 'products'));
+  const files = { 'p1.webp': 'w1', 'p1.jpg': 'j1', 'p1.png': 'p1', 'p1-2.webp': 'w2', 'p1-2.jpg': 'j2' };
+  for (const [f, body] of Object.entries(files)) writeFileSync(join(out, 'products', f), body);
+  const product = { ...byId.get('galaxy-s26'), id: 'p1', files: { png: 'products/p1.png', webp: 'products/p1.webp', white: 'products/p1.jpg' }, sha256: sha256(Buffer.from('w1')) };
+  const gallery = [{ ...galleryRowOf(product), files: { webp: 'products/p1-2.webp', white: 'products/p1-2.jpg' }, sha256: sha256(Buffer.from('w2')) }];
+  writeFileSync(join(out, 'MANIFEST.json'), `${JSON.stringify({ about: 'x', products: [product], totals: {}, art: { rows: [] }, [GALLERY_SECTION]: gallery }, null, 2)}\n`);
+  const index = `${JSON.stringify({ products: { P1: { id: 'p1', verdict: 'accept', src: '/d/img/products/p1.webp', gallery: ['/d/img/products/p1.webp', '/d/img/products/p1-2.webp'] } } }, null, 1)}\n`;
+  writeFileSync(join(out, 'index.json'), index);
+  const conf = { ...imagery, section: 'products', subdir: 'products', gate: undefined,
+    sources: [{ id: 'p1', name: product.name, maker: product.maker, page: 'https://example.com/p1', kind: 'pair', src: [{ role: 'pair', url: 'https://example.com/p1.png' }] }] };
+  const noNetwork = async () => { throw new Error('no network'); };
+  const result = await fetchImagery({ imagery: conf, outDir: out, manifestPath: join(out, 'MANIFEST.json'), cacheDir: mkdtempSync(join(tmpdir(), 'demo-kit-cache-')), log: () => {}, fetchImpl: noNetwork });
+  assert.deepEqual([result.made, result.kept, result.failed], [0, 1, 0], 'nothing fetched: the product is on disk');
+  const written = JSON.parse(readFileSync(join(out, 'MANIFEST.json'), 'utf8'));
+  assert.deepEqual(written[GALLERY_SECTION], gallery, 'the gallery section is kept as read');
+  assert.deepEqual(written.art, { rows: [] }, 'and any other section');
+  assert.equal(readFileSync(join(out, 'index.json'), 'utf8'), index, 'the index, its gallery field included, is not touched');
+  assert.equal(written.totals.files, 6, 'the totals count the second pictures (and the index) as payload');
+  await assert.rejects(fetchImagery({ imagery: { ...conf, section: GALLERY_SECTION }, outDir: out, manifestPath: join(out, 'MANIFEST.json'), cacheDir: out, log: () => {}, fetchImpl: noNetwork }),
+    /cannot be "gallery"/);
+  assert.deepEqual(JSON.parse(readFileSync(join(out, 'MANIFEST.json'), 'utf8'))[GALLERY_SECTION], gallery, 'the refused run wrote nothing');
 });
 
 test('a verdict holds only for the sha256 it was given to', () => {

@@ -1,5 +1,5 @@
 {
- "about": "OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): white type in the format's text zone, a badge in its badge zone, never over the product zone. src is the WebP; avif is the same picture for a <picture> source. jpg is the fallback. Hero pieces carry two slides: slide (1440x640, the carousel layout) and slide540 (1440x540, the full-bleed hero), the same scene and product, slide540 cut from slide's frame. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product's box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper's own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.",
+ "about": "OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): each file's ink says which type its text zone carries (light: white type; dark: dark type), a badge in its badge zone, never over the product zone. Since A1b the art is light (daylight rooms and bright studio sets): slides and banners carry no scrim, because the page sets dark type on its own white panel there; deal tiles and tall tiles keep a shaded foot for white headlines; room tiles carry their text under the picture. src is the WebP; avif is the same picture for a <picture> source. jpg is the fallback. Hero pieces carry two slides: slide (1440x640, the carousel layout) and slide540 (1440x540, the full-bleed hero), the same scene and product, slide540 cut from slide's frame. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product's box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper's own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.",
  "manifest": "/oh/img/MANIFEST.json",
  "formats": {
   "slide": {
@@ -149,7 +149,26 @@
     0.98
    ],
    "badgeZones": [],
-   "use": "room grid banners"
+   "use": "room grid banners, 1440x360"
+  },
+  "banner-tall": {
+   "width": 1440,
+   "height": 520,
+   "textZone": [
+    0.04,
+    0.15,
+    0.56,
+    0.85
+   ],
+   "productZone": [
+    0.62,
+    0.04,
+    0.98,
+    0.98
+   ],
+   "badgeZones": [],
+   "extends": "banner",
+   "use": "room grid banners in a taller box (M1e, about 490 px at 1440), 1440x520: the banner's scene extended upward, the product at the banner's pixel size"
   }
  },
  "rooms": {
@@ -169,7 +188,7 @@
     "jpg": "/oh/img/art/slide/hero_nfl_gift_card.jpg",
     "width": 1440,
     "height": 640,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -178,10 +197,10 @@
       0.82
      ],
      "product": [
-      0.778,
-      0.377,
-      0.93,
-      0.634
+      0.644,
+      0.363,
+      0.796,
+      0.62
      ],
      "badge": [
       0.82,
@@ -199,7 +218,7 @@
     "jpg": "/oh/img/art/slide540/hero_nfl_gift_card.jpg",
     "width": 1440,
     "height": 540,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -208,10 +227,10 @@
       0.82
      ],
      "product": [
-      0.778,
-      0.446,
-      0.93,
-      0.752
+      0.644,
+      0.43,
+      0.796,
+      0.735
      ],
      "badge": [
       0.82,
@@ -243,10 +262,10 @@
       0.82
      ],
      "product": [
-      0.776,
-      0.441,
-      0.925,
-      0.705
+      0.65,
+      0.448,
+      0.799,
+      0.713
      ],
      "badge": [
       0.82,
@@ -273,10 +292,10 @@
       0.82
      ],
      "product": [
-      0.776,
-      0.522,
-      0.925,
-      0.835
+      0.65,
+      0.531,
+      0.799,
+      0.844
      ],
      "badge": [
       0.82,
@@ -299,7 +318,7 @@
     "jpg": "/oh/img/art/slide/hero_laundry_room.jpg",
     "width": 1440,
     "height": 640,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -308,9 +327,9 @@
       0.82
      ],
      "product": [
-      0.727,
+      0.672,
       0.37,
-      0.885,
+      0.829,
       0.88
      ],
      "badge": [
@@ -329,7 +348,7 @@
     "jpg": "/oh/img/art/slide540/hero_laundry_room.jpg",
     "width": 1440,
     "height": 540,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -338,9 +357,9 @@
       0.82
      ],
      "product": [
-      0.727,
+      0.672,
       0.32,
-      0.885,
+      0.829,
       0.924
      ],
      "badge": [
@@ -364,7 +383,7 @@
     "jpg": "/oh/img/art/slide/hero_kitchen.jpg",
     "width": 1440,
     "height": 640,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -373,9 +392,9 @@
       0.82
      ],
      "product": [
-      0.725,
+      0.692,
       0.405,
-      0.921,
+      0.888,
       0.93
      ],
      "badge": [
@@ -394,7 +413,7 @@
     "jpg": "/oh/img/art/slide540/hero_kitchen.jpg",
     "width": 1440,
     "height": 540,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -403,9 +422,9 @@
       0.82
      ],
      "product": [
-      0.725,
+      0.692,
       0.302,
-      0.921,
+      0.888,
       0.924
      ],
      "badge": [
@@ -429,7 +448,7 @@
     "jpg": "/oh/img/art/slide/pin_micro_rgb_evo.jpg",
     "width": 1440,
     "height": 640,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -438,9 +457,9 @@
       0.82
      ],
      "product": [
-      0.783,
+      0.614,
       0.523,
-      0.935,
+      0.765,
       0.8
      ],
      "badge": [
@@ -459,7 +478,7 @@
     "jpg": "/oh/img/art/slide540/pin_micro_rgb_evo.jpg",
     "width": 1440,
     "height": 540,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -468,9 +487,9 @@
       0.82
      ],
      "product": [
-      0.783,
+      0.614,
       0.596,
-      0.935,
+      0.765,
       0.924
      ],
      "badge": [
@@ -528,9 +547,9 @@
       0.95
      ],
      "product": [
-      0.546,
+      0.489,
       0.401,
-      0.868,
+      0.811,
       0.62
      ],
      "badge": [
@@ -554,7 +573,7 @@
     "jpg": "/oh/img/art/slide/hero_continue.jpg",
     "width": 1440,
     "height": 640,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -584,7 +603,7 @@
     "jpg": "/oh/img/art/slide540/hero_continue.jpg",
     "width": 1440,
     "height": 540,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -658,10 +677,10 @@
       0.95
      ],
      "product": [
-      0.642,
-      0.426,
-      0.95,
-      0.62
+      0.525,
+      0.406,
+      0.833,
+      0.6
      ],
      "badge": [
       0.05,
@@ -694,9 +713,9 @@
      ],
      "product": [
       0.51,
-      0.217,
+      0.171,
       0.969,
-      0.681
+      0.636
      ],
      "badge": [
       0.04,
@@ -724,9 +743,9 @@
      ],
      "product": [
       0.251,
-      0.236,
+      0.265,
       0.91,
-      0.56
+      0.59
      ],
      "badge": [
       0.05,
@@ -789,9 +808,9 @@
      ],
      "product": [
       0.289,
-      0.305,
+      0.33,
       0.949,
-      0.59
+      0.615
      ],
      "badge": [
       0.05,
@@ -854,9 +873,9 @@
      ],
      "product": [
       0.639,
-      0.412,
+      0.386,
       0.96,
-      0.6
+      0.574
      ],
      "badge": [
       0.05,
@@ -888,9 +907,9 @@
       0.94
      ],
      "product": [
-      0.499,
+      0.503,
       0.188,
-      0.939,
+      0.943,
       0.8
      ],
      "badge": [
@@ -1464,7 +1483,7 @@
     "jpg": "/oh/img/art/tile/tile_tvs.jpg",
     "width": 720,
     "height": 420,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.05,
@@ -1474,9 +1493,9 @@
      ],
      "product": [
       0.546,
-      0.14,
+      0.076,
       0.953,
-      0.69
+      0.626
      ],
      "badge": [
       0.04,
@@ -1499,7 +1518,7 @@
     "jpg": "/oh/img/art/tile/tile_audio.jpg",
     "width": 720,
     "height": 420,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.05,
@@ -1509,9 +1528,9 @@
      ],
      "product": [
       0.51,
-      0.226,
+      0.181,
       0.969,
-      0.69
+      0.645
      ],
      "badge": [
       0.04,
@@ -1569,7 +1588,7 @@
     "jpg": "/oh/img/art/tile/tile_washtower.jpg",
     "width": 720,
     "height": 420,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.05,
@@ -1639,7 +1658,7 @@
     "jpg": "/oh/img/art/tile/tile_dishwashers.jpg",
     "width": 720,
     "height": 420,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.05,
@@ -1674,7 +1693,7 @@
     "jpg": "/oh/img/art/tile/tile_packages.jpg",
     "width": 720,
     "height": 420,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.05,
@@ -1709,7 +1728,7 @@
     "jpg": "/oh/img/art/banner/room_living_room.jpg",
     "width": 1440,
     "height": 360,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -1718,10 +1737,35 @@
       0.85
      ],
      "product": [
-      0.655,
-      0.044,
-      0.845,
-      0.644
+      0.605,
+      0.086,
+      0.795,
+      0.686
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   },
+   "banner-tall": {
+    "src": "/oh/img/art/banner-tall/room_living_room.webp",
+    "webp": "/oh/img/art/banner-tall/room_living_room.webp",
+    "avif": "/oh/img/art/banner-tall/room_living_room.avif",
+    "jpg": "/oh/img/art/banner-tall/room_living_room.jpg",
+    "width": 1440,
+    "height": 520,
+    "ink": "dark",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.605,
+      0.367,
+      0.795,
+      0.783
      ],
      "badge": null
     },
@@ -1739,7 +1783,7 @@
     "jpg": "/oh/img/art/banner/room_laundry_room.jpg",
     "width": 1440,
     "height": 360,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -1748,10 +1792,35 @@
       0.85
      ],
      "product": [
-      0.7,
+      0.68,
       0.1,
-      0.9,
+      0.88,
       0.919
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   },
+   "banner-tall": {
+    "src": "/oh/img/art/banner-tall/room_laundry_room.webp",
+    "webp": "/oh/img/art/banner-tall/room_laundry_room.webp",
+    "avif": "/oh/img/art/banner-tall/room_laundry_room.avif",
+    "jpg": "/oh/img/art/banner-tall/room_laundry_room.jpg",
+    "width": 1440,
+    "height": 520,
+    "ink": "dark",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.68,
+      0.377,
+      0.88,
+      0.944
      ],
      "badge": null
     },
@@ -1769,7 +1838,7 @@
     "jpg": "/oh/img/art/banner/room_kitchen.jpg",
     "width": 1440,
     "height": 360,
-    "ink": "light",
+    "ink": "dark",
     "zones": {
      "text": [
       0.04,
@@ -1778,10 +1847,35 @@
       0.85
      ],
      "product": [
-      0.633,
+      0.598,
       0.1,
-      0.927,
+      0.892,
       0.939
+     ],
+     "badge": null
+    },
+    "verdict": "accept"
+   },
+   "banner-tall": {
+    "src": "/oh/img/art/banner-tall/room_kitchen.webp",
+    "webp": "/oh/img/art/banner-tall/room_kitchen.webp",
+    "avif": "/oh/img/art/banner-tall/room_kitchen.avif",
+    "jpg": "/oh/img/art/banner-tall/room_kitchen.jpg",
+    "width": 1440,
+    "height": 520,
+    "ink": "dark",
+    "zones": {
+     "text": [
+      0.04,
+      0.15,
+      0.56,
+      0.85
+     ],
+     "product": [
+      0.598,
+      0.377,
+      0.892,
+      0.958
      ],
      "badge": null
     },

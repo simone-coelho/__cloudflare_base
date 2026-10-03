@@ -714,7 +714,7 @@ The page's styles are one block, `P2_CSS`, in my section, injected once as `<sty
 
 ### M2b: R5's second look on the product page
 
-**Lane M2b, builder, 2026-10-03, 02:33–04:15 EDT, in the control checkout's working tree over HEAD `e584287`, beside M1e and M3b, which were working in parallel. Built: at 390, the title block above the picture in lg.com's phone order; a gallery with a thumbnail for each of the product's pictures, at 1440 and at 390; at 1440, the sticky stack cut to 100 px. Every control M2 built still works by hand, and every manual event keeps its shape. Side-by-sides for the washer and a TV at 1440 and 390. Nothing committed, deployed or pushed. No cloud resource was touched, and nothing was sent to a hosted worker.**
+**Lane M2b, builder, 2026-10-03, 02:33–03:58 EDT, in the control checkout's working tree over HEAD `e584287`. HEAD was `272ede8` by the end: M3b's commit, which took this section's first draft but none of my code. M1e and M3b were working in parallel. Built: at 390, the title block above the picture in lg.com's phone order; a gallery with a thumbnail for each of the product's pictures, at 1440 and at 390; at 1440, the sticky stack cut to 100 px. Every control M2 built still works by hand, and every manual event keeps its shape. Side-by-sides for the washer and a TV at 1440 and 390. Nothing committed, deployed or pushed. No cloud resource was touched, and nothing was sent to a hosted worker.**
 
 #### What changed, against R5's lines
 
@@ -731,11 +731,9 @@ The page's styles are one block, `P2_CSS`, in my section, injected once as `<sty
 |---|---|
 | By hand (`scratchpad/m2b/m2b-hand.mjs`: M2's `m2-hand.mjs` plus M2b's checks; a fresh headless Chrome per run, real mouse presses, the wire read back), on the TV, the washer and the range, on the final code | **1440: 112 of 112 · 1366: 112 of 112 · 390: 106 of 106.** M2 had 97, 97 and 94. The new checks: one thumbnail per picture from the data and the shown one pressed; the column at a desk and the row below 900 px; lg.com's phone order at 390; a thumbnail press that sends nothing; at a desk a stack of 100 px or less with the twin's button at 44 px, and each section landing below the stack. One change to the check itself: it now waits 1.8 s after a tab press instead of 1.1 s. At 390 the specifications sit 8,000 px down a page 11,089 px long, and the smooth scroll takes about 1.25 s (measured), so the 1.1 s wait read the page mid-scroll; that is where the first 390 run's 10 failures came from. Two earlier 390 runs of the range alone each missed one press once (an offer card after the carousel, and the heart right after Back while the page was asking again); the next two runs were clean |
 | The shells load together (`scratchpad/m2b/loads.mjs`: a fresh profile per width, nothing clicked) | **21 of 21**: the homepage, the TVs grid, the laundry grid, the three product pages and `/oh/m`, each at 1440, 1366 and 390. Every load: no script error, no horizontal overflow, no broken image |
-| `node scripts/rehearse-oh-page.mjs --base http://localhost:9133` | **231 of 231** |
-| `node scripts/rehearse-oh-dom.mjs --base http://localhost:9133` | **492 of 498.** Beats 5 to 10 and every product-page check passed. **None of the six failures is mine:** |
-| | M1e's (in progress; S2 to follow): three "every filled button … 42 to 44 px tall" checks (the boot page, the TVs grid, her homepage) see the card's "Add to Cart" at 30 px, which is M1e's lg.com card button. **S2:** `scripts/rehearse-oh-dom.mjs` line 780, the `unlike` test, should accept 30 px for buttons inside `.m1-cardbtn` and keep 42–44 for every other button |
-| | M1e's (in progress; S2 to follow): "Recommended for you: on screen with real content" (`BOOT_CLAIMS`, line 725) fails since M1e made the rail a four-card carousel. All twelve cards are there with loaded images, but in each card the outermost `[data-open]` element now holds no price text: `/\$\d/` fails on all twelve, read on my rig. **S2** reads the card's price where M1e's card puts it, or M1e puts the price back inside the card's `[data-open]` |
-| | The engine's (two checks): the local engine answered 503 to two `POST /realtime/action` calls. One was a custom event in S2's manual session, whose body had passed the attribute check. The other was beat 11's press. The rig's log shows the two 503s and no page-side error. It is the same family as the receipt 503s at beat 16 that the suite already prints as a known `wrangler dev` defect |
+| `node scripts/rehearse-oh-page.mjs --base http://localhost:9133` | **231 of 231**, twice: once before I removed the gallery's unreachable arrow code and once on the final state |
+| `node scripts/rehearse-oh-dom.mjs --base http://localhost:9133`, on the final state (03:39–03:52; M1e edited its own block of `oh.css` during the run, and my P2 section and M2 blocks were the same before and after) | **495 of 498.** Beats 5 to 10, the manual session on my page and every product-page check passed. **None of the three failures is mine.** They are M1e's (in progress), and S2 follows: the three "every filled button … 42 to 44 px tall" checks (the boot page, the TVs grid, her homepage) see the card's "Add to Cart" at 30 px, which is M1e's lg.com card button. **S2:** `scripts/rehearse-oh-dom.mjs` line 780, the `unlike` test, should accept 30 px for buttons inside `.m1-cardbtn` and keep 42–44 for every other button |
+| the same suite, the first run (03:13–03:37; the arrow code came out during it, and the code it removed was never drawn) | **492 of 498**: the same three checks, plus three more that were not mine and did not come back. One was "Recommended for you: on screen with real content" (`BOOT_CLAIMS`, line 725). On M1e's carousel at that moment, each card's outermost `[data-open]` held no price text (`/\$\d/` failed on all twelve, read on my rig); it passed in the final run. The other two were 503s from the local engine to `POST /realtime/action`: one on a custom event in S2's manual session, whose body had passed the attribute check, and one at beat 11's press. The rig's log shows the 503s and no page-side error, the same family as the beat-16 receipt 503s the suite prints as a known `wrangler dev` defect |
 | Side-by-sides | Below |
 
 #### Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`
@@ -755,12 +753,12 @@ Each page was loaded fresh with `?present=0` and nothing clicked. lg.com was rea
 
 1. **The tabs stay five.** lg.com's "Limited Warranty & Support" and "Similar Products" need content the data does not carry. The feed holds no warranty terms, and the nearest thing to "similar products" is the static type switch. Adding them is a design §9.3 change (a D1 source for warranty terms, then a tab to the type switch or a new section), for your call.
 2. **D2, more pictures.** For 193 products the feed's `image` link is a different LG picture from the one D2 accepted (LG's gallery-01 at its 350 px thumbnail rendition, against D2's gallery-02). D2's gate never checked it, so the gallery does not show it. If D2 fetches and gates more pictures per product (lg.com shows 360°, video and lifestyle frames), `picturesOf` reads them from D2's index entry with a few lines, and the thumbnails take them as they come.
-3. **S2:** the two lines above (780 and 725) for M1e's work. Three facts of mine to assert if wanted: at 1440 and 1366 `#pdpStick` stands at most 100 px once stuck; `#pdpGallery .pdp-gthumb` counts one per picture in `img/index.json` (one today); at 390 `#pdpTabs` ends above `#bbTitle`, which ends above `#pdpGallery`.
+3. **S2:** line 780 for M1e's card button (above). Line 725 passed in the final run. Three facts of mine to assert if wanted: at 1440 and 1366 `#pdpStick` stands at most 100 px once stuck; `#pdpGallery .pdp-gthumb` counts one per picture in `img/index.json` (one today); at 390 `#pdpTabs` ends above `#bbTitle`, which ends above `#pdpGallery`.
 4. **A note on the stuck row.** The row is in the page's flow, so when its twin appears on the way down the sections below move down 57 px in document terms. Chrome's scroll anchoring keeps a hand scroll steady, and a tab press already counts the twin through that shift. I left it in flow rather than overlaying it, so no section ever sits hidden under it.
 
 #### Rig, seeds and restoration
 
-- **Rig:** port 9133, inspector 9283, state `.wrangler/state-m2` (kept). Started from WSL with `rig.mjs`; no new file under `public/` from me, so no restart was needed. Stopped at the end with SIGINT to its own `rig.mjs` (PID 56702), which ends its wrangler and workerd; no other process was touched.
+- **Rig:** port 9133, inspector 9283, state `.wrangler/state-m2` (kept). Started from WSL with `rig.mjs`; no new file under `public/` from me, so no restart was needed. Stopped at 03:53 with SIGINT to its own `rig.mjs` (PID 56702), which ends its wrangler and workerd. Ports 9133 and 9283 are free, and no other process was touched.
 - **Beat documents:** hashed at 02:35, before the seed. The seed wrote only to my scratchpad. **19 of 19 equal their hashes at the end.**
 - **Not touched:** the P1, shared and P3 sections of `oh.js`, M1's blocks of `oh.css`, `index.html`, `m.html`, `oh-store.js`, `panels.js`, `store.js`, `scripts/`, `src/`, every governance file. Other lanes' uncommitted lines are as they were. `compose.mjs` briefly wrote four `.html` working pages beside my shots under `docs/lg/lanes/shots/`. I moved them to my scratchpad within a minute (`mv`, not `rm`), and the script now writes them there.
 
@@ -1400,6 +1398,44 @@ Each check accepts the old wording or C3's new one, with curly apostrophes as in
 
 The rig is stopped; ports 9134, 9284, 9184 and 9334 are free. The beat documents equal HEAD.
 
+#### Addendum, 04:45–06:27: M1e's card button and deals take, and M2b's product page
+
+The base is `272ede8`; every lane's working-tree pages are in, with M1e's three rulings and M2b's second pictures.
+
+**`check-demo` run 10, 06:01–06:16, on a fresh prepared state** (`state-s2g`, seeded with `--out`, the regional lean seeded for 51 regions; the rig was started after the `*-2.webp` files existed):
+- request level **231 of 231**;
+- DOM **506 of 506**;
+- generated, typecheck and credentials passed (3,255 files).
+
+**Mid-run changes, and the reruns.**
+- `oh.js` changed at 06:02:47, during the request-level step. The DOM step ran entirely on it.
+- `product.html` changed at 06:17:10, M2b's.
+- After both, on the same rig:
+  - `--only store`: **161 of 161** (06:16–06:24). Its first product load came after `product.html` changed.
+  - request level again: **231 of 231** (06:24–06:26).
+
+**DOM suite** (`scripts/rehearse-oh-dom.mjs`, now 2,466 lines).
+- **227, 785, 787: M1e's exact lines.**
+  - A button in `.m1-cardbtn` is a card button. It must be exactly 30 px tall; every other button must be the 42–44 px pill.
+  - The check fails on a card button at any other height, and on a non-card button at 30 px.
+- **743–747: the deals bento's take and its rule.**
+  - Both are read from the page's own config (`demo.config.json`), else the opening slots document, never a constant: five today, at most two per room.
+  - Used at 723, 1120, 1656, 1752 and 1852.
+  - The label “the deals four” is now “the deals bento”.
+- **1464–1531 and 1692: M2b's product page**, on an in-stock washer and an in-stock TV.
+  - **The stuck chrome.** At 1440 and 1366, scrolled, the chrome stuck at the top is at most 100 px and holds the title bar and tabs: `#pdpStick` measures 100 px.
+  - **The gallery.** It shows one thumbnail per picture in `img/index.json`'s `gallery` field for the product, falling back to its one accepted picture. Two today, for both products.
+  - **The phone order.** At 390 the tabs (246 px) sit above the title (305 px), which sits above the picture (500 px).
+- Recommended for you is read with twelve products, on screen with real content. At 390 it is the one-at-a-time carousel with its pager (“1/12”).
+
+**Request-level suite** (`scripts/rehearse-oh-page.mjs`, 1,704 lines).
+- **436–437:** the engine's deals answer is as many as the served opening slots' take, under its diversity rule.
+- **Used at 664, 731, 770, 819 and 834,** and at M1e's two lines:
+  - 1335: “the deals still answer 5”;
+  - 1389: “the other 4 are still the engine’s”.
+
+**Housekeeping.** The rig is stopped; ports 9134, 9284 and 9184 are free. The only beat documents that differ from HEAD are M1e's `open-slots.json` and `12-pin-launch.json`, not mine.
+
 ### W1c: the presenter script for the live store (`cd3775e2` from `bbf8a9d`)
 
 **Lane W1c, writer, 2026-10-02 EDT. Revised `docs/oh/OH-Presenter-Script.md` for the store as it is live now. It was 5,869 words and is now 6,122. That is about 2% over the ~6,000 cap: the persistence and dial material is new, and the rest was cut to pay for it. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
@@ -1720,3 +1756,229 @@ Those files changed under lane M1e's uncommitted edits between my two DOM runs (
 - The rigs and the scratch proxies are stopped. Ports 9131, 9281, 9158, 9308, 9185, 9192, 9193, 9194 and 9195 are free.
 - The states `state-m3`, `state-m3c` and `state-m3bv` are kept.
 - The scratch scripts (`probe.mjs`, `proxy.mjs`, `forget.mjs`, `look.mjs`, the patch scripts), the results as JSON and the suite logs are in the session scratchpad under `m3b/`.
+
+### M1e: R5's second look, items 2 to 9
+
+**Lane M1e, builder, 2026-10-03, 02:40 to 05:55 EDT, on the working tree over HEAD `e584287`, with the coordinator's later rulings (the banner art never stretched; then all twelve decided, five decided deals, the art bands capped). Every edit is whole: the three files and the P1 section load together at 1440, 1366, 390 and 1920 with no script error, on the working tree as it stood at each run. Lanes M2b, M3b, A1b and D2b wrote their own blocks, sections, art and images in the same tree meanwhile; none of their lines was touched. Nothing committed, deployed or pushed; no cloud resource; nothing sent to a hosted worker.**
+
+#### What is in
+
+- **2. No deal-tile label is cut.** The 140 px cap with its ellipsis is gone from `oh.css` line 748, and so is the 96 px cap at a phone's width. The tile's button wraps rather than cuts on a narrow tile, so at 390 the first tile reads "See Micro RGB evo ›" whole. At a phone's width the tall tile's copy also takes the tile's width; M1b's 40 % had held it to a narrow column.
+- **3. The banners at 390 in the hero's phone order.** This covers the TVs banner (`#slot-grid-promo`) and the three static room banners.
+  - The order is the kicker, the headline, the sub and a full-width pill, then A1's art as a rounded 4:3 picture with the products kept in the crop, then the receipt under it. The badge sits on the art's calm foot.
+  - The ground is tinted for the room. A new `data-room` sits on the decided banner and on the static ones.
+  - The title block is slimmer: the title and the expert pill share one row, and the grid's one-line description is left off at that width. The search page keeps its own line, because it carries buttons.
+  - The TVs banner now starts at y 367, against lg.com's 390 (it was 560).
+  - Over A1b's daylight art, M1b's contrast rule keeps the kicker dark grey, as ruled.
+- **4. The header scrolls away at every width,** as lg.com's does (`oh.css` line 79).
+  - The filter rail now sticks 16 px from the top (line 346).
+  - The product page's bar reads the header's position itself (`stickTop()`, M2's section), so it now sits at the top with nothing over it: about 100 px of sticky chrome once scrolled, as lg.com's (R5 measured 180).
+- **5. The product card's button in lg.com's size,** on product cards only.
+  - It applies to `.m1-cardbtn`: Add to Cart and Find a Retailer, on the rail, the grids, the search, the showcase and the phone.
+  - **The new size: 30 px tall, 12 px type at weight 700, a 32 px radius pill, 0 14 px padding, the card's full width.** Add to Cart stays the action red `#EA1917` with white type; Find a Retailer stays outlined.
+  - Every other button keeps the 44 px pill.
+- **6. The deals at 1440 as lg.com's bento.**
+  - Four equal columns: the tall tile over two columns and both rows (676 × 660 at 1440), then a 2 × 2 block of small tiles (330 × 322), each with lg.com's round red arrow (44 × 44). The arrow keeps its label for readers, as its own text and its `aria-label`.
+  - **All five are decided** (the slot's take is now 5, the lead's ruling): the tall tile and the four of the 2 × 2. The static link I had first drawn in the fourth cell is gone; "View all deals" above the tabs already opens the Offers grid.
+  - Under the whole set sits **one honesty line**, for a visitor: "Decided for you: the five deals in the engine's order · leans with North Carolina's sales · synthetic → warehouse · each tile's receipt:". The lean is read off the decisions' own regional driver, in the `/sort` rails' words (`leanLine`). Before anyone arrives the line says it is the published template.
+  - **Every tile's receipt** follows that line, each led by its tile's title.
+  - Each receipt stays in its own tile's container, where the suites (`#slot-deals .p1-deal--pinned .receipt`) and `refreshReceipts` read it. Each article spans the set as a CSS subgrid: it places its tile in its cell and its receipt in a row under the set.
+  - Every tile takes A1's tall art.
+  - From 860 px down the deals are as before (one at a time at 390, "1/5", each receipt under its tile), and the line is not drawn.
+  - From the heading to the expert band the set runs 1,087 px with its five receipts (1,067 with four). R5 measured 1,273 for OH and 1,103 for lg.com.
+- **7. lg.com's row of offer cards under the TVs banner, and a taller banner.**
+  - **The banner, on the coordinator's two later rulings.** The art is never stretched.
+    - From 861 px up the page draws A1b's 1440 × 520 `banner-tall` (`pieces.<room>["banner-tall"]`, read through `artSrc`). Its box takes the art's own proportion: **506 px at 1440, the art drawn at ×0.972** (lg.com's banner is about 540; OH's was 350). The laundry, kitchen and offers banners do the same.
+    - The 1440 × 360 files serve the phone, through a `<picture>` source from 861 px.
+    - A banner is marked `m1-banner--tall` only when the index has the tall file for its room; otherwise M1b's 1440 × 360 box stands.
+  - **The offer cards.** They are the catalog's own TV promotions in force: published deals for TVs and their bundles that are live, inside their window and in stock, with slot types deals or grid-promo. They follow the catalog's order, are static and the same for everyone, and leave out the one the banner shows.
+    - Each card is the piece's own copy: A1's tile art (cropped on the product's zone), "Valid through …" only where the feed's `display.grammar.ends` gives one, the title and the piece's own button.
+    - **The feed has six such pieces;** with the banner's own left out, the row holds five. At a desk that is three a view with "‹ 1/2 ›"; at 390 it is one at a time with the next peeking ("1/5"), as lg.com's.
+    - Big screens and the Xbox controller carry no date, because none was captured.
+  - **A card's button** filters the grid by the piece's own tags, through the banner's `promo()`, now also reached by `data-offer`.
+    - One TV type comes first (free wall mounting → OLED), else its sizes (big screens → 75″ and up).
+    - A soundbar or Sound Suite piece opens that search ("sound suite": 11 results), since no TV carries its type. Before this change, `promo()` would have filtered the TV grid to type sound-suite and emptied it.
+- **8. The service strip at 390: one centred item between two arrows,** in one 44 px row on the band, as lg.com's. M1d's pager wiring is kept, and the count stays for screen readers without being drawn. Paging sends nothing and mints nobody, and the centred item opens its sheet.
+- **9. The small items.**
+  - "$X OFF" is in whole dollars: the saving rounded to the dollar (R5's `oh.js` line 1845, now 1917), so "$399.01 OFF" now reads "$399 OFF".
+  - The hero's and the banners' headlines are at weight 500 at every width.
+  - **At a desk, Recommended for you is a carousel of four a view,** with the "‹ n/N ›" pager under it (two a view on a tablet; one at a time at 390, as before). It pages through every card the rail holds, in their order. Its later pages' pictures load with the first (`eager`), so a press never shows a blank card. Paging sends nothing and mints nobody.
+
+#### The lead's three rulings (05:00 to 05:55)
+
+1. **All twelve stay decided.** `demo.config.json`'s for-you take is 8 → 12, and the P1 section now reads each rail's take from that file (it already read the rail's weights there), not from the scaffold's copy in `SITE`. On the rig, after a reseed with `--out`, a visitor's decided rail held twelve cards in exactly the order of POST /sort's answer across the rooms (read off the wire), four a view, "1/3", with › twice reaching 9–12. The DOM suite's "Recommended for you: on screen with real content" reads 12 products and passes.
+2. **Five decided deals.**
+   - The take is 4 → 5 in `demo.config.json`. The seed does not build the slots document from the config: it publishes `beats/open-slots.json` (and beat 12 its own `12-pin-launch.json`) as they stand. So the take is 4 → 5 in those two documents too, one number in each; the other 17 beat documents are unchanged.
+   - The fifth tile takes the 2 × 2's last cell (one placement rule), and the static link is gone.
+   - The template before anyone arrives takes the opening document's take.
+   - On the rig, after the reseed: five decided pieces, each with its receipt under the set.
+   - The DOM suite's deals checks pass with five (S2's suite now reads the take from the opening slots): "the deals bento" (5 cards), the bento's 5 tiles, "the deals bento's 5 moved for her", "holds both rooms, at most 2 each".
+   - Two request-level lines still say four (below).
+3. **The art bands capped.** The hero's band and the banners are capped at **1,400 px**, centred on the page's own ground. That is their width at a 1440 window. I took it in place of the ruling's 1,480 because a 1,480 px band would draw the 1440-wide art at ×1.03, above its own scale, and the C6's 22 px mark (A1b's 1:1) at 22.6 px.
+   - At 1920 (site 1,880 px) the band is 1,400 px at x 240. The hero's `slide540` is drawn at ×0.972, and its mark at 16.5 px against the wordmark's 23.0 px capitals (measured on the page).
+   - The TVs and laundry banners draw `banner-tall` at ×0.972 in 1,400 × 506 boxes. The C6's mark is 21.4 px against 23.0.
+   - The banner copy keeps the grid's own left edge inside the capped band.
+
+#### Side by side (lg.com left, OH right), `docs/lg/lanes/shots/`
+
+lg.com was captured read-only at 03:00 EDT, its consent notice, chat and feedback tab hidden by a style; nothing on it was clicked. OH was captured cold at about 04:25 in fresh profiles with `?present=0`, nothing pressed, on A1b's art of 04:19. The three deals files were captured again at 05:55 with the five decided tiles. The 1920 captures for ruling 3 (OH alone) are in the scratchpad (`m1e/shots/confirm/w1920-*.png`).
+
+- At 1440: `M1e-1440-home-top.png` (the hero's headline at 500), `M1e-1440-deals.png`, `M1e-1440-deals-receipts.png` (the lower block, the honesty line and the receipts), `M1e-1440-recommended.png`, `M1e-1440-header-scrolled.png` (both at y 1800, neither header on screen), `M1e-1440-tvs-banner.png`, `M1e-1440-tvs-offers.png`, `M1e-1440-tvs-grid.png` (the 30 px card button; the filter rail at the top).
+- At 390: `M1e-390-home-top.png`, `M1e-390-service.png`, `M1e-390-deals.png`, `M1e-390-recommended.png`, `M1e-390-tvs-banner.png`, `M1e-390-tvs-offers.png`.
+
+**My judgement.**
+- The bento is now lg.com's layout tile for tile. lg.com's tall tile is a flash-sale graphic and OH's is A1b's room scene, and lg.com's arrows are about 40 px against OH's 44.
+- The TVs page reads as lg.com's top to bottom at both widths: the title row, the tall banner with the copy on the white curve, the three offer cards with "VALID THROUGH" and a red pill, the pager, then the type row.
+- At 390 the banner is in lg.com's order, and the service strip and the deal labels match.
+- The rail's cards and buttons are lg.com's proportions.
+
+#### Results (rig 9132, inspector 9282)
+
+The UTC day of `.wrangler/state-m1d` outgrew the day report after M1d's runs and four of mine. Run 3 of the request-level suite there failed 12: receipts answered 202 and the counts did not move. The DOM suite then saw the 413 "too large for the window". So the runs before the lead's three rulings used a fresh state, `.wrangler/state-m1e`: `rig.mjs --prepare`, seeded with `--out` to the scratchpad (reflex, catalog, slots and learn at revision 2), regions 51 of 51. The table's first four rows are those runs, with the static fourth cell then in place; **its last row is the hand-back state, after the rulings**. The pre-ruling runs all used one set of files; their hashes held from the first run to the last: `oh.js` `3e8ca519…`, `oh.css` `723b1d62…`, `index.html` `856eebde…`, the DOM suite `559cb98e…`, the page suite `a3d121c7…`, `oh-store.js` `251e0935…`, `img/art/index.json` `f39f8ad4…`.
+
+| Check | Result |
+|---|---|
+| M1e's own check (fresh profiles, real CDP presses; 1440, 1366, 390) | **57 of 57** on state-m1e, before the rulings. **At 1440 and 1366:** the bento's geometry; the fourth cell to Offers; the honesty line under the set and the four receipts, each led by its title, none between the rows; the round arrows 44 × 44 red pills; the tall tile's pill uncut; every card button 30 px, 12 px type, a pill (16); every other filled button 42 to 44 px, radius 32; every "$X OFF" whole dollars (16); the hero's headline 500; Recommended for you four a view, › twice and ‹ once with all twelve reached in their order, nothing sent and nobody minted; the header gone at scroll 1400. **On the TV grid at 1440:** the banner 1400 × 506 with the 1440 × 520 art at ×0.972; the offer cards equal to the rule read independently from `beats/open-catalog.json` (five, in its order, the banner's piece left out, each its own copy, three a view, "1/2"); only the cold-start lookup on load; the filter rail 16 px from the top with the header gone. **At 390:** the four tile labels whole inside their tiles, 44 px; the strip 44 px, one item centred at 195 of 390, › walking the five in order and stopping, ‹ back one, nothing sent, the item opening its sheet; the TVs, laundry and offers banners in the phone order; the offer cards one a view, "1/5". **By hand:** big screens filters the grid to 75″ and up, the first click minting the visitor; the Sound Suite card opens "sound suite"; the fourth cell opens Offers; a small tile's arrow navigates. No script error anywhere |
+| M1's probe (sizes and the manual path, fresh profiles) | **44 of 44**, final run (also 44 of 44 on state-m1d earlier). Every M1 page at 1440, 1366 and 390 is ready, with no visitor on load, no overflow, no broken image and no script error; the manual path's steps pass |
+| Request level, fresh state (04:29 to 04:31) | **231 of 231** |
+| DOM suite, full, fresh state (04:31 to 04:43) | **495 of 498.** All three failures are the suite's own rule, which my item 5 changes on purpose (for S2, below): "the boot page" (30 action buttons), "the TVs grid" (15) and "her homepage" (20): "every filled button is lg.com's action red #EA1917, white text, a 32 px pill 42 to 44 px tall", failing on the product cards' Add to Cart at h30. The suite also printed its known engine line (not a failure): beat 16's two receipt reads answered 503 while the report built ("Configuration publication authority unavailable", Vantage RESUME finding 3). Everything else passes, among it: the boot page's "the deals four" and "Recommended for you: on screen with real content"; the bento's tiles of more than one size (676 × 660 and 330 × 322); 390's deals and rail carousels with working pagers; the sixteen beats, beat 12's pin receipt read in `.p1-deal--pinned`, and beat 16's day report |
+| Earlier, state-m1d | DOM **493 of 498** (03:13): the suite's three, plus "Recommended for you: on screen with real content", which was mine. The desk carousel's later pages were lazy images beside the view, never loaded; this is fixed with `eager`. The fifth failure was a product_view 503 (the engine). After the fix, DOM **495 of 498** (03:32), the suite's three only, and request level **231 of 231** twice |
+| **After the three rulings**, a new state `.wrangler/state-m1f` (`--prepare`, seeded with `--out` at r2, regions 51 of 51, then reseeded with `--out` at r3 once the two slots documents said 5). Files held through both suites: `oh.js` `760586d2…`, `oh.css` `498bf998…`, `index.html` `e7639bb9…`, `demo.config.json` `3755e0d1…`, `open-slots.json` `526ecfa0…`, `12-pin-launch.json` `c29dc583…`, the DOM suite `a343de70…` (S2's, now with the card rule and the deals take), the page suite `fa8cb7f1…` | **The rulings' own check: 13 of 13** (ruling 1: twelve decided in POST /sort's order, four a view, all reachable; ruling 2: five decided tiles, the line and five receipts; ruling 3: the three bands at 1920, 1,400 px centred, art at ×0.972, the marks under the wordmark; no script error). **M1e's own check 54 of 55** (adjusted for five tiles), then 16 of 16 twice on its 390 part. The one miss was a press on the service strip's centred item landing during the strip's snap, so no sheet opened; it was not seen again. **M1's probe 44 of 44** (its boot check now expects the opening slots' five deals). **Request level 229 of 231**: both failures are the suite's, as it still counts four deals (for S2, below). **DOM 505 of 506** (05:37 to 05:50): the one failure is the engine's, "one visitor for the whole session … refused custom 503". The run before that (05:22) had nine further failures, all images D2b wrote at 05:16 (`img/products/*-2.webp`, the product page's second pictures). The rig had started before them, so they answered 403 until it restarted; with the rig restarted they serve and pass |
+
+#### For the lead
+
+1. **For S2.**
+   - **The card button** (`rehearse-oh-dom.mjs` lines 227, 780 and 782 as they stood at `559cb98e…`): the new values are 30 px tall, 12 px type, weight 700, radius 32 px, white on `#EA1917`. S2's suite at `a343de70…` already passes it.
+   - **The deals' take of five** (`rehearse-oh-page.mjs` at `fa8cb7f1…`): line 1335, "the deals still answer four, the next offers taking the places", asserts `four.length === 4`. Line 1389, "and the other three are still the engine's", asserts `four.length === 4`. Both should read the take from `beats/open-slots.json`, as the DOM suite now does (`DEALS_TAKE`), and their words become "five" and "the other four". These are the request level's two failures.
+2. **Where the deals' take lives.** The seed publishes the slots document from `public/oh/beats/open-slots.json` and beat 12's from `12-pin-launch.json`; it does not derive them from `demo.config.json`. So the ruling's take of five needed those two numbers, which I changed by hand (one line each). The hosted seed now publishes five, and the deploy's own seed run copies them as they are. If D1 or the scaffold regenerates the beat documents later, they must keep 5.
+3. **Copies that still say four or eight**, not in my files:
+   - the deals heading lines in `m.html` (lines 83 and 86) and `product.html` (79 and 82): "take 4";
+   - `SITE` in the shared section of `oh.js` (the scaffold's copy: deals 4, for-you 8). The page no longer reads these two for the rail or the template;
+   - the seed's note in `scripts/demo-kit/configs/oh.json` ("deals take 4");
+   - in `beats.json`, beat 2's "the deals four hold both rooms" (line 139) and beat 12's "the other three are still ranked for the shopper" (line 589). The copy lane should follow: the page now draws five, and "the other four".
+   - In the P1 section I changed the page's own words: the before/now row's "The opening four" is now "The opening deals", "Nothing moved in the four." is now "… in the deals.", and beat 2's moved/held list says "the deals".
+4. **A1b's art changed twice during the lane** (03:42 and 04:16 to 04:19, every format, plus `banner-tall`). The crops follow the index's zones:
+   - The offer cards are placed on each piece's product zone in code.
+   - The phone banner's 4:3 crop (87 %) holds the three rooms' products (0.60 to 0.89 of the width).
+   - If A1b moves those again, the one number in `oh.css` follows; the comment beside it says where.
+   - The side-by-sides are on the 04:19 files.
+5. **Wider than 1440: settled by ruling 3.** The bands are capped at 1,400 px, so the art is never above ×0.972 at any width.
+6. **Not built, for R5's next look:**
+   - Once scrolled, lg.com keeps a slim type row stuck on its TV grid at a desk. OH's desk type row is the large disc row and does not stick; only the filter rail does.
+   - lg.com's grid card has a compact Add to Cart at the right beside a Compare toggle. OH's button is lg.com's size and full width, as lg.com's homepage rail is.
+7. **Line endings** are kept: `oh.js` CRLF (4,597 lines, all CRLF); `oh.css`, `index.html`, `demo.config.json` and the two beat documents LF.
+
+#### Files
+
+| File | Change |
+|---|---|
+| `public/oh/index.html` | 512 → 521 lines (+15 −6): the offer row under the TVs banner (`#m1Offers-tvs`, its track, pager and note); `data-room` on the three static banners; the deals heading "take 5" and the rail's "take 12"; the deals comment |
+| `public/oh/oh.css` | The M1 blocks are 1,158 → 1,304 lines (+151 −5): the header (line 79), the filter rail (346), the tile label (748, and the phone cap at 969 removed), and the M1e block at the end of M1's blocks (the five-tile bento, the tall banner, the capped bands). M2's two blocks are untouched; their changed lines are M2b's |
+| `public/oh/oh.js`, P1 section | 1,865 → 1,943 lines (+104 −26): the bento's set line and the receipts' `data-of` (`dealSetHtml`); `renderOffers` and `eager`; `bannerPicture` and `tallArtOf` (A1b's `banner-tall`), `artSrc` returning its role, `data-room` and `m1-banner--tall` on the banners; `promo()` with `data-offer`, the one-TV-type rule and the soundbar search; whole-dollar "$X OFF"; `m1OffersTrack` in `PAGED`; the takes read from `demo.config.json` (`S.takes`, `takeOf`), the template taking the opening slots' take; the row's "The opening deals". The shared section is identical to HEAD's |
+| `public/oh/demo.config.json` | 2 numbers, the lead's rulings: deals take 4 → 5, for-you take 8 → 12 |
+| `public/oh/beats/open-slots.json`, `public/oh/beats/12-pin-launch.json` | 1 number each, ruling 2: deals take 4 → 5 (the documents the seed publishes as the slots). The other 17 beat documents are equal at start and end by hash |
+| `docs/lg/lanes/shots/M1e-*.png` | 14 side-by-sides (about 11.5 MB); the three deals files recaptured with five tiles |
+| this section | new |
+
+Not touched: `oh-store.js`, `panels.js`, `store.js`, `product.html`, `m.html`, the shared, P2 and P3 sections, M2's blocks, `scripts/**`, `src/**`, the art, `beats.json`, and any governance file. Every seed went to the scratchpad with `--out`.
+
+The rig is stopped with Ctrl-C (SIGINT to its own `rig.mjs`); ports 9132 and 9282 are free, and no other lane's rig was touched. The states `state-m1d` (its UTC day full), `state-m1e` and `state-m1f` are kept; `state-m1f` is seeded at r3 with the take of five and its tenant is at the opening state after the DOM suite's reset. The scratch scripts (`m1e-check.mjs`, `confirm.mjs`, `cap.mjs`, `crop.mjs`, `decided.mjs`, `pdp.mjs`, the probe), the captures and the logs are in the session scratchpad under `m1e/`.
+
+### C4: five deals and twelve for you, in every copy
+
+**Lane C4, consistency, 2026-10-03, 05:57 to 06:27 EDT, on the working tree over HEAD `6157ae7`, after M1e's three rulings. Strings and numbers only: 10 edits in 6 files. Each is an exact, single-occurrence replacement anchored to its line and written only if the file had not changed since it was read. Line endings are kept (`m.html` and `oh.js` CRLF, the rest LF). The P1, P2 and P3 sections of `oh.js` are untouched. Nothing committed, deployed or pushed; no cloud resource; the seed went to the scratchpad with `--out`, and the 19 beat documents are equal at start and end by hash.**
+
+#### The changes
+
+| File | Line | Old | New |
+|---|---|---|---|
+| `public/oh/m.html` | 83 | `<!-- Slot deals, take 4: …` | `<!-- Slot deals, take 5: …` |
+| `public/oh/m.html` | 86 | `slot <b>deals</b> &middot; take 4 &middot; decided per visitor` | `… take 5 …` |
+| `public/oh/oh.js`, shared section (`SITE`, home) | 75 | deals `"take": 4,` | `"take": 5,` |
+| `public/oh/oh.js`, shared section (`SITE`, home) | 89 | for-you `"take": 8,` | `"take": 12,` |
+| `public/oh/product.html` | 91 | `rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 8` | `… take 12` |
+| `scripts/demo-kit/configs/oh.json` | 34 | `seed.notes.slots`: "… deals take 4; …" | "… deals take 5; …" (the slots publication's note) |
+| `public/oh/beats.json` | 139 | beat 3 (`two-rooms`), `will`: "the deals four hold both rooms by the slot’s own rule" | "the five deals hold both rooms by the slot’s own rule" |
+| `public/oh/beats.json` | 589 | beat 12 (`pin-launch`), `will`: "the other three are still ranked for the shopper" | "the other four are still ranked for the shopper" |
+| `public/oh/oh.css` | 277 | `/* Discover OH deals: the deals four */` | `/* Discover OH deals: the five deals */` |
+| `public/oh/oh.css` | 418 | `/* The full-size before rows of the tiles and the four */` | `/* … of the tiles and the deals */` |
+
+`product.html`'s deals lines (79 and 82) already read "take 5" when I started. Another writer changed them at 05:55:19; that edit is not mine.
+
+**For the presenter script lane.** These are the only two beat strings that changed, and the script quotes both:
+- `OH-Presenter-Script.md` 99: "the deals four hold both rooms" becomes "the five deals hold both rooms".
+- Line 182: "The other three are still ranked for this visitor." becomes "The other four …".
+- Line 55's "the deals four", and line 99's run figure "Recommended for you holds living room 4 · laundry room 4", also count the old sizes. With twelve, the rail can also hold the kitchen.
+
+#### Readers of the shared copy (`SITE` in `oh.js`)
+
+- **Every page ask gets `SITE`'s slot and rail objects** through `slotsOf` and `railsOf` (312–313): `askPage`, P1's home ask, restore, the template paint, Compare and why, P3's phone diff, and the boot's empty paint. All of these read names and labels only.
+- **The take is read in one place: P1's `takeOf` (1190).** It takes `S.takes[slot]` first (`demo.config.json`, read in `data()` at 618). `SITE`'s take is used only when the config has not loaded or does not name the slot. Its callers:
+  - `shownOrder` (1191), the rail's cut;
+  - the rail's cards (1744);
+  - the template (1868), after the opening slots document's own take.
+- **So the one reader left is P1's fallback,** and at 5 and 12 it agrees with the config either way.
+- **No other reader** in P2, P3, `oh-store.js` (it reads `demo.config.json`'s `pages[].sorted`, line 209), the kit (`store.js` 895 takes from the slots document) or the suites. `rehearse-oh-dom.mjs` 465 and 680 and `rehearse-oh-page.mjs` 107, 281 and 295 parse `SITE`, but only for `signIn`, `dimLabels`, `products.attributes`, `roadmap`, `brand.legal` and `tenant`. Their deals take comes from `open-slots.json` or `demo.config.json`.
+
+#### Hits judged and kept
+
+These counts are something else:
+- `beats.json` 139: "each room’s four", the four per room that make the twelve.
+- `product.html` 88: "the site's four picks in each room".
+- `products.json`: `recommendedNote` (twelve: four TVs, four laundry, four kitchen) and `gridDefaultsNote` (the TV grid's eight).
+- `oh.css`:
+  - 56: the column's four cards across;
+  - 1067: the category row;
+  - 1166 and 1207: four a view over the twelve.
+- `oh.js`:
+  - 564: four picks per room;
+  - 908: four a view;
+  - 1068: the number words;
+  - 1163 and 1215: the rooms' first four each;
+  - 1436: the shortlist's eight.
+- The kit: `deltas.js` `four` (the before row's property name, the kit's API) and `panels.js`'s top eight.
+- Catalog and beat-document copy about products ("three or four pieces", "the four apart"); `demo.config.json` 344 and `region.json` (the four allowlisted dimensions); the art and imagery notes.
+
+#### Left for their owners (not my files)
+
+- **The P1 section of `oh.js`:** two comments, 1032 "The deals four: the bento …" and 1377 "… for the tiles and the four".
+- **`oh.css` 419 `.p1-before-cards`, `repeat(4, …)`:** the before row ("What was on screen before this press") will draw five previous deals as 4 + 1 at a desk. This is a layout choice for M1, not a count string.
+- **S2's suites:**
+  - `rehearse-oh-page.mjs` 1449, the label 'the deals four';
+  - 571, a comment;
+  - 810, the label "POST /sort’s first eight hold …", which now slices to the config's twelve;
+  - 825, an info line "in its first eight";
+  - `rehearse-oh-dom.mjs` 494, a comment.
+  - M1e's two failing assertions (formerly 1335 and 1389) are gone from the file as it stands.
+- **`docs/lg/OH-Demo-Design.md` 23:** "deals (take 4)", the lead's document.
+- **The phone page has no pager.** `m.html` carries no pager markup at all (no `data-pager-for` anywhere; `index.html` has the deals' at line 132), and P1's `pagerSync` draws only into that markup. So on `/oh/m` the five deals have no ‹ n/5 › control and no count; they move by swiping only. This is structure, not a string, so it is outside this lane: for whoever owns `m.html`'s markup.
+
+#### The phone check (rig 9190)
+
+One headless Chrome at 390 × 844, mobile, fresh profile, real CDP mouse and wheel input (scratchpad `c4/phone2.mjs`).
+
+- **`/oh/m`, a stranger decided live.**
+  - **Five decided deals, exactly the snapshot's deals in its order:** `deal-nfl-gift-card`, `deal-free-wall-mounting`, `deal-range-microwave`, `deal-laundry-pair`, `deal-thinq-warranty`.
+  - Five receipts, and the heading reads "slot deals · take 5 · decided per visitor".
+  - **One at a time:** a scroll-snap carousel, a 362 px view over 1,605 px. A horizontal wheel (a two-finger swipe) brings each of the five on screen alone, in order, and stops at the fifth.
+  - No sideways scroll and no script error. **No pager** (above).
+- **`/oh/` at 390, the same visitor** (kept from `/oh/m` in the same browser).
+  - The same five decided deals in the snapshot's order, under "Decided for you · slot deals · take 5", one on screen.
+  - **The pager reads 1/5.** › pressed by mouse four times reads 2/5, 3/5, 4/5 and 5/5, with the next deal alone on screen each time; then › is disabled.
+  - A stranger's `/oh/` at 390 before anyone arrives shows the five template deals, with 1/5 to 5/5 the same way.
+
+#### Results
+
+| Check | Result |
+|---|---|
+| `node scripts/rehearse-oh-dom.mjs --base http://localhost:9190 --only store`, 06:09 to 06:16, before the `product.html` line | **161 of 161** |
+| The same on the final files, 06:17 to 06:25 | **161 of 161**. Among them: the deals bento on screen with 5 cards; Recommended for you with 12 products; the bento's 5 tiles; "her homepage … deals 5"; the bento's 5 moved for her; at 390 the deals "one item on screen of 5", pager "‹ 1/5 ›", and Recommended for you "of 12", "‹ 1/12 ›". Every call carried X-Tenant: oh, no script error, and the run ended with POST /oh/api/reset |
+| Files held through the final run | `oh.js` `0bb4006f…`, `m.html` `deb348bc…`, `product.html` `80b15093…`, `index.html` `e7639bb9…`, `oh.css` `e98fdfa6…`, `beats.json` `60d2b3dd…`, `demo.config.json` `3755e0d1…`, `open-slots.json` `526ecfa0…`, `configs/oh.json` `54e7c284…`, the DOM suite `ba661cb5…` |
+
+**The rig.**
+- **Start and seed:** `rig.mjs --prepare` on 9190 (inspector 9340), state `.wrangler/state-c4`. Seeded with `--out` to scratchpad `c4/seed`: reflex, catalog, slots and learn at r2, with the published home slots hero 1, category-rail 3, deals 5 and continue 1. Regions 51 of 51.
+- **Stopped** with Ctrl-C (SIGINT to its own `rig.mjs`). Ports 9190 and 9340 are free and the state is kept. No other lane's rig was touched.
+
+**Other writers in the tree meanwhile:**
+- `oh.js` was written at 06:02:47, after my 05:58:12 edits; my two lines stand.
+- `product.html` was written at 05:55:19 (above).

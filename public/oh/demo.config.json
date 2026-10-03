@@ -54,11 +54,11 @@
       "slots": [
         { "slot": "hero", "take": 1, "label": "The hero", "pieceType": "hero", "weights": { "room": 0.4, "category": 0.3, "type": 0.2, "priceTier": 0.1, "intent": 0.3 } },
         { "slot": "category-rail", "take": 3, "label": "Shop by room", "pieceType": "tile", "weights": { "room": 0.6, "category": 0.3 } },
-        { "slot": "deals", "take": 4, "label": "Deals for you", "pieceType": "promotion", "weights": { "category": 0.3, "type": 0.3, "sizeBand": 0.15, "priceTier": 0.15, "room": 0.4, "intent": 0.5, "fuel": 0.15, "contentType": 0.1 }, "diversity": { "dimension": "room", "max": 2 } },
+        { "slot": "deals", "take": 5, "label": "Deals for you", "pieceType": "promotion", "weights": { "category": 0.3, "type": 0.3, "sizeBand": 0.15, "priceTier": 0.15, "room": 0.4, "intent": 0.5, "fuel": 0.15, "contentType": 0.1 }, "diversity": { "dimension": "room", "max": 2 } },
         { "slot": "continue", "take": 1, "label": "Pick up where you left off", "pieceType": "hero", "weights": { "room": 0.4, "series": 0.3, "type": 0.3 }, "stage": { "outOfStage": 0, "inStage": 0.5 }, "gate": { "visit": ["return"] } }
       ],
       "sorted": [
-        { "slot": "for-you", "take": 8, "label": "Recommended for you", "weights": { "room": 0.4, "category": 0.3, "type": 0.3, "sizeBand": 0.2, "priceTier": 0.2 } }
+        { "slot": "for-you", "take": 12, "label": "Recommended for you", "weights": { "room": 0.4, "category": 0.3, "type": 0.3, "sizeBand": 0.2, "priceTier": 0.2 } }
       ],
       "offLimits": ["the header", "the service strip", "the footer"]
     },

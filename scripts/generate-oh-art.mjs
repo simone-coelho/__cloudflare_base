@@ -14,6 +14,9 @@
 //   art/tile/<piece>.{webp,avif,jpg}     720×420   deal tiles (the fourteen deals pieces) and the seven room tiles
 //   art/tall/<piece>.{webp,avif,jpg}     720×860   the deals pieces' tall variant, for the bento's tall positions
 //   art/banner/<room>.{webp,avif,jpg}    1440×360  the three room banners (living room, laundry room, kitchen)
+//   art/banner-tall/<room>.{webp,avif,jpg} 1440×520 the same three for a taller banner box: the banner's scene extended
+//                                        upward from its bottom edge (a format with `extends`), the product at the
+//                                        banner's very pixel size and place
 //   art/index.json                       piece id → its art files, with the text, product and badge zones
 //
 // What is made, from which scene and product, with which layout, is scripts/demo-kit/configs/oh/art.json.
@@ -29,6 +32,9 @@
 //   node scripts/generate-oh-art.mjs --review <dir>    contact sheets of the committed art, for the gate
 //   --gradient     compose every job on a composed gradient scene instead (no candidates, no model)
 //   --work <dir>   where candidates live (default: OS temp dir). Candidates are never committed.
+//   --tone light|dark  a tone in art.json: dark is its base keys (A1's night scenes), light is tones.light over them
+//                  (A1b's daylight recipe, the products at the base keys' exact scale); defaultTone (light) when not
+//                  given. The tone is recorded on every manifest row and in its provenance.
 //
 // The loop that produced the committed set: --roll, --sheet and --preview, a person reads every candidate,
 // each job's `pick` and `layout` in art.json are fitted to the winner, --compose writes art/, --review makes
@@ -72,10 +78,67 @@ const OH = join(ROOT, 'public', 'oh');
 const IMG = join(OH, 'img');
 const ART = join(IMG, 'art');
 const MANIFEST = join(IMG, 'MANIFEST.json');
-const cfg = JSON.parse(readFileSync(CONFIG, 'utf8'));
+
+// ── The tone (lane A1b, 2026-10-03) ─────────────────────────────────────────
+//
+// R5's second look measured the hero's art half at a mean luma of 36 with 96 % of its pixels darker than 60, where
+// lg.com's measures 113 and 26 %: lg.com's campaign pictures are daylight rooms, OH's were night scenes and dark
+// studios. A1b redrew every piece in lg.com's tone: sunlit living rooms, laundry rooms and kitchens, and the studio
+// sets as colour-lit rooms in daylight. What changes with the tone is the scene (and the scrims, shadows, scene
+// filter and encoders a daylight scene needs); what does NOT change is the product's size: a job's box (boxW, boxH)
+// and its shrink are art.json's base keys, so every product is drawn at exactly the scale the lead's ruling set (the
+// hero products smaller than the wordmark, because they carry their maker's own marks). A tone's job may move its
+// product (cx, bottom) onto its scene's console top or floor line, and nothing else; toned() refuses anything more.
+//
+// Both tones are data in art.json: the base keys are A1's night set (tone dark, no overlay), tones.light is A1b's
+// daylight recipe over them, and defaultTone names the tone composed when --tone is not given.
+/**
+ * art.json with a tone over it: `dark` (the base keys, A1's night set, no overlay) or `light` (tones.light, A1b's
+ * daylight recipe). A tone with no overlay of recipe keys composes the base keys as they are.
+ */
+export function toned(base, tone = base.defaultTone || 'dark') {
+  const conf = JSON.parse(JSON.stringify(base));
+  const tones = base.tones || {};
+  if (!tones[tone] && tone !== 'dark') throw new Error(`--tone is one of ${Object.keys(tones).join(', ') || 'dark'}, not ${tone}`);
+  conf.tone = tone;
+  conf.toneAbout = tones[tone]?.about ?? null;
+  const light = tones[tone] || {};
+  if (!light.scenes) return conf;
+  conf.about = `${base.about} Tone ${tone}: ${light.about}`;
+  conf.style = light.style;
+  for (const [k, frame] of Object.entries(light.aspects)) conf.aspects[k] = { ...conf.aspects[k], frame };
+  for (const [k, s] of Object.entries(light.scenes)) conf.scenes[k] = { ...conf.scenes[k], ...s };
+  for (const [k, f] of Object.entries(light.formats)) if (conf.formats[k]) conf.formats[k].scrim = { ...conf.formats[k].scrim, ...f.scrim };
+  conf.kindScrim = light.kindScrim;
+  conf.shadow = light.shadow;
+  conf.vignette = light.vignette;
+  conf.sceneFilter = light.sceneFilter ?? null;
+  if (light.encode) conf.encode = light.encode;
+  conf.gate = light.gate ?? {};
+  const allowed = new Set(['pick', 'at', 'position', 'scrim', 'lift']);
+  for (const piece of conf.pieces) {
+    for (const [format, own] of Object.entries(piece.formats)) {
+      const over = (light.jobs || {})[`${piece.id}/${format}`];
+      if (!over) continue;
+      const stray = Object.keys(over).filter((k) => !allowed.has(k));
+      if (stray.length) throw new Error(`${piece.id}/${format}: a light job may set ${[...allowed].join(', ')} only, not ${stray.join(', ')} (the product's size is art.json's)`);
+      if (over.at && Object.keys(over.at).some((k) => !['cx', 'bottom'].includes(k))) throw new Error(`${piece.id}/${format}: at moves cx and bottom only`);
+      if (over.pick) own.pick = over.pick;
+      if (over.position !== undefined) own.position = over.position;
+      if (over.lift) own.lift = over.lift;
+      if (over.scrim) own.scrim = { ...(own.scrim ?? {}), ...over.scrim };
+      if (over.at) own.layout = { ...(own.layout ?? {}), ...over.at };
+    }
+  }
+  return conf;
+}
+
+const BASE = JSON.parse(readFileSync(CONFIG, 'utf8'));
+const TONE = arg('--tone', process.env.OH_ART_TONE || BASE.defaultTone || 'dark');
+const cfg = toned(BASE, TONE);
 const MODEL = process.env.OH_ART_MODEL || cfg.model;
 const GLAPI = 'https://generativelanguage.googleapis.com/v1beta';
-const WORK = arg('--work', process.env.OH_ART_WORK || join(tmpdir(), 'oh-art-work'));
+const WORK = arg('--work', process.env.OH_ART_WORK || join(tmpdir(), TONE === 'light' ? 'oh-art-work-light' : 'oh-art-work'));
 const LETTERS = 'abcdefgh';
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -89,6 +152,14 @@ export function jobsOf(conf = cfg) {
   for (const piece of conf.pieces) {
     for (const [format, own] of Object.entries(piece.formats)) {
       const f = conf.formats[format];
+      if (f.extends) {
+        // The base format's own scene, extended to this frame from the same bottom edge; the product keeps the very
+        // pixel size and scene position it has in the base format (its box is computed on the base frame).
+        const baseJob = made.get(`${piece.id}/${f.extends}`);
+        if (!baseJob) throw new Error(`${piece.id}/${format} extends ${f.extends}, which the piece does not have`);
+        jobs.push({ ...baseJob, key: `${piece.id}/${format}`, format, derived: f.extends, extend: true });
+        continue;
+      }
       if (f.from) {
         // Cut from the frame of another format: the same scene, product and layout, cropped to this height.
         const baseJob = made.get(`${piece.id}/${f.from}`);
@@ -107,7 +178,7 @@ export function jobsOf(conf = cfg) {
         pick: over.pick || LETTERS[n], product: piece.product ?? null, mount,
         reflection: over.reflection ?? piece.reflection ?? false,
         layout: { ...(conf.layouts[format]?.[mount] ?? {}), ...(over.layout ?? {}) },
-        scrim: { ...f.scrim, ...(over.scrim ?? {}) }, position: over.position || 'centre', note: piece.note || null,
+        scrim: { ...f.scrim, ...(conf.kindScrim?.[piece.kind]?.[format] ?? {}), ...(over.scrim ?? {}) }, position: over.position ?? 'centre', lift: over.lift ?? null, note: piece.note || null,
       };
       jobs.push(job);
       made.set(job.key, job);
@@ -431,7 +502,7 @@ export function gradientSvg(g, W, H) {
     <radialGradient id="glow" cx="${gx}" cy="${gy}" r="${W > H * 1.5 ? 0.45 : 0.6}" gradientTransform="translate(${gx} ${gy}) scale(${H / W} 1) translate(${-gx} ${-gy})">
       <stop offset="0" stop-color="${g.glow}" stop-opacity="0.85"/><stop offset="0.45" stop-color="${g.glow}" stop-opacity="0.32"/><stop offset="1" stop-color="${g.glow}" stop-opacity="0"/></radialGradient>
     <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g.floor}" stop-opacity="0"/><stop offset="1" stop-color="${g.floor}" stop-opacity="1"/></linearGradient>
-    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.55"/></radialGradient></defs>
+    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${cfg.vignette ?? 0.55}"/></radialGradient></defs>
     <rect width="${W}" height="${H}" fill="${g.base}"/><rect width="${W}" height="${H}" fill="url(#glow)"/>
     <rect y="${Math.round(H * 0.72)}" width="${W}" height="${Math.round(H * 0.28)}" fill="url(#floor)"/>
     <rect width="${W}" height="${H}" fill="url(#vig)"/>`);
@@ -448,13 +519,15 @@ function scrimSvg(s, W, H) {
     <rect width="${W}" height="${H}" fill="url(#b)"/><rect width="${W}" height="${H}" fill="url(#l)"/>`);
 }
 
-async function productLayers(job, W, H) {
+async function productLayers(job, W, H, frame = null) {
   const product = productOf(job.product);
   if (!product) return { layers: [], placed: null, product: null, cut: null };
   // The placement is fitted on the 420 cut, so the product box and every zone hold whichever file is drawn.
   const fit = await productCut(product);
   const L = job.layout;
-  const s = Math.min((L.boxW * W) / fit.width, (L.boxH * H) / fit.height, cfg.maxUpscale);
+  // The layout is computed on `frame` (the base format's, for an extended frame) and moved down by frame.dy.
+  const LW = frame ? frame.W : W, LH = frame ? frame.H : H, dy = frame ? frame.dy : 0;
+  const s = Math.min((L.boxW * LW) / fit.width, (L.boxH * LH) / fit.height, cfg.maxUpscale);
   // shrink (R5's ruling on panel marks): the fitted box scaled down, keeping its right edge and its base.
   const shrink = L.shrink ?? 1;
   const w0 = Math.round(fit.width * s);
@@ -473,8 +546,8 @@ async function productLayers(job, W, H) {
   }
   if (sDrawn > 1.05) img = img.sharpen({ sigma: 0.6 });
   const pimg = await img.png().toBuffer();
-  const bottom = Math.round(L.bottom * H);
-  const fittedLeft = Math.round(L.cx * W) - Math.round(w0 / 2);
+  const bottom = Math.round(L.bottom * LH) + dy;
+  const fittedLeft = Math.round(L.cx * LW) - Math.round(w0 / 2);
   const left = shrink === 1 ? fittedLeft : fittedLeft + w0 - w, top = bottom - h;
   const cx = left + Math.round(w / 2);
   const layers = [];
@@ -490,20 +563,20 @@ async function productLayers(job, W, H) {
     // A wall-hung panel: its own silhouette, blurred and dropped a little, behind it.
     const pad = Math.round(h * 0.12);
     const sil = await sharp({ create: { width: w + pad * 2, height: h + pad * 2, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-      .composite([{ input: await sharp(pimg).ensureAlpha().linear([0, 0, 0, 0.62], [0, 0, 0, 0]).png().toBuffer(), left: pad, top: pad }])
+      .composite([{ input: await sharp(pimg).ensureAlpha().linear([0, 0, 0, cfg.shadow?.wall ?? 0.62], [0, 0, 0, 0]).png().toBuffer(), left: pad, top: pad }])
       .blur(Math.max(4, Math.round(h * 0.035))).png().toBuffer();
     const l = await clip(sil, left - pad, top - pad + Math.round(h * 0.035));
     if (l) layers.push(l);
   } else {
     // Standing on a floor or a console: a soft contact shadow under the foot.
     const sw = Math.round(w * 0.96), sh = Math.max(14, Math.round(h * 0.06));
-    const shadow = await sharp(svg(sw, sh * 2, `<ellipse cx="${sw / 2}" cy="${sh}" rx="${sw / 2.2}" ry="${sh / 2.4}" fill="#000" fill-opacity="0.62"/>`))
+    const shadow = await sharp(svg(sw, sh * 2, `<ellipse cx="${sw / 2}" cy="${sh}" rx="${sw / 2.2}" ry="${sh / 2.4}" fill="#000" fill-opacity="${cfg.shadow?.contact ?? 0.62}"/>`))
       .blur(Math.max(4, Math.round(sh / 3))).png().toBuffer();
     const l = await clip(shadow, cx - Math.round(sw / 2), bottom - sh);
     if (l) layers.push(l);
     if (job.reflection) {
       // A glossy floor's reflection: the product flipped, fading out over a quarter of its height.
-      const rh = Math.min(Math.round(h * 0.28), H - bottom);
+      const rh = Math.min(Math.round(h * 0.28), LH + dy - bottom);
       if (rh > 8) {
         // flip in its own pipeline: sharp extracts before it flips, which would mirror the top of the product
         const flipped = await sharp(await sharp(pimg).flip().png().toBuffer()).extract({ left: 0, top: 0, width: w, height: rh }).png().toBuffer();
@@ -550,8 +623,24 @@ async function encode(raw) {
     ...(cfg.encode.jpg ? { jpg: await sharp(raw).jpeg(cfg.encode.jpg).toBuffer() } : {}) };
 }
 
+/**
+ * The scene cut to the frame. `position` is sharp's (centre, bottom, ...) or, since A1b, a fraction from 0 to 1: the
+ * cover-scaled scene cut that far into its spare height (or width), so a console or a floor line can be set where
+ * the product's fixed size needs it without scaling anything.
+ */
+async function sceneCover(srcFile, W, H, position) {
+  if (typeof position !== 'number') return sharp(srcFile).resize(W, H, { fit: 'cover', position }).toBuffer();
+  if (!(position >= 0 && position <= 1)) throw new Error(`a fractional position is between 0 and 1, not ${position}`);
+  const m = await sharp(srcFile).metadata();
+  const k = Math.max(W / m.width, H / m.height);
+  const w = Math.max(W, Math.round(m.width * k)), h = Math.max(H, Math.round(m.height * k));
+  const scaled = await sharp(srcFile).resize(w, h).toBuffer();
+  return sharp(scaled).extract({ left: Math.round((w - W) * position), top: Math.round((h - H) * position), width: W, height: H }).toBuffer();
+}
+
 async function composeJob(job, srcFile) {
   const f = cfg.formats[job.format];
+  if (job.derived && job.extend) return composeExtended(job, srcFile, f);
   if (job.derived) {
     // The base format's frame, cropped to this height: the product keeps its size and its place on the scene. The
     // crop keeps a margin of floor under the product (and its shadow) and takes the rest from the top.
@@ -565,13 +654,56 @@ async function composeJob(job, srcFile) {
     return { W: f.width, H: f.height, raw, ...(await encode(raw)), product: base.product, cut: base.cut, placed, legibility: await legibility(raw, f.textZone, f.width, f.height) };
   }
   const W = f.width, H = f.height;
-  const base = srcFile ? await sharp(srcFile).resize(W, H, { fit: 'cover', position: job.position }).toBuffer()
+  const base = srcFile ? await sceneCover(srcFile, W, H, job.position)
     : await sharp(gradientSvg(cfg.scenes[job.scene].gradient, W, H)).png().toBuffer();
+  const scene = await treatScene(base, job);
   const scrim = scrimSvg(job.scrim, W, H);
   const { layers, product, cut, placed } = await productLayers(job, W, H);
   // Scrim first, then the product, so the product stays at full brightness in its own zone.
-  const raw = await sharp(base).composite([...(scrim ? [{ input: scrim }] : []), ...layers]).removeAlpha().png().toBuffer();
+  const raw = await sharp(scene).composite([...(scrim ? [{ input: scrim }] : []), ...layers]).removeAlpha().png().toBuffer();
   return { W, H, raw, ...(await encode(raw)), product, cut, placed, legibility: await legibility(raw, f.textZone, W, H) };
+}
+
+/**
+ * A frame taller than its base format (banner-tall over banner): the base's cover-scaled scene, cut from the same
+ * bottom edge upward (or as near as the scene allows), with the product laid out on the base frame and moved down by
+ * the difference, so it keeps its pixel size and its place on the console or floor. The scene must scale the same for
+ * both frames (a width-bound cover), or the product would leave its place; the generator refuses otherwise.
+ */
+async function composeExtended(job, srcFile, f) {
+  const b = cfg.formats[job.derived];
+  const W = f.width, H = f.height;
+  if (W !== b.width) throw new Error(`${job.key}: an extended format keeps its base's width`);
+  let scene, dy;
+  if (srcFile) {
+    const m = await sharp(srcFile).metadata();
+    const kb = Math.max(b.width / m.width, b.height / m.height), kt = Math.max(W / m.width, H / m.height);
+    if (Math.abs(kb - kt) > 1e-9) throw new Error(`${job.key}: the scene scales differently for ${job.derived} and ${job.format}`);
+    const hs = Math.max(b.height, Math.round(m.height * kb));
+    if (hs < H) throw new Error(`${job.key}: the scene is ${hs} px tall at this scale, short of ${H}`);
+    const pos = typeof job.position === 'number' ? job.position : ({ top: 0, north: 0, bottom: 1, south: 1 }[job.position] ?? 0.5);
+    const yb = Math.round((hs - b.height) * pos);
+    const yt = Math.max(0, Math.min(hs - H, yb - (H - b.height)));
+    dy = yb - yt;
+    scene = await sceneCover(srcFile, W, H, hs === H ? 0 : yt / (hs - H));
+  } else {
+    dy = H - b.height;
+    scene = await sharp(gradientSvg(cfg.scenes[job.scene].gradient, W, H)).png().toBuffer();
+  }
+  const treated = await treatScene(scene, job);
+  const scrim = scrimSvg(job.scrim, W, H);
+  const { layers, product, cut, placed } = await productLayers({ ...job, format: job.derived }, W, H, { W: b.width, H: b.height, dy });
+  const raw = await sharp(treated).composite([...(scrim ? [{ input: scrim }] : []), ...layers]).removeAlpha().png().toBuffer();
+  return { W, H, raw, ...(await encode(raw)), product, cut, placed: placed ? { ...placed, extendedFrom: { format: job.derived, dy } } : null, legibility: await legibility(raw, f.textZone, W, H) };
+}
+
+/** The scene alone, before the scrim and the product: a job's lift (its exposure, sharp's modulate) and the tone's filter. */
+async function treatScene(buf, job) {
+  let img = sharp(buf);
+  if (job.lift && job.lift !== 1) img = img.modulate({ brightness: job.lift });
+  if (cfg.sceneFilter?.blur) img = img.blur(cfg.sceneFilter.blur);
+  if (cfg.sceneFilter?.median) img = img.median(cfg.sceneFilter.median);
+  return img.png().toBuffer();
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -643,17 +775,18 @@ async function compose() {
     const scene = cfg.scenes[job.scene];
     const sku = r.product?.sku ?? null;
     const productText = sku ? ` + the product's own image ${sku}${r.cut.source.large ? ` (D2's ${r.cut.source.size}-pixel cutout, ${r.cut.source.file})` : ''}, demo use` : ' (no product by design: the page draws the shopper\'s own configuration)';
-    const provenance = generated ? `generated scene (${rolled?.model ?? MODEL}, ${scene.summary})${productText}` : `composed gradient (${scene.summary.split(',')[0]} colours)${productText}`;
+    const toneText = cfg.tone === 'light' ? 'A1b light tone: ' : '';
+    const provenance = generated ? `generated scene (${rolled?.model ?? MODEL}, ${toneText}${scene.summary})${productText}` : `composed gradient (${toneText}${scene.summary.split(',')[0]} colours, no model)${productText}`;
     rows.push({
       key: job.key, piece: job.piece, kind: job.kind, format: job.format, title: piece?.title ?? room?.title ?? null,
       files: Object.fromEntries(encodings().map((e) => [e, rel(job.format, job.piece, e)])),
       size: { width: r.W, height: r.H }, bytes: Object.fromEntries(encodings().map((e) => [e, r[e].length])), sha256: sha256(r.webp),
-      generated, provenance,
-      scene: { key: job.scene, summary: scene.summary, ...(generated ? { model: rolled?.model ?? MODEL, candidate: `${job.group}--${job.pick}`, aspect: rolled?.ratio ?? cfg.aspects[job.aspect].ratio, prompt: promptId(rolled?.prompt ?? promptOf(job.scene, job.aspect)),...(rolled?.rolled ? { rolled: rolled.rolled.slice(0, 10) } : {}) } : { method: 'composed gradient, sharp (SVG radial glow, floor and vignette)' }) },
+      generated, tone: cfg.tone, ...(cfg.tone === 'light' ? { lane: 'A1b' } : {}), provenance,
+      scene: { key: job.scene, summary: scene.summary, ...(job.lift && job.lift !== 1 ? { lift: job.lift } : {}), ...(cfg.sceneFilter ? { filter: cfg.sceneFilter } : {}), ...(typeof job.position === 'number' ? { position: job.position } : {}),...(generated ? { model: rolled?.model ?? MODEL, candidate: `${job.group}--${job.pick}`, aspect: rolled?.ratio ?? cfg.aspects[job.aspect].ratio, prompt: promptId(rolled?.prompt ?? promptOf(job.scene, job.aspect)),...(rolled?.rolled ? { rolled: rolled.rolled.slice(0, 10) } : {}) } : { method: 'composed gradient, sharp (SVG radial glow, floor and vignette)' }) },
       product: sku ? { sku, name: nameOf(sku), image: r.cut.source.file, imageSha256: r.cut.source.sha256, mount: job.mount, reflection: job.reflection,
         placed: r.placed, treatment: r.cut.treatment, ...(r.product.substitute ? { substituteFor: r.product.substitute.lead, why: r.product.substitute.why } : {}) } : null,
       ...(job.note ? { note: job.note } : {}),
-      ...(job.derived ? { cutFrom: `${job.piece}/${job.derived}` } : {}),
+      ...(job.derived ? (job.extend ? { extendedFrom: `${job.piece}/${job.derived}` } : { cutFrom: `${job.piece}/${job.derived}` }) : {}),
       zones: zonesOf(f, r.placed, previous.get(job.key)?.zones?.badge ?? null), legibility: r.legibility,
     });
     console.log(`  ${job.key} ← ${generated ? `${job.group}--${job.pick}` : 'gradient'}${sku ? ` + ${sku}` : ''}  webp ${Math.round(r.webp.length / 1024)}KB avif ${Math.round(r.avif.length / 1024)}KB${r.jpg ? ` jpg ${Math.round(r.jpg.length / 1024)}KB` : ''}  white ${r.legibility.whiteContrastAtP90}:1`);
@@ -667,7 +800,8 @@ async function compose() {
   const bytes = rows.reduce((n, r) => n + Object.values(r.bytes).reduce((a, b) => a + b, 0), 0);
   manifest.art = {
     about: `OH campaign art (Lane A1), written by scripts/generate-oh-art.mjs from scripts/demo-kit/configs/oh/art.json. Each file is a generated scene (no product, no text, no marks) with the piece\'s lead product placed on it from LG\'s own cutout in products/, or a composed gradient where no scene was generated; provenance per row, each scene\'s exact prompt once under prompts by the id its row names. ${cfg.encode.jpg ? 'Three encodings: WebP (the src), AVIF and a JPEG fallback' : 'Two encodings: WebP (the src) and AVIF; the JPEG fallback was dropped to keep the image payload under the 25 MB budget when the 1440x540 slides were added (the page draws src and avif only)'}; opaque art carries no transparency, so the kit\'s transparent PNG is not made. The verdict holds only for the sha256 of the exact WebP reviewed. art/index.json maps each piece to its files.`,
-    generator: 'scripts/generate-oh-art.mjs', config: 'scripts/demo-kit/configs/oh/art.json', model: MODEL, credential: keyPresent ? 'GEMINI_API_KEY (by name, from the environment or .dev.vars)' : 'none present',
+    tone: cfg.toneAbout ? `${cfg.tone}: ${cfg.toneAbout}` : cfg.tone,
+    generator: 'scripts/generate-oh-art.mjs', config: `scripts/demo-kit/configs/oh/art.json, tone ${cfg.tone}${cfg.tone === 'dark' ? ' (the base keys)' : ` (tones.${cfg.tone} over the base keys)`}`, model: MODEL,
     counts: { files: rows.length, encodings: rows.reduce((n, r) => n + Object.keys(r.files).length, 0), byFormat: Object.fromEntries(Object.keys(cfg.formats).map((k) => [k, rows.filter((r) => r.format === k).length])),
       generated: rows.filter((r) => r.generated).length, gradient: rows.filter((r) => !r.generated).length,
       verdicts: rows.reduce((m, r) => ({ ...m, [r.gate.verdict]: (m[r.gate.verdict] ?? 0) + 1 }), {}) },
@@ -678,7 +812,11 @@ async function compose() {
     rows,
   };
   writeIndex(rows);
-  writeManifest(MANIFEST, manifest, { dir: IMG, budgetMegabytes: cfg.budgetMegabytes });
+  // Re-read just before the write and replace only the art section, so another lane's rows written meanwhile hold.
+  const fresh = readManifest(MANIFEST);
+  fresh.art = manifest.art;
+  writeManifest(MANIFEST, fresh, { dir: IMG, budgetMegabytes: cfg.budgetMegabytes });
+  manifest.totals = fresh.totals;
   console.log(`art: ${rows.length} files × ${encodings().length} encodings, ${(bytes / 1048576).toFixed(2)} MB; image payload ${manifest.totals.megabytes} MB of ${cfg.budgetMegabytes}`);
 }
 
@@ -690,10 +828,10 @@ function writeIndex(rows) {
       width: r.size.width, height: r.size.height, ink: r.legibility.ink === 'dark' ? 'dark' : 'light', zones: r.zones, verdict: r.gate.verdict };
   }
   const index = {
-    about: `OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): white type in the format\'s text zone, a badge in its badge zone, never over the product zone. src is the WebP; avif is the same picture for a <picture> source.${cfg.encode.jpg ? ' jpg is the fallback.' : ''} Hero pieces carry two slides: slide (1440x640, the carousel layout) and slide540 (1440x540, the full-bleed hero), the same scene and product, slide540 cut from slide's frame. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product\'s box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper\'s own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.`,
+    about: `OH campaign art (Lane A1): piece id → its art. Draw the headline, sub, badge and button over the art (nothing is baked in): each file\'s ink says which type its text zone carries (light: white type; dark: dark type), a badge in its badge zone, never over the product zone.${cfg.tone === 'light' ? ' Since A1b the art is light (daylight rooms and bright studio sets): slides and banners carry no scrim, because the page sets dark type on its own white panel there; deal tiles and tall tiles keep a shaded foot for white headlines; room tiles carry their text under the picture.' : ''} src is the WebP; avif is the same picture for a <picture> source.${cfg.encode.jpg ? ' jpg is the fallback.' : ''} Hero pieces carry two slides: slide (1440x640, the carousel layout) and slide540 (1440x540, the full-bleed hero), the same scene and product, slide540 cut from slide's frame. Zones are fractions of the frame, [left, top, right, bottom]; each file carries its own: text (where the page sets white type), product (the placed product\'s box, or the empty product zone) and badge (a corner the product leaves clear, or null). hero_continue carries no product by design: the page draws the shopper\'s own configuration into its product zone. Provenance and verdicts: MANIFEST.json, art.`,
     manifest: '/oh/img/MANIFEST.json',
     formats: Object.fromEntries(Object.entries(cfg.formats).map(([k, f]) => [k, { width: f.width, height: f.height, textZone: f.textZone, productZone: f.productZone, badgeZones: f.badgeZones,
-      ...(f.from ? { cutFrom: f.from } : {}), use: { slide: 'hero carousel slides, 1440x640 (the carousel layout)', slide540: 'the full-bleed hero, 1440x540', tile: 'deal bento tiles and room tiles', tall: 'the deal bento\'s tall positions', banner: 'room grid banners' }[k] }])),
+      ...(f.from ? { cutFrom: f.from } : {}), ...(f.extends ? { extends: f.extends } : {}), use: { slide: 'hero carousel slides, 1440x640 (the carousel layout)', slide540: 'the full-bleed hero, 1440x540', tile: 'deal bento tiles and room tiles', tall: 'the deal bento\'s tall positions', banner: 'room grid banners, 1440x360', 'banner-tall': 'room grid banners in a taller box (M1e, about 490 px at 1440), 1440x520: the banner\'s scene extended upward, the product at the banner\'s pixel size' }[k] }])),
     rooms: Object.fromEntries(Object.entries(cfg.rooms).map(([id, r]) => [r.view, id])),
     pieces,
   };

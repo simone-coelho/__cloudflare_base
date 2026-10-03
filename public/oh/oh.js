@@ -72,7 +72,7 @@ import { store } from '/oh/oh-store.js';
         },
         {
           "slot": "deals",
-          "take": 4,
+          "take": 5,
           "label": "Deals for you",
           "gated": false
         },
@@ -86,7 +86,7 @@ import { store } from '/oh/oh-store.js';
       "sorted": [
         {
           "slot": "for-you",
-          "take": 8,
+          "take": 12,
           "label": "Recommended for you",
           "category": null
         }
@@ -567,7 +567,7 @@ import { store } from '/oh/oh-store.js';
     /** A grid's own state: the rail's answer, her declared fit, her filters, her choice of order, how many are shown. */
     const freshGrid = () => ({ set: null, rail: { status: 'site', order: null, items: null, regional: null, prevOrder: null }, fit: null, hidden: [], unknown: 0, f: {}, sort: 'best', show: 24 });
     const S = {
-      ready: null, display: new Map(), images: {}, weights: {}, openSlots: {},
+      ready: null, display: new Map(), images: {}, weights: {}, takes: {}, openSlots: {},
       home: { set: null, slots: {}, heroWas: null, rail: { status: 'site', order: null, items: null, regional: null, prevOrder: null } },
       grid: freshGrid(),
       grids: {}, search: { q: '', matches: [] }, tpl: false, zip: null, slide: 0, pencil: 0, tab: 'appliances', template: null, feedAsOf: null, art: null,
@@ -612,6 +612,10 @@ import { store } from '/oh/oh-store.js';
           for (const p of arr(cat && cat.pieces)) if (p && p.customerContentId && p.display) S.display.set(p.customerContentId, p.display);
           S.images = (idx && idx.products) || {};
           for (const pg of arr(cfg && cfg.pages)) for (const r of arr(pg.sorted)) if (r && r.weights) S.weights[r.slot] = r.weights;
+          // Each rail's and slot's take as the config gives it (M1e, the lead's rulings: Recommended for you 12, deals 5), so a
+          // rail follows the config rather than the scaffold's copy of it in SITE; a slot's template takes the published opening
+          // slots document's take first (the engine's own answer always sets how many a decided slot shows).
+          for (const pg of arr(cfg && cfg.pages)) for (const s of [...arr(pg.slots), ...arr(pg.sorted)]) if (s && s.slot && num(s.take) > 0) S.takes[s.slot] = num(s.take);
           // The opening slots as published (their take and diversity rule): what the template applies before anyone arrives.
           const pages = (transport.unwrap(slots) || {}).pages || ((((slots || {}).publish || {}).document || {}).pages) || {};
           for (const list of Object.values(pages)) for (const s of arr(list)) if (s && s.slot) S.openSlots[s.slot] = s;
@@ -843,8 +847,8 @@ import { store } from '/oh/oh-store.js';
         if (typeof e === 'string') return { src: e };
         for (const r of roles) {
           const pick = e[r];
-          if (typeof pick === 'string') return { src: pick };
-          if (pick && typeof pick === 'object' && (pick.src || pick.webp)) return { src: pick.src || pick.webp, avif: pick.avif || null, ink: pick.ink || null, zones: pick.zones || null };
+          if (typeof pick === 'string') return { src: pick, role: r };
+          if (pick && typeof pick === 'object' && (pick.src || pick.webp)) return { src: pick.src || pick.webp, avif: pick.avif || null, ink: pick.ink || null, zones: pick.zones || null, role: r };
         }
       }
       return null;
@@ -852,9 +856,20 @@ import { store } from '/oh/oh-store.js';
     /** The picture for A1's art: AVIF first, the WebP as the src; dark type where A1 measured the art light. */
     const artPicture = (art, name, narrow) => `<span class="m1-scene m1-scene--art${art.ink === 'dark' ? ' m1-ink-dark' : ''}"><picture>${narrow ? `${narrow.avif ? `<source media="(max-width: 640px)" type="image/avif" srcset="${esc(narrow.avif)}">` : ''}<source media="(max-width: 640px)" srcset="${esc(narrow.src)}">` : ''}${art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc(art.src)}" alt="" decoding="async" data-p1-name="${esc(name)}"></picture></span>`;
     /** A piece's picture for a role: A1's art when it exists, else a dark scene in its room's colours with the product on it. */
+    /**
+     * A room banner's picture (M1e): A1b's 1440×520 `banner-tall` from a desk's width (861 px, where the banner's box takes
+     * its proportion, oh.css M1e), the 1440×360 banner below it (the phone's 4:3 crop), each drawn at no more than its own
+     * scale at 1440. Without a tall file, the 360 banner alone.
+     */
+    const bannerPicture = (art, tall, name) => (tall ? `<span class="m1-scene m1-scene--art${(art || tall).ink === 'dark' ? ' m1-ink-dark' : ''}"><picture>${tall.avif ? `<source media="(min-width: 861px)" type="image/avif" srcset="${esc(tall.avif)}">` : ''}<source media="(min-width: 861px)" srcset="${esc(tall.src)}">${art && art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc((art || tall).src)}" alt="" decoding="async" data-p1-name="${esc(name)}"></picture></span>`
+      : artPicture(art, name));
+    /** A room's tall banner art (A1b's banner-tall), by the same keys as its banner; null where the index has none. */
+    const tallArtOf = (keys) => artSrc(keys, 'banner-tall');
     function sceneHtml(piece, cid, role, narrowRole) {
       const room = roomOfPiece(piece), prod = productOfPiece(piece, cid);
-      const art = artSrc([cid, piece.id, role === 'banner' ? roomArtKey(room) : null], role);
+      const keys = [cid, piece.id, role === 'banner' ? roomArtKey(room) : null];
+      const art = artSrc(keys, role);
+      if (art && role === 'banner') return bannerPicture(art, tallArtOf(keys), bare(piece.title || cid));
       if (art) return artPicture(art, bare(piece.title || cid), narrowRole ? artSrc([cid, piece.id], narrowRole) : null);
       return `<span class="m1-scene m1-scene--${esc(room)}" data-art="placeholder">${prod ? artHtml(prod, 'p1-art--scene') : ''}</span>`;
     }
@@ -890,11 +905,11 @@ import { store } from '/oh/oh-store.js';
       if (car) car.classList.toggle('m1-car--playing', Boolean(heroTimer));
     }
 
-    // ── The pagers: the category row, and at phone width the service strip, the deals and Recommended for you, one ──
-    //    view at a time. Paging scrolls what is already on the page, in the order it came: no event, no visitor, nothing
+    // ── The pagers: the category row, Recommended for you (four a view at a desk, M1e), the TV grid's offer cards, and at ──
+    //    phone width the service strip and the deals, one view at a time. Paging scrolls what is already on the page, in the order it came: no event, no visitor, nothing
     //    reordered. The hero's arrows and dots are the same kind of control (the lead's ruling): a slide change mints nobody
     //    and sends nothing; only a press on the slide's own content goes through the click dispatcher.
-    const PAGED = ['m1Cats', 'm1Svc', 'slot-deals', 'rail-for-you'];
+    const PAGED = ['m1Cats', 'm1Svc', 'slot-deals', 'rail-for-you', 'm1OffersTrack'];
     function pagerGeo(box) {
       const kids = [...box.children].filter((c) => c.getBoundingClientRect().width > 0);
       if (kids.length < 2) return { kids, step: Math.max(1, box.clientWidth), per: 1 };
@@ -945,8 +960,10 @@ import { store } from '/oh/oh-store.js';
       if (!box || box.dataset.m1 === (S.art ? 'art' : 'scene')) return;
       box.dataset.m1 = S.art ? 'art' : 'scene';
       const room = box.dataset.room || '';
-      const art = room ? artSrc([roomArtKey(room)], 'banner') : null;
-      if (art) { box.innerHTML = artPicture(art, GRIDS[view] ? GRIDS[view].title : view); return; }
+      const art = room ? artSrc([roomArtKey(room)], 'banner') : null, tall = room ? tallArtOf([roomArtKey(room)]) : null;
+      const ban = box.closest('.m1-banner');
+      if (ban) ban.classList.toggle('m1-banner--tall', Boolean(art && tall));
+      if (art) { box.innerHTML = bannerPicture(art, tall, GRIDS[view] ? GRIDS[view].title : view); return; }
       const prods = (box.dataset.skus || '').split(' ').filter(Boolean).map(productOf).filter(Boolean);
       box.innerHTML = `<span class="m1-scene m1-scene--${esc(room || 'living-room')}" data-art="placeholder">${prods.map((p, k) => `<span class="m1-banner-prod m1-banner-prod--${k}">${artHtml(p, 'p1-art--scene')}</span>`).join('')}</span>`;
     }
@@ -977,7 +994,7 @@ import { store } from '/oh/oh-store.js';
       if (!S.quiet && !S.restoring && !S.tpl) { S.home.heroPrev = S.home.heroWas; S.home.heroWas = d ? d.customerContentId : null; }
       if (!d) { box.innerHTML = '<p class="slot-empty">The engine returned no hero for this request, and the page shows none rather than invent one.</p>'; return; }
       // The slot's answer first; then the template's other heroes, static, the same for everyone, in the catalog's order.
-      const others = S.quiet ? [] : M1.template({ slot: 'hero', take: 6 }).filter((x) => x.customerContentId !== d.customerContentId).slice(0, 4);
+      const others = S.quiet ? [] : M1.template({ slot: 'hero', take: 6, own: true }).filter((x) => x.customerContentId !== d.customerContentId).slice(0, 4);
       S.slide = 0;
       const slides = [heroSlideHtml(d, 0, true, entered), ...others.map((x, i) => heroSlideHtml(x, i + 1, false, false))];
       const n = slides.length;
@@ -1020,19 +1037,38 @@ import { store } from '/oh/oh-store.js';
       const row = S.tpl ? null : rowFor(slot.slot);       // the template has no before: nobody has seen anything yet
       if (row && !S.restoring) deltas.rotate(slot.slot, after, decisions);   // her answer put back after Compare: no new before
       const moves = row && !S.quiet ? deltas.moves(slot.slot, slotState(slot.slot).previous, after, decisions) : {};
-      box.innerHTML = decisions.map((d, i) => dealHtml(d, i, moves[d.customerContentId])).join('')
-        || '<p class="slot-empty">The engine returned no deal for this request, and the page shows none rather than invent one.</p>';
+      box.innerHTML = decisions.length ? `${decisions.map((d, i) => dealHtml(d, i, moves[d.customerContentId])).join('')}${dealSetHtml(decisions)}`
+        : '<p class="slot-empty">The engine returned no deal for this request, and the page shows none rather than invent one.</p>';
       if (row && !S.quiet) deltas.render(slot.slot);
       M1.heads();
     }
+    // At a desk the five are lg.com's bento (oh.css, M1e): the tall tile beside a 2 × 2 block of small tiles with round
+    // arrows, every one decided (the slot's take is 5, the lead's ruling). Each tile keeps its receipt in its own container (the suites and refreshReceipts read it there); the layout
+    // sets the receipts in rows under the whole set, each led by its tile's title (data-of), under one honesty line.
+    // Every tile takes A1's tall art, which crops to the bento's near-square cells and to the phone's carousel alike.
     function dealHtml(d, i, mv) {
       const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
       return `<article class="card p1-deal p1-deal--${i}${d.strategy === 'tenant-pinned' ? ' p1-deal--pinned' : ''}"${decided(d)}>${deltas.chipHtml(mv)}
-        <div class="p1-deal-tile">${sceneHtml(piece, d.customerContentId, i === 3 ? 'tile' : 'tall', i === 3 ? 'tall' : null)}${disp.badge ? `<span class="p1-badge"${badgePos(zonesOf(piece, d.customerContentId, i === 3 ? 'tile' : 'tall'))}>${esc(disp.badge)}</span>` : ''}
+        <div class="p1-deal-tile">${sceneHtml(piece, d.customerContentId, 'tall')}${disp.badge ? `<span class="p1-badge"${badgePos(zonesOf(piece, d.customerContentId, 'tall'))}>${esc(disp.badge)}</span>` : ''}
           <div class="p1-deal-body"><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
             ${g.value || g.consideration ? `<p class="p1-fine">${esc([g.value, g.consideration].filter(Boolean).join(' · '))}</p>` : ''}</div>
           <button type="button" class="m1-tile-go" ${target(piece, d.customerContentId)} data-ctl="deal-${i + 1}" aria-label="${esc(disp.cta || 'Shop the deal')}"><span>${esc(disp.cta || 'Shop the deal')}</span> &rsaquo;</button></div>
-        <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></article>`;
+        <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}" data-of="${esc(bare(piece.title || d.customerContentId))}">${receiptLine(d, i)}</p></article>`;
+    }
+    /**
+     * The one honesty line under the set (at a desk): what the five are, and the region's lean when a decision carries it,
+     * in the /sort rails' own words ("leans with North Carolina’s sales · synthetic → warehouse"), read off the decisions'
+     * own drivers. The receipts follow it, one per tile.
+     */
+    function dealSetHtml(decisions) {
+      const tpl = decisions.every((d) => d.strategy === 'template');
+      const reg = decisions.map((d) => arr(d.explain && d.explain.drivers).find((x) => x && x.dim === 'regional')).find(Boolean);
+      const lean = reg ? leanLine({ status: 'sorted', regional: { region: reg.value, asserted: Boolean(state.ctx.region) } }) : '';
+      const pinned = decisions.some((d) => d.strategy === 'tenant-pinned');
+      const n = ['no', 'one', 'two', 'three', 'four', 'five', 'six'][decisions.length] || String(decisions.length);
+      const head = tpl ? `The published template: the opening catalog’s ${n} in its own order, nobody has arrived and nothing is decided yet`
+        : `<b>Decided for you</b>: the ${n} deals in the engine’s order${pinned ? ', one pinned by our merchandiser' : ''}`;
+      return `<p class="m1-deal-set">${head}${lean ? ` · <span class="p1-lean">${esc(lean)}</span>` : ''} · each tile’s receipt:</p>`;
     }
 
     // ── The continue hero: gated on the return visit; its body is her own shortlist ─
@@ -1072,14 +1108,46 @@ import { store } from '/oh/oh-store.js';
       box.innerHTML = decisions.map((d, i) => {
         const piece = pieceOf(d) || {}, disp = dispOf(d.customerContentId), g = disp.grammar || {};
         const badge = g.ends || disp.badge || '';
-        return `<article class="card p1-promo m1-banner"${decided(d)}>${sceneHtml(piece, d.customerContentId, 'banner')}
+        const bk = [d.customerContentId, piece.id, roomArtKey(roomOfPiece(piece))], tall = Boolean(artSrc(bk, 'banner') && tallArtOf(bk));
+        return `<article class="card p1-promo m1-banner${tall ? ' m1-banner--tall' : ''}" data-room="${esc(roomOfPiece(piece))}"${decided(d)}>${sceneHtml(piece, d.customerContentId, 'banner')}
           <div class="m1-banner-copy"><p class="p1-kicker">${esc(KICKER[roomOfPiece(piece)] || 'Offer')}</p><h3>${esc(piece.title || d.customerContentId)}</h3>${piece.subtitle ? `<p class="p1-sub">${esc(piece.subtitle)}</p>` : ''}
             ${disp.cta ? `<button type="button" class="btn btn--brand p1-promo-cta" data-act="m1-promo" data-cid="${esc(d.customerContentId)}" data-ctl="promo-cta">${esc(disp.cta)}</button>` : ''}</div>
           ${badge ? `<span class="m1-hero-badge"${badgePos(zonesOf(piece, d.customerContentId, 'banner'))}>${esc(badge)}</span>` : ''}
           <p class="receipt p1-receipt" data-receipt="${esc(d.decisionId || '')}">${receiptLine(d, i)}</p></article>`;
       }).join('') || '<p class="slot-empty">The engine returned nothing for the grid’s promotion on this request.</p>';
+      renderOffers(decisions.map((d) => d.customerContentId));
       M1.heads();
     }
+    /**
+     * lg.com's row of offer cards under the TVs banner: the catalog's own TV promotions in force (published deals for TVs
+     * and their bundles, live, inside their window, in stock), in the catalog's order, static and the same for everyone;
+     * the piece the banner shows is left out. The copy is each piece's own (its title, its "Valid through" where the feed
+     * gives one, its button), never written here; a piece with no window in the feed carries no date.
+     */
+    function renderOffers(shownAbove) {
+      const wrap = $('m1Offers-tvs'), box = $('m1OffersTrack');
+      if (!wrap || !box) return;
+      const now = Date.now();
+      const list = piecesNow().filter((p) => p && p.type === 'promotion' && arr(p.tags && p.tags.contentType).includes('deal') && arr(p.tags && p.tags.category).includes('tvs')
+        && (arr(p.slotTypes).includes('deals') || arr(p.slotTypes).includes('grid-promo')) && liveAt(p, now) && p.inStock !== false && !p.eligibleWhen
+        && !arr(shownAbove).includes(p.customerContentId));
+      const pc = (n) => `${(Math.max(0, Math.min(1, n)) * 100).toFixed(1)}%`;
+      box.innerHTML = list.map((p) => {
+        const cid = p.customerContentId, disp = dispOf(cid), g = disp.grammar || {};
+        const art = artSrc([cid, p.id], 'tile'), z = art && art.zones && Array.isArray(art.zones.product) ? art.zones.product.map(Number) : null;
+        const at = z && z.every(Number.isFinite) ? ` style="object-position:${pc((z[0] + z[2]) / 2)} ${pc((z[1] + z[3]) / 2)}"` : '';   // the product A1 placed, kept in the crop
+        const prod = productOfPiece(p, cid);
+        const pic = art ? `<span class="m1-scene m1-scene--art"><picture>${art.avif ? `<source type="image/avif" srcset="${esc(art.avif)}">` : ''}<img src="${esc(art.src)}" alt="" loading="lazy" decoding="async" data-p1-name="${esc(bare(p.title || cid))}"${at}></picture></span>`
+          : `<span class="m1-scene m1-scene--${esc(roomOfPiece(p))}" data-art="placeholder">${prod ? artHtml(prod, 'p1-art--scene') : ''}</span>`;
+        return `<article class="m1-offer"><span class="m1-offer-pic">${pic}</span><div class="m1-offer-body">${g.ends ? `<p class="m1-offer-ends">${esc(g.ends)}</p>` : ''}<h3>${esc(bare(p.title || cid))}</h3>
+          <button type="button" class="btn btn--brand" data-act="m1-promo" data-offer="${esc(cid)}" data-ctl="offer-${esc(cid)}">${esc(disp.cta || 'Shop now')}</button></div></article>`;
+      }).join('');
+      wrap.hidden = !list.length;
+      box.scrollLeft = 0;
+      eager(box);
+    }
+    /** A carousel's pictures past its first view load with it (a lazy image beside the view, not below it, would wait for a page press). */
+    function eager(box) { for (const img of box.querySelectorAll('img[loading="lazy"]')) img.loading = 'eager'; }
 
     // ── The /sort rails: "for you" across rooms, and the TV grid ────────────
     /**
@@ -1118,7 +1186,9 @@ import { store } from '/oh/oh-store.js';
     }
     const poolOf = (rail) => (viewOfRail(rail) ? gridPool(rail) : forYouPool());
     /** What a rail shows: the engine's order (or, with no answer, the products file's), the module's rule, its take. */
-    const shownOrder = (rail, R) => (R.order || (R.pool || poolOf(rail)).map(idOf)).slice(0, rail.take);
+    /** A slot's or a rail's take: the published config's (read with the documents), else the page's own. */
+    const takeOf = (x) => num(S.takes[x && x.slot]) || num(x && x.take) || 0;
+    const shownOrder = (rail, R) => (R.order || (R.pool || poolOf(rail)).map(idOf)).slice(0, takeOf(rail));
     const candidateOf = (p) => { const { productId, ...attrs } = productAttrs(p); return { id: productId, ...attrs }; };
     /** The rail's weights as demo.config.json publishes them; a dimension it does not name weighs 0, as on the slots. */
     function weightsOf(rail) {
@@ -1220,7 +1290,7 @@ import { store } from '/oh/oh-store.js';
         return M1.card(p, { chip: mark, rank });
       }).join('') || `<p class="slot-empty m1-empty">${view && G.fit && !pool.length ? `Nothing here fits that space.` : view ? 'Nothing matches those filters.' : 'No product to show.'}${view && Object.keys(G.f).length ? `<br><button type="button" class="btn btn--line btn--sm" data-act="m1-filter-clear" data-view="${view}" data-ctl="filter-clear-${view}">Clear the filters</button>` : ''}</p>`;
       if (view) M1.gridChrome(view, pool, best || [], order.length);
-      else railDeltas(prev, order);
+      else { railDeltas(prev, order); eager(box); }   // a carousel at every width now (M1e): its later pages' pictures load with the first
       M1.heads();
     }
     function railDeltas(prev, order) {
@@ -1328,12 +1398,12 @@ import { store } from '/oh/oh-store.js';
         get: () => ({ before: slotState(slot).previous, after: slotState(slot).current || [] }),
         set: () => S.home.set,
         mode: 'ghosts', before: $(`p1Ghosts-${slot}`), deltas: $(`p1Deltas-${slot}`), unit, pins: true, swaps: false, leftFirst: true,
-        opening: { sign: '·', cls: 'in', what: slot === 'deals' ? 'The opening four' : 'The opening tiles', why: transport.cur() && transport.cur().fresh ? 'a fresh visitor: nothing sent' : 'the first decision this visitor was served' },
+        opening: { sign: '·', cls: 'in', what: slot === 'deals' ? 'The opening deals' : 'The opening tiles', why: transport.cur() && transport.cur().fresh ? 'a fresh visitor: nothing sent' : 'the first decision this visitor was served' },
         emptyBefore: 'Not seen yet.',
         left: (b, i) => `left ${unit} ${i + 1} · ${wentWhy(b.id)}`,
         lead: () => (slot === 'deals' && S.lead && !S.quiet ? S.lead : '') + (slot === 'deals' && !S.quiet ? (deltas.superseded('deals') || '') : ''),
         held: { title: (d) => (pieceOf(d) || {}).title || d.customerContentId, index: (d) => transport.bySlot(S.home.set, slot).indexOf(d) },
-        nothing: { text: slot === 'deals' ? 'Nothing moved in the four.' : 'The tiles held their order.' },
+        nothing: { text: slot === 'deals' ? 'Nothing moved in the deals.' : 'The tiles held their order.' },
         pending: 'the homepage has not been asked again yet',
         beforeRow: { row: $(`p1Before-${slot}`), label: $(`p1NowLabel-${slot}`), four: $(`p1BeforeCards-${slot}`), card: (d, i) => beforeCard(slot, d, i) },
         title: (d) => (pieceOf(d) || {}).title || d.customerContentId,
@@ -1671,7 +1741,7 @@ import { store } from '/oh/oh-store.js';
 
     // ── What Why these and Compare read on these two pages ──────────────────
     function railRows(R, rail) {
-      const take = rail.take;
+      const take = takeOf(rail);
       return (R.order ? shownOrder(rail, R) : []).slice(0, take).map((id, i) => {
         const it = arr(R.items).find((x) => x.id === id);
         const regs = arr(it && it.drivers).filter((x) => x.dim === 'regional');
@@ -1731,7 +1801,7 @@ import { store } from '/oh/oh-store.js';
       const keyOf = (list) => (list ? list.map((x) => x.id).join('|') : null);
       const railPrev = S.home.rail.prevOrder && railsOf(HOME)[0] ? shownOrder(railsOf(HOME)[0], { order: S.home.rail.prevOrder, pool: S.home.rail.pool }).join('|') : null;
       for (const [name, was, now] of [['the hero', S.home.heroPrev || null, S.home.heroWas || null], ['the room tiles', keyOf(tiles.previous), keyOf(tiles.current)],
-        ['the deals four', keyOf(fours.previous), keyOf(fours.current)], ['the rail across rooms', railPrev, order.length ? order.join('|') : null]]) {
+        ['the deals', keyOf(fours.previous), keyOf(fours.current)], ['the rail across rooms', railPrev, order.length ? order.join('|') : null]]) {
         if (was === null || now === null) continue;
         (was === now ? held : moved).push(name);
       }
@@ -1793,7 +1863,9 @@ import { store } from '/oh/oh-store.js';
       const inForceNow = (p) => Boolean(p) && liveAt(p, Date.now()) && p.inStock !== false && !p.eligibleWhen;
       function template(slot) {
         const def = S.openSlots[slot.slot] || {};
-        const take = num(slot.take) || num(def.take) || 1, div = def.diversity || null, counts = {};
+        // The take of the published opening slots document (beats/open-slots.json, what the template is), else the config's;
+        // own: the hero carousel's own count of slides, not the slot's.
+        const take = (slot.own ? num(slot.take) : num(def.take) || takeOf(slot)) || 1, div = def.diversity || null, counts = {};
         const out = [];
         for (const p of piecesNow()) {
           if (out.length >= take) break;
@@ -1831,7 +1903,7 @@ import { store } from '/oh/oh-store.js';
        *  the struck list price beside it, delivery with its icons, the button. */
       function card(p, o = {}) {
         const id = idOf(p), price = priceNum(p), list = listNum(p);
-        const off = price !== null && list && list > price ? list - price : 0;
+        const off = price !== null && list && list > price ? list - price : 0;   // shown as lg.com does, in whole dollars ("$399 OFF")
         const badges = arr(p.badges).slice(0, 2);
         const cta = p.cta === 'cart' && p.inStock !== false && price !== null
           ? `<button type="button" class="btn btn--brand btn--sm" data-act="store-add" data-sku="${esc(id)}" data-ctl="add-${esc(id)}">Add to Cart</button>`
@@ -1842,7 +1914,7 @@ import { store } from '/oh/oh-store.js';
           ${artHtml(p, 'p1-art--card')}
           <span class="pname">${esc(titleOfP(p))}</span>
           <span class="m1-meta"><span class="m1-sku">${esc(id)}</span>${p.rating ? ` <span class="p1-rating"><i aria-hidden="true">${stars(p.rating)}</i> ${esc(p.rating)}${p.reviews ? ` <em>(${Number(p.reviews).toLocaleString('en-US')})</em>` : ''}</span>` : ''}</span>
-          <span class="pprice">${price !== null ? `<b class="m1-now">${money(price)}</b>` : '<span class="m1-retail">Price at the retailer</span>'}${off ? ` <span class="m1-was"><span class="m1-off">${money0(Math.round(off * 100) / 100)} OFF</span> <s>${money(list)}</s></span>` : ''}</span>
+          <span class="pprice">${price !== null ? `<b class="m1-now">${money(price)}</b>` : '<span class="m1-retail">Price at the retailer</span>'}${off >= 0.5 ? ` <span class="m1-was"><span class="m1-off">${money0(Math.round(off))} OFF</span> <s>${money(list)}</s></span>` : ''}</span>
           <span class="m1-ship">${shipLine(p)}</span>
           <span class="m1-cardbtn">${cta}</span>
           ${o.rank ? `<span class="p1-rank">${o.rank}</span>` : ''}</article>`;
@@ -2222,7 +2294,13 @@ import { store } from '/oh/oh-store.js';
           }
           return sheets.open('m1-info', `<p class="sk">Every series</p><h2 id="sheetTitle">${esc(bare(piece.title || 'Every series'))}</h2><p>${esc(piece.subtitle || '')}</p>${rows.join('')}<p class="p3-fine">The series we list today, by panel type, from the feed.</p>`);
         }
-        const f = cid === 'grid-best-buy-pickup' ? { pickup: ['best-buy-pickup'] } : arr(tags.sizeBand).length ? { sizeBand: arr(tags.sizeBand) } : arr(tags.type).length && arr(tags.type).length < 3 ? { type: arr(tags.type) } : null;
+        // The piece's own tags as the grid's filters: one TV type names the narrowest list (free wall mounting: OLED), else its
+        // sizes, else up to two TV types. A piece about soundbars (a soundbar or Sound Suite bundle) opens their search instead,
+        // since no TV carries its type. (The offer cards under the banner use this too, by data-offer.)
+        const tvTypes = arr(tags.type).filter((t) => ORDER.type.includes(t));
+        const f = cid === 'grid-best-buy-pickup' ? { pickup: ['best-buy-pickup'] } : tvTypes.length === 1 ? { type: tvTypes } : arr(tags.sizeBand).length ? { sizeBand: arr(tags.sizeBand) }
+          : tvTypes.length && tvTypes.length < 3 ? { type: tvTypes } : null;
+        if (!f && arr(tags.category).includes('soundbars')) return store.nav.go(`${BASE}?q=${encodeURIComponent(arr(tags.type).includes('sound-suite') ? 'sound suite' : 'soundbar')}`, { dispatched: true });
         if (f) { G.f = { ...G.f, ...f }; G.show = 24; await store.reask(GRID); }
         const mod = $('mod-tv-grid');
         if (mod) focusOn(mod);
@@ -2299,7 +2377,7 @@ import { store } from '/oh/oh-store.js';
         if (act === 'm1-info') { closeMenus(); info(d.info); return true; }
         if (act === 'm1-pencil') { S.pencil += num(d.step) || 1; pencil(); return true; }
         if (act === 'm1-tab') { S.tab = d.tab === 'entertainment' ? 'entertainment' : 'appliances'; showcase(); return true; }
-        if (act === 'm1-promo') return promo(d.cid);
+        if (act === 'm1-promo') return promo(d.cid || d.offer);
         return undefined;
       }
 
@@ -2380,11 +2458,17 @@ import { store } from '/oh/oh-store.js';
   //   the breadcrumb    Home / the room's grid / the kind / the SKU.
   //   the buy bar       #buyBox, OFF LIMITS to the engine: the title, the SKU and the stars, the price block, the
   //                     financing line as the site shows it, Add to Cart, Notify Me or Find a Retailer as the feed says,
-  //                     and Special Offers. The catalog's, the same for everyone, nothing decided inside. Its twin
-  //                     sticks under the header with the tabs once the bar has scrolled away.
+  //                     and Special Offers. The catalog's, the same for everyone, nothing decided inside. Its twin, one
+  //                     row (the title and SKU, the price, the financing line, the button), sticks with the tabs at the
+  //                     top once the bar has scrolled away: about 100 px together, as lg.com's title bar and tabs (M2b).
   //   the tabs          Overview, Specifications, Features, Reviews, Q&A: each scrolls to its section.
-  //   the gallery       the product's accepted image (D2), else its name on a neutral tile; the feed's badges; the
-  //                     heart, which sends wishlist_add.
+  //   the gallery       the product's pictures as the data has them (picturesOf: D2b's gallery in img/index.json, two
+  //                     for most products, one for some; never an invented one), else its name on a neutral tile and
+  //                     no thumbnail; a thumbnail column at the picture's left at a desk and a row under it on
+  //                     a phone, as lg.com's; a thumbnail shows its picture; the feed's badges; the heart, which
+  //                     sends wishlist_add.
+  //   on a phone        lg.com's phone order: the crumbs, the tabs, the title block, then the gallery; the price and the
+  //                     two buttons dock to the foot of the screen (M2b; the styles are oh.css's).
   //   the offer carousel pdp-offers, DECIDED (take 2), in the engine's order, each card with its receipt. It sits under
   //                     the gallery, not at the head of the buy column, so nothing decided sits near the financing line.
   //   the buy column    static, the catalog's, the same for everyone: key features; delivery and pickup for her real
@@ -2499,7 +2583,9 @@ import { store } from '/oh/oh-store.js';
   const P2 = { docs: null, display: new Map(), images: new Map(), sort: null, last: null, prevRoom: null, gone: [], sizeUp: null,
     rows: { 'pdp-modules': {}, 'pdp-offers': {} },
     // Her choices in the buy column (the services, one per group), kept across a size or colour of the same kind; her wishlist.
-    sel: { sku: null, kind: null, picks: {} }, wished: new Set() };
+    sel: { sku: null, kind: null, picks: {} }, wished: new Set(),
+    // The gallery: the product it shows, its pictures and the one in the main frame; the stuck twin's last measured height.
+    pics: { sku: null, list: [], at: 0 }, twinH: 0 };
 
   // ── Its documents: D1's display catalog (packages' prices), D2's image index ──
   function loadProductDocs() {
@@ -2551,6 +2637,35 @@ import { store } from '/oh/oh-store.js';
     const feed = !own && p.image && !/placeholder/.test(String(p.image)) ? p.image : null;
     const src = own || feed;
     return src ? `<img src="${esc(src)}" alt="${esc(name)}" width="${size}" height="${size}" ${eager ? 'decoding="async"' : 'loading="lazy"'} data-p2ph="${esc(tile)}">` : tile;
+  }
+  /**
+   * The product's pictures, as the data has them, for the gallery. D2b's `gallery` in img/index.json, in its order, where
+   * the row carries one: the first is the row's `src`, the second (where D2b found one) `<id>-2.webp`; two for 549
+   * products, one for 42, none for the 11 placeholders, which keep today's placeholder in the main frame and draw no
+   * thumbnail. D2's 840-pixel rendition goes in the first picture's srcset only (the second has none). A row without the
+   * field: D2's accepted file, else the feed's own link. Never an invented picture, and never the feed's link beside
+   * D2's files: for most TVs and some appliances it names another LG gallery picture that D2's gate never checked.
+   */
+  function picturesOf(p) {
+    if (!p) return [];
+    const entry = P2.images.get(idOf(p));
+    if (entry && Array.isArray(entry.gallery)) {
+      const big = entry.large && (entry.large.webp || entry.large.png || entry.large.jpg);
+      return entry.gallery.filter(Boolean).map((src, i) => ({ src: String(src),
+        srcset: i === 0 && big && src === entry.src ? `${src} ${Number(entry.size) || 420}w, ${big} ${Number(entry.large.size) || 840}w` : null }));
+    }
+    if (entry && entry.verdict === 'accept' && entry.src) {
+      const big = entry.large && (entry.large.webp || entry.large.png || entry.large.jpg);
+      return [{ src: String(entry.src), srcset: big ? `${entry.src} ${Number(entry.size) || 420}w, ${big} ${Number(entry.large.size) || 840}w` : null }];
+    }
+    const feed = p.image && !/placeholder/.test(String(p.image)) ? String(p.image) : null;
+    return feed ? [{ src: feed, srcset: null }] : [];
+  }
+  /** One picture as the gallery draws it: the main frame (named, sharp where a larger rendition exists) or a thumbnail (its button names it). */
+  function pictureHtml(pic, p, main) {
+    const name = nameOf(p), size = main ? 560 : 96;
+    const tile = `<span class="ph-tile" role="img" aria-label="${esc(name)}">${esc(name)}</span>`;
+    return `<img src="${esc(pic.src)}"${main && pic.srcset ? ` srcset="${esc(pic.srcset)}" sizes="(max-width: 900px) 92vw, 560px"` : ''} alt="${main ? esc(name) : ''}" width="${size}" height="${size}" decoding="async" data-p2ph="${esc(tile)}">`;
   }
   // A link that does not answer is replaced by the tile with its name: never a broken image on screen.
   document.addEventListener('error', (e) => {
@@ -2606,18 +2721,26 @@ import { store } from '/oh/oh-store.js';
     const track = $('slot-pdp-offers');
     if (track && !track.dataset.p2) { track.dataset.p2 = '1'; track.addEventListener('scroll', () => syncOffers(), { passive: true }); }
   }
-  /** Where the sticky row sits: under the header when the header sticks (M1's does), else at the top. */
+  /**
+   * Where the sticky row sits: under the header while the header is on screen and sticks (or is fixed), else at the top.
+   * The header scrolls away at every width now (M1e, as lg.com's), so the row sits at 0 and the stack is the row alone;
+   * a header that sticks or hides itself on scroll is read where it is, never assumed.
+   */
   function stickTop() {
     const head = document.querySelector('#site .site-header');
-    const sticky = head && getComputedStyle(head).position === 'sticky';
-    const top = sticky ? Math.round(head.getBoundingClientRect().height) : 0;
+    const pos = head ? getComputedStyle(head).position : '';
+    const top = pos === 'sticky' || pos === 'fixed' ? Math.max(0, Math.round(head.getBoundingClientRect().bottom)) : 0;
     const view = $('view-product');
-    if (view) view.style.setProperty('--pdp-stick-top', `${top}px`);
+    if (view && view.style.getPropertyValue('--pdp-stick-top') !== `${top}px`) view.style.setProperty('--pdp-stick-top', `${top}px`);
     return top;
   }
-  /** A section's own box: at a phone's width the overview's wrapper lays out its children directly (display: contents), so its first child stands for it. */
+  /**
+   * A section's own box: at a phone's width the overview's wrapper lays out its children directly (display: contents),
+   * and the title block comes first there (lg.com's phone order), so the buy bar's box stands for the overview.
+   */
   function boxOf(id) {
     let n = $(id);
+    if (id === 'pdpTop' && n && !n.getClientRects().length && $('buyBox') && $('buyBox').getClientRects().length) return $('buyBox');
     while (n && !n.getClientRects().length && n.firstElementChild) n = n.firstElementChild;
     return n;
   }
@@ -2639,11 +2762,15 @@ import { store } from '/oh/oh-store.js';
       const view = $('view-product');
       const on = Boolean(view && !view.hidden && bar.getBoundingClientRect().bottom < stickTop() + 1);
       if (stick.classList.contains('is-stuck') !== on) stick.classList.toggle('is-stuck', on);
+      // The twin's height, measured while it shows: the tabs and the sections land under the whole stuck row (M2b).
+      const twin = $('pdpStickBar');
+      if (on && twin && twin.offsetHeight) P2.twinH = twin.offsetHeight;
+      const full = stick.offsetHeight + (on ? 0 : twinHeight());
       // The gallery column stays in view beside a longer buy column, as lg.com's does, when it fits under the sticky row.
       const left = document.querySelector('#view-product .pdp-left');
       if (view && left) {
-        view.style.setProperty('--pdp-stick-h', `${stick.offsetHeight}px`);
-        const fits = window.innerWidth > 900 && left.offsetHeight + stickTop() + stick.offsetHeight + 32 <= window.innerHeight;
+        if (view.style.getPropertyValue('--pdp-stick-h') !== `${full}px`) view.style.setProperty('--pdp-stick-h', `${full}px`);
+        const fits = window.innerWidth > 900 && left.offsetHeight + stickTop() + full + 32 <= window.innerHeight;
         if (left.classList.contains('is-pinned') !== fits) left.classList.toggle('is-pinned', fits);
       }
     };
@@ -2652,6 +2779,11 @@ import { store } from '/oh/oh-store.js';
     window.addEventListener('scroll', tick, { passive: true });
     window.addEventListener('resize', tick, { passive: true });
     tick();
+  }
+  /** The twin's height once it shows (it shows at a desk only): its last measure, else the one row oh.css gives it. */
+  function twinHeight() {
+    if (window.innerWidth <= 900 || document.body.classList.contains('shell--phone')) return 0;
+    return P2.twinH || 57;
   }
 
   // ── The buy box: off limits, the catalog's own facts, the same for everyone ──
@@ -2740,10 +2872,11 @@ import { store } from '/oh/oh-store.js';
       + `<div class="bb-dock"><div class="bb-pricebox"><div class="bb-price" id="bbPrice">${priceHtml(p)}</div>${fin ? finHtml(fin, 'bbFin') : ''}</div>`
       + `<div class="bb-actions">${ctaHtml(p, 'bar')}<button type="button" class="btn btn--line" data-act="pdp-tab" data-to="mod-pdp-offers" data-ctl="special-offers">Special Offers</button></div></div>`
       + `<p class="offlimits"><b>Off limits</b> the title, the price, the ${v.label === 'Size' ? 'sizes' : 'colours'}, the button and the financing line are the catalog’s, the same for everyone · never decided, never personalised</p>`;
+    // The twin is one row (M2b): the title over the SKU, the price, the financing line, the button; the same facts, smaller.
     const twin = $('pdpStickBar');
     if (twin) {
       twin.innerHTML = `<div class="bb-head"><b class="bb-title">${esc(titleOfProduct(p))}</b><span class="bb-sku">${esc(p ? idOf(p) : '')}</span></div>`
-        + `<div class="bb-pricebox"><div class="bb-price">${priceHtml(p)}</div>${fin ? finHtml(fin) : ''}</div><div class="bb-actions">${ctaHtml(p, 'stick')}</div>`;
+        + `<div class="bb-price">${priceHtml(p)}</div>${fin ? finHtml(fin) : ''}<div class="bb-actions">${ctaHtml(p, 'stick')}</div>`;
     }
   }
 
@@ -2757,14 +2890,46 @@ import { store } from '/oh/oh-store.js';
       return !m || (state.pieces.has(m[1]) && !catalogWhy(m[1]));
     });
   }
+  /**
+   * The gallery, as lg.com's (M2b): the picture in the main frame; a thumbnail for each of the product's pictures (a column
+   * at the picture's left at a desk, a row under it on a phone; oh.css), the one shown pressed; the feed's badges; the
+   * heart. A product with no picture shows today's placeholder and no thumbnail. A thumbnail press puts its picture in
+   * the main frame (showPicture); the thumbnails are the gallery's controls, with no arrows beside them. The pictures are
+   * the catalog's, the same for everyone; looking at one sends nothing.
+   */
   function renderGallery(p) {
     const box = $('pdpGallery');
     if (!box) return;
     const badges = galleryBadges(p);
     const on = Boolean(p && P2.wished.has(idOf(p)));
-    box.innerHTML = `<div class="pdp-gmain">${imageHtml(p, 560, true)}</div>`
+    const list = picturesOf(p), sku = p ? idOf(p) : null;
+    if (P2.pics.sku !== sku) P2.pics = { sku, list, at: 0 };
+    else P2.pics.list = list;
+    const at = Math.min(P2.pics.at, Math.max(0, list.length - 1));
+    P2.pics.at = at;
+    box.classList.toggle('pdp-gallery--bare', !list.length);
+    const html = `<div class="pdp-gmain">${list.length ? pictureHtml(list[at], p, true) : imageHtml(p, 560, true)}</div>`
+      + (list.length ? `<div class="pdp-gthumbs" role="group" aria-label="Pictures of the ${esc(nameOf(p))}">${list.map((pic, i) => `<button type="button" class="pdp-gthumb" data-act="pdp-thumb" data-i="${i}" data-ctl="thumb-${i + 1}" aria-pressed="${i === at}" aria-label="Picture ${i + 1} of ${list.length}">${pictureHtml(pic, p, false)}</button>`).join('')}</div>` : '')
       + (badges.length ? `<div class="pdp-gbadges">${badges.map((b) => `<span class="pdp-gbadge">${esc(b)}</span>`).join('')}</div>` : '')
       + (p ? `<button type="button" class="pdp-wish" data-act="pdp-wish" data-ctl="wishlist" aria-pressed="${on}" aria-label="${on ? 'Saved to your wishlist: remove it' : 'Save to your wishlist'}">${HEART}</button>` : '');
+    // A repaint with nothing changed leaves the gallery's nodes alone: a press on the heart or a thumbnail that lands while
+    // the page asks again (after Back, say) is never lost to its button being replaced between the press and the release.
+    if (box.p2html === html && box.firstElementChild) return;
+    box.innerHTML = html;
+    box.p2html = html;
+  }
+  /** A thumbnail: its picture in the main frame, the thumbnail pressed. Looking at a picture is not a taste: nothing is sent. */
+  function showPicture(i) {
+    const p = productOf(state.productId), n = P2.pics.list.length, at = Math.trunc(Number(i));
+    if (!p || !n || P2.pics.sku !== idOf(p) || !(at >= 0 && at < n)) return;
+    const main = document.querySelector('#pdpGallery .pdp-gmain');
+    if (main && at !== P2.pics.at) {
+      const was = main.querySelector('img, .ph-tile');
+      if (was) was.remove();
+      main.insertAdjacentHTML('afterbegin', pictureHtml(P2.pics.list[at], p, true));
+    }
+    P2.pics.at = at;
+    for (const b of document.querySelectorAll('#pdpGallery .pdp-gthumb')) b.setAttribute('aria-pressed', String(Number(b.dataset.i) === at));
   }
 
   // ── The buy column: static, the catalog's, the same for everyone ──────────
@@ -3612,7 +3777,10 @@ import { store } from '/oh/oh-store.js';
     store.cart.open();
     return true;
   }
-  /** A tab, or Special Offers: the section scrolls in under the sticky row. */
+  /**
+   * A tab, or Special Offers: the section scrolls in under the sticky row. The row is in the page's flow, so when its twin
+   * appears on the way down the sections below move down by the twin's height too: the row's height now is the offset.
+   */
   function scrollToSection(to) {
     const node = boxOf(to);
     if (!node) return;
@@ -3631,14 +3799,22 @@ import { store } from '/oh/oh-store.js';
       await store.events.send('wishlist_add', { sku, control: 'gallery' }, { note: ['saved', nameOf(p), 'to the shopper’s wishlist · wishlist_add, the engine’s own action, with its attributes'] });
       store.ui.toast(`Saved to your wishlist: ${nameOf(p)}`, 'good');
     }
+    // The heart on screen now, as well as the one pressed: the page may have repainted the gallery between the press and
+    // this line (the dispatcher awaits the visitor first), and a detached button would leave the saved state invisible (M2b).
     const on = P2.wished.has(sku);
-    t.setAttribute('aria-pressed', String(on));
-    t.setAttribute('aria-label', on ? 'Saved to your wishlist: remove it' : 'Save to your wishlist');
+    for (const h of new Set([t, document.querySelector('#pdpGallery .pdp-wish')])) {
+      if (!h) continue;
+      h.setAttribute('aria-pressed', String(on));
+      h.setAttribute('aria-label', on ? 'Saved to your wishlist: remove it' : 'Save to your wishlist');
+    }
   }
   /** An offer card: its terms open and close (the press is a decided click, credited by the dispatcher before this runs). */
   function toggleOffer(t) {
-    const card = t.closest ? t.closest('.pdp-offer') : null;
-    if (!card) return;
+    const pressed = t.closest ? t.closest('.pdp-offer') : null;
+    if (!pressed) return;
+    // The card on screen with the same decision, when the track was repainted between the press and this line (M2b).
+    const card = pressed.isConnected ? pressed
+      : document.querySelector(`#slot-pdp-offers > .pdp-offer[data-cid="${CSS.escape(pressed.dataset.cid || '')}"]`) || pressed;
     const open = card.getAttribute('aria-expanded') !== 'true';
     card.setAttribute('aria-expanded', String(open));
     const terms = card.querySelector('.pdp-oterms'), more = card.querySelector('.pdp-omore');
@@ -3673,6 +3849,7 @@ import { store } from '/oh/oh-store.js';
     if (act === 'pdp-offer') { toggleOffer(t); return true; }
     if (act === 'pdp-wish') { await toggleWish(t); return true; }
     if (act === 'pdp-notify') { await notifyMe(); return true; }
+    if (act === 'pdp-thumb') { showPicture(t.dataset.i); return true; }
     return undefined;
   });
 

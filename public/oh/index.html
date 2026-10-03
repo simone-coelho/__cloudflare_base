@@ -115,10 +115,12 @@
         <div class="cards cards--many" id="slot-category-rail" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-category-rail" hidden></p>
       </section>
-      <!-- Slot deals, take 4: the page renders what comes back, in the order it comes back. -->
+      <!-- Slot deals, take 5: the page renders what comes back, in the order it comes back. At a desk lg.com's bento (the tall
+           tile, then a 2 × 2 block, five decided pieces), one honesty line and each tile's receipt under the set; at a phone's
+           width one at a time, each receipt under its tile. -->
       <section class="module decided" id="mod-deals" data-slot="deals" aria-labelledby="head-deals">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>deals</b> &middot; take 4</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>deals</b> &middot; take 5</p>
           <h2 id="head-deals">Discover OH. deals</h2>
         </div></header>
         <div class="m1-deal-head static"><button type="button" class="btn btn--brand" data-nav="offers" data-ctl="deals-all">View all deals</button>
@@ -145,7 +147,7 @@
       <!-- Rail for-you: POST /sort across the rooms; before a visitor, the template's own order. -->
       <section class="module decided" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
         <header class="module-head"><div>
-          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 8</p>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 12</p>
           <h2 id="head-for-you">Recommended for you</h2>
         </div><span class="rail-chip" id="chip-for-you">the site&rsquo;s own order</span></header>
         <div class="rail" id="rail-for-you"></div>
@@ -188,6 +190,13 @@
         <div class="cards cards--one" id="slot-grid-promo" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
         <p class="engine-down" id="down-grid-promo" hidden></p>
       </section>
+      <!-- lg.com's row of offer cards under the banner: static, the same for everyone. oh.js (M1e) draws the catalog's own TV
+           promotions in force, in its order, with each piece's own copy; the one the banner shows is left out. -->
+      <section class="m1-offers static" id="m1Offers-tvs" aria-label="TV offers" hidden>
+        <div class="m1-offers-track" id="m1OffersTrack"></div>
+        <div class="m1-offers-foot"><div class="m1-pager static" data-pager-for="m1OffersTrack"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="offers-page-prev" aria-label="Previous offers" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="offers-page-next" aria-label="Next offers">&rsaquo;</button></div>
+          <p class="m1-offers-note"><span class="nper">not personalised</span> the offers in force, in the catalog’s own order, the same for everyone</p></div>
+      </section>
       <div class="m1-quick static" id="m1Quick-tvs" aria-label="TV types"></div>
       <div class="m1-layout">
         <aside class="m1-filters static" id="m1Filters-tvs" aria-label="Filters"></aside>
@@ -211,7 +220,7 @@
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Laundry</span></nav>
       <header class="view-head"><div class="view-head-text"><h1 class="view-title">Washers &amp; dryers</h1><span class="p1-sub">Front-load and top-load washers, gas and electric dryers, WashTower, all-in-one, laundry sets and pedestals</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-laundry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
       <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
-      <section class="m1-banner m1-banner--static static" aria-label="Laundry">
+      <section class="m1-banner m1-banner--static static" aria-label="Laundry" data-room="laundry-room">
         <div class="m1-banner-art" id="m1BannerArt-laundry" data-room="laundry-room" data-skus="WM4000HWA DLEX4000W"></div>
         <div class="m1-banner-copy"><p class="p1-kicker">Laundry</p><h2>A laundry room that runs itself</h2><p class="p1-sub">Front-load pairs that stack, WashTower, all-in-one and the pedestals that raise them; the width is on every one we list.</p>
           <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="laundry" data-filter="category:laundry-sets" data-ctl="banner-laundry">Shop laundry sets</button></div>
@@ -238,7 +247,7 @@
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Kitchen</span></nav>
       <header class="view-head"><div class="view-head-text"><h1 class="view-title">Kitchen</h1><span class="p1-sub">Ranges, over-the-range microwaves, dishwashers and kitchen packages</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
       <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
-      <section class="m1-banner m1-banner--static static" aria-label="Kitchen">
+      <section class="m1-banner m1-banner--static static" aria-label="Kitchen" data-room="kitchen">
         <div class="m1-banner-art" id="m1BannerArt-kitchen" data-room="kitchen" data-skus="LSGL6335X MVEM1825F"></div>
         <div class="m1-banner-copy"><p class="p1-kicker">Kitchen</p><h2>Cook, vent and clean up, matched</h2><p class="p1-sub">Ranges in your fuel, the microwave above them and a dishwasher to finish; every package priced beside its pieces bought apart.</p>
           <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="kitchen" data-filter="category:kitchen-packages" data-ctl="banner-kitchen">Shop kitchen packages</button></div>
@@ -265,7 +274,7 @@
       <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Offers</span></nav>
       <header class="view-head"><div class="view-head-text"><h1 class="view-title">Offers</h1><span class="p1-sub">Everything on sale today, across TVs, laundry and the kitchen; the same prices for everyone</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-offers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
       <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
-      <section class="m1-banner m1-banner--static static" aria-label="Offers">
+      <section class="m1-banner m1-banner--static static" aria-label="Offers" data-room="living-room">
         <div class="m1-banner-art" id="m1BannerArt-offers" data-room="living-room" data-skus="OLED77G6WUA WM4000HWA"></div>
         <div class="m1-banner-copy"><p class="p1-kicker">Offers</p><h2>Everything on sale today</h2><p class="p1-sub">Across TVs, laundry and the kitchen; the same prices for everyone, and the dates each offer runs.</p>
           <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="offers" data-filter="room:living-room" data-ctl="banner-offers">Shop TV offers</button></div>

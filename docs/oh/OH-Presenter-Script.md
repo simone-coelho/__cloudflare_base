@@ -1,6 +1,6 @@
 # OH: the presenter script
 
-**Hosted: https://edge-platform-oh.expedge.workers.dev/oh/** · version `cd3775e2` from `bbf8a9d`, reseeded on 2026-10-03 with the sixty-second dials (51 of 51 regions, no census term in the lean); lane E4, the engine's action speed, deploys next, so the version id will move. TV grid `/oh/?view=tvs`, a product `/oh/product?id=<sku>`, search `/oh/?q=<words>`, the phone `/oh/m`.
+**Hosted: https://edge-platform-oh.expedge.workers.dev/oh/** · version `dd29784d` from `6157ae7` (the engine's action speed, lane E4, in it), reseeded on 2026-10-03 with the sixty-second dials (51 of 51 regions, no census term in the lean); the version id moves with each deploy and `docs/oh/RESUME-oh.md` has the current one. TV grid `/oh/?view=tvs`, a product `/oh/product?id=<sku>`, search `/oh/?q=<words>`, the phone `/oh/m`.
 
 OH is a working store first and a scripted walk second: open it cold and click, then walk sixteen beats in eight acts with **Next →**. Figures come from the lane reports of 2026-10-02 and 10-03 and the hosted runs; where one depends on the walk or the time since the last click, the script says so, and the screen wins. Quotes keep the screen's words; a product keeps its own name as the catalog has it. **OH** is fictional; the products, their names, images and prices are the customer's, as listed publicly on or before 2 October 2026; offers, packages, delivery dates, retailer lists and regional sales are representative, and the footer says so.
 
@@ -36,7 +36,7 @@ Do this before any beat, at `/oh/`, with the director collapsed. It is the most 
 
 **Now open the director** (D) and keep it open for the clicks: "What has been signalled" reads "No dimension has evidence yet."
 
-**The rhythm: click, watch Just now, then click again.** Every event the store sends redraws the panel, the receipts and the before/now strips when the engine answers, exactly as after a press; **Just now**, at the top of the panel, names what the click changed. Wait for it to move, so the room sees each click land; hosted, the answer can take a moment. Between clicks the readings drift down: that is the one-minute dial, not a fault. *Hosted figure, click to Just now: to be measured by the lead after lane E4's deploy, and named here then.*
+**The rhythm: click, watch Just now, then click again.** Every event the store sends redraws the panel, the receipts and the before/now strips when the engine answers, exactly as after a press; **Just now**, at the top of the panel, names what the click changed. Wait for it to move, so the room sees each click land; hosted, the answer can take a moment. Between clicks the readings drift down: that is the one-minute dial, not a fault. *Hosted figure, measured by the lead from the live page on 2026-10-03 after lane E4's deploy: an Add to Cart's answer in about half a second (537 ms; ten replayed actions 433 to 587 ms, median 453), and Just now moving with it (542 ms from the click); before E4 the same answer took 1.0 to 2.1 s. A profile read answers in under a tenth of a second.*
 
 Then click, in this order; each line is what the lanes measured by real clicks.
 

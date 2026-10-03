@@ -136,7 +136,7 @@
    ],
    "will": [
     "<b>room</b> and <b>type</b> rise on the shopper’s own meters: the living room and the laundry room, the TVs’ panel and a front-load",
-    "The room tiles reorder on the shopper’s rooms; the deals four hold both rooms by the slot’s own rule; <b>Recommended for you</b> asks POST /sort for each room’s four, then across the rooms, so it balances them instead of swapping wholesale"
+    "The room tiles reorder on the shopper’s rooms; the five deals hold both rooms by the slot’s own rule; <b>Recommended for you</b> asks POST /sort for each room’s four, then across the rooms, so it balances them instead of swapping wholesale"
    ],
    "line": "The shopper opens two TVs, then a front-load washer, and the homepage changes with them, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
    "run": [
@@ -586,7 +586,7 @@
    ],
    "will": [
     "The pin takes <b>container 1</b> for everyone (a pin is a required prefix); its receipt reads <b>ranking skipped</b>",
-    "Its receipt names what the engine would have led with, read off a ranked decision’s own receipt; the other three are still ranked for the shopper"
+    "Its receipt names what the engine would have led with, read off a ranked decision’s own receipt; the other four are still ranked for the shopper"
    ],
    "line": "The merchandiser pins a launch series. The pin leads, and its receipt says so: <b>the merchandiser outranks the engine, visibly</b>.",
    "run": [
