@@ -2008,3 +2008,86 @@ One headless Chrome at 390 × 844, mobile, fresh profile, real CDP mouse and whe
 **Other writers in the tree meanwhile:**
 - `oh.js` was written at 06:02:47, after my 05:58:12 edits; my two lines stand.
 - `product.html` was written at 05:55:19 (above).
+
+### K8: OH's engine panel restored (the classic meters, Meridian's audiences, a scrolling middle in the dock)
+
+The full report is `docs/lg/lanes/K8.md`. This lane carried out the coordinator's change of brief, from Simone: restore, do not redesign, and bring back Meridian's audiences under the meters. The first brief, rows-first, was superseded before any build.
+
+- **Before** (`shots/K8-before-1440.png`, my rig, 1440×900, a fresh visitor's Add to Cart on WM4000HWA):
+  - "Just now" had 18 lines, with raw audience ids in red.
+  - The dimension rows began at y = 746, below the machine's bottom at 687.
+  - The tabs were at y = 1229 and the panes were 0 px high, all cut off by the column's `overflow: hidden`.
+  - The bars were 4 px high.
+- **After** (`shots/K8-vantage-vs-oh-1440.png` puts Vantage's panel beside OH's, each after Add to Cart):
+  - **From Vantage, unchanged in the kit's classic path:** the eight strongest values as meters (7 px track, θin tick, regional mark, white over θin, glow when moved), the λ and memory line, the five tabs, the Session journey, Capture / Compare.
+  - **From Meridian** (`index.html` 157, `meridian.js` 2990–2997, `meridian.css` 235–242): the audience chips under the meters. They are the memberships the engine holds, named "washers · category" (never the id); an entering chip lands green, a leaving chip fades over 1.2 s. The caption reads "Audiences · 11 in · +11 −0 on add_to_cart".
+  - **The only layout change:** in the dock, at 1180 px and wider, the column scrolls in its middle. The header and Capture / Compare stay put, the director bar stays below as built, and the tab bar is pinned at the middle's edge so it is always on screen; choosing a tab brings its pane into view.
+  - **What is gone:** the rows mode and "Just now" are removed from the kit. M3's redraw after a manual event and M3b's draw from the action's answer now feed the classic `renderVectors`.
+  - **Shots:** the 1440, 1920 and 390 shots (`?present=1`) are in `shots/K8-after-*.png`.
+- **Files:**
+
+  | File | Δ |
+  |---|---|
+  | `public/demo-kit/panels.js` | +109 −75 |
+  | `public/demo-kit/kit.css` | +34 −18 |
+  | `public/demo-kit/director.js` | +12 −3; the dock's `fit()` measures the machine's header and tools for the pinned tabs |
+
+  No OH page markup changed: it is already Vantage's. Vantage's own files are untouched, and without the dock and `config.signals` nothing in its panel changes.
+- **Counts** (OH rig 9195 at `.wrangler/state-k8`, Vantage rig 9198 at `.wrangler/state-k8v`; both prepared, seeded with `--out`, region seeds 51 of 51; the DOM suites run one at a time):
+
+  | Suite | Result |
+  |---|---|
+  | OH DOM `--only store` | **155 of 161** |
+  | OH DOM, full | **500 of 506**, plus the known beat-16 page defect on wrangler dev |
+  | OH request level | **231 of 231** |
+  | Vantage request level | **115 of 115** |
+  | Vantage DOM | **298 of 298** |
+
+  The six OH failures are the rows-mode checks, all reading `DIM_ROWS` (`scripts/rehearse-oh-dom.mjs` 1276–1284).
+- **For S2.** These lines fail and need rewriting against the restored panel: 1319 (read at 1317), 1344, 1346 (read at 1342), 1360 and 1361 (read at 1356), and 1448 (read at 1426). `K8.md` gives, for each one, what the restored panel offers instead, plus:
+  - the classic rows' selectors: `#vectors .vecrow`, `.vectop span/em/b`, `.vecrow--fresh`
+  - the audiences' markup: `#audBox`, `#audHead`, `#audChips .audchip[data-aud]` with `--new` and `--gone`, and `.aud-none`
+  - the tab ids: `tab-arrival`, `tab-session`, `tab-why`, `tab-report`, `tab-next`
+  - the Session text for a manual Add to Cart: `added` · "4.5 cu. ft. Front Load Washer (WM4000HWA)" · "add_to_cart, the order-start action, with its attributes, credited to the decision that led here (N on the trail)"
+- **For the owner of `oh.js` and `oh-store.js`:**
+  - `oh.js` 348–350 still says `signals: { byDimension: true }`, with a comment describing the rows mode. The kit reads that key as the audiences' opt-in. The clean form is `signals: { audiences: true }`.
+  - `oh-store.js` 426 and 447 still mention the "just now" strip.
+- **The rigs** are left running as this session's background tasks (9195 with inspector 9395; 9198 with inspector 9398): the brief rules out process kills. `public/oh` and `public/vantage` are clean. Nothing is committed.
+
+#### K8, second pass (the coordinator's three items, and the store's sends)
+
+1. **The tab bar.** Pinning to the bottom edge is gone (`kit.css`, the dock block).
+   - The bar sits in the flow under the card, with the active pane directly under it. Once scrolled past, it sticks to the top of the middle, under the header.
+   - Choosing a tab scrolls `#machine` so the bar is at the top and its pane fills the rest (`panels.js` `selectTab`). The panes' `min-height` comes from the header, tab-bar and tools heights that the dock's `fit()` measures (`director.js`).
+   - At 1440×900, choosing Arrival after an Add to Cart puts the bar at y = 133–169, directly under the header, with the pane from 169.
+   - `shots/K8-vantage-vs-oh-1440.png` now has three columns: Vantage, OH after Add to Cart, OH with the Arrival tab chosen. The 1440 and 1920 `K8-after-*` shots are retaken, with `…-arrival-tab-chosen.png` added.
+2. **The config contract.**
+   - `oh.js` 348–349 is now `signals: { audiences: true }` with a one-line comment (+2 −3). The kit still accepts `byDimension` for a transition.
+   - The "just now" comments in `oh-store.js` (423–426, 446–447) now describe the meters drawn from the answer and the audience chips.
+3. **The store's sends** (S2's new check; the coordinator's word).
+   - `oh-store.js` 1095–1096 now pass the event's name: `drawEarly(r, type, who)` and `drawEarly(r, name, who)`, in place of `null`. With no name, `drawEarly` had dropped the answer's `changed`. After a page-load product view the chips were therefore unmarked, with a bare "Audiences · 2 in".
+   - Total for `oh-store.js`: +9 −8.
+   - **By hand on my rig.** A stranger opens two TVs from the TV grid, then the Laundry menu's Washers, then the first washer. Its answer said `enter pricetier_best_affinity (product_view)`. The chip landed green under "Audiences · 1 in · +1 −0 on product_view" (`shots/K8-after-1440-washer-after-tvs.png`).
+   - **Deterministic.** One washer page loaded three times: the third view's +11 are all green, "on product_view" (`shots/K8-after-1440-third-washer-load.png`).
+4. **Counts** (one at a time):
+
+   | Run | Result |
+   |---|---|
+   | OH `--only store`, old suite | 155 of 161: the six rows-mode checks. S2's rewrite landed after this run had loaded the old file |
+   | Vantage DOM | **298 of 298** |
+   | OH `--only store`, S2's rewrite (`15064d44…`), before the store change | 172 of 173: the unmarked chips |
+   | OH `--only store`, the same suite, after it | **172 of 173** |
+
+   In that last run the chip check passes ("+2 −0 on product_view"). The one failure is "one visitor … refused custom 503": the rig log shows `POST /realtime/action 503` straight after `POST /oh/api/report 200 (11358 ms)`, the known event refusal on wrangler dev while a report builds (the beat-16 page defect, Vantage RESUME finding 3). That check passed in the two store runs before it and in the full run.
+5. **The rigs** are stopped with Ctrl-C (SIGINT) to their own `rig.mjs`, pids 27661 and 37626, at 11:04:16. Both exited 130. Ports 9195, 9198, 9395 and 9398 are free and the states are kept. Nobody else's process was touched.
+6. **Final hashes:**
+
+   | File | Hash |
+   |---|---|
+   | `panels.js` | `88a9d194…` |
+   | `kit.css` | `59ab221c…` |
+   | `director.js` | `b4506ffd…` |
+   | `oh.js` | `64455c01…` |
+   | `oh-store.js` | `112d7162…` |
+
+   `public/vantage` is clean. Nothing is committed. Ready for the deploy.

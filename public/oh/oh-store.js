@@ -421,10 +421,10 @@ function afterOf(answer) {
 /** Whether an answer is about the visitor on screen (its session is hers). */
 const forHer = (answer, v) => { const c = H && T().cur(); return Boolean(c && (!v || v === c) && c.session && (!answer || !answer.sessionId || answer.sessionId === c.session.sessionId)); };
 /**
- * The panel the moment an answer lands, before anything else is asked: its rows drawn from the answer's dims, or, when
- * the engine sent none, her profile read at once rather than after the page's question. trigger names the event for the
- * "just now" strip (none: the strip reads as after a page's own question). The read that follows, the page's after its
- * question, confirms it.
+ * The panel the moment an answer lands, before anything else is asked: its meters drawn from the answer's dims, or,
+ * when the engine sent none, her profile read at once rather than after the page's question; the audiences the answer
+ * reports entering or leaving move the chips under the meters, and trigger names the event in their caption (none: the
+ * caption keeps the last change). The read that follows, the page's after its question, confirms it.
  */
 function drawEarly(r, trigger, v) {
   const a = r && r.ok ? afterOf(r.body) : null;
@@ -444,7 +444,7 @@ function drawEarly(r, trigger, v) {
 let refreshing = null, refreshAgain = false, lastAnswer = null;
 function refreshSignals(answer, type) {
   // The action's own answer: the state after the event (dims), the audiences it reports entering or leaving and its
-  // trigger, for the panel and the "just now" strip; the event's own name is the trigger.
+  // trigger (the event's own name): the panel's meters are redrawn from it at once and its audience chips move.
   const a = afterOf(answer);
   lastAnswer = { changed: a ? a.changed : [], trigger: type || null };
   if (a && a.dims && forHer(answer)) { try { Promise.resolve(P().renderVectors({ ...lastAnswer, dims: a.dims })).catch(() => {}); } catch { /* no panel */ } }
@@ -1089,11 +1089,12 @@ function bind(host) {
   // visitor A is kept the moment it answers, not when the page around it has finished asking.
   t.ensureVisitor = async () => { const v = await ensureVisitor(); persist(v); return v; };
   // The page's own events straight to the kit (a page view, a product view, a declared fit), by hand, never in a beat:
-  // the panel is drawn the moment the answer lands, while the page asks its question, whose read confirms it. The
+  // the panel is drawn the moment the answer lands, with the event's name, so the audience chips mark what its answer
+  // reported, while the page asks its question, whose read confirms it. The
   // store's own events go out on the kit's sends as they were (raw) and draw in send().
   raw = { cur: t.cur, send: t.send, sendCustom: t.sendCustom };
-  t.send = async (type, data, v) => { const who = v || t.cur(), r = await raw.send(type, data, v); if (!S().busy) drawEarly(r, null, who); return r; };
-  t.sendCustom = async (name, data, v) => { const who = v || t.cur(), r = await raw.sendCustom(name, data, v); if (!S().busy) drawEarly(r, null, who); return r; };
+  t.send = async (type, data, v) => { const who = v || t.cur(), r = await raw.send(type, data, v); if (!S().busy) drawEarly(r, type, who); return r; };
+  t.sendCustom = async (name, data, v) => { const who = v || t.cur(), r = await raw.sendCustom(name, data, v); if (!S().busy) drawEarly(r, name, who); return r; };
   // A new walk (beat 1's arrival) is a new stranger: her cart starts empty.
   H.lanes.beforeBeat.push((b) => { if (b && b.data && b.data.arrives) clearAll(); });
   style();

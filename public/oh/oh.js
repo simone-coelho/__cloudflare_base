@@ -345,9 +345,8 @@ import { store } from '/oh/oh-store.js';
     // The director docked right, collapsed to a slim rail by default so the site is the store (design §9.1); the
     // presenter's key (D) or ?present=1 opens it, and it remembers its state in this tab (kit option, lane M3).
     dock: { collapsed: true, onForget: () => { store.visitor.forget(); store.cart.clear(); location.assign('/oh/'); } },   // "Forget this browser": back to the cold open (M1d)
-    // "What has been signalled": one row per dimension in the registry's order, its leading value and the second, under a
-    // "just now" strip of what the last event changed (kit option, lane M3), so a new line's first signals show at once.
-    signals: { byDimension: true },
+    // "What has been signalled": the audiences the engine holds, as chips under the meters, as Meridian showed them (kit, K8).
+    signals: { audiences: true },
     state: { view: null, viewPage: null, productId: null, sets: {}, pieces: new Map(), engine: null, products: [], productById: new Map(), anchor: {} },
     // The transport: her own fields on a new visitor; nothing asserted as her intent until she or the presenter says so.
     visitor: () => ({ cart: 0 }),

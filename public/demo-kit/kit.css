@@ -449,21 +449,38 @@ body.kit-dock.kit-dock--collapsed .dock-rail {
   body.kit-dock.kit-present .nextbeat { flex: 1 1 100%; }
 }
 
-/* ══ The by-dimension signals panel (config.signals.byDimension, panels.js): one compact row per dimension ══ */
-.vectors--dims { gap: 3px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-.vectors--dims .vecrow { gap: 2px; }
-.vectors--dims .vectop { font-size: 11.5px; }
-.vectors--dims .vectop span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vectors--dims .vec2 { font-style: normal; font-family: var(--mono); font-size: 9.5px; color: var(--m-dim); margin-left: 8px; }
-.vectors--dims .track { height: 4px; }
-.vectors--dims .vecrow--none .vectop span, .vectors--dims .vecrow--none .vectop b { color: var(--m-dim); }
-@media (max-height: 860px) { .vectors--dims .vecrow:nth-child(n+7) { display: grid; } }
-.justnow { margin: 0 0 8px; padding: 6px 9px 7px; border-left: 3px solid var(--m-red); background: var(--m-card); }
-.justnow[hidden] { display: none; }
-.justnow .jn-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--m-muted); margin-bottom: 3px; }
-.justnow ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.justnow li { font-size: 11.5px; color: var(--m-text); line-height: 1.35; }
-.justnow li b { color: var(--m-on); font-weight: 600; }
-.justnow li em { font-style: normal; color: var(--m-green); font-family: var(--mono); font-size: 10px; margin-left: 4px; }
-.justnow .jn-aud em { color: var(--accent); }
-.justnow .jn-none, .justnow .jn-more { font-size: 11px; color: var(--m-dim); }
+/* ══ The dock's column scrolls in its middle (lane K8) ══════════════════════════════════════════════════════
+ * Docked at 1180 and up, the machine is a viewport-height column above the bar. Its header and its tools stay put and
+ * everything between them (the signal card, the tabs and their panes) scrolls in the column, so nothing is cut by the
+ * column's own height. The tabs scroll with the content and stick to the top of the middle once scrolled past, the
+ * active pane directly under them; choosing a tab scrolls the bar to the top with its pane filling the rest (panels.js),
+ * which the panes' minimum height always allows (director.js measures the header, the tabs and the tools). Without the
+ * dock, nothing here applies. */
+@media (min-width: 1180px) {
+  body.kit-dock .machine { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--m-line) transparent; }
+  body.kit-dock .m-head { position: sticky; top: 0; z-index: 3; background: var(--m-bg); }
+  body.kit-dock .mtabs { position: sticky; top: var(--dock-head-h, 0px); z-index: 2; background: var(--m-bg); }
+  body.kit-dock .mpanels { flex: 1 0 auto; overflow: visible; min-height: calc(100% - var(--dock-head-h, 0px) - var(--dock-tabs-h, 0px) - var(--dock-tools-h, 0px)); }
+  body.kit-dock .m-tools { position: sticky; bottom: 0; z-index: 3; background: var(--m-bg); }
+}
+
+/* ══ The audiences (config.signals.audiences, panels.js): Meridian's chips, under the meters ════════════════
+ * The memberships the engine holds, named by value and dimension. One the action's answer reports entering lands
+ * green; one it reports leaving fades out. Meridian's .chip, .chip.new and .chip.gone, drawn in the machine's tokens. */
+.audbox { margin-top: 11px; }
+.aud-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--m-muted); margin-bottom: 6px; }
+.aud-k b { color: var(--m-on); font-weight: 600; }
+.aud-k .aud-in { color: var(--m-green); }
+.aud-k .aud-out { color: var(--accent); }
+.audchips { display: flex; flex-wrap: wrap; gap: 5px; min-height: 22px; }
+.audchip {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 600; line-height: 1; padding: 5px 7px; border-radius: 3px; white-space: nowrap;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; background: var(--m-card-2); border: 1px solid var(--m-line); color: var(--m-on);
+}
+.audchip em { font-style: normal; font-weight: 500; color: var(--m-muted); }
+.audchip--new { background: var(--m-green); border-color: var(--m-green); color: var(--m-ink); animation: audin .7s ease-out; }
+.audchip--new em, .audchip--gone em { color: var(--m-ink); }
+@keyframes audin { from { transform: scale(.86); } to { transform: none; } }
+.audchip--gone { background: var(--accent); border-color: var(--accent); color: var(--m-ink); animation: audout 1.1s ease-in forwards; }
+@keyframes audout { to { opacity: 0; transform: translateX(-8px); max-width: 0; padding-left: 0; padding-right: 0; border-width: 0; } }
+.aud-none { font-size: 12px; color: var(--m-dim); font-style: italic; }

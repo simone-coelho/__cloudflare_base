@@ -584,14 +584,106 @@ async function engineReading(cap) {
   const j = r ? await r.json().catch(() => null) : null;
   return (j && j.affinity && j.affinity.dims) || null;
 }
-/** The panel's rows as rendered (the director is collapsed for a visitor: its rows are read as drawn) and the page's own vector. */
-const PANEL_READ = `(() => { const { txt } = window.__s1;
+/**
+ * The engine panel as drawn (K8 restored the kit's classic panel, Vantage's; docs/lg/lanes/K8.md): the eight strongest values
+ * across every dimension as meters (`#vectors .vecrow`: the value is `.vectop span`'s own text, the dimension `.vectop em`,
+ * the reading `.vectop b`, `.vecrow--fresh` on one that just moved), the audience chips under them (`#audChips .audchip`,
+ * `data-aud` the engine's key, `--new` entering, `--gone` leaving for 1.2 s, `#audHead` the caption), the Session list
+ * (`#journey li`: `.verb`, `.what` and its `em`), and the page's own vector. Read as drawn, by text content (the director is
+ * collapsed for a visitor, and `.verb` is upper-cased by CSS alone).
+ */
+const CLASSIC_READ = `(() => {
+  const t = (el) => (el ? el.textContent.replace(/\\s+/g, ' ').trim() : '');
   const own = (el) => (el ? [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\\s+/g, ' ').trim() : '');
-  const rows = [...document.querySelectorAll('#vectors .vecrow')].map((r) => ({ value: own(r.querySelector('.vectop span')), label: txt(r.querySelector('.vectop em')), a: Number(txt(r.querySelector('.vectop b'))) }));
+  const rows = [...document.querySelectorAll('#vectors .vecrow')].map((r) => ({ value: own(r.querySelector('.vectop span')), label: t(r.querySelector('.vectop em')), a: Number(t(r.querySelector('.vectop b'))), fresh: r.classList.contains('vecrow--fresh') }));
+  const chips = [...document.querySelectorAll('#audChips .audchip')].map((c) => ({ key: c.dataset.aud || '', isNew: c.classList.contains('audchip--new'), gone: c.classList.contains('audchip--gone'), text: t(c) }));
+  const journey = [...document.querySelectorAll('#journey li')].filter((li) => !li.classList.contains('journey-empty')).map((li) => ({ verb: t(li.querySelector('.verb')), what: own(li.querySelector('.what')), detail: t(li.querySelector('.what em')) }));
   const s = window.__oh && window.__oh.state;
-  return { rows, vector: (s && s.lastVector) || null };
+  return { rows, chips, head: t(document.getElementById('audHead')), none: Boolean(document.querySelector('#audChips .aud-none')), journey, vector: (s && s.lastVector) || null };
 })()`;
 const dimLabel = (d) => (((PAGE_SITE.dimLabels) || {})[d]) || d;   // read at run time (PAGE_SITE is defined below)
+/** A meter's dimension, from its label ("category · 1 min memory" → category), through the page's own dimension labels. */
+const dimOfLabel = (label) => { const L = String(label || '').split(' · ')[0].trim().toLowerCase(); if (!L) return null; const labels = PAGE_SITE.dimLabels || {};
+  return Object.keys(labels).find((d) => String(labels[d] || d).toLowerCase() === L) || Object.keys(labels).find((d) => d.toLowerCase() === L) || L; };
+/** Her profile at the engine (GET /realtime/reflex, her capability): the vector, and the audiences it holds (the stage's left out, as the panel does). */
+async function engineState(cap) {
+  if (!cap) return null;
+  const r = await fetch(`${base}/realtime/reflex`, { headers: { 'X-Tenant': TENANT, 'X-SDK-Key': 'demo-site', 'X-Shopper-Session': cap }, cache: 'no-store' }).catch(() => null);
+  const j = r ? await r.json().catch(() => null) : null;
+  return j && j.affinity ? { dims: j.affinity.dims || {}, audiences: (Array.isArray(j.affinity.audiences) ? j.affinity.audiences : []).filter((k) => !STAGE_AUDIENCE.test(k)) } : null;
+}
+const STAGE_AUDIENCE = /^(journeystage|applicationstage)_/;
+/** The engine's eight strongest values across every dimension, strongest first, as the classic panel orders its meters. */
+const topEight = (dims) => Object.entries(dims || {}).flatMap(([d, vals]) => Object.entries(vals || {}).map(([v, a]) => ({ d, v, a: Number(a) || 0 }))).sort((x, y) => y.a - x.a).slice(0, 8);
+/** The meters against the engine: they are its eight strongest readings, in order, and each reads its own value's (two places). */
+function metersAgainst(C, dims) {
+  if (!dims) return { ok: false, detail: 'no engine read' };
+  const want = topEight(dims), rows = C.rows.map((r) => ({ ...r, d: dimOfLabel(r.label) }));
+  const off = rows.filter((r) => !(Math.abs(r.a - Number(((dims[r.d] || {})[r.value]) || 0)) <= 0.011));
+  const sameTop = rows.length === want.length && rows.every((r, i) => Math.abs(r.a - want[i].a) <= 0.011);
+  return { ok: rows.length > 0 && off.length === 0 && sameTop,
+    detail: `meters ${rows.map((r) => `${r.value} ${r.a.toFixed(2)}`).join(', ') || 'none'}${off.length ? ` · off the engine: ${off.slice(0, 3).map((r) => `${r.d} ${r.value} ${r.a.toFixed(2)} (engine ${Number(((dims[r.d] || {})[r.value]) || 0).toFixed(2)})`).join(', ')}` : ''}${sameTop ? '' : ` · the engine’s eight: ${want.map((x) => `${x.v} ${x.a.toFixed(2)}`).join(', ')}`}` };
+}
+/** What an action's own answer reports about audiences: the keys entering and leaving (the stage's left out, as the panel does). */
+function audienceChanges(answer) {
+  const b = answer && typeof answer === 'object' ? answer : {};
+  const aff = (b.update && ((b.update.data && b.update.data.affinity) || b.update.affinity)) || b.affinity || null;
+  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const keyOf = (c) => c.audience || `${slug(c.dim)}_${slug(c.value)}_affinity`;
+  const recs = (aff && Array.isArray(aff.changed) ? aff.changed : []).filter((c) => c && (c.audience || (c.dim && c.value)) && !STAGE_AUDIENCE.test(c.audience || ''));
+  return { entered: [...new Set(recs.filter((c) => c.direction !== 'exit').map(keyOf))], exited: [...new Set(recs.filter((c) => c.direction === 'exit').map(keyOf))] };
+}
+/**
+ * The audience chips against the engine and the event's answer: the chips on screen (leaving ones aside) are the audiences the
+ * engine holds; each the answer reports entering is a chip marked new; none it reports leaving is still in; and when the answer
+ * reported a change, the caption counts it on the event's name.
+ */
+function audiencesAgainst(C, held, answer, trigger) {
+  const live = C.chips.filter((c) => !c.gone).map((c) => c.key), ch = audienceChanges(answer);
+  const setOk = Array.isArray(held) && live.length === held.length && held.every((k) => live.includes(k)) && (live.length > 0 || C.none);
+  const newOk = ch.entered.every((k) => C.chips.some((c) => c.key === k && c.isNew && !c.gone));
+  const leftOk = ch.exited.every((k) => !live.includes(k));
+  const changed = ch.entered.length + ch.exited.length > 0;
+  const headOk = !changed || (has(C.head, `+${ch.entered.length}`) && has(C.head, `−${ch.exited.length}`) && has(C.head, `on ${trigger}`));
+  return { ok: setOk && newOk && leftOk && headOk, set: setOk, marks: newOk && leftOk && headOk, changed,
+    detail: `“${C.head || 'no caption'}” · ${live.length} chip(s)${Array.isArray(held) ? `, the engine holds ${held.length}` : ', no engine read'} · the answer: +${ch.entered.length} −${ch.exited.length}`
+      + `${newOk ? '' : ` · not marked new: ${ch.entered.filter((k) => !C.chips.some((c) => c.key === k && c.isNew && !c.gone)).slice(0, 3).join(', ')}`}${leftOk ? '' : ` · still in: ${ch.exited.filter((k) => live.includes(k)).slice(0, 3).join(', ')}`}`
+      + `${setOk ? '' : ` · on screen only: ${live.filter((k) => !(held || []).includes(k)).slice(0, 3).join(', ') || '—'}; held only: ${(held || []).filter((k) => !live.includes(k)).slice(0, 3).join(', ') || '—'}`}` };
+}
+/** The Session list names the event: among its last lines, the product opened (its name as the page writes it, or its SKU) for a view, else the event's own name. */
+function sessionNames(C, evt) {
+  const name = eventName(evt), sku = String((evt.data || {}).productId || ''), title = String((row(sku) || {}).name || '');
+  const lines = C.journey.slice(-4);
+  const hit = lines.find((l) => { const text = `${l.what} ${l.detail}`; return evt.type === 'product_view' ? Boolean(sku) && (text.includes(sku) || (Boolean(title) && l.what === title)) : text.includes(name); });
+  return { ok: Boolean(hit), detail: hit ? `“${hit.verb} · ${hit.what}${hit.detail ? ` · ${hit.detail.slice(0, 90)}` : ''}”` : `its last lines: ${lines.map((l) => `${l.verb} · ${l.what}`).join(' | ').slice(0, 200) || 'none'}` };
+}
+/** An action request on the wire for an event (the latest that matches), as [requestId, record]. */
+const actionEntry = (presses, test) => [...requests.entries()].filter(([, r]) => presses.includes(r.press) && r.path === '/realtime/action')
+  .filter(([, r]) => { try { const b = JSON.parse(r.body); return test({ type: b.type, data: b.data || {} }); } catch { return false; } }).pop() || null;
+/**
+ * After a manual event, from the moment its request answered: polls the classic panel for two seconds until the meters show
+ * the engine's eight strongest readings, the Session list names the event, and the audience chips are the engine's (read
+ * again each time, an audience can leave on its own) with what the answer reported. Returns what it saw.
+ */
+async function classicAfter(evt, entry, extra = () => true) {
+  const req = entry ? entry[1] : null;
+  for (let i = 0; i < 40 && req && req.status === null; i += 1) await sleep(50);
+  const t0 = Date.now();
+  const E = await engineState(evt.cap), engine = E && E.dims;
+  const answer = entry ? json(await bodyOf(entry[0])) : null;
+  let C = null, M = null, J = null, A = null, X = false;
+  do {
+    C = await evaluate(CLASSIC_READ);
+    M = metersAgainst(C, engine);
+    J = sessionNames(C, evt);
+    const now = await engineState(evt.cap);
+    A = audiencesAgainst(C, now ? now.audiences : null, answer, eventName(evt));
+    X = extra(C, engine);
+    if (M.ok && J.ok && A.ok && X) break;
+    await sleep(200);
+  } while (Date.now() - t0 < 2000);
+  return { C, M, J, A, X, engine, ms: Date.now() - t0, roundTrip: entry && ANSWERED.has(entry[0]) ? `${ANSWERED.get(entry[0]) - entry[1].at} ms` : 'not answered' };
+}
 /**
  * The panel follows a manual event by itself: from the moment the event's request answered, within two seconds and with no
  * press or navigation, the page's vector equals the engine's reading for every dimension the event carried, and each of
@@ -600,30 +692,27 @@ const dimLabel = (d) => (((PAGE_SITE.dimLabels) || {})[d]) || d;   // read at ru
 async function panelFollows(label, presses, test) {
   let evt = null;
   for (let i = 0; i < 60 && !evt; i += 1) { evt = eventsIn(presses).filter(test).pop() || null; if (!evt) await sleep(100); }   // the page sends it just after the release
-  const hit = evt ? [...requests.entries()].filter(([, r]) => presses.includes(r.press) && r.path === '/realtime/action').find(([, r]) => { try { const b = JSON.parse(r.body); return eventName({ type: b.type, data: b.data || {} }) === eventName(evt); } catch { return false; } }) : null;
-  const req = hit ? hit[1] : null;
-  const roundTrip = () => (hit && ANSWERED.has(hit[0]) ? `${ANSWERED.get(hit[0]) - hit[1].at} ms` : 'not answered');
   if (!evt) return ok(`${label}: the panel follows it by itself within two seconds`, false, 'no such event on the wire');
+  const entry = actionEntry(presses, (e) => eventName(e) === eventName(evt));
   const dims = carriedDims(evt.data);
   if (!dims.length) { info(`${label}: the event carries no dimension, so nothing on the panel is asked to move`); return null; }
-  for (let i = 0; i < 40 && req && req.status === null; i += 1) await sleep(50);
-  const t0 = Date.now();
-  const engine = await engineReading(evt.cap);
   const close = (x, y, tol) => Math.abs(Number(x || 0) - Number(y || 0)) <= tol;
-  let P = null, pass = false, shown = [];
-  do {
-    P = await evaluate(PANEL_READ);
-    shown = dims.map(([d, v]) => ({ d, v, e: engine && engine[d] ? Number(engine[d][v] || 0) : 0, vec: P.vector && P.vector[d] ? Number(P.vector[d][v] || 0) : null,
-      row: P.rows.find((r) => r.value === v && (r.label.startsWith(dimLabel(d)) || r.label.startsWith(d))) || null }));
-    pass = Boolean(engine) && shown.every((x) => x.vec !== null && close(x.vec, x.e, 0.02)) && shown.some((x) => x.row) && shown.every((x) => !x.row || close(x.row.a, x.e, 0.011));
-    if (pass) break;
-    await sleep(200);
-  } while (Date.now() - t0 < 2000);
-  ok(`${label}: within two seconds, with no press or navigation, the panel and the page’s vector read what the engine now holds for what it carried`, pass,
-    shown.slice(0, 4).map((x) => `${x.d} ${x.v}: engine ${x.e.toFixed(2)} · vector ${x.vec === null ? 'none' : x.vec.toFixed(2)} · panel ${x.row ? x.row.a.toFixed(2) : 'not shown'}`).join(' | ') + ` · ${Date.now() - t0} ms after the answer · the action’s own round trip ${roundTrip()} (its request to its response)`);
+  let shown = [];
+  // The carried values: the page's vector equals the engine for every one, and each the meters show reads the engine's value.
+  const carried = (C, engine) => {
+    shown = dims.map(([d, v]) => ({ d, v, e: engine && engine[d] ? Number(engine[d][v] || 0) : 0, vec: C.vector && C.vector[d] ? Number(C.vector[d][v] || 0) : null,
+      row: C.rows.find((r) => r.value === v && dimOfLabel(r.label) === d) || null }));
+    return Boolean(engine) && shown.every((x) => x.vec !== null && close(x.vec, x.e, 0.02)) && shown.every((x) => !x.row || close(x.row.a, x.e, 0.011));
+  };
+  const R = await classicAfter(evt, entry, carried);
+  ok(`${label}: within two seconds, with no press or navigation, the meters show the engine’s eight strongest readings, and the page’s vector and every meter it carried read what the engine now holds`,
+    R.M.ok && R.X, shown.slice(0, 4).map((x) => `${x.d} ${x.v}: engine ${x.e.toFixed(2)} · vector ${x.vec === null ? 'none' : x.vec.toFixed(2)} · meter ${x.row ? x.row.a.toFixed(2) : 'not in the eight'}`).join(' | ')
+      + ` · ${R.M.ok ? 'the engine’s eight' : R.M.detail} · ${R.ms} ms after the answer · the action’s own round trip ${R.roundTrip} (its request to its response)`);
+  ok(`${label}: and the Session list names it within the same two seconds`, R.J.ok, R.J.detail);
+  ok(`${label}: and the audience chips are the audiences the engine holds`, R.A.set, R.A.detail);
+  ok(`${label}: and they mark what its answer reported${R.A.changed ? '' : ' (it reported no change)'}: each entering chip marked new, none leaving still in, the caption counting them on the event’s name`, R.A.marks, R.A.detail);
   return shown;
 }
-
 
 // ── Lane S2: R4's rulings, measured against her profile and the engine, never the page's sentence ──
 /** Her own reading of a dimension, from her profile as the page holds it (the meters' read): { value: a } with a > 0. */
@@ -1273,17 +1362,8 @@ async function phoneWidth() {
 }
 
 
-/** The panel by dimension (M3: config.signals.byDimension): each row's dimension, leading value and reading, and its second. */
-const DIM_ROWS = `(() => { const { txt } = window.__s1;
-  const own = (el) => (el ? [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\\s+/g, ' ').trim() : '');
-  const rows = [...document.querySelectorAll('#vectors .vecrow[data-dim]')].map((r) => { const v2 = r.querySelector('.vec2'); const m = v2 ? /^(.*)\\s([\\d.]+)$/.exec(txt(v2)) : null;
-    return { dim: r.dataset.dim, value: own(r.querySelector('.vectop span')), a: Number(txt(r.querySelector('.vectop b'))), second: m ? { value: m[1], a: Number(m[2]) } : null }; });
-  const jn = document.getElementById('justNow');
-  const items = jn ? [...jn.querySelectorAll('li')].map((li) => ({ value: txt(li.querySelector('b')), text: txt(li) })) : [];
-  return { rows, just: { head: jn ? txt(jn.querySelector('.jn-k')) : '', items }, vector: (window.__oh && window.__oh.state && window.__oh.state.lastVector) || null };
-})()`;
 async function signalsWalk() {
-  console.log('\n── Her signals, by hand: one click registers at once; three washers after two TVs lead the panel; home leads with laundry');
+  console.log('\n── Her signals, by hand, on the classic panel: one click registers at once; three washers after two TVs lead the meters; home leads with laundry');
   const HANDS2 = [];
   const step = (name) => { press = `signals · ${name}`; HANDS2.push(press); };
   await cdp('Page.navigate', { url: 'about:blank' });
@@ -1309,17 +1389,22 @@ async function signalsWalk() {
     await hand(`#view-tvs #rail-tv-grid [data-open="${sku}"]`, { settle: false });
     const e = await pv(sku);
     if (i === 0) {
-      // One click registers at once: within two seconds of the view's answer, with no press, the room it carried reads on the
-      // panel and in the page's vector what the engine holds, which is the registry's one-touch reading, w / (w + K).
-      const room = e && e.data.room, t0 = Date.now(), engine = await engineReading(e && e.cap);
-      const want = engine && engine.room ? Number(engine.room[room] || 0) : 0;
-      let D = null, hit = false;
-      do { D = await evaluate(DIM_ROWS); const r = D.rows.find((x) => x.dim === 'room'); hit = Boolean(r && r.value === room && Math.abs(r.a - want) <= 0.011 && D.vector && D.vector.room && Math.abs(Number(D.vector.room[room] || 0) - want) <= 0.02); if (hit) break; await sleep(200); } while (Date.now() - t0 < 2000);
-      const r = D.rows.find((x) => x.dim === 'room');
-      ok(`one click registers at once: the first view’s room (${room}) reads on the panel within two seconds what the engine holds, the one-touch reading ${oneTouch.toFixed(2)}`,
-        hit && Math.abs(want - oneTouch) <= 0.02, `engine ${want.toFixed(2)} · panel ${r ? `${r.value} ${r.a.toFixed(2)}` : 'no room row'} · ${Date.now() - t0} ms`);
-    }
-    await settled();
+      // One click registers at once (K8's classic panel): within two seconds of the view's answer, with no press, the meters
+      // show the engine's eight strongest readings, the room it carried reads the registry's one-touch reading, w / (w + K), in
+      // the page's vector (and on its meter when it is among the eight: after one view a dozen values tie), the Session list
+      // names the TV, and the audience chips are the engine's with what the answer reported.
+      const room = e && e.data.room;
+      const R = await classicAfter(e, actionEntry([press], (x) => x.type === 'product_view' && String(x.data.productId) === sku),
+        (C, engine) => Boolean(engine && C.vector && C.vector.room) && Math.abs(Number(C.vector.room[room] || 0) - Number((engine.room || {})[room] || 0)) <= 0.02);
+      const want = Number((((R.engine || {}).room) || {})[room] || 0);
+      const roomRow = R.C.rows.find((r) => r.value === room && dimOfLabel(r.label) === 'room') || null;
+      ok(`one click registers at once: within two seconds the meters show the engine’s eight strongest readings, and the first view’s room (${room}) reads the one-touch reading ${oneTouch.toFixed(2)} in the page’s vector${roomRow ? ' and on its meter' : ''}`,
+        R.M.ok && R.X && Math.abs(want - oneTouch) <= 0.02 && (!roomRow || Math.abs(roomRow.a - want) <= 0.011),
+        `engine ${want.toFixed(2)} · vector ${Number(((R.C.vector || {}).room || {})[room] || 0).toFixed(2)} · meter ${roomRow ? roomRow.a.toFixed(2) : 'not in the eight'} · ${R.M.ok ? 'the engine’s eight' : R.M.detail} · ${R.ms} ms`);
+      ok('and the Session list names the TV she opened within the same two seconds', R.J.ok, R.J.detail);
+      ok('and the audience chips are the audiences the engine holds', R.A.set, R.A.detail);
+      ok(`and they mark what its answer reported${R.A.changed ? '' : ' (it reported no change)'}: each entering chip marked new, none leaving still in, the caption counting them on the event’s name`, R.A.marks, R.A.detail);
+    }    await settled();
     await browserBack();
   }
   // The Laundry menu's own "Washers", then three washers from that grid, Back between them.
@@ -1334,33 +1419,44 @@ async function signalsWalk() {
     await hand(`#stage > .view:not([hidden]) .rail [data-open="${sku}"]`, { settle: false });
     const e = await pv(sku);
     if (i === 0) {
-      // The "just now" strip names what the view moved, within two seconds: washers · category, with the engine's score.
-      const t0 = Date.now(), engine = await engineReading(e && e.cap);
-      const want = engine && engine.category ? Number(engine.category.washers || 0) : 0;
-      let D = null, item = null;
-      const scoreOk = (x) => { const m = /\bcategory\b\D*?(\d+\.\d+)/i.exec(x.text); return Boolean(m) && Math.abs(Number(m[1]) - want) <= 0.011; };
-      do { D = await evaluate(DIM_ROWS); item = D.just.items.find((x) => x.value === 'washers' && /\bcategory\b/i.test(x.text)); if (item && scoreOk(item)) break; await sleep(200); } while (Date.now() - t0 < 2000);
-      const cat = D.rows.find((x) => x.dim === 'category') || null;
-      ok('and after that one washer the category row shows tvs leading, washers second', Boolean(cat && cat.value === 'tvs' && cat.second && cat.second.value === 'washers'),
-        cat ? `category: ${cat.value} ${cat.a.toFixed(2)}${cat.second ? ` · ${cat.second.value} ${cat.second.a.toFixed(2)}` : ''}` : 'no category row');
-      ok(`after a washer view following the TVs, the “just now” strip names washers · category with its score, ${want.toFixed(2)}, within two seconds`,
-        Boolean(item) && scoreOk(item), `“${D.just.head}” ${D.just.items.slice(0, 3).map((x) => x.text).join(' | ').slice(0, 160)} · ${Date.now() - t0} ms`);
-    }
-    await settled();
+      // After one washer following the TVs (K8's classic panel; the rows mode and "just now" are gone): within two seconds the
+      // meters show the engine's eight strongest readings, the washers meter (when among them) marked as just moved, the
+      // Session list names the washer, and the audience chips are the engine's with what the view's answer reported; the page's
+      // own vector still reads category tvs above washers, as the engine holds them.
+      const R = await classicAfter(e, actionEntry([press], (x) => x.type === 'product_view' && String(x.data.productId) === sku));
+      const wash = R.C.rows.find((r) => r.value === 'washers' && dimOfLabel(r.label) === 'category') || null;
+      const eng = (v) => Number((((R.engine || {}).category) || {})[v] || 0), vec = (v) => Number((((R.C.vector || {}).category) || {})[v] || 0);
+      ok('after one washer following the TVs, within two seconds the meters show the engine’s eight strongest readings, the washers meter (when among them) marked as just moved',
+        R.M.ok && (!wash || (wash.fresh && Math.abs(wash.a - eng('washers')) <= 0.011)),
+        `${wash ? `washers · category ${wash.a.toFixed(2)}${wash.fresh ? ', marked' : ', not marked'}` : 'washers not in the eight'} · ${R.M.ok ? 'the engine’s eight' : R.M.detail} · ${R.ms} ms`);
+      ok('and the page’s vector reads category tvs leading, washers second, as the engine holds them',
+        vec('tvs') > vec('washers') && vec('washers') > 0 && Math.abs(vec('tvs') - eng('tvs')) <= 0.02 && Math.abs(vec('washers') - eng('washers')) <= 0.02,
+        `vector tvs ${vec('tvs').toFixed(2)} · washers ${vec('washers').toFixed(2)} · engine tvs ${eng('tvs').toFixed(2)} · washers ${eng('washers').toFixed(2)}`);
+      ok('and the Session list names the washer within the same two seconds', R.J.ok, R.J.detail);
+      ok('and the audience chips are the audiences the engine holds', R.A.set, R.A.detail);
+      ok(`and they mark what its answer reported${R.A.changed ? '' : ' (it reported no change)'}: each entering chip marked new, none leaving still in, the caption counting them on the event’s name`, R.A.marks, R.A.detail);
+    }    await settled();
     await browserBack();
   }
   {
-    // Three washers after two TVs (about twenty seconds, the memory sixty): the panel's category row leads with washers over
-    // tvs and its room row with laundry-room over living-room, as the engine holds them.
-    const engine = await engineReading(cap());
-    const D = await evaluate(DIM_ROWS);
-    const rowOf = (dim) => D.rows.find((x) => x.dim === dim) || null;
-    const leads = (dim, top, under) => { const r = rowOf(dim); return Boolean(r && r.value === top && (!r.second || r.second.value === under || Number(r.second.a) <= r.a)) && engine && engine[dim] && Number(engine[dim][top] || 0) > Number(engine[dim][under] || 0); };
-    const show = (dim) => { const r = rowOf(dim); return r ? `${dim}: ${r.value} ${r.a.toFixed(2)}${r.second ? ` over ${r.second.value} ${r.second.a.toFixed(2)}` : ''}` : `${dim}: no row`; };
-    ok('three washers after two TVs: the panel’s category row reads washers above tvs, and the engine holds the same', leads('category', 'washers', 'tvs'), show('category'));
-    ok('and its room row reads laundry-room above living-room', leads('room', 'laundry-room', 'living-room'), show('room'));
-  }
-  // Home, by the wordmark: the engine's next homepage answer leads with laundry (the hero's or the four's first piece).
+    // Three washers after two TVs (about twenty seconds, the memory sixty), on K8's classic panel: on the meters washers sits
+    // above tvs and laundry-room above living-room (or the lower one has left the eight); when the leader is not among the
+    // eight, the page's own vector says it, at the engine's values; the engine holds the same order either way.
+    const E = await engineState(cap()), engine = (E && E.dims) || {};
+    const C = await evaluate(CLASSIC_READ);
+    const order = (dim, top, under) => {
+      const at = (v) => C.rows.findIndex((r) => r.value === v && dimOfLabel(r.label) === dim);
+      const e = (v) => Number(((engine[dim] || {})[v]) || 0), vv = (v) => Number((((C.vector || {})[dim] || {})[v]) || 0);
+      const iTop = at(top), iUnder = at(under);
+      const meters = iTop >= 0 ? (iUnder < 0 || iTop < iUnder) : null;
+      const byVector = vv(top) > vv(under) && Math.abs(vv(top) - e(top)) <= 0.02 && Math.abs(vv(under) - e(under)) <= 0.02;
+      return { ok: e(top) > e(under) && (meters === null ? byVector : meters),
+        how: `${meters === null ? `not among the eight; vector ${top} ${vv(top).toFixed(2)} over ${under} ${vv(under).toFixed(2)}` : `meters: ${top} #${iTop + 1}${iUnder >= 0 ? `, ${under} #${iUnder + 1}` : `, ${under} not in the eight`}`} · engine ${top} ${e(top).toFixed(2)} over ${under} ${e(under).toFixed(2)}` };
+    };
+    const cat = order('category', 'washers', 'tvs'), room = order('room', 'laundry-room', 'living-room');
+    ok('three washers after two TVs: on the meters washers sits above tvs (or tvs has left the eight), and the engine holds the same', cat.ok, cat.how);
+    ok('and laundry-room sits above living-room', room.ok, room.how);
+  }  // Home, by the wordmark: the engine's next homepage answer leads with laundry (the hero's or the four's first piece).
   step('home');
   await hand('#site .site-header a.wordmark, #site .site-header [data-ctl="home"]');
   await sleep(SETTLE_MS);
@@ -1420,15 +1516,24 @@ async function persistenceWalk() {
     let evt = null;
     for (let i = 0; i < 100 && !evt; i += 1) { evt = eventsIn([key]).find((e) => e.type === 'product_view') || null; if (!evt) await sleep(100); }
     for (let i = 0; i < 60; i += 1) { const r = [...requests.values()].filter((q) => q.press === key && q.path === '/realtime/action').pop(); if (!r || r.status !== null) break; await sleep(50); }
-    const engine = await engineReading(evt && evt.cap);
-    const want = engine && engine.category ? Number(engine.category.washers || 0) : 0;
-    const t0 = Date.now(); let D = null, panel = null;
-    do { D = await evaluate(DIM_ROWS); const r = D.rows.find((x) => x.dim === 'category'); panel = r && r.value === 'washers' ? r.a : null; if (panel !== null && Math.abs(panel - want) <= 0.011) break; await sleep(200); } while (Date.now() - t0 < 2000);
+    const E = await engineState(evt && evt.cap), engineDims = (E && E.dims) || null;
+    const want = engineDims && engineDims.category ? Number(engineDims.category.washers || 0) : 0;
+    // K8's classic panel: washers · category on its meter when it is among the eight strongest (after one view a dozen
+    // values tie at the one-touch reading), else in the page's own vector; and the meters the engine's eight, each load.
+    const t0 = Date.now(); let C = null, panel = null, from = 'meter', M = null;
+    do {
+      C = await evaluate(CLASSIC_READ);
+      const r = C.rows.find((x) => x.value === 'washers' && dimOfLabel(x.label) === 'category');
+      if (r) { panel = r.a; from = 'meter'; } else { const v = ((C.vector || {}).category || {}).washers; panel = v == null ? null : Number(v); from = 'vector'; }
+      M = metersAgainst(C, engineDims);
+      if (panel !== null && Math.abs(panel - want) <= 0.011 && M.ok) break;
+      await sleep(200);
+    } while (Date.now() - t0 < 2000);
     const mine = [...requests.entries()].filter(([, r]) => r.press === key).sort((x, y) => x[1].at - y[1].at);
     const mintAt = mine.filter(([, r]) => /\/identity\/session$/.test(r.path)).map(([id]) => ANSWERED.get(id) || null).find(Boolean) || null;
     const firstAction = mine.find(([, r]) => r.path === '/realtime/action');
     const probe = mine.find(([, r]) => r.path === '/realtime/reflex' && (!firstAction || r.at <= firstAction[1].at)) || null;
-    return { ids: userIdsIn(key), mints: mintsIn(key), cookie: await cookieOf('opt_user_id'), engine: want, panel, cap: evt ? evt.cap : null, mintAt, decided, keptAtReady, readyMs: Date.now() - readyAt,
+    return { ids: userIdsIn(key), mints: mintsIn(key), cookie: await cookieOf('opt_user_id'), engine: want, panel, from, metersOk: Boolean(M && M.ok), metersDetail: M ? M.detail : '', cap: evt ? evt.cap : null, mintAt, decided, keptAtReady, readyMs: Date.now() - readyAt,
       probe: probe ? { status: probe[1].status, cap: header(probe[1], 'X-Shopper-Session') || null, at: probe[1].at } : null };
   };
   const one = await loadOnce('persist · a direct product address', addr(A));
@@ -1445,9 +1550,9 @@ async function persistenceWalk() {
     `userId ${same(three) ? 'the same' : 'changed'} · cookie ${one.cookie ? (three.cookie === one.cookie ? 'the same' : 'changed') : 'none set by the engine on this route'} · ${three.mints} new identity call(s) · ${probeSays(three)}`);
   const touch = (n) => n / (n + K);
   const steps = [one, two, three];
-  ok(`her readings accumulate across those loads, on the panel as the engine holds them: washers · category ${steps.map((x) => (x.panel === null ? '—' : x.panel.toFixed(2))).join(' → ')} (one, two and three touches: ${[1, 2, 3].map((n) => touch(n).toFixed(2)).join(', ')})`,
-    one.mints === 1 && steps.every((x, i) => x.panel !== null && Math.abs(x.panel - x.engine) <= 0.011 && Math.abs(x.engine - touch(i + 1)) <= 0.06) && one.engine < two.engine && two.engine < three.engine,
-    (one.mints === 1 ? '' : `the first load was not a fresh visitor (${one.mints} identity calls) · `) + steps.map((x, i) => `${i + 1}: engine ${x.engine.toFixed(2)} panel ${x.panel === null ? 'none' : x.panel.toFixed(2)}`).join(' · '));
+  ok(`her readings accumulate across those loads, on the panel as the engine holds them (washers · category on its meter, else the page’s vector; the meters the engine’s eight each time): ${steps.map((x) => (x.panel === null ? '—' : x.panel.toFixed(2))).join(' → ')} (one, two and three touches: ${[1, 2, 3].map((n) => touch(n).toFixed(2)).join(', ')})`,
+    one.mints === 1 && steps.every((x, i) => x.panel !== null && x.metersOk && Math.abs(x.panel - x.engine) <= 0.011 && Math.abs(x.engine - touch(i + 1)) <= 0.06) && one.engine < two.engine && two.engine < three.engine,
+    (one.mints === 1 ? '' : `the first load was not a fresh visitor (${one.mints} identity calls) · `) + steps.map((x, i) => `${i + 1}: engine ${x.engine.toFixed(2)} panel ${x.panel === null ? 'none' : `${x.panel.toFixed(2)} (${x.from})`}${x.metersOk ? '' : ` · ${x.metersDetail.slice(0, 120)}`}`).join(' · '));
   // A new tab in the same profile: its first event about C carries her userId, with no new identity call.
   const tab = await openTab(addr(C));
   let firstAction = null;

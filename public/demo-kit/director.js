@@ -190,9 +190,21 @@ export function createDirector(k) {
       if (remember) write(open ? 'open' : 'closed');
       if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fit); else fit();
     }
-    // The machine column leaves room for the bar docked at its foot, whatever the bar's height.
-    function fit() { body.style.setProperty('--dock-bar-h', `${bar ? bar.offsetHeight : 0}px`); }
-    if (bar && typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(bar);
+    // The machine column leaves room for the bar docked at its foot, whatever the bar's height; and, where the column
+    // scrolls in its middle (kit.css, K8), its tabs stick under the machine's header, and its panes are always tall
+    // enough to fill the middle under them, whatever the header's, the tabs' and the tools' heights.
+    const machine = document.getElementById('machine');
+    const part = (sel) => (machine ? machine.querySelector(sel) : null);
+    const mhead = part('.m-head'), mtabs = part('.mtabs'), mtools = part('.m-tools');
+    function fit() {
+      body.style.setProperty('--dock-bar-h', `${bar ? bar.offsetHeight : 0}px`);
+      if (machine) {
+        machine.style.setProperty('--dock-head-h', `${mhead ? mhead.offsetHeight : 0}px`);
+        machine.style.setProperty('--dock-tabs-h', `${mtabs ? mtabs.offsetHeight : 0}px`);
+        machine.style.setProperty('--dock-tools-h', `${mtools ? mtools.offsetHeight : 0}px`);
+      }
+    }
+    if (typeof ResizeObserver === 'function') { const ro = new ResizeObserver(fit); [bar, mhead, mtabs, mtools].filter(Boolean).forEach((x) => ro.observe(x)); }
     fit();
     const stored = read();
     const first = flags.present !== null ? flags.present : stored === 'open' ? true : stored === 'closed' ? false : flags.debug ? true : !opts.collapsed;

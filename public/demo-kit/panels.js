@@ -22,15 +22,17 @@
 //   titleOf(d)            a decision's title as the page shows it
 //   report                { slots(), labels(), row(slot, id) → { key, title }, attach: { slot, rows }, holdout(), theirs }
 //   roadmap               [[built | designed, name, sentence]]
-//   signals               optional { byDimension: true }: "What has been signalled" draws one row per dimension, every
-//                         one the registry names in its order, each with its leading value and score and the second
-//                         when one exists, under a "just now" strip naming what the last event changed (the vector's
-//                         diff, and the audiences the action's own answer reports entering or leaving). Without it, the
-//                         panel is the top eight values, exactly as before (Vantage).
+//   signals               optional { audiences: true }: under the meters, the visitor's audiences as chips, Meridian's
+//                         design: the memberships the engine holds (its profile read's affinity.audiences), each named by
+//                         its value and dimension words, never the audience id; one the action's answer reports entering
+//                         lands green, one it reports leaving fades out. Without it, the card is the meters alone
+//                         (Vantage). The old name, byDimension (lane M3's rows mode, removed by K8), is still read as
+//                         the same opt-in, for a transition.
 // renderVectors({ changed, trigger }) takes the action's own answer when the caller has one (affinity.changed, its trigger).
 //   With dims (the answer's affinity.dims, the profile read's own shape) it draws at once without a read; with early it
 //   reads at once, ahead of the page's own question. Either is an early draw, and the next plain call is the engine's read
-//   that confirms it. Without either, a call is the read it always was (Vantage passes neither).
+//   that confirms it. Without either, a call is the read it always was (Vantage passes neither). changed moves the
+//   audience chips (once per record, however many draws carry it); trigger names the event in their caption.
 // No DOM or window access at import time.
 import { arr, esc, fmt2, fmt3, hhmm, money0, num, sleep } from './util.js';
 
@@ -55,6 +57,19 @@ export function createPanels(k) {
       <span class="what">${esc(j.what)}${j.detail ? `<em>${esc(j.detail)}</em>` : ''}</span></li>`).join('');
     const panels = el.journey.closest('.mpanels');
     if (panels && !el.journey.parentElement.hidden) panels.scrollTop = panels.scrollHeight;
+    // Where the column itself scrolls (the dock), the newest line comes into view only while the panes are being read.
+    const col = columnScroll();
+    if (col && !el.journey.parentElement.hidden && col.scrollTop >= panesAt(col) - 2) col.scrollTop = col.scrollHeight;
+  }
+  /** The machine column, when it is the one that scrolls (kit.css's dock: its middle scrolls, the tabs stick at its top), else null. */
+  function columnScroll() {
+    const m = el.journey.closest('.machine');
+    return m && getComputedStyle(m).overflowY === 'auto' && m.scrollHeight > m.clientHeight + 1 ? m : null;
+  }
+  /** The column's scroll at which the tab bar reaches the top of the middle, the panes starting just under it. */
+  function panesAt(col) {
+    const panels = col.querySelector('.mpanels'), bar = col.querySelector('.mtabs'), head = col.querySelector('.m-head');
+    return panels ? Math.max(0, panels.offsetTop - (bar ? bar.offsetHeight : 0) - (head ? head.offsetHeight : 0)) : 0;
   }
 
   // ── Who, her arm, and the context the page asserts ───────────────────────
@@ -90,9 +105,8 @@ export function createPanels(k) {
 
   // ── Her meters ────────────────────────────────────────────────────────────
   // Draws land in the order they start: a read that left before a later draw landed is not drawn over it. An early draw
-  // (opts.dims, or opts.early) keeps its baseline, the vector before the event, and what the answer said; the plain read
-  // that follows confirms it against the same baseline (the moved rows stay marked, the "just now" strip keeps the event's
-  // answer unless the read names its own), so the engine's reading is always the last word on screen.
+  // (opts.dims, or opts.early) keeps its baseline, the vector before the event; the plain read that follows confirms it
+  // against the same baseline (the moved rows stay marked), so the engine's reading is always the last word on screen.
   let started = 0, landed = 0, early = null;
   /** The per-dimension vector an answer carries ({ category: { washers: 0.64, … }, … }), or null when it is not that shape. */
   function dimsOf(x) {
@@ -105,24 +119,22 @@ export function createPanels(k) {
   }
   async function renderVectors(opts = {}) {
     const v = T().cur();
-    if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; if (byDimension()) justNow(null); return; }
+    if (!v) { el.vectors.innerHTML = '<p class="m-empty">No dimension has evidence yet.</p>'; if (audiencesOn()) renderAudiences(null); return; }
     const mine = ++started, given = dimsOf(opts.dims), first = Boolean(given || opts.early);
     const base = v.vector || {};
-    let dims = given;
+    let dims = given, held = null;
     if (!given) {
       const { body } = await T().api('/realtime/reflex', undefined, { visitor: v });
       if (mine < landed) return;   // a later draw is on screen: this read left before it, and the read after that draw confirms it
       dims = (body && body.affinity && body.affinity.dims) || {};
+      held = body && body.affinity && Array.isArray(body.affinity.audiences) ? body.affinity.audiences : null;
       if (body && body.journeyStage && body.journeyStage !== v.stage) { v.stage = body.journeyStage; if (v === T().cur()) renderWho(); }
     }
     landed = mine;
     let prev = first ? base : v.vector || {};
-    if (first) early = { v, prev, said: { changed: opts.changed, trigger: opts.trigger } };
+    if (first) early = { v, prev };
     else if (early) {
-      if (early.v === v) {
-        prev = early.prev;
-        if (!arr(opts.changed).length && !opts.trigger) opts = { ...opts, ...early.said };
-      }
+      if (early.v === v) prev = early.prev;
       early = null;
     }
     const rows = [];
@@ -134,7 +146,6 @@ export function createPanels(k) {
     const lean = leanShare();
     const leanOf = (dim, value) => { const d = lean[dim] || {}; return typeof d[value] === 'number' ? d[value] : null; };
     const th = thetaIn();
-    if (byDimension()) { renderDimensions(dims, prev, leanOf, th, opts); renderPrior(); return; }
     el.vectors.innerHTML = rows.length ? rows.slice(0, 8).map((r) => {
       const l = leanOf(r.dim, r.value);
       return `<div class="vecrow${state.fresh.has(`${r.dim}\u0000${r.value}`) ? ' vecrow--fresh' : ''}">
@@ -142,6 +153,7 @@ export function createPanels(k) {
         <div class="track"><span class="fill${r.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, r.a * 100)}%"></span>
           <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
     }).join('') : '<p class="m-empty">No evidence from the visitor yet. The first paint is the region and the campaign, not the visitor.</p>';
+    if (audiencesOn() && v === T().cur()) renderAudiences(v, { held, changed: opts.changed, trigger: opts.trigger, dims, prev });
     renderPrior();
   }
   /** The line under the meters: the region's share of the blend, the registry's constants, the memory. */
@@ -154,69 +166,88 @@ export function createPanels(k) {
     const mem = memoryLine();
     if (mem) el.priorLine.insertAdjacentHTML('beforeend', `<span class="memline">${mem}</span>`);
   }
-  // ── The by-dimension panel (config.signals.byDimension) ───────────────────
-  const byDimension = () => Boolean(cfg.signals && cfg.signals.byDimension);
-  /** Every dimension the registry names, in its order; one the vector carries that the registry does not list follows. */
-  function dimOrder(dims) {
-    const order = arr(reg().dimensions).map((d) => d && d.key).filter(Boolean);
-    const base = order.length ? order : Object.keys(DIM_LABEL);
-    return [...base, ...Object.keys(dims || {}).filter((d) => !base.includes(d))];
+  // ── The audiences (config.signals.audiences): Meridian's chips, under the meters ──
+  // The memberships the engine holds, as chips named by their value and dimension words. The profile read's own list
+  // (affinity.audiences) is the set; the action's answer (affinity.changed) moves it at once: a chip it reports entering
+  // lands green and stays green until the next change, one it reports leaving fades out. The journey-stage audiences are
+  // the stage chip's, not these. The chips are reconciled by key, so a confirming read never replays an animation.
+  const audiencesOn = () => Boolean(cfg.signals && (cfg.signals.audiences || cfg.signals.byDimension));
+  const isStageAudience = (key) => /^(journeystage|applicationstage)_/.test(String(key));
+  const slugOf = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const audKey = (dim, value) => `${slugOf(dim)}_${slugOf(value)}_affinity`;
+  const audState = new WeakMap();   // visitor → { keys: [in the order they entered], words: Map, fresh: Set, last }
+  const applied = new Set(), appliedRec = new WeakSet();   // the answer's records already applied (by ts, else by identity)
+  /** An audience's words: the engine's own record, else the vector that carries it; else the key read through the registry's dimensions. */
+  function audWords(key, rec, ...vectors) {
+    if (rec && rec.dim && rec.value) return { dim: rec.dim, value: String(rec.value) };
+    for (const dims of vectors) for (const [dim, values] of Object.entries(dims || {})) for (const value of Object.keys(values || {})) if (audKey(dim, value) === key) return { dim, value };
+    const dim = [...arr(reg().dimensions).map((d) => d && d.key), ...Object.keys(DIM_LABEL)].filter(Boolean).find((d) => String(key).startsWith(`${slugOf(d)}_`));
+    const value = String(key).replace(/_affinity$/, '').slice(dim ? slugOf(dim).length + 1 : 0).replace(/_/g, ' ');
+    return { dim: dim || '', value };
   }
-  /** A dimension's values with evidence, strongest first: the panel's leading value and its second. */
-  const valuesOf = (vals) => Object.entries(vals || {}).map(([value, a]) => ({ value, a: num(a) || 0 })).filter((x) => x.a > 0).sort((x, y) => y.a - x.a);
-  function renderDimensions(dims, prev, leanOf, th, opts) {
-    const order = dimOrder(dims);
-    el.vectors.classList.add('vectors--dims');
-    el.vectors.innerHTML = order.map((dim) => {
-      const [first, second] = valuesOf(dims[dim]);
-      const label = `${esc(DIM_LABEL[dim] || dim)}${roomOf(dim) ? ` · ${esc(roomOf(dim))} memory` : ''}`;
-      if (!first) return `<div class="vecrow vecrow--none" data-dim="${esc(dim)}"><div class="vectop"><span>—<em>${label}</em></span><b>0.00</b></div><div class="track"></div></div>`;
-      const l = leanOf(dim, first.value);
-      const fresh = state.fresh.has(`${dim}\u0000${first.value}`) || (second && state.fresh.has(`${dim}\u0000${second.value}`));
-      return `<div class="vecrow${fresh ? ' vecrow--fresh' : ''}" data-dim="${esc(dim)}">
-        <div class="vectop"><span>${esc(first.value)}<em>${label}</em>${second ? `<i class="vec2" title="the second value of ${esc(DIM_LABEL[dim] || dim)}">${esc(second.value)} ${second.a.toFixed(2)}</i>` : ''}</span><b class="${first.a >= th ? 'over' : ''}">${first.a.toFixed(2)}</b></div>
-        <div class="track"><span class="fill${first.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, first.a * 100)}%"></span>
-          <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
-    }).join('');
-    justNow({ dims, prev, order, opts });
-  }
-  /**
-   * The "just now" strip above the panel: what the last event changed, read off the vector before and after (a value new
-   * to her, one that rose or fell, and whether it now leads or comes second in its dimension, "entered the panel"), and
-   * the audiences the action's own answer reports entering or leaving, with its trigger. An event that moved nothing says
-   * so; a read with no event and no change leaves the strip as it was.
-   */
-  function justNow(x) {
-    let box = document.getElementById('justNow');
-    if (!box && el.vectors.parentElement) { el.vectors.insertAdjacentHTML('beforebegin', '<div class="justnow" id="justNow" aria-live="polite"></div>'); box = document.getElementById('justNow'); }
+  function renderAudiences(v, x) {
+    let box = document.getElementById('audBox');
+    if (!box && el.vectors.parentElement) {
+      el.vectors.insertAdjacentHTML('afterend', '<div class="audbox" id="audBox"><p class="aud-k" id="audHead">Audiences</p><div class="audchips" id="audChips" aria-live="polite"></div></div>');
+      box = document.getElementById('audBox');
+    }
     if (!box) return;
-    if (!x) { box.innerHTML = ''; box.hidden = true; return; }
-    const { dims, prev, order, opts } = x;
-    const shown = (vector, dim) => valuesOf(vector[dim]).slice(0, 2).map((y) => y.value);
-    const moved = [];
-    for (const dim of order) {
-      const now = dims[dim] || {}, was = prev[dim] || {};
-      for (const value of new Set([...Object.keys(now), ...Object.keys(was)])) {
-        const a = num(now[value]) || 0, b = num(was[value]) || 0;
-        if (Math.abs(a - b) <= 0.004) continue;
-        const entered = shown(dims, dim).includes(value) && !shown(prev, dim).includes(value);
-        moved.push({ dim, value, a, b, d: Math.abs(a - b), entered });
+    const chips = document.getElementById('audChips'), head = document.getElementById('audHead');
+    if (!v) { chips.innerHTML = '<span class="aud-none">none yet</span>'; head.innerHTML = 'Audiences'; return; }
+    let s = audState.get(v);
+    if (!s) { s = { keys: [], words: new Map(), fresh: new Set(), last: null }; audState.set(v, s); }
+    const gone = [];
+    // The answer's records, each applied once however many draws carry it.
+    const recs = arr(x.changed).filter((c) => c && (c.audience || (c.dim && c.value)) && !isStageAudience(c.audience || ''))
+      .filter((c) => { const id = c.ts != null ? `${c.audience}|${c.direction}|${c.ts}` : null; if (id ? applied.has(id) : appliedRec.has(c)) return false; if (id) applied.add(id); else appliedRec.add(c); return true; });
+    if (recs.length) {
+      s.fresh = new Set();
+      let inN = 0, outN = 0;
+      for (const c of recs) {
+        const key = c.audience || audKey(c.dim, c.value);
+        s.words.set(key, audWords(key, c, x.dims, x.prev));
+        if (c.direction === 'exit') { if (s.keys.includes(key)) { s.keys = s.keys.filter((k) => k !== key); gone.push(key); } outN += 1; }
+        else { if (!s.keys.includes(key)) s.keys.push(key); s.fresh.add(key); inN += 1; }
       }
+      s.last = { inN, outN, trigger: x.trigger || (recs[0] && recs[0].trigger) || null };
     }
-    moved.sort((p, q) => q.d - p.d);
-    // A read that follows a navigation or a page's own question with nothing new keeps the strip: it says what the last
-    // event did until another event, or another change, replaces it.
-    if (!moved.length && !arr(opts && opts.changed).length && !(opts && opts.trigger)) return;
-    const lines = moved.slice(0, 6).map((m) => `<li><b>${esc(m.value)}</b> · ${esc(DIM_LABEL[m.dim] || m.dim)} ${m.a.toFixed(2)} <em>${m.a <= 0 ? 'left the profile'
-      : m.entered ? 'entered the panel' : m.b <= 0 ? 'new' : `was ${m.b.toFixed(2)}`}</em></li>`);
-    if (moved.length > 6) lines.push(`<li class="jn-more">and ${moved.length - 6} more</li>`);
-    for (const c of arr(opts && opts.changed)) {
-      if (!c || !c.dim) continue;
-      lines.push(`<li class="jn-aud"><b>${esc(c.value)}</b> · ${esc(DIM_LABEL[c.dim] || c.dim)} <em>${c.direction === 'exit' ? 'left' : 'entered'} the audience${c.audience ? ` ${esc(c.audience)}` : ''}${c.trigger ? ` on ${esc(c.trigger)}` : ''}</em></li>`);
+    // The engine's own list, on a read: what it holds is the set; one it no longer holds has left.
+    if (x.held) {
+      const live = x.held.filter((k) => !isStageAudience(k));
+      const strength = (k) => { const w = s.words.get(k) || audWords(k, null, x.dims); return num(((x.dims || {})[w.dim] || {})[w.value]) || 0; };
+      for (const k of s.keys) if (!live.includes(k)) gone.push(k);
+      s.keys = s.keys.filter((k) => live.includes(k));
+      for (const k of live.filter((k) => !s.keys.includes(k)).sort((p, q) => strength(q) - strength(p))) s.keys.push(k);
+      for (const k of live) if (!s.words.has(k)) s.words.set(k, audWords(k, null, x.dims, x.prev));
+      for (const k of [...s.fresh]) if (!live.includes(k)) s.fresh.delete(k);
     }
-    const trigger = opts && opts.trigger ? ` · ${esc(opts.trigger)}` : '';
-    box.innerHTML = `<p class="jn-k">Just now${trigger}</p>${lines.length ? `<ul>${lines.join('')}</ul>` : '<p class="jn-none">Nothing in the profile moved on this one.</p>'}`;
-    box.hidden = false;
+    const name = (k) => { const w = s.words.get(k) || audWords(k, null, x.dims, x.prev); return { value: w.value, label: DIM_LABEL[w.dim] || w.dim }; };
+    const chipHtml = (k) => { const n = name(k); return `${esc(n.value)}${n.label ? `<em> · ${esc(n.label)}</em>` : ''}`; };
+    // Reconcile by key: a chip stays the element it was, so its animation plays once.
+    chips.querySelectorAll('.aud-none').forEach((n) => n.remove());
+    const byKey = new Map([...chips.querySelectorAll('.audchip')].map((n) => [n.dataset.aud, n]));
+    let at = null;
+    for (const k of s.keys) {
+      let n = byKey.get(k);
+      if (!n || n.classList.contains('audchip--gone')) {
+        n = document.createElement('span');
+        n.dataset.aud = k;
+        n.innerHTML = chipHtml(k);
+        if (at) at.after(n); else chips.prepend(n);
+      }
+      n.className = `audchip${s.fresh.has(k) ? ' audchip--new' : ''}`;
+      n.title = s.fresh.has(k) ? `entered on ${s.last && s.last.trigger ? s.last.trigger : 'the last event'}` : 'in the audience';
+      byKey.delete(k);
+      at = n;
+    }
+    for (const [k, n] of byKey) {
+      if (n.classList.contains('audchip--gone')) continue;
+      if (gone.includes(k)) { n.className = 'audchip audchip--gone'; n.title = 'left'; setTimeout(() => n.remove(), 1200); }
+      else n.remove();
+    }
+    if (!s.keys.length && !chips.querySelector('.audchip--gone')) chips.insertAdjacentHTML('beforeend', '<span class="aud-none">none yet</span>');
+    const l = s.last;
+    head.innerHTML = `Audiences · <b>${s.keys.length}</b> in${l ? ` · <span class="aud-in">+${l.inN}</span> <span class="aud-out">−${l.outN}</span>${l.trigger ? ` on ${esc(l.trigger)}` : ''}` : ''}`;
   }
   /** The registry's per-dimension memory, as the vertical labels it: compressed for this room, days in production. */
   const memoryDims = () => arr(cfg.memoryDims ? cfg.memoryDims() : []).filter((d) => d.compressed);
@@ -522,6 +553,9 @@ export function createPanels(k) {
       if (panel) panel.hidden = !on;
     });
     if (id === 'tab-why') { renderWhy(); const set = cfg.currentSet ? cfg.currentSet() : null; if (set) void T().prefetchReceipts(set.decisions, set.asked).then(renderWhy); }
+    // Where the column scrolls (the dock), choosing a tab brings its bar to the top of the middle, its pane filling the rest.
+    const col = columnScroll();
+    if (col) col.scrollTop = panesAt(col);
   }
   tabs.forEach((t) => t.addEventListener('click', () => selectTab(t.id)));
   if (el.buildReport) el.buildReport.addEventListener('click', () => { void loadReport(true); });
