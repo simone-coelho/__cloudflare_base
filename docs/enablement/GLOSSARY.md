@@ -130,7 +130,7 @@ Terms are in alphabetical order, one entry each, in two or three sentences. "Dep
 
 ## J
 
-**Journey stage.** Where a visitor is within a visit: exploring, then considering, then deciding, with the middle stage reported as thinking. By default a visitor reaches considering at their third interaction and deciding at their first purchase, and the brand can publish its own thresholds.
+**Journey stage.** Where a visitor is within a visit: exploring, then considering, then deciding, with the middle one reported as thinking. By default a visitor reaches considering at their third interaction and deciding at their first purchase, and the brand can publish its own thresholds.
 
 ## K
 
