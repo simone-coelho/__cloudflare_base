@@ -276,11 +276,35 @@ const NEVER_SEEN = [
   [/\bnot\s+yet\b/gi, '"not yet"'],
   [/\b(?:tapestry|verizon|coach|qvc|mandeep|dynamic\s+yield)\b/gi, 'a customer or competitor name'],
 ];
-const neverSeen = (text) => NEVER_SEEN.flatMap(([re, what]) => [...text.matchAll(re)].map((m) => `${what} in "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).trim()}"`));
+const neverSeen = (text, except = null) => NEVER_SEEN.filter(([, what]) => what !== except)
+  .flatMap(([re, what]) => [...text.matchAll(re)].map((m) => `${what} in "${text.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).trim()}"`));
 const SEEN_RULE = 'no "designed", "stage", "Generation 1/2", "demo only", "today", "not yet", customer or competitor name';
+// The coordinator's ruling: the glossary's own Stage entry, the element with id "stage" on glossary.html,
+// names the word in order to retire it. Inside that one element, and nowhere else, "stage" is not a
+// finding; every other word in the scan still is.
+const STAGE_ENTRY = { page: 'glossary.html', id: 'stage' };
+// Where the element with this id starts and ends, its own tag balanced; null if there is none.
+const elementSpan = (html, id) => {
+  const open = new RegExp(`<([a-zA-Z][\\w-]*)\\b[^>]*\\sid=(["'])${id}\\2[^>]*>`).exec(html);
+  if (!open) return null;
+  const tag = new RegExp(`<(/?)${open[1]}\\b[^>]*>`, 'gi');
+  tag.lastIndex = open.index + open[0].length;
+  for (let depth = 1, m; (m = tag.exec(html));) {
+    depth += m[1] ? -1 : 1;
+    if (depth === 0) return [open.index, m.index + m[0].length];
+  }
+  return null;
+};
 for (const p of pages) {
-  const hits = neverSeen(seenText(p.html));
-  check(hits.length === 0, `${p.file}: what a reader sees has ${SEEN_RULE}${hits.length ? ` (${hits.length} found; first: ${hits.slice(0, 2).join('; ')})` : ''}`);
+  let html = noComments(p.html);
+  let entryHits = [];
+  const span = p.file.endsWith(`/${STAGE_ENTRY.page}`) ? elementSpan(html, STAGE_ENTRY.id) : null;
+  if (span) {
+    entryHits = neverSeen(seenText(html.slice(span[0], span[1])), '"stage"');
+    html = `${html.slice(0, span[0])} ${html.slice(span[1])}`;
+  }
+  const hits = [...neverSeen(seenText(html)), ...entryHits];
+  check(hits.length === 0, `${p.file}: what a reader sees has ${SEEN_RULE}${span ? ' (its Stage entry may name "stage")' : ''}${hits.length ? ` (${hits.length} found; first: ${hits.slice(0, 2).join('; ')})` : ''}`);
 }
 const shownElsewhere = [
   ...files.filter((f) => extname(f).toLowerCase() === '.svg').map((f) => [f, seenText(read(f))]),
