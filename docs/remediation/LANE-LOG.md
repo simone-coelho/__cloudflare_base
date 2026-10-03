@@ -557,6 +557,16 @@ Triage (L2, 2026-09-18) measured the 29 failing files serially on `5b0b0ae`: 238
 
 Plan: BASE-2 (L3) and BASE-1a (L4) run now in disjoint files. BASE-1b (shopperReflex.*, routes/identity, routes/sort, auth.refresh-boundary, routeEscape, api-boundary B-part, brands: groups A/B/E/I/D-part) and BASE-1c (brighthour, learn, console, telemetry, freshFatigue, regionTrend: groups A/H/J-learn) follow when L3/L4 return. `W09.BASE.01` is briefed to an implementer once the score tool exists so the ratchet can be run.
 
+### Engine residuals found by the demo programme (lead, 2026-10-03)
+Found while hosting the OH demo on today's engine; recorded here so the owning W sees them. None is built by the demo programme except where said; none changes a W's scope or closure.
+
+| Residual | Where | Owning W | State |
+|---|---|---|---|
+| The hourly fold refuses a closed hour on `aggregateBytes` once the 48-hour rings pass about 7.5 MB (the transaction carries about two copies of the rings against one 16 MiB budget, `src/learn/hourly.ts` ~1810, ~1827), and every busy hour after it is listed missing; the catch-up's first step, the ring cleanup, carries the same bound (~1570, ~1929), so on busy rings one erasure stops the whole catch-up | `src/learn/hourly.ts` | W30.04 (the fold's recovery record), W22 (the horizon and ring size) | Open; the ruling turns on what the recovery record must carry, a smaller ring or horizon for a demo tenant, a transaction budget apart from the report's, and whether an hour past its raw budget is truncated (R7 §, `docs/lg/lanes/R7.md`) |
+| The day report on a busy day: a day with no folded hour read raw trips `rawBytes` at about four and a half suite rounds; summing a day from its hours charged every member 4 × the hours folded and tripped `work` by early afternoon; the open hour's decisions were left out silently | `src/learn/report.ts`, `src/learn/hourly.ts` | W22 | Lane E6 (demo programme, `docs/lg/lanes/E6.md`, reviewed by R7) builds the merge-in-place day and a working aggregate for the open hour with the final fold byte-equal; its second build is in review; it merges into `feature/real-time-personalization` on PASS and the W22 owner is told |
+| `POST /realtime/action` in the session host: the session projection's two KV writes (about 97 ms each on a rig) are now the largest share of the answer; answering before the fan-out would buy about 200 ms on add_to_cart but changes what a 200 acknowledges (W05.02, W06.12) | `src/durable-objects/ShopperReflex.ts` | W04, W05 | Open; the lead's ruling for the demo was to leave the acknowledgement contract as it is (lane E4, `docs/lg/lanes/E4.md`, R6 §11) |
+| `/content/priors` answers 503 for a demo tenant; the demo bootstrap accepts only four publication members; the entry contract still refuses `gclid` (W16's ruling) | content and publication routes | W16, W37 | Open, from the demo kit's lanes (`docs/demo-kit/Demo-Kit-Design.md`) |
+
 ## Commits
 
 | Sha | What |
