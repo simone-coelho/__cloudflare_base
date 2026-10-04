@@ -259,6 +259,8 @@ const getJson = async (path) => (await fetch(`${base}/${SLUG}/${path}`, { cache:
 const demoConfig = await getJson('demo.config.json');
 const beatsDoc = await getJson('beats.json');
 const anchor = await getJson('beats/anchor.json');
+/** A dimension's own evidence constant: its K in the registry's dimensions (Simone's per-dimension K), else the registry's global K. */
+const kOf = (dim) => Number((((anchor.registry || {}).dimensions || []).find((d) => d && d.key === dim) || {}).K) || Number((anchor.registry || {}).K) || 1.8;
 const catalog = await getJson('catalog.json');
 const productsDoc = await getJson('products.json');
 const openCatalog = (await getJson('beats/open-catalog.json')).publish.document;
@@ -1377,7 +1379,7 @@ async function signalsWalk() {
   await booted();
   await evaluate(inPage(pageHelpers));
   await sleep(1200);
-  const reg = anchor.registry || {}, K = Number(reg.K) || 1.8, wpv = Number((reg.weights || {}).product_view) || 1, oneTouch = wpv / (wpv + K);
+  const reg = anchor.registry || {}, wpv = Number((reg.weights || {}).product_view) || 1, oneTouch = (dim) => wpv / (wpv + kOf(dim));   // w / (w + K), the dimension's own K
   const cap = () => { const e = eventsIn(HANDS2); return e.length ? e[e.length - 1].cap : null; };
   const pv = async (sku) => { for (let i = 0; i < 60; i += 1) { const e = eventsIn([press]).find((x) => x.type === 'product_view' && String(x.data.productId) === sku); if (e) { for (let j = 0; j < 40; j += 1) { const r = [...requests.values()].filter((q) => q.press === press && q.path === '/realtime/action').pop(); if (!r || r.status !== null) break; await sleep(50); } return e; } await sleep(100); } return null; };
   const at = async () => path((await storeNow()).address);
@@ -1398,8 +1400,8 @@ async function signalsWalk() {
         (C, engine) => Boolean(engine && C.vector && C.vector.room) && Math.abs(Number(C.vector.room[room] || 0) - Number((engine.room || {})[room] || 0)) <= 0.02);
       const want = Number((((R.engine || {}).room) || {})[room] || 0);
       const roomRow = R.C.rows.find((r) => r.value === room && dimOfLabel(r.label) === 'room') || null;
-      ok(`one click registers at once: within two seconds the meters show the engine’s eight strongest readings, and the first view’s room (${room}) reads the one-touch reading ${oneTouch.toFixed(2)} in the page’s vector${roomRow ? ' and on its meter' : ''}`,
-        R.M.ok && R.X && Math.abs(want - oneTouch) <= 0.02 && (!roomRow || Math.abs(roomRow.a - want) <= 0.011),
+      ok(`one click registers at once: within two seconds the meters show the engine’s eight strongest readings, and the first view’s room (${room}) reads the one-touch reading ${oneTouch('room').toFixed(2)} (K ${kOf('room')} on room) in the page’s vector${roomRow ? ' and on its meter' : ''}`,
+        R.M.ok && R.X && Math.abs(want - oneTouch('room')) <= 0.02 && (!roomRow || Math.abs(roomRow.a - want) <= 0.011),
         `engine ${want.toFixed(2)} · vector ${Number(((R.C.vector || {}).room || {})[room] || 0).toFixed(2)} · meter ${roomRow ? roomRow.a.toFixed(2) : 'not in the eight'} · ${R.M.ok ? 'the engine’s eight' : R.M.detail} · ${R.ms} ms`);
       ok('and the Session list names the TV she opened within the same two seconds', R.J.ok, R.J.detail);
       ok('and the audience chips are the audiences the engine holds', R.A.set, R.A.detail);
@@ -1494,7 +1496,7 @@ async function persistenceWalk() {
   console.log('\n── One visitor across full page loads: a reload, a direct product address, a new tab');
   const washers = rowsAll.filter((p) => p.family === 'front-load-washer' && p.cta === 'cart' && p.inStock !== false && Number(p.salePrice) > 0).slice(0, 3);
   const [A, B, C] = washers;
-  const K = Number((anchor.registry || {}).K) || 1.8;
+  const K = kOf('category');   // the walk reads washers · category: its own K
   await cdp('Page.navigate', { url: 'about:blank' });
   await sleep(300);
   await settled(500, 8000);
@@ -2256,7 +2258,7 @@ try {
         tv && laundry ? `living room ${tv.b} → ${tv.a} (−${tv.fall}%) · laundry room ${laundry.b} → ${laundry.a} (−${laundry.fall}%)` : 'no dials read');
       {
         // The fade is the published memory's own projection: a = R / (R + K), R = aK / (1 − a), decaying by e^(−t/τ) on the dimension.
-        const reg = anchor.registry || {}, K = Number(reg.K) || 1.8, t = days * 86400000;
+        const reg = anchor.registry || {}, K = kOf('room'), t = days * 86400000;   // the room dials: room's own K
         const tauRoom = Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs) || 1209600000;
         const tauLabel = (ms) => (ms < 120000 ? `${Math.round(ms / 1000)} seconds` : ms < 7200000 ? `${Math.round(ms / 60000)} minutes` : `${Math.round(ms / 86400000)} days`);
         const carry = (a) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauRoom); return r / (r + K); };

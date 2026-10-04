@@ -1704,9 +1704,9 @@ import { store } from '/oh/oh-store.js';
       await panels.renderVectors();
       const before = JSON.parse(JSON.stringify(state.lastVector || {}));
       const reg = state.registry || {};
-      const K = num(reg.K) || 1.8, base = num(reg.tauMs) || 1209600000, t = days * 86400000;
+      const kOf = (dim) => { const d = arr(reg.dimensions).find((x) => x.key === dim); return num(d && d.K) || num(reg.K) || 1.8; }, K = kOf('room'), base = num(reg.tauMs) || 1209600000, t = days * 86400000;   // K per dimension: its own, else the registry's
       const tauOf = (dim) => { const d = arr(reg.dimensions).find((x) => x.key === dim); return num(d && d.tauMs) || base; };
-      const carry = (a, dim) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauOf(dim)); return r / (r + K); };
+      const carry = (a, dim) => { if (!(a > 0) || a >= 1) return a; const k = kOf(dim), r = (a * k) / (1 - a) * Math.exp(-t / tauOf(dim)); return r / (r + k); };
       const thetaIn = num(reg.thetaIn) || 0.6;                                // the entry threshold, the registry's own
       const fast = tauOf('room') < 3600000;                                   // the demo's compressed dial: seconds or minutes, not days
       const read = (dim, value) => { const a = num(((before[dim] || {})[value]) || 0); return { dim, value, b: a, a: carry(a, dim), tau: tauOf(dim) }; };

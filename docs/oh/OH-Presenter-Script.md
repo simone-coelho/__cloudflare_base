@@ -36,17 +36,17 @@ Do this before any beat, at `/oh/`, with the director collapsed. It is the most 
 
 **Now open the director** (D) and keep it open for the clicks: "What has been signalled" reads "No dimension has evidence yet."
 
-**The rhythm: click, watch Just now, then click again.** Every event the store sends redraws the panel, the receipts and the before/now strips when the engine answers, exactly as after a press; **Just now**, at the top of the panel, names what the click changed. Wait for it to move, so the room sees each click land. Between clicks the readings drift down: that is the three-minute dial, not a fault. One view reads 0.36 and stays out; a second view within two minutes reads about 0.50 and enters its audiences as green chips; a cart add enters alone at 0.74 on a fresh value. The previous line leaves its audience when its reading falls under 0.30, two to four minutes after its last click, depending on how much it carried. *Hosted figure, measured by the lead from the live page on 2026-10-03 after lane E4's deploy: an Add to Cart's answer in about half a second (537 ms; ten replayed actions 433 to 587 ms, median 453), and Just now moving with it (542 ms from the click); before E4 the same answer took 1.0 to 2.1 s. A profile read answers in under a tenth of a second.*
+**The rhythm: click, watch the panel, then click again.** Every event the store sends redraws the panel, the receipts and the before/now strips when the engine answers, exactly as after a press: the meters it moved glow, and the Audiences caption names the event ("+2 −0 on product_view"). Wait for it, so the room sees each click land. Between clicks the readings drift down: that is the three-minute dial, not a fault. The chips arrive in order, for views 25 seconds apart: category and room on the second, type, size and price tier on the third, series and finish on the fifth, the retailer only with a cart add, which enters a fresh product whole (category 0.74). The previous line leaves its audience when its reading falls under 0.30, two to four minutes after its last click, depending on how much it carried. *Hosted figure, measured by the lead from the live page on 2026-10-03 after lane E4's deploy: an Add to Cart's answer in about half a second (537 ms; ten replayed actions 433 to 587 ms, median 453), and the panel moving with it (542 ms from the click). A profile read answers in under a tenth of a second.*
 
-Then click, in this order; each line is what the lanes measured by real clicks.
+Then click, in this order.
 
 | Click | What it does | Say |
 |---|---|---|
-| **A room tile:** TVs | **This first click mints the visitor** (one session, consent, the page view). A page view carries no product, so Just now has nothing to name yet. The grid opens decided, "Best match, decided for you", POST /sort over the TVs, "leans with North Carolina's sales · synthetic → warehouse". | "The visitor exists from the first click, not from loading the page." |
-| **A filter:** OLED | "47 results", every card an OLED; the filter goes to the engine as a signal, the grid asks again, and Just now names the type and category it carried. Taking it off sends nothing. | "Choosing a filter tells us something about the visitor. Clearing one doesn't." |
-| **A product:** any OLED card | The sticky buy bar over "OFF LIMITS … never decided, never personalised"; below, the decided modules with their receipts. Just now lists the TV's attributes at one view's worth (hosted, 2026-10-03: room living-room 0.35, on the panel within two seconds). | "The buy box is yours, never ours. What's below it is decided, and says why." |
-| **A size** on the TV, or **a colour** on a washer | The page becomes that model at its own price (WM6500HWA: White $1,199.00, Black steel $1,249.00), and Back returns; Just now names what the select moved, at three views' weight. | "The price follows the model, the same for everyone. What the visitor picks is a signal." |
-| **Add to Cart** | "Added to your cart: …", the count goes to 1, the drawer opens. The event carries the decisions that led there and weighs five views: Just now shows the product's dimensions jump. | "Adding to the cart counts five times a view, and you just watched it land." |
+| **A room tile:** TVs | **This first click mints the visitor** (one session, consent, the page view). A page view carries no product, so no meter moves yet. The grid opens decided, "Best match, decided for you", POST /sort over the TVs, "leans with North Carolina's sales · synthetic → warehouse". | "The visitor exists from the first click, not from loading the page." |
+| **A filter:** OLED | "47 results", every card an OLED; the filter goes to the engine as a signal, the grid asks again, and the type and category it carried glow on the meters. Taking it off sends nothing. | "Choosing a filter tells us something about the visitor. Clearing one doesn't." |
+| **A product:** any OLED card | The sticky buy bar over "OFF LIMITS … never decided, never personalised"; below, the decided modules with their receipts. The meters show the TV's attributes at one view's worth (hosted, 2026-10-03: room living-room 0.35, on the panel within two seconds). | "The buy box is yours, never ours. What's below it is decided, and says why." |
+| **A size** on the TV, or **a colour** on a washer | The page becomes that model at its own price (WM6500HWA: White $1,199.00, Black steel $1,249.00), and Back returns; the meters show what the select moved, at three views' weight. | "The price follows the model, the same for everyone. What the visitor picks is a signal." |
+| **Add to Cart** | "Added to your cart: …", the count goes to 1, the drawer opens. The event carries the decisions that led there and weighs five views: the product's dimensions jump on the meters, and their chips land green. | "Adding to the cart counts five times a view, and you just watched it land." |
 | **The cart** (the icon) | Lines, quantities, add-ons, the pair saving when a washer and its own dryer are both in, the total. **Checkout** opens "What this demo records": one order event per line against the decision that led to it; "No payment is taken, no card or address is asked for, nothing ships." | "Nothing is charged. The order is recorded against the decision that earned it." |
 | **Find a Retailer** (a retailer-only card, or Find a Store on a product page) | The one retailer modal: Buy directly, Best Buy pickup where offered, Online, then Nearby stores in the region from the request; the demo's own list, "not a live PriceSpider answer". A seller pressed sends a referral, credited to a decided where-to-buy module or to none, as the modal says: "A referral is not a sale". | "Every retailer hand-off becomes a named outcome. The list is ours for the demo; in production it's yours." |
 | **Back** | One press per page, the grid's filter still on. | |
@@ -66,7 +66,7 @@ The Session tab lists every event the visitor sent. Then **Next** for beat 1.
 The director is docked right, collapsed by default to a slim rail with **Director** and **Next**, so the room sees the store full width. Open it with **D** (outside a text field), the rail's Director button or `/oh/?present=1`; close it with **Hide** or **D**. Open, it shows the engine panel above the director bar, and the store goes to three cards across.
 
 - **Next →** runs the next beat (the rail's Next is the same press). **All beats** opens the sixteen, the region buttons and the Compare tools; **Explain** shows what a press will do.
-- The dark panel is the engine. **What has been signalled** has one row per dimension in the registry's order: the leading value and its score, the second beside it, "—" where nothing has evidence, the row's memory ("3 min memory", "10 min memory"), the green tick at the 0.45 entry line, the hollow mark for the region's lean. **Just now**, above the rows, names what the last event changed ("entered the panel", "was 0.36") or says "Nothing in the profile moved on this one."; beneath them, the registry's constants and "Memory is compressed for this room (…); production runs days." Then the tabs Arrival, Session, Why these, Learned (the day report) and Roadmap, and Capture and Compare.
+- The dark panel is the engine. **What has been signalled** shows the eight strongest values as meters, each naming its dimension, memory and K ("category · 3 min memory · K 1.8"), white past the green tick at 0.45, glowing when the last event moved it; the hollow mark is the region's lean. Under them, **Audiences**: the engine's memberships as chips ("washers · category"), green entering, fading leaving. Beneath, each dimension's K and "Memory is compressed for this room (…); production runs days." Then the tabs Arrival, Session, Why these, Learned (the day report) and Roadmap, and Capture and Compare.
 - Each decided slot has a before/now strip ("What was on screen before this press · What changed") and a receipt under each card, redrawn after every event. The quoted lines under **They see** are on screen: point at them.
 
 ---
@@ -88,7 +88,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 **You say:**
 > "Same stranger, same page. Now I tell the page this visitor is in Texas, and it says so: asserted, not observed. Texas sales lean to a bigger screen, so the rails follow. The meters haven't moved, and the price is the same for everyone."
 
-**Caveat:** the homepage's pieces often hold their order while the rails move; read the line. From a state that leans like Texas, the contrast is New Jersey. Say nothing about Texas beyond its sales.
+**Caveat:** the homepage's pieces often hold their order while the rails move; read the line. From a state that leans like Texas, the contrast is New Jersey.
 
 ---
 
@@ -98,7 +98,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 **Press:** Next. Back in the visitor's own region, through the store's own controls: the TV grid, the first TV it offers, Back, the next one, the Laundry menu's WM4000HWA, then home.
 **They see:** the meters rise; the room tiles reorder with the reason on the strip; the five deals hold both rooms by the slot’s own rule; "Recommended for you holds living room 4 · laundry room 4 · kitchen 4", rooms in the rail's order.
 **You say:**
-> "Two TVs, then a washer: the clicks I just made by hand, scripted so we can measure them. The meter is evidence over evidence plus 1.8: one product view reads 0.36, two about 0.53. The tiles reorder on the rooms, and Recommended for you keeps each room's four, never swapping wholesale. Every receipt names what carried the card."
+> "Two TVs, then a washer: the clicks I just made by hand, scripted so we can measure them. The room's meter is evidence over evidence plus 1.8: one product view reads 0.36, two about 0.53. The tiles reorder on the rooms, and Recommended for you keeps each room's four, never swapping wholesale. Every receipt names what carried the card."
 
 ### Beat 4. The fresh visitor beside them
 **Press:** Next: Compare → Fresh visitor on the homepage.
@@ -151,7 +151,7 @@ The director is docked right, collapsed by default to a slim rail with **Directo
 **You say:**
 > "Premium as curation, not pressure: bright room, QNED; dark room, OLED. The visitor tells us they sit nine feet away. That's declared context: it rides the next question and records nothing about any product. The card's own rule says one size up is the 75-inch, and nothing on the meters rises. Then they choose it, with the card's button, and the size band moves, because they chose. The price is the same for everyone, and nothing decided sits near the financing line."
 
-**Caveat:** nothing rises after the distance, only after "Choose the 75″", when Just now names what moved; which dimensions, and by how much, varies with the walk.
+**Caveat:** nothing rises after the distance, only after "Choose the 75″", when the moved meters glow; which dimensions, and by how much, varies with the walk.
 
 ### Beat 10. A closet width
 **Press:** Next. The washer page again, "28 in" in the fit tool.
@@ -237,15 +237,15 @@ Say once: "Each of these is a real publish of your catalog or slots, as a mercha
 **"How long does a profile last?"**
 > "Four clocks, independent, three of them yours to set. Interest fades per dimension: we ship 14 days, 35 for price band, up to 90; you'd publish 60 to 90 days on type, size and price band, minutes on deal interest. Five touches read 0.74; six weeks later that's 0.12 at 14 days, 0.58 at 60, 0.64 at 90. Retention is a tenant policy from the first event: 30 days on demo tenants, 120 to 180 with your privacy owner. A return is recognised inside a continuity window you publish, up to 90 days; the session token lasts 24 hours. Consent runs 30 days from each explicit choice, and we carry your consent state, Global Privacy Control included, rather than a second banner. Taste lasts as long as you decide; the moment lasts minutes; a return is recognised inside the window you publish, and never without consent."
 
-In this room memory is compressed on purpose, and the panel says so: three minutes on room, category, subcategory, type, series, panel, size band, capacity tier, fuel, finish, package, content type and retailer; ten minutes on price tier, feature and intent. If asked:
+In this room memory is compressed on purpose, and the panel says so: ten minutes on price tier, feature and intent, three on every other dimension. A view moves each dimension by what it says, its K: a lot about category and room (1.8), less about type, size band, capacity tier, fuel, package and content type (3), little about subcategory, series, panel and finish (4.5), nothing about the retailer whose price was on the page (6); price tier, feature and intent take 2.5. If asked:
 > "Only in this room, so you can watch the page change while I click; production runs days. The dial sets how fast old evidence fades, never how fast a click counts: every click counts at once. We measured it on this store: two TVs, then three washers by hand, and washers lead TVs 0.58 to 0.40, and the next homepage opens on the laundry room."
 
-The washers figure was measured on the hosted store on 2026-10-03, on the one-minute dial (the laundry room's hero and deal led the next answer); the lead re-measures it on the three-minute registry and corrects it here if it moves. The by-hand rhythm is arithmetic, entry 0.45 and exit 0.30; production's lines are 0.60 and 0.45.
+The washers figure was measured on the hosted store on 2026-10-03, on the one-minute dial (the laundry room's hero and deal led the next answer); the lead re-measures it on the three-minute registry and corrects it here if it moves. The by-hand order is the engine's arithmetic, entry 0.45 and exit 0.30; production's lines are 0.60 and 0.45.
 
 **"Laptop now, phone later: is that one person?"**
 > "Two anonymous people, two profiles, until the visitor signs in on either device and your site sends the signed link. Then one profile keeps both histories, each faded by its own clock, and the phone's next page opens on the laptop's taste. No fingerprinting, by design. 'Sign in for member pricing' is the natural moment, and a linked profile keeps the earliest start date, so retention must be long enough to make the link worth it."
 
-If asked why a reload keeps the visitor: "The browser keeps its own session token, as our SDK does, for 24 hours: the same browser, not a device match." Each showing signs in a fresh Dana, and a session a sign-in has retired cannot sign in again.
+If asked why a reload keeps the visitor: "The browser keeps its own session token, as our SDK does, for 24 hours: the same browser, not a device match."
 
 ---
 

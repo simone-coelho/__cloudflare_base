@@ -8,7 +8,7 @@ import test from 'node:test';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig, loadValidConfig, REPO_ROOT, STORE_LABELS, validateConfig } from './config.mjs';
+import { loadConfig, loadValidConfig, REPO_ROOT, STORE_LABELS, validateConfig, validateDemoConfig } from './config.mjs';
 import { DAY, MINUTE, prepareSeed } from './seed.mjs';
 import { beatFile, fill, idents, mountLines, planScaffold, selectPiece } from './scaffold.mjs';
 import { builderArgs, builderArgsFor, main } from '../new-demo.mjs';
@@ -22,7 +22,7 @@ const tiny = () => ({
   fonts: { font: 'Inter', mono: 'JetBrains Mono' },
   dimensions: [
     { key: 'category', values: ['a', 'b', 'c'] },
-    { key: 'style', tau: '60s', values: ['x', 'y'] },
+    { key: 'style', tau: '60s', K: 4.5, values: ['x', 'y'] },
     { key: 'intent', tau: '10m', multi: true, values: ['buy', 'browse'] },
   ],
   regional: { dimensions: ['category'] },
@@ -139,7 +139,15 @@ test('the starter catalog names every value of every dimension, carries each see
   const vocab = read(root, 'scripts/demo-kit/configs/kx.json').seed.vocabulary;
   assert.deepEqual(vocab, { category: ['a', 'b', 'c'], style: ['x', 'y'], intent: ['buy', 'browse'] });
   const reflex = read(root, 'scripts/demo-kit/configs/kx/reflex.json');
-  assert.deepEqual(reflex.dimensions, [{ key: 'category', source: 'category' }, { key: 'style', source: 'style', tauMs: 60000 }, { key: 'intent', source: 'intent', multi: true, tauMs: 600000 }]);
+  assert.deepEqual(reflex.dimensions, [{ key: 'category', source: 'category' }, { key: 'style', source: 'style', tauMs: 60000, K: 4.5 }, { key: 'intent', source: 'intent', multi: true, tauMs: 600000 }],
+    'each dimension\'s own memory and K, as the config sets them; none where it sets none (the registry\'s)');
+  assert.equal(reflex.K, 1.8, 'the registry\'s own K stays the fallback');
+  const anchor = read(root, 'public/kx/beats/anchor.json');
+  assert.deepEqual(anchor.registry.dimensions, reflex.dimensions, 'the anchor\'s copy carries the same K the registry publishes');
+  for (const [K, said] of [['4.5', /^dimensions\[1\]\.K: a positive number/m], [0, /^dimensions\[1\]\.K: a positive number/m], [-1, /^dimensions\[1\]\.K: a positive number/m]]) {
+    const d = tiny(); d.dimensions[1].K = K;
+    assert.match(validateDemoConfig(d).errors.join('\n'), said, `K ${JSON.stringify(K)} is refused`);
+  }
   const learn = read(root, 'scripts/demo-kit/configs/kx/learn.json');
   assert.deepEqual(Object.keys(learn.slots), ['hero', 'deals', 'back', 'modules']);
   assert.ok(Object.values(learn.slots).every((s) => s.gamma === 0 && s.exploration.mode === 'off'));
@@ -260,6 +268,10 @@ test('OH\'s scaffold in this repository seeds clean, and its server, kit config 
   const plan = planScaffold({ demo: JSON.parse(readFileSync(join(REPO_ROOT, 'public', 'oh', 'demo.config.json'), 'utf8')) });
   assert.equal(plan.files.find((f) => f.path === 'src/demos/oh.config.ts').content.split('\n').filter((l) => /^ {2}'/.test(l)).join('\n'),
     server.split('\n').filter((l) => /^ {2}'/.test(l)).join('\n'), 'a rerun plans the same closed list');
+  // A rebuild (--rebuild-beats) rewrites reflex.json from demo.config.json: it must plan the published dimensions, memory and K.
+  const planned = JSON.parse(plan.files.find((f) => f.path === 'scripts/demo-kit/configs/oh/reflex.json').content);
+  const published = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts', 'demo-kit', 'configs', 'oh', 'reflex.json'), 'utf8'));
+  assert.deepEqual(planned.dimensions, published.dimensions, 'a rerun plans the published registry\'s dimensions, field for field');
 });
 
 test('a demo\'s own catalog: the opening document carries the engine\'s fields only, against the catalog\'s own anchor, with a slot\'s gate on its ungated pieces', async () => {

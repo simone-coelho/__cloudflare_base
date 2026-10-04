@@ -3,7 +3,8 @@
 //   who and context   the visitor chip, her arm, and the context chips (region, intent, stage), each labelled
 //                     with how it is known: from the request, asserted, or a rehearsal override
 //   signals           her meters, read from her own profile (GET /realtime/reflex), with the entry threshold
-//                     and the region's lean drawn on each track; constants from the published registry
+//                     and the region's lean drawn on each track; constants from the published registry, each row on
+//                     its own dimension's K and θin where the registry sets them per dimension (the engine's rule)
 //   arrival           the cold start: region, grain, census (shown, never scored) and the regional lean
 //   session           the journey, written down as it happens
 //   why these         every decision on screen with its drivers, and the full receipt behind it
@@ -101,6 +102,20 @@ export function createPanels(k) {
   const thetaIn = () => num(reg().thetaIn != null ? reg().thetaIn : 0.6);
   const thetaOut = () => num(reg().thetaOut != null ? reg().thetaOut : 0.45);
   const K = () => num(reg().K != null ? reg().K : 1.8);
+  // Per dimension, as the engine applies them (src/reflex/core.ts dimParams): the dimension's own entry, else the registry's.
+  const specOf = (dim) => arr(reg().dimensions).find((d) => d && d.key === dim) || null;
+  const kOf = (dim) => { const s = specOf(dim); return s && s.K != null ? num(s.K) : K(); };
+  const thetaInOf = (dim) => { const s = specOf(dim); return s && s.thetaIn != null ? num(s.thetaIn) : thetaIn(); };
+  /** K per dimension, grouped by value and ascending ([[1.8, [labels]], …]), when a dimension's own K differs from the registry's; else null. */
+  function kGroups() {
+    const dims = arr(reg().dimensions).filter((d) => d && d.key);
+    if (!dims.some((d) => kOf(d.key) !== K())) return null;
+    const by = new Map();
+    for (const d of dims) by.set(kOf(d.key), [...(by.get(kOf(d.key)) || []), DIM_LABEL[d.key] || d.key]);
+    return [...by.entries()].sort((p, q) => p[0] - q[0]);
+  }
+  /** "1.8 (category, room); 3 (type, …); 6 (retailer)": the K each dimension reads, for a presenter. */
+  const kWords = (groups = kGroups()) => (groups ? groups.map(([k, names]) => `${k} (${names.join(', ')})`).join('; ') : `${K()}`);
   const leanShare = () => { const l = state.coldstart && state.coldstart.lean; return (l && (l.share || l.shares)) || {}; };
 
   // ── Her meters ────────────────────────────────────────────────────────────
@@ -145,11 +160,11 @@ export function createPanels(k) {
     rows.sort((x, y) => y.a - x.a);
     const lean = leanShare();
     const leanOf = (dim, value) => { const d = lean[dim] || {}; return typeof d[value] === 'number' ? d[value] : null; };
-    const th = thetaIn();
+    const perDimK = Boolean(kGroups());   // with K set per dimension, each row names the K its reading is on
     el.vectors.innerHTML = rows.length ? rows.slice(0, 8).map((r) => {
-      const l = leanOf(r.dim, r.value);
+      const l = leanOf(r.dim, r.value), th = thetaInOf(r.dim);
       return `<div class="vecrow${state.fresh.has(`${r.dim}\u0000${r.value}`) ? ' vecrow--fresh' : ''}">
-        <div class="vectop"><span>${esc(r.value)}<em>${esc(DIM_LABEL[r.dim] || r.dim)}${roomOf(r.dim) ? ` · ${esc(roomOf(r.dim))} memory` : ''}</em></span><b class="${r.a >= th ? 'over' : ''}">${r.a.toFixed(2)}</b></div>
+        <div class="vectop"><span>${esc(r.value)}<em>${esc(DIM_LABEL[r.dim] || r.dim)}${roomOf(r.dim) ? ` · ${esc(roomOf(r.dim))} memory` : ''}${perDimK ? ` · K ${kOf(r.dim)}` : ''}</em></span><b class="${r.a >= th ? 'over' : ''}">${r.a.toFixed(2)}</b></div>
         <div class="track"><span class="fill${r.a >= th ? ' fill--over' : ''}" style="width:${Math.min(100, r.a * 100)}%"></span>
           <span class="thresh" style="left:${th * 100}%"></span>${l !== null ? `<span class="lean" style="left:${Math.min(100, l * 100)}%" title="the region’s lean: ${Math.round(l * 100)}%"></span>` : ''}</div></div>`;
     }).join('') : '<p class="m-empty">No evidence from the visitor yet. The first paint is the region and the campaign, not the visitor.</p>';
@@ -160,9 +175,13 @@ export function createPanels(k) {
   function renderPrior() {
     const th = thetaIn();
     const reg0 = cfg.regionalDriver ? cfg.regionalDriver() : null;
+    // With K set per dimension the line names each dimension's K (the rows carry theirs); with one K, the line is as it was.
+    const groups = kGroups(), perDim = groups ? `on its dimension’s own K, from the published registry: K = ${esc(kWords(groups))}` : '';
     el.priorLine.innerHTML = reg0
-      ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as the visitor’s own evidence grows. Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
-      : `a = R / (R + K) with K = ${K()}, from the published registry. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`;
+      ? `The region (${esc(reg0.value)}) speaks for <b>λ = ${fmt2(reg0.a)}</b> of the blend, λ = K / (K + Σa): it gives way as the visitor’s own evidence grows.${groups ? ` Each meter is a = R / (R + K) ${perDim}.` : ''} Hollow marks: the region’s lean. Green tick: the ${fmt2(th)} entry threshold.`
+      : groups
+        ? `Each meter is a = R / (R + K) ${perDim}. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`
+        : `a = R / (R + K) with K = ${K()}, from the published registry. Green tick: the ${fmt2(th)} entry threshold; hollow marks: the region’s lean.`;
     const mem = memoryLine();
     if (mem) el.priorLine.insertAdjacentHTML('beforeend', `<span class="memline">${mem}</span>`);
   }
@@ -599,7 +618,7 @@ export function createPanels(k) {
   if (el.buildReport) el.buildReport.addEventListener('click', () => { void loadReport(true); });
 
   return {
-    note, renderJourney, renderWho, thetaIn, thetaOut, K, reg, renderVectors, roomOf, memoryLine, topSignal,
+    note, renderJourney, renderWho, thetaIn, thetaOut, K, kOf, thetaInOf, kGroups, kWords, reg, renderVectors, roomOf, memoryLine, topSignal,
     coldLabel, regionName, loadColdStart, renderColdStart, ownRegion, ownSource, ownName, setRegion, restoreRegion, regionShown, regionLabel,
     SEED_NAME, seedsFired, seedLabel, OWN, declaredMark, driverSummary, whyRows, renderWhy,
     loadReport, renderReport, renderRoadmap, selectTab, sleep,

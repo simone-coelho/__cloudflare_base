@@ -796,12 +796,13 @@ export function validateDemoConfig(demo, { root = REPO_ROOT, tokens = kitTokens(
 
   // Dimensions with their memory.
   const dims = new Map();
-  if (!Array.isArray(demo.dimensions) || !demo.dimensions.length || demo.dimensions.length > 32) at('dimensions', 'a list of 1..32 dimensions, each { key, tau?, source?, multi?, values? }');
+  if (!Array.isArray(demo.dimensions) || !demo.dimensions.length || demo.dimensions.length > 32) at('dimensions', 'a list of 1..32 dimensions, each { key, tau?, K?, source?, multi?, values? }');
   else demo.dimensions.forEach((d, i) => {
     const where = `dimensions[${i}]`;
     if (!isObject(d) || !isString(d.key, 64) || !DIM.test(d.key)) { at(`${where}.key`, 'a dimension name'); return; }
     if (dims.has(d.key)) at(`${where}.key`, `"${d.key}" is listed twice`);
     if (d.tau !== undefined && durationMs(d.tau) === null) at(`${where}.tau`, `"${d.tau}" is not a duration such as 60s, 10m, 2h or 14d`);
+    if (d.K !== undefined && !(typeof d.K === 'number' && Number.isFinite(d.K) && d.K > 0)) at(`${where}.K`, 'a positive number: the evidence at which the dimension reads 0.5 (absent, the registry\'s K)');
     if (d.source !== undefined && !(isString(d.source, 64) && FIELD.test(d.source))) at(`${where}.source`, 'the event attribute it reads');
     if (d.multi !== undefined && typeof d.multi !== 'boolean') at(`${where}.multi`, 'true when an event may carry several values');
     if (d.values !== undefined) vocabularyRule(errors, `dimensions[${i}].values`, { [d.key]: d.values });

@@ -730,7 +730,8 @@ import { store } from '/demo-kit/store.js';
       if (!beatsDoc || !Array.isArray(beatsDoc.beats)) throw new Error(`beats.json is missing: the director's script is public/${SITE.slug}/beats.json`);
       if (!anchor) throw new Error(`beats/anchor.json is missing: node scripts/demo-kit/seed.mjs --config scripts/demo-kit/configs/${SITE.slug}.json --files-only`);
       state.anchor = anchor;
-      // The registry the arithmetic reads: the anchor's copy of the published document (the seed holds them equal).
+      // The registry the arithmetic reads: the anchor's copy of the published document (the seed holds them equal). A
+      // dimension may carry its own K (and τ); the kit's panel and Explain read each dimension's own, else the registry's.
       state.registry = anchor.registry || null;
       state.sources.registry = anchor.registry ? 'beats/anchor.json registry' : 'missing';
       state.products = mergeOverlay(arr(productsDoc && productsDoc[SITE.products.list]), overlayDoc);

@@ -1517,6 +1517,34 @@ The one-row-per-dimension mode and the "Just now" strip are gone, so every check
 
 **Housekeeping.** The rig is stopped; ports 9134, 9284 and 9185 are free. The beat documents equal HEAD.
 
+#### Addendum, 21:30–22:21: K per dimension (Simone's ruling; D1c's registry, K9's kit)
+
+**Every expected reading now uses its dimension's own K.**
+- **Where K comes from.** Both suites read it with `kOf(dim)`: the dimension's `K` in `anchor.json`'s `registry.dimensions`, else the registry's global K, else 1.8. It sits in `rehearse-oh-dom.mjs` at 263 and in `rehearse-oh-page.mjs` at 89.
+- **The DOM suite.**
+  - 1382 and 1403–1404, “one click registers at once”: the one-touch reading is now w / (w + K) for the dimension, still 0.357 for room (K 1.8), with the label naming “K 1.8 on room”.
+  - 1499, the persistence walk: it uses category's K, so the readings stay 0.36 → 0.53 → 0.63.
+  - 2261, beat 13's projection and sentence: they use room's K, which is what the page now prints.
+- **The request-level suite.**
+  - 1067–1069, beat 13's projection: each dimension is carried on its own K.
+  - 1081, the below-θin projection: it uses room's K.
+- **Unchanged:** every check that compares the panel with the engine's own readings.
+
+**The counted set, on a fresh prepared state** (`state-s2i`, seeded with `--out` from the working tree's `reflex.json`, its 16 dimensions each carrying its K, and the regional lean seeded for 51 regions). The page files hashed the same before and after every run (`dfc3bef1…`).
+
+| Run | Time | Result |
+|---|---|---|
+| `check-demo` run 12 | 21:48–22:04 | **5 of 5**: request level **231 of 231**, DOM **518 of 518**, generated, typecheck, credentials (3,255 files) |
+| `--only store` | 22:04–22:12 | **173 of 173** |
+| X7 through my proxy on 9185 | 22:12–22:20 | **4 of 173 failed**, as it must |
+
+- **X7's failures.** Among them is the add-to-cart check at 1068: “engine 0.83 · vector 0.69 · meter 0.69”. The chips also stayed at the last view's caption while the engine held 14. Its served original hashed equal to the checkout's `oh-store.js`.
+- **Two measures from the run:**
+  - the first view's room read 0.36 on the engine, in the vector and on its meter;
+  - the persistence walk read 0.36 → 0.53 → 0.62.
+
+**Housekeeping.** The rig is stopped; ports 9134, 9284 and 9185 are free. The beat documents are as the lanes left them: `anchor.json` is D1c's, not mine.
+
 ### W1c: the presenter script for the live store (`cd3775e2` from `bbf8a9d`)
 
 **Lane W1c, writer, 2026-10-02 EDT. Revised `docs/oh/OH-Presenter-Script.md` for the store as it is live now. It was 5,869 words and is now 6,122. That is about 2% over the ~6,000 cap: the persistence and dial material is new, and the rest was cut to pay for it. I wrote only that file and this section. Nothing committed, deployed or pushed; no code or other document touched.**
@@ -2183,3 +2211,51 @@ The full report is `docs/lg/lanes/K8.md`. This lane carried out the coordinator'
 - **Shots:** `shots/K8-explain-{before,after}-{1440,1920}.png` and `K8-explain-{before,after}-vantage-1440.png`.
 - **Suites:** OH `--only store` **173 of 173**, Vantage DOM **298 of 298**.
 - **Rigs** are stopped, and nothing is committed.
+
+### K9: the panel, the explain card and the clock-jump note read each dimension's own K
+
+The full report is `docs/lg/lanes/K8.md` § K9. Simone ruled a K per dimension, and lane D1c wrote it into the two registry files. The engine applies the dimension's own K (`src/reflex/core.ts` `dimParams`). The kit read one K, so every arithmetic row except category's and room's was printed on the wrong K.
+
+- **The panel** (`public/demo-kit/panels.js`):
+  - `kOf` and `thetaInOf` (105–108) read the dimension's own entry, else the registry's.
+  - Each meter's label carries its K, "category · 3 min memory · K 1.8" (167–171); the tick reads the dimension's θin.
+  - The line under the meters names the K of every dimension (182–189).
+  - With one K (Vantage), every string is as before.
+- **The explain card** (`public/demo-kit/prove.js`):
+  - Each row computes on its dimension's own K and θin (36–46, 74–76).
+  - The caption names the K of the rows' dimensions (42, 96): "K = 1.8 (category, room); 2.5 (pricetier); 3 (type, capacitytier, package); 4.5 (subcategory, series, finish); 6 (retailer)".
+  - The note says "on each dimension's own K" (143).
+- **The clock jump** (`public/oh/oh.js` 1707, 1709): each dial is carried on its own dimension's K; the note's K is room's.
+- **The scaffold**, on the coordinator's addition:
+  - `scaffold.mjs` 298 carries `d.K` → `K`.
+  - `config.mjs` 799 and 805 name `K?` and refuse a K that is not a positive number.
+  - `scaffold.test.mjs` 25, 142–149 and 271–274.
+  - OH's `demo.config.json`: line 31's note says three minutes, and lines 33–48 carry `tau` 3m or 10m and K per dimension.
+  - The template (`page.js.tpl` 733–734) and the HOWTO (50) say K may be set per dimension.
+  - OH's planned `reflex.json` now equals the published dimensions field for field: 0 differences, against 29 from HEAD's config.
+- **Proof on my rig** (9195, `.wrangler/state-k8`, seeded with `--out` from D1c's `reflex.json` as `reflex-oh+r3`; 1440×900; the page's own controls):
+  - **One TV:** 10 of 10 touched values read 1 / (1 + K) on their own dimension (0.355, 0.285, 0.248, 0.180, 0.142).
+  - **Two TVs:** all eight meter labels carry the registry's K, and tvs and living-room (K 1.8) enter first.
+  - **The washer's Add to Cart:** 11 of 11 touched values read a(R + 5) on their own K within 0.003; one K would have printed up to 0.75 where retailer reads 0.50.
+  - **The explain card before beat 3:** 11 of 11 rows check by hand; the engine after beat 3 came within 0.008 of the card, and one K would have been off by up to 0.218.
+  - **Shots:** `shots/K9-1440-two-tvs.png`, `…-two-tvs-prior-line.png`, `…-add-to-cart.png`, `…-add-to-cart-prior-line.png`, `…-explain-before-beat-3.png`.
+- **Suites** (one at a time, on the final files): OH `--only store` **173 of 173**; Vantage request level **115 of 115**; Vantage DOM **298 of 298**; the kit's lib tests **161 of 161** (2 skipped, as before).
+- **For S2.** Its working copies already read each dimension's K at every place: `rehearse-oh-dom.mjs` 263, 1382/1403, 1499 and 2261, and `rehearse-oh-page.mjs` 89, 1067–1069 and 1081. `K8.md` § K9 lists what each one reads and the new strings.
+- **Residuals for the lead:**
+  - The explain box at 1440×900 now scrolls 44 px. The caption is four lines; the watch list (4 of 4) and the arithmetic (11 of 11) stay on screen.
+  - A scaffold rebuild still resets the weights (five actions) and θin/θout to the kit's defaults.
+  - The λ sentence's K is the regional blend's own constant, not a dimension's.
+- **The rigs** (9195/9395 and 9198/9398) are left running, since the brief rules out process kills. Nothing is committed.
+
+#### K9, second pass (the explain card: each row carries its K)
+
+- **`prove.js` 39–42, 96–99, 144** (hash `69b3764b`):
+  - The caption keeps one figure: "K per dimension, on each row", or "K = 1.8" with one K.
+  - Each row's θ cell reads "θ 0.45 · K 3", padded so the boxes stay in one column.
+  - The note reads "K on each row".
+- **The scroll.** The first pass's longer note was what made the box scroll: 59 px against 39, measured in the same DOM.
+- **Before beat 3 at 1440×900:** the box is 842 px with no scroll, the watch list 4 of 4, the arithmetic 11 of 11, and 11 of 11 rows check by hand on the K they print. `shots/K9-1440-explain-before-beat-3.png` is retaken.
+- **Vantage's** caption and note are unchanged ("K = 1.8").
+- **Suite:** OH `--only store` **173 of 173**.
+- **The rigs** are stopped with Ctrl-C to their own `rig.mjs` (pids 40621 and 41735, at 21:55:15). Both exited 130, and the ports are free.
+- **Recorded as the next kit item:** the scaffold's remaining resets (weights and thresholds) and the λ line's wording. Nothing is committed.

@@ -85,6 +85,8 @@ console.log(`\nOH page rehearsal against ${base}`);
 console.log('\n── The page loads');
 const demo = await assetJson('demo.config.json');
 const anchor = await assetJson('beats/anchor.json');
+/** A dimension's own evidence constant: its K in the registry's dimensions (Simone's per-dimension K), else the registry's global K. */
+const kOf = (dim) => Number((((anchor.registry || {}).dimensions || []).find((d) => d && d.key === dim) || {}).K) || Number((anchor.registry || {}).K) || 1.8;
 const beatsDoc = await assetJson('beats.json');
 const productsPath = (demo.products.file || '').replace(`public/${SLUG}/`, '');
 const productsDoc = await assetJson(productsPath).catch(() => null);
@@ -1062,9 +1064,9 @@ const OUTCOMES = {
     ok('control: without it the continue hero stays shut, so a stranger’s first paint never says “pick up where you left off”', bare.slot('continue').length === 0, ids(bare.slot('continue')).join(', '));
     {
       // Her room dials carried three weeks on by the published memory: a = R / (R + K), R decaying by e^(−t/τ) on each dimension.
-      const K = Number(reg.K) || 1.8, base = Number(reg.tauMs) || 1209600000, t = days * 86400000;
+      const K = kOf('room'), base = Number(reg.tauMs) || 1209600000, t = days * 86400000;
       const tauOf = (dim) => Number((((reg.dimensions || []).find((x) => x.key === dim)) || {}).tauMs) || base;
-      const carry = (a, dim) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauOf(dim)); return r / (r + K); };
+      const carry = (a, dim) => { if (!(a > 0) || a >= 1) return a; const k = kOf(dim), r = (a * k) / (1 - a) * Math.exp(-t / tauOf(dim)); return r / (r + k); };   // each dimension's own K
       const fall = (v) => { const a = Number(((m0.dims.room || {})[v]) || 0); return a > 0 ? (a - carry(a, 'room')) / a : null; };
       const tv = fall('living-room'), laundry = fall('laundry-room');
       // What the page measures (the lead's alignment): each room's dial now and its projection three weeks on; a comparison is
@@ -1076,7 +1078,7 @@ const OUTCOMES = {
     if ((Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs) || 1209600000) < 3600000) {
       // On the demo's dial beat 13 says her room signals are gone (every room below θin), so the continue hero rests on her
       // shortlist and the decisions trail: projected here from her own meters at the engine, the page's arithmetic.
-      const K = Number(reg.K) || 1.8, t = days * 86400000, thetaIn = Number(reg.thetaIn) || 0.6;
+      const K = kOf('room'), t = days * 86400000, thetaIn = Number(reg.thetaIn) || 0.6;   // the room dials: room's own K
       const tauRoom = Number((((reg.dimensions || []).find((x) => x.key === 'room')) || {}).tauMs) || Number(reg.tauMs);
       const carry = (a) => { if (!(a > 0) || a >= 1) return a; const r = (a * K) / (1 - a) * Math.exp(-t / tauRoom); return r / (r + K); };
       const rooms = Object.entries(m0.dims.room || {}).filter(([, a]) => Number(a) > 0);

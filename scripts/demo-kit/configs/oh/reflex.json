@@ -4,86 +4,102 @@
     {
       "key": "category",
       "source": "category",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 1.8
     },
     {
       "key": "subcategory",
       "source": "subcategory",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 4.5
     },
     {
       "key": "type",
       "source": "type",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     },
     {
       "key": "series",
       "source": "series",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 4.5
     },
     {
       "key": "panel",
       "source": "panel",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 4.5
     },
     {
       "key": "sizeBand",
       "source": "sizeBand",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     },
     {
       "key": "capacityTier",
       "source": "capacityTier",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     },
     {
       "key": "fuel",
       "source": "fuel",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     },
     {
       "key": "finish",
       "source": "finish",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 4.5
     },
     {
       "key": "priceTier",
       "source": "priceTier",
-      "tauMs": 600000
+      "tauMs": 600000,
+      "K": 2.5
     },
     {
       "key": "room",
       "source": "room",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 1.8
     },
     {
       "key": "feature",
       "source": "feature",
       "multi": true,
-      "tauMs": 600000
+      "tauMs": 600000,
+      "K": 2.5
     },
     {
       "key": "intent",
       "source": "intent",
       "multi": true,
-      "tauMs": 600000
+      "tauMs": 600000,
+      "K": 2.5
     },
     {
       "key": "contentType",
       "source": "contentType",
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     },
     {
       "key": "retailer",
       "source": "retailer",
       "multi": true,
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 6
     },
     {
       "key": "package",
       "source": "package",
       "multi": true,
-      "tauMs": 180000
+      "tauMs": 180000,
+      "K": 3
     }
   ],
   "weights": {

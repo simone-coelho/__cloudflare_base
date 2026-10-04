@@ -47,7 +47,7 @@ The one file you edit first. Pick a short **slug** (OH: `oh`); it fixes everythi
 |---|---|
 | `name`, `slug`, `tenant`, `customer`, `worker`, `design` | the names above; `design` points at your design document |
 | `brand`, `palette`, `fonts` | the wordmark, the page title, the footer's honesty sentence; colours as the kit's tokens (`brand`, `brand-deep`, `ink`, `paper`, `line`, `soft`, ... from `public/demo-kit/tokens.css`); Google Fonts families |
-| `dimensions` | each `{ key, tau, values, multi? }`: `tau` as `60s`, `10m`, `60d`; `values` the vocabulary, from the products file |
+| `dimensions` | each `{ key, tau, K?, values, multi? }`: `tau` as `60s`, `3m`, `10m`, `60d`; `K` the dimension's own K in a = R / (R + K), set per dimension when one touch should say more or less on it (the larger, the more touches before its audience enters; OH: category and room 1.8, retailer 6), the registry's K (1.8) when absent; `values` the vocabulary, from the products file. The scaffold writes `tau` and `K` into the registry (`scripts/demo-kit/configs/<slug>/reflex.json`) and the anchor's copy of it, the engine applies each dimension's own, and the panel's meters and Explain's arithmetic read the same |
 | `regional` | the dimensions the regional prior may blend |
 | `pages` | each page: its `key`, the engine's `page` name, its `entry` (`home`, `grid`, `product`, `phone`), its `url`, its `shell`, and its `slots` (`slot`, `take`, `weights`, and optionally `diversity`, `stage`, `complements`, a `gate` that keeps a slot closed until the page asserts it), plus `sorted` rails over the products (`POST /sort`) and `offLimits` in words |
 | `seeds` | what an arrival is evidence for, as context: `{ slots, signal: campaign_term, value: "lg tvs", tags, weight }` |

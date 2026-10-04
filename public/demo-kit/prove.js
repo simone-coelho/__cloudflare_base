@@ -4,7 +4,9 @@
 // happens and checked by hand: a = R / (R + K), each action adding its weight to
 // R on every dimension the event's attributes touch. The constants (K, the entry
 // and exit thresholds) and the action weights are READ from the published
-// registry (state.registry, which the vertical loads), never typed here.
+// registry (state.registry, which the vertical loads), never typed here; each row
+// reads its own dimension's K and θin where the registry sets them per dimension,
+// as the engine does, and names it beside its threshold.
 //
 // Explain (the director's button, or E anywhere) opens the panel before the next
 // press: what the visitor has done, what we are watching for with its arithmetic
@@ -31,10 +33,17 @@ export function createProve(k) {
     'pdWhyWrap', 'pdWhy', 'pdWhyHead', 'pdMapNow', 'pdMapAfter', 'pdGo', 'pdPill', 'pdNote', 'explainBtn']);
   const K = () => P().K();
   const thetaIn = () => P().thetaIn();
+  const kOf = (dim) => P().kOf(dim);             // the dimension's own K, else the registry's (the engine's rule)
+  const thetaInOf = (dim) => P().thetaInOf(dim);
+  /** With K set per dimension each row names its own beside its threshold ("θ 0.45 · K 3"), and the caption says so in one line. */
+  const perDimK = () => Boolean(P().kGroups());
+  const kCaption = () => (perDimK() ? 'K per dimension, on each row' : `K = ${K()}`);
+  /** A row's K, padded to the widest on the card (mono, non-breaking) so the rows' boxes stay in one column. */
+  const kCell = (k, rows) => { const w = Math.max(...rows.map((r) => String(r.K).length)); return `K ${String(k).padEnd(w, ' ')}`; };
   const labelOf = (b) => (typeof b.label === 'function' ? b.label() : b.label);
 
-  const rOf = (a) => (a >= 1 ? Infinity : (a * K()) / (1 - a));
-  const aOf = (r) => r / (r + K());
+  const rOf = (a, k) => (a >= 1 ? Infinity : (a * k) / (1 - a));
+  const aOf = (r, k) => r / (r + k);
   /** The touches an event's attributes make, dimension by dimension, as the registry reads them. */
   function touchesOf(attrs) {
     const out = [];
@@ -62,8 +71,9 @@ export function createProve(k) {
     return [...added.entries()].map(([key, delta]) => {
       const [dim, value] = key.split('\u0000');
       const before = num(((state.lastVector[dim] || {})[value]) || 0);
-      const after = aOf(rOf(before) + delta);
-      return { dim, value, before, after, delta, crosses: before < thetaIn() && after >= thetaIn() };
+      const k = kOf(dim), th = thetaInOf(dim);
+      const after = aOf(rOf(before, k) + delta, k);
+      return { dim, value, before, after, delta, K: k, thetaIn: th, crosses: before < th && after >= th };
     }).sort((x, y) => y.after - x.after);
   }
   /** Each position in the before and after maps wears its own colour, from the token sheet (--pd-slot-1 to -6). */
@@ -83,9 +93,10 @@ export function createProve(k) {
     renderDone();
     el.pdAct.innerHTML = (b.declare ? b.declare() : [labelOf(b)]).map((l) => `<li>${l}</li>`).join('');
     const rows = predictArithmetic(acts);
-    el.pdArithK.textContent = `The arithmetic · score before → after · entry threshold ${fmt2(thetaIn())} · K = ${K()} · from ${state.sources.registry || 'the shipped constants'}`;
+    el.pdArithK.textContent = `The arithmetic · score before → after · entry threshold ${fmt2(thetaIn())} · ${kCaption()} · from ${state.sources.registry || 'the shipped constants'}`;
+    const kOn = perDimK();
     el.pdArith.innerHTML = rows.length ? rows.map((r) => `<div class="pd-row${r.crosses ? ' crosses' : ''}"><span>${esc(DIM_LABEL[r.dim] || r.dim)} · ${esc(r.value)}</span>
-      <span class="from">${r.before.toFixed(3)} + ${r.delta} →</span><span class="to">${r.after.toFixed(3)}</span><span class="th">θ ${fmt2(thetaIn())}</span></div>`).join('')
+      <span class="from">${r.before.toFixed(3)} + ${r.delta} →</span><span class="to">${r.after.toFixed(3)}</span><span class="th">θ ${fmt2(r.thetaIn)}${kOn ? ` · ${kCell(r.K, rows)}` : ''}</span></div>`).join('')
       : `<p class="pd-empty" style="font-size:12.5px">${b.who === 'merch' ? 'This press is the merchandiser or the request’s context, not the visitor: no meter moves.' : b.who === 'engine' ? 'Nothing is sent. The engine’s own clock does this one.' : 'A page view that carries no attribute, or a reward: no meter moves.'}</p>`;
     const target = b.target && b.target();
     const standing = target && cfg.standing ? cfg.standing(target) : '';
@@ -130,7 +141,7 @@ export function createProve(k) {
       el.pdWhyHead.textContent = `Why: every decision the last press made (${state.pdProof.label})`;
       el.pdWhyWrap.hidden = false;
     } else el.pdWhyWrap.hidden = true;
-    el.pdNote.textContent = `Above: computed from the visitor’s real profile on the published registry: a = R / (R + K), K = ${K()}, checkable by hand. Below: what the engine actually did on the last press, read off its receipts. Nothing runs from this panel.`;
+    el.pdNote.textContent = `Above: computed from the visitor’s real profile on the published registry: a = R / (R + K), ${perDimK() ? 'K on each row' : `K = ${K()}`}, checkable by hand. Below: what the engine actually did on the last press, read off its receipts. Nothing runs from this panel.`;
     el.pdBack.hidden = false;
   }
   const closeExplain = () => { el.pdBack.hidden = true; };

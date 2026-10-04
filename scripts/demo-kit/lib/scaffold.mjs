@@ -294,7 +294,8 @@ export function derivedVocabulary(demo, pieces) {
 export function reflexDocument(demo) {
   return {
     version: `reflex-${demo.slug}`,
-    dimensions: demo.dimensions.map((d) => ({ key: d.key, source: d.source || d.key, ...(d.multi ? { multi: true } : {}), ...(d.tau !== undefined ? { tauMs: durationMs(d.tau) } : {}) })),
+    // A dimension's own memory (tau → tauMs) and its own K (K → K) when the config sets them; the engine falls back to the registry's.
+    dimensions: demo.dimensions.map((d) => ({ key: d.key, source: d.source || d.key, ...(d.multi ? { multi: true } : {}), ...(d.tau !== undefined ? { tauMs: durationMs(d.tau) } : {}), ...(d.K !== undefined ? { K: d.K } : {}) })),
     weights: { ...DEFAULT_WEIGHTS, ...(isObject(demo.actions) ? demo.actions : {}) },
     ...structuredClone(DEFAULT_REGISTRY),
   };
