@@ -17,10 +17,15 @@
 //            lead line above an interactive element) or data-added (an addition a ruling made, with its reason).
 // Marked additions are listed, never compared. A source is read by its kind:
 //   a markdown file             the whole file
-//   the spine                   docs/enablement/content/spine.md, named first by every hand-written page but the
-//                               battlecard: the page's spine is the block between its spine markers, which must
-//                               equal the partial enablement/partials/spine.html; the partial itself is compared with
-//                               spine.md in both directions, and the rest of the article with the page's own markdown
+//   the spine                   docs/enablement/content/spine.md, named first by what-it-is, the one page that keeps the
+//                               full opening (LANE-BRIEF-V3 section 8.1): the page's spine is the block between its
+//                               spine markers, which must equal the partial enablement/partials/spine.html; the
+//                               partial itself is compared with spine.md in both directions, and the rest of the
+//                               article with the page's own markdown
+//   the band                    docs/enablement/content/spine-band.md, named first by selling-it and how-it-works
+//                               (section 8.1): their band (between the band markers, equal to
+//                               enablement/partials/spine-band.html) is compared with it in both directions, and so
+//                               is the partial; see-it-work names no spine text and opens on the tour player
 //   the short form              docs/enablement/content/spine-compact.md, the compact spine's own text of record,
 //                               named first by the battlecard: the page's compact block (between the compact markers,
 //                               equal to enablement/partials/spine-compact.html) is compared with it in both
@@ -41,9 +46,12 @@
 // visible text.
 //
 // LANE-BRIEF-V3 adds, each named in the report with the lane whose file it is:
-//   - the stamped blocks: every page carries the header and footer markers, a hand-written page the spine markers
-//     (the compact ones on the battlecard), and each stamped block equals its partial after whitespace is collapsed,
-//     with aria-current="page" on the page's own link and nowhere else;
+//   - the stamped blocks: every page carries the header and footer markers; story first reads per page (section
+//     8.1): what-it-is the full spine, selling-it and how-it-works the band, the battlecard the compact spine, and
+//     see-it-work none, its first section after the title and one intro line being the tour player
+//     (section.tour-player with data-visual); each stamped block equals its partial after whitespace is collapsed,
+//     with aria-current="page" on the page's own link and nowhere else; a page with no opening may leave out
+//     /spine.css and /spine.js;
 //   - the partials: each exists; the header links every page; the footer lists every piece with the title its own
 //     source gives it and ends with the footer line; the spine addresses no one: no "you" or "your" outside a
 //     quoted interface label (below);
@@ -133,22 +141,29 @@ const NAME_SCANS = (() => {
 const STATE_WORD_EXEMPT = new Map([['glossary.html', ['stage']]]);
 const SPINE_MD = 'docs/enablement/content/spine.md';
 const SPINE_COMPACT_MD = 'docs/enablement/content/spine-compact.md';
+// The band, the one-strip opening of selling-it and how-it-works (LANE-BRIEF-V3 section 8.1).
+const SPINE_BAND_MD = 'docs/enablement/content/spine-band.md';
 // The texts of record of the two stamped spines, and the marker kind each belongs to.
-const SPINE_TEXTS = new Map([[SPINE_MD, 'spine'], [SPINE_COMPACT_MD, 'compact']]);
+const SPINE_TEXTS = new Map([[SPINE_MD, 'spine'], [SPINE_COMPACT_MD, 'compact'], [SPINE_BAND_MD, 'band']]);
+const RECORD_OF_KIND = { spine: SPINE_MD, compact: SPINE_COMPACT_MD, band: SPINE_BAND_MD };
+const KIND_NAME = { spine: 'the full spine', compact: 'the compact spine', band: 'the band' };
+// Where each opening belongs (LANE-BRIEF-V3 section 8.1), for the failure that finds one elsewhere.
+const KIND_HOME = { spine: 'only on what-it-is', compact: 'only on the battlecard', band: 'only on selling-it and how-it-works' };
 // The sources lanes P1 and S1 write, scanned with the pages.
-const OWN_SOURCES = ['docs/enablement/content/credits-source.html', 'docs/enablement/content/credits.md', 'docs/enablement/content/demos.md', SPINE_MD, SPINE_COMPACT_MD];
+const OWN_SOURCES = ['docs/enablement/content/credits-source.html', 'docs/enablement/content/credits.md', 'docs/enablement/content/demos.md', SPINE_MD, SPINE_COMPACT_MD, SPINE_BAND_MD];
 
 // ---------- LANE-BRIEF-V3: the hand-written pages, the partials, the markers ----------
-// The five hand-written pages (section 5): the markdown each names after its spine's text of record, the form of the
-// spine it opens with (the full spine and spine.md, or the compact one and spine-compact.md), its prose budget in
-// words per text block, whether every section needs a shot (section 5, "Pictures for Word"), and the lane that
-// writes it.
+// The five hand-written pages (section 5): the markdown each names after its opening's text of record, the opening it
+// carries (section 8.1: the full spine and spine.md on what-it-is; the band and spine-band.md on selling-it and
+// how-it-works; the compact spine and spine-compact.md on the battlecard; none on see-it-work, which opens on the tour
+// player), its prose budget in words per text block, whether every section needs a shot (section 5, "Pictures for
+// Word"), and the lane that writes it.
 const HAND_WRITTEN = new Map([
   ['what-it-is.html', { md: 'docs/enablement/content/what-it-is.md', spine: 'spine', budget: 60, shots: true, lane: 'M2' }],
-  ['see-it-work.html', { md: 'docs/enablement/content/see-it-work.md', spine: 'spine', budget: 60, shots: true, lane: 'T1' }],
-  ['selling-it.html', { md: 'docs/enablement/content/selling-it.md', spine: 'spine', budget: 60, shots: true, lane: 'A1' }],
+  ['see-it-work.html', { md: 'docs/enablement/content/see-it-work.md', spine: 'none', budget: 60, shots: true, lane: 'T1' }],
+  ['selling-it.html', { md: 'docs/enablement/content/selling-it.md', spine: 'band', budget: 60, shots: true, lane: 'A1' }],
   ['battlecard.html', { md: 'docs/enablement/content/battlecard.md', spine: 'compact', budget: 60, shots: true, lane: 'A1' }],
-  ['how-it-works.html', { md: 'docs/enablement/content/how-it-works-and-where-it-runs.md', spine: 'spine', budget: 120, shots: false, lane: 'G1' }],
+  ['how-it-works.html', { md: 'docs/enablement/content/how-it-works-and-where-it-runs.md', spine: 'band', budget: 120, shots: false, lane: 'G1' }],
 ]);
 // Whose file each finding is: a hand-written page's lane; how-it-works-interactive's page is H1's, its chrome S1's;
 // everything else here (the builder's pages, the partials, spine.md, the checks) is S1's.
@@ -158,6 +173,7 @@ const MARKERS = [
   ['header', 'chrome:header:start', 'chrome:header:end', 'header.html'],
   ['spine', 'spine:start', 'spine:end', 'spine.html'],
   ['compact', 'spine:compact:start', 'spine:compact:end', 'spine-compact.html'],
+  ['band', 'spine:band:start', 'spine:band:end', 'spine-band.html'],
   ['footer', 'chrome:footer:start', 'chrome:footer:end', 'footer.html'],
 ];
 const markerPair = (a, b) => new RegExp(`<!--\\s*${a}\\s*-->([\\s\\S]*?)<!--\\s*${b}\\s*-->`, 'g');
@@ -522,7 +538,7 @@ const recordBlocks = (src) => {
   if (!existsSync(join(root, src))) { fail(`${src} does not exist`, 'S1'); return []; }
   try { return mdBlocks(recordMarkdown(src), notes, src); } catch (e) { fail(`${src} could not be read: ${e.message}`, 'S1'); return []; }
 };
-const recordOf = new Map([[SPINE_MD, recordBlocks(SPINE_MD)], [SPINE_COMPACT_MD, recordBlocks(SPINE_COMPACT_MD)]]);
+const recordOf = new Map([[SPINE_MD, recordBlocks(SPINE_MD)], [SPINE_COMPACT_MD, recordBlocks(SPINE_COMPACT_MD)], [SPINE_BAND_MD, recordBlocks(SPINE_BAND_MD)]]);
 // An element marked data-ui-label holds a quoted interface label of a few words, never a sentence.
 const checkUiLabels = (tree, label, lane) => {
   for (const n of find(tree, (x) => 'data-ui-label' in x.attrs)) {
@@ -531,8 +547,9 @@ const checkUiLabels = (tree, label, lane) => {
   }
 };
 // The partials against the texts of record: the spine with spine.md in both directions; the short form with
-// spine-compact.md in both directions, and with spine.md in reverse (it says nothing the spine does not say).
-for (const [kind, name, record, both] of [['spine', 'spine.html', SPINE_MD, true], ['compact', 'spine-compact.html', SPINE_COMPACT_MD, true], ['compact', 'spine-compact.html', SPINE_MD, false]]) {
+// spine-compact.md in both directions, and with spine.md in reverse (it says nothing the spine does not say); the band
+// with spine-band.md in both directions (section 8.1).
+for (const [kind, name, record, both] of [['spine', 'spine.html', SPINE_MD, true], ['compact', 'spine-compact.html', SPINE_COMPACT_MD, true], ['compact', 'spine-compact.html', SPINE_MD, false], ['band', 'spine-band.html', SPINE_BAND_MD, true]]) {
   if (!partials[kind]) continue;
   const tree = partialTree(kind);
   const marked = [];
@@ -546,7 +563,7 @@ for (const [kind, name, record, both] of [['spine', 'spine.html', SPINE_MD, true
 }
 // The partials' own rules: a visual in every section; no "you" outside a quoted interface label (the spine addresses
 // no one); every data-ui-label short; the prose budget; no refused class part.
-for (const [kind, name] of [['spine', 'spine.html'], ['compact', 'spine-compact.html']]) {
+for (const [kind, name] of [['spine', 'spine.html'], ['compact', 'spine-compact.html'], ['band', 'spine-band.html']]) {
   if (!partials[kind]) continue;
   const tree = partialTree(kind);
   for (const sec of find(tree, (n) => n.tag === 'section')) if (!hasAttrInside(sec, 'data-visual')) fail(`enablement/partials/${name}: a <section> without a data-visual element`, 'S1');
@@ -574,12 +591,15 @@ const spineShots = existsSync(join(root, SPINE_MD)) ? shotLines(read(join(root, 
 const compactShots = existsSync(join(root, SPINE_COMPACT_MD)) ? shotLines(read(join(root, SPINE_COMPACT_MD))) : [];
 if (partials.spine) checkShots(spineShots, partialTree('spine'), 'enablement/partials/spine.html', 'S1');
 if (partials.compact) checkShots(compactShots, partialTree('compact'), 'enablement/partials/spine-compact.html', 'S1');
+const bandShots = existsSync(join(root, SPINE_BAND_MD)) ? shotLines(read(join(root, SPINE_BAND_MD))) : [];
+if (partials.band) checkShots(bandShots, partialTree('band'), 'enablement/partials/spine-band.html', 'S1');
+const SHOTS_OF_KIND = { spine: spineShots, compact: compactShots, band: bandShots, none: [] };
 
 // The stamped blocks on one page: present where required, equal to the partial, aria-current on the page's own link.
 function checkStamped(file, html) {
   const hw = HAND_WRITTEN.get(file);
   const want = new Set(['header', 'footer']);
-  if (hw) want.add(hw.spine);
+  if (hw && hw.spine !== 'none') want.add(hw.spine);
   const address = addressOf(file);
   const lane = hw ? hw.lane : 'S1';
   const found = {};
@@ -587,10 +607,10 @@ function checkStamped(file, html) {
     const hits = [...html.matchAll(markerPair(a, b))];
     if (hits.length > 1) { fail(`${file}: the ${kind} markers appear ${hits.length} times`, lane); continue; }
     if (!hits.length) {
-      if (want.has(kind)) fail(`${file}: no ${kind === 'compact' ? 'spine:compact' : kind === 'spine' ? 'spine' : `chrome:${kind}`} markers; run node enablement/render-pages.mjs --stamp after writing them`, lane);
+      if (want.has(kind)) fail(`${file}: no ${kind === 'compact' ? 'spine:compact' : kind === 'band' ? 'spine:band' : kind === 'spine' ? 'spine' : `chrome:${kind}`} markers; run node enablement/render-pages.mjs --stamp after writing them`, lane);
       continue;
     }
-    if (!want.has(kind)) fail(`${file}: carries the ${kind} markers, which belong ${kind === 'compact' ? 'only on the battlecard' : kind === 'spine' ? 'only on the hand-written pages, not this one' : 'here'}`, lane);
+    if (!want.has(kind)) fail(`${file}: carries the ${kind} markers, which belong ${KIND_HOME[kind] || 'elsewhere'} (LANE-BRIEF-V3 section 8.1)`, lane);
     const inner = hits[0][1];
     found[kind] = { inner, index: hits[0].index, length: hits[0][0].length };
     if (!partials[kind]) continue;
@@ -737,13 +757,30 @@ for (const file of pages) {
     for (const h of budgetHits(body, hw.budget)) fail(`${file}: a <${h.tag}${h.cls ? ` class="${h.cls}"` : ''}> of ${h.words} words, over the budget of ${hw.budget}: "${h.text.slice(0, 70)}..."`, lane);
     // class names
     for (const n of find(body, (x) => classTokens(x).some((c) => REFUSED_CLASS_PARTS.test(c)))) fail(`${file}: the class "${classTokens(n).join(' ')}" uses a refused part (chip, label or legend; LANE-BRIEF-V3 section 5)`, lane);
-    // the spine's own files
-    if (!html.includes('<link rel="stylesheet" href="/spine.css">')) fail(`${file}: does not load /spine.css, which the stamped spine needs`, lane);
+    // the spine's own files: a page with an opening loads /spine.css, and the full spine also /spine.js; a page with
+    // none (see-it-work, section 8.1) may load them or not
+    if (hw.spine !== 'none' && !html.includes('<link rel="stylesheet" href="/spine.css">')) fail(`${file}: does not load /spine.css, which ${KIND_NAME[hw.spine]} needs`, lane);
     if (hw.spine === 'spine' && !html.includes('<script src="/spine.js" defer></script>')) fail(`${file}: does not load /spine.js, which replays the spine's loop (LANE-BRIEF-V3 section 7.5)`, lane);
+    // see-it-work opens on the tour (section 8.1 and 8.2): after the title and at most one intro line, the article's
+    // first section is the player, section.tour-player carrying data-visual, and nothing drawn or headed comes before it
+    if (hw.spine === 'none') {
+      const art = find(tree, (n) => n.tag === 'article' && 'data-source' in n.attrs)[0];
+      const player = art ? find(art, (n) => n.tag === 'section')[0] : null;
+      if (!player || !classTokens(player).includes('tour-player') || !('data-visual' in player.attrs)) fail(`${file}: the article's first section must be the tour player, <section class="tour-player" data-visual> (LANE-BRIEF-V3 section 8.2)${player ? ` (found <section class="${player.attrs.class || ''}">)` : ' (found no section)'}`, lane);
+      else {
+        // In document order, between the article's start and the player: the title, at most one intro line, and
+        // wrappers; no heading, picture, list, table or other visual.
+        const a0 = html.search(/<article\b[^>]*\bdata-source=/);
+        const before = html.slice(a0, html.indexOf('<section', a0)).replace(/<!--[\s\S]*?-->/g, '').replace(/^<article\b[^>]*>/i, '');
+        const lines = (before.match(/<p\b/gi) || []).length;
+        const stray = /<(?:h[2-6]|figure|svg|img|table|picture|canvas|video|ul|ol|dl|blockquote)\b|\sdata-(?:visual|shot)\b/i.exec(before);
+        if (stray || lines > 1) fail(`${file}: before the tour player the article holds only its title and one intro line (LANE-BRIEF-V3 section 8.1); found ${stray ? `"${stray[0].trim()}"` : `${lines} paragraphs`}`, lane);
+      }
+    }
     // pictures for Word
     if (existsSync(join(root, hw.md))) checkShots(shotLines(read(join(root, hw.md))), body, file, lane);
     else fail(`${file}: its markdown ${hw.md} does not exist`, lane);
-    const shotNames = new Set([...(existsSync(join(root, hw.md)) ? shotLines(read(join(root, hw.md))) : []), ...(hw.spine === 'spine' ? spineShots : compactShots)].map((s) => s.name));
+    const shotNames = new Set([...(existsSync(join(root, hw.md)) ? shotLines(read(join(root, hw.md))) : []), ...(SHOTS_OF_KIND[hw.spine] || [])].map((s) => s.name));
     for (const el of find(body, (n) => n.attrs['data-shot'] !== undefined)) if (!shotNames.has(el.attrs['data-shot'])) notes.push(`${file}: data-shot="${el.attrs['data-shot']}" has no picture line in its markdown`);
   }
 
@@ -772,18 +809,20 @@ for (const file of pages) {
   }
   const sourcesNamed = article.attrs['data-source'].split(/\s+/).filter(Boolean);
   let compareTree = article;
-  const wantRecord = hw ? (hw.spine === 'compact' ? SPINE_COMPACT_MD : SPINE_MD) : null;
-  if (hw && (sourcesNamed.length !== 2 || sourcesNamed[0] !== wantRecord || sourcesNamed[1] !== hw.md)) fail(`${file}: the article must name data-source="${wantRecord} ${hw.md}" (LANE-BRIEF-V3 section 5${hw.spine === 'compact' ? ', and the lead\'s ruling of 2026-10-03 giving the short form its own text of record' : ''}); it names "${sourcesNamed.join(' ')}"`);
+  const wantRecord = hw ? RECORD_OF_KIND[hw.spine] || null : null;
+  const wantSources = hw ? [wantRecord, hw.md].filter(Boolean) : null;
+  if (hw && sourcesNamed.join(' ') !== wantSources.join(' ')) fail(`${file}: the article must name data-source="${wantSources.join(' ')}" (LANE-BRIEF-V3 sections 5 and 8.1${hw.spine === 'compact' ? ', and the lead\'s ruling of 2026-10-03 giving the short form its own text of record' : ''}); it names "${sourcesNamed.join(' ')}"`);
   const namedSpine = sourcesNamed.find((s) => SPINE_TEXTS.has(s));
   if (namedSpine) {
-    // The spine block is held to its partial (checkStamped) and the partial to its text of record; when the page
-    // names spine-compact.md, its compact block is also compared with spine-compact.md directly. The rest of the
+    // The opening's block is held to its partial (checkStamped) and the partial to its text of record; when the page
+    // names spine-compact.md or spine-band.md, its block is also compared with that text directly. The rest of the
     // article is compared with the page's own sources.
-    const kind = stamped.spine ? 'spine' : stamped.compact ? 'compact' : null;
+    const wantKind = SPINE_TEXTS.get(namedSpine);
+    const kind = stamped[wantKind] ? wantKind : stamped.spine ? 'spine' : stamped.compact ? 'compact' : stamped.band ? 'band' : null;
     const a0 = html.search(/<article\b[^>]*\bdata-source=/);
     const a1 = html.lastIndexOf('</article>');
-    if (!kind) fail(`${file}: names ${namedSpine} but carries no stamped spine`);
-    else if (namedSpine === SPINE_COMPACT_MD && kind !== 'compact') fail(`${file}: names ${SPINE_COMPACT_MD} but carries the full spine, not the compact one`);
+    if (!kind) fail(`${file}: names ${namedSpine} but carries no stamped opening`);
+    else if (kind !== wantKind) fail(`${file}: names ${namedSpine} but carries ${KIND_NAME[kind]}, not ${KIND_NAME[wantKind]}`);
     else if (!(stamped[kind].index > a0 && stamped[kind].index < a1)) fail(`${file}: the spine markers must sit inside the <article>`);
     else {
       // Story first (LANE-BRIEF-V3 section 7.1): the spine opens the piece, so before it the article holds the title
@@ -793,12 +832,14 @@ for (const file of pages) {
       const cut = html.slice(a0, stamped[kind].index) + html.slice(stamped[kind].index + stamped[kind].length, a1 + '</article>'.length);
       compareTree = find(parseHtml(cut), (n) => n.tag === 'article')[0] || article;
       const same = partials[kind] && collapse(stamped[kind].inner) === collapse(partials[kind]);
-      if (namedSpine === SPINE_COMPACT_MD) {
+      if (namedSpine === SPINE_COMPACT_MD || namedSpine === SPINE_BAND_MD) {
+        const short = namedSpine.split('/').pop();
+        const name = kind === 'band' ? 'band' : 'compact block';
         const block = parseHtml(stamped[kind].inner);
-        const r = compare(recordOf.get(SPINE_COMPACT_MD), blocksOf(block), blocksOf(block, () => {}));
-        for (const s of r.missing) fail(`${file}: a sentence of spine-compact.md is missing from the compact block: "${s}"`);
-        for (const s of r.extra) fail(`${file}: a sentence of the compact block is not in spine-compact.md: "${s}"`);
-        rows.push([file, 'stamped', 'spine-compact.md', String(r.srcCount), String(r.missing.length), String(r.pageCount), String(r.extra.length), same ? '0' : 'differs']);
+        const r = compare(recordOf.get(namedSpine), blocksOf(block), blocksOf(block, () => {}));
+        for (const s of r.missing) fail(`${file}: a sentence of ${short} is missing from the ${name}: "${s}"`);
+        for (const s of r.extra) fail(`${file}: a sentence of the ${name} is not in ${short}: "${s}"`);
+        rows.push([file, 'stamped', short, String(r.srcCount), String(r.missing.length), String(r.pageCount), String(r.extra.length), same ? '0' : 'differs']);
       } else rows.push([file, 'stamped', `spine.md (${kind === 'spine' ? 'full' : 'compact'})`, '-', same ? '0' : 'differs', '-', same ? '0' : 'differs', '-']);
     }
   }

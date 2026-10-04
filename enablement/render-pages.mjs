@@ -31,10 +31,13 @@
 // the hand-written pages (LANE-BRIEF-V3 section 5): what-it-is (lane M2), see-it-work (T1), selling-it and battlecard
 // (A1) and how-it-works (G1), nor how-it-works-interactive (H1). It only stamps them.
 //
-// The stamp. A page carries up to three marked blocks, each a pair of comments (the spine pair or the compact pair):
+// The stamp. A page carries up to three marked blocks, each a pair of comments (one of the spine pair, the compact pair
+// or the band pair):
 //   <!-- chrome:header:start --> ... <!-- chrome:header:end -->       the skip link, masthead and navigation
 //   <!-- spine:start --> ... <!-- spine:end -->                       the spine's four blocks, inside the <article>
 //   <!-- spine:compact:start --> ... <!-- spine:compact:end -->       its short form, on the battlecard instead
+//   <!-- spine:band:start --> ... <!-- spine:band:end -->             the one-band opening, on selling-it and how-it-works
+//                                                                     (LANE-BRIEF-V3 section 8.1); see-it-work carries none
 //   <!-- chrome:footer:start --> ... <!-- chrome:footer:end -->       the footer
 // The stamp replaces what is between each pair with its partial, marking the page's own address in the navigation
 // and the footer with aria-current="page". It is idempotent, writes a page only when the page changes, keeps the
@@ -80,6 +83,7 @@ const MARKERS = [
   ['header', 'chrome:header:start', 'chrome:header:end', 'header.html'],
   ['spine', 'spine:start', 'spine:end', 'spine.html'],
   ['compact', 'spine:compact:start', 'spine:compact:end', 'spine-compact.html'],
+  ['band', 'spine:band:start', 'spine:band:end', 'spine-band.html'],
   ['footer', 'chrome:footer:start', 'chrome:footer:end', 'footer.html'],
 ];
 const markerPair = (a, b) => new RegExp(`<!--\\s*${a}\\s*-->[\\s\\S]*?<!--\\s*${b}\\s*-->`, 'g');

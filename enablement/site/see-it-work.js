@@ -1,8 +1,11 @@
 /* enablement/site/see-it-work.js
-   The guided tour of the page See it work: one sample store, Morrow & Vale, and seven steps the reader walks with
-   Back and Next. It is progressive enhancement. Without it the page reads in full as a storyboard: each step's text,
-   a still frame drawn from the same arithmetic, and a caption. With it, the stills give way to one live storefront,
-   a callout per step that says what to do and then what changed, the interest buckets, and a receipt panel.
+   The guided tour of the page See it work, as one player (LANE-BRIEF-V3 §8.2): one sample store, Morrow & Vale, and
+   seven steps. The player is one frame: a bar that stays at the top of the window (Back, "Step n of 7", the dots
+   and the step's controls), one explanation line with the step's fixed sentence, the store on the left, and on the
+   right the interest buckets, what the page leans on and the receipt. Show me performs the step's action, and so
+   does clicking what the store highlights; Next is never disabled, and pressed first it performs the action, holds
+   so the result is seen, then goes on. It is progressive enhancement: without it the page reads as a seven-frame
+   storyboard, each frame a still drawn from the same arithmetic.
 
    It stores nothing, sends nothing and loads nothing. It builds every element with createElement and fills it with
    textContent; it sets SVG attributes directly; the only styles it touches are CSS custom properties and the
@@ -164,11 +167,11 @@
     return { now, a, b: bl.b, lambda: bl.lambda, sum: bl.sum, share, order, interestOrder, hero: heroOrder[0], scores, heroScores, pinned: o.pin ? PIN : null, holdout: !!o.holdout };
   }
 
-  // The tour. Each step's own actions, in order: the region (step 1), the add to the bag (2), the look (3), the
-  // minutes that pass (4), the pin and the story click (5), none (6), and the holdout view (7), which changes
-  // nothing the engine holds and is a way of looking only.
+  // The tour. Each step's own action: the region (step 1), the add to the bag (2), the look (3), the minutes that
+  // pass (4) and the story click (5); steps 6 and 7 have none. A merchandiser's pin is in force from step 5 on: it
+  // is the brand's setting, there when the step opens, and the story click then reorders the sections below it.
   const STEP_COUNT = 7;
-  const ACTIONS = [0, 1, 1, 1, 1, 2, 0, 0];
+  const ACTIONS = [0, 1, 1, 1, 1, 1, 0, 0];
   function replay(regionId, step, progress) {
     const r = REGIONS[regionId];
     const plan = r.plan;
@@ -203,12 +206,12 @@
       log.push({ t: now, kind: 'time', from });
       page();
     }
-    if (done(5, 1)) {
+    if (done(5, 0)) {
       pin = true;
       log.push({ t: now, kind: 'pin', section: PIN });
       page();
     }
-    if (done(5, 2)) {
+    if (done(5, 1)) {
       now = AT.story;
       touch(p, plan.first, W_LOOK, now);
       log.push({ t: now, kind: 'look', card: plan.story, v: plan.first, w: W_LOOK });
@@ -245,10 +248,12 @@
 
   if (typeof document === 'undefined') return;
   const doc = document;
-  const tourEl = doc.getElementById('tour');
+  const playerEl = doc.getElementById('tour-player');
   const liveEl = doc.getElementById('tour-live');
-  if (!tourEl || !liveEl) return;
-  const stepEls = Array.prototype.slice.call(tourEl.querySelectorAll('section.tour-step[data-step]'));
+  const boardEl = doc.getElementById('tour');
+  const introEl = doc.querySelector('.tour-intro');
+  if (!playerEl || !liveEl || !boardEl) return;
+  const stepEls = Array.prototype.slice.call(boardEl.querySelectorAll('section.tour-step[data-step]'));
   if (stepEls.length !== STEP_COUNT) return;
   const motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const reduced = () => !!(motionQuery && motionQuery.matches);
@@ -256,6 +261,16 @@
   const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth'];
   // A span of minutes is written as a word, so no timing figure appears beside the one performance sentence.
   const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+  // How the callouts name the things to click.
+  const SHORT = { cardigan: 'cardigan', shell: 'rain shell', shirt: 'linen shirt', woolcare: 'wool-care story', wet: 'wet-weekends story' };
+  const HOLD_MS = 1200;
+  const GLIDE_MS = 700;
+
+  // The step's words, from the storyboard on the page: its title, its explanation line and its fixed sentence.
+  const STEP_TEXT = stepEls.map((sec) => {
+    const t = (sel) => { const n = sec.querySelector(sel); return n ? n.textContent.replace(/\s+/g, ' ').trim() : ''; };
+    return { title: t('h2'), explain: t('.tour-explain'), explainNode: sec.querySelector('.tour-explain'), fixed: t('.tour-fixed') };
+  });
 
   // ---------- small helpers ----------
   function el(tag, cls, text) {
@@ -300,11 +315,25 @@
     Array.prototype.slice.call(parent.children).forEach((n) => { if (wanted.indexOf(n) < 0) parent.removeChild(n); });
     wanted.forEach((n, i) => { const at = parent.children[i]; if (at !== n) parent.insertBefore(n, at || null); });
   }
+  // Play a class's animation from its start, then take the class off once the animation is over or cut short, so a
+  // panel hidden and shown again later (the buckets after step 6, or after Start again) does not play it a second time.
   function restartAnimation(node, cls) {
     node.classList.remove(cls);
     void node.offsetWidth;
     node.classList.add(cls);
+    const playing = () => (node.getAnimations ? node.getAnimations({ subtree: true }).some((a) => a.animationName && a.playState !== 'finished') : false);
+    const over = () => {
+      if (playing()) return;
+      node.removeEventListener('animationend', over);
+      node.removeEventListener('animationcancel', over);
+      node.classList.remove(cls);
+    };
+    node.addEventListener('animationend', over);
+    node.addEventListener('animationcancel', over);
+    if (!playing()) over();
   }
+  // Where an element sits in the document, by layout and not by any glide in progress.
+  function docTop(node) { let y = 0; for (let n = node; n; n = n.offsetParent) y += n.offsetTop; return y; }
 
   // ---------- icons: simple line drawings, decorative ----------
   const ICONS = {
@@ -322,8 +351,6 @@
     napkin: 'M5 5h14v14H5Z M5 5l14 14 M12 5v3',
     pin: 'M9 3.5h6l-1 5 3 3H7l3-3-1-5Z M12 11.5V20.5',
     clock: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17Z M12 7.5V12l3 2',
-    up: 'M12 19V5 M6.5 10.5 12 5l5.5 5.5',
-    down: 'M12 5v14 M6.5 13.5 12 19l5.5-5.5',
   };
   function icon(name, cls) {
     const s = svgEl('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false', class: cls || 'tour-icon' });
@@ -332,19 +359,13 @@
   }
 
   // ---------- words ----------
-  const regionOf = () => (state.regionId ? REGIONS[state.regionId] : null);
   function leanWords(r) {
     const leaning = VALUES.filter((v) => (r.share[v.id] || 0) > 0).sort((x, y) => r.share[y.id] - r.share[x.id]).slice(0, 2).map((v) => v.word);
     return listWords(leaning, 'then');
   }
-  function cardPhrase(id, cap) {
-    const c = CARD[id];
-    if (c.story) return `${cap ? 'The' : 'the'} story ${c.name}`;
-    return `${cap ? 'The' : 'the'} ${c.name.toLowerCase()}`;
-  }
-  // What moved between two pages: two neighbors that traded places, or a section that moved up past others.
+  // What moved between two pages: two neighbors that traded places, or sections that moved up past others.
   function movesOf(before, after) {
-    const out = { up: [], down: [], swap: null, lines: [] };
+    const out = { up: [], down: [], swap: null };
     if (!before) return out;
     after.forEach((id, i) => {
       const j = before.indexOf(id);
@@ -359,122 +380,101 @@
     return out;
   }
   function moveSentence(m) {
-    if (m.swap) return `${sectionName(m.swap[0], true)} moved up, ahead of ${sectionName(m.swap[1])}: the two traded places.`;
+    if (m.swap) return `${sectionName(m.swap[0], true)} moved up, ahead of ${sectionName(m.swap[1])}.`;
     if (m.up.length) return `${listWords(m.up.map((id, i) => sectionName(id, i === 0)))} moved up.`;
     return '';
   }
 
-  // ---------- the state, and the history the tour can rebuild ----------
-  const state = { regionId: null, step: 1, progress: 0, holdoutView: false, busy: 0, timers: [] };
-  function current() { return state.regionId ? replay(state.regionId, state.step, state.progress) : null; }
+  // ---------- the state ----------
+  const state = { regionId: null, step: 1, progress: 0, busy: false, holding: false, timers: [], doneUpTo: 0 };
+  const current = () => (state.regionId ? replay(state.regionId, state.step, state.progress) : null);
+  const stepDone = () => (state.step === 1 ? !!state.regionId : state.progress >= ACTIONS[state.step]);
+  function clearTimers() { state.timers.forEach((t) => clearTimeout(t)); state.timers = []; state.busy = false; state.holding = false; }
+  function later(fn, ms) { state.timers.push(setTimeout(fn, ms)); }
 
-  // ---------- components ----------
-  function Stepper() {
-    const root = el('div', 'tour-stepper');
-    root.setAttribute('role', 'group');
-    root.setAttribute('aria-label', 'Tour steps');
-    const back = button('tour-btn', 'Back', () => go(state.step - 1, false));
-    const count = added(el('p', 'tour-count'), 'the step counter, drawn by the script');
-    const dots = el('ol', 'tour-dots');
-    dots.setAttribute('aria-hidden', 'true');
-    const dotEls = [];
-    for (let i = 1; i <= STEP_COUNT; i++) { const li = el('li', 'tour-dot'); dots.appendChild(li); dotEls.push(li); }
-    const next = button('tour-btn tour-btn--next', 'Next', () => (state.step === STEP_COUNT ? restart() : go(state.step + 1, false)));
-    root.appendChild(back);
-    root.appendChild(count);
-    root.appendChild(dots);
-    root.appendChild(next);
-    return {
-      root,
-      next,
-      update() {
-        count.textContent = `Step ${state.step} of ${STEP_COUNT}`;
-        back.setAttribute('aria-disabled', state.step === 1 ? 'true' : 'false');
-        const waiting = state.step === 1 && !state.regionId;
-        next.setAttribute('aria-disabled', waiting ? 'true' : 'false');
-        next.textContent = state.step === STEP_COUNT ? 'Start over' : 'Next';
-        next.setAttribute('aria-label', state.step === STEP_COUNT ? 'Start the tour over' : 'Next step');
-        back.setAttribute('aria-label', 'Previous step');
-        dotEls.forEach((d, i) => { d.classList.toggle('is-done', i + 1 < state.step); d.classList.toggle('is-current', i + 1 === state.step); });
-      },
-    };
-  }
-
-  function Callout() {
-    const root = el('div', 'tour-callout');
-    const said = el('div', 'tour-callout-said');
-    said.setAttribute('aria-live', 'polite');
-    said.setAttribute('aria-atomic', 'true');
-    const top = el('p', 'tour-callout-top');
-    const pill = added(el('span', 'tour-pill'), 'the step counter, drawn by the script');
-    const title = added(el('span', 'tour-callout-title'), "the step's title, repeated in the callout by the script");
-    top.appendChild(pill);
-    top.appendChild(title);
-    const text = added(el('p', 'tour-callout-text'), 'what to do, then what changed, written by the script for the region picked');
-    text.setAttribute('data-reader', 'the reader');
-    const note = added(el('p', 'tour-callout-note'), "a note on the step's instrument, written by the script");
-    said.appendChild(top);
-    said.appendChild(text);
-    said.appendChild(note);
-    root.appendChild(said);
-    const actions = el('div', 'tour-callout-actions');
-    root.appendChild(actions);
-    return {
-      root,
-      actions,
-      set(o) {
-        pill.textContent = `Step ${state.step} of ${STEP_COUNT}`;
-        title.textContent = o.title;
-        text.textContent = o.text;
-        note.textContent = o.note || '';
-        note.hidden = !o.note;
-        root.classList.toggle('is-done', !!o.done);
-      },
-    };
-  }
-
-  function RegionPicker(onPick) {
-    const wrap = el('div', 'tour-regions');
-    wrap.setAttribute('role', 'group');
-    const name = el('span', 'tour-regions-name', 'Pick where this visitor is');
-    name.id = 'tour-regions-name';
-    name.setAttribute('data-reader', 'the reader');
-    added(name, 'the region control, drawn by the script');
-    wrap.setAttribute('aria-labelledby', name.id);
-    wrap.appendChild(name);
-    const buttons = REGION_IDS.map((id, i) => {
-      const b = button('tour-btn tour-btn--region', REGIONS[id].name, () => onPick(id));
-      b.dataset.region = id;
-      b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('keydown', (e) => {
-        let to = -1;
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (i + 1) % REGION_IDS.length;
-        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (i + REGION_IDS.length - 1) % REGION_IDS.length;
-        if (to >= 0) { e.preventDefault(); buttons[to].focus(); }
-      });
-      wrap.appendChild(b);
-      return b;
+  // ---------- the player's parts ----------
+  const frame = el('div', 'tour-frame');
+  // The bar, which stays at the top of the window while the frame is on screen.
+  const bar = el('div', 'tour-bar');
+  bar.setAttribute('role', 'group');
+  bar.setAttribute('aria-label', 'The tour’s controls');
+  const backBtn = button('tour-btn tour-btn--back', 'Back', () => onBack());
+  backBtn.setAttribute('aria-label', 'Back one step');
+  const barTitle = el('p', 'tour-bar-title');
+  const barCount = added(el('span', 'tour-bar-count'), 'the step counter, drawn by the script');
+  const barName = added(el('span', 'tour-bar-name'), "the step's title, repeated in the bar by the script");
+  barTitle.appendChild(barCount);
+  barTitle.appendChild(barName);
+  const dots = el('ol', 'tour-dots');
+  dots.setAttribute('aria-hidden', 'true');
+  const dotEls = [];
+  for (let i = 1; i <= STEP_COUNT; i++) { const li = el('li', 'tour-dot'); dots.appendChild(li); dotEls.push(li); }
+  const controls = el('div', 'tour-bar-controls');
+  const pickName = added(el('span', 'tour-pick-name', 'Pick where this visitor is:'), 'the region control, drawn by the script');
+  pickName.id = 'tour-pick-name';
+  pickName.setAttribute('data-reader', 'the reader');
+  // The two region buttons are a group named by the words before it; the words stay outside the group, so on a phone
+  // they take their own line and Next can sit beside the buttons.
+  const regionGroup = el('div', 'tour-regions');
+  regionGroup.setAttribute('role', 'group');
+  regionGroup.setAttribute('aria-labelledby', pickName.id);
+  const regionBtns = REGION_IDS.map((id, i) => {
+    const b = button('tour-btn tour-btn--region', REGIONS[id].name, () => pickRegion(id));
+    b.dataset.region = id;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('keydown', (e) => {
+      let to = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (i + 1) % REGION_IDS.length;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (i + REGION_IDS.length - 1) % REGION_IDS.length;
+      if (to >= 0) { e.preventDefault(); regionBtns[to].focus(); }
     });
-    return {
-      root: wrap,
-      update() { buttons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.region === state.regionId ? 'true' : 'false')); },
-    };
+    regionGroup.appendChild(b);
+    return b;
+  });
+  const showBtn = button('tour-btn tour-btn--act', 'Show me', () => onShow());
+  showBtn.setAttribute('data-reader', 'the reader');
+  const nextBtn = button('tour-btn tour-btn--next', 'Next', () => onNext());
+  nextBtn.setAttribute('aria-label', 'Next step');
+  const againBtn = button('tour-btn tour-btn--next', 'Start again', () => restart());
+  bar.appendChild(backBtn);
+  bar.appendChild(barTitle);
+  bar.appendChild(dots);
+  bar.appendChild(controls);
+  frame.appendChild(bar);
+  // What a screen reader hears: the step's title on a new step, the result after an action.
+  const status = added(el('p', 'visually-hidden'), 'what the tour announces, written by the script');
+  status.setAttribute('aria-live', 'polite');
+  frame.appendChild(status);
+  // The explanation line and the step's fixed sentence, copied from the storyboard below.
+  const explain = el('div', 'tour-explain-box');
+  const explainLine = added(el('p', 'tour-explain-line'), "the step's explanation, copied from its text by the script");
+  const explainFixed = added(el('p', 'tour-explain-fixed'), "the step's fixed sentence, copied from its text by the script");
+  explain.appendChild(explainLine);
+  explain.appendChild(explainFixed);
+  frame.appendChild(explain);
+  const board = el('div', 'tour-board');
+  frame.appendChild(board);
+
+  function announce(text) {
+    status.textContent = '';
+    later(() => { status.textContent = text; }, 60);
   }
 
-  function Storefront(onCard) {
+  // ---------- the store ----------
+  function Storefront() {
     const root = el('div', 'tour-store');
     root.setAttribute('role', 'group');
-    root.setAttribute('aria-label', 'Morrow & Vale, the sample store: its home page');
+    root.setAttribute('aria-label', 'Morrow & Vale, a sample store: its home page');
     const head = el('div', 'tour-store-head');
-    head.setAttribute('aria-hidden', 'true');
-    head.appendChild(el('span', 'tour-store-mark', 'Morrow & Vale'));
-    const nav = el('span', 'tour-store-nav');
-    ['New in', 'Clothing', 'Home', 'Journal'].forEach((t) => nav.appendChild(el('span', null, t)));
-    head.appendChild(nav);
-    head.appendChild(icon('bag', 'tour-icon tour-store-bag'));
+    const mark = el('p', 'tour-store-mark');
+    mark.appendChild(el('span', 'tour-store-name', 'Morrow & Vale'));
+    mark.appendChild(el('span', 'tour-store-sample', ' · a sample store'));
+    head.appendChild(mark);
+    const timeSlot = el('div', 'tour-time-slot');
+    head.appendChild(timeSlot);
     root.appendChild(head);
-    const status = added(el('p', 'tour-store-status'), 'what the storefront shows, written by the script');
-    root.appendChild(status);
+    const note = added(el('p', 'tour-store-note'), 'what the store shows before a region is picked, written by the script');
+    root.appendChild(note);
     const hero = el('div', 'tour-hero');
     const heroTitle = el('span', 'tour-hero-title');
     const heroSub = el('span', 'tour-hero-sub');
@@ -489,39 +489,47 @@
       const li = el('li', `tour-section tone-${s.tone}`);
       li.dataset.id = s.id;
       const sh = el('div', 'tour-section-head');
-      sh.appendChild(el('span', 'tour-section-title', s.title));
-      if (s.recs) sh.appendChild(el('span', 'tour-section-note', "Products from the brand's recommendations"));
-      const mark = el('span', 'mark');
-      mark.hidden = true;
-      sh.appendChild(mark);
+      sh.appendChild(el('span', 'tour-section-title', s.partner ? 'Partner spotlight' : s.title));
+      if (s.partner) sh.appendChild(el('span', 'tour-section-note', 'Saltmarsh Ceramics'));
+      if (s.recs) sh.appendChild(el('span', 'tour-section-note', 'By the brand’s recommendations'));
       li.appendChild(sh);
+      const markEl = el('span', 'mark');
+      markEl.hidden = true;
+      li.appendChild(markEl);
       const ul = el('ul', 'tour-products');
       li.appendChild(ul);
       list.appendChild(li);
-      secEls[s.id] = { li, mark, ul };
+      secEls[s.id] = { li, mark: markEl, ul };
     });
+    const timeBtn = button('tour-time-target', 'Let five minutes pass', () => onShow());
+    timeBtn.appendChild(icon('clock', 'tour-icon tour-time-icon'));
     let heroId = null;
-    function drawCards(s, target) {
-      const ul = secEls[s.id].ul;
-      const items = s.cards.map((c) => {
+    function callout(text, where) {
+      const c = added(el('p', `tour-callout ${where}`), 'the call to act, written by the script for the region picked');
+      c.setAttribute('data-reader', 'the reader');
+      c.textContent = text;
+      return c;
+    }
+    function drawCards(s, target, row) {
+      const items = s.cards.map((c, k) => {
         const item = el('li', 'tour-product-item');
-        const isTarget = target && target.card === c.id;
+        const isTarget = !!target && target.card === c.id;
         const node = el(isTarget ? 'button' : 'div', `tour-product${isTarget ? ' is-target' : ''}`);
         if (isTarget) {
           node.type = 'button';
           node.setAttribute('aria-label', target.aria);
-          node.addEventListener('click', () => onCard(c.id));
+          node.addEventListener('click', () => onShow());
         }
         node.appendChild(icon(c.icon));
-        const txt = el('span', 'tour-product-text');
-        if (c.story) txt.appendChild(el('span', 'tour-product-kind', 'Story'));
-        txt.appendChild(el('span', 'tour-product-name', c.name));
-        if (isTarget && target.verb) txt.appendChild(el('span', 'tour-product-do', target.verb));
-        node.appendChild(txt);
+        node.appendChild(el('span', 'tour-product-name', c.name));
         item.appendChild(node);
+        if (isTarget) {
+          item.classList.add('has-callout');
+          item.appendChild(callout(target.callout, `${row >= 3 ? 'is-above' : 'is-below'} ${k === 0 ? 'is-left' : k === 2 ? 'is-right' : 'is-mid'}`));
+        }
         return item;
       });
-      ul.replaceChildren(...items);
+      secEls[s.id].ul.replaceChildren(...items);
     }
     // Move the sections to their new places and let each glide from where it was (CSS transitions do the motion).
     function glide(order) {
@@ -545,7 +553,8 @@
       root,
       secEls,
       update(view, animate) {
-        status.textContent = view.status;
+        note.textContent = view.note || '';
+        note.hidden = !view.note;
         const h = HERO[view.hero];
         if (heroId !== view.hero) {
           heroTitle.textContent = h.title;
@@ -555,7 +564,16 @@
           if (animate && heroId !== null) restartAnimation(hero, 'is-fresh');
           heroId = view.hero;
         }
-        SECTIONS.forEach((s) => drawCards(s, view.target && view.target.section === s.id ? view.target : null));
+        const cardTarget = view.target && view.target.card ? view.target : null;
+        SECTIONS.forEach((s) => drawCards(s, cardTarget && cardTarget.section === s.id ? cardTarget : null, view.order.indexOf(s.id)));
+        const timeTarget = view.target && view.target.time ? view.target : null;
+        if (timeTarget) {
+          timeBtn.setAttribute('aria-label', 'Let five minutes pass with no clicks');
+          syncChildren(timeSlot, [timeBtn, callout(timeTarget.callout, 'is-below is-right')]);
+          timeBtn.classList.remove('is-target');
+          void timeBtn.offsetWidth;
+          timeBtn.classList.add('is-target');
+        } else timeSlot.replaceChildren();
         SECTIONS.forEach((s) => {
           const m = view.marks[s.id];
           const e = secEls[s.id];
@@ -567,17 +585,21 @@
         });
         if (animate) glide(view.order);
         else view.order.forEach((id) => list.appendChild(secEls[id].li));
-        root.classList.toggle('is-holdout', !!view.holdout);
       },
-      focusTarget() { const t = root.querySelector('.tour-product.is-target'); if (t) t.focus({ preventScroll: false }); },
+      targetNode() { return root.querySelector('.tour-product.is-target') || (timeBtn.isConnected ? timeBtn : null); },
     };
   }
 
+  // ---------- the buckets, what the page leans on, the receipt, learning ----------
   const VESSEL = 'M5 4H59L53 96H11Z';
   const levelY = (a) => 96 - a * 92;
   function Buckets() {
     const root = el('div', 'tour-buckets');
-    root.appendChild(el('p', 'tour-panel-title', 'Interest buckets'));
+    const title = el('p', 'tour-panel-title');
+    const titleTime = added(el('span', 'tour-panel-time'), 'the time into the visit, kept by the script');
+    title.appendChild(el('span', null, 'Interest buckets'));
+    title.appendChild(titleTime);
+    root.appendChild(title);
     const row = el('div', 'tour-bucket-row');
     root.appendChild(row);
     const cells = {};
@@ -599,11 +621,13 @@
       svg.appendChild(svgEl('line', { x1: 1, x2: 63, y1: levelY(RELEASE), y2: levelY(RELEASE), class: 'tour-release' }));
       svg.appendChild(svgEl('path', { d: VESSEL, class: 'tour-vessel-rim' }));
       cell.appendChild(svg);
-      cell.appendChild(el('p', 'tour-bucket-name', v.name));
+      const words = el('div', 'tour-bucket-words');
+      words.appendChild(el('p', 'tour-bucket-name', v.name));
       const level = added(el('p', 'tour-bucket-level'), "the bucket's level, computed by the script");
-      cell.appendChild(level);
+      words.appendChild(level);
       const word = added(el('p', 'tour-bucket-word'), "the bucket's state, written by the script");
-      cell.appendChild(word);
+      words.appendChild(word);
+      cell.appendChild(words);
       row.appendChild(cell);
       cells[v.id] = { cell, svg, liquid, level, word };
     });
@@ -613,6 +637,7 @@
     root.appendChild(key);
     return {
       root,
+      setTime(t) { titleTime.textContent = ` · visit time ${clock(t)}`; },
       update(levels, p, opts) {
         const o = opts || {};
         VALUES.forEach((v) => {
@@ -626,24 +651,23 @@
           c.cell.classList.toggle('is-released', released);
           c.level.textContent = a < 5e-4 ? 'empty' : fixed3(a);
           c.word.textContent = member ? 'Interested' : released ? 'Released' : '';
-          const where = a >= ENTRY ? 'past the entry line' : a >= RELEASE ? 'between the two lines' : a < 5e-4 ? 'empty' : 'below the release line';
+          const where = a >= ENTRY ? 'past the entry line' : a >= RELEASE ? 'between the two lines' : 'below the release line';
           c.svg.setAttribute('aria-label', `${v.name} bucket: ${a < 5e-4 ? 'empty' : `${fixed3(a)}, ${where}`}${member ? ', interested' : released ? ', released' : ''}.`);
         });
       },
       flash(v, kind) { restartAnimation(cells[v].cell, kind === 'released' ? 'is-let-go' : 'is-filled'); },
+      cell(v) { return cells[v].cell; },
     };
   }
 
   function Balance() {
     const root = el('div', 'tour-balance');
     root.appendChild(el('p', 'tour-panel-title', 'What the page leans on'));
-    const bar = el('div', 'tour-balance-bar');
-    bar.setAttribute('role', 'img');
-    const regionPart = el('span', 'tour-balance-region');
-    const ownPart = el('span', 'tour-balance-own');
-    bar.appendChild(regionPart);
-    bar.appendChild(ownPart);
-    root.appendChild(bar);
+    const barEl = el('div', 'tour-balance-bar');
+    barEl.setAttribute('role', 'img');
+    barEl.appendChild(el('span', 'tour-balance-region'));
+    barEl.appendChild(el('span', 'tour-balance-own'));
+    root.appendChild(barEl);
     const words = el('div', 'tour-balance-words');
     const rw = added(el('span', 'tour-balance-key tour-balance-key--region'), "the region's share, computed by the script");
     const ow = added(el('span', 'tour-balance-key tour-balance-key--own'), "the visitor's share, computed by the script");
@@ -652,18 +676,25 @@
     root.appendChild(words);
     return {
       root,
-      update(lambda, opts) {
+      update(lambda, regionName, opts) {
         const l = lambda === null ? 1 : lambda;
         const pr = Math.round(l * 100);
-        bar.style.setProperty('--lambda', l.toFixed(4));
-        bar.classList.toggle('is-slow', !!(opts && opts.slow));
-        rw.textContent = `The region ${pr}%`;
-        ow.textContent = `This visitor ${100 - pr}%`;
-        bar.setAttribute('aria-label', `The page leans ${pr} percent on the region and ${100 - pr} percent on this visitor's own buckets.`);
+        barEl.style.setProperty('--lambda', l.toFixed(4));
+        barEl.classList.toggle('is-slow', !!(opts && opts.slow));
+        barEl.classList.toggle('is-waiting', !regionName);
+        rw.textContent = regionName ? `${regionName} ${pr}%` : 'No region picked yet';
+        ow.textContent = regionName ? `This visitor ${100 - pr}%` : '';
+        barEl.setAttribute('aria-label', regionName ? `The page leans ${pr} percent on ${regionName} and ${100 - pr} percent on this visitor's own buckets.` : 'No region picked yet.');
       },
     };
   }
 
+  // The lines of one event (an action and what it caused) stay in their order; the events go newest first.
+  function newestEventFirst(lines) {
+    const groups = [];
+    lines.forEach((l) => { if (l.start || !groups.length) groups.push([l]); else groups[groups.length - 1].push(l); });
+    return groups.reverse().reduce((out, g) => out.concat(g), []);
+  }
   function Receipt() {
     const root = el('div', 'tour-receipt');
     const head = el('p', 'tour-receipt-head', 'Why this page');
@@ -671,14 +702,9 @@
     const sub = added(el('p', 'tour-receipt-sub'), "the receipt's subject, written by the script");
     root.appendChild(sub);
     const list = el('ol', 'tour-receipt-lines');
-    list.setAttribute('aria-label', 'Receipt lines, oldest first');
     root.appendChild(list);
     const extra = el('div', 'tour-receipt-extra');
     root.appendChild(extra);
-    // What is new on the receipt, said once to a screen reader; the whole list stays readable in place.
-    const fresh = added(el('p', 'visually-hidden'), 'the new receipt lines, repeated for a screen reader by the script');
-    fresh.setAttribute('aria-live', 'polite');
-    root.appendChild(fresh);
     function line(l) {
       const li = added(el('li', `tour-rline${l.fresh ? ' is-new' : ''}${l.kind ? ` tour-rline--${l.kind}` : ''}`), 'a receipt line, written by the script from the arithmetic');
       li.appendChild(el('span', 'tour-rtime', l.time || ''));
@@ -696,19 +722,19 @@
       root,
       list,
       extra,
-      set(title, subject, lines, mode) {
+      set(title, subject, lines, mode, newestFirst) {
         head.textContent = title;
         sub.textContent = subject;
-        list.replaceChildren(...lines.map(line));
-        const news = lines.filter((l) => l.fresh).map((l) => l.text);
-        fresh.textContent = news.length ? `New on the receipt: ${news.join(' ')}` : '';
+        list.setAttribute('aria-label', newestFirst ? 'Receipt lines, newest first' : 'Receipt lines, in order');
+        list.replaceChildren(...(newestFirst ? newestEventFirst(lines) : lines).map(line));
+        list.scrollTop = 0;
         root.classList.toggle('is-whole', mode === 'whole');
         root.classList.toggle('is-learning', mode === 'learning');
       },
+      newest() { return list.firstElementChild; },
     };
   }
 
-  // The learning dial, at zero, and the holdout's share (step 7).
   function Learning() {
     const root = el('div', 'tour-learning');
     const dialBox = el('div', 'tour-dial');
@@ -729,100 +755,85 @@
     dialBox.appendChild(dialWords);
     root.appendChild(dialBox);
     const hold = el('div', 'tour-holdout');
-    const dots = el('div', 'tour-holdout-dots');
-    dots.setAttribute('role', 'img');
-    dots.setAttribute('aria-label', 'Twenty visitors, one of them in the holdout.');
-    for (let i = 0; i < 20; i++) dots.appendChild(el('span', `tour-holdout-dot${i === 13 ? ' is-held' : ''}`));
-    hold.appendChild(dots);
-    hold.appendChild(el('p', 'tour-holdout-note', 'Here one visitor in twenty keeps the site’s own page; the brand sets the share.'));
+    const holdDots = el('div', 'tour-holdout-dots');
+    holdDots.setAttribute('role', 'img');
+    holdDots.setAttribute('aria-label', 'Twenty visitors, one of them in the holdout.');
+    for (let i = 0; i < 20; i++) holdDots.appendChild(el('span', `tour-holdout-dot${i === 13 ? ' is-held' : ''}`));
+    hold.appendChild(holdDots);
+    hold.appendChild(el('p', 'tour-holdout-note', 'Here one visitor in twenty keeps the site’s own page, a share the brand sets:'));
+    const holdList = el('ol', 'tour-holdout-page');
+    holdList.setAttribute('aria-label', 'The holdout’s page, in order');
+    hold.appendChild(holdList);
     root.appendChild(hold);
-    return { root };
+    return {
+      root,
+      update(order) {
+        holdList.replaceChildren(...order.map((id) => {
+          const s = SECTION[id];
+          const li = added(el('li', `tour-holdout-row tone-${s.tone}`, s.partner ? 'Partner spotlight, pinned' : s.title), "a section of the holdout's page, drawn by the script");
+          return li;
+        }));
+      },
+    };
   }
 
-  // ---------- the live tour ----------
-  const stepper = Stepper();
-  tourEl.insertBefore(stepper.root, tourEl.firstChild);
-  const board = el('div', 'tour-board');
-  const main = el('div', 'tour-main');
+  const store = Storefront();
   const side = el('div', 'tour-side');
-  board.appendChild(main);
-  board.appendChild(side);
-  const callout = Callout();
-  const picker = RegionPicker(pickRegion);
-  const store = Storefront(onCard);
-  main.appendChild(callout.root);
-  main.appendChild(store.root);
-  const clockBox = el('p', 'tour-clock');
-  clockBox.appendChild(icon('clock', 'tour-icon tour-clock-icon'));
-  const clockText = added(el('span', 'tour-clock-text'), 'the time into the visit, kept by the script');
-  clockBox.appendChild(clockText);
   const buckets = Buckets();
   const balance = Balance();
   const receipt = Receipt();
   const learning = Learning();
-  side.appendChild(clockBox);
   side.appendChild(buckets.root);
   side.appendChild(balance.root);
   side.appendChild(receipt.root);
   receipt.extra.appendChild(learning.root);
-  liveEl.appendChild(board);
+  board.appendChild(store.root);
+  board.appendChild(side);
+  liveEl.appendChild(frame);
 
-  const passBtn = button('tour-btn tour-btn--act', 'A few minutes pass', () => act());
-  const pinBtn = button('tour-btn tour-btn--act', 'Pin the partner spotlight', () => act());
-  const holdBtn = button('tour-btn tour-btn--act', 'Show the holdout’s page', () => toggleHoldout());
-  const nextBtn = button('tour-btn tour-btn--next tour-btn--inline', 'Next step', () => go(state.step + 1, true));
-  [passBtn, pinBtn, holdBtn].forEach((b) => b.setAttribute('data-reader', 'the reader'));
-
-  function clearTimers() { state.timers.forEach((t) => clearTimeout(t)); state.timers = []; state.busy = 0; }
-  function later(fn, ms) { state.timers.push(setTimeout(fn, ms)); }
-
-  // The words of each step, for the region picked: what to do before the action, what changed after it.
-  function stepWords(s) {
-    const r = regionOf();
-    const title = stepEls[state.step - 1].querySelector('h2').textContent.trim();
-    if (state.step === 1) {
-      if (!r) return { title, text: 'Start with the visitor’s region. The engine reads it from each request; here it is picked on the page, never guessed.', note: 'Each region’s leans are invented for this sample store.' };
-      const lifted = movesOf(SECTIONS.map((x) => x.id), s.d.order).up;
-      return { title, text: `Visitors in ${r.name} lean toward ${leanWords(r)}, so ${sectionName(s.d.order[0])} leads, and against the brand’s own order ${listWords(lifted.map((id) => sectionName(id)))} moved up. The hero is ${HERO[s.d.hero].title}.`, note: 'Each region’s leans are invented for this sample store.', done: true };
-    }
+  // ---------- the words of a step ----------
+  function targetOf(s) {
+    if (!s || stepDone() || state.busy) return null;
+    const r = REGIONS[s.regionId];
+    const plan = r.plan;
+    const first = VALUE[plan.first];
+    if (state.step === 2) return { card: plan.add, section: CARD[plan.add].section, aria: `${CARD[plan.add].name}: add to the bag`, callout: `Add the ${SHORT[plan.add]} to the bag, or press Show me. Watch the top two sections.` };
+    if (state.step === 3) return { card: plan.look, section: CARD[plan.look].section, aria: `${CARD[plan.look].name}: look at it`, callout: `Look at the ${SHORT[plan.look]}, or press Show me. Watch the last two sections.` };
+    if (state.step === 4) return { time: true, callout: `Let five minutes pass, or press Show me. Watch the ${first.word} bucket drain.` };
+    if (state.step === 5) return { card: plan.story, section: CARD[plan.story].section, aria: `${CARD[plan.story].name}: click the story`, callout: `Click the ${SHORT[plan.story]}, or press Show me. Watch the sections below the pin.` };
+    return null;
+  }
+  // The result of a step's action, in words, for a screen reader.
+  function resultWords(s) {
+    const r = REGIONS[s.regionId];
     const plan = r.plan;
     const first = VALUE[plan.first];
     const second = VALUE[plan.second];
-    if (state.step === 2) {
-      if (!state.progress) return { title, text: `Add ${cardPhrase(plan.add)} to the bag, and watch the two sections at the top.` };
-      const m = movesOf(s.prev.order, s.d.order);
-      return { title, text: `${moveSentence(m)} The add counts three times a look, so ${first.word} passed its entry line, and the hero is now ${HERO[s.d.hero].title}.`, done: true };
+    const m = movesOf(s.prev ? s.prev.order : null, s.d.order);
+    if (state.step === 1) {
+      const lifted = movesOf(SECTIONS.map((x) => x.id), s.d.order).up;
+      return `Visitors in ${r.name} lean toward ${leanWords(r)}, so ${sectionName(s.d.order[0])} leads, and against the brand’s own order ${listWords(lifted.map((id) => sectionName(id)))} moved up. The hero is ${HERO[s.d.hero].title}.`;
     }
-    if (state.step === 3) {
-      if (!state.progress) return { title, text: `Click ${cardPhrase(plan.look)}, a look at something different.` };
-      const m = movesOf(s.prev.order, s.d.order);
-      return { title, text: `${moveSentence(m)} One look fills ${second.word} partway; ${first.word} still leads, so the page leans on both.`, done: true };
-    }
+    if (state.step === 2) return `${moveSentence(m)} ${first.name} passed its entry line, and the hero is now ${HERO[s.d.hero].title}.`;
+    if (state.step === 3) return `${moveSentence(m)} ${second.name} fills partway; ${first.word} still leads.`;
     if (state.step === 4) {
-      if (!state.progress) return { title, text: 'Let a few minutes pass with no clicks, and watch the buckets drain.' };
       const rel = s.log.filter((x) => x.kind === 'released').pop();
-      const m = movesOf(s.prev.order, s.d.order);
-      const dropped = m.swap ? `${sectionName(m.swap[1], true)} dropped back behind ${sectionName(m.swap[0])}.` : '';
-      return { title, text: `At ${clock(rel.t)}, ${first.word} drained below its release line, so the visitor was released from it. ${dropped} Nobody wrote a rule; time did it.`, done: true };
+      return `At ${clock(rel.t)}, ${first.word} drained below its release line, so the visitor was released from it. ${m.swap ? `${sectionName(m.swap[1], true)} dropped back behind ${sectionName(m.swap[0])}.` : ''}`;
     }
-    if (state.step === 5) {
-      if (state.progress === 0) return { title, text: 'A merchandiser sold the partner spotlight the first place on the home page. Pin it there, as the merchandiser would.' };
-      if (state.progress === 1) return { title, text: `The partner spotlight now holds the first place. Click ${cardPhrase(plan.story)}, and watch the sections below the pin.` };
-      const m = movesOf(s.prev.order, s.d.order);
-      return { title, text: `${moveSentence(m)} The pinned spotlight held the first place: ranking never ran for it.`, done: true };
-    }
-    if (state.step === 6) return { title, text: 'The receipt panel now shows the whole receipt for the home page shown here. Every number on it can be recomputed by hand.', done: true };
-    if (!state.holdoutView) return { title, text: 'The learning dial is at zero: what this visit recorded changes nothing until the brand turns it. See the page a holdout visitor gets.', done: true };
-    return { title, text: 'A holdout visitor gets the site’s own page: the brand’s own order, with the pin kept. Comparing the two groups shows the lift.', done: true };
+    if (state.step === 5) return `${moveSentence(m)} The pinned spotlight held the first place: ranking never ran for it.`;
+    return '';
   }
 
-  // The receipt panel's lines, in words, from the replay's log.
+  // The receipt's lines, in words, from the replay's log.
   function logLines(s, freshFrom) {
     const r = REGIONS[s.regionId];
     const out = [];
     s.log.forEach((x, i) => {
       const fresh = i >= freshFrom;
       const time = clock(x.t);
+      const prev = i ? s.log[i - 1].kind : null;
+      const begins = ['region', 'add', 'look', 'pin'].indexOf(x.kind) >= 0 || ((x.kind === 'released' || x.kind === 'time') && prev !== 'released');
+      const before = out.length;
       if (x.kind === 'region') out.push({ time, sign: '+', text: `Regional start: ${r.name}, picked on this page. Visitors there lean toward ${leanWords(r)}.`, fresh });
       else if (x.kind === 'add') out.push({ time, sign: '+', text: `Added to the bag: ${CARD[x.card].name}. An add counts three times a look.`, fresh });
       else if (x.kind === 'entered') out.push({ time, sign: '+', text: `${VALUE[x.v].name} passed its entry line: the visitor counts as interested.`, fresh });
@@ -831,6 +842,7 @@
       else if (x.kind === 'released') out.push({ time, sign: '−', text: `Released from ${VALUE[x.v].word}: the bucket drained below its release line.`, fresh, kind: 'release' });
       else if (x.kind === 'time') out.push({ time, sign: '', text: `${COUNT_WORDS[Math.round(x.t - x.from)] || 'Some'} minutes with no clicks; the page is decided again.`, fresh });
       else if (x.kind === 'pin') out.push({ time, sign: 'pin', text: 'Pinned by a merchandiser: the partner spotlight, first. Ranking never ran for it.', fresh, kind: 'pin' });
+      if (out.length > before) out[out.length - 1].start = begins;
     });
     return out;
   }
@@ -840,17 +852,18 @@
     const r = REGIONS[s.regionId];
     const lines = [];
     const own = VALUES.filter((v) => rc.levels[v.id] > 0).map((v) => `${v.word} ${num(rc.levels[v.id])}`);
-    lines.push({ time: 'Rule', sign: '', text: 'Score = (1 − the region’s share) × the visitor’s level + the region’s share × the region’s lean.' });
-    lines.push({ time: 'Buckets', sign: '', text: `Levels: ${listWords(own)}; every other bucket is empty. A level is evidence ÷ (evidence + 1.8): ${VALUE[rc.worked.v].word}, ${num(rc.worked.R)} ÷ ${num(rc.worked.RK)} = ${num(rc.worked.level)}.` });
-    lines.push({ time: 'Region', sign: '', text: `${r.name}. The region’s share is 1 ÷ (1 + ${VALUES.filter((v) => rc.levels[v.id] > 0).map((v) => num(rc.levels[v.id])).join(' + ')}) = ${num(rc.lam)}.` });
+    lines.push({ time: 'Rule', sign: '', text: 'Score = (1 − the region’s share) × the visitor’s level + the region’s share × its lean.' });
+    const ownWords = listWords(own);
+    lines.push({ time: 'Buckets', sign: '', text: `${ownWords.charAt(0).toUpperCase()}${ownWords.slice(1)}, the rest empty. Level = evidence ÷ (evidence + 1.8): ${num(rc.worked.R)} ÷ ${num(rc.worked.RK)} = ${num(rc.worked.level)}.` });
+    lines.push({ time: 'Region', sign: '', text: `${r.name}’s share = 1 ÷ (1 + ${VALUES.filter((v) => rc.levels[v.id] > 0).map((v) => num(rc.levels[v.id])).join(' + ')}) = ${num(rc.lam)}.` });
     rc.places.forEach((pl) => {
       const name = SECTION[pl.id].title;
-      if (pl.pinned) lines.push({ time: `Place ${pl.place}`, sign: 'pin', text: `${name}: pinned by a merchandiser, an instruction. Ranking never ran for it; interest alone would have placed it ${ORDINAL[pl.interestPlace - 1]}.`, kind: 'pin' });
-      else if (pl.untagged) lines.push({ time: `Place ${pl.place}`, sign: '', text: `${name}: no tag, so 0. Its products come from the brand’s recommendations; the engine decides where it sits.` });
+      if (pl.pinned) lines.push({ time: `Place ${pl.place}`, sign: 'pin', text: `${SECTION[pl.id].partner ? 'Partner spotlight' : name}: pinned. Ranking never ran for it; interest alone would rank it ${ORDINAL[pl.interestPlace - 1]}.`, kind: 'pin' });
+      else if (pl.untagged) lines.push({ time: `Place ${pl.place}`, sign: '', text: `${name}: no tag, so 0; the brand’s recommendations fill it.` });
       else lines.push({ time: `Place ${pl.place}`, sign: '', text: `${name}: ${num(pl.rest)} × ${num(pl.level)} + ${num(pl.lam)} × ${num(pl.lean)} = ${num(pl.score)}.` });
     });
-    lines.push({ time: 'Hero', sign: '', text: `${HERO[rc.hero].title}: ${num(rc.heroScore)}, the highest of the four heroes.` });
-    lines.push({ time: 'Learning', sign: '', text: 'Recorded with the receipt. The learning dial is at 0, so it changed nothing.' });
+    lines.push({ time: 'Hero', sign: '', text: `${HERO[rc.hero].title}: ${num(rc.heroScore)}, the highest hero.` });
+    lines.push({ time: 'Learning', sign: '', text: 'Recorded; the learning dial is at 0, so it changed nothing.' });
     return lines;
   }
   function learningLines(s) {
@@ -863,137 +876,176 @@
     return out;
   }
 
-  // The view of the storefront for the state: its order, hero, marks and the one card the reader may use.
+  // The store's view for a state: its order, hero, marks, and the one thing the reader may use.
   function viewOf(s, showMarks) {
-    const r = REGIONS[s.regionId];
-    const plan = r.plan;
-    const d = state.holdoutView && state.step === 7 ? decide(s.p, s.regionId, s.now, { pin: s.pin, holdout: true }) : s.d;
     const marks = {};
+    if (!s) return { order: SECTIONS.map((x) => x.id), hero: HEROES[0].id, marks, target: null, pinned: null, note: 'The brand’s own order, until a region is picked in the bar.' };
+    const d = s.d;
     const lastPin = s.log.length && s.log[s.log.length - 1].kind === 'pin';
     const before = s.prev ? s.prev.order : state.step === 1 ? SECTIONS.map((x) => x.id) : null;
-    if (showMarks && before && !d.holdout && !lastPin) {
+    if (showMarks && before && !lastPin) {
       const m = movesOf(before, d.order);
       m.up.forEach((id) => { marks[id] = { kind: 'up', text: 'moved up' }; });
       m.down.forEach((id) => { marks[id] = { kind: 'down', text: 'moved down' }; });
     }
     if (d.pinned) marks[d.pinned] = { kind: 'pin', text: 'pinned' };
-    let target = null;
-    if (state.step === 2 && !state.progress) target = { card: plan.add, verb: 'Add to bag', aria: `${CARD[plan.add].name}: add to the bag` };
-    if (state.step === 3 && !state.progress) target = { card: plan.look, verb: 'Look', aria: `${CARD[plan.look].name}: look at it` };
-    if (state.step === 5 && state.progress === 1) target = { card: plan.story, verb: 'Read', aria: `${CARD[plan.story].name}: click the story` };
-    if (target) target.section = CARD[target.card].section;
-    let status;
-    if (d.holdout) status = `What a holdout visitor in ${r.name} gets at ${clock(s.now)}: the site’s own page, with the pin kept.`;
-    else if (s.now === 0) status = `The home page for a visitor in ${r.name}, the region picked above, before any click.`;
-    else status = `The home page at ${clock(s.now)} into the visit.`;
-    return { order: d.order, hero: d.hero, marks, target, pinned: d.pinned, holdout: d.holdout, status };
-  }
-  function blankView() {
-    return { order: SECTIONS.map((x) => x.id), hero: HEROES[0].id, marks: {}, target: null, pinned: null, holdout: false, status: 'The brand’s own order. The engine has no region yet: pick one in the callout.' };
+    return { order: d.order, hero: d.hero, marks, target: targetOf(s), pinned: d.pinned, note: '' };
   }
 
-  function sideFor(s) {
+  // ---------- drawing ----------
+  function drawBar() {
+    backBtn.hidden = state.step === 1;
+    barCount.textContent = `Step ${state.step} of ${STEP_COUNT}`;
+    barName.textContent = ` · ${STEP_TEXT[state.step - 1].title}`;
+    dotEls.forEach((d, i) => { d.classList.toggle('is-done', i + 1 < state.step); d.classList.toggle('is-current', i + 1 === state.step); });
+    regionBtns.forEach((b) => b.setAttribute('aria-pressed', b.dataset.region === state.regionId ? 'true' : 'false'));
+    const want = [];
+    if (state.step === 1) { want.push(pickName, regionGroup); if (state.regionId) want.push(nextBtn); }
+    else if (state.step <= 5) { if (!stepDone() && !state.busy) want.push(showBtn); want.push(nextBtn); }
+    else if (state.step === 6) want.push(nextBtn);
+    else want.push(againBtn);
+    syncChildren(controls, want);
+    const t = STEP_TEXT[state.step - 1];
+    explainLine.replaceChildren(...Array.prototype.slice.call(t.explainNode.cloneNode(true).childNodes));
+    explainFixed.textContent = t.fixed;
+    explainFixed.hidden = !t.fixed;
+  }
+  function drawSide(s, freshFrom) {
+    const wide = state.step >= 6;
+    side.classList.toggle('is-wide', wide);
     if (!s) {
       const zero = {};
       VALUES.forEach((v) => { zero[v.id] = 0; });
       buckets.update(zero, newProfile());
-      balance.update(1);
-      clockText.textContent = 'Visit time 0:00';
-      receipt.set('Why this page', 'No region picked yet.', [], 'log');
+      buckets.setTime(0);
+      balance.update(1, null);
+      receipt.set('Why this page', 'No region picked yet.', [], 'log', true);
+      liveEl.classList.remove('is-learning');
       return;
     }
-    clockText.textContent = `Visit time ${clock(s.now)}`;
+    buckets.setTime(s.now);
     buckets.update(s.d.a, s.p, {});
-    balance.update(s.d.lambda === null ? 1 : s.d.lambda, {});
+    balance.update(s.d.lambda === null ? 1 : s.d.lambda, REGIONS[s.regionId].name, {});
+    if (state.step === 6) receipt.set('The receipt, whole', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, wholeLines(s), 'whole', false);
+    else if (state.step === 7) receipt.set('What learning recorded', `This visit, up to ${clock(s.now)}.`, learningLines(s), 'learning', false);
+    else receipt.set('Why this page', `The home page at ${clock(s.now)}, newest line first.`, logLines(s, freshFrom === undefined ? s.log.length : freshFrom), 'log', true);
+    liveEl.classList.toggle('is-learning', state.step === 7);
+    if (state.step === 7) learning.update(decide(s.p, s.regionId, s.now, { pin: s.pin, holdout: true }).order);
   }
-
-  // Draw everything for the current state. freshFrom marks the receipt lines that are new since the last draw.
   function render(opts) {
     const o = opts || {};
     const s = current();
-    stepper.update();
-    stepEls.forEach((sec, i) => sec.classList.toggle('is-current', i + 1 === state.step));
-    picker.update();
-    const words = stepWords(s);
-    callout.set(words);
-    const acts = [];
-    if (state.step === 1) acts.push(picker.root);
-    if (state.step === 4 && !state.progress) acts.push(passBtn);
-    if (state.step === 5 && state.progress === 0) acts.push(pinBtn);
-    if (state.step === 7) { holdBtn.textContent = state.holdoutView ? 'Show this visitor’s page' : 'Show the holdout’s page'; holdBtn.setAttribute('aria-pressed', state.holdoutView ? 'true' : 'false'); acts.push(holdBtn); }
-    if (words.done && state.step < STEP_COUNT) acts.push(nextBtn);
-    syncChildren(callout.actions, acts);
-    passBtn.setAttribute('aria-disabled', state.busy ? 'true' : 'false');
-    if (!s) { store.update(blankView(), !!o.animate); sideFor(null); return; }
+    drawBar();
     store.update(viewOf(s, !!o.marks), !!o.animate);
-    if (!o.keepSide) sideFor(s);
-    if (state.step === 6) receipt.set('The receipt, whole', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, wholeLines(s), 'whole');
-    else if (state.step === 7) receipt.set('What learning recorded', `This visit, up to ${clock(s.now)}.`, learningLines(s), 'learning');
-    else receipt.set('Why this page', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, logLines(s, o.freshFrom === undefined ? s.log.length : o.freshFrom), 'log');
-    liveEl.classList.toggle('is-learning', state.step === 7);
+    drawSide(s, o.freshFrom);
   }
 
-  // Picking a region keeps focus on the region button just chosen, so a keyboard reader goes on from there.
+  // ---------- where the window goes ----------
+  const narrow = () => liveEl.clientWidth < 760;
+  // Any control brings the frame's top to the window's top.
+  function frameToTop() {
+    const top = Math.max(0, docTop(liveEl));
+    if (Math.abs(window.scrollY - top) < 2) return;
+    window.scrollTo({ top, behavior: reduced() ? 'auto' : 'smooth' });
+  }
+  // On a phone, after an action, the changed section comes into view under the bar, with the buckets and the newest
+  // receipt line below it. When everything still fits, the view starts higher: at the store's top, or else at a pinned
+  // section above the change, so the reader also sees the pin hold its place.
+  function revealChange(s) {
+    if (!narrow()) { frameToTop(); return; }
+    const barH = bar.getBoundingClientRect().height;
+    const m = movesOf(s.prev ? s.prev.order : null, s.d.order);
+    const ids = m.up.concat(m.down);
+    const rows = ids.length ? ids.map((id) => store.secEls[id].li) : [store.root];
+    const firstTop = Math.min.apply(null, rows.map(docTop));
+    const newest = receipt.newest();
+    const bottom = newest ? docTop(newest) + newest.offsetHeight : docTop(receipt.root) + 80;
+    const tops = [docTop(store.root) - barH - 6];
+    const pinTop = s.d.pinned ? docTop(store.secEls[s.d.pinned].li) : Infinity;
+    if (pinTop < firstTop) tops.push(pinTop - barH - 14);
+    const fits = tops.filter((t) => bottom - t <= window.innerHeight - 8);
+    const top = fits.length ? fits[0] : firstTop - barH - 8;
+    window.scrollTo({ top: Math.max(0, top), behavior: reduced() ? 'auto' : 'smooth' });
+  }
+  function primary() {
+    if (state.step === 1) return state.regionId ? nextBtn : regionBtns[0];
+    if (state.step <= 5) return stepDone() ? nextBtn : showBtn;
+    if (state.step === 6) return nextBtn;
+    return againBtn;
+  }
+
+  // ---------- the controls ----------
   function pickRegion(id) {
     if (state.step !== 1) return;
     clearTimers();
     state.regionId = id;
     state.progress = 1;
+    state.doneUpTo = 1;
     render({ animate: true, marks: true, freshFrom: 0 });
-    const chosen = picker.root.querySelector(`[data-region="${id}"]`);
-    if (chosen && doc.activeElement !== chosen && (!doc.activeElement || doc.activeElement === doc.body || picker.root.contains(doc.activeElement))) chosen.focus({ preventScroll: true });
+    frameToTop();
+    const chosen = regionBtns[REGION_IDS.indexOf(id)];
+    if (doc.activeElement !== chosen) chosen.focus({ preventScroll: true });
+    announce(resultWords(current()));
   }
-
-  // The step's action: the add, the look, the minutes, the pin, the story click.
-  function act() {
-    if (!state.regionId || state.busy) return;
+  // The step's action, in front of the reader. then: what follows once the result has been seen (Next's hold).
+  function act(then) {
+    if (state.busy || stepDone() || !state.regionId) return;
     const before = current();
-    const need = ACTIONS[state.step];
-    if (state.progress >= need) return;
-    if (state.step === 4) { passTime(before); return; }
-    state.progress += 1;
+    if (state.step === 4) { passTime(before, then); return; }
+    state.progress = ACTIONS[state.step];
+    state.doneUpTo = Math.max(state.doneUpTo, state.step);
     const s = current();
     render({ animate: true, marks: true, freshFrom: before.log.length });
     s.log.slice(before.log.length).forEach((x) => { if (x.kind === 'entered') buckets.flash(x.v, 'entered'); });
-    if (state.progress >= need) focusNext();
-    else store.focusTarget();
+    revealChange(s);
+    announce(`${resultWords(s)} New on the receipt: ${logLines(s, before.log.length).filter((l) => l.fresh).map((l) => l.text).join(' ')}`);
+    afterAction(then, GLIDE_MS);
   }
-  function onCard(cardId) {
-    const r = regionOf();
-    if (!r) return;
-    const plan = r.plan;
-    const want = state.step === 2 ? plan.add : state.step === 3 ? plan.look : state.step === 5 && state.progress === 1 ? plan.story : null;
-    if (cardId !== want) return;
-    act();
+  function afterAction(then, ms) {
+    if (then) {
+      state.holding = true;
+      later(() => { state.holding = false; then(); }, reduced() ? 0 : ms + HOLD_MS);
+    } else nextBtn.focus({ preventScroll: true });
   }
   // Step 4: the clock runs on, the bucket drains past its release line, then the page is decided again.
-  function passTime(before) {
+  function passTime(before, then) {
     state.progress = 1;
     const s = current();
     const rel = s.log.filter((x) => x.kind === 'released');
-    if (reduced() || !rel.length) {
+    state.doneUpTo = Math.max(state.doneUpTo, 4);
+    const finish = () => {
+      state.busy = false;
+      state.progress = 1;
       render({ animate: true, marks: true, freshFrom: before.log.length });
+      revealChange(s);
+      announce(`${resultWords(s)} New on the receipt: ${logLines(s, before.log.length).filter((l) => l.fresh).map((l) => l.text).join(' ')}`);
+    };
+    if (reduced() || !rel.length) {
+      finish();
       rel.forEach((x) => buckets.flash(x.v, 'released'));
-      focusNext();
+      afterAction(then, GLIDE_MS);
       return;
     }
     // Hold the page as it was while the buckets drain, then let it be decided again.
-    state.busy = 1;
+    state.busy = true;
     state.progress = 0;
-    render({ keepSide: true });
-    passBtn.setAttribute('aria-disabled', 'true');
+    render({});
+    state.progress = 1;
+    frameToTop();
+    if (!then) nextBtn.focus({ preventScroll: true });
     const t0 = before.now;
     const tRel = rel[0].t;
     const t1 = s.now;
     const p = before.p;
     const levelsAt = (t) => { const a = {}; VALUES.forEach((v) => { a[v.id] = interestOf(rawAt(p, v.id, t)); }); return a; };
     const lambdaAt = (t) => blend(levelsAt(t), REGIONS[state.regionId].share).lambda;
-    const firstMs = 1400;
-    const restMs = 900;
+    const firstMs = 1300;
+    const restMs = 800;
+    const name = REGIONS[state.regionId].name;
     buckets.update(levelsAt(tRel), p, { slow: true });
-    balance.update(lambdaAt(tRel), { slow: true });
-    const ticks = 14;
-    for (let i = 1; i <= ticks; i++) later(() => { clockText.textContent = `Visit time ${clock(t0 + ((tRel - t0) * i) / ticks)}`; }, (firstMs * i) / ticks);
+    balance.update(lambdaAt(tRel), name, { slow: true });
+    const ticks = 12;
+    for (let i = 1; i <= ticks; i++) later(() => { buckets.setTime(t0 + ((tRel - t0) * i) / ticks); }, (firstMs * i) / ticks);
     later(() => {
       const pr = newProfile();
       Object.assign(pr.member, before.p.member, { [rel[0].v]: false });
@@ -1001,59 +1053,52 @@
       buckets.update(levelsAt(tRel), pr, { slow: true });
       buckets.flash(rel[0].v, 'released');
       buckets.update(levelsAt(t1), pr, { slow: true });
-      balance.update(lambdaAt(t1), { slow: true });
-      const lines = logLines(s, before.log.length).filter((l) => l.kind === 'release');
-      receipt.set('Why this page', `The home page at ${clock(t0)}, for a visitor in ${REGIONS[state.regionId].name}.`, logLines(before, before.log.length).concat(lines), 'log');
-      const extraTicks = 8;
-      for (let i = 1; i <= extraTicks; i++) later(() => { clockText.textContent = `Visit time ${clock(tRel + ((t1 - tRel) * i) / extraTicks)}`; }, (restMs * i) / extraTicks);
+      balance.update(lambdaAt(t1), name, { slow: true });
+      const release = logLines(s, before.log.length).filter((l) => l.kind === 'release');
+      receipt.set('Why this page', `The home page at ${clock(t0)}, newest line first.`, logLines(before, before.log.length).concat(release), 'log', true);
+      for (let i = 1; i <= 6; i++) later(() => { buckets.setTime(tRel + ((t1 - tRel) * i) / 6); }, (restMs * i) / 6);
     }, firstMs);
-    later(() => {
-      state.busy = 0;
-      state.timers = [];
-      state.progress = 1;
-      render({ animate: true, marks: true, freshFrom: before.log.length });
-      focusNext();
-    }, firstMs + restMs + 60);
+    later(() => { finish(); afterAction(then, GLIDE_MS); }, firstMs + restMs + 40);
   }
-  function toggleHoldout() {
-    state.holdoutView = !state.holdoutView;
-    render({ animate: true });
+  function onShow() { act(null); }
+  function onNext() {
+    if (state.step === 1 && !state.regionId) return;
+    if (state.holding || state.busy) { clearTimers(); state.progress = Math.max(state.progress, ACTIONS[state.step]); go(state.step + 1, false); return; }
+    if (!stepDone()) { act(() => go(state.step + 1, false)); return; }
+    go(state.step + 1, false);
   }
-  function focusNext() {
-    if (nextBtn.isConnected) nextBtn.focus({ preventScroll: true });
-  }
-
-  function go(step, fromCallout) {
+  function onBack() { if (state.step > 1) go(state.step - 1, true); }
+  // A step change. Going back restores the step as the reader left it, its action done.
+  function go(step, back) {
     if (step < 1 || step > STEP_COUNT) return;
-    if (step > 1 && !state.regionId) { restartAnimation(callout.root, 'is-nudged'); return; }
     clearTimers();
     state.step = step;
-    state.progress = step === 1 ? (state.regionId ? 1 : 0) : 0;
-    state.holdoutView = false;
+    // A step the reader has already done opens as it was left; a new one opens before its action.
+    state.progress = back || step <= state.doneUpTo ? ACTIONS[step] : 0;
+    if (step === 1) state.progress = state.regionId ? 1 : 0;
+    if (step > 1 && ACTIONS[step] === 0) state.doneUpTo = Math.max(state.doneUpTo, step);
     render({ animate: true });
-    if (fromCallout) {
-      const h = stepEls[step - 1].querySelector('h2');
-      h.setAttribute('tabindex', '-1');
-      h.focus({ preventScroll: true });
-      stepper.root.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
-    }
+    frameToTop();
+    primary().focus({ preventScroll: true });
+    announce(`Step ${step} of ${STEP_COUNT}: ${STEP_TEXT[step - 1].title}.`);
   }
   function restart() {
     clearTimers();
     state.regionId = null;
     state.step = 1;
     state.progress = 0;
-    state.holdoutView = false;
+    state.doneUpTo = 0;
     render({ animate: true });
-    const first = picker.root.querySelector('button');
-    if (first) first.focus({ preventScroll: true });
-    stepper.root.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
+    frameToTop();
+    regionBtns[0].focus({ preventScroll: true });
+    announce(`Step 1 of ${STEP_COUNT}: ${STEP_TEXT[0].title}. Pick where this visitor is.`);
   }
 
   // ---------- start ----------
+  if (introEl) introEl.hidden = false;
   liveEl.hidden = false;
-  tourEl.classList.add('is-live');
+  playerEl.classList.add('is-live');
   render({});
   // For the page's own checks in a browser: the model and the state, read only.
-  window.__seeItWork = Object.freeze({ model: MODEL, state: () => ({ regionId: state.regionId, step: state.step, progress: state.progress, holdoutView: state.holdoutView }), current });
+  window.__seeItWork = Object.freeze({ model: MODEL, state: () => ({ regionId: state.regionId, step: state.step, progress: state.progress, busy: state.busy, holding: state.holding }), current });
 })();
