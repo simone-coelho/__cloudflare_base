@@ -42,7 +42,7 @@
 // markdown file (write a space as %20) and the file must be a PNG or a JPEG,
 // judged by its bytes, never its name. The picture is centred at the text width,
 // 9360 twips (12960 landscape), its aspect ratio kept; one that would then be
-// taller than 8in (5.5in landscape) is set that tall instead, so it never runs
+// taller than 7.5in (5.5in landscape) is set that tall instead, so it never runs
 // off the page. The caption prints beneath it in 9pt grey and stays on its page.
 // A JPEG's EXIF rotation is ignored: save it upright. A missing or unreadable
 // file fails the build (rule 11).
@@ -105,6 +105,9 @@
 // 15. A paragraph whose next block is a figure keeps with it, so a heading, its
 //     one lead line and the picture travel together; rule 14 alone joined the
 //     heading to the lead line, and the picture could still open the next page.
+// 16. The tallest picture is 7.5in, not 8in, aspect kept (landscape unchanged):
+//     at 8in a heading, its lead line, the picture and its caption could exceed
+//     a page, and Word then parted the picture from them.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -131,7 +134,7 @@ const NAVY = '11142A', BLUE = '0B5CAD', GREY = '5A6472', RULE = 'C9D1DC';
 const HEAD = 'E8EDF4', ZEBRA = 'F6F8FB', CODEBG = 'F3F5F8';
 const BODY = 'Calibri', MONO = 'Consolas';
 const W = LANDSCAPE ? 12960 : 9360;   // Letter minus 1in margins, in twips; 11in wide when landscape
-const FIG_H = (LANDSCAPE ? 9360 : 12960) - 1440;   // tallest figure: the text height less an inch for its caption
+const FIG_H = LANDSCAPE ? 9360 - 1440 : 12960 - 2160;   // tallest figure: 7.5in (rule 16), 5.5in landscape, room left for the caption
 
 const strip = (s) => s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')
   .replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');

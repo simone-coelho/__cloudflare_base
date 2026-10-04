@@ -371,7 +371,9 @@ The credits document is back to 7 pages, the last 90 % full. It had spilled 14 %
 
 ## Version 3.0, 2026-10-03
 
-Lane W2, under `LANE-BRIEF-V3.md` (sections 1, 5, 6 and 7), this note's method, `LANE-BRIEF-COMMON.md`, the design's section 6 and `../verizon/lanes/W4.md`. Paths written: `docs/enablement/figures/shot-*.png` (37 at 10:24 and 10:40, 9 more and 5 replaced at 11:01, 1 more and 14 replaced at 11:15, 21 replaced at 11:57, the band added at 21:58; the folder holds 46 since two stale ones left it, section V3.12), the four `docs/enablement/word/Enablement-*-v3.0.docx`, `scripts/md2docx.mjs` (by the lead's rulings of 10:50 and 22:03, sections V3.10 and V3.14) and this section, appended. No source, page or partial was edited. Git was used read-only; nothing was installed, deployed or killed, and nothing was deleted; three version 2.0 files were moved out of `docs/enablement/word/` with `mv -n`, as the brief asks (section V3.10).
+Lane W2, under `LANE-BRIEF-V3.md` (sections 1, 5, 6 and 7), this note's method, `LANE-BRIEF-COMMON.md`, the design's section 6 and `../verizon/lanes/W4.md`. Paths written: `docs/enablement/figures/shot-*.png` (37 at 10:24 and 10:40, 9 more and 5 replaced at 11:01, 1 more and 14 replaced at 11:15, 21 replaced at 11:57, the band added at 21:58; the folder holds 46 since two stale ones left it, section V3.12), the four `docs/enablement/word/Enablement-*-v3.0.docx`, `scripts/md2docx.mjs` (by the lead's rulings of 10:50, 22:03 and 22:12, sections V3.10, V3.14 and V3.15) and this section, appended. No source, page or partial was edited. Git was used read-only; nothing was installed, deployed or killed, and nothing was deleted; three version 2.0 files were moved out of `docs/enablement/word/` with `mv -n`, as the brief asks (section V3.10).
+
+**Status, 22:20 EDT. Converter rule 16 (the tallest picture 7.5 in, aspect kept; sha-256 `49458ca7…`, proved by paired builds) is in, and all four documents were rebuilt with it and pass all 18 checks: What it is 16 pages (`76ac8094…`), Selling it 17 (`fb092885…`), How it works and where it runs 18 (`b030553e…`), the Battlecard 10 (`0766246c…`). No picture is parted from its heading or lead line in any of them; the edge section now sits whole on page 12 of How it works (section V3.15). The statuses below are kept as they were written.**
 
 **Status, 22:15 EDT. Converter rule 15 (a paragraph a picture follows keeps with it; sha-256 `5e4594f8…`, proved by paired builds) is in, and all four documents were rebuilt with it and pass all 18 checks: What it is 16 pages (`c6bbd8f2…`), Selling it 17 (`98ea88b5…`), How it works and where it runs 19 (`715a9b08…`), the Battlecard 10 (`6112e74f…`). One section still parts its picture from its heading and lead line: How it works, "It runs at the edge, and every setting is a published document", whose run is taller than a page (section V3.14). The statuses below are kept as they were written.**
 
@@ -766,3 +768,34 @@ What gained it, as the rule's words reach further than lead lines: What it is 1 
 - The two other sections where this happened before rule 15 now move whole: "Learning waits behind the dial…" (to page 11) and "The site connects once…" (to page 15). Control: the How it works of 21:59 shows three such pages (10, 11 and 13: learning, the edge, integration) under the same model.
 
 How it works' sparsest body pages are page 12 (8 %, the edge section's heading and lead line) and its last page (2 %, the companion card's link line); the others are 54 % full or more. Word's own pagination cannot be run here; expect it to differ by about a page.
+
+### V3.15 Converter rule 16: the tallest picture is 7.5 in (22:12 to 22:20)
+
+The lead committed V3.14 at `741cc42d` and asked to close the last parted section with the converter: lower the picture height cap so a captioned picture never exceeds 7.5 in tall, aspect ratio kept, nothing else changing; prove it on before-and-after builds, listing the pictures that change size; rebuild the four documents; run the 18 checks; confirm that the edge section's heading, lead line and figure share a page.
+
+**The change.** `scripts/md2docx.mjs`, 5 insertions and 2 deletions: the cap `FIG_H` is 7.5 in for portrait (`12960 - 2160` twips), where it was 8 in (`12960 - 1440`); landscape keeps its 5.5 in; the header's figure paragraph says 7.5 in, and rule 16 records why. sha-256 `49458ca79b84ce269e27602813b753d49ed3da9a7f3342b3c975d396f5bdbe54`, where it was `5e4594f8…` (HEAD `741cc42d`).
+
+**The proof.** The same 12 inputs as rule 15's, built with the converter at HEAD and the changed one, seeded (`pair3.sh`), compared by `compare-pair3.py` (every part identical but for the build time, the relationships the same with every id resolved to its target, `document.xml` identical once picture sizes are set aside, and each picture that changed size taller than 7.5 in before and exactly 7.5 in after, its aspect kept, no wider than the text width): all 12 pass. The pictures that changed size, and only these:
+
+| Document | Picture | Before | After |
+|---|---|---|---|
+| What it is | `shot-mk-say.png`, "Each card pairs a phrase never to say with the sentence to say instead." | 6.50 x 7.98 in | 6.11 x 7.50 in |
+| Selling it | `shot-ae-asks.png`, "Each ask comes with its reason." | 5.89 x 8.00 in | 5.52 x 7.50 in |
+| How it works | `architecture.png`, "Where the engine runs on Cloudflare" | 6.50 x 7.92 in | 6.16 x 7.50 in |
+| Battlecard | `shot-bc-discovery.png`, "Each question opens a measure the customer can track on their own numbers." | 5.83 x 8.00 in | 5.47 x 7.50 in |
+| (not delivered) version 2's Selling it and How it works | `architecture.png` | 6.50 x 7.92 in | 6.16 x 7.50 in |
+
+Every other picture in the 12 inputs is at most 7.5 in tall and kept its size. A first run of the comparison on the real (unseeded) builds reported differences beyond picture sizes: a backslash in the script's relationship pattern had been lost on its way through a shell heredoc, so no link id was resolved. With the pattern repaired, every comparison passes.
+
+**The documents**, rebuilt at 22:15:35 from sources equal to HEAD (composed copies unchanged). Each differs from the 22:06 document only in its one resized picture.
+
+| Word document | Bytes | sha-256 | Pages | Checks |
+|---|---|---|---|---|
+| `Enablement-What-It-Is-v3.0.docx` | 1,844,641 | `76ac8094201c7488d21ddff770afe293de581a26ccb11e8e2c7d83269a4c05fe` | 16 | 18 of 18 |
+| `Enablement-Selling-It-v3.0.docx` | 2,295,210 | `fb0928854d29c1c6a9813160a7a66bb1454675c2fe53bfd912f0ea22a5039f13` | 17 | 18 of 18 |
+| `Enablement-How-It-Works-and-Where-It-Runs-v3.0.docx` | 3,547,994 | `b030553eefe7c548e6f20be9937072d34237fd3a83cce499d2987e4a21756629` | 18 | 18 of 18 |
+| `Enablement-Battlecard-v3.0.docx` | 811,950 | `0766246cccbafb8fbe6b43e096d8b3a7b55447cf2a39616f5bb54c714317ba2f` | 10 | 18 of 18 |
+
+**The checks** (`final-check-output-v3g.txt`): all 18 pass on all four, check 11 now holding a picture to 7.5 in.
+
+**The pages.** W1's model and its copy with Word's cascade (section V3.14) now agree: 16, 17, 18 and 10. No page in any of the four ends with a heading or a lead line whose picture opens the next page. The edge section, "It runs at the edge, and every setting is a published document", sits whole on page 12 of How it works: the heading at the top, the lead line at 26 pt, the architecture figure (540 pt) from 67 pt and its caption at 610 pt. In the 22:06 build the figure opened page 13. The learning and integration sections still move whole to pages 11 and 14. How it works' sparsest body pages are page 7 (54 %) and its last (2 %, the companion card's link line).
