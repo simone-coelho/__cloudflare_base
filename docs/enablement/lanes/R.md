@@ -1355,3 +1355,223 @@ M4-10 is closed.
 - **The links.** One GET per external link; no form was sent and nothing was signed in to.
 - **Chrome.** Each run was headless on its own profile and closed with `Browser.close`.
 - **Scratch.** The scripts are `docx-inspect3.mjs`, `rcompose.cjs`, `pairdiff.cjs`, `namecheck.mjs` and `probe-print5.mjs`. The copies are in `docx3/`, `wbuild/`, `site5/` and `mut/names-*`.
+
+# Round five, 2026-10-03: the tour player and the band
+
+**Scope.** This round reviews the pages, partials, sources and checks as committed in `6434b4f1`. The law is `LANE-BRIEF-V3.md` §8, read in full, and the owner's approved `mocks/04-tour-player-and-openings.html`. T1's and S1's notes were read as claims and checked, never taken as evidence.
+
+The work was done on a scratch copy of the served folder. The commits since (`42882d26`, `741cc42d`, `679c163c` and two OH commits) change no page, partial, source, check, brief or mock. So every result below holds at `1c64862a`, where `shot-spine-band.png` is now captured and the text check passes with no note about it.
+
+The rebuilt Word copies are not in this round.
+
+## Verdicts
+
+| Page or tool | Verdict | Open |
+|---|---|---|
+| `/see-it-work` | PASS | minor M5-1 (on a phone, part of a result sits outside the window); minor M5-2 (Back leaves out the "moved" marks) |
+| `/selling-it` | PASS | none |
+| `/how-it-works` | PASS | none |
+| `/what-it-is` | PASS | none; the full spine unchanged, byte-identical to its partial |
+| `/battlecard` | PASS | none; unchanged, the compact spine intact |
+| `render-check.mjs` and `check-site.mjs` | PASS | minor M5-3 (a text `<div>` before the player passes) |
+| `lanes/T1.md` | PASS | minor M5-4 (one sentence about the model block) |
+
+**Would a first-time reader know what to do at every moment? Yes.**
+- On load at 1366×768, the bar's "Pick where this visitor is:" and its two buttons sit in the window under the one intro line.
+- From then on, the bar at the top of the window always shows what comes next:
+  - steps 2 to 5: Show me and Next, with the card to use outlined in the store and a callout saying what to do and what to watch;
+  - step 6: Next alone;
+  - step 7: Start again.
+- After every action, the moved sections are marked "moved up", "moved down" or "pinned". The bucket that changed shows its level and its word, and the newest receipt line is lit at the top of the receipt.
+- I looked at 23 screens of the live tour one by one (1366 light, 1440 dark, 390 light and dark), at two whole walks as contact sheets (1440 light, 390 dark) and at the storyboard without the script.
+- Nothing on any of them leaves the reader unsure of the next step. The owner's three complaints are gone:
+  - no animation above the tour;
+  - Next never greyed out;
+  - the store in view with the controls.
+
+The qualifications are on a phone (M5-1) and on Back (M5-2).
+
+## R5.1 The §8.3 acceptance, walked independently
+
+**The harness.** It is my own, written from §8.2 and §8.3 rather than T1's scripts. It presses only the bar's controls (or, in the second walk, the highlighted target) with real mouse events at each control's center. It refuses any press whose control is off screen or covered at its center, and it never scrolls the page by hand.
+
+**Each walk:**
+- from load to step 7;
+- Back from 7 to 1, compared field by field with each step as it was left;
+- forward again to 7;
+- Start again.
+
+**The 22 walks, 5,970 checks:**
+
+| Size | Light | Dark |
+|---|---|---|
+| 1366×768 | by Show me (Washington State) and by targets (Florida) | the same; and Next before every action, under reduced motion |
+| 1440×900 | the same | the same; and Next before every action, with and without reduced motion; and by targets under reduced motion |
+| 390×844 | the same; and by Show me, and Next before every action, under reduced motion | the same; and Next before every action; and by targets under reduced motion |
+
+Also at 1366 light: Next before every action with motion, and by Show me under reduced motion.
+
+**Results:**
+- **Arithmetic and controls.** Every state equals my model, every control is where it should be, and every frame fits. The 14 checks that failed are all one rule of mine, stricter than §8.3, and all on the phone (M5-1).
+- **From load.** The region buttons are in the window without scrolling, with nothing pressed and no Next. A pick shows that region's page, Next appears, and the buttons stay switchable with the chosen one pressed.
+- **The frame.**
+  - At 1366 and 1440 each control brings the frame's top to the window's top.
+  - The whole frame stays within the window less 24 px at every moment, 731 px at the tallest (step 3, after its action; T1 gives 727) against a limit of 744 at 1366.
+  - All six store rows are in the window at every moment.
+- **At every action, steps 2 to 5.** The target and its whole callout are in the window, below the bar and uncovered, before the press. After it, each moved section, each changed bucket and the newest receipt line are in the window, below the bar and uncovered, at 1366 and 1440 in both schemes.
+- **Next.** It is never disabled or greyed (opacity 1, no filter; light on fir in light, fir on white in dark).
+- **Next before the action.** It performs the action and shows it on its step, then advances 1.9 seconds later (4.1 at step 4, after the drain). Under reduced motion it advances in under 0.1 seconds. During the hold, the moved sections, the bucket and the new line are in the window at 1366 and 1440.
+- **Show me** disappears after the action; clicking the target does the same as Show me.
+- **Back from 7 to 1** restores each step exactly in every field I compared:
+  - the bar's words and controls;
+  - the explanation and the fixed sentence;
+  - the store's order and hero;
+  - every bucket's level and word, and the lean bar;
+  - the receipt's head, subject and every line;
+  - the holdout's page and the clock.
+
+  One thing is not restored, the "moved" marks (M5-2). Forward again reopens each step done, equal to how it was left.
+- **Start again** returns to a clean step 1: no region pressed, no Back, no Next, the brand's own order with no marks, empty buckets, "No region picked yet.", the store's waiting note, focus on Washington State, and "Step 1 of 7: … Pick where this visitor is." announced.
+- **The target** pulses three times (1.6 seconds each), then rests outlined; under reduced motion it never pulses.
+- **On a phone** the bar stays at the top of the window under a hand scroll while the frame is on screen, and leaves with the frame's end.
+
+## R5.2 The four fixed sentences
+
+- **On the tour.** Performance in step 2, recommendations in step 3, AI in step 6, learning in step 7: each verbatim, in three places.
+  - The live explanation box, at every walk.
+  - The storyboard without the script, at all three widths in both schemes.
+  - `content/see-it-work.md`, once each.
+
+  Steps 1, 4 and 5 carry none, as §8.2 item 5 sets.
+- **On the band pages.** All four are verbatim on `/selling-it` (two to three times each) and on `/how-it-works`. On the engineers' page the recommendations sentence comes from the band, and the AI sentence appears four times.
+- **On the other two pages.** What it is and the battlecard keep all four.
+
+## R5.3 The arithmetic
+
+My model (round four's `recompute.mjs`, written from FACTS §1 to §3 and S2, not from the page) was extended to every printed line. The page equals it at every moment of every walk, in both regions:
+- the store's order and hero;
+- every bucket's level and word ("Interested", "Released");
+- the lean bar's two shares;
+- the marks;
+- the receipt's times in their order, the release at 4:03 included.
+
+**Step 6, the whole receipt.** Line by line, for example "Washington State’s share = 1 ÷ (1 + 0.514 + 0.156) = 0.599", "Soft knits: 0.401 × 0.514 + 0.599 × 0.75 = 0.655", and the pin "interest alone would rank it third".
+
+**Step 7.** What learning recorded, three credited clicks, and the holdout's page: partner spotlight pinned, then the brand's own order.
+
+**The model block.** Since `4419a253` it changed only in step 5, as T1's departure 14 says: one action, and the pin in force when the step opens (M5-4).
+
+## R5.4 The band and the openings
+
+- **The text.** `content/spine-band.md` equals the brief's code block byte for byte. The partial `partials/spine-band.html` says the band's eight lines in order, verbatim, its caption being the headline. The stamped band equals the partial byte for byte on both pages.
+- **The markup.**
+  - The band carries `data-visual` and `data-shot="spine-band"`.
+  - The article names `spine-band.md` in place of `spine.md`.
+  - The partial's link is `/what-it-is`, where the markdown names the site's full address.
+- **Placement.** The band follows the reader line and opens the article, before the first section.
+- **Layout.**
+  - At 1366 and 1440 the three cells sit in a row, at 390 they stack, and the link comes last.
+  - The band is 281 px tall on a desktop and 504 px on a phone.
+  - No overflow and no console message, in both schemes.
+  - I looked at it at 1366 in light and at 390 in dark.
+- **The full spine.** What it is alone keeps it, byte-identical to its partial. The battlecard keeps the compact one.
+- **See it work** carries no spine and loads neither spine file. Above the player are only the title, the reader tag and the intro line, verbatim from §8.2 item 1 with `data-reader`. Without the script the intro line is hidden, since it names Show me.
+
+## R5.5 The checks' new rules, one mutation each
+
+- `node enablement/render-check.mjs` exits 0.
+- `node enablement/check-site.mjs` exits 0 with 189 checks.
+- On fresh copies of `enablement/` and `docs/enablement/`, 19 mutations and 3 probes:
+
+| Case | Expected | Result |
+|---|---|---|
+| S1 selling-it carries the full spine (and names `spine.md`) | refused | refused: the spine markers belong only on what-it-is; no band markers; wrong data-source |
+| S2 what-it-is carries the band | refused | refused, three ways |
+| S3 how-it-works keeps the band but names `spine.md` | refused | refused |
+| S4 one word changed inside the stamped band | refused | refused: differs from the partial; a sentence missing and one unexplained |
+| S5 one sentence changed in `spine-band.md` only | refused | refused on the partial and both pages |
+| S6 the partial and both pages changed together, the markdown not | refused | refused |
+| S7 a band page without `/spine.css` | refused | refused |
+| S8 a band page without `/spine.js` | passes | passes |
+| S9 the battlecard carries the band | refused | refused |
+| S10 the band moved below selling-it's first section | refused | refused (story first) |
+| S11 the band's headline hidden | refused | refused (the band differs from its partial) |
+| T1 the tour carries the band before the player | refused | refused, eight ways |
+| T2 the tour names `spine.md` | refused | refused |
+| T3 a section before the player | refused | refused: the first section must be the player |
+| T4 a picture between the title and the player | refused | refused |
+| T5 a second intro line, page and markdown | refused | refused: "found 2 paragraphs" |
+| T6 the player without `data-visual` | refused | refused |
+| T7 a heading before the player | refused | refused |
+| T8 the tour carries the full spine | refused | refused |
+| P1 probe: a `<div>` holding a sentence (with its markdown line) before the player | (judgment) | passes (M5-3) |
+| P2 probe: a `<div>` with one link before the player | (judgment) | passes (M5-3) |
+| P3 probe: an extra drawn section inside the player, before the live frame | (judgment) | refused, by the shot rule |
+
+## R5.6 Keyboard, screen reader, motion, no script, overflow, console, requests, contrast
+
+**Keyboard alone, at 1366 and 390.**
+- The skip link is the first stop, and the first region button is the twelfth.
+- The arrows move between the two regions; Enter picks, and focus stays on the chosen one.
+- Tab then reaches the other region and Next.
+- At steps 2 to 5:
+  - each step opens with focus on Show me, with its 3 px ring;
+  - the Tab order is Back, Show me, Next, then the target in the store (the clock at step 4), each with its ring;
+  - Show me by Enter, the target by Enter and step 4 by Space all act and leave the step in place, with focus on Next.
+- Step 6 opens on Next and step 7 on Start again. Tab then reaches "What it is" and "How it works, interactive".
+- Start again by Enter returns focus to Washington State.
+
+**Screen reader.**
+- One polite live region. It says "Step n of 7: title." on a step change and the result with "New on the receipt: …" after an action.
+- Named groups: "The tour’s controls" and "Morrow & Vale, a sample store: its home page". Named lists: the sections of the page, and the receipt's lines, newest first.
+- Buttons: "Back one step", "Show me", "Next step", the regions with `aria-pressed`, and each target named by its action ("Cable-knit cardigan: add to the bag"). The buckets and the lean bar are images with labels.
+
+**Reduced motion.**
+- Nothing runs at any moment of seven walks, and the frame moves to the top at once.
+- Next before an action advances at once, and there is no pulse.
+- The five pages open at their end state.
+
+**Without the script.**
+- The tour shows no live player, no intro line and no spine at 390, 1366 and 1440 in both schemes.
+- All seven steps follow in order, each with its title, explanation, fixed sentence where it has one, still frame (`data-shot="tour-step-1"` to `-7`) and caption.
+- The frames' smallest text is 13.9 px on a desktop and 11.3 px on a phone.
+- The band pages and the other pages read in full.
+
+**Overflow, console, requests.** None in any walk or on any page in either scheme. Every request is on the page's own origin: the tour loads only `site.css`, `see-it-work.css`, `site.js` and `see-it-work.js`.
+
+**Contrast (WCAG AA).**
+- **The live tour:** 4,816 texts measured at twelve moments, at 1366 and 390, light and dark. The lowest is 4.91 in light and 6.7 in dark.
+- **The pages' HTML text:** at least 4.91 in light; the band pages 5.12 in light, and 7.72 and 6.92 in dark.
+- **SVG text:** at 390 the engineers' page is now 20,518 px tall, past my audit's 16,000-pixel full-page capture, and some of its drawn text sits in figures that scroll sideways. My full-page pass therefore misread 15 texts. Measured again with each text scrolled into the window, all 480 pass in both schemes, the lowest 5.12. No finding.
+
+## R5.7 Findings
+
+**M5-1 (minor, T1). On a phone, part of a result sits outside the window.** At 390×844, in both schemes:
+- **After the pick.** The moved sections are in view, but the receipt's new line ("Regional start: …, picked on this page.") and the lean bar sit below the window.
+- **Step 2.** Of the action's three new receipt lines only the first is whole in view. The entry line ("Knitwear passed its entry line") is cut at the bottom edge and the third is below. The hero's change is cut under the bar.
+- **Step 4.** For the two seconds of the drain, the buckets sit at the window's bottom edge: the vessels in view, their names and state words below. Only when the page settles is the change brought under the bar. Of the two new lines, the second ("Five minutes with no clicks") sits just below.
+- **Step 5.** The hero's change is cut under the bar.
+
+§8.3's letter holds for steps 2 to 5: the target, the moved sections, the changed bucket's vessel and the newest receipt line are inside the window. It holds for the pick only if the pick is not counted as an action, and T1's own table lists the pick as step 1's action. No reader is stopped, since the bar's next control is always in view. On a desktop every part is in view.
+
+**M5-2 (minor, T1). Back restores each step except its "moved up" and "moved down" marks.** Every other field is restored exactly (R5.1). The marks the reader saw when leaving steps 1 to 5 are absent on return, and only "pinned" stays.
+- **Where.** `go()` draws a step with `render({ animate: true })`, without the marks.
+- **Why it matters.** §8.3 asks that Back restore "each step's state exactly". A step revisited then shows its result without saying what moved.
+- **The fix.** Draw a step already done with its marks, as its action left it.
+
+**M5-3 (minor, S1). The tour's "nothing before the player" rule counts paragraphs only.** A `<div>` holding a sentence (with its markdown line), or a link, between the intro line and the player passes the text check (probes P1 and P2). §8.2 item 1 makes the intro line "the only text above the player". Every other case is refused (R5.5).
+
+**M5-4 (minor, T1, the note only).** "The player rebuild did not change it" (T1, the arithmetic section) is not quite so. The model block changed in step 5: `ACTIONS[5]` went from 2 to 1, and the pin is in force on entering, `done(5, 0)`. That is departure 14. The arithmetic and every printed number are unchanged.
+
+## R5.8 For the lead
+
+1. **M5-2.** Whether "restores each step's state exactly" includes the change marks. If it does, T1 draws a done step with its marks (one call).
+2. **M5-1.** Whether the pick counts as an action under §8.3 on a phone. Also whether, on a phone, the view should keep the buckets in the window during step 4's drain and show the action's new lines whole.
+
+## R5.9 Conduct
+
+- **What I wrote.** Only this section of this file. No git command that changes anything; no install, deploy, delete or kill.
+- **Scratch.** The site copy, the mutation copies and every script and output live in `scratchpad/r5/`:
+  - the scripts: `walk5.mjs`, `model5.mjs`, `kbd5.mjs`, `nojs5.mjs`, `contrast5.mjs`, `band5.mjs`, `phone5.mjs`, `drain5.mjs`, `pulse5.mjs`, `scan5.mjs`, `svgc5.mjs`, `mutate5.mjs`, `sheet5.mjs` and `lib5.mjs`;
+  - the outputs: the 262 walk screens and the contact sheets under `out/`.
+- **Chrome.** Every Chrome run was headless on its own profile, closed with `Browser.close`. One sheet run stopped on a missing favicon in its own server. I then listed the running Chrome processes: none from the scratch folder was left, and none was after the last run either.

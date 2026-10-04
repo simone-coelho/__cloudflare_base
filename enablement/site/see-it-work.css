@@ -299,6 +299,7 @@ button.tour-product { cursor: pointer; }
 .tour-piece .tour-rline::marker { content: none; }
 .tour-piece .tour-rline:first-child { border-top: 0; }
 .tour-rline.is-new { animation: tour-fresh-line 2.2s ease-out; }
+.tour-rline.is-new.is-kept { animation: none; }
 .tour-receipt-lines .tour-rline.is-new:first-child { box-shadow: inset 3px 0 0 var(--lf-green); padding-left: 6px; }
 @keyframes tour-fresh-line { from { background: var(--tint); } to { background: transparent; } }
 .tour-rtime { color: var(--muted); font: 700 .7rem/1.7 var(--mono); overflow-wrap: anywhere; }
@@ -346,19 +347,20 @@ button.tour-product { cursor: pointer; }
   .tour-piece .tour-explain-line { font-size: .92rem; }
   .tour-piece .tour-explain-fixed { font-size: .8rem; }
   .tour-piece .tour-receipt-lines { max-height: none; }
-  /* compact enough that a changed section, its bucket and the newest receipt line share one phone screen */
-  .tour-board { gap: 8px; }
-  .tour-side { gap: 6px; }
+  /* compact enough that, with the first change just below the bar, the sections that moved, the bucket that changed and
+     the newest receipt line share one 390x844 screen */
+  .tour-board { gap: 6px; }
+  .tour-side { gap: 5px; }
   .tour-btn { min-height: 38px; }
   .tour-piece .tour-receipt-sub { display: none; }
-  .tour-store { padding: 7px; }
-  .tour-piece .tour-sections { gap: 7px; margin-top: 6px; }
-  .tour-piece .tour-section { padding: 5px 7px 6px; gap: 4px; }
+  .tour-store { padding: 6px 7px; }
+  .tour-piece .tour-sections { gap: 6px; margin-top: 6px; }
+  .tour-piece .tour-section { padding: 4px 7px; gap: 3px; }
   .tour-product { min-height: 32px; padding: 3px 5px; }
   .tour-buckets, .tour-balance, .tour-receipt { padding: 7px 10px; }
-  .tour-piece .tour-panel-title { margin-bottom: 4px; }
-  .tour-vessel { max-width: 30px; }
-  .tour-piece .tour-bucket-name { margin-top: 2px; font-size: .7rem; }
+  .tour-piece .tour-panel-title { margin-bottom: 3px; }
+  .tour-vessel { max-width: 28px; }
+  .tour-piece .tour-bucket-name { margin-top: 1px; font-size: .7rem; }
   .tour-piece .tour-key { margin-top: 2px; font-size: .7rem; }
   .tour-balance-words { margin-top: 3px; }
   .tour-piece .tour-receipt-sub { margin-bottom: 3px; }

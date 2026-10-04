@@ -586,6 +586,7 @@
         if (animate) glide(view.order);
         else view.order.forEach((id) => list.appendChild(secEls[id].li));
       },
+      heroEl: hero,
       targetNode() { return root.querySelector('.tour-product.is-target') || (timeBtn.isConnected ? timeBtn : null); },
     };
   }
@@ -705,8 +706,8 @@
     root.appendChild(list);
     const extra = el('div', 'tour-receipt-extra');
     root.appendChild(extra);
-    function line(l) {
-      const li = added(el('li', `tour-rline${l.fresh ? ' is-new' : ''}${l.kind ? ` tour-rline--${l.kind}` : ''}`), 'a receipt line, written by the script from the arithmetic');
+    function line(l, kept) {
+      const li = added(el('li', `tour-rline${l.fresh ? ` is-new${kept ? ' is-kept' : ''}` : ''}${l.kind ? ` tour-rline--${l.kind}` : ''}`), 'a receipt line, written by the script from the arithmetic');
       li.appendChild(el('span', 'tour-rtime', l.time || ''));
       const sign = el('span', `tour-rsign${l.sign === '+' ? ' is-plus' : l.sign === '−' ? ' is-minus' : ''}`);
       if (l.sign === 'pin') sign.appendChild(icon('pin', 'tour-icon tour-rpin'));
@@ -722,11 +723,12 @@
       root,
       list,
       extra,
-      set(title, subject, lines, mode, newestFirst) {
+      // kept: the lines are drawn as a step left them, so the new ones are lit without their flash.
+      set(title, subject, lines, mode, newestFirst, kept) {
         head.textContent = title;
         sub.textContent = subject;
         list.setAttribute('aria-label', newestFirst ? 'Receipt lines, newest first' : 'Receipt lines, in order');
-        list.replaceChildren(...(newestFirst ? newestEventFirst(lines) : lines).map(line));
+        list.replaceChildren(...(newestFirst ? newestEventFirst(lines) : lines).map((l) => line(l, kept)));
         list.scrollTop = 0;
         root.classList.toggle('is-whole', mode === 'whole');
         root.classList.toggle('is-learning', mode === 'learning');
@@ -910,7 +912,7 @@
     explainFixed.textContent = t.fixed;
     explainFixed.hidden = !t.fixed;
   }
-  function drawSide(s, freshFrom) {
+  function drawSide(s, freshFrom, kept) {
     const wide = state.step >= 6;
     side.classList.toggle('is-wide', wide);
     if (!s) {
@@ -928,7 +930,7 @@
     balance.update(s.d.lambda === null ? 1 : s.d.lambda, REGIONS[s.regionId].name, {});
     if (state.step === 6) receipt.set('The receipt, whole', `The home page at ${clock(s.now)}, for a visitor in ${REGIONS[s.regionId].name}.`, wholeLines(s), 'whole', false);
     else if (state.step === 7) receipt.set('What learning recorded', `This visit, up to ${clock(s.now)}.`, learningLines(s), 'learning', false);
-    else receipt.set('Why this page', `The home page at ${clock(s.now)}, newest line first.`, logLines(s, freshFrom === undefined ? s.log.length : freshFrom), 'log', true);
+    else receipt.set('Why this page', `The home page at ${clock(s.now)}, newest line first.`, logLines(s, freshFrom === undefined ? s.log.length : freshFrom), 'log', true, kept);
     liveEl.classList.toggle('is-learning', state.step === 7);
     if (state.step === 7) learning.update(decide(s.p, s.regionId, s.now, { pin: s.pin, holdout: true }).order);
   }
@@ -937,7 +939,7 @@
     const s = current();
     drawBar();
     store.update(viewOf(s, !!o.marks), !!o.animate);
-    drawSide(s, o.freshFrom);
+    drawSide(s, o.freshFrom, !!o.kept);
   }
 
   // ---------- where the window goes ----------
@@ -948,24 +950,32 @@
     if (Math.abs(window.scrollY - top) < 2) return;
     window.scrollTo({ top, behavior: reduced() ? 'auto' : 'smooth' });
   }
-  // On a phone, after an action, the changed section comes into view under the bar, with the buckets and the newest
-  // receipt line below it. When everything still fits, the view starts higher: at the store's top, or else at a pinned
-  // section above the change, so the reader also sees the pin hold its place.
+  // On a phone (the store above the panels), after an action, the first thing that changed comes to sit just below the
+  // bar: the hero when the hero changed, otherwise the first section that moved, with room above it for its mark (the
+  // lead's ruling on review finding M5-1). A region's pick is not one of these: its page is the result, seen from the
+  // frame's top.
   function revealChange(s) {
     if (!narrow()) { frameToTop(); return; }
-    const barH = bar.getBoundingClientRect().height;
+    if (s.prev && s.prev.hero !== s.d.hero) { underBar(store.heroEl, 6); return; }
     const m = movesOf(s.prev ? s.prev.order : null, s.d.order);
-    const ids = m.up.concat(m.down);
-    const rows = ids.length ? ids.map((id) => store.secEls[id].li) : [store.root];
-    const firstTop = Math.min.apply(null, rows.map(docTop));
-    const newest = receipt.newest();
-    const bottom = newest ? docTop(newest) + newest.offsetHeight : docTop(receipt.root) + 80;
-    const tops = [docTop(store.root) - barH - 6];
-    const pinTop = s.d.pinned ? docTop(store.secEls[s.d.pinned].li) : Infinity;
-    if (pinTop < firstTop) tops.push(pinTop - barH - 14);
-    const fits = tops.filter((t) => bottom - t <= window.innerHeight - 8);
-    const top = fits.length ? fits[0] : firstTop - barH - 8;
+    const first = s.d.order.filter((id) => m.up.indexOf(id) >= 0 || m.down.indexOf(id) >= 0)[0];
+    if (first) underBar(store.secEls[first].li, 16);
+    else underBar(store.root, 6);
+  }
+  function underBar(node, room) {
+    const top = docTop(node) - bar.getBoundingClientRect().height - room;
     window.scrollTo({ top: Math.max(0, top), behavior: reduced() ? 'auto' : 'smooth' });
+  }
+  // Keep a part whole in the window, below the bar, moving the page as little as it can.
+  function keepWhole(node) {
+    const r = node.getBoundingClientRect();
+    const floor = bar.getBoundingClientRect().bottom + 8;
+    const ceiling = window.innerHeight - 8;
+    let dy = 0;
+    if (r.bottom > ceiling) dy = r.bottom - ceiling;
+    if (r.top - dy < floor) dy = r.top - floor;
+    if (Math.abs(dy) < 1) return;
+    window.scrollTo({ top: Math.max(0, window.scrollY + dy), behavior: reduced() ? 'auto' : 'smooth' });
   }
   function primary() {
     if (state.step === 1) return state.regionId ? nextBtn : regionBtns[0];
@@ -1031,7 +1041,9 @@
     state.progress = 0;
     render({});
     state.progress = 1;
-    frameToTop();
+    // The drain is the point of the step: on a phone the buckets stay whole in the window while it runs.
+    if (narrow()) keepWhole(buckets.root);
+    else frameToTop();
     if (!then) nextBtn.focus({ preventScroll: true });
     const t0 = before.now;
     const tRel = rel[0].t;
@@ -1077,11 +1089,16 @@
     state.progress = back || step <= state.doneUpTo ? ACTIONS[step] : 0;
     if (step === 1) state.progress = state.regionId ? 1 : 0;
     if (step > 1 && ACTIONS[step] === 0) state.doneUpTo = Math.max(state.doneUpTo, step);
-    render({ animate: true });
+    // A step already done is drawn exactly as its action left it (review finding M5-2): its "moved up", "moved down"
+    // and "pinned" marks, and the action's own receipt lines lit.
+    const left = ACTIONS[step] > 0 && !!state.regionId && stepDone();
+    render(left ? { animate: true, marks: true, freshFrom: freshFromOf(step), kept: true } : { animate: true });
     frameToTop();
     primary().focus({ preventScroll: true });
     announce(`Step ${step} of ${STEP_COUNT}: ${STEP_TEXT[step - 1].title}.`);
   }
+  // Where a step's own receipt lines begin: the log as it stood before the step's action.
+  function freshFromOf(step) { return step === 1 ? 0 : replay(state.regionId, step, 0).log.length; }
   function restart() {
     clearTimers();
     state.regionId = null;

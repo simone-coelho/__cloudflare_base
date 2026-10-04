@@ -49,7 +49,9 @@
 //   - the stamped blocks: every page carries the header and footer markers; story first reads per page (section
 //     8.1): what-it-is the full spine, selling-it and how-it-works the band, the battlecard the compact spine, and
 //     see-it-work none, its first section after the title and one intro line being the tour player
-//     (section.tour-player with data-visual); each stamped block equals its partial after whitespace is collapsed,
+//     (section.tour-player with data-visual), and from the reader tag to the player nothing but the stamp line, the
+//     title and that line: no other element with text, no bare text, link, picture, drawn element, control, heading
+//     or empty element (review round five, M5-3); each stamped block equals its partial after whitespace is collapsed,
 //     with aria-current="page" on the page's own link and nowhere else; a page with no opening may leave out
 //     /spine.css and /spine.js;
 //   - the partials: each exists; the header links every page; the footer lists every piece with the title its own
@@ -595,6 +597,74 @@ const bandShots = existsSync(join(root, SPINE_BAND_MD)) ? shotLines(read(join(ro
 if (partials.band) checkShots(bandShots, partialTree('band'), 'enablement/partials/spine-band.html', 'S1');
 const SHOTS_OF_KIND = { spine: spineShots, compact: compactShots, band: bandShots, none: [] };
 
+// The tour's opening (LANE-BRIEF-V3 sections 8.1 and 8.2 item 1; review round five, M5-3). From the reader tag to the
+// player, in document order, the page holds only the stamp line beside the reader tag, the article's title, one intro
+// line, and plain wrappers (div, header, hgroup) that hold them. Everything else is reported: an element with text
+// (hidden or not, since a script may show it), bare text, a link, a picture, a drawn element, a control, a heading, a
+// second line, any other element, and an empty one, which only a stylesheet could draw. Script, style, template,
+// link, meta and line breaks render nothing and pass. Inside the title and the intro line only phrasing elements that
+// hold text, and line breaks, may appear.
+const LINK_TAGS = new Set(['a', 'area']);
+const PICTURE_TAGS = new Set(['img', 'svg', 'picture', 'figure', 'canvas', 'video', 'audio', 'iframe', 'object', 'embed', 'math']);
+const CONTROL_TAGS = new Set(['button', 'input', 'select', 'textarea', 'output', 'meter', 'progress']);
+const INERT_TAGS = new Set(['script', 'style', 'template', 'link', 'meta', 'br', 'wbr']);
+const PHRASING_TAGS = new Set(['span', 'b', 'strong', 'i', 'em', 'small', 'abbr', 'cite', 'code', 'kbd', 'mark', 'q', 's', 'samp', 'sub', 'sup', 'time', 'u', 'var', 'dfn', 'bdi', 'bdo', 'data']);
+const WRAPPER_TAGS = new Set(['div', 'header', 'hgroup']);
+function tourOpening(tree, art, player) {
+  const found = [];
+  const say = (what) => { if (!found.includes(what)) found.push(what); };
+  const tagOf = (n) => `<${n.tag}${n.attrs.class ? ` class="${n.attrs.class}"` : ''}>`;
+  const quote = (s) => `"${s.length > 48 ? `${s.slice(0, 48)}...` : s}"`;
+  const pictureOf = (n) => PICTURE_TAGS.has(n.tag) || n.attrs.role === 'img';
+  const drawn = (n) => ['data-visual', 'data-shot'].find((a) => a in n.attrs);
+  const reader = find(tree, (n) => classTokens(n).includes('reader-tag'))[0];
+  const meta = reader ? find(tree, (n) => (n.children || []).includes(reader))[0] : null;
+  let phase = 'before';
+  let title = null;
+  let intro = null;
+  let stamp = null;
+  let lines = 0;
+  // inside the title or the intro line
+  const phrasing = (n, where) => {
+    for (const c of n.children || []) {
+      if (!c.tag || INERT_TAGS.has(c.tag)) continue;
+      if (LINK_TAGS.has(c.tag)) say(`a link (${tagOf(c)}) in the ${where}`);
+      else if (pictureOf(c) || drawn(c)) say(`a picture (${tagOf(c)}) in the ${where}`);
+      else if (!PHRASING_TAGS.has(c.tag)) say(`a ${tagOf(c)} in the ${where}`);
+      else if (!norm(textOf(c))) say(`an empty ${tagOf(c)} in the ${where}, which only a stylesheet could draw`);
+      else phrasing(c, where);
+    }
+  };
+  const walk = (n, inArticle) => {
+    if (phase === 'done' || n.comment !== undefined) return;
+    if (n === player) { phase = 'done'; return; }
+    if (n.text !== undefined) { if (phase === 'in' && norm(n.text)) say(`bare text ${quote(norm(n.text))}`); return; }
+    if (n === reader) { phase = 'in'; return; }
+    if (phase === 'before' && n !== art) { for (const c of n.children || []) walk(c, false); return; }
+    phase = 'in';
+    if (n === art) { for (const c of n.children) walk(c, true); return; }
+    if (INERT_TAGS.has(n.tag)) return;
+    if (LINK_TAGS.has(n.tag)) { say(`a link (${tagOf(n)})`); return; }
+    if (pictureOf(n)) { say(`a picture (${tagOf(n)})`); return; }
+    if (drawn(n)) { say(`a drawn element (${tagOf(n)} with ${drawn(n)})`); return; }
+    if (CONTROL_TAGS.has(n.tag)) { say(`a control (${tagOf(n)})`); return; }
+    if (!stamp && meta && meta.children.includes(n) && n.tag === 'p' && classTokens(n).includes('stamp') && /^Updated\b/.test(norm(textOf(n)))) { stamp = n; return; }
+    if (inArticle && n.tag === 'h1' && !title && !intro) { title = n; phrasing(n, 'title'); return; }
+    if (/^h[1-6]$/.test(n.tag)) { say(`a heading (${tagOf(n)})`); return; }
+    if (inArticle && n.tag === 'p' && title && !intro && norm(textOf(n))) { intro = n; lines = 1; phrasing(n, 'intro line'); return; }
+    if (n.tag === 'p' && intro) { lines += 1; return; }
+    if (!WRAPPER_TAGS.has(n.tag)) { const text = norm(textOf(n)); say(text ? `a ${tagOf(n)} with text ${quote(text)}` : `an empty ${tagOf(n)}, which only a stylesheet could draw`); return; }
+    const own = norm((n.children || []).filter((c) => c.text !== undefined).map((c) => c.text).join(' '));
+    if (own) { say(`a ${tagOf(n)} with text ${quote(own)}`); return; }
+    const was = [title, intro, found.length, lines];
+    for (const c of n.children || []) walk(c, inArticle);
+    if (phase !== 'done' && title === was[0] && intro === was[1] && found.length === was[2] && lines === was[3]) say(`an empty ${tagOf(n)}, which only a stylesheet could draw`);
+  };
+  walk(tree, false);
+  if (lines > 1) found.unshift(`${lines} paragraphs`);
+  return found;
+}
+
 // The stamped blocks on one page: present where required, equal to the partial, aria-current on the page's own link.
 function checkStamped(file, html) {
   const hw = HAND_WRITTEN.get(file);
@@ -761,20 +831,16 @@ for (const file of pages) {
     // none (see-it-work, section 8.1) may load them or not
     if (hw.spine !== 'none' && !html.includes('<link rel="stylesheet" href="/spine.css">')) fail(`${file}: does not load /spine.css, which ${KIND_NAME[hw.spine]} needs`, lane);
     if (hw.spine === 'spine' && !html.includes('<script src="/spine.js" defer></script>')) fail(`${file}: does not load /spine.js, which replays the spine's loop (LANE-BRIEF-V3 section 7.5)`, lane);
-    // see-it-work opens on the tour (section 8.1 and 8.2): after the title and at most one intro line, the article's
-    // first section is the player, section.tour-player carrying data-visual, and nothing drawn or headed comes before it
+    // see-it-work opens on the tour (section 8.1 and 8.2): the article's first section is the player,
+    // section.tour-player carrying data-visual, and from the reader tag to the player the page holds only the stamp
+    // line, the article's title and one intro line (tourOpening; review round five, M5-3)
     if (hw.spine === 'none') {
       const art = find(tree, (n) => n.tag === 'article' && 'data-source' in n.attrs)[0];
       const player = art ? find(art, (n) => n.tag === 'section')[0] : null;
       if (!player || !classTokens(player).includes('tour-player') || !('data-visual' in player.attrs)) fail(`${file}: the article's first section must be the tour player, <section class="tour-player" data-visual> (LANE-BRIEF-V3 section 8.2)${player ? ` (found <section class="${player.attrs.class || ''}">)` : ' (found no section)'}`, lane);
       else {
-        // In document order, between the article's start and the player: the title, at most one intro line, and
-        // wrappers; no heading, picture, list, table or other visual.
-        const a0 = html.search(/<article\b[^>]*\bdata-source=/);
-        const before = html.slice(a0, html.indexOf('<section', a0)).replace(/<!--[\s\S]*?-->/g, '').replace(/^<article\b[^>]*>/i, '');
-        const lines = (before.match(/<p\b/gi) || []).length;
-        const stray = /<(?:h[2-6]|figure|svg|img|table|picture|canvas|video|ul|ol|dl|blockquote)\b|\sdata-(?:visual|shot)\b/i.exec(before);
-        if (stray || lines > 1) fail(`${file}: before the tour player the article holds only its title and one intro line (LANE-BRIEF-V3 section 8.1); found ${stray ? `"${stray[0].trim()}"` : `${lines} paragraphs`}`, lane);
+        const found = tourOpening(tree, art, player);
+        if (found.length) fail(`${file}: between the reader tag and the tour player the page holds only the stamp line, the article's title and one intro line, the only text above the player (LANE-BRIEF-V3 sections 8.1 and 8.2; review round five, M5-3); found ${found.join('; ')}`, lane);
       }
     }
     // pictures for Word
