@@ -102,6 +102,9 @@
 //     no link. Now the text around the link stays bold and the link's own run
 //     is bold too. And every heading keeps with the next paragraph, so a tall
 //     figure can no longer leave its heading alone at the foot of a page.
+// 15. A paragraph whose next block is a figure keeps with it, so a heading, its
+//     one lead line and the picture travel together; rule 14 alone joined the
+//     heading to the lead line, and the picture could still open the next page.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -323,6 +326,8 @@ function figure(l, at) {
 // ── parse ────────────────────────────────────────────────────────────────────
 const kids = [];
 let i = 0, wide = [], numberedLists = 0;
+// Rule 15: is the next block after line `at` (past blank lines, which build nothing) a figure?
+const beforeFigure = (at) => { let j = at + 1; while (j < lines.length && !lines[j].trim()) j++; return j < lines.length && /^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(lines[j]); };
 while (i < lines.length) {
   const l = lines[i];
   if (/^```/.test(l)) {
@@ -345,7 +350,7 @@ while (i < lines.length) {
   }
   if (/^\s*!\[[^\]]*\]\([^)]+\)\s*$/.test(l)) { kids.push(...figure(l, i + 1)); i++; continue; }
   if (!l.trim()) { i++; continue; }
-  kids.push(new Paragraph({ children: runs(l), spacing: { after: 120, line: 276 } })); i++;
+  kids.push(new Paragraph({ children: runs(l), ...(beforeFigure(i) ? { keepNext: true } : {}), spacing: { after: 120, line: 276 } })); i++;   // rule 15
 }
 if (wide.length) console.warn(`md2docx: WARNING rule 2 — ${wide.length} code line(s) over 76 chars will wrap: lines ${wide.slice(0, 8).join(', ')}`);
 if (problems.length) {   // rule 11: nothing is written while a link or a figure is broken
