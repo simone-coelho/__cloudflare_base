@@ -2754,11 +2754,20 @@ it('W22.07 gates both hosts on owned profiles consent and observed erasure barri
     // Each of the two owner entries first reads the isolated-monitor authority
     // marker every durable object checks before it serves anything
     // (src/ops/synthetic.ts MARKER, SyntheticObjectBoundary.run; the same read
-    // src/reflex/regionTrend.test.ts:206 expects). The refused request reads no
-    // profile, affinity, pipeline or session state (W22 LG1, STALE: the list
-    // predates the monitor boundary).
-    expect(read.mock.calls).toEqual([['__monitor_authority_v1'], ['identityTransfer'], ['identityIntent'], ['grantAuthority'],
-      ['__monitor_authority_v1'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
+    // src/reflex/regionTrend.test.ts:206 expects). On the first entry
+    // assertOwned then calls withdrawSupersededTransfer
+    // (src/durable-objects/ShopperReflex.ts:3042), which reads the prepared
+    // transfer and the intent (ShopperReflex.ts:3018) to roll back a superseded
+    // prepared transfer, as W35 criterion A3 requires (unit:W35.A3,
+    // src/units/W35/LEDGER.unit.test.ts); finding none it withdraws nothing, and
+    // assertOwned reads the same pair again for its own refusal. The refused
+    // request reads no profile, affinity, pipeline, consent, forwarding,
+    // audience-owner or session-projection state (W22 LG1, STALE: the list
+    // predates the monitor boundary and the W35 A3 rollback).
+    expect(read.mock.calls).toEqual([['__monitor_authority_v1'], ['identityTransfer'], ['identityIntent'], ['identityTransfer'], ['identityIntent'],
+      ['grantAuthority'], ['__monitor_authority_v1'], ['grantAuthority'], ['identityTransfer'], ['identityIntent']]);
+    const readKeys = read.mock.calls.flatMap(([key]) => [key].flat().map(String));
+    expect(readKeys.filter(key => ['affinity', 'pipeline', 'consent', 'forwardTo', 'audienceOwner'].includes(key) || key.startsWith('sessionProjection:'))).toEqual([]);
     expect(limited.bytes()).toBe(before); expect(limited.queued).toHaveLength(1);
     const delayed = await bufferedBoundary('do'), saved = delayed.bytes(), delayedRead = vi.spyOn(delayed.item.state.storage, 'get');
     const serialized = delayed.item.shopper as unknown as { serialize: (fn: () => Promise<unknown>) => Promise<unknown> };
