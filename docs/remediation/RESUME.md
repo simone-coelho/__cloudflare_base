@@ -2,6 +2,16 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines.
 
+## 2026-10-08, early morning
+
+- **Score** (`status`): **Local engineering done 26/26 · Final/live accepted 0/26** · no ticket active · "every ticket is locally done". W41's DELIVERY receipt is at artifact `5fd5a77b` (reviewer PASS on V1-V6, gate GATE_OK, ratchet 53 failing / 0 outside the baseline / 26 baseline entries now pass); the build merged into this branch at `24c5ea2f`, receipt and W41 INACTIVE committed at `a4d81441`. Evidence `/home/simonecoelho/rem/_evidence/W41-delivery/fix3/`; the three fix rounds and their rulings are in `_evidence/step3/AMENDMENTS.md`.
+- **Owed work named by the W41 review, none blocking:** the session-host trusted link without a principal (`SessionManager.ts:650, :674`, unreachable from product code, measured zero cost); a revoked grant's restoration entry lingers until its expiry (at most 24 h); no unit on expiry pruning, the older record shape or the history-import carry; no cap on entries beyond the grant lifetime. LV1 and LV2 deferred to live acceptance, as for every ticket.
+- **In flight:** the W22.07 stale-expectation correction (triage `_evidence/W22-triage/`; specifier on `rem/spec-w22-fix` in `/home/simonecoelho/rem/spec-w22-fix` from `a4d81441`); then a spec review and a superseding W22 DELIVERY receipt at the corrected artifact. The baseline shrink (26 entries now pass) waits on the owner (freeze sheet item 31).
+- **Worktrees.** Re-registered 2026-10-07 after a prune from Windows; every WSL lane is **locked**; never `git worktree prune` from either side. Lanes: `integration` (lead), `build-w41`, `review-w41`, `review-w41-fix3`, `spec-w41-fix3`, `spec-parity-a`, `spec-parity-b`, `spec-w22-fix`.
+- **Next program, `tapestry-parity-build`, 25 tickets** (`P02,P01,P28,P03,P10,P07,P04,P29,P31,P05,P06,P12,P13,P34,P30,P33,P32,P09,P11,P14,P35,P08,P15,P16,P26`): draft work orders complete at `/home/simonecoelho/rem/_evidence/parity-draft/delivery-control/program.json` (check fails only on the 25 specification gates); batch S1 (P02, P01, P03, P10) specified on `rem/spec-parity-a` at `e6d2068d`, under spec review; batch S2 (P07, P04, P29, P31, P05, P06) in specification on `rem/spec-parity-b`; the owner freezes from `docs/BTI-Parity-Freeze-Sheet.md` in the /mnt/c tree (50 items). Per-ticket spec branches are cut from a batch branch with `_evidence/parity-step3/make-ticket-spec-branch.sh` (plumbing only). The vector tickets P17-P25, P27 form a later program; P36 is out. Reported as x/25.
+- **Landing on the product branch** is not granted and is a separate decision (freeze sheet item 33): both branches rebuilt the hourly fold, the day report and the publication cache since the 2026-09-20 fork.
+- **Session rule:** commands from a Windows session into WSL go through `wsl.exe -d Ubuntu-22.04 -- bash -lc '<one literal line>'`; variables, `~`, `$(...)`, heredocs and double quotes are stripped by the hand-off; script files and literal absolute paths only; detached launches need stdin from /dev/null (role files carry the lesson).
+
 ## 2026-10-07, evening
 
 - **Score** (`status`): Local engineering done 25/26 · Final/live accepted 0/26 · W41 ACTIVE · no recorded blocker · program valid.
