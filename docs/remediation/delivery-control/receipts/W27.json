@@ -4,43 +4,43 @@
   "ticketId": "W27",
   "workOrderHash": "sha256:c95f0cff9fbb1c91985cc16e3bab559f627c14ec491e4bd466d75558466c4b3a",
   "artifact": {
-    "revision": "d4e8071716d18e496e757149ee038a865751b29b",
-    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+    "revision": "8ef90f3052f83ef46b49f2b668385cb9c766c5a9",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/w27-build merged into rem/integration, local and not pushed; supersedes the W27 receipt at artifact d4e8071716d18e496e757149ee038a865751b29b (completed 2026-09-27T10:25:46.000Z)"
   },
   "implementation": {
     "actor": "rem-implementer",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W27-delivery/implementer/REPORT-2.md",
-      "/home/simonecoelho/rem/_evidence/W27-delivery/implementer/REPORT.md",
-      "/home/simonecoelho/rem/_evidence/W27-delivery/implementer/logs/eslint-final.log",
-      "git commits 5690f4f 1e78c2c on rem/w27-build"
+      "Regression unit R5 (replay compares records by value, not by key order), found by the parity S1 specification review (R-P3), ruled under W27 in _evidence/step3/AMENDMENTS.md; specified at aae1f17e on rem/spec-w27-fix (unit:W27.R5.01 to .03, review PASS), built at 8ef90f30 (src/learn/replay.ts compareRecords, +23 -2); the recording of R5 as a criterion waits for the owner (freeze sheet item 51), the tests being enforced by the acceptance command that runs src/units/W27 whole",
+      "/home/simonecoelho/rem/_evidence/W27-replay/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W27-replay/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W27-replay/implementer/REPORT.md",
+      "git commit 8ef90f30 on rem/w27-build"
     ]
   },
   "acceptance": {
     "command": "node node_modules/vitest/vitest.mjs run src/units/W27 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts -t \"W27[.]\" --minWorkers=1 --maxWorkers=1",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W27-delivery/reviewer/logs/acceptance-2.log",
-      "/home/simonecoelho/rem/_evidence/W27-delivery/implementer/logs/acceptance-final.log"
+      "/home/simonecoelho/rem/_evidence/W27-replay/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W27-replay/implementer/logs/acceptance-head.log"
     ]
   },
   "integration": {
     "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W27-delivery/reviewer/logs/gate-2.log",
-      "/home/simonecoelho/rem/_evidence/W27-delivery/implementer/logs/gate-final.log"
+      "/home/simonecoelho/rem/_evidence/W27-replay/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/W27-replay/implementer/logs/gate-2.log"
     ]
   },
   "verification": {
     "verdict": "PASS",
     "verifier": "rem-reviewer",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W27-delivery/reviewer/REPORT-2.md",
-      "/home/simonecoelho/rem/_evidence/W27-delivery/reviewer/REPORT.md"
+      "/home/simonecoelho/rem/_evidence/W27-replay/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-09-27T10:25:46.000Z",
+  "completedAt": "2026-10-08T08:59:35.617Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
