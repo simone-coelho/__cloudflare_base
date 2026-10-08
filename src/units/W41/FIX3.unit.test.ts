@@ -34,7 +34,10 @@
 // reading sign-in's own attempt; the ruling leaves the stored shape open.
 //
 // UNIT NUMBERING continues criterion V1 across the W41 files: V1.01 (FIX1),
-// V1.02 (FIX2), V1.03–V1.07 here.
+// V1.02 (FIX2), V1.03–V1.08 here. V1.08 (added at the specification review of
+// 2723413c) pins kit 02 :543-545, the retry of an attempt that could not read:
+// not again within its visit, once in each later visit of the same sign-in
+// until it gets an answer, per sign-in when two are live.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -848,13 +851,115 @@ describe('unit:W41.V1.07', () => {
   /** A kit document with its line wrapping folded, so a sentence reads as one line. */
   const kit = (name: string) => readFileSync(join(ROOT, 'docs', 'kit', name), 'utf8').replace(/\s+/g, ' ');
 
-  it('logic: the kit states one attempt per sign-in — kit 02 "Once per sign-in", "One attempt per sign-in … recorded against that sign-in", every later sign-in its own attempt, a consent choice not a sign-in; kit 03 "Every sign-in makes one attempt" — the promise the code is judged against', () => {
+  it('logic: the kit states one attempt per sign-in — kit 02 "Once per sign-in", "One attempt per sign-in … recorded against that sign-in", every later sign-in its own attempt, a consent choice not a sign-in, an `unavailable` attempt made again once in each later visit of the same sign-in until it gets an answer; kit 03 "Every sign-in makes one attempt" and `unavailable` "retried once in each later visit" — the promise the code is judged against', () => {
     const api = kit('02-api-reference.md'), payloads = kit('03-payload-schemas.md');
     expect(api, 'kit 02 :521').toContain('Once per sign-in, at a signed-in (recognized) shopper\'s first event under personalization after it, her ODP profile is read');
     expect(api, 'kit 02 :539').toContain('One attempt per sign-in, whatever her choice at the moment she signs in');
     expect(api, 'kit 02 :539-540').toContain('it is made at her first event under personalization after the sign-in and recorded against that sign-in');
     expect(api, 'kit 02 :541').toContain('Every later sign-in gets its own attempt, also one made under tracking only');
     expect(api, 'kit 02 :542-543').toContain('a consent choice is not a sign-in, so withdrawing personalization and granting it again within one sign-in makes no second attempt');
+    expect(api, 'kit 02 :543-545').toContain('An attempt that could not read (`unavailable`) is made again once in each later visit of the same sign-in until it gets an answer; every other answer stands until her next sign-in');
     expect(payloads, 'kit 03 :749').toContain('Every sign-in makes one attempt, at her first event under personalization after it');
+    expect(payloads, 'kit 03 :757').toContain('`unavailable` (a read failed; retried once in each later visit)');
   });
+});
+
+// ---------------------------------------------------------------------------
+// The retry of an attempt that could not read (kit 02 :543-545; the fix-2
+// ruling, AMENDMENTS :167-173: "'unavailable' retried once per later visit").
+// ---------------------------------------------------------------------------
+
+/** The idle gap that ends a visit: thirty minutes (the lead's instruction; src/services/visit.ts :24-30, the analytics convention). */
+const VISIT_IDLE_MS = 30 * MINUTE_MS;
+/** Past the visit gap with room to spare, so the next event begins a later visit. */
+const NEXT_VISIT_MS = VISIT_IDLE_MS + 15 * MINUTE_MS;
+/** Her tenant's ODP answers her profile read with an error status: the attempt could not read (`unavailable`). */
+const UNAVAILABLE: OdpMode = { kind: 'status', status: 503 };
+const COULD_NOT_READ = { source: 'odp', status: 'cold', reason: 'unavailable' };
+
+/**
+ * One event under `who` at `at` and her profile-read count after it. With
+ * `down`, ODP's read outage is re-asserted first: the fake lets an accepted
+ * profile upsert (the platform's own write-back) replace a failure mode, and
+ * the fixture is an outage of her profile reads that lasts the whole visit.
+ */
+async function eventAt(h: Fixture, host: string, clock: Clock, vuid: string, who: Person, at: number, event: ShopperEvent, down = true) {
+  if (down) h.odp.subject(ODP_MERIDIAN, vuid, UNAVAILABLE);
+  clock.mockReturnValue(at);
+  await accepted(h.act(who, event), `${host}, ${down ? 'ODP unavailable' : 'ODP answering'} at ${at}`);
+  return readsOf(h, vuid);
+}
+
+describe('unit:W41.V1.08', () => {
+  it('host: (a) an attempt that could not read is not made again within its visit — ODP answers her profile read 503; her first event after the sign-in makes one read and answers `unavailable`, and four further events of that visit make no further read, on both hosts', async () => {
+    await onBothHosts(async (h, host, clock) => {
+      const account = 'coach-account-odp-down-one-visit';
+      const her = await h.personFor(MERIDIAN, account);
+      h.odp.subject(ODP_MERIDIAN, her.vuid, UNAVAILABLE);
+      clock.mockReturnValue(SIGN_IN_A);
+      const a = await h.recognize(MERIDIAN, account);
+
+      const reads: number[] = [];
+      for (const [index, event] of [PAGE_VIEW, ROGUE_VIEW, PAGE_VIEW, ROGUE_VIEW, PAGE_VIEW].entries())
+        reads.push(await eventAt(h, host, clock, her.vuid, a, SIGN_IN_A + index * MINUTE_MS, event));
+      expect(reads, `${host}: within one visit the failed attempt is not made again — one read at her first event, none at the four after it`).toEqual([1, 1, 1, 1, 1]);
+      expect((await h.reflex(a)).affinity?.restoration, `${host}: the attempt could not read`).toMatchObject(COULD_NOT_READ);
+    });
+  }, 180_000);
+
+  it('host: (b) once in each later visit of the same sign-in until it gets an answer — with ODP still unavailable, each later visit makes exactly one more read, at its first event, and none after it in that visit; when ODP answers, that visit\'s one read restores her, and a visit after it makes no read, on both hosts', async () => {
+    await onBothHosts(async (h, host, clock) => {
+      const account = 'coach-account-odp-down-later-visits';
+      const her = await h.personFor(MERIDIAN, account);
+      h.odp.subject(ODP_MERIDIAN, her.vuid, UNAVAILABLE);
+      clock.mockReturnValue(SIGN_IN_A);
+      const a = await h.recognize(MERIDIAN, account);
+
+      const visit = async (start: number, events: ShopperEvent[], down = true) => {
+        const reads: number[] = [];
+        for (const [index, event] of events.entries()) reads.push(await eventAt(h, host, clock, her.vuid, a, start + index * MINUTE_MS, event, down));
+        return reads;
+      };
+      const v1 = SIGN_IN_A, v2 = v1 + 2 * MINUTE_MS + NEXT_VISIT_MS, v3 = v2 + 2 * MINUTE_MS + NEXT_VISIT_MS;
+      expect(await visit(v1, [PAGE_VIEW, ROGUE_VIEW, PAGE_VIEW]), `${host}: visit 1 — her one attempt, unavailable, not made again in it`).toEqual([1, 1, 1]);
+      expect(await visit(v2, [PAGE_VIEW, ROGUE_VIEW, PAGE_VIEW]), `${host}: visit 2 of the same sign-in — exactly one more read, at its first event, none after it`).toEqual([2, 2, 2]);
+      expect(await visit(v3, [ROGUE_VIEW, PAGE_VIEW, PAGE_VIEW]), `${host}: visit 3 of the same sign-in — exactly one more read, at its first event, none after it`).toEqual([3, 3, 3]);
+      expect((await h.reflex(a)).affinity?.restoration, `${host}: still could not read`).toMatchObject(COULD_NOT_READ);
+
+      const v4 = v3 + 2 * MINUTE_MS + NEXT_VISIT_MS, v5 = v4 + 2 * MINUTE_MS + NEXT_VISIT_MS;
+      h.odp.subject(ODP_MERIDIAN, her.vuid, recordedProfile(OBS_A));
+      expect(await visit(v4, [PAGE_VIEW, ROGUE_VIEW, PAGE_VIEW], false), `${host}: visit 4, ODP answering — exactly one more read, at its first event, none after it`).toEqual([4, 4, 4]);
+      expect((await h.reflex(a)).affinity?.restoration, `${host}: that read got an answer and restored her`).toMatchObject({ source: 'odp', status: 'restored', observedAt: OBS_A });
+      expect(await visit(v5, [PAGE_VIEW, ROGUE_VIEW], false), `${host}: visit 5 — an answer stands until her next sign-in: no read`).toEqual([4, 4]);
+    });
+  }, 180_000);
+
+  it('host: (c) two live sign-ins, each retried on its own — with ODP unavailable throughout, each sign-in makes its one attempt in visit 1 and none again there, and in each later visit each sign-in makes exactly one more read at its own first event of that visit and none after it, whichever browser comes first; neither sign-in\'s attempt or retry answers for the other\'s, on both hosts', async () => {
+    await onBothHosts(async (h, host, clock) => {
+      const account = 'coach-account-odp-down-two-browsers';
+      const her = await h.personFor(MERIDIAN, account);
+      h.odp.subject(ODP_MERIDIAN, her.vuid, UNAVAILABLE);
+      clock.mockReturnValue(SIGN_IN_A);
+      const a = await h.recognize(MERIDIAN, account);
+      clock.mockReturnValue(SIGN_IN_A + MINUTE_MS);
+      const b = await h.recognize(MERIDIAN, account);
+      expect([a.shopperId, b.shopperId], `${host}: fixture — both sign-ins resolve her person`).toEqual([her.shopperId, her.shopperId]);
+      expect(readsOf(h, her.vuid), `${host}: neither sign-in reads her profile`).toBe(0);
+
+      const visit = async (start: number, steps: Array<[Person, ShopperEvent]>) => {
+        const reads: number[] = [];
+        for (const [index, [who, event]] of steps.entries()) reads.push(await eventAt(h, host, clock, her.vuid, who, start + index * MINUTE_MS, event));
+        return reads;
+      };
+      const v1 = SIGN_IN_A + 2 * MINUTE_MS, v2 = v1 + 4 * MINUTE_MS + NEXT_VISIT_MS, v3 = v2 + 6 * MINUTE_MS + NEXT_VISIT_MS;
+      expect(await visit(v1, [[a, PAGE_VIEW], [b, PAGE_VIEW], [a, ROGUE_VIEW], [b, ROGUE_VIEW]]),
+        `${host}: visit 1 — A's one attempt, B's one attempt, both unavailable, neither made again in it`).toEqual([1, 2, 2, 2]);
+      expect(await visit(v2, [[a, PAGE_VIEW], [a, ROGUE_VIEW], [b, PAGE_VIEW], [b, ROGUE_VIEW], [a, PAGE_VIEW], [b, PAGE_VIEW]]),
+        `${host}: visit 2 — A retried once at its first event, B retried once at its own, none after`).toEqual([3, 3, 4, 4, 4, 4]);
+      expect(await visit(v3, [[b, PAGE_VIEW], [b, ROGUE_VIEW], [a, PAGE_VIEW], [a, ROGUE_VIEW], [b, PAGE_VIEW], [a, PAGE_VIEW]]),
+        `${host}: visit 3 — B retried once at its first event, A retried once at its own, none after`).toEqual([5, 5, 6, 6, 6, 6]);
+      for (const [name, who] of [['A', a], ['B', b]] as const)
+        expect((await h.reflex(who)).affinity?.restoration, `${host}: ${name} still could not read`).toMatchObject(COULD_NOT_READ);
+    });
+  }, 180_000);
 });
