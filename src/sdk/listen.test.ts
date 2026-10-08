@@ -596,12 +596,12 @@ describe('W15 supported refresh, render admission and server adoption', () => {
       const request = new Request(input, init); requests.push(request);
       if (request.url.endsWith('/identity/session')) return Response.json({ ok: true, session: grant });
       const body = await request.json() as { page: string; pageInstance: string };
-      return Response.json({ ok: true, tenant: 'coach', ...offeredSet({ ...snapshot, page: body.page } as DecisionSet, body.pageInstance) });
+      return Response.json({ ok: true, tenant: 'coach', ...offeredSet({ ...snapshot, page: body.page } as DecisionSet, body.pageInstance), session: grant });
     });
     const { bootstrap, headers } = await bridge.snapshot(new Request('https://shop.example/home'), 'home');
     expect(bootstrap).not.toBeNull(); expect(headers.get('Cache-Control')).toBe('private, no-store');
-    expect(headers.get('Set-Cookie')).toContain('Secure; HttpOnly; SameSite=Lax'); expect(requests).toHaveLength(2);
-    expect(requests[1]!.headers.get('X-Shopper-Session')).toBe(grant.capability); expect(bootstrapJSON(bootstrap!)).not.toContain(grant.capability);
+    expect(headers.get('Set-Cookie')).toContain('Secure; HttpOnly; SameSite=Lax'); expect(requests).toHaveLength(1);
+    expect(requests[0]!.url).toBe('https://engine.example/v1/coach/decisions/snapshot'); expect(headers.get('Set-Cookie')).toContain(grant.capability); expect(bootstrapJSON(bootstrap!)).not.toContain(grant.capability);
     const escaped = bootstrapJSON({ ...bootstrap!, decisions: [{ ...bootstrap!.decisions[0]!, customerContentId: '</script><script>bad</script>\u2028' }] });
     expect(escaped).not.toContain('<'); expect(escaped).toContain('\\u003c'); expect(escaped).toContain('\\u2028');
     const callback = publishedCallback();
