@@ -4263,7 +4263,7 @@
     {
       "id": "W41",
       "title": "ODP interest-vector restoration",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",

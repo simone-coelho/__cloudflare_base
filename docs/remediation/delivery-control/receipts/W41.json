@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W41",
+  "workOrderHash": "sha256:4ef57fd67683c07735c50e518650c0ec9a2a02d8a322762e95885b4dbc57238f",
+  "artifact": {
+    "revision": "5fd5a77b89b14ed9446460bbfebed33dd5822d84",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/w41-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/implementer/logs/fix3.diff",
+      "git commits 192a01f9 (spec, fast-forward) 08950d75 5fd5a77b on rem/w41-build; earlier rounds 038e2d7 90e458b 6393604 e8a8f4d 1862942 7f5ceb9"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W41 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer-spec/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-08T04:31:50.452Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
