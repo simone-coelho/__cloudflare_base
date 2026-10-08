@@ -4,43 +4,41 @@
   "ticketId": "W22",
   "workOrderHash": "sha256:77a77252cc92298ea0e770b1b76701d5b1105d50f723eae695c58865fb536e47",
   "artifact": {
-    "revision": "4b286d0d4b6acbdd5353b4ded47aa489763d6ac3",
-    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+    "revision": "41315bb52cba3097ddca1dd5993114539c86edbe",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/spec-w22-fix merged into rem/integration, local and not pushed; supersedes the W22 receipt at artifact 4b286d0d4b6acbdd5353b4ded47aa489763d6ac3 (completed 2026-09-25T22:49:23.000Z)"
   },
   "implementation": {
     "actor": "rem-implementer",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W22-delivery/implementer/REPORT-2.md",
-      "/home/simonecoelho/rem/_evidence/W22-delivery/implementer/REPORT.md",
-      "/home/simonecoelho/rem/_evidence/W22-delivery/implementer/logs/fix1/eslint-head.log",
-      "git commits 6720cc6 46aceb8 46bb991 fc6c53b 4b286d0 on rem/w22-build"
+      "Product code of W22 unchanged since the superseded receipt (artifact 4b286d0, builds bb69bda and the W22 merges); this receipt re-certifies the ticket after a stale-expectation correction by rem-specifier under the lead's R10 ruling (AMENDMENTS.md, W22 triage) and the date-bomb test correction a1e25041 of 2026-09-30",
+      "/home/simonecoelho/rem/_evidence/W22-triage/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W22-correction/specifier/REPORT.md",
+      "git commit 41315bb5 on rem/spec-w22-fix"
     ]
   },
   "acceptance": {
     "command": "node node_modules/vitest/vitest.mjs run src/units/W22 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/telemetry.boundary.test.ts src/learn/hourly.test.ts src/learn/learn.test.ts src/learn/report.test.ts src/ledger/ledger.test.ts src/routes/realtime.sdkContract.test.ts -t \"W22[.]\" --minWorkers=1 --maxWorkers=1",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W22-delivery/reviewer/logs/acceptance-2.log",
-      "/home/simonecoelho/rem/_evidence/W22-delivery/implementer/logs/fix1/acceptance.log"
+      "/home/simonecoelho/rem/_evidence/W22-correction/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/W22-correction/specifier/logs/acceptance.log"
     ]
   },
   "integration": {
     "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W22-delivery/reviewer/logs/gate-2.log",
-      "/home/simonecoelho/rem/_evidence/W22-delivery/implementer/logs/fix1/gate.log"
+      "/home/simonecoelho/rem/_evidence/W22-correction/reviewer/logs/gate.log"
     ]
   },
   "verification": {
     "verdict": "PASS",
     "verifier": "rem-reviewer",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/W22-delivery/reviewer/REPORT-2.md",
-      "/home/simonecoelho/rem/_evidence/W22-delivery/reviewer/REPORT.md"
+      "/home/simonecoelho/rem/_evidence/W22-correction/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-09-25T22:49:23.000Z",
+  "completedAt": "2026-10-08T05:03:46.291Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
