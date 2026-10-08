@@ -10,7 +10,7 @@ import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegm
 import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot, type ReflexConfig } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
-import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
+import { forwardEventToOdp, odpRestorationOf, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
 import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeEnrollment } from '@/content/holdout';
@@ -551,12 +551,15 @@ realtimeRoutes.get('/reflex', async (c) => {
       }
     }
 
+    // W41: the provenance of this session's ODP restoration, when one was
+    // attempted — the same member the object host answers (handleSnapshot).
+    const restoration = odpRestorationOf(sessionData.reflex);
     return c.json({
       ok: true,
       now,
       config: reflexConfigView(cfg),
       affinity: live
-        ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
+        ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed, ...(restoration ? { restoration } : {}) }
         : null,
       // W16 C4 / R29: the SDK-visible journey stage, in the shared vocabulary,
       // derived from THIS VISIT's counters against the tenant's published

@@ -32,11 +32,15 @@ import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 import { ownerFetch, currentOwnerConsent, currentProfileBirth, currentExternalRetention, requireConsentPurpose, pinRetention } from '@/identity/sessionAuthority';
-import { destinationRetentionCategory, type ExternalRetention } from '@/retention';
+import { destinationRetentionCategory, retentionPolicy, type ExternalRetention } from '@/retention';
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
 import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, type OdpConfiguration } from '@/connectors/config';
 import { PERSISTED_STAGE, type JourneyWord } from '@/services/JourneyStage';
+import { admittedTouches, effectiveScore, emptyState, type CatalogVocabulary, type ReflexConfig, type ReflexEntry, type ReflexState, type Touch } from '@/reflex/core';
+import { personalizes, type Consent } from '@/content/consent';
+import { SessionAccessError, SHOPPER_MAX_AGE, type SessionCapability } from '@/identity/sessionCapability';
+import { loadTombstone } from '@/ledger/erasure';
 
 /** The audiences the ODP team mirrored 1:1 with our edge keys (handoff 2026-07-03).
     GraphQL subset queries MUST enumerate names — unknown names risk validation
@@ -532,7 +536,7 @@ export async function fetchOdpAudiences(
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': resolved.key },
         body: JSON.stringify({ query }),
-      }, 1500);
+      }, ODP_READ_TIMEOUT_MS);
     if (!res.ok) return null;
     const json = (await res.json()) as {
       data?: { customer?: { audiences?: { edges?: Array<{ node: { name: string; state: string } }> } } };
@@ -551,4 +555,317 @@ export async function fetchOdpAudiences(
     console.warn('[odp] seed failed');
     return null;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// W41 — INTEREST-VECTOR RESTORATION (doc 35 §5 W41; F13, F31, N16).
+//
+// The loop above writes the edge's live affinity onto the tenant's ODP profile
+// through the tenant's own `odp.profile` mapping (`upsertOdpProfile`). This is
+// the read back. Once per sign-in, at a RECOGNIZED shopper's first event after
+// it under personalization, her mapped profile attributes are read from her
+// tenant's ODP and merged into her current interests before that event is
+// applied: "If edge state is ever absent, it is re-seeded from ODP on the first
+// event of the session".
+//
+//   • Once per sign-in, whatever her choice at the sign-in, for every live
+//     sign-in of hers at once. A sign-in is named by a digest of the recognized
+//     grant her capability carries, which only the identity link mints (a
+//     retried link replays the same grant; rotation, return continuity and the
+//     socket relay mint anonymous grants or re-sign the same one); one person
+//     signed in on two browsers holds two live grants on one session. Her
+//     restoration record keeps, beside the outcome of her latest attempt (the
+//     member the read answers), one entry per live sign-in that has made its
+//     attempt, so neither sign-in's attempt answers for the other's and neither
+//     is made twice. An attempt of an earlier sign-in never answers for a later
+//     one, also when that later sign-in kept her state as it was (tracking
+//     only). A consent choice is not a sign-in and re-arms nothing. Whatever she
+//     built before is kept: a restored pair is added where she has none and
+//     replaces hers only where it is the stronger at that moment. An attempt
+//     that could not read (`unavailable`) is made again once in each later
+//     visit of the same sign-in, per sign-in; every other answer stands until
+//     her next sign-in. An entry lives as long as its grant: it carries the
+//     grant's expiry and is dropped at the record's next write after it (an
+//     attempt, or a sign-in's merge), so the record holds at most one entry per
+//     sign-in whose grant was live at that write.
+//
+//   • Tenant-scoped. Only a tenant's own connector configuration — its host, key,
+//     identity namespace and attribute mapping — is read. The default tenant's
+//     stamp-global legacy settings (isLegacyOdpTenant) never restore anything.
+//   • A vector is a numeric `{dimension, value}` attribute on a dimension the
+//     tenant's registry defines, with a value its catalogue admits (the one R64
+//     rule, admittedTouches). A dominant-value label, a journey label and an
+//     audience are labels and never become interests.
+//   • The value is the affinity a the attribute recorded AT ODP's
+//     `last_modified_at`, so the restored entry holds R = K·a/(1−a) touched at
+//     that observation and decays from it by the engine's own law, never from
+//     the moment it was restored.
+//   • Only under the shopper's current personalization choice, and never after
+//     her erasure. ODP's `last_modified_at` is profile-wide: any writer moves it,
+//     and our erasure leaves her ODP profile to the brand's operator
+//     (src/identity/erase.ts), so no ODP timestamp can prove a value newer than
+//     the erasure. Once her own subject carries an erasure barrier her profile
+//     is not read at all; the timestamp is never consulted for it. Never an
+//     observation older than the tenant's own profile retention.
+//   • Cold, missing, malformed and unreadable state leaves her cold with a named
+//     reason. The read is capped like the seed read and every provider failure
+//     is absorbed, so it can delay her first event by at most that cap and never
+//     fails the event or a decision.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Why a restoration left her cold. `cold`, `missing` and `malformed` are the profile's own state. */
+export type OdpColdReason = 'cold' | 'missing' | 'malformed' | 'unavailable' | 'erased' | 'expired';
+/** The provenance `GET /realtime/reflex` answers as `affinity.restoration`, identically on both hosts. */
+export type OdpRestoration =
+  | { source: 'odp'; status: 'restored'; observedAt: number }
+  | { source: 'odp'; status: 'cold'; reason: OdpColdReason };
+/**
+ * One live sign-in's own attempt: the start of the visit it was last made in,
+ * whether it could not read (`unavailable`, made again once in a later visit),
+ * and when the grant it is keyed on expires (epoch seconds, the grant's `exp`).
+ */
+type SignInAttempt = { visit: number; exp: number; unavailable?: true };
+/**
+ * Stored on the reflex state it produced: the outcome of the latest attempt (the
+ * member the read answers) and, keyed by sign-in (a digest of the recognized
+ * grant, never the grant id itself), the attempt of each live sign-in. Neither
+ * the entries nor their keys are ever answered. `signIn` and `visit` are how a
+ * record written before the per-sign-in entries named its one sign-in; they are
+ * read as that sign-in's entry and never written.
+ */
+type OdpRestorationRecord = OdpRestoration & { signIns?: Record<string, SignInAttempt>; signIn?: string; visit?: number };
+
+/** The cap every ODP read on the serving path shares: ODP slowness never holds the shopper. */
+export const ODP_READ_TIMEOUT_MS = 1500;
+const COLD_REASONS: ReadonlySet<string> = new Set<OdpColdReason>(['cold', 'missing', 'malformed', 'unavailable', 'erased', 'expired']);
+
+const plainObject = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+function storedRestoration(state: unknown): OdpRestorationRecord | undefined {
+  const r = plainObject(plainObject(state)?.restoration);
+  if (!r || r.source !== 'odp' || (r.visit !== undefined && !Number.isSafeInteger(r.visit))
+    || (r.signIn !== undefined && typeof r.signIn !== 'string')) return undefined;
+  if (r.status === 'restored' && Number.isSafeInteger(r.observedAt)) return r as unknown as OdpRestorationRecord;
+  if (r.status === 'cold' && typeof r.reason === 'string' && COLD_REASONS.has(r.reason)) return r as unknown as OdpRestorationRecord;
+  return undefined;
+}
+
+/** The outcome of the latest attempt a record holds, without anything else it keeps. */
+const outcomeOf = (r: OdpRestorationRecord): OdpRestoration => r.status === 'restored'
+  ? { source: 'odp', status: 'restored', observedAt: r.observedAt }
+  : { source: 'odp', status: 'cold', reason: r.reason };
+
+/** The provenance a stored reflex state carries, exactly as the read answers it; undefined when it has none. */
+export function odpRestorationOf(state: unknown): OdpRestoration | undefined {
+  const r = storedRestoration(state);
+  return r ? outcomeOf(r) : undefined;
+}
+
+const SIGN_IN_KEY = /^[0-9a-f]{32}$/;
+const couldNotRead = (r: OdpRestoration): boolean => r.status === 'cold' && r.reason === 'unavailable';
+
+/**
+ * The attempts of her sign-ins whose grant is still live at `now`, keyed by
+ * sign-in. An entry whose grant has expired, or that is not one, is dropped. A
+ * record written before the per-sign-in entries counts its one sign-in, live at
+ * most as long as any grant presented now can be (SHOPPER_MAX_AGE).
+ */
+function liveAttempts(record: OdpRestorationRecord | undefined, now: number): Record<string, SignInAttempt> {
+  const live: Record<string, SignInAttempt> = {};
+  if (!record) return live;
+  const nowSeconds = Math.floor(now / 1000);
+  for (const [signIn, raw] of Object.entries(plainObject(record.signIns) ?? {})) {
+    const entry = plainObject(raw);
+    if (!SIGN_IN_KEY.test(signIn) || !entry || !Number.isSafeInteger(entry.visit) || !Number.isSafeInteger(entry.exp)
+      || (entry.unavailable !== undefined && entry.unavailable !== true) || (entry.exp as number) <= nowSeconds) continue;
+    live[signIn] = { visit: entry.visit as number, exp: entry.exp as number, ...(entry.unavailable ? { unavailable: true as const } : {}) };
+  }
+  if (record.signIn && SIGN_IN_KEY.test(record.signIn) && !live[record.signIn] && record.visit !== undefined) {
+    live[record.signIn] = { visit: record.visit, exp: nowSeconds + SHOPPER_MAX_AGE, ...(couldNotRead(record) ? { unavailable: true as const } : {}) };
+  }
+  return live;
+}
+
+/**
+ * Every reducer step returns a fresh state; her restoration record rides on with
+ * it unchanged. A sign-in's merge, which builds her state afresh, passes `now`:
+ * the record is carried with the entries of sign-ins whose grant has expired
+ * dropped.
+ */
+export function carryOdpRestoration<T extends ReflexState>(next: T, from: unknown, now?: number): T {
+  const r = storedRestoration(from);
+  if (!r || storedRestoration(next)) return next;
+  return { ...next, restoration: now === undefined ? r : { ...outcomeOf(r), signIns: liveAttempts(r, now) } };
+}
+
+/** `last_modified_at` is int64 epoch SECONDS, returned as a string (docs/ODP-Recent-Events-Reference.md Part 2). */
+function observationTime(raw: unknown): number | null {
+  const seconds = typeof raw === 'number' ? raw : typeof raw === 'string' && /^\d{1,12}$/.test(raw) ? Number(raw) : NaN;
+  if (!Number.isSafeInteger(seconds) || seconds < 0) return null;
+  const ms = seconds * 1000;
+  return Number.isSafeInteger(ms) && Number.isFinite(new Date(ms).getTime()) ? ms : null;
+}
+
+/** A recorded affinity a ∈ [0, 1): null when nothing was recorded, undefined when the value is not one. */
+function recordedAffinity(raw: unknown): number | null | undefined {
+  if (raw === null || raw === undefined) return null;
+  const a = typeof raw === 'number' ? raw
+    : typeof raw === 'string' && /^-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(raw) ? Number(raw) : NaN;
+  return Number.isFinite(a) && a >= 0 && a < 1 ? a : undefined;
+}
+
+type ProfileRead = { kind: 'profile'; customer: Record<string, unknown> } | { kind: 'missing' | 'malformed' | 'unavailable' };
+
+/**
+ * Read the mapped attributes of one person's profile BY VUID from her tenant's
+ * own ODP (the recorded contract: `customer(vuid) { vuid <attributes…>
+ * last_modified_at }`). A personalization read, admitted exactly as the seed
+ * read is; capped; every provider failure is `unavailable`, never a throw.
+ */
+async function readOdpProfile(
+  env: Env, tenant: TenantId, odp: { host: string; key: string; config: OdpConfiguration }, subject: string, attributes: string[],
+): Promise<ProfileRead> {
+  const consent = await currentOwnerConsent();
+  if (consent) requireConsentPurpose(consent, 'personalization');
+  try {
+    const bornAt = currentProfileBirth(tenant);
+    if (bornAt === undefined) throw new Error('Profile retention authority unavailable');
+    await admitOdp(env, tenant, odp, bornAt);
+    const vuid = await connectorIdentity(tenant, odp.config.identityNamespace, subject);
+    const fields = [...new Set(['vuid', 'last_modified_at', ...attributes])].join(' ');
+    const res = await ownerFetch(`${odp.host}/v3/graphql`, {
+      redirect: 'error',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': odp.key },
+      body: JSON.stringify({ query: `query { customer(vuid: ${JSON.stringify(vuid)}) { ${fields} } }` }),
+    }, ODP_READ_TIMEOUT_MS);
+    if (!res.ok) return { kind: 'unavailable' };
+    let body: Record<string, unknown> | null;
+    try { body = plainObject(await res.json()); } catch { body = null; }
+    if (!body || (Array.isArray(body.errors) && body.errors.length > 0)) return { kind: 'unavailable' };
+    const data = plainObject(body.data);
+    if (!data) return { kind: 'malformed' };
+    if (data.customer === null || data.customer === undefined) return { kind: 'missing' };
+    const customer = plainObject(data.customer);
+    return customer && customer.vuid === vuid ? { kind: 'profile', customer } : { kind: 'malformed' };
+  } catch (error) {
+    if (error instanceof SessionAccessError) throw error;
+    console.warn('[odp] profile read failed');
+    return { kind: 'unavailable' };
+  }
+}
+
+/**
+ * The sign-in a recognized capability was issued by. The identity link is the
+ * only minter of a recognized grant and a retried link replays the same one, so
+ * the grant identifies the sign-in; a recognized bearer without one (never
+ * minted today) is identified by its issue time. Stored as a digest.
+ */
+async function signInOf(principal: Pick<SessionCapability, 'subject' | 'iat' | 'grantId'>): Promise<string> {
+  const grant = typeof principal.grantId === 'string' && principal.grantId ? ['grant', principal.grantId] : ['issued', principal.iat];
+  return (await connectorDigest(['w41-sign-in-v1', principal.subject, ...grant])).slice(0, 32);
+}
+
+export interface OdpRestorationInput {
+  /** The caller's shopper authority; only a recognized (signed-in) shopper is restored. */
+  principal: Pick<SessionCapability, 'kind' | 'subject' | 'iat' | 'exp' | 'grantId'> | null | undefined;
+  /** Her choice current at this event. */
+  consent: Consent;
+  /** Her stored interest state before this event. */
+  prior: ReflexState | null | undefined;
+  config: ReflexConfig;
+  now: number;
+  /** When the visit this event belongs to began (`liveVisit(...).lastVisitAt`): an `unavailable` attempt is retried in a later one. */
+  visit: number;
+  /** The tenant's catalogue vocabulary, read only when there is a value to admit. */
+  vocabulary: () => Promise<CatalogVocabulary>;
+}
+
+/**
+ * The state her first event after a sign-in is applied to: her current state
+ * with her restored interests merged in (or unchanged, cold), carrying the
+ * provenance. `null` when no attempt is due, and the caller then proceeds
+ * exactly as before. An authority refusal propagates; nothing else escapes.
+ */
+export async function restoreOdpInterests(env: Env, tenant: TenantId, input: OdpRestorationInput): Promise<ReflexState | null> {
+  const { principal, prior, config, now } = input;
+  if (principal?.kind !== 'recognized' || !personalizes(input.consent)) return null;
+  // Once per sign-in, for each of her live sign-ins: THIS sign-in's own entry
+  // answers for it; another sign-in's attempt, earlier or concurrent, never
+  // does. Only an attempt of this sign-in that could not read is made again,
+  // once in a later visit.
+  const signIn = await signInOf(principal), grantExpiry = principal.exp;
+  const attempts = liveAttempts(storedRestoration(prior), now);
+  const mine = attempts[signIn];
+  if (mine && !(mine.unavailable && mine.visit !== input.visit)) return null;
+  let resolved: ReturnType<typeof resolveOdp>;
+  try { resolved = resolveOdp(env, tenant); } catch { return null; }
+  if (!resolved?.config) return null;
+  const odp = { host: resolved.host, key: resolved.key, config: resolved.config };
+
+  const base = prior ?? emptyState(config);
+  // The record answers this attempt's outcome and keeps every live sign-in's
+  // entry, this one's now made in this visit; entries of expired grants are gone.
+  const answer = (outcome: OdpRestoration, dims: ReflexState['dims'] = base.dims): ReflexState =>
+    ({ ...base, dims, restoration: { ...outcome, signIns: { ...attempts,
+      [signIn]: { visit: input.visit, exp: grantExpiry, ...(couldNotRead(outcome) ? { unavailable: true } : {}) } } } }) as ReflexState;
+  const cold = (reason: OdpColdReason) => answer({ source: 'odp', status: 'cold', reason });
+
+  // Only a numeric {dimension, value} attribute on a dimension the registry
+  // defines is a vector. A dominant-value label, a journey label and an
+  // audience never are; a dimension the registry lacks builds nothing (apply()).
+  const vectors: Array<{ attribute: string; dim: string; value: string }> = [];
+  for (const [attribute, mapping] of Object.entries(odp.config.profile)) {
+    if (!('value' in mapping)) continue;
+    const { dimension, value } = mapping;
+    if (config.dimensions.some(spec => spec.key === dimension)) vectors.push({ attribute, dim: dimension, value });
+  }
+  if (vectors.length === 0) return cold('cold');
+
+  // Her own erasure barrier, read first: once it exists nothing is restored
+  // from ODP and her profile is not read, whatever ODP's timestamp says. An
+  // unreadable barrier proves nothing either way, and nothing is read then too.
+  let erased: boolean;
+  try { erased = (await loadTombstone(env.STORAGE, tenant, principal.subject)) !== null; }
+  catch (error) { if (error instanceof SessionAccessError) throw error; return cold('unavailable'); }
+  if (erased) return cold('erased');
+
+  const read = await readOdpProfile(env, tenant, odp, principal.subject, vectors.map(v => v.attribute));
+  if (read.kind !== 'profile') return cold(read.kind);
+  const observedAt = observationTime(read.customer.last_modified_at);
+  if (observedAt === null) return cold('malformed');
+  let horizonMs: number;
+  try { horizonMs = retentionPolicy(env, tenant, 'profile').durationMs; } catch { return cold('unavailable'); }
+  if (observedAt + horizonMs <= now) return cold('expired');
+
+  const recorded = new Map<string, Touch & { a: number }>();
+  for (const { attribute, dim, value } of vectors) {
+    const a = recordedAffinity(read.customer[attribute]);
+    if (a === undefined) return cold('malformed');
+    if (a === null || a === 0) continue;
+    const key = JSON.stringify([dim, value]), seen = recorded.get(key);
+    if (!seen || a > seen.a) recorded.set(key, { dim, value, a });
+  }
+  if (recorded.size === 0) return cold('cold');
+
+  let admitted: Touch[];
+  try { admitted = admittedTouches([...recorded.values()].map(({ dim, value }) => ({ dim, value })), await input.vocabulary()); }
+  catch (error) { if (error instanceof SessionAccessError) throw error; return cold('unavailable'); }
+  const dims: ReflexState['dims'] = {};
+  for (const dim of Object.keys(base.dims)) dims[dim] = { ...base.dims[dim] };
+  const at = Math.min(observedAt, now);
+  let live = false;
+  for (const { dim, value } of admitted) {
+    const { a } = recorded.get(JSON.stringify([dim, value]))!;
+    const spec = config.dimensions.find(d => d.key === dim)!, tauMs = spec.tauMs ?? config.tauMs;
+    const entry: ReflexEntry = { s: (spec.K ?? config.K) * a / (1 - a), t: at };
+    // Merged, never overwriting: what she built in this session is kept, and a
+    // pair both hold keeps whichever is the stronger now (adding the two would
+    // count twice what the platform itself wrote to ODP).
+    const held = dims[dim]?.[value];
+    if (!held || effectiveScore(held, now, tauMs) < effectiveScore(entry, now, tauMs)) (dims[dim] ??= {})[value] = entry;
+    if (effectiveScore(entry, now, tauMs) >= config.epsilon) live = true;
+  }
+  return live ? answer({ source: 'odp', status: 'restored', observedAt }, dims) : cold('cold');
 }

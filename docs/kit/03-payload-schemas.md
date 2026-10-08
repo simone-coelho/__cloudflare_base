@@ -741,6 +741,24 @@ no other part of the difference is explained by it. A row without `conflicts` na
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
 
+## The interest hydrate's restoration provenance
+
+`GET /realtime/reflex` answers `affinity: { dims, audiences, odpConfirmed[], restoration? }` on both
+hosts. `restoration` is the outcome of the latest restoration attempt from your ODP profile recorded
+on the interests a signed-in shopper holds, described in the API reference (Identity, "Interest
+restoration from ODP"). Every sign-in makes one attempt, at her first event under personalization
+after it; until then `restoration` is absent or still the outcome of an earlier sign-in's attempt:
+
+| Member | Meaning |
+|---|---|
+| `source` | Always `"odp"` |
+| `status` | `restored`: her mapped interests were restored, merged into the interests she already held. `cold`: nothing was restored, and what she holds is unchanged |
+| `observedAt` | With `restored`: ODP's `last_modified_at` for the profile, in epoch milliseconds. The restored interests decay from this instant |
+| `reason` | With `cold`: `cold` (no interest recorded), `missing` (no profile), `malformed` (a mapped value or the observation time is unusable), `unavailable` (a read failed; retried once in each later visit), `erased` (she has been erased: nothing is restored from ODP and her profile is not read, whatever its timestamp) or `expired` (older than your profile retention) |
+
+The provider's own attribute values are never echoed. Labels (`{ dimension }`, `{ journey: true }`
+and ODP audiences) never appear in `dims` because of a restoration.
+
 ## Socket frames
 
 | Frame | Body |
