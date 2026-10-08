@@ -39,7 +39,7 @@ import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSe
 import { PERSISTED_STAGE, type JourneyWord } from '@/services/JourneyStage';
 import { admittedTouches, effectiveScore, emptyState, type CatalogVocabulary, type ReflexConfig, type ReflexEntry, type ReflexState, type Touch } from '@/reflex/core';
 import { personalizes, type Consent } from '@/content/consent';
-import { SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
+import { SessionAccessError, SHOPPER_MAX_AGE, type SessionCapability } from '@/identity/sessionCapability';
 import { loadTombstone } from '@/ledger/erasure';
 
 /** The audiences the ODP team mirrored 1:1 with our edge keys (handoff 2026-07-03).
@@ -568,18 +568,26 @@ export async function fetchOdpAudiences(
 // applied: "If edge state is ever absent, it is re-seeded from ODP on the first
 // event of the session".
 //
-//   • Once per sign-in, whatever her choice at the sign-in. The attempt's
-//     record names the sign-in it was made under: a digest of the recognized
+//   • Once per sign-in, whatever her choice at the sign-in, for every live
+//     sign-in of hers at once. A sign-in is named by a digest of the recognized
 //     grant her capability carries, which only the identity link mints (a
 //     retried link replays the same grant; rotation, return continuity and the
-//     socket relay mint anonymous grants or re-sign the same one). A record of
-//     an earlier sign-in never answers for a later one, also when that later
-//     sign-in kept her state as it was (tracking only). A consent choice is not
-//     a sign-in and re-arms nothing. Whatever she built before is kept: a
-//     restored pair is added where she has none and replaces hers only where it
-//     is the stronger at that moment. An attempt that could not read
-//     (`unavailable`) is retried once in each later visit of the same sign-in;
-//     every other answer stands until her next sign-in.
+//     socket relay mint anonymous grants or re-sign the same one); one person
+//     signed in on two browsers holds two live grants on one session. Her
+//     restoration record keeps, beside the outcome of her latest attempt (the
+//     member the read answers), one entry per live sign-in that has made its
+//     attempt, so neither sign-in's attempt answers for the other's and neither
+//     is made twice. An attempt of an earlier sign-in never answers for a later
+//     one, also when that later sign-in kept her state as it was (tracking
+//     only). A consent choice is not a sign-in and re-arms nothing. Whatever she
+//     built before is kept: a restored pair is added where she has none and
+//     replaces hers only where it is the stronger at that moment. An attempt
+//     that could not read (`unavailable`) is made again once in each later
+//     visit of the same sign-in, per sign-in; every other answer stands until
+//     her next sign-in. An entry lives as long as its grant: it carries the
+//     grant's expiry and is dropped at the record's next write after it (an
+//     attempt, or a sign-in's merge), so the record holds at most one entry per
+//     sign-in whose grant was live at that write.
 //
 //   • Tenant-scoped. Only a tenant's own connector configuration — its host, key,
 //     identity namespace and attribute mapping — is read. The default tenant's
@@ -612,11 +620,20 @@ export type OdpRestoration =
   | { source: 'odp'; status: 'restored'; observedAt: number }
   | { source: 'odp'; status: 'cold'; reason: OdpColdReason };
 /**
- * Stored on the reflex state it produced, with the sign-in it was made under (a
- * digest of the recognized grant, never the grant id itself) and the start of the
- * visit it was attempted in. Neither is ever answered.
+ * One live sign-in's own attempt: the start of the visit it was last made in,
+ * whether it could not read (`unavailable`, made again once in a later visit),
+ * and when the grant it is keyed on expires (epoch seconds, the grant's `exp`).
  */
-type OdpRestorationRecord = OdpRestoration & { signIn?: string; visit?: number };
+type SignInAttempt = { visit: number; exp: number; unavailable?: true };
+/**
+ * Stored on the reflex state it produced: the outcome of the latest attempt (the
+ * member the read answers) and, keyed by sign-in (a digest of the recognized
+ * grant, never the grant id itself), the attempt of each live sign-in. Neither
+ * the entries nor their keys are ever answered. `signIn` and `visit` are how a
+ * record written before the per-sign-in entries named its one sign-in; they are
+ * read as that sign-in's entry and never written.
+ */
+type OdpRestorationRecord = OdpRestoration & { signIns?: Record<string, SignInAttempt>; signIn?: string; visit?: number };
 
 /** The cap every ODP read on the serving path shares: ODP slowness never holds the shopper. */
 export const ODP_READ_TIMEOUT_MS = 1500;
@@ -634,19 +651,52 @@ function storedRestoration(state: unknown): OdpRestorationRecord | undefined {
   return undefined;
 }
 
+/** The outcome of the latest attempt a record holds, without anything else it keeps. */
+const outcomeOf = (r: OdpRestorationRecord): OdpRestoration => r.status === 'restored'
+  ? { source: 'odp', status: 'restored', observedAt: r.observedAt }
+  : { source: 'odp', status: 'cold', reason: r.reason };
+
 /** The provenance a stored reflex state carries, exactly as the read answers it; undefined when it has none. */
 export function odpRestorationOf(state: unknown): OdpRestoration | undefined {
   const r = storedRestoration(state);
-  if (!r) return undefined;
-  return r.status === 'restored'
-    ? { source: 'odp', status: 'restored', observedAt: r.observedAt }
-    : { source: 'odp', status: 'cold', reason: r.reason };
+  return r ? outcomeOf(r) : undefined;
 }
 
-/** Every reducer step returns a fresh state; the provenance of this sign-in's restoration rides on with it. */
-export function carryOdpRestoration<T extends ReflexState>(next: T, from: unknown): T {
+const SIGN_IN_KEY = /^[0-9a-f]{32}$/;
+const couldNotRead = (r: OdpRestoration): boolean => r.status === 'cold' && r.reason === 'unavailable';
+
+/**
+ * The attempts of her sign-ins whose grant is still live at `now`, keyed by
+ * sign-in. An entry whose grant has expired, or that is not one, is dropped. A
+ * record written before the per-sign-in entries counts its one sign-in, live at
+ * most as long as any grant presented now can be (SHOPPER_MAX_AGE).
+ */
+function liveAttempts(record: OdpRestorationRecord | undefined, now: number): Record<string, SignInAttempt> {
+  const live: Record<string, SignInAttempt> = {};
+  if (!record) return live;
+  const nowSeconds = Math.floor(now / 1000);
+  for (const [signIn, raw] of Object.entries(plainObject(record.signIns) ?? {})) {
+    const entry = plainObject(raw);
+    if (!SIGN_IN_KEY.test(signIn) || !entry || !Number.isSafeInteger(entry.visit) || !Number.isSafeInteger(entry.exp)
+      || (entry.unavailable !== undefined && entry.unavailable !== true) || (entry.exp as number) <= nowSeconds) continue;
+    live[signIn] = { visit: entry.visit as number, exp: entry.exp as number, ...(entry.unavailable ? { unavailable: true as const } : {}) };
+  }
+  if (record.signIn && SIGN_IN_KEY.test(record.signIn) && !live[record.signIn] && record.visit !== undefined) {
+    live[record.signIn] = { visit: record.visit, exp: nowSeconds + SHOPPER_MAX_AGE, ...(couldNotRead(record) ? { unavailable: true as const } : {}) };
+  }
+  return live;
+}
+
+/**
+ * Every reducer step returns a fresh state; her restoration record rides on with
+ * it unchanged. A sign-in's merge, which builds her state afresh, passes `now`:
+ * the record is carried with the entries of sign-ins whose grant has expired
+ * dropped.
+ */
+export function carryOdpRestoration<T extends ReflexState>(next: T, from: unknown, now?: number): T {
   const r = storedRestoration(from);
-  return r && !storedRestoration(next) ? { ...next, restoration: r } : next;
+  if (!r || storedRestoration(next)) return next;
+  return { ...next, restoration: now === undefined ? r : { ...outcomeOf(r), signIns: liveAttempts(r, now) } };
 }
 
 /** `last_modified_at` is int64 epoch SECONDS, returned as a string (docs/ODP-Recent-Events-Reference.md Part 2). */
@@ -719,7 +769,7 @@ async function signInOf(principal: Pick<SessionCapability, 'subject' | 'iat' | '
 
 export interface OdpRestorationInput {
   /** The caller's shopper authority; only a recognized (signed-in) shopper is restored. */
-  principal: Pick<SessionCapability, 'kind' | 'subject' | 'iat' | 'grantId'> | null | undefined;
+  principal: Pick<SessionCapability, 'kind' | 'subject' | 'iat' | 'exp' | 'grantId'> | null | undefined;
   /** Her choice current at this event. */
   consent: Consent;
   /** Her stored interest state before this event. */
@@ -741,21 +791,25 @@ export interface OdpRestorationInput {
 export async function restoreOdpInterests(env: Env, tenant: TenantId, input: OdpRestorationInput): Promise<ReflexState | null> {
   const { principal, prior, config, now } = input;
   if (principal?.kind !== 'recognized' || !personalizes(input.consent)) return null;
-  // Once per sign-in: a record made under THIS sign-in answers for it; a record
-  // of an earlier one never does. Only an attempt of this sign-in that could not
-  // read is made again, once in a later visit.
-  const signIn = await signInOf(principal);
-  const previous = storedRestoration(prior);
-  if (previous && previous.signIn === signIn
-    && !(previous.status === 'cold' && previous.reason === 'unavailable' && previous.visit !== input.visit)) return null;
+  // Once per sign-in, for each of her live sign-ins: THIS sign-in's own entry
+  // answers for it; another sign-in's attempt, earlier or concurrent, never
+  // does. Only an attempt of this sign-in that could not read is made again,
+  // once in a later visit.
+  const signIn = await signInOf(principal), grantExpiry = principal.exp;
+  const attempts = liveAttempts(storedRestoration(prior), now);
+  const mine = attempts[signIn];
+  if (mine && !(mine.unavailable && mine.visit !== input.visit)) return null;
   let resolved: ReturnType<typeof resolveOdp>;
   try { resolved = resolveOdp(env, tenant); } catch { return null; }
   if (!resolved?.config) return null;
   const odp = { host: resolved.host, key: resolved.key, config: resolved.config };
 
   const base = prior ?? emptyState(config);
+  // The record answers this attempt's outcome and keeps every live sign-in's
+  // entry, this one's now made in this visit; entries of expired grants are gone.
   const answer = (outcome: OdpRestoration, dims: ReflexState['dims'] = base.dims): ReflexState =>
-    ({ ...base, dims, restoration: { ...outcome, signIn, visit: input.visit } }) as ReflexState;
+    ({ ...base, dims, restoration: { ...outcome, signIns: { ...attempts,
+      [signIn]: { visit: input.visit, exp: grantExpiry, ...(couldNotRead(outcome) ? { unavailable: true } : {}) } } } }) as ReflexState;
   const cold = (reason: OdpColdReason) => answer({ source: 'odp', status: 'cold', reason });
 
   // Only a numeric {dimension, value} attribute on a dimension the registry
