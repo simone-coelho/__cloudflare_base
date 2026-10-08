@@ -344,7 +344,7 @@
     {
       "id": "W17",
       "title": "SDK lifecycle ownership and unbind",
-      "state": "RECONCILE",
+      "state": "INACTIVE",
       "executionMode": "RECONCILIATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -421,7 +421,7 @@
     {
       "id": "W18",
       "title": "Operator controls: stage defaults, per-slot dimension editor, safe off values",
-      "state": "RECONCILE",
+      "state": "INACTIVE",
       "executionMode": "RECONCILIATION",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
@@ -2622,7 +2622,7 @@
     {
       "id": "W31",
       "title": "Long-window report coverage and version honesty",
-      "state": "BUILT_PENDING_VERIFY",
+      "state": "INACTIVE",
       "executionMode": "VERIFICATION_ONLY",
       "authority": {
         "source": "docs/architecture/35-audit-verification-and-source-of-truth.md",
