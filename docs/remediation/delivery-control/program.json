@@ -4386,23 +4386,17 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "150c20695d1ff82104bfa6952939a18f6dce9424 on rem/spec-w40-w41 (fix 2, one commit on 611afc6): src/units/W41 (LEDGER, FIX1 and FIX2)",
+        "reviewedRevision": "192a01f958d4161169aa58c5be8909243cd22c85 on rem/spec-w41-fix3: src/units/W41/FIX3.unit.test.ts (units W41.V1.03 to W41.V1.08, fix round 3) beside the fix-2 gate's files at 150c2069",
         "verdict": "PASS",
         "evidence": [
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/specifier/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/REPORT.md",
-          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/REPORT.md"
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/reviewer-spec/logs/red-e8a8f4d.log",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix2/specifier/logs/acceptance-150c206.log",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/red-90e458b.log",
-          "/home/simonecoelho/rem/_evidence/W41-delivery/fix1/reviewer-spec/logs/acceptance-611afc6.log",
-          "/home/simonecoelho/rem/_evidence/step3/W40-W41/specifier/W41-negative-control.log",
-          "/home/simonecoelho/rem/_evidence/step3/W33-W41/reviewer-spec/logs/W41-units.log"
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer-spec/logs/negative-control.log",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/reviewer-spec/logs/negative-control-round2.log",
+          "/home/simonecoelho/rem/_evidence/W41-delivery/fix3/specifier/logs/negative-control.log"
         ]
       },
       "doneWhen": [
