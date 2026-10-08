@@ -3099,10 +3099,13 @@ export class ShopperReflex {
     pinProfileRetention(this.env, { retention, externalRetention }, tenant);
     const profileEnrichment = mergeEnrichment(this.pipeline?.profileEnrichment, fromPipe?.profileEnrichment);
     const previousExternal = new Set([...enrichmentInputs(this.pipeline?.profileEnrichment).audiences, ...enrichmentInputs(fromPipe?.profileEnrichment).audiences]);
-    // W41: the merged state is built afresh, without an ODP restoration record;
-    // either way the grant this sign-in mints arms its one attempt (odpLoop
-    // restoreOdpInterests), also on the retained tracking-only path below.
-    const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
+    // W41: the merged state is built afresh; her ODP restoration record (her
+    // latest attempt's outcome and the attempt of each of her live sign-ins) is
+    // carried through it, so the grant this sign-in mints arms its own one
+    // attempt (odpLoop restoreOdpInterests) and re-arms no other live sign-in's,
+    // as on the retained tracking-only path, which keeps her state as it was.
+    const fresh = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
+    const merged = { ...fresh, state: carryOdpRestoration(fresh.state, this.affinity?.reflex, now) };
 
     const odp = await mergeOdpState(this.env, tenant, this.affinity, from);
     const affinity: AffinityRecord = {
@@ -3324,7 +3327,8 @@ export class ShopperReflex {
       }).strict().parse(savedOwner);
       const nextAffinity: AffinityRecord = {
         ...affinity,
-        reflex: evaluated.state,
+        // W41: her ODP restoration record rides on through the re-evaluation.
+        reflex: carryOdpRestoration(evaluated.state, affinity.reflex),
         configVersion: behavioral ? cfg.version : affinity.configVersion,
       };
       const nextPipeline: PipelineRecord = { ...pipeline, profileEnrichment,
