@@ -52,10 +52,31 @@ export function classifyReplay(ok: boolean, diff: ReplayDiff[]): ReplayClassific
   return 'explanation';
 }
 
-/** What a replay may legitimately differ on: nothing. These are the fields compared, in the order a reader wants them. */
+/**
+ * W27 R5: a compared value as JSON text in which key order is not a value. A
+ * record admitted through the recovery path is stored with every object's keys
+ * sorted (`recoveryJSON`, src/ledger/recovery.ts) while the replay builds its
+ * record in insertion order, so comparing plain `JSON.stringify` text reported
+ * equal values as an explanation difference. Every plain object is written with
+ * its keys in one order; an array keeps its own order, because drivers and
+ * candidates are ranked lists and another order is another value. Everything
+ * else is `JSON.stringify`'s own reading, as before (an undefined member is
+ * absent, a non-finite number is null).
+ */
+function valueJSON(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) => item !== null && typeof item === 'object' && !Array.isArray(item)
+    && (Object.getPrototypeOf(item) === Object.prototype || Object.getPrototypeOf(item) === null)
+    ? Object.fromEntries(Object.keys(item).sort().map(key => [key, (item as Record<string, unknown>)[key]]))
+    : item);
+}
+
+/**
+ * What a replay may legitimately differ on: nothing. These are the fields compared, in the order a reader wants them.
+ * Each field is compared by value ({@link valueJSON}), and a difference carries both values as the records hold them.
+ */
 export function compareRecords(served: DecisionRecord, replayed: DecisionRecord): ReplayDiff[] {
   const diff: ReplayDiff[] = [];
-  const eq = (field: string, a: unknown, b: unknown) => { if (JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)) diff.push({ field, served: a ?? null, replayed: b ?? null }); };
+  const eq = (field: string, a: unknown, b: unknown) => { if (valueJSON(a ?? null) !== valueJSON(b ?? null)) diff.push({ field, served: a ?? null, replayed: b ?? null }); };
   eq('decision_id', served.decision_id, replayed.decision_id);
   eq('request_id', served.request_id, replayed.request_id);
   eq('measurementBasis', served.measurementBasis ?? 'served-v1', replayed.measurementBasis ?? 'served-v1');
