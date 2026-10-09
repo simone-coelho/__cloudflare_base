@@ -347,13 +347,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "6477d82c2c8b527844486f19b6610080b1b217bf on rem/spec-parity-a (batch S1; P02 reviewed at this revision; P01, P03 and P10 reviewed at e6d2068d and byte-identical at 6477d82c; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "d419a009412f3c9dbf6892485779a031a7535949 on rem/spec-p01-fix1: src/units/P01/FIX1.unit.test.ts (units P01.O5.F1.01 to F1.03 RED with the related kinds slots, Slots and SLOTS under learn, priors and catalog primaries and the catalogue of the same request; P01.O7.F1.04, P01.O5.F1.05 and the validate leg locks; fix round 1 after the correction round, ruling R-P24) beside the S1 gate's files at 6477d82c (src/units/P01/LEDGER.unit.test.ts, src/units/_parity.ts, byte-identical on the per-ticket branch rem/tkt/P01 6d468a1b)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/reviewer-spec/logs/re-controls.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/specifier/logs/fix2-controls.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/specifier/logs/fix2-control-NARROW.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/specifier/logs/control-ME2.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/specifier/logs/control-MG.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/logs/probes-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/logs/nc10-round2.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/logs/negative-controls.log"
