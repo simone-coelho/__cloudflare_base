@@ -32,10 +32,13 @@
 //   · "no revision written" is read back through `GET /content/:kind`: the
 //     revision of every member of the refused request is unchanged;
 //   · a related member's kind is matched case-insensitively (`Slots`, `SLOTS`,
-//     `Catalog`, `CATALOG`), in either position of `publicationChanges`;
+//     `Catalog`, `CATALOG`), in either position of `publicationChanges`, whatever
+//     the primary document is (learn, priors, catalog or slots);
 //   · `POST /content/:kind/validate` takes no related members (it reads
 //     `document`, or the body, and nothing else), so the related-member units have
-//     no validate leg; the primary validate path is LEDGER's O5 and the kit's.
+//     no validate leg; the primary validate path (`POST /content/slots/validate`,
+//     kit 02: "`PUT /content/slots` and `POST /content/slots/validate` alike") is
+//     pinned by a lock leg of F1.03 — LEDGER's O5 drives PUT only.
 //   · "an absent catalogue registers nothing": the harness provisions every member
 //     of the publication set, so the state is the catalogue in force registering
 //     no module (`pieces: []`, the compiled default's empty catalogue).
@@ -52,7 +55,7 @@ import { EMPTY_PRIORS } from '@/learn/priors';
 import {
   asOperator, declaredSlots, DIRECT_ENTRY, errorsOf, expectPublished, HOSTS, layoutSlot, LAYOUT, learnDocument, M, MODULES, mount,
   PAGE_VIEW, PAID_SOCIAL_ENTRY, pageInstanceOf, putSlots, recentSlot, servedIn, shopperOn, storedDecisions, TENANT,
-  type Answer, type Mounted, type Shopper,
+  type Answer, type Host, type Mounted, type Shopper,
 } from '../_parity';
 
 type Kind = 'catalog' | 'slots' | 'learn' | 'priors';
@@ -113,32 +116,48 @@ const registers = (document: Record<string, unknown>, id: string) => ((document.
 // ===========================================================================
 
 describe('unit:P01.O5.F1.01 — P01 fix round 1, R-P24: a slots document published as a related member of a learn or priors publication is checked against the catalogue', () => {
+  /**
+   * For each primary (learn, priors) on its own tenant: the control (a valid related order publishes), then one
+   * publication per related kind whose slots member names UNREGISTERED. Each must be refused 422 by name at its
+   * path with no revision of any member written.
+   */
+  async function relatedRefusals(host: Host, kinds: readonly string[]) {
+    const primaries: Array<[Kind, (label: string) => unknown]> = [
+      ['learn', label => learnDocument({}, { version: `p01-fix1-learn-${label}` })],
+      ['priors', label => ({ ...EMPTY_PRIORS, version: `p01-fix1-priors-${label}` })],
+    ];
+    const outcomes: unknown[] = [], expected: unknown[] = [];
+    for (const [primary, documentOf] of primaries) {
+      const m = await mount(host, BASE);
+      expectPublished(m, `P01.O5.F1.01 (${primary}) — the declared layout slot (P02) publishes`);
+      // CONTROL: the same publication with a valid related slots document is admitted and writes its revision.
+      const start = await revisionsOf(m);
+      const control = await publishWith(m, primary, documentOf('control'), [{ kind: 'slots', document: withOrders(VALID_ORDERS) }], 'f1.01 control');
+      expect(control.status, `${host}: CONTROL (${primary}) — a related slots document with a valid order publishes: ${JSON.stringify(errorsOf(control))}`).toBe(200);
+      expect(layoutOrdersOf((await inForce(m, 'slots')).document), `${host}: CONTROL (${primary}) — and its order is in force`).toEqual(VALID_ORDERS);
+      expect((await revisionsOf(m)).slots, `${host}: CONTROL (${primary}) — and wrote the slots revision`).toBe(start.slots + 1);
+
+      for (const kind of kinds) {
+        const before = await revisionsOf(m);
+        const answer = await publishWith(m, primary, documentOf(`refused-${kind}`), [{ kind, document: NAMING_UNREGISTERED }], `f1.01 unregistered, kind ${kind}`);
+        const after = await revisionsOf(m);
+        outcomes.push({ primary, kind, status: answer.status, namesModuleAndPath: namesAt(answer, UNREGISTERED, UNREGISTERED_AT),
+          revisions: after, ordersInForce: layoutOrdersOf((await inForce(m, 'slots')).document), errors: errorsOf(answer) });
+        expected.push({ primary, kind, status: 422, namesModuleAndPath: true, revisions: before, ordersInForce: VALID_ORDERS, errors: expect.anything() });
+      }
+    }
+    return { outcomes, expected };
+  }
+
   for (const host of HOSTS) {
     it(`host (${host}): PUT /content/learn and PUT /content/priors whose publicationChanges carry a slots document with an order naming an unregistered module on the declared layout slot are refused 422 with an error naming the module and its path, and write no revision`, async () => {
-      const primaries: Array<[Kind, (label: string) => unknown]> = [
-        ['learn', label => learnDocument({}, { version: `p01-fix1-learn-${label}` })],
-        ['priors', label => ({ ...EMPTY_PRIORS, version: `p01-fix1-priors-${label}` })],
-      ];
-      const outcomes: unknown[] = [], expected: unknown[] = [];
-      for (const [primary, documentOf] of primaries) {
-        const m = await mount(host, BASE);
-        expectPublished(m, `P01.O5.F1.01 (${primary}) — the declared layout slot (P02) publishes`);
-        // CONTROL: the same publication with a valid related slots document is admitted and writes its revision.
-        const start = await revisionsOf(m);
-        const control = await publishWith(m, primary, documentOf('control'), [{ kind: 'slots', document: withOrders(VALID_ORDERS) }], 'f1.01 control');
-        expect(control.status, `${host}: CONTROL (${primary}) — a related slots document with a valid order publishes: ${JSON.stringify(errorsOf(control))}`).toBe(200);
-        expect(layoutOrdersOf((await inForce(m, 'slots')).document), `${host}: CONTROL (${primary}) — and its order is in force`).toEqual(VALID_ORDERS);
-        expect((await revisionsOf(m)).slots, `${host}: CONTROL (${primary}) — and wrote the slots revision`).toBe(start.slots + 1);
+      const { outcomes, expected } = await relatedRefusals(host, ['slots']);
+      expect(outcomes, `${host}: P01.O5.F1.01 — a related slots member naming ${UNREGISTERED} is refused 422 by name at ${UNREGISTERED_AT}, and no member is written`).toEqual(expected);
+    });
 
-        const before = await revisionsOf(m);
-        const answer = await publishWith(m, primary, documentOf('refused'), [{ kind: 'slots', document: NAMING_UNREGISTERED }], 'f1.01 unregistered');
-        const after = await revisionsOf(m);
-        outcomes.push({ primary, status: answer.status, namesModuleAndPath: namesAt(answer, UNREGISTERED, UNREGISTERED_AT),
-          revisions: { slots: after.slots, [primary]: after[primary] }, ordersInForce: layoutOrdersOf((await inForce(m, 'slots')).document), errors: errorsOf(answer) });
-        expected.push({ primary, status: 422, namesModuleAndPath: true, revisions: { slots: before.slots, [primary]: before[primary] }, ordersInForce: VALID_ORDERS,
-          errors: expect.anything() });
-      }
-      expect(outcomes, `${host}: P01.O5.F1.01 — a related slots member naming ${UNREGISTERED} is refused 422 by name at ${UNREGISTERED_AT}, and neither member is written`).toEqual(expected);
+    it(`host (${host}): the same learn and priors publications with the slots member under the kind 'Slots' or 'SLOTS' (matched as the route matches every kind, whatever the primary) are refused 422 with an error naming the module and its path, and write no revision of any member`, async () => {
+      const { outcomes, expected } = await relatedRefusals(host, ['Slots', 'SLOTS']);
+      expect(outcomes, `${host}: P01.O5.F1.01 — a related member of kind 'Slots' or 'SLOTS' under a learn or priors primary, naming ${UNREGISTERED}, is refused 422 by name at ${UNREGISTERED_AT}, and no member is written`).toEqual(expected);
     });
   }
 });
@@ -235,6 +254,18 @@ describe('unit:P01.O5.F1.03 — P01 fix round 1, R-P24: the catalogue an order i
         `${host}: P01.O5.F1.03 — no catalogue registers ${M.grid} or ${M.reco1}, so the order is refused 422 naming each on every path, writing nothing: ${JSON.stringify([errorsOf(viaLearn), errorsOf(direct)])}`)
         .toEqual({ related: { status: 422, named: [true, true] }, direct: { status: 422, named: [true, true] }, revisions: { slots: before.slots, learn: before.learn } });
     });
+
+    it(`host (${host}), lock: POST /content/slots/validate of a document whose order names an unregistered module answers 422 naming the module at its path, checked against the catalogue in force, while a valid order validates`, async () => {
+      const m = await mount(host, BASE);
+      expectPublished(m, 'P01.O5.F1.03 (validate) — the declared layout slot (P02) publishes');
+      const before = await revisionsOf(m);
+      const refused = await asOperator(m, 'POST', `/content/slots/validate?scope=${TENANT}`, { document: NAMING_UNREGISTERED });
+      const valid = await asOperator(m, 'POST', `/content/slots/validate?scope=${TENANT}`, { document: withOrders(VALID_ORDERS) });
+      expect({ refused: { status: refused.status, valid: refused.body.valid, namesModuleAndPath: namesAt(refused, UNREGISTERED, UNREGISTERED_AT) },
+        control: { status: valid.status, valid: valid.body.valid }, revisions: await revisionsOf(m) },
+        `${host}: P01.O5.F1.03 — the dry run refuses the order naming ${UNREGISTERED} 422 by name at ${UNREGISTERED_AT} (kit 02: "PUT /content/slots and POST /content/slots/validate alike"), validates the valid one, and writes nothing: ${JSON.stringify([errorsOf(refused), errorsOf(valid)])}`)
+        .toEqual({ refused: { status: 422, valid: false, namesModuleAndPath: true }, control: { status: 200, valid: true }, revisions: before });
+    });
   }
 });
 
@@ -242,7 +273,7 @@ describe('unit:P01.O5.F1.03 — P01 fix round 1, R-P24: the catalogue an order i
 // unit:P01.O7.F1.04 — the orders marker only on a decision that served its order (a lock)
 // ===========================================================================
 
-describe('unit:P01.O7.F1.04 — P01 fix round 1, R-P24 (lock): the orders replay marker is written only on a decision on which the layout slot served its configured order', () => {
+describe('unit:P01.O7.F1.04 — P01 fix round 1 (lock; witnesses C11 and kit 02:790): the orders replay marker is written only on a decision on which the layout slot served its configured order', () => {
   /** One page for the shopper, every layout position acknowledged, and the records the real consumer stored for it. */
   async function decided(m: Mounted, s: Shopper, label: string) {
     const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(label) });
@@ -289,7 +320,7 @@ describe('unit:P01.O7.F1.04 — P01 fix round 1, R-P24 (lock): the orders replay
 // unit:P01.O5.F1.05 — a write marked earlier than 4 carrying orders is refused by name (a lock)
 // ===========================================================================
 
-describe('unit:P01.O5.F1.05 — P01 fix round 1, R-P24 (lock): a slots write marked governanceVersion 3 that carries orders is refused by name, never admitted with the orders dropped', () => {
+describe('unit:P01.O5.F1.05 — P01 fix round 1 (lock; witness kit 02:785-786): a slots write marked governanceVersion 3 that carries orders is refused by name, never admitted with the orders dropped', () => {
   const ORDERS = [{ context: EMAIL_RETURNING, modules: [M.grid, M.reco1] }];
   /** The layout slot as an earlier version writes it: no `layout` declaration, which version 4 introduces. */
   const { layout: _declared, ...earlierLayoutSlot } = layoutSlot();
