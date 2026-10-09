@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#EE0000"/>
+  <circle cx="1200" cy="800" r="260" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-opacity="0.16"/><circle cx="1200" cy="800" r="400" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-opacity="0.16"/><circle cx="1200" cy="800" r="540" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-opacity="0.16"/>
+  
+  <rect x="96" y="150" width="120" height="12" fill="#F5FF1E"/>
+  <text x="96" y="330" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="64" font-weight="700" fill="#FFFFFF" opacity="0.9">Unlimited</text>
+  <text x="90" y="470" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="168" font-weight="800" letter-spacing="-5" fill="#FFFFFF">Go</text>
+  <text x="96" y="540" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="44" font-weight="500" fill="#FFFFFF">Unlimited 5G, the essentials.</text>
+  <rect x="96" y="600" width="48" height="16" rx="8" fill="#F5FF1E"/><rect x="160" y="600" width="48" height="16" rx="8" fill="rgba(255,255,255,0.35)"/><rect x="224" y="600" width="48" height="16" rx="8" fill="rgba(255,255,255,0.35)"/>
+</svg>

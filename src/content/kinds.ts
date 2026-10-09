@@ -6,7 +6,8 @@
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
-import type { ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { platformWordOf } from '@/services/platform';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -32,8 +33,8 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
-  'tags', 'slotTypes', 'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
-  'featuredProductIds', 'inStock']);
+  'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
+  'featuredProductIds', 'complements', 'inStock']);
 
 /**
  * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
@@ -121,6 +122,43 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
     }
   }
+  // Garrett's targeting rule. Bounded on every axis, because it is authored by a
+  // feed and it decides whether a piece may be served at all.
+  let eligibleWhen: { regions?: string[]; context?: Record<string, string[]> } | undefined;
+  if (p.eligibleWhen !== undefined) {
+    if (!isRecord(p.eligibleWhen)) errors.push(`${at}.eligibleWhen: object with regions and/or context`);
+    else {
+      const extra = Object.keys(p.eligibleWhen).filter((k) => !['regions', 'context'].includes(k));
+      if (extra.length) errors.push(`${at}.eligibleWhen: unknown member(s) ${extra.join(', ')}; expected regions and/or context`);
+      const rule: { regions?: string[]; context?: Record<string, string[]> } = {};
+      if (p.eligibleWhen.regions !== undefined) {
+        const raw = p.eligibleWhen.regions;
+        if (!Array.isArray(raw) || !raw.length || raw.length > 64
+          || !raw.every((v) => isStr(v) && /^[A-Za-z]{2}(-[A-Za-z0-9]{1,3})?$/.test(v))) {
+          errors.push(`${at}.eligibleWhen.regions: 1..64 region keys such as US or US-WA`);
+        } else rule.regions = raw.map((v) => v.trim().toUpperCase());
+      }
+      if (p.eligibleWhen.context !== undefined) {
+        const raw = p.eligibleWhen.context;
+        if (!isRecord(raw) || !Object.keys(raw).length || Object.keys(raw).length > 8) {
+          errors.push(`${at}.eligibleWhen.context: object of 1..8 signal names → accepted values`);
+        } else {
+          const ctx: Record<string, string[]> = {};
+          for (const [name, values] of Object.entries(raw)) {
+            if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) { errors.push(`${at}.eligibleWhen.context.${name}: signal name must be 1..32 letters, digits or underscore`); continue; }
+            if (!Array.isArray(values) || !values.length || values.length > 32
+              || !values.every((v) => isStr(v) && v.trim() && v.length <= 64)) {
+              errors.push(`${at}.eligibleWhen.context.${name}: 1..32 non-empty values of at most 64 characters`); continue;
+            }
+            ctx[name] = values.map((v) => v.trim());
+          }
+          if (Object.keys(ctx).length) rule.context = ctx;
+        }
+      }
+      if (!rule.regions && !rule.context) errors.push(`${at}.eligibleWhen: name at least one of regions or context`);
+      else eligibleWhen = rule;
+    }
+  }
   let merchandising: Record<string, number> | undefined;
   if (p.merchandising !== undefined) {
     if (!isRecord(p.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → number 0..1`);
@@ -152,6 +190,12 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     if (!Array.isArray(p.featuredProductIds) || !p.featuredProductIds.every(isStr)) errors.push(`${at}.featuredProductIds: array of product id strings`);
     else featuredProductIds = [...new Set((p.featuredProductIds as string[]).map((x) => x.trim()).filter(Boolean))];
   }
+  // The products the piece completes, validated exactly as the products it features are.
+  let complements: string[] | undefined;
+  if (p.complements !== undefined) {
+    if (!Array.isArray(p.complements) || !p.complements.every(isStr)) errors.push(`${at}.complements: array of product id strings`);
+    else complements = [...new Set((p.complements as string[]).map((x) => x.trim()).filter(Boolean))];
+  }
   if (p.inStock !== undefined && typeof p.inStock !== 'boolean') errors.push(`${at}.inStock: boolean when present`);
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
@@ -160,6 +204,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(journeyStageFit ? { journeyStageFit } : {}),
     ...(isStr(p.freshnessDate) ? { freshnessDate: p.freshnessDate } : {}),
     ...(featuredProductIds && featuredProductIds.length ? { featuredProductIds } : {}),
+    ...(complements && complements.length ? { complements } : {}),
     ...(typeof p.inStock === 'boolean' ? { inStock: p.inStock } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
@@ -168,6 +213,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(isStr(p.renderUrl) ? { renderUrl: p.renderUrl } : {}),
     ...(isStr(p.excerpt) ? { excerpt: p.excerpt } : {}),
     ...(window && (window.from || window.to) ? { window } : {}),
+    ...(eligibleWhen ? { eligibleWhen } : {}),
   };
 }
 
@@ -202,10 +248,10 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
-/** W16 C3: the three arrival signals a seed rule may read. */
-const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network']);
+/** W16 C3: the arrival signals a seed rule may read; `platform` is the request's own OS family. */
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform']);
 /** Bounded like every other authored list in this document. */
-const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50;
+const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50, SEED_DAMPEN_MAX = 4;
 
 /**
  * W16 C3 / R30: one slot's contextual seed rule set, against the dimensions that
@@ -226,13 +272,31 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
     const before = errors.length;
     const signal = raw.signal, value = raw.value, weight = raw.weight;
-    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network`);
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform`);
     if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
     // A signal value outside its own vocabulary names a context that cannot
     // occur, so it could only ever be dead configuration or a typo for a live one.
     else if (signal === 'entry_channel' && entryChannelOf(value) !== value) errors.push(`${at}.value: entry_channel names one of the six channel words, exactly`);
     else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
+    else if (signal === 'platform' && platformWordOf(value) !== value) errors.push(`${at}.value: platform names an OS family, ios | android, exactly`);
     if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
+    // The dampen reads the SHOPPER's own memberships, not the piece, so its
+    // dimensions need not be ones this slot weights.
+    let dampen: SeedRule['dampen'];
+    if (raw.dampen !== undefined) {
+      const list = raw.dampen, held = new Set<string>();
+      if (!Array.isArray(list) || list.length < 1 || list.length > SEED_DAMPEN_MAX) errors.push(`${at}.dampen: 1..${SEED_DAMPEN_MAX} of { dimension, value, factor 0..1 }`);
+      else {
+        dampen = [];
+        for (const d of list as unknown[]) {
+          if (!isRecord(d) || !isStr(d.dimension) || !isStr(d.value) || !isNum(d.factor) || d.factor < 0 || d.factor > 1) { errors.push(`${at}.dampen: each is { dimension, value, factor 0..1 }`); continue; }
+          const pair = `${d.dimension}\u0000${d.value}`;
+          if (held.has(pair)) { errors.push(`${at}.dampen: duplicate interest`); continue; }
+          held.add(pair);
+          dampen.push({ dimension: d.dimension, value: d.value, factor: d.factor });
+        }
+      }
+    }
     const tags: SeedRule['tags'] = [];
     if (!Array.isArray(raw.tags) || raw.tags.length < 1 || raw.tags.length > SEED_TAGS_MAX) errors.push(`${at}.tags: 1..${SEED_TAGS_MAX} canonical tags`);
     else {
@@ -248,7 +312,7 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
         tags.push({ dimension: tag.dimension, value: tag.value });
       }
     }
-    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number });
+    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number, ...(dampen ? { dampen } : {}) });
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: rules };
 }
@@ -512,6 +576,13 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.windowHours) || f.windowHours <= 0 || !isNum(f.cap) || !Number.isInteger(f.cap) || f.cap < 1) errors.push(`${at}.fatigue: { weight 0..1, windowHours > 0, cap integer ≥ 1 }`);
     else fatigue = { weight: f.weight, windowHours: f.windowHours, cap: f.cap };
   }
+  // The composer's `prefer` hook, published: prefer what completes the request's anchor product.
+  let complements: ComplementsRule | undefined;
+  if (s.complements !== undefined) {
+    const c = s.complements;
+    if (!isRecord(c) || !isNum(c.weight) || c.weight < 0 || c.weight > 1) errors.push(`${at}.complements: { weight 0..1 }`);
+    else complements = { weight: c.weight };
+  }
   let diversity: DiversityRule | undefined;
   if (s.diversity !== undefined) {
     const d = s.diversity;
@@ -558,7 +629,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}),
+    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
   };
 }
 
@@ -726,6 +797,23 @@ export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
 
 const ARMS = new Set(['default', 'no_learning']);
 
+/**
+ * `regional.dimensions` names registry dimensions, so it is held to what a
+ * registry can define (src/reflex/configStore.ts): at most its 32 dimensions,
+ * each an exact, distinct, non-empty key that is not a reserved object key. An
+ * empty list is refused: `enabled: false` is how the prior is switched off.
+ * This document is validated without the registry in hand; a well-formed name
+ * the tenant's registry does not define matches nothing at decision time,
+ * because a region only ever holds the dimensions its events carried.
+ */
+const REGIONAL_DIMENSIONS_MAX = 32;
+const RESERVED_DIMENSION_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+function regionalDimensionsOf(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length < 1 || v.length > REGIONAL_DIMENSIONS_MAX) return null;
+  if (!v.every((d) => isStr(d) && d.trim() === d && !RESERVED_DIMENSION_KEYS.has(d)) || new Set(v).size !== v.length) return null;
+  return [...v] as string[];
+}
+
 export function validateLearnConfig(candidate: unknown): ValidationResult<LearnConfig> {
   return validateRetainedLearn(candidate, false);
 }
@@ -749,7 +837,10 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (typeof g.enabled !== 'boolean') errors.push('regional.enabled: boolean');
       if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) errors.push('regional.kBlend: number in (0, 100]');
       if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) errors.push('regional.minEvents: positive integer');
-      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents };
+      // Absent means every dimension the region carries, so a document without it reads exactly as before.
+      const dimensions = g.dimensions === undefined ? undefined : regionalDimensionsOf(g.dimensions);
+      if (dimensions === null) errors.push(`regional.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
+      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents, ...(dimensions ? { dimensions } : {}) };
     }
   }
   const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);

@@ -23,13 +23,52 @@ export interface ContentPiece extends ContentPieceLike {
   freshnessDate?: string;
   /** CW32 (BTIE A.3.6 `featured_product_ids`): the products the piece features, in the customer's product ids, so a shoppable module can be painted and a product decision joined. Carried, validated, never rewritten. */
   featuredProductIds?: string[];
+  /**
+   * The products this piece COMPLETES, in the customer's product ids: a dryer
+   * module completes the washer it pairs with, a mount the TV it fits. Carried
+   * and validated like `featuredProductIds`, never rewritten. It moves nothing
+   * by itself; a slot's `complements` rule reads it against the anchor product
+   * the request names (`ctx.anchor`) and prefers the pieces that complete it.
+   */
+  complements?: string[];
   /** CW33 (BTIE D11): the catalog's own stock flag. `false` removes the piece from every decision; absent or `true` means in stock. */
   inStock?: boolean;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
   window?: { from?: string; to?: string };
+  /**
+   * QVC/Garrett (2026-09-11): "Do you have options for location? What about
+   * weather forecast? It's snowing in the Pacific Northwest, we might want to
+   * display relevant content to those customers."
+   *
+   * That is a TARGETING RULE, not an affinity: it decides whether the piece may
+   * be served at all, beside the window and the stock flag, and it is evaluated
+   * BEFORE scoring so a gated piece cannot be chosen however well it would have
+   * scored. It never boosts anything — a piece that passes its rule is then
+   * ranked on exactly the same terms as everything else.
+   *
+   * `regions` are the engine's own region keys (country, or country-region, as
+   * `regionKeyOf` builds them: "US", "US-WA"). A piece listing "US-WA" is
+   * eligible for a shopper in Washington; listing "US" covers the country.
+   * `context` names signals the page or a scheduled job supplies on the request,
+   * each with the values that admit the piece. Every named condition must hold,
+   * and a condition the request does not carry FAILS — an unknown weather is not
+   * snow, and silence must never open a gate.
+   */
+  eligibleWhen?: EligibilityRule;
   excerpt?: string;
+}
+
+/**
+ * A piece's own eligibility rule. Absent means "eligible wherever and whenever
+ * its window says", which is every piece that has never heard of this feature.
+ */
+export interface EligibilityRule {
+  /** Region keys that admit the piece. Absent means every region. */
+  regions?: string[];
+  /** Named request signals, each with the values that admit the piece. */
+  context?: Record<string, string[]>;
 }
 
 /** The `content` document kind: the catalog for a scope. */
@@ -124,6 +163,14 @@ export interface SlotStrategy {
    * decision. Absent means the slot decides exactly as before.
    */
   orders?: ConfiguredOrder[];
+  /**
+   * This slot prefers the pieces that complete the anchor product the request
+   * names (`ctx.anchor`, a product id), through the composer's `prefer` hook:
+   * a piece whose `complements` lists that id gains `weight` in its base score,
+   * itemised as a `completes` driver. Fails closed: a request that names no
+   * anchor prefers nothing. Personalization, so never on the holdout's default arm.
+   */
+  complements?: ComplementsRule;
 }
 
 /**
@@ -146,9 +193,22 @@ export interface OrderContext {
 export interface ConfiguredOrder { context: OrderContext; modules: string[] }
 
 export interface DiversityRule { dimension: string; max: number }
+/** A slot's preference for the pieces that complete the request's anchor product; `weight` in the engine's 0..1 rule range. */
+export interface ComplementsRule { weight: number }
 
-/** The arrival signals a seed rule may read. Each is context, never learned evidence. */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network';
+/**
+ * The arrival signals a seed rule may read. Each is context, never learned
+ * evidence. `platform` is the OS family the request itself reports (`ios` or
+ * `android`, nothing finer; src/services/platform.ts).
+ */
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform';
+
+/**
+ * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
+ * holds this interest, that is, while she is a member of the `dimension:value`
+ * audience. Never read from the regional prior or from asserted context.
+ */
+export interface SeedDampen { dimension: string; value: string; factor: number }
 
 /**
  * W16 C3 (document 35 §2 F13): the interest an ARRIVAL is evidence for, before
@@ -163,13 +223,20 @@ export interface SeedRule {
   /**
    * The value of that signal this rule fires on: one of the six channel words
    * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
-   * network's registrable domain for `referrer_network`.
+   * network's registrable domain for `referrer_network`, `ios` or `android` for
+   * `platform`.
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
   tags: Array<{ dimension: string; value: string }>;
   /** 0..1, the codebase's rule-weight range. */
   weight: number;
+  /**
+   * Optional: each interest the shopper's own evidence holds multiplies the
+   * weight by its factor (for example, halve an OS-family seed while intent is
+   * switch, and let it yield once she holds the other ecosystem).
+   */
+  dampen?: SeedDampen[];
 }
 
 /** What one fired rule contributed to one candidate, itemised as a delta like every other term. */
@@ -181,6 +248,8 @@ export interface SeedDriver {
   weight: number;
   /** The delta this rule caused in the final pre-lift base, after merchandising. */
   contribution: number;
+  /** Present when the rule's `dampen` applied: each interest she holds and the factor it cost the rule. */
+  dampened?: SeedDampen[];
 }
 
 /** Refused seed configuration, never a fabricated influence, in the pattern of `pinDiagnostics`. */
@@ -283,6 +352,12 @@ export interface RegionalConfig {
   kBlend: number;
   /** The finest level with at least this many events is used; the same gate as the geo cold start. */
   minEvents: number;
+  /**
+   * The registry dimensions the prior may blend. Absent means every dimension
+   * the region carries (the shipped behaviour). A dimension not listed takes no
+   * share from the region, exactly like a dimension the region has never seen.
+   */
+  dimensions?: string[];
 }
 
 /** Doc 22 §4: the learning policy's four axes and the per-reward windows. */

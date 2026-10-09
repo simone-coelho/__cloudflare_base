@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- The site key. Not a secret: it names the SITE, the way an SDK key does. -->
+<meta name="edge-sdk-key" content="demo-site" />
+<link rel="icon" href="data:," />
+<title>OH. | TVs, laundry and the kitchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<!-- The demo kit (public/demo-kit/): the token sheet, then the chrome drawn from it (the machine, the director bar,
+     the before/now rows, the sheets, predict-then-prove), then OH's own sheet (its token overrides and its
+     site), then the kit's Compare. Scaffolded by scripts/demo-kit/new-demo.mjs from public/oh/demo.config.json. -->
+<link rel="stylesheet" href="/demo-kit/tokens.css" />
+<link rel="stylesheet" href="/demo-kit/kit.css" />
+<link rel="stylesheet" href="/oh/oh.css" />
+<link rel="stylesheet" href="/demo-kit/compare.css" />
+</head>
+<!-- index.html, product.html and m.html carry the same shell; each boots into its own view (data-entry).
+     Change all three together, or rerun the scaffold into a fresh directory and compare. -->
+<body data-entry="product" class="">
+<a class="skip" href="#stage">Skip to the page</a>
+
+<!-- The director's hand. It glides to a real control and runs that control's own handler: never a shortcut around it. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div class="fixture-flag" id="fixtureFlag" hidden>Fixture mode: canned answers for layout work, not the engine</div>
+
+<div class="shell">
+<!-- ═══════════════════════════════ THE SITE ═══════════════════════════════ -->
+<div class="site" id="site">
+  <header class="site-header static">
+    <div class="utility"><span class="nper">not personalised</span><span class="u-right"><span>Support</span><span>Find a store</span><span class="u-sign" id="signIn">Sign in</span></span></div>
+    <div class="mast">
+      <a class="wordmark" href="/oh/" data-nav="home" data-ctl="home"><span class="wm" id="wordmark">OH.</span><span class="wm-tag" id="tagline">Optimized Home</span></a>
+      <nav class="mainnav" id="mainnav" aria-label="Shop">
+          <button type="button" data-nav="tvs" data-ctl="nav-tvs">TVs</button>
+          <span class="nper">not personalised</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <section class="view view--home" id="view-home" data-page="home">
+      <p class="offlimits-note"><b>Off limits</b> the header &middot; the service strip &middot; the footer: never decided, never personalised</p>
+      <!-- The service strip: static, the same for everyone. -->
+      <div class="svc-strip static" aria-label="Services"><span class="nper">not personalised</span><span><b>Free delivery</b></span><span><b>14-day returns</b></span><span><b>Extended coverage</b></span><span><b>Haul-away</b></span><span><b>Pick up at Best Buy</b> on select TVs and laundry</span><span><b>Chat with an expert</b></span></div>
+      <!-- Slot continue, take 1, gated on the return visit (ctx.visit = return): off the page until a decision says otherwise. -->
+      <section class="module decided" id="mod-continue" data-slot="continue" data-gated="true" hidden aria-labelledby="head-continue">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>continue</b> &middot; take 1 &middot; gated on a return visit &middot; decided per visitor</p>
+          <h2 id="head-continue">Welcome back</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-continue" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-continue" hidden></p>
+      </section>
+      <!-- Slot hero, take 1: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-hero" data-slot="hero" aria-labelledby="head-hero">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>hero</b> &middot; take 1 &middot; decided per visitor</p>
+          <h2 id="head-hero">The hero</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-hero" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-hero" hidden></p>
+      </section>
+      <!-- Slot category-rail, take 3: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-category-rail" data-slot="category-rail" aria-labelledby="head-category-rail">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>category-rail</b> &middot; take 3 &middot; decided per visitor</p>
+          <h2 id="head-category-rail">Shop by room</h2>
+        </div></header>
+        <div class="cards cards--many" id="slot-category-rail" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-category-rail" hidden></p>
+      </section>
+      <!-- Slot deals, take 5: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-deals" data-slot="deals" aria-labelledby="head-deals">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>deals</b> &middot; take 5 &middot; decided per visitor</p>
+          <h2 id="head-deals">Deals for you</h2>
+        </div></header>
+        <div class="cards cards--many" id="slot-deals" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-deals" hidden></p>
+      </section>
+      <!-- Rail for-you: POST /sort over the site's four picks in each room; at an affinity weight of zero the site's own order. -->
+      <section class="module decided" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
+        <header class="module-head"><div>
+          <p class="module-where">rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 12</p>
+          <h2 id="head-for-you">Recommended for you</h2>
+        </div><span class="rail-chip" id="chip-for-you">the site&rsquo;s own order</span></header>
+        <div class="rail" id="rail-for-you"></div>
+      </section>
+    </section>
+
+    <section class="view view--grid" id="view-tvs" data-page="tvs" hidden>
+      <p class="offlimits-note"><b>Off limits</b> the filters &middot; the sort control: never decided, never personalised</p>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>TV &amp; Audio</span><span>/</span><span>TVs</span></nav>
+      <header class="view-head"><h1 class="view-title">TVs</h1><span class="p1-sub">OLED evo, QNED evo Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches</span></header>
+      <!-- Slot grid-promo, take 1: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-grid-promo" data-slot="grid-promo" aria-labelledby="head-grid-promo">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>grid-promo</b> &middot; take 1 &middot; decided per visitor</p>
+          <h2 id="head-grid-promo">In the TV grid</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-grid-promo" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-grid-promo" hidden></p>
+      </section>
+      <!-- Rail tv-grid: POST /sort over every priced TV, with the regional prior; at an affinity weight of zero the site's own order. -->
+      <section class="module decided" id="mod-tv-grid" data-rail="tv-grid" aria-labelledby="head-tv-grid">
+        <header class="module-head"><div>
+          <p class="module-where">rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the TVs &middot; take 24</p>
+          <h2 id="head-tv-grid">Every TV, ordered for you</h2>
+        </div><span class="rail-chip" id="chip-tv-grid">the site&rsquo;s own order</span></header>
+        <div class="rail" id="rail-tv-grid"></div>
+      </section>
+    </section>
+
+    <!-- THE PRODUCT PAGE (lane M2), in lg.com's anatomy, top to bottom. oh.js's P2 section paints it from one template
+         (productViewHtml), and puts the same template into index.html and m.html the first time a product opens there. -->
+    <section class="view view--product" id="view-product" data-page="product" hidden>
+      <p class="offlimits-note"><b>Off limits</b> the buy bar, the sizes and colours, the services and the selections total: never decided, never personalised</p>
+      <nav class="crumbs pdp-crumbs" id="crumbs-product" aria-label="Breadcrumb"></nav>
+      <!-- THE BUY BOX, as lg.com's buy bar: the title, the SKU and the stars, the price block, the financing line as the
+           site shows it, the feed's button. Off limits to the engine: never decided, never personalised. -->
+      <section class="buybox pdp-bar" id="buyBox" aria-label="Buy box"></section>
+      <!-- The buy bar's twin (shown once the bar scrolls up under the header) and the tabs, sticky together. -->
+      <div class="pdp-stick" id="pdpStick"><div class="pdp-stick-bar" id="pdpStickBar"></div>
+        <nav class="pdp-tabs" id="pdpTabs" aria-label="On this page">
+          <button type="button" data-act="pdp-tab" data-to="pdpTop" data-ctl="tab-overview" aria-current="true">Overview</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpSpecs" data-ctl="tab-specs" aria-current="false">Specifications</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpFeatures" data-ctl="tab-features" aria-current="false">Features</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpReviews" data-ctl="tab-reviews" aria-current="false">Reviews</button>
+          <button type="button" data-act="pdp-tab" data-to="pdpQa" data-ctl="tab-qa" aria-current="false">Q&amp;A</button>
+        </nav>
+      </div>
+      <div class="pdp-top" id="pdpTop">
+        <div class="pdp-left">
+          <!-- The gallery: static, the product's accepted image, the feed's badges, the heart (wishlist_add). -->
+          <div class="pdp-gallery static" id="pdpGallery" aria-label="Gallery"></div>
+          <!-- Slot pdp-offers, take 2, as the offer carousel: in the engine's order, under the gallery, away from the financing line. -->
+          <section class="module decided pdp-offers" id="mod-pdp-offers" data-slot="pdp-offers" aria-labelledby="head-pdp-offers">
+            <header class="module-head"><div>
+              <p class="module-where">slot <b>pdp-offers</b> &middot; take 2 &middot; decided per visitor</p>
+              <h2 id="head-pdp-offers">Special offers</h2>
+            </div><div class="pdp-onav"><button type="button" class="pdp-oarrow" data-act="pdp-offers-nav" data-dir="-1" data-ctl="offers-prev" aria-label="Previous offer">&lsaquo;</button><span id="pdpOcount">0 / 0</span><button type="button" class="pdp-oarrow" data-act="pdp-offers-nav" data-dir="1" data-ctl="offers-next" aria-label="Next offer">&rsaquo;</button></div></header>
+            <section class="changes" id="changes-pdp-offers" aria-live="polite"><div class="changes-before"><span class="changes-cap">What was on screen before this press</span><ol class="ordlist" id="before-pdp-offers"><li class="ghost-empty">No product page had been opened yet.</li></ol></div><div class="changes-what"><span class="changes-cap">What changed</span><ul class="deltas" id="deltas-pdp-offers"><li class="delta-none">Open a product to begin.</li></ul></div></section>
+            <div class="pdp-otrack" id="slot-pdp-offers" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+            <p class="engine-down" id="down-pdp-offers" hidden></p>
+          </section>
+        </div>
+        <!-- The buy column: static, the catalog's: key features, delivery and pickup, the size or colour tiles, a package's
+             members, the services, "Review your selections" with Add to Cart and Find a Retailer. -->
+        <div class="pdp-config static" id="pdpConfig" aria-label="Choose and buy"></div>
+      </div>
+      <!-- The type switch: static, the site’s own (each type’s best seller at this price tier), never decided. -->
+      <nav class="pdp-type" id="pdpType" aria-label="Other types" hidden></nav>
+      <!-- Slot pdp-modules, take 6: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-pdp-modules" data-slot="pdp-modules" aria-labelledby="head-pdp-modules">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>pdp-modules</b> &middot; take 6 &middot; decided per visitor</p>
+          <h2 id="head-pdp-modules">Goes with it</h2>
+        </div></header>
+        <section class="changes" id="changes-pdp-modules" aria-live="polite"><div class="changes-before"><span class="changes-cap">What was on screen before this press</span><ol class="ordlist" id="before-pdp-modules"><li class="ghost-empty">No product page had been opened yet.</li></ol></div><div class="changes-what"><span class="changes-cap">What changed</span><ul class="deltas" id="deltas-pdp-modules"><li class="delta-none">Open a product to begin.</li></ul></div></section>
+        <div class="cards cards--many pdp-mods" id="slot-pdp-modules" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <!-- A module the last page of the same room showed, withdrawn by its own rule: shown with the reason, never decided. -->
+        <div class="pdp-gone" id="pdpGone" aria-live="polite"></div>
+        <p class="engine-down" id="down-pdp-modules" hidden></p>
+      </section>
+      <!-- The specifications, the features, the reviews (the feed's rating and count) and the questions: static. -->
+      <section class="pdp-specs pdp-sec static" id="pdpSpecs" aria-label="Specifications"></section>
+      <section class="pdp-sec static" id="pdpFeatures" aria-label="Features"></section>
+      <section class="pdp-sec static" id="pdpReviews" aria-label="Reviews"></section>
+      <section class="pdp-sec static" id="pdpQa" aria-label="Questions and answers"></section>
+    </section>
+  </main>
+
+  <footer class="site-footer static">
+    <span class="nper">not personalised</span>
+    <p class="foot-legal" id="footLegal">OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on 2 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income.</p>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════ THE ENGINE ═════════════════════════════ -->
+<aside class="machine" id="machine" aria-label="The engine">
+  <header class="m-head">
+    <p class="m-k">The engine</p>
+    <div class="m-who">
+      <span class="who" id="whoChip">No visitor yet</span>
+      <span class="arm" id="armChip" hidden></span>
+    </div>
+    <div class="m-ctx" id="ctxChips"></div>
+  </header>
+
+  <section class="signalcard">
+    <h2>What has been signalled</h2>
+    <p class="m-note">Read from the visitor&rsquo;s own profile, the moment each signal is sent. The hollow mark is the region&rsquo;s lean.</p>
+    <div class="vectors" id="vectors"><p class="m-empty">No dimension has evidence yet.</p></div>
+    <p class="m-note m-prior" id="priorLine"></p>
+  </section>
+
+  <div class="mtabs" role="tablist">
+    <button type="button" role="tab" id="tab-arrival" aria-controls="panel-arrival" aria-selected="true">Arrival</button>
+    <button type="button" role="tab" id="tab-session" aria-controls="panel-session" aria-selected="false">Session</button>
+    <button type="button" role="tab" id="tab-why" aria-controls="panel-why" aria-selected="false">Why these</button>
+    <button type="button" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false">Learned</button>
+    <button type="button" role="tab" id="tab-next" aria-controls="panel-next" aria-selected="false">Roadmap</button>
+  </div>
+  <div class="mpanels">
+    <section class="mpanel" id="panel-arrival" role="tabpanel" aria-labelledby="tab-arrival">
+      <div id="coldStart"><p class="m-empty">The arrival is read when a visitor lands.</p></div>
+    </section>
+    <section class="mpanel" id="panel-session" role="tabpanel" aria-labelledby="tab-session" hidden>
+      <ol class="journey" id="journey"><li class="journey-empty">Nobody has arrived yet.</li></ol>
+    </section>
+    <section class="mpanel" id="panel-why" role="tabpanel" aria-labelledby="tab-why" hidden>
+      <div id="whyBody"><p class="m-empty">Press a beat to begin.</p></div>
+    </section>
+    <section class="mpanel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <div id="reportBody"><p class="m-empty">Press <b>Build today&rsquo;s report</b> to read what the modules have learned. It is built from the ledger, not from anything this page holds.</p></div>
+      <button type="button" class="m-btn" id="buildReport" data-ctl="build-report">Build today&rsquo;s report</button>
+    </section>
+    <section class="mpanel" id="panel-next" role="tabpanel" aria-labelledby="tab-next" hidden>
+      <ul class="dials" id="roadmap"></ul>
+    </section>
+  </div>
+
+  <div class="m-tools">
+    <button type="button" class="m-tool" id="captureBtn" data-ctl="capture">Capture</button>
+    <button type="button" class="m-tool" id="compareBtn" data-ctl="compare" title="Before: none yet. Act, then Compare.">Compare</button>
+    <span class="m-tool-note" id="captureNote">Capture this page, then compare it with another moment or another shopper.</span>
+  </div>
+</aside>
+</div>
+
+<!-- ── Sheets: one at a time ─────────────────────────────────────────────── -->
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <button type="button" class="sheet-x" id="sheetClose" data-ctl="sheet-close" aria-label="Close">&times;</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- ── Predict, then prove ──────────────────────────────────────────────── -->
+<div class="pd-back" id="pdBack" hidden role="dialog" aria-modal="true" aria-labelledby="pdKicker">
+  <div class="pd-box">
+    <div class="pd-head">
+      <span class="pd-k" id="pdKicker">Predict, then prove</span>
+      <span class="pd-mode" id="pdMode">before the next act</span>
+    </div>
+    <div class="pd-grid">
+      <section class="pd-card pd-done"><h3 class="pd-h">What the visitor has done</h3><div class="pd-body"><ol id="pdDone"></ol></div></section>
+      <section class="pd-card pd-watch">
+        <h3 class="pd-h">What we are watching for</h3>
+        <div class="pd-body"><ol id="pdAct"></ol></div>
+        <div class="pd-arith"><p class="pd-arith-k" id="pdArithK">The arithmetic &middot; score before &rarr; after &middot; entry threshold</p><div id="pdArith"></div></div>
+      </section>
+      <section class="pd-card pd-will">
+        <h3 class="pd-h">What will change if they do it</h3>
+        <div class="pd-body"><ul id="pdWill"></ul><p class="pd-arith-k" style="margin:12px 0 7px" id="pdNowK">On screen right now</p><div id="pdNow"></div></div>
+      </section>
+    </div>
+    <section class="pd-why" id="pdWhyWrap" hidden>
+      <p class="pd-why-head" id="pdWhyHead">Why: every decision the last press made</p>
+      <div class="pd-why-grid">
+        <div class="pd-why-table"><table><thead><tr><th>What</th><th>Why, in numbers</th><th>Against</th><th>Authority</th></tr></thead><tbody id="pdWhy"></tbody></table></div>
+        <div class="pd-map"><div class="pd-map-cols">
+          <div><p class="pd-map-k">Before</p><div id="pdMapNow"></div></div>
+          <div class="pd-arrow">&rarr;</div>
+          <div><p class="pd-map-k">After</p><div id="pdMapAfter"></div></div>
+        </div></div>
+      </div>
+    </section>
+    <div class="pd-foot">
+      <p class="pd-note" id="pdNote">Computed from the visitor&rsquo;s real profile on the published constants. Nothing has happened yet.</p>
+      <button type="button" class="pd-go" id="pdGo">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Compare: the demo kit's overlay (public/demo-kit/compare.js) is injected into <body> on first use. ── -->
+
+<button type="button" class="pd-pill" id="pdPill">Explain &mdash; predict &amp; prove</button>
+
+<div class="director" role="group" aria-label="Director">
+  <div class="director-in">
+    <div class="beatline">
+      <span class="beatno" id="beatNo">Ready</span>
+      <p class="engineline" id="engineLine">A stranger arrives from search. Press Next to begin.</p>
+      <div class="beatnav">
+        <button type="button" class="nextbeat" id="nextBeat">Next &rarr;<span id="nextLabel">1 · A stranger arrives from search</span></button>
+        <button type="button" class="director-handle" id="explainBtn" title="Press E anywhere">Explain</button>
+        <button type="button" class="director-handle" id="directorHandle" aria-expanded="false" aria-controls="directorMore">All beats</button>
+      </div>
+    </div>
+    <div class="director-more" id="directorMore">
+      <div class="presses" id="presses"></div>
+      <div class="dtools">
+        <div class="assert" id="assertRegion"></div>
+        <div class="assert" id="assertIntent"></div>
+        <div class="assert" id="compareTools"></div>
+      </div>
+      <div class="director-foot">
+        <span class="status" id="status">idle</span>
+        <span class="legend"><i class="legend-dot legend-dot--shopper"></i>the visitor
+          <i class="legend-dot legend-dot--merch"></i>the merchandiser
+          <i class="legend-dot legend-dot--engine"></i>the engine, on its own</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- The page calls the engine routes directly through the kit's transport (X-Tenant on every call, no credential),
+     so every call can be driven and asserted headlessly. oh.js builds the page on the kit (public/demo-kit/kit.js). -->
+<script type="module" src="/oh/oh.js"></script>
+</body>
+</html>

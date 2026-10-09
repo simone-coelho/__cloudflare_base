@@ -2,6 +2,27 @@
 
 A comprehensive Cloudflare Workers foundation that serves as a reusable scaffold for demos and production services with tracking, personalization, and experimentation capabilities.
 
+## 👉 Start here: the demos
+
+This repository hosts **five customer demos** on one edge personalization engine, plus the productised
+**content decision service** that the newest demos run on. **Read [`docs/demos/BOOTSTRAP.md`](docs/demos/BOOTSTRAP.md)
+before anything else** — what each demo is for, how it was built, how to run, verify and deploy it, and how to
+build the next one.
+
+| Demo | For | Live |
+|---|---|---|
+| Coach / Tapestry storefront | Tapestry (Coach) | [edge-platform…/storefront](https://edge-platform.expedge.workers.dev/storefront) |
+| First National Bank | banking lead generation | [edge-platform…/visual-demo](https://edge-platform.expedge.workers.dev/visual-demo) |
+| The Bright Hour | QVC — live shopping | [edge-platform…/live/](https://edge-platform.expedge.workers.dev/live/) |
+| Meridian (on screen: Calder) | Opticon — retail and banking | [edge-platform…/meridian/](https://edge-platform.expedge.workers.dev/meridian/) |
+| Top Offers (Lantern & Lane) | QVC — the four-container module | [edge-platform-top-offers…/top-offers/](https://edge-platform-top-offers.expedge.workers.dev/top-offers/) |
+
+> ⛔ **There are two demo workers. Never run plain `npx wrangler deploy` from the repo root** — it ships today's
+> code onto the shared worker and breaks Coach, Bright Hour and Meridian. The commands are in "Deployment" below
+> and in `AGENTS.md`. Verify any deploy through the demos' APIs, never their pages.
+
+The sections after "Quick Start" document the shared platform scaffold the demos grew from.
+
 ## ✨ Features
 
 - **Real-time Event Tracking**: Track user interactions, page views, and custom events
@@ -296,11 +317,11 @@ run twice, and the seeds change nothing that is already there.
 
 ### Development
 
-```bash
-# Start development server
-npm run dev
+Two ways to run locally, one at a time — both serve on http://localhost:9100:
 
-# The server will be available at http://localhost:9100
+```bash
+npm run dev                                   # today's code: Top Offers (seed it: docs/qvc/RESUME-top-offers.md)
+bash scripts/deploy-legacy-demos.sh --dev     # commit 26e2db1: Coach, the bank demo, Bright Hour, Meridian
 ```
 
 ### Seed content (local worker, one named tenant)
@@ -339,6 +360,22 @@ Nothing above deploys anything. There is no default deploy target: `npm run depl
 `staging` or `production` and runs the guarded customer-stamp workflow, which is operated only under
 its own authority ([docs/deployment/01-deploy.md](docs/deployment/01-deploy.md)). Tracked backup files
 and their dispositions are listed there too.
+
+`npm run dev` cannot run the older four demos; today's engine requires a shopper session on every shopper call,
+which their pages never create. `wrangler dev` snapshots its asset list at startup, so a file newly added under
+`public/` returns 404 until you restart it.
+
+### Deployment
+
+| Worker | Runs | Deploy with |
+|---|---|---|
+| `edge-platform.expedge.workers.dev` | Coach, bank, Bright Hour, Meridian (commit `26e2db1`) | `bash scripts/deploy-legacy-demos.sh --deploy` |
+| `edge-platform-top-offers.expedge.workers.dev` | Top Offers (today's engine) | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` |
+
+Run `npm run check:generated` first: `npm run dev` rebuilds the Meridian and SDK bundles, a deploy does not.
+
+`npm run deploy staging|production` is the guarded **customer-stamp** workflow for Tapestry's environments
+([`docs/deployment/01-deploy.md`](docs/deployment/01-deploy.md)). It is never used for a demo.
 
 ## 🔧 Configuration
 

@@ -1,0 +1,9 @@
+/* Fallback tokens so the approved mocks render standalone. On the site, colors and type come from site.css;
+   these mocks are wireframes of layout, order, motion and the kind of visual per section, not of color. */
+:root{--surface-1:#f3f4f6;--surface-2:#ffffff;--border:#d7dbe0;--border-strong:#9aa3ad;--border-accent:#2f7d5a;--bg-accent:#e3f5ea;
+--text-accent:#1f6b4a;--text-muted:#6b7580;--text-secondary:#3d4650;--text-primary:#111418;--bg-warning:#fff3d6;--border-warning:#e0b35a;--text-warning:#8a5a00;
+--font-voice:Georgia,serif;--font-sans:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;--radius:10px}
+body{font-family:var(--font-sans);color:var(--text-primary);background:#fafafa;max-width:960px;margin:0 auto;padding:16px}
+.sr-only{position:absolute;left:-9999px}
+/* Icons: the mocks name Tabler icons (class ti ti-*). The names say which glyph; on the site every icon is an inline SVG. */
+.ti::before{content:"\25E6";font-style:normal}

@@ -194,6 +194,19 @@ export function isDecisionReference(value: unknown): value is string {
 
 // ── Outcomes from actions ────────────────────────────────────────────────────
 
+/**
+ * The NAMED outcomes: reward-bearing events that are neither a click nor a
+ * sale, carried as the `custom` reward under their own event name (the record
+ * keeps it in `event`). A partner pickup is the shopper choosing to collect at
+ * a partner store; a retailer referral is her leaving for a partner retailer.
+ * Each is credited to the decision that earned it exactly as a click is, under
+ * the learning policy's `custom` window, and counted in the day report under
+ * its own name beside the orders and the attach (`namedOutcomes`). Neither is
+ * ever a purchase: what the partner sells is the partner's ledger, not ours.
+ */
+export const NAMED_OUTCOMES = ['partner_pickup', 'retailer_referral'] as const;
+export type NamedOutcome = (typeof NAMED_OUTCOMES)[number];
+
 /** The action names that are rewards, and what reward type they are. */
 const REWARD_OF: Record<string, RewardType> = {
   add_to_cart: 'add_to_bag', cart_add: 'add_to_bag',
@@ -202,6 +215,7 @@ const REWARD_OF: Record<string, RewardType> = {
   content_click: 'click', click: 'click',
   content_dwell: 'dwell', dwell: 'dwell',
   video_complete: 'video_complete',
+  ...Object.fromEntries(NAMED_OUTCOMES.map((name) => [name, 'custom' as const])),
 };
 
 export interface ActionLike {
@@ -229,7 +243,8 @@ export type RewardActionLike = Pick<ActionLike, 'type' | 'data'> & Partial<Omit<
 
 export function rewardOf(action: RewardActionLike): { type: RewardType; event: string } | null {
   const name = action.type === 'custom' && typeof action.data?.event === 'string' ? action.data.event : action.type;
-  const type = REWARD_OF[name];
+  // Own rows only: an event named after an Object.prototype member is not a reward.
+  const type = Object.hasOwn(REWARD_OF, name) ? REWARD_OF[name] : undefined;
   return type ? { type, event: name } : null;
 }
 

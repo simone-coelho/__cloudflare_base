@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "fixture": "L2 build fixture for GET /vantage/api/coldstart (lane L4). The census row is real (migrations/seed/seed_011_geo.sql, geo_census region TX); the lean is representative until L4's seeded regional prior answers.",
+ "region": { "key": "US-TX", "label": "Texas", "city": "Austin", "source": "asserted" },
+ "grain": { "used": "state", "label": "Texas (state)", "ladder": ["metro", "state", "country", "global"], "why": "State grain: IP location on a mobile network is off by about 200 km at the median, so the ZIP rung is never used." },
+ "census": { "label": "Texas", "medianHhIncomeUsd": 79721, "medianHomeValueUsd": 313200, "source": "Census ACS 2024 1-yr", "vintage": "2024", "role": "shown, never scored" },
+ "lean": {
+  "label": "Regional device sales",
+  "dataSource": "synthetic → warehouse",
+  "level": "region",
+  "events": 1840,
+  "shares": {
+   "ecosystem": { "android": 0.58, "ios": 0.42 },
+   "brand": { "samsung": 0.34, "apple": 0.42, "google": 0.14, "motorola": 0.10 },
+   "priceBand": { "core": 0.47, "premium": 0.33, "entry": 0.20 },
+   "category": { "home-internet": 0.12 }
+  },
+  "summary": "Leans Android, core price band; the home bundle sells here."
+ },
+ "platform": { "family": null, "note": "OS family from the request only, never a model." },
+ "sentence": "Aggregate, never the individual; we curate, never price."
+}

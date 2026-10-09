@@ -221,6 +221,18 @@ export function lambdaFor(personal: Dims | null | undefined, kBlend: number): nu
   return Math.round((k / (k + evidence)) * 1000) / 1000;
 }
 
+/**
+ * The shares of only the dimensions the tenant lets its prior blend
+ * (`learn.regional.dimensions`). Absent keeps every dimension, the shipped
+ * behaviour. A dimension left out takes no share from the region, exactly like
+ * a dimension the region has never seen: the blend gives it (1 − λ)·a_personal.
+ */
+export function sharesWithin(share: TrendSnapshot['share'], dimensions?: readonly string[] | null): TrendSnapshot['share'] {
+  if (!dimensions) return share;
+  const allowed = new Set(dimensions);
+  return Object.fromEntries(Object.entries(share).filter(([dim]) => allowed.has(dim)));
+}
+
 export interface Blended { dims: Record<string, Record<string, number>>; lambda: number }
 
 /** ã = (1 − λ)·a_personal + λ·share_region, per dimension value. The personal input is not modified. */

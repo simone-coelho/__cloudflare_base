@@ -17,6 +17,7 @@ import {
   journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
+import { platformWordOf, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
@@ -24,7 +25,7 @@ import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUn
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
-import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
+import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
@@ -52,8 +53,17 @@ export interface ServeRequest {
   browsingSessionId?: string | null;
   cf?: CfLike | null;
   channel?: string | null;
+  /**
+   * Named conditions the caller asserts are true for this request — Garrett's
+   * weather, and the same door for device, campaign or customer type. They gate
+   * pieces that carry a matching `eligibleWhen` rule and nothing else: a signal
+   * here can never boost, re-rank or become behavioural evidence.
+   */
+  context?: Readonly<Record<string, string>>;
   /** Observed arrival context, not an override of an established visit entry. */
   entry?: ChannelSignals;
+  /** The OS family the request reports (src/services/platform.ts), for `platform` seed rules: the OS family is read from the request; the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept. */
+  platform?: PlatformWord | null;
   nowMs?: number;
   /** The brand whose shopper state this request reads, as the tenancy middleware resolved it. */
   stateTenant?: TenantId;
@@ -399,9 +409,27 @@ export async function tenantCatalogVocabulary(
   return value;
 }
 
+/**
+ * The region a caller asserted, as a region key, when it may select the
+ * regional prior: on the demo profile only. Null everywhere else, and for a
+ * value that is not a region key, so the edge region stays the prior's input.
+ */
+export function demoAssertedRegion(env: Pick<Env, 'DEPLOYMENT_PROFILE'>, asserted: string | undefined): string | null {
+  if (env.DEPLOYMENT_PROFILE !== 'demo' || typeof asserted !== 'string') return null;
+  const key = asserted.trim().toUpperCase();
+  return /^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$/.test(key) ? key : null;
+}
+
 export async function serveContentDecisions(
   env: Env, r: ServeRequest,
-): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean }> {
+): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean;
+  /**
+   * Ruling L-R10 (P02 decision D1): the records the serve-time capture took, the
+   * only ones a caller may write to the ledger when `write` holds — every record
+   * of the answer except a declared layout slot measured on any basis but
+   * rendered-v1, which is served and never captured at serve time.
+   */
+  ledgerRecords: ContentDecisionSet['records'] }> {
   if (!validEntry(r.entry, true)) throw new SessionAccessError();
   const hints = intersectConsent(consentFromCookies(r.cookieHeader), refusalHints(r.consent));
   // The monitor's explicit refusal is a synthetic default probe, not authority
@@ -525,14 +553,23 @@ export async function serveContentDecisions(
   // holdout's default arm, since defaults are the point of that arm.
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
   let affinity: { dims: Record<string, Record<string, number>> } | null = personalized ? shopper.affinity : null;
-  let regional: Parameters<typeof decideContent>[0]['regional'] = null;
+  let regional: (NonNullable<Parameters<typeof decideContent>[0]['regional']> & { asserted?: true }) | null = null;
   if (regionalCfg.enabled && arm !== 'default') {
-    const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
+    // DEMO PROFILE ONLY: an asserted region also selects the prior, so one
+    // laptop can rehearse two regions. Every other profile keeps the rule
+    // below (an asserted region moves no affinity); the receipt says asserted.
+    const assertedPrior = demoAssertedRegion(env, consent.tracking ? r.context?.region : undefined);
+    const trend = await readTrend(env, scope, assertedPrior ?? regionKeyOf(r.cf), regionalCfg.minEvents, now);
     if (trend) {
       const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
-      const blended = blendAffinity(shopper.affinity?.dims, trend.snapshot.share, lambda);
+      // Only the dimensions the tenant lets the prior blend (absent: all). The
+      // same shares travel to the decision, so its receipt and the record's
+      // replay inputs itemise exactly what the region contributed.
+      const share = sharesWithin(trend.snapshot.share, regionalCfg.dimensions);
+      const blended = blendAffinity(shopper.affinity?.dims, share, lambda);
       affinity = { dims: blended.dims };
-      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share };
+      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share,
+        ...(assertedPrior ? { asserted: true as const } : {}) };
     }
   }
 
@@ -573,6 +610,26 @@ export async function serveContentDecisions(
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.browsingSessionId || r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
+    // Garrett's targeting rule needs two things: where she is, and whatever
+    // condition the caller says holds right now.
+    //
+    // An ASSERTED region wins over the edge's own, and deliberately. The edge
+    // resolves location from the connection, which is coarse and sometimes only
+    // a country; the integrator often knows better — a server-side caller has
+    // the customer's account region, and a page may carry a chosen store or a
+    // delivery postcode. The edge value is the fallback when nothing is
+    // asserted, so an integration that says nothing behaves exactly as before.
+    //
+    // The trust boundary, stated: this input is caller-controlled, and it can
+    // only ever admit content the merchandiser already published with a rule
+    // naming that region. It grants no access, moves no affinity and is never
+    // stored as evidence about the shopper. Region rides consent exactly as the
+    // learning cell does — a shopper who withholds tracking is located by
+    // nobody, asserted or not.
+    eligibility: {
+      region: consent.tracking ? (r.context?.region ?? regionKeyOf(r.cf) ?? null) : null,
+      ...(r.context ? { signals: r.context } : {}),
+    },
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
     learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf },
@@ -580,8 +637,14 @@ export async function serveContentDecisions(
     served,
     // W16 C3: the arrival's context for this page load, for the slots that
     // publish seed rules. Observed only, under the same tracking gate as the
-    // visit it is read with, and never stored by the decision.
+    // visit it is read with: the arrival is read from the request; a fired seed
+    // (its signal and value) is recorded on the receipt as a driver; nothing
+    // else of it is kept by the decision.
     ...(consent.tracking && r.entry ? { entry: r.entry } : {}),
+    // The OS family the request reports, under the same gate as the arrival,
+    // and her own memberships for a seed rule's dampen (none without consent).
+    ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
+    ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
   });
 
   lap('decide');
@@ -679,6 +742,7 @@ export async function serveContentDecisions(
     decisions,
     afterResponse,
     write: consent.tracking && servedCapture,
+    ledgerRecords: captureRecords,
     sources: {
       catalog: { version: catalog.version ?? null, revision: catalogRev?.revision ?? 0, pieces: catalog.pieces.length },
       slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },

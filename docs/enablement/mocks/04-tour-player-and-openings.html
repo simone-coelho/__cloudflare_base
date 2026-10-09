@@ -1,0 +1,105 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Approved mock 4: the tour as one player, and the openings</title><link rel="stylesheet" href="_tokens.css">
+<!-- Approved by the owner, 2026-10-03 ("GO"), after the owner found the version 3 tour unusable (Back and Next under the
+     shared opening's animation, Next greyed out until an action a screen below, the store pushed out of view) and the
+     three pages' identical openings repetitive. Shown in the chat as "bti_tour_player_and_openings_fix_mock".
+     LANE-BRIEF-V3 §8 turns it into build rules. Part 1: the full opening only on What it is; a one-band short form on
+     Selling it and How it works; See it work starts on the tour. Part 2: the tour as one player at step 2. Part 3: the
+     moment after the action. --></head><body>
+<h2 class="sr-only">Design mock of the fix. Part 1 shows how each page opens: the full opening only on What it is, a one-band short form on Selling it and How it works, and See it work starting straight on the tour. Part 2 shows the tour as one pinned player at step 2, with the step bar, the store, the buckets and the receipt in one screen, the card to click highlighted with its callout attached, and a Show me button so Next never greys out. Part 3 shows what happens after the click.</h2>
+<style>
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(47,125,90,.5)}50%{box-shadow:0 0 0 6px rgba(47,125,90,0)}}
+.lbl{font-size:11px;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+.sec{border-top:0.5px solid var(--border);padding:1.1rem 0}
+.pg{background:var(--surface-2);border:0.5px solid var(--border);border-radius:10px;padding:8px}
+.pg h4{font-size:12px;font-weight:500;margin:0 0 6px}
+.blk{border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border);margin:3px 0;font-size:9px;color:var(--text-secondary);padding:3px 5px}
+.blk.acc{background:var(--bg-accent);border-color:var(--border-accent);color:var(--text-accent)}
+.note{font-size:11px;color:var(--text-secondary);line-height:1.4;margin:6px 0 0}
+.btn{display:inline-block;font-size:11px;padding:5px 10px;border-radius:999px;border:0.5px solid var(--border-strong);color:var(--text-primary);background:var(--surface-2)}
+.btn.pri{background:var(--text-primary);color:var(--surface-2);border-color:var(--text-primary)}
+.btn.acc{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.row{border-radius:6px;border:0.5px solid var(--border);background:var(--surface-1);padding:4px 6px;margin:4px 0}
+.row b{font-size:10px;font-weight:500;display:block;margin-bottom:3px}
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.c{font-size:9px;border-radius:4px;border:0.5px solid var(--border);background:var(--surface-2);padding:4px;color:var(--text-secondary)}
+.c.t{border:1.5px solid var(--border-accent);animation:ring 1.6s ease-in-out 3;color:var(--text-primary)}
+.bk{width:26px;height:46px;border:1px solid var(--border-strong);border-top:none;border-radius:0 0 4px 4px;position:relative;margin:0 auto}
+.bk .ln{position:absolute;left:-3px;right:-3px;border-top:1px solid var(--text-primary)}
+.bk .rl{position:absolute;left:-3px;right:-3px;border-top:1px dashed var(--text-muted)}
+.bk .f{position:absolute;left:0;right:0;bottom:0;background:var(--bg-accent);border-top:1px solid var(--border-accent)}
+.cap{font-size:9px;text-align:center;color:var(--text-secondary);margin-top:3px}
+.tag{font-size:10px;padding:3px 8px;border-radius:6px;background:var(--bg-warning);border:0.5px solid var(--border-warning);color:var(--text-warning);display:inline-block;margin:3px 4px 0 0}
+</style>
+
+<div style="padding:1rem 0 0">
+<p class="lbl">1 · How each page opens: the full opening once, a short form elsewhere</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+  <div class="pg"><h4>What it is · the front door</h4>
+    <div class="blk acc">What we built · story</div><div class="blk acc">Three contrasts</div><div class="blk acc">Both engines on one page</div><div class="blk acc">Watch it · walk-through</div><div class="blk">Pillars, steps, reasons…</div>
+    <p class="note">The only page with the full opening.</p></div>
+  <div class="pg"><h4>Selling it</h4>
+    <div class="blk acc">One band: the headline and the three contrasts in a row · "The full story: What it is"</div><div class="blk">Seven scenes</div><div class="blk">Reasons, measures, objections…</div>
+    <p class="note">Straight to the seller's kit.</p></div>
+  <div class="pg"><h4>How it works</h4>
+    <div class="blk acc">The same one band</div><div class="blk">Signal chain</div><div class="blk">Instrument cards…</div>
+    <p class="note">Straight to the mechanism.</p></div>
+  <div class="pg"><h4>See it work</h4>
+    <div class="blk">One line: one visitor, seven moments, on a sample store</div><div class="blk acc" style="height:46px">The tour player</div>
+    <p class="note">The tour is the watching, so no opening and no separate animation above it.</p></div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">2 · The tour as one player, pinned in the window, at step 2</p>
+<div style="border:1.5px solid var(--border-strong);border-radius:12px;background:var(--surface-2);padding:10px">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:0.5px solid var(--border);padding-bottom:8px">
+    <span class="btn">Back</span>
+    <span style="font-size:12px;font-weight:500">Step 2 of 7 · The first click changes the page</span>
+    <span style="font-size:11px;color:var(--text-muted)">● ● ○ ○ ○ ○ ○</span>
+    <span style="flex:1"></span>
+    <span class="btn acc">Show me</span><span class="btn pri">Next</span>
+  </div>
+  <p style="font-size:11px;color:var(--text-secondary);margin:6px 0 8px;line-height:1.45">A click pours into the bucket for what it touches. An add to the bag counts three times a look, so the knitwear bucket passes its entry line at once.</p>
+  <div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:10px">
+    <div style="position:relative">
+      <div style="font-size:10px;letter-spacing:.08em;font-weight:500;margin-bottom:4px">MORROW &amp; VALE <span style="font-weight:400;color:var(--text-muted);letter-spacing:0">· a sample store</span></div>
+      <div class="row" style="background:var(--bg-accent);border-color:var(--border-accent)"><b>The rain edit · hero</b></div>
+      <div class="row"><b>Rain-ready layers</b><div class="cards"><div class="c">Waxed jacket</div><div class="c">Rain shell</div><div class="c">Story</div></div></div>
+      <div class="row"><b>Soft knits</b><div class="cards"><div class="c t">Cable-knit cardigan · Add to bag</div><div class="c">Merino crew</div><div class="c">Story</div></div></div>
+      <div style="position:absolute;left:4%;top:118px;width:58%;padding:6px 8px;border-radius:8px;background:var(--surface-2);border:1px solid var(--text-primary);font-size:10px;line-height:1.35;z-index:2">Add the cardigan to the bag, or press Show me. Watch the top two sections.</div>
+      <div class="row" style="margin-top:34px"><b>Partner spotlight</b></div>
+      <div class="row"><b>Recommended picks · the brand's recommendations</b></div>
+      <div class="row"><b>The linen shop</b></div>
+    </div>
+    <div>
+      <div style="font-size:9px;letter-spacing:.06em;color:var(--text-muted)">INTEREST BUCKETS · visit time 0:00</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0 8px">
+        <div><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span><span class="f" style="height:10px"></span></div><div class="cap">Rain layers</div></div>
+        <div><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span></div><div class="cap">Knitwear</div></div>
+        <div><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span></div><div class="cap">Linen</div></div>
+        <div><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span></div><div class="cap">Tableware</div></div>
+      </div>
+      <div style="font-size:9px;letter-spacing:.06em;color:var(--text-muted)">WHAT THE PAGE LEANS ON</div>
+      <div style="height:8px;border-radius:4px;background:var(--bg-accent);border:0.5px solid var(--border-accent);margin:4px 0 2px"></div>
+      <div style="font-size:9px;color:var(--text-secondary);display:flex;justify-content:space-between"><span>The region 100%</span><span>This visitor 0%</span></div>
+      <div style="margin-top:8px;border:0.5px dashed var(--border-strong);border-radius:6px;padding:6px;font-size:10px;line-height:1.4"><span style="font-size:9px;letter-spacing:.06em;color:var(--text-muted)">WHY THIS PAGE</span><br>0:00 + Regional start: Washington State, picked in step 1.</div>
+    </div>
+  </div>
+</div>
+<div style="margin-top:6px">
+  <span class="tag">Bar, store, buckets and receipt in one screen at 1366 × 768; the player stays pinned while the reader works</span>
+  <span class="tag">The thing to click is highlighted inside the player, with its callout attached to it</span>
+  <span class="tag">Next never greys out: Show me performs the step for the reader, and so does clicking the card</span>
+  <span class="tag">Step 1's bar holds the two region buttons; nothing is pre-set</span>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">3 · What happens after the click or Show me</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
+  <div class="pg"><div class="blk acc">Soft knits · moved up</div><div class="blk">The rain edit</div><div class="blk">Rain-ready layers</div><p class="note">The two sections trade places, marked "moved up" and "moved down".</p></div>
+  <div class="pg"><div style="display:flex;gap:8px;justify-content:center"><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span><span class="f" style="height:10px"></span></div><div class="bk"><span class="ln" style="top:12px"></span><span class="rl" style="top:20px"></span><span class="f" style="height:36px"></span></div></div><p class="note">Knitwear fills past its entry line while the reader watches.</p></div>
+  <div class="pg"><div class="blk">0:00 + Added the cable-knit cardigan: knitwear passes its entry line</div><p class="note">The receipt gains the line, and Next goes on to step 3.</p></div>
+</div>
+</div>
+</body></html>

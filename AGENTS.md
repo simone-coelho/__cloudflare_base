@@ -42,3 +42,69 @@ Preserve pre-existing worktree material. The owner's settings deny `git checkout
 ## Durable handoff
 
 A new lead starts from this file, the memo, and `check`, `status` and `next` on both programmes, not from chat or old logs. `docs/remediation/RESUME.md` stays a few lines. No other tracker, log or documentation programme.
+
+---
+
+# Demo operations
+
+**Not part of the remediation programme above.** These are operating rules for the hosted demos; they authorize
+nothing in document 35 and nothing above authorizes them.
+
+## The two demo workers — read this before any deploy
+
+There are **two** demo workers, because no single version of the code can run every demo.
+
+| Worker | URL | Runs | Deploy with |
+|---|---|---|---|
+| `edge-platform` (shared) | `edge-platform.expedge.workers.dev` | Coach storefront, Bright Hour `/live`, Meridian `/meridian`, the bank demo — on commit `26e2db1`, exactly as they were built and rehearsed | `bash scripts/deploy-legacy-demos.sh --deploy` **and nothing else** |
+| `edge-platform-top-offers` | `edge-platform-top-offers.expedge.workers.dev` | the QVC Top Offers demo `/top-offers` — on today's engine | `node scripts/build-top-offers-config.mjs && npx wrangler deploy --config wrangler.top-offers.toml` (the builder delegates to `scripts/build-demo-worker-config.mjs`, which also renames the recovery queues; a config whose `LEDGER_RECOVERY_CONFIG` still names the shared `events` queue leaves that worker's ledger unconsumed and its day report empty, as it was from 2026-09-23 to 2026-09-30) |
+| `edge-platform-vantage` | `edge-platform-vantage.expedge.workers.dev` | the Verizon demo `/vantage` — on today's engine, session host | `node scripts/build-demo-worker-config.mjs --name edge-platform-vantage --queue events-vantage --dev-port 9110 && npx wrangler deploy --config wrangler.vantage.toml`, from WSL; after a reseed, redeploy, then `scripts/seed-vantage-region.mjs`; see `docs/verizon/RESUME-vantage.md` |
+| `edge-platform-oh` | `edge-platform-oh.expedge.workers.dev` | the LG demo OH `/oh` — on today's engine and the demo kit, session host | `node scripts/demo-kit/host.mjs --config oh --from secrets --confirm edge-platform-oh` from WSL (one command: secrets, database check, deploy from a clean worktree, crons, the hosted seed then the redeploy it requires, the region seed, the hosted suites); never plain `npx wrangler deploy`; see `docs/oh/RESUME-oh.md` |
+| `edge-platform-bti` | `edge-platform-bti.expedge.workers.dev` | the internal enablement site for Optimizely staff (Behavioral Targeting and Intelligence), a static site behind a passphrase gate in the worker (`enablement/worker.mjs`); no engine code, no bindings but assets; the passphrase and cookie secret live only in the worker and the owner’s `.dev.vars` | `node enablement/check-site.mjs && npx wrangler deploy --config wrangler.enablement.toml`, from WSL and from a clean worktree of the commit; see `docs/enablement/BTI-Enablement-Design.md` §7. The earlier worker `edge-platform-enablement` sits behind a Cloudflare Access sign-in whose emailed codes never arrived and is not deployed to |
+
+**Never run plain `npx wrangler deploy` from the repo root.** `wrangler.toml` names the shared worker, so it
+ships today's code onto it, and today's code cannot run the older demos: it requires a shopper session on every
+shopper call, which the Coach storefront and Bright Hour never create, and under `AUTH_MODE=enforced` it
+deliberately answers 404 for `/meridian/api`, `/live/api`, `/geo/cohort`, `/ai`, `/agents`, `/experiment`,
+`/signals` and `/funnel`. That is precisely how all three broke on 2026-09-23 and stayed broken for a week.
+
+**Verify a deploy through the APIs, never the pages.** Every page returned 200 throughout that week; the APIs
+behind them returned 404 and 403. After a shared-worker deploy, run
+`MERIDIAN_BASE=https://edge-platform.expedge.workers.dev node scripts/meridian-rehearsal.mjs` and
+`node scripts/meridian-isolation.mjs` (which exercises Coach's pipeline). After a Top Offers deploy, run both
+`scripts/rehearse-top-offers-*.mjs` with `--base https://edge-platform-top-offers.expedge.workers.dev`.
+
+**Do not change a demo worker's settings or secrets without the owner.** Adding `TENANTS` to the shared worker
+removed its implicit `coach` tenant and cut Coach off even from basic calls. Staging and production are
+`DEPLOYMENT_PROFILE=customer` and are never demo targets; `npm run deploy staging|production` is the guarded
+customer-stamp workflow and is a different thing entirely.
+
+## A reseed must be followed by a deploy
+
+`scripts/seed-shn.mjs` (and any seed shaped like it) **re-anchors every content window to now and rewrites the
+beat documents under `public/`**. The worker reads those documents from its own `ASSETS` binding when it applies
+a beat. So after seeding the Top Offers worker, redeploy it:
+
+```bash
+node scripts/seed-shn.mjs --base https://edge-platform-top-offers.expedge.workers.dev --token <operator token>
+npx wrangler deploy --config wrangler.top-offers.toml
+```
+
+Skip the deploy and the served assets drift from what was published: a beat then applies a *different* document
+than the one that was seeded, and the demo misbehaves in a way that looks like an engine fault. Seeding a hosted
+demo is two steps, never one. Before any deploy, `npm run check:generated` must pass: `npm run dev` rebuilds the
+Meridian and SDK bundles, but a deploy does not.
+
+## No demo page carries a credential
+
+`public/` is served wholesale (`wrangler.toml [assets]`), so a token written into a static directory is a
+credential anyone with the URL can fetch. A demo page names an action and the worker performs it
+(`src/routes/topOffers.ts` is the pattern): mounted only where `DEPLOYMENT_PROFILE` is `demo`, accepting a
+closed set of names and no caller-supplied document, minting genuine short-lived operator authority and
+re-entering the ordinary route pipeline. Never hand the configuration store a permissive `authorize` to skip
+that — it is shorter and it is a hole in the authority model.
+
+A demo page must send `X-Tenant` on its own API calls. Without it the app-level tenant middleware falls back to
+the default tenant, which a single-tenant demo worker does not provision, and every call fails with "Tenant
+unavailable" before reaching the handler. This passes locally whenever the local registry happens to contain the
+default tenant, so it surfaces only once deployed.
