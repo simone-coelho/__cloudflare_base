@@ -233,6 +233,20 @@ Every slot's offered decision for the page, in page order; private records are n
 
 Customer snapshot polls are read-only: `write:false`, no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Tracking-refused choices contain no render offer; personalization-refused choices use defaults. `sources.consent` names that state.
 
+**A declared layout slot.** A slot the slot document declares with `layout: true` (under
+`governanceVersion: 4`, at most one per page) is the page's layout: its `decisions` are up to `take`
+module ids in rank order, after eligibility, the slot's exclusions and page-wide de-duplication, and
+never a filler when fewer modules are eligible. The list the layout slot returns is the layout's
+sequence, in `order`. A module that is not returned is not drawn, and its container stays hidden. Every
+drawn module is acknowledged with its own render acknowledgement (a `content_impression` carrying its
+`decisionId` and `renderOffer`), and only a drawn module is. On a layout slot measured on `rendered-v1`
+that acknowledgement is the module's one exposure, however often it is retried, while a module returned
+and not drawn, or not returned, adds none. A layout slot whose learn document leaves it on `served-v1`
+is answered without a `renderOffer` and is never captured as an exposure at serve time, not even by the
+platform's own trusted synthetic monitor; the decision set names the mismatch as
+`layoutDiagnostics: [{measurementBasis, reason: "measurement_basis", slot}]`, which is host-internal and
+not a member of this answer.
+
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data
 authority it was born under is no longer the one in force (for example, you published the next
 revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then still
@@ -702,7 +716,8 @@ Available pin feedback names the strict uncached committed catalog revision and 
 
 The slots current GET also adds `constraintDiagnostics: {schema: 'slot-constraint-diagnostics/v1', advisory: true, status, slotsRevision, catalog: {source, revision}, checkedAt, warningCount, omittedWarningCount, warnings: [{page, slot, contentId, reason, dimension?, value?}]}`: the operator's home for the refusals a decision set's own `constraintDiagnostics` names one page load at a time (below), read for the whole stored document. Each page is decided as serving decides it — the strict uncached committed catalog revision, eligibility at `checkedAt`, the page's pin reservations and its compiled hard controls — so only a slot that ranks contributes (not off-limits, with ranked positions left after its pins, and with no refused pinned prefix), and only a piece that slot could otherwise have served is named (live, inside its window, in stock, and naming the slot in its `slotTypes`). Every refused eligible piece is counted; at most 50 are named, in page order, then slot order, then catalogue order, and `omittedWarningCount` is the rest; an excluded-tag refusal names the published pair that matched. Unlike the pin channel it names pages, slots and piece ids, because those are what a merchandiser acts on. A document that publishes no hard control is `not_required` with zero counts and catalog `not_read`; a legacy GET fallback, an unbound selector or a catalog that cannot be read is `unavailable` with null counts, list, catalog revision and time, never a zero nobody checked. It is advice, never serving authority: the runtime decision stays authoritative, and a later catalog change or the passage of a publish window can change the answer.
 
-Current slot validation/publication accepts absent/1/2/3 markers and emits `governanceVersion: 3`, with optional per-slot
+Current slot validation/publication accepts absent/1/2/3/4 markers and emits `governanceVersion: 3`, or `4` for a
+document marked 4 and for an unmarked document that declares a layout slot (below), with optional per-slot
 `offLimits`, exact `excludedPieceIds`, OR `excludedTags` pairs and `allowedTypes` controls ([schema](./03-payload-schemas.md#hard-slot-controls)).
 Off-limits slots return no engine candidates, decisions or records on any arm, including pinned
 slots; their pin and ranking settings remain dormant. Excluded IDs cannot reach scoring, exploration
@@ -722,6 +737,17 @@ manifest rows keep page order with zero lift/prior and require no archives. Old 
 documents ignore all formerly unknown hard-control fields; stored version 1 validates ID/off-limits and ignores tag/type fields;
 stored version 2 validates tag/type controls but ignores formerly unknown prefixes; version 3 validates prefixes too.
 Historical bytes are never migrated or rewritten.
+
+Version 4 adds one member, the layout declaration: `layout: true` on one slot of a page (the snapshot's
+"A declared layout slot" above says what it returns and how it is measured). It is refused by name
+(`pages.{page}[i].layout`) in a document marked 1, 2 or 3, and a second declaration on the same page is
+refused naming the page and the slot (`pages.{page}.{slot}`); its `take` keeps the 1–50 bound of every
+slot. Otherwise version 4 reads exactly as version 3, a stored document marked earlier ignores the member,
+and versions above 4 refuse. A page that declares a layout slot writes
+`inputs.replay.layout: "declared-slot-v1"` on every receipt of that page, beside the other markers and independent of them; a
+page that declares none writes exactly the markers it wrote before. A replay of a record without the
+marker decides the page without the declaration; a present marker with another value, or over a page
+revision that declares no layout slot, refuses as `invalid page replay manifest`.
 
 `pinnedPieceIds` pins a required ordered prefix (up to 50 distinct exact nonempty IDs, [] neutral),
 followed by ranking up to total take. It is mutually exclusive with scalar `pinnedPieceId`, even with [].
