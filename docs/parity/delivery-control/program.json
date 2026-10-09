@@ -377,7 +377,7 @@
     {
       "id": "P28",
       "title": "Layout base and the behaviour-and-performance blend",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
