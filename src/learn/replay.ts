@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { BLEND_RULES, decideContent, LAYOUT_RULES, layoutBlendOf, ORDER_RULES } from '@/content/decide';
+import { BLEND_RULES, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -96,6 +96,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.configuredOrder', served.explain.configuredOrder, replayed.explain.configuredOrder);
   // P28: the layout blend's terms, compared by value like every explain member (and built with sorted keys).
   eq('explain.blend', served.explain.blend, replayed.explain.blend);
+  // P10: the signal floor a context-only position was decided under and the count, by value (keys sorted).
+  eq('explain.signalFloor', served.explain.signalFloor, replayed.explain.signalFloor);
   return diff;
 }
 
@@ -172,8 +174,8 @@ function manifestVersionRefusal(value: unknown): string | null {
   return `page replay manifest version ${value.version} is not supported`;
 }
 
-function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend').sort().join(',') !== 'candidateLimit,learning,slots,version'
+function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }): Manifest | null {
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
@@ -189,6 +191,13 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     // on which a declared layout slot ranked by the blend its learn dials opt into.
     || (own(value, 'blend') && (value.blend !== BLEND_RULES || !own(value, 'layout') || value.learning !== true
       || !page.some(slot => slot.layout === true && layoutBlendOf(learn, slot.slot) !== null)))
+    // P10: the signal-floor marker is written only on a decision of an arm that
+    // personalizes on which a slot of the page was below its floor, with the
+    // count it was decided with beside it; a marker no floor of the recorded
+    // revision explains, or one without a whole count, is inconsistent.
+    || (own(value, 'signalFloor') && (value.signalFloor !== SIGNAL_FLOOR_RULES || served.arm === 'default'
+      || !(typeof floor.signals === 'number' && Number.isSafeInteger(floor.signals) && floor.signals >= 0)
+      || contextOnlySlots(page, { floor: floor.tenant, signals: floor.signals }, served.arm).size === 0))
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -220,7 +229,8 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'governance') ? { governance: value.governance as NonNullable<Manifest['governance']> } : {}),
     ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}),
     ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}),
-    ...(own(value, 'blend') ? { blend: BLEND_RULES } : {}) };
+    ...(own(value, 'blend') ? { blend: BLEND_RULES } : {}),
+    ...(own(value, 'signalFloor') ? { signalFloor: SIGNAL_FLOOR_RULES } : {}) };
 }
 
 /** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
@@ -290,7 +300,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   if (targetIndex < 0) return fail(served, 'the recorded slot is absent from the page revision');
   const target = page[targetIndex]!;
   const hasManifest = own(inputs, 'replay');
-  const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn) : null;
+  const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn, { tenant: slots.signalFloor ?? 0, signals: inputs.signals }) : null;
   if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
   // W28.R2 (amendment A20): the exploration rules the record was decided under
   // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
@@ -370,6 +380,12 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
         ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: (slot) => learn.slots?.[slot]?.external?.weight ?? 0, status: 'unavailable', reason: served.explain.external.reason }
         : null,
     served: inputs.served ?? null,
+    // P10: a record that states the signal-floor marker is replayed with the
+    // floor of its slots revision and the count it was decided with, its
+    // context-only slots scored on the prior shares it recorded; one that
+    // states none, with no floor, which is what that decision did.
+    ...(manifest?.signalFloor === SIGNAL_FLOOR_RULES
+      ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null } : {}),
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,
