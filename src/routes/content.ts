@@ -163,11 +163,29 @@ async function orderRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unk
   const errors = slotOrderCatalogueErrors(valid.value, catalog);
   return errors.length ? { status: 422, errors } : null;
 }
-/** The document of one kind a request publishes beside its own, when it carries one. */
-function relatedDocument(related: unknown, kind: string): unknown {
-  if (!Array.isArray(related)) return undefined;
-  const entry = related.find(item => item && typeof item === 'object' && (item as { kind?: unknown }).kind === kind) as { document?: unknown } | undefined;
-  return entry?.document;
+/**
+ * P01 fix round 1 (R-P24, the lead's ruling): EVERY slots document one request
+ * publishes — the primary document or a related member, its kind resolved as
+ * `kindOf` resolves every kind (so `slots`, `Slots` and `SLOTS` are one kind),
+ * whatever the primary is — is checked against the catalogue the same request
+ * publishes (the primary, or a related member of the catalogue kind in any case
+ * of the word), or else the catalogue in force. A refusal of a related member
+ * names it (`publicationChanges[i]`) before the validator's own path and refuses
+ * the whole request, so no member of it is written.
+ */
+interface PublishedMember { kind: DocumentKind<unknown>; document: unknown; at: string | null }
+async function requestOrderRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const catalogue = members.find(member => member.kind.name === CONTENT_KIND.name)?.document;
+  const errors: string[] = [];
+  for (const member of members) {
+    if (member.kind.name !== SLOTS_KIND.name) continue;
+    const refused = await orderRefusals(c, scope, member.document, catalogue);
+    if (!refused) continue;
+    const named = member.at === null ? refused.errors : refused.errors.map(error => `${member.at}: ${error}`);
+    if (refused.status === 503) return { status: 503, errors: named };
+    errors.push(...named);
+  }
+  return errors.length ? { status: 422, errors } : null;
 }
 
 function catalogScope(c: Context<Ctx>): string {
@@ -447,12 +465,6 @@ contentRoutes.put('/:kind', async (c) => {
     const unit = await priorUnitRefusals(c, scope, candidate);
     if (unit) return c.json({ ok: false, errors: unit.errors }, unit.status);
   }
-  // P01: per-context orders against the catalogue — the one this request
-  // publishes with them, or the one in force.
-  const orders = k.kind.name === SLOTS_KIND.name ? await orderRefusals(c, scope, candidate, relatedDocument(related, 'catalog'))
-    : k.kind.name === CONTENT_KIND.name && relatedDocument(related, 'slots') !== undefined ? await orderRefusals(c, scope, relatedDocument(related, 'slots'), candidate)
-      : null;
-  if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
   // A replacement is self-contained: reject invalid new drafts before any
   // authority read. Original v1 receipt resolution is deliberately read-only
   // and may retain a value that the current write validator no longer admits.
@@ -464,7 +476,8 @@ contentRoutes.put('/:kind', async (c) => {
   if (related !== undefined) {
     if (!Array.isArray(related) || related.length > 5) throw new PublicationError('Invalid related publication members', 422, 'invalid_document');
     const changes = [{ kind: k.kind, scope, request: { type: 'replace', candidate }, candidate: () => candidate }];
-    for (const entry of related) {
+    const members: PublishedMember[] = [{ kind: k.kind, document: candidate, at: null }];
+    for (const [index, entry] of related.entries()) {
       if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['kind', 'document'].includes(key))) throw new PublicationError('Invalid related document', 422, 'invalid_document');
       const target = entry.kind === 'reflex' ? { kind: REFLEX_KIND } : kindOf(entry.kind);
       if (!target) throw new PublicationError('Unsupported related document kind', 422, 'invalid_document');
@@ -473,9 +486,19 @@ contentRoutes.put('/:kind', async (c) => {
       if (!valid.ok) return c.json({ ok: false, errors: valid.errors }, 422);
       changes.push({ kind: target.kind, scope: entry.kind === 'reflex' && scope === 'brighthour' ? 'tenant:brighthour' : scope,
         request: { type: 'replace', candidate: entry.document }, candidate: () => entry.document });
+      members.push({ kind: target.kind, document: entry.document, at: `publicationChanges[${index}]` });
     }
+    // P01 (R-P24): the per-context orders of every slots member, against the
+    // catalogue this request publishes or else the one in force.
+    const orders = await requestOrderRefusals(c, scope, members);
+    if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
     result = await publishSet(c.env, changes, { ...meta, note });
-  } else result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
+  } else {
+    // P01 (R-P24): a slots document published alone is checked against the catalogue in force.
+    const orders = await requestOrderRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
+    if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
+    result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
+  }
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate, envelope)) } : {}),
