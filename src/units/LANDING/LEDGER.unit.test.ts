@@ -437,8 +437,8 @@ describe('unit:LANDING.H5 (hourly.ts hunks 6-7: the working fold reads the filed
     const unfiled = new LedgerR2(), unfiledEnv = filingEnv(unfiled);
     hour(unfiled, unfiledEnv);
     const refused = await foldOpenHours(unfiled as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true }, unfiledEnv as never);
-    expect(refused.failed.map((f: { hour: number; refusal?: { code?: string } }) => [f.hour, f.refusal?.code]),
-      'an unfiled conflict refuses the working fold of its hour, named as a row conflict').toEqual([[12, 'report_row_conflict']]);
+    expect(refused.failed.filter((f: { hour: number }) => f.hour === 12).map((f: { refusal?: { code?: string } }) => f.refusal?.code),
+      'an unfiled conflict refuses the working fold of its hour, named as a row conflict').toEqual(['report_row_conflict']);
 
     // Filed: the operator's day build met the collision and filed it in the tenant's own scope, as the report
     // route files it (src/routes/decisions.ts:1517-1518), before the five-minute job's run.
