@@ -775,9 +775,9 @@ export class ShopperReflex {
             journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
               entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
-            // P10: her count of signals, read off the state this object already
+            // P10: the shopper's count of signals, read off the state this object already
             // holds (no read of its own), for the slots that publish a signal
-            // floor. Present only when she has one; absent reads as 0.
+            // floor. Present only when there is one; absent reads as 0.
             ...(signalsOf(this.affinity?.reflex) > 0 ? { signals: signalsOf(this.affinity?.reflex) } : {}),
           });
         }
