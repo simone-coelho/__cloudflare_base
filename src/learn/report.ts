@@ -879,6 +879,80 @@ export function validVisitorOutcomes(value: unknown): VisitorOutcomes | null {
   return { version: 1, basis: 'enrolled_visitors', arms: arms.sort((a, b) => a.arm.localeCompare(b.arm)) };
 }
 
+/**
+ * The day's NAMED outcomes (`NAMED_OUTCOMES`, src/ledger/records.ts): every
+ * outcome carried as the `custom` reward, counted under its own event name, so
+ * a partner pickup and a retailer referral each read as themselves beside the
+ * orders (`visitorOutcomes`, the `purchase` type) and the attach (the slot
+ * grids), never inside either and never as a sale: no value, currency or
+ * revenue is read for them. Per name:
+ *
+ * - `outcomes`: the day's outcome records carried under it;
+ * - `credited`: the decisions the LEARNING policy credited them to, whatever
+ *   reward the slot itself learns from, because this is attribution and not
+ *   learning (a slot learns from a named outcome only when it publishes
+ *   `reward: 'custom'`);
+ * - `bySlot`: slot → item → credits, the decision that earned each.
+ *
+ * Null where the day cannot say (an hour folded before this member existed);
+ * absent on a report built before it existed.
+ */
+export interface NamedOutcomes {
+  version: 1;
+  basis: 'learning_policy';
+  events: Record<string, NamedOutcomeRow>;
+}
+export interface NamedOutcomeRow { outcomes: number; credited: number; bySlot: Record<string, Record<string, number>> }
+export const emptyNamedOutcomes = (): NamedOutcomes => ({ version: 1, basis: 'learning_policy', events: {} });
+/** The row a named outcome counts under, or null when the outcome is not one (or its name cannot be a report key). */
+export function namedOutcomeRow(named: NamedOutcomes, outcome: Pick<OutcomeRecord, 'type' | 'event'>): NamedOutcomeRow | null {
+  if (outcome.type !== 'custom' || !name(outcome.event)) return null;
+  return (named.events[outcome.event] ??= { outcomes: 0, credited: 0, bySlot: {} });
+}
+/** One credit to the decision that earned it; its slot and item are named where they can be report keys. */
+export function creditNamedOutcome(row: NamedOutcomeRow, slot: string, item: string): void {
+  row.credited += 1;
+  if (!name(slot) || !name(item)) return;
+  const items = (row.bySlot[slot] ??= {});
+  items[item] = (items[item] ?? 0) + 1;
+}
+/** Two days', or two hours', named outcomes as one: every count adds. */
+export function addNamedOutcomes(into: NamedOutcomes, from: NamedOutcomes): NamedOutcomes {
+  for (const [event, row] of Object.entries(from.events)) {
+    const to = (into.events[event] ??= { outcomes: 0, credited: 0, bySlot: {} });
+    to.outcomes += row.outcomes; to.credited += row.credited;
+    for (const [slot, items] of Object.entries(row.bySlot)) {
+      const out = (to.bySlot[slot] ??= {});
+      for (const [item, n] of Object.entries(items)) out[item] = (out[item] ?? 0) + n;
+    }
+  }
+  return into;
+}
+/** Read back conservatively: anything that is not exactly the declaration is unknown, and unknown is null. */
+export function validNamedOutcomes(value: unknown): NamedOutcomes | null {
+  if (!object(value) || value.version !== 1 || value.basis !== 'learning_policy' || !object(value.events)
+    || Object.keys(value.events).length > REPORT_LIMITS.cells) return null;
+  const out = emptyNamedOutcomes();
+  let cells = 0;
+  for (const [event, row] of Object.entries(value.events)) {
+    if (!name(event) || !object(row) || !count(row.outcomes) || !count(row.credited) || !object(row.bySlot)) return null;
+    const bySlot: NamedOutcomeRow['bySlot'] = {};
+    let named = 0;
+    for (const [slot, items] of Object.entries(row.bySlot)) {
+      if (!name(slot) || !object(items)) return null;
+      const kept: Record<string, number> = {};
+      for (const [item, n] of Object.entries(items)) {
+        if (!name(item) || !count(n) || ++cells > REPORT_LIMITS.cells) return null;
+        kept[item] = n; named += n;
+      }
+      bySlot[slot] = kept;
+    }
+    if (named > row.credited) return null;
+    out.events[event] = { outcomes: row.outcomes, credited: row.credited, bySlot };
+  }
+  return out;
+}
+
 export function attributionArm(arm: string, decisions: number, credited: number): ArmRow {
   const creditedPerDecision = decisions > 0 ? credited / decisions : null;
   return { arm, decisions, credited, creditedPerDecision, rate: creditedPerDecision };
@@ -973,6 +1047,25 @@ export interface ReportCoverage {
   recoveryFromMs?: number;
 }
 
+/**
+ * Lane E6: why an open hour's latest working fold was refused, as the day
+ * report names it. `code` is the refusal's own. A budget refusal carries the
+ * budget, its limit and the figure observed, as the 413 answer does; a row
+ * conflict carries its stream, and not its id, which names a visitor and would
+ * outlive an erasure in a saved report.
+ */
+export interface OpenHourRefusal {
+  at: number;
+  error: string;
+  code: string;
+  budget?: string;
+  limit?: number;
+  observed?: number;
+  conflict?: { stream: 'decision' | 'outcome' };
+}
+/** Lane E6: one open hour of a day report (`DayReport.hours.open`). */
+export interface OpenHourEntry { hour: number; status: 'current' | 'refused'; through: number | null; refusal?: OpenHourRefusal }
+
 export interface DayReport {
   tenant: string;
   brand: string;
@@ -1013,10 +1106,31 @@ export interface DayReport {
   allocation?: ReportAllocation;
   /** W21 E1.04: per-arm enrolled visitors and the outcome types they produced. Null where the source predates the field, or names an hour in `coverage.unassignedHours`. */
   visitorOutcomes?: VisitorOutcomes | null;
+  /** The named outcomes (a partner pickup, a retailer referral) by their own names, credited to the decisions that earned them; never a sale. */
+  namedOutcomes?: NamedOutcomes | null;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
   /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
-  hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number };
+  hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number;
+    /**
+     * Lane E6: the open hours — the hour still open, and the hour just closed
+     * until its own fold is due — the five-minute job has started a WORKING
+     * aggregate for. Absent when there is none, which is every report written
+     * before it existed. Each says where it stands:
+     *
+     *  · `current`: the hour is in `built`, summed from a working fold of
+     *    everything the ledger held at `through`, and nothing that fold reads
+     *    has changed since. The hour's final fold replaces it.
+     *  · `refused`: the hour's latest working fold was refused, and `refusal`
+     *    says why — the budget with its limit and the observed figure, or the
+     *    row conflict's stream. Where an earlier fold stands the hour is in
+     *    `built` from THAT fold and `through` is when it read the ledger: the
+     *    hour is stale, and says so. Where none stands `through` is null and
+     *    the hour is not in `built`.
+     *
+     * Either way the day is incomplete by its own account.
+     */
+    open?: OpenHourEntry[] };
   coverage?: ReportCoverage;
   /** Null/absent means unknown. Equality is not experimental compatibility. */
   computation?: ComputationBasis | null;
@@ -1067,6 +1181,9 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const source = report.hours?.source === 'aggregates' || report.hours?.source === 'ledger' ? report.hours.source
     : report.hours === undefined && e.version === 1 && e.source === 'ledger' ? 'ledger' : 'unknown';
   const built = knownHours(report.hours?.built), missing = knownHours(report.hours?.missing);
+  // Lane E6: an open hour, current or refused, is not final, so a day that
+  // names one is incomplete by its own account.
+  const open = Array.isArray(report.hours?.open) ? Array.from(report.hours.open as unknown[]).filter(v => hour(v) || (object(v) && hour(v.hour))) : [];
   // W21 C1.08 (R149): optional in the evidence, because a report written before
   // this release cannot carry it and is not thereby invalid. Present, it is a
   // list of built hours or the explicit unknown.
@@ -1127,7 +1244,7 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
   const unplaced = (carryInHours ?? []).some(row => row.unplaced > 0);
   return {
     version: 1, source, metadata,
-    status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length || late || unplaced ? 'incomplete' : 'unknown',
+    status: truncated || visitorsIncomplete === true || missingHours.length || unadvancedHours.length || late || unplaced || open.length ? 'incomplete' : 'unknown',
     maturity: 'unknown', truncated, visitorsIncomplete, missingHours, truncatedHours, unadvancedHours, unknownHours, horizons,
     ...(valid && count(e.refoldHorizonMs) ? { refoldHorizonMs: e.refoldHorizonMs } : {}),
     ...(maturities ? { maturities } : {}),
@@ -1170,6 +1287,7 @@ export function diagnosticDayReport(report: DayReport): DayReport {
     armVisitors: validArmVisitors(report.armVisitors, 'distinct_visitors'),
     ...(allocation ? { allocation } : {}),
     visitorOutcomes: validVisitorOutcomes(report.visitorOutcomes),
+    namedOutcomes: validNamedOutcomes(report.namedOutcomes),
     ...(report.erasures ? { erasures: report.erasures } : {}),
     ...(report.hours ? { hours: report.hours } : {}),
     coverage,
@@ -1366,6 +1484,20 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     const visitors = byType.get(o.type) ?? new Set<string>();
     visitors.add(o.visitor_id); byType.set(o.type, visitors); outcomeVisitors.set(arm, byType);
   }
+  // The named outcomes, each under its own name, credited to the decisions the
+  // learning policy pays — the same attribution the holdout rows above count,
+  // without the slot's own reward filter, because a named outcome is counted
+  // where it was earned whatever the slot learns from.
+  const namedOutcomes = emptyNamedOutcomes();
+  for (const o of i.outcomes) {
+    const row = namedOutcomeRow(namedOutcomes, o);
+    if (!row) continue;
+    row.outcomes += 1;
+    if (Object.hasOwn(o, 'decision_id') && conflictingReferences?.has(referenceKey(o.tenant, o.visitor_id, o.decision_id!))) continue;
+    const ring = rings.get(o.visitor_id);
+    if (!ring) continue;
+    for (const c of attribute(o, ring, i.learning)) creditNamedOutcome(row, c.slot, c.item);
+  }
   const armNames = [...armVisitorIds.keys()].sort((a, b) => a.localeCompare(b));
   const armVisitors: ArmVisitors = { version: 1, basis: 'distinct_visitors',
     arms: armNames.map(arm => ({ arm, visitors: armVisitorIds.get(arm)!.size })) };
@@ -1378,7 +1510,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
     tenant: i.tenant, brand: i.brand, date: i.date, builtAt: i.now,
     counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated },
     policies, grids, gridPriors, exploration, measurement: REPORT_MEASUREMENT, holdout, holdoutComparison,
-    armVisitors, visitorOutcomes, allocation: publishedAllocation(i.learn),
+    armVisitors, visitorOutcomes, namedOutcomes, allocation: publishedAllocation(i.learn),
     computation: new Set(policies.map(p => p.name)).size === policies.length
       ? computationBasis(i.learn, policies, slots, { source: 'raw-day', horizonMs: null, ringCap: null }) : null,
     // W22 A1.01: what the tenant's published policy asks for, and the one day

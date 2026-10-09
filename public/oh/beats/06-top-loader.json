@@ -1,0 +1,13 @@
+{
+ "name": "06-top-loader",
+ "beat": 6,
+ "act": 3,
+ "actName": "The room completes",
+ "press": "she switches to a top-loader",
+ "kind": "context",
+ "label": "She switches to a top-loader",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "the pedestal leaves, the card says why",
+ "sees": "a rule withdrawing itself"
+}

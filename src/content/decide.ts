@@ -11,7 +11,9 @@ import type {
 } from './types';
 import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, type ChannelSignals } from '@/services/visit';
-import { isEligibleAt } from './lifecycle';
+import type { PlatformWord } from '@/services/platform';
+import { audienceKey } from '@/reflex/core';
+import { isEligibleAt, type EligibilityContext } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
@@ -43,6 +45,13 @@ export interface DecideInput {
    */
   regional?: (RegionalBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
   cell: Cell;
+  /**
+   * Where and under what conditions this request is happening, for the pieces
+   * that carry an `eligibleWhen` rule (Garrett's "snowing in the Pacific
+   * Northwest"). Absent means no rule can pass, which leaves every catalog
+   * without rules behaving exactly as before.
+   */
+  eligibility?: EligibilityContext;
   arm: Arm;
   versions: DecisionVersions;
   configLabel: string;
@@ -70,12 +79,35 @@ export interface DecideInput {
    * W16 C3: the arrival this page load reports, for the contextual seed rules
    * that read the campaign term and the referrer network. The entry-channel
    * signal is read from the cell, which already carries the established owned
-   * channel (R13). Observed context only: it is never stored by this decision.
+   * channel (R13). Observed context: the arrival is read from the request; a
+   * fired seed (its signal and value) is recorded on the receipt as a driver;
+   * nothing else of it is kept by this decision.
    */
   entry?: ChannelSignals;
+  /**
+   * The OS family the request itself reports, for seed rules that read
+   * `platform` (src/services/platform.ts). Observed context, like `entry`: the
+   * OS family is read from the request; the fired seed (ios or android) is
+   * recorded on the receipt as a driver; nothing finer is read or kept.
+   */
+  platform?: PlatformWord | null;
+  /**
+   * The shopper's OWN current audience memberships, for a seed rule's
+   * `dampen`. Never the regional prior and never asserted context. Absent
+   * means she holds none.
+   */
+  audiences?: readonly string[];
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
+
+/**
+ * The request context signal that names the anchor product, the product the
+ * page is about (`ctx.anchor=<product id>` on the snapshot), for the slots
+ * that prefer the pieces completing it. It is the signal the request contract
+ * already carries for this; there is no separate viewed-product member.
+ */
+export const ANCHOR_SIGNAL = 'anchor';
 
 /** The sample bound both existing advisory channels carry; the count stays whole. */
 const CONSTRAINT_WARNING_SAMPLE = 50;
@@ -255,6 +287,19 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
   const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
+  // The slots that prefer what completes the anchor product the request names,
+  // through the composer's `prefer` hook. The anchor is context the page asserts,
+  // never evidence about the shopper and never kept beyond the receipt's driver.
+  // FAIL CLOSED: a request that names no anchor prefers nothing, and a slot rule
+  // that is not a finite weight in (0, 1] is ignored rather than guessed at.
+  // Personalization, so never on the holdout's default arm.
+  const anchorSignal = i.eligibility?.signals?.[ANCHOR_SIGNAL];
+  const anchor = typeof anchorSignal === 'string' ? anchorSignal.trim() : '';
+  const completesAnchor = (p: ContentPieceLike): boolean => anchor !== '' && ((p as ContentPiece).complements ?? []).includes(anchor);
+  const complementsOf = new Map<string, number>(i.arm === 'default' || anchor === '' ? [] : i.slots.flatMap((s) => {
+    const w = s.complements?.weight;
+    return typeof w === 'number' && Number.isFinite(w) && w > 0 && w <= 1 ? [[s.slot, w] as const] : [];
+  }));
   // P01 decision D2: a configured per-context order is personalization by
   // context, so it is resolved only on an arm that personalizes — never on the
   // holdout's default arm, which is also the arm of a shopper without
@@ -265,8 +310,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const order = configuredOrderFor(s, i.cell);
     if (order) configured.set(s.slot, order);
   }
+  // The decision's slot specs are the ones the advisory diagnostics read
+  // (`slotSpecs`), with the decision's own per-request additions on top: the
+  // configured order (P01) and the anchor preference, neither of which refuses
+  // any piece, so the diagnostics' view of what a slot refuses is unchanged.
   const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins)
-    .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec);
+    .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
+    .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // Keep the site's default diversity/order unchanged as well as its zero scores.
@@ -275,7 +325,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
     byId.set(piece.id, piece);
-    if (isEligibleAt(piece, i.nowMs)) eligible.push(piece);
+    if (isEligibleAt(piece, i.nowMs, i.eligibility)) eligible.push(piece);
   }
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
@@ -342,7 +392,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const fires = (rule: SeedRule): boolean =>
     rule.signal === 'entry_channel' ? i.cell.channel === rule.value
       : rule.signal === 'campaign_term' ? arrivalTerm !== '' && arrivalTerm === term(rule.value)
-        : arrivedFromNetwork(i.entry, rule.value);
+        : rule.signal === 'platform' ? i.platform != null && i.platform === rule.value
+          : arrivedFromNetwork(i.entry, rule.value);
+  // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
+  const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
   /** The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`. */
   const seedDriversFor = (p: ContentPieceLike, slot: string): SeedDriver[] => {
@@ -352,10 +405,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const drivers: SeedDriver[] = [];
     for (const rule of rules) {
       if (!fires(rule)) continue;
+      // Each interest her own evidence holds multiplies the rule down; the receipt names every one.
+      const damped = (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
+      const weight = damped.reduce((w, d) => w * d.factor, rule.weight);
       for (const tag of rule.tags) {
         const w = weights[tag.dimension] ?? 0;
         if (!w || !(piece.tags[tag.dimension] ?? []).includes(tag.value)) continue;
-        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(rule.weight * w) });
+        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(weight * w),
+          ...(damped.length ? { dampened: damped.map((d) => ({ dimension: d.dimension, value: d.value, factor: d.factor })) } : {}) });
       }
     }
     return drivers;
@@ -536,6 +593,15 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     return { ...summary, contribution: Math.round(contribution * 1000) / 1000 };
   };
   for (const d of decisions) {
+    // The composer keeps a served piece's four strongest drivers, so a `completes`
+    // bonus smaller than four interest terms would leave the receipt without the
+    // reason it was preferred. It is itemised whenever it applied, never claimed
+    // where it did not: only a ranked piece that completes the anchor in a slot
+    // whose rule was in force.
+    if (complementsOf.has(d.slot) && d.strategy !== 'tenant-pinned' && !d.explain.drivers.some((x) => x.dim === 'completes')) {
+      const piece = byId.get(d.contentId);
+      if (piece && completesAnchor(piece)) d.explain.drivers.push({ dim: 'completes', value: anchor, a: 1, weight: complementsOf.get(d.slot)! });
+    }
     const r = regionalOf(d);
     if (r) d.explain.drivers.push({ dim: 'regional', value: r.region, a: r.lambda, weight: Math.round((r.contribution / (r.lambda || 1)) * 1000) / 1000 });
     if (ext?.status === 'ok') {

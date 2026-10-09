@@ -1,0 +1,35 @@
+{
+ "about": "L2 build fixture for public/vantage/beats/anchor.json (lane L1's seed writes the real one). What the PAGE needs that the engine does not decide: page and slot names, the ad the stranger lands from, the rehearsed regions, the ids the merchandiser beats act on, the template orders the receipts are read against. Every field is optional; the page names what it fell back to.",
+ "scope": "vantage",
+ "brand": { "name": "Vantage", "tagline": "See further." },
+ "pages": { "home": "home", "phone": "phone" },
+ "slots": { "hero": "hero", "deals": "deals", "rail": "phones-rail", "modules": "pdp-modules", "plans": "plan-pairing" },
+ "arrival": { "utm_source": "tiktok", "utm_medium": "paid-social", "utm_term": "iphone-17", "utm_campaign": "iphone-launch", "referrer": "https://www.tiktok.com/" },
+ "regions": { "first": "US-TX", "second": "US-NY", "covered": "US-TX", "uncovered": "US-NY" },
+ "focusPhone": "galaxy-s26-ultra",
+ "browse": ["galaxy-s26-ultra", "pixel-11-pro"],
+ "streamingShopper": { "phone": "iphone-18-pro-max", "plan": "max", "perk": "streaming" },
+ "ids": {
+  "launch": "VNT-IP18P-NEWLINE",
+  "upgrade": "VNT-IP18P-UPGRADE",
+  "blackFriday": "VNT-BF-SWITCH",
+  "duo": "VNT-DUO-PREORDER",
+  "homeBundle": "VNT-HOME-5G",
+  "family": "VNT-FAMILY-FOUR",
+  "byod": "VNT-BYOD-KEEP"
+ },
+ "beats": {
+  "open": { "slots": "slots-1", "catalog": "catalog-1" },
+  "twoWeeks": { "catalog": "catalog-two-weeks" },
+  "blackFriday": { "catalog": "catalog-black-friday" },
+  "pinDuo": { "slots": "slots-pin-duo" }
+ },
+ "templates": {
+  "home": ["hero", "deals", "phones-rail"],
+  "modules": ["trade-in", "plan-pairing", "storage-memory", "connected-devices", "accessories", "protection", "home-bundle"],
+  "plans": ["plan-simple", "plan-go", "plan-more", "plan-max"]
+ },
+ "defaults": ["VNT-IP18P-NEWLINE", "VNT-S26U-TRADE", "VNT-SIMPLE-SWITCH", "VNT-REWARDS-FEE"],
+ "exitBeat": false,
+ "measurementBasis": "served-v1"
+}

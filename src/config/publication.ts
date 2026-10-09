@@ -362,31 +362,65 @@ function storageIdentity(storage: R2Bucket): object {
   for (let hops = 0; hops < 8 && storageOrigins.has(current); hops++) current = storageOrigins.get(current)!;
   return current;
 }
-interface CacheEntry { storage: object; scope: string; at: number; bytes: number; value: PublicationPin; documents: Map<string, Revision<unknown>> }
+/**
+ * One resident publication set. `handle` is the storage object the read that
+ * filled it held; `binding` is the backing binding that handle fronts
+ * (`storageIdentity`). The identical handle is answered from its own entry with
+ * no storage read; any other handle of the same binding validates the head and
+ * may reuse the set and documents of an entry of that binding only.
+ */
+interface CacheEntry { handle: object; binding: object; scope: string; at: number; bytes: number; value: PublicationPin; documents: Map<string, Revision<unknown>> }
 const cache = new Set<CacheEntry>(); let cacheBytes = 0, cacheEpoch = {};
 const fresh = (at: number, now: number) => Number.isFinite(now) && now >= at && now - at < PUBLICATION_CACHE_MS;
 function remove(entry: CacheEntry): void { if (cache.delete(entry)) cacheBytes -= entry.bytes; }
 export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; }
 function invalidateScope(storage: R2Bucket, scope: string): void {
   const binding = storageIdentity(storage);
-  for (const entry of cache) if (entry.storage === binding && entry.scope === scope) remove(entry);
+  for (const entry of cache) if (entry.binding === binding && entry.scope === scope) remove(entry);
   cacheEpoch = {};
 }
 async function invalidating<T>(storage: R2Bucket, scope: string, run: () => Promise<T>): Promise<T> { invalidateScope(storage, scope); try { return await run(); } finally { invalidateScope(storage, scope); } }
 /** One pin is shared by every dependent read in an operation. Administrative
- * callers opt out of the bounded serving cache; it never refreshes on failure. */
+ * callers opt out of the bounded serving cache; it never refreshes on failure.
+ *
+ * Lane E4: a serving read whose storage handle has no resident entry still reads
+ * and validates the head, every time, so a publication committed anywhere is
+ * honoured on the very next read. When the head's committed identity (revision and
+ * digest) is one this isolate already holds a set for under the SAME backing
+ * binding (W19 LG1, `storageIdentity`), that set and the documents already read
+ * under it are used instead of reading them again: the identity is
+ * the digest of the sealed set, and the set and its documents are immutable and
+ * were validated against it when first read. This is what lets a shopper's owner
+ * operations share the cache, because every operation fences its bindings behind
+ * a handle of its own (`ownerEnvironment`): without it, each action read the head,
+ * the set and every document again. Nothing else changes: a head that cannot be
+ * read or does not validate refuses as before, and a new identity reads the set.
+ * A read by the identical handle that filled an entry is answered from it with
+ * no storage read until the entry expires, as before; a wrapper the fence does
+ * not name is its own binding and reuses nothing another binding read. */
 export async function pinPublication(env: Env, scope: string, servingCache = false): Promise<PublicationPin> {
   required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)); const storage = storageOf(env), binding = storageIdentity(storage), started = Date.now(), epoch = cacheEpoch;
   for (const entry of cache) if (!fresh(entry.at, started)) remove(entry);
-  if (servingCache) for (const entry of cache) if (entry.storage === binding && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
-  const value = freeze(await currentSet(storage, await requiredHead(storage, scope)));
-  const bytes = encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
+  // The identical handle: its own entry answers with no storage read, so one
+  // operation reads the head once however many members it reads, and a read
+  // the same handle already made serves through an authority outage until expiry.
+  if (servingCache) for (const entry of cache) if (entry.handle === storage && entry.scope === scope) { cache.delete(entry); cache.add(entry); return entry.value; }
+  const loaded = await requiredHead(storage, scope), committed = loaded.head.committed;
+  // Any other handle has read and validated the head above. The most recently
+  // used entry of the SAME backing binding for exactly this committed identity
+  // lends its set and the documents read under it (each operation starts from
+  // what the one before it held and adds what it reads, so the newest holds the
+  // most); nothing another binding read is ever served (W19 LG1).
+  let known: CacheEntry | undefined;
+  if (servingCache && committed) for (const e of cache) if (e.binding === binding && e.scope === scope && e.value.revision === committed.revision && e.value.digest === committed.digest) known = e;
+  const value = known ? known.value : freeze(await currentSet(storage, loaded));
+  const bytes = known ? known.bytes : encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
   if (servingCache && epoch === cacheEpoch && fresh(started, now) && bytes <= CACHE_BYTES) {
-    const resident = [...cache].find(e => e.storage === binding && e.scope === scope);
+    const resident = [...cache].find(e => e.handle === storage && e.scope === scope);
     if (!resident || resident.at <= started && resident.value.revision <= value.revision) {
       if (resident) remove(resident);
       while (cache.size >= CACHE_ENTRIES || cacheBytes + bytes > CACHE_BYTES) remove(cache.values().next().value!);
-      cache.add({ storage: binding, scope, at: started, bytes, value, documents: new Map() }); cacheBytes += bytes;
+      cache.add({ handle: storage, binding, scope, at: started, bytes, value, documents: new Map(known?.documents) }); cacheBytes += bytes;
     }
   }
   return value;
@@ -414,7 +448,8 @@ export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, 
   required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; required(ref);
   const storage = storageOf(env), binding = storageIdentity(storage), epoch = cacheEpoch, now = Date.now();
   for (const entry of cache) if (!fresh(entry.at, now)) remove(entry);
-  const resident = [...cache].find(e => e.storage === binding && e.scope === set.scope && e.value.digest === set.digest);
+  const matching = [...cache].filter(e => e.binding === binding && e.scope === set.scope && e.value.digest === set.digest);
+  const resident = matching.find(e => e.handle === storage) ?? matching[matching.length - 1];
   const hit = resident?.documents.get(key);
   if (hit) return hit as Revision<T>;
   const value = await retained(storage, kind, scope, ref.revision);
@@ -426,6 +461,28 @@ export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, 
     resident.documents.set(key, result); resident.bytes += charge; cacheBytes += charge;
   }
   return result;
+}
+/**
+ * One member of a pinned set, or `null` where the set itself says the member
+ * does not exist (lane E2).
+ *
+ * Absence and unreadability are kept apart, as `publishedProposals` keeps them
+ * for the proposals list (`src/routes/decisions.ts`). The set was read and its
+ * digest checked like every other pin, so a missing member is the sealed set's
+ * own statement and never a guess: a set cannot lose a member without failing
+ * its digest. Everything else refuses exactly as `readPinnedPublication` does: a
+ * set of another scope, and a member the set DOES list whose document cannot be
+ * read or does not match its ref.
+ *
+ * For a member a tenant may legitimately never publish, such as imported priors:
+ * the demo bootstrap creates a set of reflex, catalog, slots and learn, and no
+ * prior. A member every reader needs is read with `readPinnedPublication`, where
+ * absence is still an authority failure.
+ */
+export async function readOptionalPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T> | null> {
+  required(set.scope === publicationScope(kind, scope) && object(set.refs));
+  if (!Object.hasOwn(set.refs, member(kind, scope))) return null;
+  return readPinnedPublication(env, kind, scope, set);
 }
 export async function readPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, servingCache = false): Promise<Revision<T>> {
   return readPinnedPublication(env, kind, scope, await pinPublication(env, publicationScope(kind, scope), servingCache));
