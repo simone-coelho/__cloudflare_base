@@ -344,18 +344,22 @@ function sharedShopper(a: OrderContext, b: OrderContext): string | null {
  * P01 (O5, decision D1): the authoring rules that relate a slot's orders to the
  * rest of its slot, applied at publication only. An order is published only on
  * the page's declared layout slot, never on an off-limits one; it keeps every
- * pinned module at its position and lists no module the slot excludes by id;
+ * pinned module at its position and lists no module the slot excludes by id,
+ * nor one another slot of the page pins (a pin reserves its module page-wide);
  * one context carries one order, and two contexts that match one shopper with
  * equal specificity are refused, so the most specific match always decides.
  */
-function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy): string[] {
+function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, pageSlots: readonly SlotStrategy[]): string[] {
   const at = `pages.${page}[${index}].orders`, orders = slot.orders ?? [];
   if (slot.layout !== true) return [`${at}: slot '${slot.slot}' is not the declared layout slot of page '${page}'; per-context orders are set only on the slot that declares layout: true`];
   if (slot.offLimits) return [`${at}: slot '${slot.slot}' is off-limits and serves no module, so it carries no order`];
   const errors: string[] = [], pins = slotPins(slot), excluded = new Set(slot.excludedPieceIds ?? []);
+  const pinnedElsewhere = new Map<string, string>();
+  for (const other of pageSlots) if (other !== slot && !other.offLimits) for (const id of slotPins(other)) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
   orders.forEach((order, k) => {
     order.modules.forEach((id, p) => {
       if (excluded.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the order could not serve it`);
+      else if (pinnedElsewhere.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is pinned by slot '${pinnedElsewhere.get(id)}' of page '${page}', which reserves it page-wide, so this order could not serve it`);
     });
     pins.forEach((pin, p) => {
       if (order.modules[p] !== pin) errors.push(`${at}[${k}].modules[${p}]: the slot pins ${quoted(pin)} at position ${p + 1}; an order keeps every pinned module at its position`);
@@ -634,7 +638,7 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
   // P01: per-context orders, refused where they are authored whenever they
   // could not be served exactly (a retained document is never reinterpreted).
   for (const [page, slots] of Object.entries(checked.value.pages)) {
-    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot)); });
+    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots)); });
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();
