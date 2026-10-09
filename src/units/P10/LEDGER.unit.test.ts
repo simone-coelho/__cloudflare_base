@@ -31,16 +31,16 @@
 //   The tenant floor is `signalFloor` on the slots document (a whole number,
 //   absent = 0); a slot's own `signalFloor` (a whole number, or 'never' on the
 //   page's declared layout slot only) overrides it. A shopper is below the floor
-//   of a slot while her count of signals is at most the floor; her count is
+//   of a slot while the shopper's count of signals is at most the floor; the count is
 //   every action whose behaviour weight is above zero.
-//   F1  With a tenant floor of 3, the snapshot after each of her first three
-//       signals is context-only (here: the catalogue order, though she has
+//   F1  With a tenant floor of 3, the snapshot after each of the first three
+//       signals is context-only (here: the catalogue order, though the shopper has
 //       interest), a weight-0 action (a page view) leaves the count where it
 //       is, and the snapshot after the fourth signal is personalized.
 //   F2  Below the floor a decision's records show the configured order, the pin,
 //       the exclusion and eligibility, the seed's contribution, the regional
 //       prior at λ = 1, freshness, merchandising and a learned lift from level 2
-//       at most — and no driver from her own interests, no stage block, no
+//       at most — and no driver from the shopper's own interests, no stage block, no
 //       fatigue block and no exploration. The same shopper at floor 0 (the
 //       control) shows every one of the terms the floor withholds.
 //   F3  A slot's floor of 0 under a tenant floor of 3 personalizes that slot
@@ -52,10 +52,10 @@
 //   F4  An explicit floor of 0 on the tenant and the slot decides, step for
 //       step, exactly what a tenant with no floor decides (every term of every
 //       decision of the content slot), by the third view the page reflects the
-//       line she viewed (W16.C8.04), and a floor-0 decision replays equal under
+//       line the shopper viewed (W16.C8.04), and a floor-0 decision replays equal under
 //       exactly today's page markers.
 //   F5  Every record of a context-only decision carries `explain.signalFloor:
-//       { floor, signals }`; her receipt says she is below the signal floor,
+//       { floor, signals }`; the receipt says the shopper is below the signal floor,
 //       with both numbers; the decision replays equal.
 //   F6  docs/kit/02 and 03 each document `signalFloor`, 'never' on the layout
 //       slot, and the counting rule (a signal is an action whose behaviour
@@ -90,7 +90,7 @@ const STORY = 'pdp-story';
 const story = (id: string, tags: Record<string, string[]>, over: Record<string, unknown> = {}) => ({ id, customerContentId: `TAP-${id.toUpperCase()}`,
   type: 'editorial', title: id, tags, slotTypes: [STORY], lifecycle: { status: 'live' }, ...over });
 const DAY = 86_400_000;
-/** The content slot's pieces, in catalogue order: the one her taste must overtake is listed first. */
+/** The content slot's pieces, in catalogue order: the one the shopper's taste must overtake is listed first. */
 const STORY_PIECES = [
   story('story.rogue', { line: ['Rogue'] }, { journeyStageFit: ['exploring'], freshnessDate: new Date(Date.now() - 2 * DAY).toISOString() }),
   story('story.willow', { line: ['Willow'] }, { merchandising: { season: 1 }, freshnessDate: new Date(Date.now() - DAY).toISOString() }),
@@ -102,15 +102,38 @@ const PIECES = [...MODULES, ...STORY_PIECES];
 const storySlot = (over: Record<string, unknown> = {}) => ({ slot: STORY, take: 2, weights: { line: 1 }, ...over });
 /** With no signal the story slot serves its catalogue order. */
 const STORY_CONTEXT_ONLY = ['story.rogue', 'story.willow'];
-/** Her taste after Tabby views: the Tabby story first. */
+/** The shopper's taste after Tabby views: the Tabby story first. */
 const STORY_PERSONALIZED_FIRST = 'story.tabby';
-const COLD_LAYOUT = [M.grid, M.reco1, M.reco2, M.editorial];
-/** After four Tabby views (P02.A2's arithmetic, one more view): reco.2, editorial.1, grid.1, then reco.1 by catalogue order. */
+/**
+ * K = 4, context only (no signal yet, or below the floor; on the F1 and F3 pages the layout slot carries no
+ * seed and no configured order, the regional prior is off and no ladder is published, so no context term
+ * moves a module): the first K ELIGIBLE modules in catalogue order, a reserved module passed over (P02.A2's
+ * rule, src/units/P02/LEDGER.unit.test.ts:38-43). The harness catalogue (src/units/_parity.ts:123-138)
+ * against these pages and their layout slot (:141-142), in order: grid.1 eligible (1st); reviews.1 excluded
+ * by the layout slot's own excludedPieceIds; reco.1 eligible (2nd); lookbook.1 expired; recent.1 ELIGIBLE
+ * (3rd), because the F1 and F3 pages declare only the layout slot and the story slot, so no slot pins
+ * module.PDP.recent.1 and nothing reserves it; reco.2 eligible (4th); editorial.1 and ugc.1 eligible but
+ * beyond K; charms.1's window has closed. P02's witness [grid.1, reco.1, reco.2, editorial.1] (P02 :104-105)
+ * holds on P02's page, where recentSlot() (src/units/_parity.ts:144) pins and so reserves recent.1 below the
+ * layout slot; P03's page, which has no such slot, reads recent.1 as eligible too
+ * (src/units/P03/LEDGER.unit.test.ts:99-104).
+ */
+const COLD_LAYOUT = [M.grid, M.reco1, M.recent, M.reco2];
+/**
+ * After four Tabby views (P02.A2's arithmetic, P02 :106-112, with one more view): line Tabby and occasion
+ * evening are on all four views, so each reads a = 4/(4 + K); category Handbags is on three and Small Leather
+ * Goods on one (the wallet), each carried by fewer views than line Tabby and so below a. With the slot's
+ * weights (line 1, category 0.5, occasion 0.5): reco.2 = a + a/2; editorial.1 = a; grid.1 at most half the
+ * sum of its two category values, so below a; reco.1, recent.1 and ugc.1 at 0 (no Tabby, Handbags, Small
+ * Leather Goods or evening tag), tied and ordered by catalogue order (positions 3, 5 and 8). recent.1 therefore ranks
+ * fifth on these pages: it ties at 0 with reco.1, which precedes it in catalogue order, so it falls outside
+ * the first four, and the list is the one P02's page (where recent.1 is reserved) gives as well.
+ */
 const PERSONALIZED_LAYOUT = [M.reco2, M.editorial, M.grid, M.reco1];
 
 async function paidSocial(m: Mounted): Promise<Shopper> {
   const s = await shopperOn(m);
-  expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: her page view is accepted`).toBe(200);
+  expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: the shopper's page view is accepted`).toBe(200);
   return s;
 }
 const page = async (s: Shopper) => {
@@ -125,7 +148,7 @@ const page = async (s: Shopper) => {
 
 describe('unit:P10.F1', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): with a tenant floor of 3 the decision after each of her first three signals is context-only, a page view is not a signal, and the decision after the fourth signal is personalized`, async () => {
+    it(`host (${host}): with a tenant floor of 3 the decision after each of the shopper's first three signals is context-only, a page view is not a signal, and the decision after the fourth signal is personalized`, async () => {
       const m = await mount(host, { pieces: PIECES, slots: declaredSlots([layoutSlot(), storySlot()], { signalFloor: 3 }), learn: learnDocument() });
       expectPublished(m, 'P10.F1 — the slots document with a tenant signal floor of 3 publishes');
       const s = await paidSocial(m);
@@ -134,13 +157,13 @@ describe('unit:P10.F1', () => {
         expect((await s.action(view)).status).toBe(200);
         if (i === 0) {
           const taste = (await s.hydrate()).body as { affinity?: { dims?: Record<string, Record<string, number>> } };
-          expect(taste.affinity?.dims?.line?.Tabby ?? 0, `${host}: CONTROL — her first view built Tabby interest`).toBeGreaterThan(0);
+          expect(taste.affinity?.dims?.line?.Tabby ?? 0, `${host}: CONTROL — the shopper's first view built Tabby interest`).toBeGreaterThan(0);
         }
         if (i === 1) expect((await s.action(PAGE_VIEW)).status, `${host}: a page view, weighted 0, between the second and third signals`).toBe(200);
         const { story: served, layout } = await page(s);
         steps.push({ after: `signal ${i + 1}`, story: served, layout });
       }
-      expect.soft(steps, `${host}: P10.F1 — the decision after each of her first three signals is context-only (the page view counted for nothing)`)
+      expect.soft(steps, `${host}: P10.F1 — the decision after each of the shopper's first three signals is context-only (the page view counted for nothing)`)
         .toEqual(['signal 1', 'signal 2', 'signal 3'].map(after => ({ after, story: STORY_CONTEXT_ONLY, layout: COLD_LAYOUT })));
       expect((await s.action(TABBY_VIEWS[3]!)).status).toBe(200);
       const fourth = await page(s);
@@ -163,13 +186,13 @@ const f2Slots = (signalFloor: number) => declaredSlots([
     stage: { inStage: 0.4, outOfStage: 0.5 }, freshness: { weight: 0.2, halfLifeDays: 30 }, fatigue: { weight: 0.5, windowHours: 24, cap: 2 },
     merchandising: { season: 0.5 } }),
 ], { signalFloor });
-/** Both slots on served-v1 here, so the capturing caller writes the ring her fatigue is read from. */
+/** Both slots on served-v1 here, so the capturing caller writes the ring the shopper's fatigue is read from. */
 const F2_LEARN = learnDocument({ [LAYOUT]: { reward: 'click' }, [STORY]: { reward: 'click', gamma: 0.5, exploration: { mode: 'rotation', share: 1, floor: 50 } } },
   { regional: { enabled: true, kBlend: 1, minEvents: 1 } });
 /** The cell the published ladder was learned in: paid social, first visit, considering. Levels 0-5 all reach nMin. */
 const LEARNED_CELL = { channel: 'paid_social', visit_bucket: '1' as const, region: null, affinity: null, stage: 'mid' as const };
 
-/** The learned ladder for the story slot: 40 served exposures of the Willow and Tabby stories in her cell, published by the real objects. */
+/** The learned ladder for the story slot: 40 served exposures of the Willow and Tabby stories in the shopper's cell, published by the real objects. */
 async function learnedLadder(m: Mounted): Promise<void> {
   const at = Date.now() - 10 * 60_000;
   for (let k = 0; k < 40; k++) {
@@ -190,7 +213,7 @@ async function learnedLadder(m: Mounted): Promise<void> {
     expect(await published.json(), `PRECONDITION: ${name} publishes its snapshot`).toMatchObject({ ok: true, published: true });
   }
 }
-/** What shoppers everywhere engage with: the Willow line, and evening. Never Tabby, so a Tabby driver can only be her own interest. */
+/** What shoppers everywhere engage with: the Willow line, and evening. Never Tabby, so a Tabby driver can only be the shopper's own interest. */
 async function publishTrend(m: Mounted): Promise<void> {
   const now = Date.now();
   await m.cache.put(trendKey(TENANT, '*'), JSON.stringify({ generation: REGION_GENERATION, tenant: TENANT, region: '*', level: 'global', events: 500,
@@ -199,40 +222,40 @@ async function publishTrend(m: Mounted): Promise<void> {
 
 describe('unit:P10.F2', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): below the floor the decision applies the seed rules, the configured order, the regional prior at full weight, the ladder at levels 0 to 2 and the slot's pins, exclusions, eligibility, freshness and merchandising, and none of her interests, her journey stage, fatigue, levels 3 to 5 or visitor-hashed exploration`, async () => {
-      // Without the durable recovery path, so the capturing caller writes her ring directly (`fanDecisions`).
+    it(`host (${host}): below the floor the decision applies the seed rules, the configured order, the regional prior at full weight, the ladder at levels 0 to 2 and the slot's pins, exclusions, eligibility, freshness and merchandising, and none of the shopper's interests, journey stage, fatigue, levels 3 to 5 or visitor-hashed exploration`, async () => {
+      // Without the durable recovery path, so the capturing caller writes the shopper's ring directly (`fanDecisions`).
       const m = await mount(host, { pieces: PIECES, slots: f2Slots(10), learn: F2_LEARN }, { recovery: false });
       expectPublished(m, 'P10.F2 — the slots document with a tenant signal floor of 10, the per-context order and the story slot’s rules publishes');
       await learnedLadder(m);
       await publishTrend(m);
       const s = await paidSocial(m);
       for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status).toBe(200);
-      // A page she was served (and the ring remembers), so fatigue has something to read.
+      // A page the shopper was served (and the ring remembers), so fatigue has something to read.
       await servePage(m, s, 'pdp', { offer: false });
       const below = (await servePage(m, s, 'pdp')).records;
       const storyBelow = below.filter(r => r.slot === STORY), layoutBelow = below.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
 
       // What applies below the floor.
-      expect.soft(layoutBelow.map(r => r.item_id), `${host}: P10.F2 — the configured order for her context, exactly`).toEqual(F2_ORDER);
+      expect.soft(layoutBelow.map(r => r.item_id), `${host}: P10.F2 — the configured order for the shopper's context, exactly`).toEqual(F2_ORDER);
       expect.soft(layoutBelow[0]?.authority, `${host}: P10.F2 — the slot's pin holds its position`).toBe('pin');
       expect(storyBelow.filter(r => ['story.excluded', 'story.expired'].includes(r.item_id)).map(r => r.item_id),
         `${host}: P10.F2 — exclusions and eligibility still apply`).toEqual([]);
       const willow = storyBelow.find(r => r.item_id === 'story.willow');
-      expect.soft(storyBelow.map(r => r.item_id)[0], `${host}: P10.F2 — the story her arrival's seed rule, the population's trend, freshness and merchandising favour is served first`).toBe('story.willow');
-      expect.soft(willow?.explain.contextual?.applied ?? 0, `${host}: P10.F2 — the seed rule for her arrival contributed`).toBeGreaterThan(0);
+      expect.soft(storyBelow.map(r => r.item_id)[0], `${host}: P10.F2 — the story the seed rule for the shopper's arrival, the population's trend, freshness and merchandising favour is served first`).toBe('story.willow');
+      expect.soft(willow?.explain.contextual?.applied ?? 0, `${host}: P10.F2 — the seed rule for the shopper's arrival contributed`).toBeGreaterThan(0);
       expect.soft(willow?.explain.freshness?.applied ?? 0, `${host}: P10.F2 — freshness applied`).toBeGreaterThan(0);
       expect.soft(willow?.explain.merchandising?.drivers?.length ?? 0, `${host}: P10.F2 — merchandising applied`).toBeGreaterThan(0);
       expect.soft(storyBelow.map(r => r.explain.regional?.lambda ?? null).filter(l => l !== null),
-        `${host}: P10.F2 — the regional prior at full weight (λ = 1), her own evidence not weighing it down`).toEqual(storyBelow.filter(r => r.explain.regional).map(() => 1));
+        `${host}: P10.F2 — the regional prior at full weight (λ = 1), the shopper's own evidence not weighing it down`).toEqual(storyBelow.filter(r => r.explain.regional).map(() => 1));
       // The ladder's own rule over levels 0 to 2: the finest of them that reaches nMin, which is level 2 (channel and visit bucket) here.
       expect.soft(willow?.explain.lift?.level ?? null, `${host}: P10.F2 — the learned ladder applies, answering from level 2 (channel and visit bucket)`).toBe(2);
       expect.soft(storyBelow.filter(r => r.explain.lift).map(r => `${r.item_id}: level ${r.explain.lift!.level}`),
         `${host}: P10.F2 — and no record's learned lift came from level 3, 4 or 5`).toEqual(storyBelow.filter(r => r.explain.lift).map(r => `${r.item_id}: level 2`));
-      // What does not. Her own interest is Tabby; the population's is not, so Tabby in the scored vector can only be hers.
-      expect.soft(storyBelow.map(r => r.inputs?.affinity?.line?.Tabby ?? 0), `${host}: P10.F2 — the interest vector the decision scored carries none of her own interests`)
+      // What does not. The shopper's own interest is Tabby; the population's is not, so Tabby in the scored vector can only be the shopper's.
+      expect.soft(storyBelow.map(r => r.inputs?.affinity?.line?.Tabby ?? 0), `${host}: P10.F2 — the interest vector the decision scored carries none of the shopper's own interests`)
         .toEqual(storyBelow.map(() => 0));
       expect.soft(storyBelow.flatMap(r => r.explain.drivers.filter(d => d.dim === 'line' && d.value === 'Tabby').map(() => r.item_id)),
-        `${host}: P10.F2 — no driver reads her own interests`).toEqual([]);
+        `${host}: P10.F2 — no driver reads the shopper's own interests`).toEqual([]);
       expect.soft(storyBelow.filter(r => r.explain.stage).map(r => r.item_id), `${host}: P10.F2 — no journey-stage rule`).toEqual([]);
       expect.soft(storyBelow.filter(r => r.explain.fatigue).map(r => r.item_id), `${host}: P10.F2 — no fatigue`).toEqual([]);
       expect.soft(below.filter(r => r.explored).map(r => `${r.slot}:${r.item_id}`), `${host}: P10.F2 — no visitor-hashed exploration`).toEqual([]);
@@ -240,12 +263,12 @@ describe('unit:P10.F2', () => {
       // CONTROL: the same shopper at floor 0 shows every term the floor withholds, so the fixture can tell them apart.
       expect((await putSlots(m, f2Slots(0))).status, `${host}: the floor of 0 publishes`).toBe(200);
       const above = (await servePage(m, s, 'pdp')).records.filter(r => r.slot === STORY);
-      expect(above.some(r => (r.inputs?.affinity?.line?.Tabby ?? 0) > 0), `${host}: CONTROL — at floor 0 her Tabby interest is in the vector the decision scored`).toBe(true);
+      expect(above.some(r => (r.inputs?.affinity?.line?.Tabby ?? 0) > 0), `${host}: CONTROL — at floor 0 the shopper's Tabby interest is in the vector the decision scored`).toBe(true);
       expect(above.some(r => r.explain.stage), `${host}: CONTROL — at floor 0 the stage rule applies`).toBe(true);
       expect(above.some(r => r.explain.fatigue), `${host}: CONTROL — at floor 0 fatigue applies`).toBe(true);
       expect(above.some(r => r.explored), `${host}: CONTROL — at floor 0 the slot explores`).toBe(true);
       expect(above.some(r => (r.explain.lift?.level ?? 0) >= 3), `${host}: CONTROL — at floor 0 a finer ladder level answers`).toBe(true);
-      expect(above.some(r => (r.explain.regional?.lambda ?? 1) < 1), `${host}: CONTROL — at floor 0 her evidence weighs the regional prior down`).toBe(true);
+      expect(above.some(r => (r.explain.regional?.lambda ?? 1) < 1), `${host}: CONTROL — at floor 0 the shopper's evidence weighs the regional prior down`).toBe(true);
     }, 60_000);
   }
 });
@@ -307,7 +330,7 @@ describe('unit:P10.F4', () => {
     .map(({ decisionId: _d, renderOffer: _r, ...rest }) => { void _d; void _r; return rest; });
 
   for (const host of HOSTS) {
-    it(`host (${host}): an explicit floor of 0 decides step for step exactly what a tenant without a floor decides, the page reflects her views by the third interaction, and a floor-0 decision replays equal under today's page markers`, async () => {
+    it(`host (${host}): an explicit floor of 0 decides step for step exactly what a tenant without a floor decides, the page reflects the shopper's views by the third interaction, and a floor-0 decision replays equal under today's page markers`, async () => {
       // Both slots on served-v1, so the capturing caller writes the ledger the replay reads.
       const learn = learnDocument({ [LAYOUT]: { reward: 'click' } });
       // Without the durable recovery path: the replay reads what the real producer and consumer wrote.
@@ -326,7 +349,7 @@ describe('unit:P10.F4', () => {
         steps.push({ step: i + 1, today: out.today, zero: out.zero });
       }
       expect(steps.map(st => st.zero), `${host}: P10.F4 — every term of every decision at floor 0 is what the tenant without a floor is served`).toEqual(steps.map(st => st.today));
-      expect((steps[2]!.zero as Array<{ contentId: string }>)[0]?.contentId, `${host}: P10.F4 — W16.C8.04: by the third interaction the page reflects the line she viewed`)
+      expect((steps[2]!.zero as Array<{ contentId: string }>)[0]?.contentId, `${host}: P10.F4 — W16.C8.04: by the third interaction the page reflects the line the shopper viewed`)
         .toBe(STORY_PERSONALIZED_FIRST);
 
       const m = worlds.zero;
@@ -344,12 +367,12 @@ describe('unit:P10.F4', () => {
 });
 
 // ===========================================================================
-// unit:P10.F5 — the record and the receipt say she is below the floor
+// unit:P10.F5 — the record and the receipt say the shopper is below the floor
 // ===========================================================================
 
 describe('unit:P10.F5', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): the record and the receipt of a context-only decision say the shopper is below the signal floor, with her count of signals and the floor in force, and the decision replays equal`, async () => {
+    it(`host (${host}): the record and the receipt of a context-only decision say the shopper is below the signal floor, with the shopper's count of signals and the floor in force, and the decision replays equal`, async () => {
       const m = await mount(host, { pieces: PIECES, slots: declaredSlots([layoutSlot(), storySlot()], { signalFloor: 3 }), learn: learnDocument() });
       expectPublished(m, 'P10.F5 — the slots document with a tenant signal floor of 3 publishes');
       const s = await paidSocial(m);
@@ -358,9 +381,9 @@ describe('unit:P10.F5', () => {
       for (const d of snap.decisions.filter(x => x.slot === LAYOUT)) expect((await s.ack(snap, d)).status, `${host}: ${d.contentId} acknowledged`).toBe(200);
       await m.drainLedger();
       const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT);
-      expect(records.length, `${host}: PRECONDITION — the ledger holds her four layout decisions`).toBe(4);
+      expect(records.length, `${host}: PRECONDITION — the ledger holds the shopper's four layout decisions`).toBe(4);
       for (const r of records) {
-        expect.soft((r.explain as Record<string, unknown>).signalFloor, `${host}: P10.F5 — the record of ${r.item_id} says she is below the floor: two signals, floor 3`).toEqual({ floor: 3, signals: 2 });
+        expect.soft((r.explain as Record<string, unknown>).signalFloor, `${host}: P10.F5 — the record of ${r.item_id} says the shopper is below the floor: two signals, floor 3`).toEqual({ floor: 3, signals: 2 });
         const replay = await replayOf(m, r.decision_id);
         expect.soft([replay.status, replay.body.classification ?? replay.body.reason ?? null], `${host}: P10.F5 — ${r.item_id} replays equal`).toEqual([200, 'equal']);
       }
@@ -369,7 +392,7 @@ describe('unit:P10.F5', () => {
       for (const r of receipts) {
         const sentence = (r.why as string[]).find(w => /below the signal floor/i.test(w)) ?? '';
         expect.soft([/(^|[^0-9])2([^0-9]|$)/.test(sentence), /(^|[^0-9])3([^0-9]|$)/.test(sentence)],
-          `${host}: P10.F5 — her receipt for ${String(r.item)} says she is below the signal floor, with her two signals and the floor of 3 (why: ${JSON.stringify(r.why)})`).toEqual([true, true]);
+          `${host}: P10.F5 — the receipt for ${String(r.item)} says the shopper is below the signal floor, with the shopper's two signals and the floor of 3 (why: ${JSON.stringify(r.why)})`).toEqual([true, true]);
       }
     });
   }
