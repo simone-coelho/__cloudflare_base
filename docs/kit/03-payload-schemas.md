@@ -277,8 +277,9 @@ and `removed` `null` — when that revision could not be read.
 }
 ```
 
-Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3` and emit version 3; any other
-explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
+Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3 | 4` and emit version 3, or
+version 4 for a document marked 4 and for an unmarked one that declares a layout slot
+([the slot document](#the-slot-document)); any other explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
 default on every arm, without candidates, decisions or records. A dormant pin and all other settings
 are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
 `excludedPieceIds` is an optional JSON array of up to 1000 distinct exact internal catalog IDs,
@@ -302,7 +303,8 @@ Stored documents without the marker retain legacy parsing and ignore all formerl
 stored version 1 validates ID/off-limits and ignores tag/type fields, even malformed ones. Stored version 2
 validates tag/type controls and ignores formerly unknown `pinnedPieceIds`; version 3 validates prefixes too.
 Receipts independently distinguish absent governance (all legacy), `slot-gates-v1`
-(ID/off-limits only), and `slot-gates-v2` (all controls). Other replay policy markers remain independent.
+(ID/off-limits only), and `slot-gates-v2` (all controls); a page that declares a layout slot adds
+`layout: "declared-slot-v1"` beside them. Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
 to remove both fields; changing form removes the other field. Take is never changed automatically.
@@ -470,6 +472,41 @@ a bonus (0 to 1) for one made for the shopper's; `freshness` is `{ weight, halfL
 cap }`, a penalty of `weight × min(served, cap) / cap` for a piece this shopper was served inside the
 window; `diversity` is `{ dimension, max }`, at most `max` pieces sharing one value of the dimension in
 the slot, the piece over the limit yielding to the next and served only when nothing else is eligible.
+
+### The layout slot
+
+```json
+{
+  "governanceVersion": 4,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1, "category": 0.5 },
+      "excludedPieceIds": ["module.PDP.reviews.1"] },
+    { "slot": "pdp-recent", "take": 1, "weights": {}, "pinnedPieceIds": ["module.PDP.recent.1"] }
+  ] }
+}
+```
+
+`layout` (governance version 4) declares the page's layout slot: `true` on at most one slot per page, a
+second declaration refused naming `pages.{page}.{slot}`, and refused naming `pages.{page}[i].layout` in a
+document marked 1, 2 or 3. Its `take` is the layout's K positions (1 to 50) over the modules that name the
+slot in their `slotTypes`: content pieces registered with their `id`, their kind as `type` and their
+journey stages as `journeyStageFit`, the catalogue refusing a module without an `id` or a `type` by name.
+Each decision returns up to K of them in rank order, after eligibility, the slot's exclusions and
+page-wide de-duplication (a module another slot of the page already serves is not repeated); with no
+signal they are the first K eligible in catalogue order, and fewer eligible modules than K return only
+those, never a filler. The list the layout slot returns is the layout's sequence, position by position
+in `order`. A module that is not returned is not drawn, and its container stays hidden. Every drawn
+module is acknowledged by its own `content_impression` render acknowledgement, carrying the module's
+`decisionId` and `renderOffer`, and a module that was not drawn is never acknowledged.
+
+Measure the layout slot on `rendered-v1` in the learn document (`slots.{slot}.measurementBasis`): the
+acknowledgement of a drawn module is its one exposure, however often it is retried, and a module returned
+and not drawn, or not returned, is none. On `served-v1` the slot is served without a render offer and
+never captured as an exposure, and the decision set names the mismatch as
+`layoutDiagnostics: [{ measurementBasis: "served-v1", reason: "measurement_basis", slot }]`, a
+host-internal member that no public answer carries. A slot without `layout`, and every document marked
+1, 2 or 3, decides and replays exactly as before; the receipts of a page that declares a layout slot
+carry the page-manifest marker `inputs.replay.layout: "declared-slot-v1"`.
 
 ## The learn document
 
