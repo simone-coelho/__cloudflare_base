@@ -180,7 +180,7 @@ export class OptimizelyService {
    * recovery deadlines and pinned retention before and after the fetch; whatever it raises there is
    * that shopper's refusal and reaches the caller unremembered.
    */
-  private async fetchedDatafile(url: string, init: RequestInit, memory: Memory | null): Promise<any> {
+  private async fetchedDatafile(url: string, init: RequestInit, memory: Memory | null) {
     let response: Response;
     try { response = await ownerFetch(url, init); }
     catch (error) {
@@ -365,7 +365,7 @@ export class OptimizelyService {
   }
 
   /** The decision-only client for a validated datafile: no event dispatch, ERROR-level logging. */
-  private async clientFor(datafile: any): Promise<FreshClient> {
+  private async clientFor(datafile: FreshClient['datafile']): Promise<FreshClient> {
     const client = optimizely.createInstance({
       datafile,
       eventDispatcher: { dispatchEvent: () => {} },

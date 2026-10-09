@@ -170,7 +170,7 @@ describe('E4 the Feature Experimentation datafile', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { env } = customer();
     const network = new TypeError('Network connection lost');
-    const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { throw network; }); vi.stubGlobal('fetch', fetcher);
+    const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { void _input; throw network; }); vi.stubGlobal('fetch', fetcher);
     const owner = {};
     const err = await runOwnerOperation(owner, env, async () => {
       pinRetention(env, retentionBirth(env, 'oh', 'profile', now), 'oh', 'profile');
@@ -184,7 +184,7 @@ describe('E4 the Feature Experimentation datafile', () => {
 
   it('never remembers an HTTP 401 refusal, wherever it is raised, and keeps environments apart', async () => {
     const { env } = customer();
-    const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { throw new SessionAccessError(); }); vi.stubGlobal('fetch', fetcher);
+    const fetcher = vi.fn(async (_input?: unknown): Promise<Response> => { void _input; throw new SessionAccessError(); }); vi.stubGlobal('fetch', fetcher);
     await expect(new OptimizelyService(env, 'oh').createFreshClient()).rejects.toBeInstanceOf(SessionAccessError);
     fetcher.mockImplementation(async () => Response.json(datafile(1)));
     expect((await new OptimizelyService(env, 'oh').createFreshClient()).revision).toBe('1');
