@@ -1,0 +1,114 @@
+{
+  "version": "learn-oh",
+  "holdout": {
+    "share": 0,
+    "salt": "oh",
+    "arms": [
+      "default"
+    ]
+  },
+  "regional": {
+    "enabled": true,
+    "kBlend": 0.5,
+    "minEvents": 30,
+    "dimensions": [
+      "category",
+      "type",
+      "sizeBand",
+      "fuel"
+    ]
+  },
+  "policy": {
+    "scope": "session",
+    "match": "direct",
+    "credit": "last",
+    "windowsMs": {
+      "click": 1800000,
+      "dwell": 1800000,
+      "video_complete": 1800000,
+      "wishlist": 21600000,
+      "add_to_bag": 21600000,
+      "purchase": 604800000,
+      "custom": 1800000
+    }
+  },
+  "stats": {
+    "n0": 30,
+    "tauLearnMs": 1814400000,
+    "liftMin": 0.5,
+    "liftMax": 2,
+    "nMin": 30
+  },
+  "slots": {
+    "hero": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "category-rail": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "deals": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "continue": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "grid-promo": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "pdp-modules": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    },
+    "pdp-offers": {
+      "reward": "click",
+      "objective": "unit",
+      "gamma": 0,
+      "exploration": {
+        "mode": "off",
+        "share": 0,
+        "floor": 0
+      }
+    }
+  }
+}

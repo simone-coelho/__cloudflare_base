@@ -1,0 +1,72 @@
+{
+  "about": "Vantage’s regional seed for the demo kit, and since part b (2026-10-01) the source: scripts/seed-vantage-region.mjs is a thin wrapper over scripts/demo-kit/region-seed.mjs with this section, and its header still states the model. Transcribed from that script (commit c720907): lane L4’s two rehearsed regions verbatim (REGIONS), the income-tilt model for the other 49 (MODEL, docs/verizon/lanes/F2.md §2) and the seed route’s vocabulary and limits (SEED_VOCABULARY and MAX_*, src/routes/vantageColdStart.ts). Synthetic and representative: not a claim about any state’s market; labelled synthetic → warehouse wherever it shows.",
+  "operator": "seed-vantage-region",
+  "route": "/vantage/api/coldstart/prior",
+  "panel": "/vantage/api/coldstart",
+  "vocabulary": {
+    "category": ["phones", "plans", "home-internet", "accessories", "watches-tablets"],
+    "brand": ["apple", "samsung", "google", "motorola"],
+    "ecosystem": ["ios", "android"],
+    "priceBand": ["entry", "core", "premium"]
+  },
+  "limits": { "rows": 64, "unitsPerRow": 400, "units": 800 },
+  "census": "migrations/seed/seed_011_geo.sql",
+  "expectRegions": 51,
+  "rehearsed": {
+    "US-TX": {
+      "label": "Texas: synthetic carrier sales, rehearsal region A",
+      "rows": [
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "core" }, "units": 90 },
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "premium" }, "units": 45 },
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "entry" }, "units": 25 },
+        { "touches": { "category": "phones", "brand": "apple", "ecosystem": "ios", "priceBand": "premium" }, "units": 80 },
+        { "touches": { "category": "phones", "brand": "apple", "ecosystem": "ios", "priceBand": "core" }, "units": 70 },
+        { "touches": { "category": "phones", "brand": "google", "ecosystem": "android", "priceBand": "premium" }, "units": 20 },
+        { "touches": { "category": "phones", "brand": "google", "ecosystem": "android", "priceBand": "core" }, "units": 25 },
+        { "touches": { "category": "phones", "brand": "motorola", "ecosystem": "android", "priceBand": "entry" }, "units": 35 },
+        { "touches": { "category": "phones", "brand": "motorola", "ecosystem": "android", "priceBand": "core" }, "units": 10 },
+        { "touches": { "category": "home-internet" }, "units": 90 }
+      ]
+    },
+    "US-NY": {
+      "label": "New York: synthetic carrier sales, rehearsal region B",
+      "rows": [
+        { "touches": { "category": "phones", "brand": "apple", "ecosystem": "ios", "priceBand": "premium" }, "units": 170 },
+        { "touches": { "category": "phones", "brand": "apple", "ecosystem": "ios", "priceBand": "core" }, "units": 70 },
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "premium" }, "units": 55 },
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "core" }, "units": 40 },
+        { "touches": { "category": "phones", "brand": "samsung", "ecosystem": "android", "priceBand": "entry" }, "units": 10 },
+        { "touches": { "category": "phones", "brand": "google", "ecosystem": "android", "priceBand": "premium" }, "units": 25 },
+        { "touches": { "category": "phones", "brand": "google", "ecosystem": "android", "priceBand": "core" }, "units": 15 },
+        { "touches": { "category": "phones", "brand": "motorola", "ecosystem": "android", "priceBand": "entry" }, "units": 15 },
+        { "touches": { "category": "home-internet" }, "units": 25 }
+      ]
+    }
+  },
+  "model": {
+    "kind": "income-tilt",
+    "spreadUsd": 25000,
+    "tSpan": 0.3,
+    "low": "US-TX",
+    "high": "US-NY",
+    "blend": { "dimension": "category", "value": "phones", "key": ["brand", "ecosystem", "priceBand"] },
+    "extras": [
+      {
+        "name": "home internet",
+        "touches": { "category": "home-internet" },
+        "units": 58,
+        "regions": {
+          "fiber": ["US-NY", "US-NJ", "US-PA", "US-MA", "US-RI", "US-DE", "US-MD", "US-VA", "US-DC"],
+          "fixedWireless": ["US-TX", "US-NY", "US-NJ", "US-PA", "US-MA", "US-IL", "US-FL", "US-GA", "US-NC", "US-CA", "US-AZ", "US-CO", "US-WA", "US-MI", "US-OH", "US-VA", "US-MN", "US-TN"]
+        }
+      }
+    ],
+    "label": "{{census.label}}: synthetic sales, national mix tilted by census income"
+  },
+  "text": {
+    "rehearsedNote": "rehearsed, as L4 wrote",
+    "shareOrder": ["ecosystem", "brand", "priceBand", "category"],
+    "blendWord": "phones",
+    "extraWord": "home"
+  }
+}

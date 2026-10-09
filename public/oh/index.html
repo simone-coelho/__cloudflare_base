@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- The site key. Not a secret: it names the SITE, the way an SDK key does. -->
+<meta name="edge-sdk-key" content="demo-site" />
+<link rel="icon" href="data:," />
+<title>OH. | TVs, laundry and the kitchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<!-- The demo kit (public/demo-kit/): the token sheet, then the chrome drawn from it (the machine, the director bar,
+     the before/now rows, the sheets, predict-then-prove), then OH's own sheet (its token overrides and its
+     site), then the kit's Compare. Scaffolded by scripts/demo-kit/new-demo.mjs from public/oh/demo.config.json. -->
+<link rel="stylesheet" href="/demo-kit/tokens.css" />
+<link rel="stylesheet" href="/demo-kit/kit.css" />
+<link rel="stylesheet" href="/oh/oh.css" />
+<link rel="stylesheet" href="/demo-kit/compare.css" />
+</head>
+<!-- index.html, product.html and m.html carry the same shell; each boots into its own view (data-entry).
+     The store (lane M1, docs/lg/OH-Demo-Design.md §9): before any visitor exists this page is the published template,
+     the opening catalog's pieces in each slot's own order, in lg.com's anatomy; the first click (or the director's first
+     press) brings a visitor, never the load. The header, the pencil banner, the category icons, the service strip, the
+     showcase, the benefits and the footer are static, the same for everyone; oh.js (M1's section) draws the same header
+     and footer on every shell, so product.html and m.html need only carry the containers. -->
+<body data-entry="home" class="">
+<a class="skip" href="#stage">Skip to the page</a>
+
+<!-- The director's hand. It glides to a real control and runs that control's own handler: never a shortcut around it. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div class="fixture-flag" id="fixtureFlag" hidden>Fixture mode: canned answers for layout work, not the engine</div>
+
+<div class="shell">
+<!-- ═══════════════════════════════ THE SITE ═══════════════════════════════ -->
+<div class="site" id="site">
+  <!-- The pencil banner: static, the same for everyone (the site's own promotions, read from nothing about her). -->
+  <div class="m1-pencil static" id="m1Pencil" aria-label="Promotions">
+    <div class="m1-pencil-in">
+      <p class="m1-pencil-msg" id="m1PencilMsg"><b>Up to $1,000 off big screens</b><span>on select 75-inch and larger TVs</span><button type="button" data-act="m1-goto" data-view="tvs" data-filter="sizeBand:75-82,sizeBand:83-and-up" data-ctl="pencil-cta">Shop now</button></p>
+      <div class="m1-pencil-nav"><button type="button" data-act="m1-pencil" data-step="-1" data-ctl="pencil-prev" aria-label="Previous promotion">&lsaquo;</button><span id="m1PencilN">1/3</span><button type="button" data-act="m1-pencil" data-step="1" data-ctl="pencil-next" aria-label="Next promotion">&rsaquo;</button></div>
+    </div>
+  </div>
+  <header class="site-header static" data-m1="1">
+    <div class="mast">
+      <a class="wordmark" href="/oh/" data-nav="home" data-ctl="home" aria-label="OH. home"><span class="wm" id="wordmark">OH.</span><span class="wm-tag" id="tagline">Optimized Home</span></a>
+      <nav class="mainnav" id="mainnav" aria-label="Shop">
+          <button type="button" data-nav="tvs" data-ctl="nav-tvs">TVs</button>
+          <button type="button" data-act="p1-menu" data-menu="laundry" data-ctl="nav-laundry" aria-expanded="false">Laundry</button>
+          <button type="button" data-act="p1-menu" data-menu="kitchen" data-ctl="nav-kitchen" aria-expanded="false">Kitchen</button>
+          <button type="button" data-nav="offers" data-ctl="nav-offers">Offers</button>
+          <button type="button" data-act="m1-info" data-info="support" data-ctl="nav-support">Support</button>
+      </nav>
+      <form class="m1-search" data-store-search role="search" action="/oh/search">
+        <input name="q" type="search" placeholder="Search TVs, laundry, kitchen" aria-label="Search the store" autocomplete="off" data-ctl="search-input" />
+        <button type="submit" data-ctl="search-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></button>
+      </form>
+      <div class="m1-right">
+        <button type="button" class="m1-zip" data-act="m1-info" data-info="delivery" data-ctl="zip" title="Your region, read from the request"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span class="m1-label">Delivering to</span> <b id="m1Zip">your area</b></button>
+        <span class="u-sign" id="signIn" role="button" tabindex="0" data-act="sign-in" data-ctl="sign-in">Sign in</span>
+        <button type="button" class="m1-icon-btn" data-act="store-cart-open" data-ctl="cart-open" aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M2.5 3.5h2.6l2.3 11.2h10.8l2.2-8H6.3"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/></svg><span class="m1-cart-n" data-cart-count>0</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <section class="view view--home" id="view-home" data-page="home">
+      <p class="offlimits-note"><b>Off limits</b> the header &middot; the service strip &middot; the footer: never decided, never personalised</p>
+      <!-- Slot continue, take 1, gated on the return visit (ctx.visit = return): off the page until a decision says otherwise. -->
+      <section class="module decided" id="mod-continue" data-slot="continue" data-gated="true" hidden aria-labelledby="head-continue">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>continue</b> &middot; take 1 &middot; gated on a return visit</p>
+          <h2 id="head-continue">Welcome back</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-continue" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-continue" hidden></p>
+      </section>
+      <!-- Slot hero, take 1: the carousel's first slide is the slot's answer (before a visitor, the template's first);
+           the other slides are the template's own heroes, static, in the catalog's order. -->
+      <section class="module decided" id="mod-hero" data-slot="hero" aria-labelledby="head-hero">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>hero</b> &middot; take 1</p>
+          <h2 id="head-hero">Featured</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-hero" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-hero" hidden></p>
+      </section>
+      <!-- The service strip: static, the same for everyone. At a phone's width one item at a time, with a pager (M1d). -->
+      <div class="svc-strip static" aria-label="Services">
+        <div class="m1-svc-track" id="m1Svc">
+        <button type="button" class="m1-svc" data-act="m1-info" data-info="delivery" data-ctl="svc-delivery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><span><b>Free delivery</b></span></button>
+        <button type="button" class="m1-svc" data-act="m1-info" data-info="returns" data-ctl="svc-returns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10H8"/><path d="M8 5 4 9l4 4"/></svg><span><b>14-day returns</b></span></button>
+        <button type="button" class="m1-svc" data-act="m1-info" data-info="coverage" data-ctl="svc-coverage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6z"/><path d="m8.8 12 2.3 2.3 4.3-4.6" stroke-linecap="round"/></svg><span><b>Extended coverage</b></span></button>
+        <button type="button" class="m1-svc" data-act="m1-info" data-info="haul-away" data-ctl="svc-haul-away"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7h16l-1.4 12.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M9 7V4.5h6V7M3 7h18"/></svg><span><b>Haul-away</b></span></button>
+        <button type="button" class="m1-svc" data-act="m1-info" data-info="expert" data-ctl="svc-expert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-5 4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01" stroke-linecap="round" stroke-width="2.2"/></svg><span><b>Chat with an expert</b></span></button>
+        </div>
+        <div class="m1-pager static" data-pager-for="m1Svc"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="svc-page-prev" aria-label="Previous service" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="svc-page-next" aria-label="Next service">&rsaquo;</button></div>
+        <span class="nper">not personalised</span>
+      </div>
+      <!-- The category row: static, the same for everyone (oh.js draws the pictures from the feed), under lg.com's heading. -->
+      <section class="m1-cats-wrap static" aria-labelledby="head-cats">
+        <header class="module-head"><div><h2 id="head-cats">Shop top appliances and electronics</h2></div></header>
+        <nav class="m1-cats static" id="m1Cats" aria-label="Shop by category"></nav>
+        <div class="m1-pager static" data-pager-for="m1Cats"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="cats-page-prev" aria-label="Previous categories" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="cats-page-next" aria-label="Next categories">&rsaquo;</button></div>
+      </section>
+      <!-- Slot category-rail, take 3: the room tiles in the order the engine returns. -->
+      <section class="module decided" id="mod-category-rail" data-slot="category-rail" aria-labelledby="head-category-rail">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>category-rail</b> &middot; take 3</p>
+          <h2 id="head-category-rail">Shop by room</h2>
+        </div></header>
+        <div class="cards cards--many" id="slot-category-rail" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-category-rail" hidden></p>
+      </section>
+      <!-- Slot deals, take 5: the page renders what comes back, in the order it comes back. At a desk lg.com's bento (the tall
+           tile, then a 2 × 2 block, five decided pieces), one honesty line and each tile's receipt under the set; at a phone's
+           width one at a time, each receipt under its tile. -->
+      <section class="module decided" id="mod-deals" data-slot="deals" aria-labelledby="head-deals">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>deals</b> &middot; take 5</p>
+          <h2 id="head-deals">Discover OH. deals</h2>
+        </div></header>
+        <div class="m1-deal-head static"><button type="button" class="btn btn--brand" data-nav="offers" data-ctl="deals-all">View all deals</button>
+          <div class="m1-deal-tabs" role="tablist" aria-label="Deals by room"><span class="m1-deal-tab" role="tab" aria-selected="true">Top deals for you</span>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:living-room" data-ctl="deals-tab-tv">TV &amp; audio</button>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:laundry-room" data-ctl="deals-tab-laundry">Laundry</button>
+            <button type="button" class="m1-deal-tab" role="tab" aria-selected="false" data-act="m1-goto" data-view="offers" data-filter="room:kitchen" data-ctl="deals-tab-kitchen">Kitchen</button></div></div>
+        <div class="cards cards--many" id="slot-deals" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <div class="m1-pager static" data-pager-for="slot-deals"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="deals-page-prev" aria-label="Previous deal" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="deals-page-next" aria-label="Next deal">&rsaquo;</button></div>
+        <p class="engine-down" id="down-deals" hidden></p>
+      </section>
+      <!-- Shop with an expert: static, a wide band. -->
+      <section class="m1-expert static" aria-labelledby="head-expert">
+        <div class="m1-expert-copy"><h2 id="head-expert">Shop with an OH. expert: free advice and the right deal</h2>
+          <p>Not sure which TV fits the room, or whether the dryer runs on gas? Our product experts help you choose, then you decide.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-info" data-info="expert" data-ctl="expert-chat">Chat with an expert</button></div>
+        <div class="m1-expert-art" aria-hidden="true">
+          <span class="m1-expert-disc"><img src="/oh/img/products/oled65c6pua.webp" alt="" loading="lazy" decoding="async" data-p1-name="OLED65C6PUA"></span>
+          <span class="m1-expert-disc"><img src="/oh/img/products/wm4000hwa.webp" alt="" loading="lazy" decoding="async" data-p1-name="WM4000HWA"></span>
+          <span class="m1-expert-disc"><img src="/oh/img/products/lsgl6335x.webp" alt="" loading="lazy" decoding="async" data-p1-name="LSGL6335X"></span>
+          <span class="m1-expert-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg></span>
+        </div>
+      </section>
+      <!-- Rail for-you: POST /sort across the rooms; before a visitor, the template's own order. -->
+      <section class="module decided" id="mod-for-you" data-rail="for-you" aria-labelledby="head-for-you">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>for-you</b> &middot; <code>POST /sort</code> across the rooms &middot; take 12</p>
+          <h2 id="head-for-you">Recommended for you</h2>
+        </div><span class="rail-chip" id="chip-for-you">the site&rsquo;s own order</span></header>
+        <div class="rail" id="rail-for-you"></div>
+        <div class="m1-pager static" data-pager-for="rail-for-you"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="for-you-page-prev" aria-label="Previous product" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="for-you-page-next" aria-label="Next product">&rsaquo;</button></div>
+      </section>
+      <!-- The showcase tabs: static, the site's own picks, the same for everyone. -->
+      <section class="m1-showcase static" id="m1Showcase" aria-labelledby="head-showcase">
+        <header class="module-head"><div><h2 id="head-showcase">Explore the store</h2></div></header>
+        <div class="m1-tabs" role="tablist" id="m1ShowTabs">
+          <button type="button" role="tab" aria-selected="true" data-act="m1-tab" data-tab="appliances" data-ctl="tab-appliances">Home appliances</button>
+          <button type="button" role="tab" aria-selected="false" data-act="m1-tab" data-tab="entertainment" data-ctl="tab-entertainment">Home entertainment</button>
+        </div>
+        <div class="m1-showcase-cards" id="m1ShowCards"></div>
+      </section>
+      <!-- The benefits of buying here: static. -->
+      <section class="m1-benefits-wrap static" aria-labelledby="head-benefits">
+        <header class="module-head"><div><h2 id="head-benefits">The benefits of buying at OH.</h2></div></header>
+        <div class="m1-benefits">
+          <button type="button" class="m1-benefit" data-act="m1-info" data-info="delivery" data-ctl="benefit-delivery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/></svg><h3>Free delivery, set up your way</h3><p>Free delivery on everything we sell, with stand set-up, wall mounting and appliance installation as add-ons.</p><span>Delivery and installation</span></button>
+          <button type="button" class="m1-benefit" data-act="m1-info" data-info="haul-away" data-ctl="benefit-haul-away"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7h16l-1.4 12.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M9 7V4.5h6V7M3 7h18"/></svg><h3>We take the old one away</h3><p>Haul-away of the appliance you are replacing, booked with your delivery.</p><span>How haul-away works</span></button>
+          <button type="button" class="m1-benefit" data-act="m1-info" data-info="coverage" data-ctl="benefit-coverage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6z"/><path d="m8.8 12 2.3 2.3 4.3-4.6" stroke-linecap="round"/></svg><h3>Coverage that outlasts the warranty</h3><p>Protection plans of one to three years on TVs and appliances, added at checkout.</p><span>Protection plans</span></button>
+          <button type="button" class="m1-benefit" data-act="m1-info" data-info="pickup" data-ctl="benefit-pickup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5h16v10.5H4z"/><path d="M9.5 20v-5.5h5V20"/></svg><h3>Order here, pick up at Best Buy</h3><p>On eligible TVs, soundbars and laundry: an OH. order, ready at a Best Buy near you.</p><span>About pickup</span></button>
+        </div>
+      </section>
+    </section>
+
+    <!-- The room grids (§9.3): /oh/?view=tvs|laundry|kitchen|offers, and the search results at /oh/?q= (the store's address). Each carries
+         its filters, its sort control and its result count (oh.js, M1); the order is POST /sort's (Best match), the
+         visitor's own choice on the sort control otherwise, and the filters are hers, never decided. -->
+    <section class="view view--grid" id="view-tvs" data-page="tvs" data-grid="tvs" hidden>
+      <p class="offlimits-note"><b>Off limits</b> the filters &middot; the sort control: never decided, never personalised</p>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>TV &amp; Audio</span><span>/</span><span>TVs</span></nav>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">TVs</h1><span class="p1-sub">OLED evo, QNED evo Mini LED, Micro RGB and 4K UHD, from 24 to 115 inches</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-tvs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- Slot grid-promo, take 1: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-grid-promo" data-slot="grid-promo" aria-labelledby="head-grid-promo">
+        <header class="module-head"><div>
+          <p class="module-where"><span class="m1-for m1-for--site" data-decided="Decided for you">The site’s own order · before anyone arrives</span> &middot; slot <b>grid-promo</b> &middot; take 1</p>
+          <h2 id="head-grid-promo">In the TV grid</h2>
+        </div></header>
+        <div class="cards cards--one" id="slot-grid-promo" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-grid-promo" hidden></p>
+      </section>
+      <!-- lg.com's row of offer cards under the banner: static, the same for everyone. oh.js (M1e) draws the catalog's own TV
+           promotions in force, in its order, with each piece's own copy; the one the banner shows is left out. -->
+      <section class="m1-offers static" id="m1Offers-tvs" aria-label="TV offers" hidden>
+        <div class="m1-offers-track" id="m1OffersTrack"></div>
+        <div class="m1-offers-foot"><div class="m1-pager static" data-pager-for="m1OffersTrack"><button type="button" class="m1-pg" data-m1-page="-1" data-ctl="offers-page-prev" aria-label="Previous offers" disabled>&lsaquo;</button><span class="m1-pg-n" aria-live="polite">1/1</span><button type="button" class="m1-pg" data-m1-page="1" data-ctl="offers-page-next" aria-label="Next offers">&rsaquo;</button></div>
+          <p class="m1-offers-note"><span class="nper">not personalised</span> the offers in force, in the catalog’s own order, the same for everyone</p></div>
+      </section>
+      <div class="m1-quick static" id="m1Quick-tvs" aria-label="TV types"></div>
+      <div class="m1-layout">
+        <aside class="m1-filters static" id="m1Filters-tvs" aria-label="Filters"></aside>
+        <div class="m1-main">
+          <div class="m1-toolbar" id="m1Bar-tvs"></div>
+          <!-- Rail tv-grid: POST /sort over every priced TV, with the regional prior; before a visitor, the site's own order. -->
+          <section class="module decided" id="mod-tv-grid" data-rail="tv-grid" aria-labelledby="head-tv-grid">
+            <header class="module-head"><div>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>tv-grid</b> &middot; <code>POST /sort</code> over the TVs</p>
+              <h2 id="head-tv-grid">Every TV, ordered for you</h2>
+            </div><span class="rail-chip" id="chip-tv-grid">the site&rsquo;s own order</span></header>
+            <div class="rail" id="rail-tv-grid"></div>
+            <div class="m1-more" id="m1More-tvs"></div>
+          </section>
+        </div>
+      </div>
+      <section class="m1-seo static"><h2>Choosing a TV</h2><p>OLED lights every pixel on its own, for true blacks in a dark room; QNED Mini LED is brighter, for a sunny one; Micro RGB evo is LG’s newest panel. Size it to the room: from about seven feet away a 65-inch fills the view, from nine a 75 or 77. Every price here is the same for everyone.</p></section>
+    </section>
+
+    <section class="view view--grid" id="view-laundry" data-page="laundry" data-grid="laundry" hidden>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Laundry</span></nav>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Washers &amp; dryers</h1><span class="p1-sub">Front-load and top-load washers, gas and electric dryers, WashTower, all-in-one, laundry sets and pedestals</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-laundry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Laundry" data-room="laundry-room">
+        <div class="m1-banner-art" id="m1BannerArt-laundry" data-room="laundry-room" data-skus="WM4000HWA DLEX4000W"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Laundry</p><h2>A laundry room that runs itself</h2><p class="p1-sub">Front-load pairs that stack, WashTower, all-in-one and the pedestals that raise them; the width is on every one we list.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="laundry" data-filter="category:laundry-sets" data-ctl="banner-laundry">Shop laundry sets</button></div>
+      </section>
+      <div class="m1-quick static" id="m1Quick-laundry" aria-label="Laundry types"></div>
+      <div class="m1-layout">
+        <aside class="m1-filters static" id="m1Filters-laundry" aria-label="Filters"></aside>
+        <div class="m1-main">
+          <div class="m1-toolbar" id="m1Bar-laundry"></div>
+          <section class="module decided" id="mod-laundry-grid" data-rail="laundry-grid" aria-labelledby="head-laundry-grid">
+            <header class="module-head"><div>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>laundry-grid</b> &middot; <code>POST /sort</code> over the laundry room</p>
+              <h2 id="head-laundry-grid">Laundry, ordered for you</h2>
+            </div><span class="rail-chip" id="chip-laundry-grid">the site&rsquo;s own order</span></header>
+            <div class="rail m1-grid-cards" id="rail-laundry-grid"></div>
+            <div class="m1-more" id="m1More-laundry"></div>
+          </section>
+        </div>
+      </div>
+      <section class="m1-seo static"><h2>Choosing a washer and dryer</h2><p>Front-load washers stack and sit on a pedestal; top-loaders do neither. Match the dryer to the fuel your laundry room has: most run on electric, some on gas. Measure the space first: the width is on every washer and dryer we list.</p></section>
+    </section>
+
+    <section class="view view--grid" id="view-kitchen" data-page="kitchen" data-grid="kitchen" hidden>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Appliances</span><span>/</span><span>Kitchen</span></nav>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Kitchen</h1><span class="p1-sub">Ranges, over-the-range microwaves, dishwashers and kitchen packages</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Kitchen" data-room="kitchen">
+        <div class="m1-banner-art" id="m1BannerArt-kitchen" data-room="kitchen" data-skus="LSGL6335X MVEM1825F"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Kitchen</p><h2>Cook, vent and clean up, matched</h2><p class="p1-sub">Ranges in your fuel, the microwave above them and a dishwasher to finish; every package priced beside its pieces bought apart.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="kitchen" data-filter="category:kitchen-packages" data-ctl="banner-kitchen">Shop kitchen packages</button></div>
+      </section>
+      <div class="m1-quick static" id="m1Quick-kitchen" aria-label="Kitchen categories"></div>
+      <div class="m1-layout">
+        <aside class="m1-filters static" id="m1Filters-kitchen" aria-label="Filters"></aside>
+        <div class="m1-main">
+          <div class="m1-toolbar" id="m1Bar-kitchen"></div>
+          <section class="module decided" id="mod-kitchen-grid" data-rail="kitchen-grid" aria-labelledby="head-kitchen-grid">
+            <header class="module-head"><div>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>kitchen-grid</b> &middot; <code>POST /sort</code> over the kitchen</p>
+              <h2 id="head-kitchen-grid">The kitchen, ordered for you</h2>
+            </div><span class="rail-chip" id="chip-kitchen-grid">the site&rsquo;s own order</span></header>
+            <div class="rail m1-grid-cards" id="rail-kitchen-grid"></div>
+            <div class="m1-more" id="m1More-kitchen"></div>
+          </section>
+        </div>
+      </div>
+      <section class="m1-seo static"><h2>Choosing a range</h2><p>Gas, electric, induction or dual fuel: start from what your kitchen is plumbed and wired for. A slide-in range sits flush with the counter; a freestanding one has finished sides. Every package price is shown beside the price of its pieces bought apart.</p></section>
+    </section>
+
+    <section class="view view--grid" id="view-offers" data-page="offers" data-grid="offers" hidden>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Offers</span></nav>
+      <header class="view-head"><div class="view-head-text"><h1 class="view-title">Offers</h1><span class="p1-sub">Everything on sale today, across TVs, laundry and the kitchen; the same prices for everyone</span></div><button type="button" class="btn btn--brand m1-help" data-act="m1-info" data-info="expert" data-ctl="help-offers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13"/><rect x="3" y="12.5" width="4" height="6" rx="1.5"/><rect x="17" y="12.5" width="4" height="6" rx="1.5"/><path d="M19 18.5c0 1.7-1.6 2.5-4 2.5h-2"/></svg>Get expert help</button></header>
+      <!-- The room's banner: static, the same for everyone (lane A1's art for the room, else a dark scene with its products). -->
+      <section class="m1-banner m1-banner--static static" aria-label="Offers" data-room="living-room">
+        <div class="m1-banner-art" id="m1BannerArt-offers" data-room="living-room" data-skus="OLED77G6WUA WM4000HWA"></div>
+        <div class="m1-banner-copy"><p class="p1-kicker">Offers</p><h2>Everything on sale today</h2><p class="p1-sub">Across TVs, laundry and the kitchen; the same prices for everyone, and the dates each offer runs.</p>
+          <button type="button" class="btn btn--brand" data-act="m1-goto" data-view="offers" data-filter="room:living-room" data-ctl="banner-offers">Shop TV offers</button></div>
+      </section>
+      <div class="m1-quick static" id="m1Quick-offers" aria-label="Offers by room"></div>
+      <div class="m1-layout">
+        <aside class="m1-filters static" id="m1Filters-offers" aria-label="Filters"></aside>
+        <div class="m1-main">
+          <div class="m1-toolbar" id="m1Bar-offers"></div>
+          <section class="module decided" id="mod-offers-grid" data-rail="offers-grid" aria-labelledby="head-offers-grid">
+            <header class="module-head"><div>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; rail <b>offers-grid</b> &middot; <code>POST /sort</code> over what is on sale</p>
+              <h2 id="head-offers-grid">On sale, ordered for you</h2>
+            </div><span class="rail-chip" id="chip-offers-grid">the site&rsquo;s own order</span></header>
+            <div class="rail m1-grid-cards" id="rail-offers-grid"></div>
+            <div class="m1-more" id="m1More-offers"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="view view--grid" id="view-search" data-page="search" data-grid="search" hidden>
+      <nav class="crumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Search</span></nav>
+      <header class="view-head"><h1 class="view-title" id="m1SearchTitle">Search</h1><span class="p1-sub" id="m1SearchSub">Search the store by name, model number or type</span></header>
+      <div class="m1-layout">
+        <aside class="m1-filters static" id="m1Filters-search" aria-label="Filters"></aside>
+        <div class="m1-main">
+          <div class="m1-toolbar" id="m1Bar-search"></div>
+          <section class="module decided" id="mod-search-grid" data-rail="search-grid" aria-labelledby="head-search-grid">
+            <header class="module-head"><div>
+              <p class="module-where"><span class="m1-for m1-for--site" data-decided="Best match, decided for you">The site’s own order · before anyone arrives</span> &middot; <code>POST /sort</code> over every match</p>
+              <h2 id="head-search-grid">Results, ordered for you</h2>
+            </div><span class="rail-chip" id="chip-search-grid">the site&rsquo;s own order</span></header>
+            <div class="rail m1-grid-cards" id="rail-search-grid"></div>
+            <div class="m1-more" id="m1More-search"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="view view--product" id="view-product" data-page="product" hidden>
+      <p class="offlimits-note"><b>Off limits</b> the buy box: price, sizes, Add to Cart and the financing line: never decided, never personalised</p>
+      <nav class="crumbs" id="crumbs-product"></nav>
+      <!-- THE BUY BOX. Off limits: never decided, never personalised. -->
+      <section class="buybox" id="buyBox" aria-label="Buy box">
+        <p class="offlimits"><b>Off limits</b> the buy box is never decided and never personalised</p>
+        <div class="bb-grid"><div class="bb-image" id="bbImage"></div><div class="bb-config">
+          <h1 class="bb-title" id="bbTitle">Product</h1><p class="bb-meta" id="bbMeta"></p><div class="bb-price" id="bbPrice"></div>
+          <div class="bb-actions"><button type="button" class="btn btn--brand" id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">Add to Cart</button></div>
+        </div></div>
+      </section>
+      <!-- Slot pdp-modules, take 6: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-pdp-modules" data-slot="pdp-modules" aria-labelledby="head-pdp-modules">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>pdp-modules</b> &middot; take 6 &middot; decided per visitor</p>
+          <h2 id="head-pdp-modules">Goes with it</h2>
+        </div></header>
+        <div class="cards cards--many" id="slot-pdp-modules" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-pdp-modules" hidden></p>
+      </section>
+      <!-- Slot pdp-offers, take 2: the page renders what comes back, in the order it comes back. -->
+      <section class="module decided" id="mod-pdp-offers" data-slot="pdp-offers" aria-labelledby="head-pdp-offers">
+        <header class="module-head"><div>
+          <p class="module-where">slot <b>pdp-offers</b> &middot; take 2 &middot; decided per visitor</p>
+          <h2 id="head-pdp-offers">Offers on this product</h2>
+        </div></header>
+        <div class="cards cards--many" id="slot-pdp-offers" aria-live="polite"><p class="slot-wait">Not asked yet.</p></div>
+        <p class="engine-down" id="down-pdp-offers" hidden></p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-footer static" data-m1="1">
+    <span class="nper">not personalised</span>
+    <div class="m1-foot">
+      <div class="m1-foot-cols">
+        <div><h3>TV &amp; audio</h3><ul>
+          <li><button type="button" data-nav="tvs" data-ctl="foot-tvs">All TVs</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="tvs" data-filter="type:oled" data-ctl="foot-oled">OLED TVs</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="tvs" data-filter="type:qned" data-ctl="foot-qned">QNED TVs</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="search" data-q="soundbar" data-ctl="foot-soundbars">Soundbars</button></li>
+        </ul></div>
+        <div><h3>Laundry</h3><ul>
+          <li><button type="button" data-nav="laundry" data-ctl="foot-laundry">Washers &amp; dryers</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="laundry" data-filter="category:washers" data-ctl="foot-washers">Washers</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="laundry" data-filter="category:dryers" data-ctl="foot-dryers">Dryers</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="laundry" data-filter="category:laundry-sets" data-ctl="foot-sets">Laundry sets</button></li>
+        </ul></div>
+        <div><h3>Kitchen</h3><ul>
+          <li><button type="button" data-nav="kitchen" data-ctl="foot-kitchen">All kitchen</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="kitchen" data-filter="category:ranges" data-ctl="foot-ranges">Ranges</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="kitchen" data-filter="category:dishwashers" data-ctl="foot-dishwashers">Dishwashers</button></li>
+          <li><button type="button" data-act="m1-goto" data-view="kitchen" data-filter="category:kitchen-packages" data-ctl="foot-packages">Kitchen packages</button></li>
+        </ul></div>
+        <div><h3>Support</h3><ul>
+          <li><button type="button" data-act="m1-info" data-info="support" data-ctl="foot-support">Contact us</button></li>
+          <li><button type="button" data-act="m1-info" data-info="delivery" data-ctl="foot-delivery">Delivery and installation</button></li>
+          <li><button type="button" data-act="m1-info" data-info="returns" data-ctl="foot-returns">Returns</button></li>
+          <li><button type="button" data-act="m1-info" data-info="coverage" data-ctl="foot-coverage">Protection plans</button></li>
+        </ul></div>
+        <div class="m1-foot-brand"><span class="wm">OH.</span><p>Optimized Home: TVs, laundry and the kitchen, chosen with you. The header, the menus, the strips and this footer are the same for everyone; the modules marked “Decided for you” are decided per visitor, and each says why.</p></div>
+      </div>
+      <div class="m1-foot-base">
+        <p class="foot-legal" id="footLegal">OH. is a fictional home brand built for a demonstration. Products, their names, images and prices are real as listed publicly on or before 2 October 2026; offers, packages and regional sales are representative. Price, financing and rebate eligibility never vary by where someone lives or by inferred income.</p>
+        <p class="m1-foot-marks">Delivery dates are representative and the same for everyone.</p>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════ THE ENGINE ═════════════════════════════ -->
+<aside class="machine" id="machine" aria-label="The engine">
+  <header class="m-head">
+    <p class="m-k">The engine</p>
+    <div class="m-who">
+      <span class="who" id="whoChip">No visitor yet</span>
+      <span class="arm" id="armChip" hidden></span>
+    </div>
+    <div class="m-ctx" id="ctxChips"></div>
+  </header>
+
+  <section class="signalcard">
+    <h2>What has been signalled</h2>
+    <p class="m-note">Read from the visitor&rsquo;s own profile, the moment each signal is sent. The hollow mark is the region&rsquo;s lean.</p>
+    <div class="vectors" id="vectors"><p class="m-empty">No dimension has evidence yet.</p></div>
+    <p class="m-note m-prior" id="priorLine"></p>
+  </section>
+
+  <div class="mtabs" role="tablist">
+    <button type="button" role="tab" id="tab-arrival" aria-controls="panel-arrival" aria-selected="true">Arrival</button>
+    <button type="button" role="tab" id="tab-session" aria-controls="panel-session" aria-selected="false">Session</button>
+    <button type="button" role="tab" id="tab-why" aria-controls="panel-why" aria-selected="false">Why these</button>
+    <button type="button" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false">Learned</button>
+    <button type="button" role="tab" id="tab-next" aria-controls="panel-next" aria-selected="false">Roadmap</button>
+  </div>
+  <div class="mpanels">
+    <section class="mpanel" id="panel-arrival" role="tabpanel" aria-labelledby="tab-arrival">
+      <div id="coldStart"><p class="m-empty">The arrival is read when a visitor lands.</p></div>
+    </section>
+    <section class="mpanel" id="panel-session" role="tabpanel" aria-labelledby="tab-session" hidden>
+      <ol class="journey" id="journey"><li class="journey-empty">Nobody has arrived yet.</li></ol>
+    </section>
+    <section class="mpanel" id="panel-why" role="tabpanel" aria-labelledby="tab-why" hidden>
+      <div id="whyBody"><p class="m-empty">Press a beat to begin.</p></div>
+    </section>
+    <section class="mpanel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <div id="reportBody"><p class="m-empty">Press <b>Build today&rsquo;s report</b> to read what the modules have learned. It is built from the ledger, not from anything this page holds.</p></div>
+      <button type="button" class="m-btn" id="buildReport" data-ctl="build-report">Build today&rsquo;s report</button>
+    </section>
+    <section class="mpanel" id="panel-next" role="tabpanel" aria-labelledby="tab-next" hidden>
+      <ul class="dials" id="roadmap"></ul>
+    </section>
+  </div>
+
+  <div class="m-tools">
+    <button type="button" class="m-tool" id="captureBtn" data-ctl="capture">Capture</button>
+    <button type="button" class="m-tool" id="compareBtn" data-ctl="compare" title="Before: none yet. Act, then Compare.">Compare</button>
+    <span class="m-tool-note" id="captureNote">Capture this page, then compare it with another moment or another shopper.</span>
+  </div>
+</aside>
+</div>
+
+<!-- ── Sheets: one at a time ─────────────────────────────────────────────── -->
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <button type="button" class="sheet-x" id="sheetClose" data-ctl="sheet-close" aria-label="Close">&times;</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- ── Predict, then prove ──────────────────────────────────────────────── -->
+<div class="pd-back" id="pdBack" hidden role="dialog" aria-modal="true" aria-labelledby="pdKicker">
+  <div class="pd-box">
+    <div class="pd-head">
+      <span class="pd-k" id="pdKicker">Predict, then prove</span>
+      <span class="pd-mode" id="pdMode">before the next act</span>
+    </div>
+    <div class="pd-grid">
+      <section class="pd-card pd-done"><h3 class="pd-h">What the visitor has done</h3><div class="pd-body"><ol id="pdDone"></ol></div></section>
+      <section class="pd-card pd-watch">
+        <h3 class="pd-h">What we are watching for</h3>
+        <div class="pd-body"><ol id="pdAct"></ol></div>
+        <div class="pd-arith"><p class="pd-arith-k" id="pdArithK">The arithmetic &middot; score before &rarr; after &middot; entry threshold</p><div id="pdArith"></div></div>
+      </section>
+      <section class="pd-card pd-will">
+        <h3 class="pd-h">What will change if they do it</h3>
+        <div class="pd-body"><ul id="pdWill"></ul><p class="pd-arith-k" style="margin:12px 0 7px" id="pdNowK">On screen right now</p><div id="pdNow"></div></div>
+      </section>
+    </div>
+    <section class="pd-why" id="pdWhyWrap" hidden>
+      <p class="pd-why-head" id="pdWhyHead">Why: every decision the last press made</p>
+      <div class="pd-why-grid">
+        <div class="pd-why-table"><table><thead><tr><th>What</th><th>Why, in numbers</th><th>Against</th><th>Authority</th></tr></thead><tbody id="pdWhy"></tbody></table></div>
+        <div class="pd-map"><div class="pd-map-cols">
+          <div><p class="pd-map-k">Before</p><div id="pdMapNow"></div></div>
+          <div class="pd-arrow">&rarr;</div>
+          <div><p class="pd-map-k">After</p><div id="pdMapAfter"></div></div>
+        </div></div>
+      </div>
+    </section>
+    <div class="pd-foot">
+      <p class="pd-note" id="pdNote">Computed from the visitor&rsquo;s real profile on the published constants. Nothing has happened yet.</p>
+      <button type="button" class="pd-go" id="pdGo">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Compare: the demo kit's overlay (public/demo-kit/compare.js) is injected into <body> on first use. ── -->
+
+<button type="button" class="pd-pill" id="pdPill">Explain &mdash; predict &amp; prove</button>
+
+<div class="director" role="group" aria-label="Director">
+  <div class="director-in">
+    <div class="beatline">
+      <span class="beatno" id="beatNo">Ready</span>
+      <p class="engineline" id="engineLine">A stranger arrives from search. Press Next to begin.</p>
+      <div class="beatnav">
+        <button type="button" class="nextbeat" id="nextBeat">Next &rarr;<span id="nextLabel">1 · A stranger arrives from search</span></button>
+        <button type="button" class="director-handle" id="explainBtn" title="Press E anywhere">Explain</button>
+        <button type="button" class="director-handle" id="directorHandle" aria-expanded="false" aria-controls="directorMore">All beats</button>
+      </div>
+    </div>
+    <div class="director-more" id="directorMore">
+      <div class="presses" id="presses"></div>
+      <div class="dtools">
+        <div class="assert" id="assertRegion"></div>
+        <div class="assert" id="assertIntent"></div>
+        <div class="assert" id="compareTools"></div>
+      </div>
+      <div class="director-foot">
+        <span class="status" id="status">idle</span>
+        <span class="legend"><i class="legend-dot legend-dot--shopper"></i>the visitor
+          <i class="legend-dot legend-dot--merch"></i>the merchandiser
+          <i class="legend-dot legend-dot--engine"></i>the engine, on its own</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- The page calls the engine routes directly through the kit's transport (X-Tenant on every call, no credential),
+     so every call can be driven and asserted headlessly. oh.js builds the page on the kit (public/demo-kit/kit.js). -->
+<script type="module" src="/oh/oh.js"></script>
+</body>
+</html>
