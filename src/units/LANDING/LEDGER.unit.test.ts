@@ -46,6 +46,21 @@
 //                    before its open-hour refresh reads anything, and its write is conditional on
 //                    that note, so a build whose ledger view is older never replaces the day the
 //                    five-minute job published meanwhile.
+//   unit:LANDING.H5  src/learn/hourly.ts hunks 6-7 (`loadHourRecords` with W30's filed set beside the
+//                    product's ledger copy; the fold helper both folds share): the open hour's working
+//                    fold refuses an UNFILED row conflict, as the final fold does, and excludes and
+//                    counts a FILED one exactly as the final fold of the same hour does (W30 F1.01;
+//                    ruling L-R5).
+//   unit:LANDING.X1  src/routes/decisions.ts:605 on the product branch, auto-merged (the snapshot route
+//                    passes the render offer only for a caller that gives a page instance), against
+//                    P02 decision D1 (freeze item 16): a snapshot without a page instance writes its
+//                    served-v1 content slot's decision records to the ledger and never a record of a
+//                    declared served-v1 layout slot; a snapshot with a page instance writes nothing at
+//                    serve time (ruling L-R10). Both shopper hosts.
+//
+// Fix round L1-fix (rulings L-R5, L-R6 amended, L-R10, L1-C3, L-R4 wording; AMENDMENTS "Landing
+// rulings, round 2"): H5 and X1 added; H1 gains its second leg (another brand's day write refused,
+// the tenant's own day withheld, W37 fix 2); the H1-H4 and P1 assertions are unchanged.
 //
 // Hunks judged non-contradicting carry no unit (the conflict map gives the reason for each).
 //
@@ -53,8 +68,9 @@
 // {date}.json`, src/learn/report.ts reportKey): its brand, counts and hours. A race is staged the
 // way src/units/W33/FIX1.unit.test.ts stages it: the stale writer is held right after a source read
 // has answered, the newer writer runs to completion, the stale writer finishes, and the stored day
-// is read back. Nothing here asserts when a note is taken, a build time, or whether the stale write
-// was refused or retried: that is the build's choice.
+// is read back. Nothing here asserts when a note is taken or a build time. The stale writer's write
+// is refused, and a refused write is never replaced by a retry with older data (L1-C3): a retry that
+// republishes the stale writer's view fails H3 and H4 exactly as an unconditional write does.
 //
 // Names are neutral (`acme`, its second brand `acme-outlet`, the placeholders src/units/W37 uses).
 // The codebase's default tenant (src/tenancy/tenant.ts:36) is a customer name, so it is not used.
@@ -66,13 +82,27 @@ import type { Env } from '@/types/env';
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { hourPrefix, outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { reportKey, type DayReport } from '@/learn/report';
-import { catchUp, foldOpenHours, runDayReport } from '@/learn/hourly';
+import { buildHour, catchUp, foldOpenHours, runDayReport } from '@/learn/hourly';
 import { initializePublicationSet, invalidatePublicationCache, readPublication, type PublicationBaseline } from '@/config/publication';
 import type { DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, EMPTY_CATALOG, SLOTS_KIND, DEFAULT_SLOTS, LEARN_KIND, DEFAULT_LEARN } from '@/content/kinds';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { ownerEnvironment, runOwnerOperation } from '@/identity/sessionAuthority';
+import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
+import { captureRetention, RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
+import { Hono } from 'hono';
+import { invalidateCache } from '@/config/versionedStore';
+import { invalidateLiftCache } from '@/content/service';
+import { DecisionRing } from '@/durable-objects/DecisionRing';
+import { LearnStats } from '@/durable-objects/LearnStats';
+import { ShopperReflex } from '@/durable-objects/ShopperReflex';
+import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { consumeLedger } from '@/ledger/consume';
+import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
+import { decisionRoutes } from '@/routes/decisions';
+import realtimeRoutes from '@/routes/realtime';
+import { tenantMiddleware } from '@/tenancy/middleware';
 
 const MIN = 60_000;
 const TENANT = 'acme', OUTLET = 'acme-outlet';
@@ -99,7 +129,11 @@ class LedgerR2 {
   objects = new Map<string, string>();
   puts: string[] = [];
   after?: After;
+  /** While set, the store refuses every put under this prefix (an outage of those objects, as src/units/W37/FIX2.unit.test.ts stages it) and counts it. */
+  refusing?: string;
+  refused = 0;
   async put(key: string, body: string, options?: { onlyIf?: unknown }) {
+    if (this.refusing !== undefined && key.startsWith(this.refusing)) { this.refused++; throw new Error('fixture: the store refuses this write'); }
     const before = this.objects.get(key), etag = before === undefined ? null : etagOf(before);
     const c = options?.onlyIf;
     if (c instanceof Headers) {
@@ -220,8 +254,9 @@ describe('unit:LANDING.P1 (publication.ts hunks 1-2: the serving cache after the
       expect(storage.reads, 'the first serving operation reads the head, the set and the catalogue').toEqual([configHead, configSet(1), configDocument('content', 1)]);
       storage.reads.length = 0;
       const second = await asOwner(fenced => readPublication(fenced, CONTENT_KIND, TENANT, true));
-      expect(storage.reads, 'LANDING.P1 (product lane E4): the next operation over the same backing binding validates the head and reads nothing else'
-        + ' — a cache hit that reads no head keeps serving a publication another isolate replaced, and answers through an authority outage').toEqual([configHead]);
+      expect(storage.reads, 'LANDING.P1 (product lane E4, L-R4): a NEW shopper operation over the same backing binding, a fenced handle with no entry of its own,'
+        + ' validates the head once and reads nothing else (a read by the same handle again serves its own entry with no storage read, src/config/versionedStore.test.ts:207-208)'
+        + ' — a new operation that reads no head keeps serving a publication another isolate replaced, and answers through an authority outage').toEqual([configHead]);
       expect(second, 'and answers exactly the document the full read answered').toEqual(first);
 
       // A wrapper that is not one of the fence's proxies (W19 LG1's own example: a synthetic monitor's
@@ -257,6 +292,24 @@ describe('unit:LANDING.H1 (hourly.ts hunks 11-12 with the open-hour publication:
       { tenant: TENANT, brand: OUTLET, date: DATE, decisions: 3, outcomes: 1, source: 'aggregates', built: [12], open });
     expect(r2.puts.indexOf(reportKey(TENANT, OUTLET, DATE)), 'W37 fix 2: the other brand\'s day is written before the tenant\'s own day, the date\'s publication record')
       .toBeLessThan(r2.puts.lastIndexOf(reportKey(TENANT, TENANT, DATE)));
+  });
+
+  it('logic: while another brand\'s day write is refused, the open-hour publication withholds the tenant\'s own day, so the own day stored before stands (W37 fix 2, second half)', async () => {
+    expect(typeof foldOpenHours, OPEN_HOUR_FOLD).toBe('function');
+    const r2 = new LedgerR2();
+    // 12:00-12:10: one hero decision under acme and one under acme-outlet; the 12:10 run publishes the date.
+    write(r2, [dec(TENANT, 'vis-own-1', T12 + 2 * MIN), dec(OUTLET, 'vis-outlet-1', T12 + 4 * MIN)], 'a');
+    expect((await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true })).failed, 'the 12:10 run folds the open hour').toEqual([]);
+    const before = said(stored(r2, TENANT));
+    expect(before, 'the tenant\'s own day the 12:10 run published').toEqual(
+      { tenant: TENANT, brand: TENANT, date: DATE, decisions: 1, outcomes: 0, source: 'aggregates', built: [12], open: [{ hour: 12, status: 'current', through: T12 + 10 * MIN }] });
+    // 12:15: one more decision under each brand. From here the store refuses every write of acme-outlet's day.
+    write(r2, [dec(TENANT, 'vis-own-2', T12 + 15 * MIN), dec(OUTLET, 'vis-outlet-2', T12 + 16 * MIN)], 'b');
+    r2.refusing = reportKey(TENANT, OUTLET, DATE);
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true });
+    expect(said(stored(r2, TENANT)), 'LANDING.H1 (W37 fix 2, ruling L-R6 amended): the 12:20 run\'s write of acme-outlet\'s day was refused, so the tenant\'s own day, the date\'s publication record,'
+      + ' is withheld and the day the 12:10 run published stands — the open-hour publication writes the tenant\'s own day whatever became of the other brand\'s').toEqual(before);
+    expect(r2.refused, 'fixture: the 12:20 run attempted acme-outlet\'s day and the store refused it').toBeGreaterThan(0);
   });
 });
 
@@ -342,3 +395,271 @@ describe('unit:LANDING.H4 (hourly.ts hunk 13, runDayReport: the build\'s open-ho
   });
 });
 
+
+// ── unit:LANDING.H5 ───────────────────────────────────────────────────────────
+
+const DAY_MS = 86_400_000;
+const fixturePolicy: RetentionPolicy = { id: 'landing-fixture-policy', revision: 1, durationMs: 3650 * DAY_MS, basis: 'admitted', renewal: 'new-record-only' };
+const fixtureRetention = () => JSON.stringify({ version: 1, tenants: { [TENANT]: Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, fixturePolicy])) as Record<RetentionCategory, RetentionPolicy> } });
+/**
+ * The bindings the five-minute job hands both folds (`src/index.ts` passes `env`): the store, the tenant
+ * registry and its retention policies, and the filing store an operator surface files a read conflict
+ * into (`src/ledger/quarantine.ts` captureReadConflict / readConflictFiled: the recovery configuration
+ * and the provenance key).
+ */
+function filingEnv(r2: LedgerR2): Env {
+  return { DEPLOYMENT_PROFILE: 'demo', STORAGE: r2, TENANTS: JSON.stringify({ provisioned: [TENANT] }), RETENTION: fixtureRetention(),
+    LEDGER_RECOVERY_CONFIG: JSON.stringify({ version: 1, sourceQueue: 'landing-source', deadLetterQueue: 'landing-dead-letter' }),
+    IDENTITY_SALT: 'landing-fixture-provenance-material-0001' } as unknown as Env;
+}
+/** A row as the producer stamps it: its retention births (src/retention.ts captureRetention). */
+const stamped = <T extends { ts: number }>(env: Env, row: T): T => ({ ...row, retention: captureRetention(env, TENANT, row.ts, row.ts) });
+/** What a day counts that a filed conflict changes. */
+const counted = (day: DayReport | null) => day && ({ decisions: day.counts.decisions, outcomes: day.counts.outcomes,
+  conflicts: (day.counts as { conflicts?: unknown }).conflicts });
+
+describe('unit:LANDING.H5 (hourly.ts hunks 6-7: the working fold reads the filed conflicts the final fold reads, W30 F1.01, ruling L-R5)', () => {
+  it('logic: the open hour\'s working fold refuses an unfiled row conflict as the final fold does, and excludes and counts one an operator surface has filed exactly as the final fold of the same hour does', async () => {
+    expect(typeof foldOpenHours, OPEN_HOUR_FOLD).toBe('function');
+    /** The open hour as the queue wrote it: 12:05 and 12:06 two hero decisions under acme, a click on the first; then
+     *  at-least-once delivery writes a genuinely DIFFERENT row under the first decision's logical id (W22.D1.03, F16 §5(j)). */
+    const hour = (r2: LedgerR2, env: Env) => {
+      const first = stamped(env, dec(TENANT, 'vis-c1', T12 + 5 * MIN)), second = stamped(env, dec(TENANT, 'vis-c2', T12 + 6 * MIN));
+      write(r2, [first, second], 'a');
+      write(r2, [stamped(env, click(first))], 'b');
+      const intruder = { ...first, item_id: 'item-b', customer_item_id: 'cms-item-b' };
+      write(r2, [intruder], 'c');
+      return { first, intruder };
+    };
+
+    // Unfiled: the working fold refuses the hour, as the final fold refuses it (src/learn/openHour.test.ts:317-334 on the
+    // product branch; W30 F1.01: "a conflict that is not filed still refuses the hour").
+    const unfiled = new LedgerR2(), unfiledEnv = filingEnv(unfiled);
+    hour(unfiled, unfiledEnv);
+    const refused = await foldOpenHours(unfiled as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true }, unfiledEnv as never);
+    expect(refused.failed.map((f: { hour: number; refusal?: { code?: string } }) => [f.hour, f.refusal?.code]),
+      'an unfiled conflict refuses the working fold of its hour, named as a row conflict').toEqual([[12, 'report_row_conflict']]);
+
+    // Filed: the operator's day build met the collision and filed it in the tenant's own scope, as the report
+    // route files it (src/routes/decisions.ts:1517-1518), before the five-minute job's run.
+    const filed = new LedgerR2(), env = filingEnv(filed);
+    const { first, intruder } = hour(filed, env);
+    await captureReadConflict(env, 'decision', first.decision_id, intruder as never, T12 + 18 * MIN);
+    expect(await readConflictFiled(env, 'decision', first.decision_id), 'fixture: the conflict is filed').toBe(true);
+    const run = await foldOpenHours(filed as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true }, env as never);
+    expect(run.failed, 'LANDING.H5 (W30 F1.01, L-R5): the working fold reads the conflict an operator surface has filed and folds the hour'
+      + ' — it refuses a filed conflict the final fold excludes and counts (the working fold reads the hour with no filed set)').toEqual([]);
+    const open = stored(filed, TENANT);
+    expect({ ...counted(open), source: open?.hours?.source, built: open?.hours?.built,
+      open: (open?.hours as OpenHours | undefined)?.open?.map(o => ({ hour: o.hour, status: o.status, through: o.through })) },
+      'LANDING.H5 (W30 F1.01): the day the job publishes from the open hour excludes the filed row and counts it in `counts.conflicts`, the member the final fold\'s day uses')
+      .toEqual({ decisions: 2, outcomes: 1, conflicts: { decisions: 1, outcomes: 0 }, source: 'aggregates', built: [12], open: [{ hour: 12, status: 'current', through: T12 + 20 * MIN }] });
+
+    // The final fold of the same hour, once it is due, over the same objects and the same filing.
+    const final = await buildHour(filed as never, TENANT, { date: DATE, hour: 12 }, learn, T12 + 66 * MIN, {}, env as never);
+    expect({ decisions: final.brands[TENANT]?.decisions, outcomes: final.brands[TENANT]?.outcomes, conflicts: (final.brands[TENANT] as { conflicts?: unknown } | undefined)?.conflicts },
+      'the final fold excludes the filed row and counts it on the hour (W30 F1.01 `HourBrand.conflicts`)').toEqual({ decisions: 2, outcomes: 1, conflicts: { decisions: 1, outcomes: 0 } });
+    const closed = await runDayReport(filed as never, { tenant: TENANT, brand: TENANT, date: DATE }, learn, null, T12 + 67 * MIN, {}, env as never);
+    expect(counted(open), 'LANDING.H5: the open hour\'s day counts exactly what the final fold\'s day counts').toEqual(counted(closed));
+  });
+});
+
+// ── unit:LANDING.X1 ───────────────────────────────────────────────────────────
+//
+// The mounted application in process, as src/units/_parity.ts and src/routes/realtime.sdkContract.test.ts
+// mount it (neither is imported: the parity harness's tenant is a customer name): the real route modules
+// behind the tenant middleware, the REAL Durable Object classes over storage stubs, on either shopper host,
+// the real ledger producer and consumer. The configuration is the deployed one (LEDGER_RECOVERY_ENABLED
+// "false", wrangler.toml:156, :241, :342): served-v1 decisions reach the ledger through the snapshot route's
+// own `enqueueDecisions(out.records)` (src/routes/decisions.ts:865 on rem/integration).
+
+class AppKV {
+  data = new Map<string, string>();
+  async get(key: string, type?: string) {
+    const v = this.data.get(key);
+    return v === undefined ? null : type === 'stream' ? new Response(v).body : type === 'json' ? JSON.parse(v) : v;
+  }
+  async put(key: string, value: string) { this.data.set(key, value); }
+  async delete(key: string) { this.data.delete(key); }
+  async list(o?: { prefix?: string; limit?: number; cursor?: string }) {
+    const keys = [...this.data.keys()].filter(k => k.startsWith(o?.prefix ?? '')).sort();
+    const start = Number(o?.cursor ?? 0), end = start + (o?.limit ?? 1000);
+    return { keys: keys.slice(start, end).map(name => ({ name })), list_complete: end >= keys.length, ...(end < keys.length ? { cursor: String(end) } : {}) };
+  }
+}
+class AppR2 {
+  objects = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string>>();
+  async get(key: string) {
+    const raw = this.objects.get(key); if (raw === undefined) return null;
+    return { key, etag: 'v' + this.versions.get(key), size: bytesOf(raw), customMetadata: this.metadata.get(key),
+      body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async head(key: string) { return this.objects.has(key) ? { key } : null; }
+  async put(key: string, raw: string, options?: R2PutOptions) {
+    const old = this.objects.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if ((absent && old !== null) || (match != null && match !== old && match !== JSON.stringify(old))) return null;
+    this.objects.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: bytesOf(raw) };
+  }
+  async delete(keys: string | string[]) { for (const key of typeof keys === 'string' ? [keys] : keys) this.objects.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.objects.keys()].filter(k => k.startsWith(options.prefix ?? '')).sort();
+    const start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map(key => ({ key, size: bytesOf(this.objects.get(key) ?? ''), uploaded: new Date(0) })),
+      truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+type Host = 'session' | 'do';
+const STORY_SLOT = 'home-story', MODULE_SLOT = 'home-modules';
+const MOD = { grid: 'module.home.grid.1', reco: 'module.home.reco.1', ugc: 'module.home.ugc.1' } as const;
+/** The home page's pieces: one story for the content slot, three modules for the layout slot (one spanning two categories, one tagged only on a dimension no registry maps). */
+const X1_PIECES = [
+  { id: 'story.home.1', customerContentId: 'CMS-STORY-HOME-1', type: 'editorial', title: 'A story for the home page', tags: { line: ['Line-A'] }, slotTypes: [STORY_SLOT], lifecycle: { status: 'live' } },
+  { id: MOD.grid, customerContentId: 'CMS-MODULE-GRID-1', type: 'category-grid', title: 'A grid of categories', tags: { category: ['Bags', 'Wallets'] }, slotTypes: [MODULE_SLOT], journeyStageFit: ['exploring'], lifecycle: { status: 'live' } },
+  { id: MOD.reco, customerContentId: 'CMS-MODULE-RECO-1', type: 'recommendations', title: 'Picked for this visit', tags: { line: ['Line-A'] }, slotTypes: [MODULE_SLOT], journeyStageFit: ['considering'], lifecycle: { status: 'live' } },
+  { id: MOD.ugc, customerContentId: 'CMS-MODULE-UGC-1', type: 'user-generated', title: 'Seen on shoppers', tags: { styleWorld: ['downtown'] }, slotTypes: [MODULE_SLOT], journeyStageFit: ['considering'], lifecycle: { status: 'live' } },
+];
+/** The page: the served-v1 content slot first, the declared layout slot below it (P02: `layout: true` in a document marked governanceVersion 4). */
+const X1_SLOTS = { version: 'landing-x1-slots', governanceVersion: 4, pages: { home: [
+  { slot: STORY_SLOT, take: 1, weights: { line: 1 } },
+  { slot: MODULE_SLOT, take: 2, layout: true, weights: { line: 1, category: 0.5 } },
+] } };
+/** Both slots measured on served-v1: the learn document names no basis for either (the documented default). */
+const X1_LEARN = { version: 'landing-x1-learn', holdout: { share: 0, salt: 'landing-x1', arms: ['default'] }, regional: { enabled: false, kBlend: 1, minEvents: 30 },
+  slots: { [STORY_SLOT]: { reward: 'click' }, [MODULE_SLOT]: { reward: 'click' } } };
+
+async function mountApp(host: Host) {
+  invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
+  const pending: Promise<unknown>[] = [], queued: unknown[] = [];
+  const storage = new AppR2(), shoppers = new Map<string, Map<string, unknown>>();
+  const env = {
+    DEPLOYMENT_PROFILE: 'demo', ENVIRONMENT: 'test', CACHE: new AppKV(), SESSIONS: new AppKV(), STORAGE: storage,
+    CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: host,
+    JWT_SECRET: 'landing-synthetic-operator-signing-material', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: `${TENANT}:landing-identity-material`,
+    TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }), RETENTION: fixtureRetention(),
+    LEDGER_RECOVERY_ENABLED: 'false',
+    PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
+    DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
+    EVENT_QUEUE: { send: async (body: unknown) => { queued.push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const m of messages) queued.push(m.body); } },
+  } as unknown as Env;
+  const namespaceFor = (make: (state: DurableObjectState, env: Env) => { fetch: (request: Request) => Promise<Response> }, registry: Map<string, Map<string, unknown>>) => {
+    const objects = new Map<string, { fetch: (request: Request) => Promise<Response> }>();
+    return { idFromName: (n: string) => n, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      let object = objects.get(name);
+      if (!object) {
+        const data = new Map<string, unknown>(), alarms: number[] = [];
+        registry.set(name, data);
+        const storageStub = {
+          get: async (k: string | string[]) => structuredClone(Array.isArray(k) ? new Map(k.map(v => [v, data.get(v)])) : data.get(k)),
+          put: async (k: string | Record<string, unknown>, v?: unknown) => { if (typeof k === 'string') data.set(k, structuredClone(v)); else for (const [key, value] of Object.entries(k)) data.set(key, structuredClone(value)); },
+          list: async (o?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }) =>
+            structuredClone(new Map([...data].filter(([key]) => key.startsWith(o?.prefix ?? '') && (!o?.startAfter || key > o.startAfter))
+              .sort(([a], [b]) => (o?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, o?.limit))),
+          transaction: async (run: (tx: DurableObjectTransaction) => Promise<unknown>) => {
+            const candidate = structuredClone(data);
+            const tx = { list: async () => structuredClone(candidate), get: async (key: string) => structuredClone(candidate.get(key)),
+              delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+              put: async (values: string | Record<string, unknown>, value?: unknown) => { if (typeof values === 'string') candidate.set(values, structuredClone(value)); else for (const [key, entry] of Object.entries(values)) candidate.set(key, structuredClone(entry)); },
+              deleteAlarm: async () => { alarms.length = 0; }, setAlarm: async (at: number) => { alarms.push(at); },
+            } as unknown as DurableObjectTransaction;
+            const result = await run(tx);
+            data.clear(); for (const [key, value] of candidate) data.set(key, value);
+            return result;
+          },
+          deleteAll: async () => data.clear(), delete: async (k: string) => data.delete(k),
+          setAlarm: async (at: number) => { alarms.push(at); }, getAlarm: async () => alarms.at(-1) ?? null,
+        };
+        const state = { id: name, storage: storageStub, getWebSockets: () => [], waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState;
+        object = make(state, env); objects.set(name, object);
+      }
+      return object.fetch(new Request(input, init));
+    } }) };
+  };
+  env.SHOPPER_REFLEX = namespaceFor((state, e) => new ShopperReflex(state, e), shoppers) as unknown as DurableObjectNamespace;
+  env.LEARN_STATS = namespaceFor((state, e) => new LearnStats(state, e), new Map()) as unknown as DurableObjectNamespace;
+  env.DECISION_RING = namespaceFor((state, e) => new DecisionRing(state, e), new Map()) as unknown as DurableObjectNamespace;
+  const app = new Hono<{ Bindings: Env }>();
+  app.use('*', tenantMiddleware());
+  app.route('/realtime', realtimeRoutes);
+  app.route('/v1', decisionRoutes);
+  const fetchOne = (request: Request) => app.fetch(request, env,
+    { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+  const drain = async () => { while (pending.length) await Promise.all(pending.splice(0)); await new Promise(r => setTimeout(r, 5)); };
+  /** The real consumer writes what the real producer queued. */
+  const drainLedger = async () => {
+    await drain();
+    if (!queued.length) return;
+    const result = await consumeLedger(env, queued.splice(0), Date.now()) as { error?: unknown };
+    expect(result.error, 'the fixture ledger batch is written by the real consumer').toBeUndefined();
+  };
+  const revision = (value: unknown) => ({ revision: 1, at: 1, actor: 'landing-x1-fixture', note: 'fixture', value });
+  let refused: string | null = null;
+  try {
+    await initializePublicationSet(env, [
+      { kind: CONTENT_KIND, scope: TENANT, revision: revision({ version: 'landing-x1-catalogue', pieces: X1_PIECES }) },
+      { kind: SLOTS_KIND, scope: TENANT, revision: revision(X1_SLOTS) },
+      { kind: LEARN_KIND, scope: TENANT, revision: revision(X1_LEARN) },
+      { kind: PRIORS_KIND, scope: TENANT, revision: revision(EMPTY_PRIORS) },
+      { kind: REFLEX_KIND, scope: reflexScopeForTenant(TENANT), revision: revision({ ...DEFAULT_REFLEX_CONFIG, version: 'landing-x1-registry' }) },
+    ] as PublicationBaseline[], '0:' + crypto.randomUUID());
+  } catch (error) { refused = `${(error as Error).message}${(error as { code?: string }).code ? ` (${(error as { code?: string }).code})` : ''}`; }
+  invalidatePublicationCache();
+
+  /** A shopper with a session grant and her own explicit choice (tracking and personalization on) through the real route. */
+  const shopper = async () => {
+    const grant = await newAnonymousSession(env, TENANT);
+    const call = async (path: string, body: unknown) => {
+      const response = await fetchOne(new Request(`https://shop.invalid${path}`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+      const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+      await drain();
+      return answer;
+    };
+    const chosen = await call(`/realtime/session/${grant.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
+      choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
+    expect(chosen.status, `PRECONDITION (${host}): her explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 200)})`).toBe(200);
+    /** `POST /v1/:tenant/decisions/snapshot`, the route production serves. */
+    const snapshot = async (pageInstance?: string) => {
+      const answer = await call(`/v1/${TENANT}/decisions/snapshot`, { page: 'home', brand: TENANT, ...(pageInstance ? { pageInstance } : {}) });
+      expect(answer.status, `PRECONDITION (${host}): the snapshot answers (${JSON.stringify(answer.body).slice(0, 200)})`).toBe(200);
+      await drainLedger();
+      return ((answer.body.decisions ?? []) as Array<{ slot: string; contentId: string; order: number }>).sort((a, b) => a.order - b.order);
+    };
+    return { subject: grant.subject, snapshot };
+  };
+  /** The decision records the real consumer stored for a visitor, as (slot, piece) pairs in decision order. */
+  const ledgerOf = (visitor: string) => [...storage.objects.entries()].filter(([key]) => key.includes('/decision/') && key.endsWith('.ndjson'))
+    .flatMap(([, raw]) => raw.split('\n').filter(Boolean).map(line => JSON.parse(line) as DecisionRecord))
+    .filter(record => record.visitor_id === visitor).sort((a, b) => a.ts - b.ts || a.decision_id.localeCompare(b.decision_id)).map(record => ({ slot: record.slot, item: record.item_id }));
+  return { refused, shopper, ledgerOf };
+}
+
+describe('unit:LANDING.X1 (src/routes/decisions.ts:605 auto-merged, the snapshot route\'s render offer: served-v1 capture without a page instance, never of a declared layout slot, ruling L-R10)', () => {
+  for (const host of ['session', 'do'] as const) {
+    it(`host (${host}): a snapshot without a page instance writes its served-v1 content slot's decision records to the ledger and never a record of the declared served-v1 layout slot; a snapshot with a page instance writes nothing at serve time`, async () => {
+      const m = await mountApp(host);
+      expect(m.refused ?? 'published', `PRECONDITION (${host}): the home page with its declared layout slot (\`layout: true\`, governanceVersion 4, P02) on served-v1 publishes — the platform refused it: ${m.refused}`).toBe('published');
+
+      const plain = await m.shopper();
+      const served = await plain.snapshot();
+      const story = served.filter(d => d.slot === STORY_SLOT).map(d => ({ slot: d.slot, item: d.contentId }));
+      expect(story, `PRECONDITION (${host}): the content slot served its one story`).toEqual([{ slot: STORY_SLOT, item: 'story.home.1' }]);
+      expect(served.filter(d => d.slot === MODULE_SLOT).map(d => d.contentId), `PRECONDITION (${host}): the layout slot served K = 2 modules, the first eligible in catalogue order with no signal (P02 A2)`)
+        .toEqual([MOD.grid, MOD.reco]);
+      expect(m.ledgerOf(plain.subject), `LANDING.X1 (${host}; L-R10, P02 decision D1): a snapshot without a page instance writes exactly its served-v1 content slot's decision records to the ledger`
+        + ` — never a record of the declared served-v1 layout slot (the hourly fold would count it as an exposure, P02 residual 7.2), and not nothing (src/routes/decisions.ts:858 passes the render offer to every caller, so no served-v1 decision is captured)`)
+        .toEqual(story);
+
+      // A caller that gives a page instance asks for rendered measurement: nothing is captured at serve time, as today.
+      const rendered = await m.shopper();
+      const page = await rendered.snapshot('landing-x1-page-1');
+      expect(page.map(d => d.slot), `PRECONDITION (${host}): the page with an instance is served the same slots`).toEqual([STORY_SLOT, MODULE_SLOT, MODULE_SLOT]);
+      expect(m.ledgerOf(rendered.subject), `LANDING.X1 (${host}): a snapshot with a page instance writes no decision record at serve time (LOCKED, as today)`).toEqual([]);
+    });
+  }
+});
