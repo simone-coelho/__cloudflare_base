@@ -774,7 +774,7 @@ revision that declares no layout slot, refuses as `invalid page replay manifest`
 
 Version 4 also carries the layout slot's per-context `orders`: `[{ context: { channel, visitBuckets }, modules }]`
 (the snapshot's "A configured order per context" above says what a shopper is served). Publication —
-`PUT /content/slots` and `POST /content/slots/validate` alike — refuses with `422`, naming the order and
+`PUT /content/slots`, a slots document published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any case, the error prefixed with `publicationChanges[i]`, the whole request refused and no member written), and `POST /content/slots/validate` alike — refuses with `422`, naming the order and
 the offending value in `errors[]` and writing no revision, an order that names a module no piece of the
 published catalogue registers for the slot (a piece with that `id` whose `slotTypes` names the slot), a
 module the slot's excluded tags or allowed types refuse, a module the slot excludes by id or another slot
@@ -784,7 +784,7 @@ with equal specificity; an order on a slot that is not the page's declared layou
 off-limits; an order that does not keep the slot's pinned modules at their positions; and an order of no
 module or of more than `take` modules. A write marked 1, 2 or 3 that carries `orders` is refused naming
 `pages.{page}[i].orders`; an unmarked write that carries them is read under version 4. The catalogue an
-order is checked against is the one published in the same request (`publicationChanges`) or else the one
+order is checked against is the one published in the same request (the primary document or a `publicationChanges` member of the catalogue kind, in any case of the word) or else the one
 in force; when it cannot be read the write is refused with `503` rather than published unchecked. A later
 catalogue change is not refused: the decision then serves the order without the module it lost. A
 decision on which a configured order was served writes `inputs.replay.orders: "configured-order-v1"`
