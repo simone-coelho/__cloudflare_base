@@ -57,9 +57,12 @@
 //                    served-v1 content slot's decision records to the ledger and never a record of a
 //                    declared served-v1 layout slot; a snapshot with a page instance writes nothing at
 //                    serve time (ruling L-R10). Both shopper hosts.
+//   unit:LANDING.H6  src/learn/hourly.ts hunk 12 with the open-hour publication, for ANOTHER brand's day
+//                    (condition L1-C4, W33 O2): a five-minute job whose open-hour ledger view is older
+//                    never replaces another brand's day a report build published meanwhile.
 //
 // Fix round L1-fix (rulings L-R5, L-R6 amended, L-R10, L1-C3, L-R4 wording; AMENDMENTS "Landing
-// rulings, round 2"): H5 and X1 added; H1 gains its second leg (another brand's day write refused,
+// rulings, round 2"): H5, X1 and H6 added; H1 gains its second leg (another brand's day write refused,
 // the tenant's own day withheld, W37 fix 2); the H1-H4 and P1 assertions are unchanged.
 //
 // Hunks judged non-contradicting carry no unit (the conflict map gives the reason for each).
@@ -662,4 +665,36 @@ describe('unit:LANDING.X1 (src/routes/decisions.ts:605 auto-merged, the snapshot
       expect(m.ledgerOf(rendered.subject), `LANDING.X1 (${host}): a snapshot with a page instance writes no decision record at serve time (LOCKED, as today)`).toEqual([]);
     });
   }
+});
+
+// ── unit:LANDING.H6 ───────────────────────────────────────────────────────────
+
+describe('unit:LANDING.H6 (hourly.ts hunk 12 with the open-hour publication: another brand\'s day, conditional, W33 O2, condition L1-C4)', () => {
+  it('logic: a five-minute job whose open-hour ledger view is older never replaces the day of another brand a report build published meanwhile', async () => {
+    expect(typeof foldOpenHours, OPEN_HOUR_FOLD).toBe('function');
+    const r2 = new LedgerR2();
+    // 12:05 one decision under acme-outlet; the job's run at 12:10 starts the open hour and publishes the date's days.
+    write(r2, [dec(OUTLET, 'vis-o1', T12 + 5 * MIN)], 'a1');
+    expect((await foldOpenHours(r2 as never, TENANT, learn, T12 + 10 * MIN, { start: true, publish: true })).failed).toEqual([]);
+    expect(said(stored(r2, OUTLET))?.decisions, 'PRECONDITION (LANDING.H1, W37 T2): the 12:10 run published acme-outlet\'s day with its one decision').toBe(1);
+    // 12:15 one more, so the 12:20 run has something new to fold and publish.
+    write(r2, [dec(OUTLET, 'vis-o2', T12 + 15 * MIN)], 'a2');
+    // The 12:20 run is held right after its listing of the open hour's ledger has answered: two more rows land,
+    // and an operator's build of acme-outlet's day at 12:21 (POST without policies) reads all four and publishes them.
+    let newer: unknown = null;
+    const hold = holdAfterFirstListing(r2, HOUR12, async () => {
+      write(r2, [dec(OUTLET, 'vis-p1', T12 + 20 * MIN + 10_000), dec(OUTLET, 'vis-p2', T12 + 20 * MIN + 20_000)], 'b');
+      r2.after = undefined;
+      await runDayReport(r2 as never, { tenant: TENANT, brand: OUTLET, date: DATE }, learn, null, T12 + 21 * MIN);
+      newer = said(stored(r2, OUTLET));
+    });
+    await foldOpenHours(r2 as never, TENANT, learn, T12 + 20 * MIN, { start: true, publish: true });
+    expect(hold.fired(), 'the job listed the open hour').toBe(true);
+    expect(newer, 'the build published the four rows it read').toEqual({ tenant: TENANT, brand: OUTLET, date: DATE, decisions: 4, outcomes: 0, source: 'aggregates', built: [12],
+      open: [{ hour: 12, status: 'current', through: T12 + 21 * MIN }] });
+    // The job may note acme-outlet's day before its first listing (then its stale write is refused) or before a listing
+    // it takes after it (then it builds from all four rows): either way the stored day never counts fewer rows than the build's.
+    expect(said(stored(r2, OUTLET))?.decisions, 'LANDING.H6 (W33 O2, L1-C4): acme-outlet\'s day is noted before the listing it is built from, so the held job\'s write never replaces the build\'s four rows with its older two'
+      + ' — the open-hour publication writes another brand\'s day unconditionally').toBe(4);
+  });
 });
