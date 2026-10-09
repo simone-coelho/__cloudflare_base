@@ -2404,8 +2404,9 @@ describe('W35.02 visit context', () => {
     f.env.EVENT_QUEUE = { send: async (v: { records?: Array<{ cell: unknown }> }) => { queued.push(v); } } as unknown as Queue;
     const state = () => host === 'session' ? f.sessions.data.get(tenantKey('meridian', `session:${g.sessionId}`))
       : JSON.stringify([...f.objects.get(shopperObjectName('meridian', g.subject))?.data ?? []]);
+    let pageInstances = 0;
     const snapshot = (entry?: unknown, extra = '') => f.call(`/v1/meridian/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`
-      + (entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(entry))}`) + extra, g.capability);
+      + (entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(entry))}`) + `&pageInstance=w35-${host}-${++pageInstances}` + extra, g.capability);
     return { ...f, g, queued, state, snapshot };
   }
 
@@ -2419,11 +2420,13 @@ describe('W35.02 visit context', () => {
     try {
       for (const host of ['session', 'do']) {
         const f = await fixture(host), before = f.state();
-        // A public snapshot is an offer: "Only a subsequent authenticated render may
-        // capture them" (src/content/service.ts:35). The route always passes an offer
-        // (src/routes/decisions.ts:465), so it returns no private replay inputs
-        // (src/routes/decisions.ts:478) and captures nothing. Those three are what it
-        // can be held to here; the visit context the engine derived is read below
+        // A public snapshot that carries a page instance is an offer: the route passes
+        // the offer exactly when one is given (src/routes/decisions.ts:888), and "Only a
+        // subsequent authenticated render may capture them" (src/content/service.ts:41),
+        // so it returns no private replay inputs and captures nothing. Without a page
+        // instance the served-v1 content slot is captured at serve time (L-R10, the
+        // landing), so every snapshot of this fixture carries one. Those three are what
+        // it can be held to here; the visit context the engine derived is read below
         // through the real personalization path and its decision provider.
         const offer = async (entry?: unknown, extra = '') => { const queued = f.queued.length, r = await f.snapshot(entry, extra);
           expect(r.status).toBe(200);

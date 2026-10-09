@@ -233,6 +233,41 @@ Every slot's offered decision for the page, in page order; private records are n
 
 Customer snapshot polls are read-only: `write:false`, no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Tracking-refused choices contain no render offer; personalization-refused choices use defaults. `sources.consent` names that state.
 
+**A declared layout slot.** A slot the slot document declares with `layout: true` (under
+`governanceVersion: 4`, at most one per page) is the page's layout: its `decisions` are up to `take`
+module ids in rank order, after eligibility, the slot's exclusions and page-wide de-duplication, and
+never a filler when fewer modules are eligible. The list the layout slot returns is the layout's
+sequence, in `order`. A module that is not returned is not drawn, and its container stays hidden. Every
+drawn module is acknowledged with its own render acknowledgement (a `content_impression` carrying its
+`decisionId` and `renderOffer`), and only a drawn module is. On a layout slot measured on `rendered-v1`
+that acknowledgement is the module's one exposure, however often it is retried, while a module returned
+and not drawn, or not returned, adds none. A layout slot whose learn document leaves it on `served-v1`
+is answered without a `renderOffer` and is never captured as an exposure at serve time, not even by the
+platform's own trusted synthetic monitor; the decision set names the mismatch as
+`layoutDiagnostics: [{measurementBasis, reason: "measurement_basis", slot}]`, which is host-internal and
+not a member of this answer.
+
+**A configured order per context.** A merchandiser can publish, on the page's declared layout slot, a
+module order per context (`orders`, governance version 4; [the layout slot](./03-payload-schemas.md#the-layout-slot)),
+in the console's Slot rules screen or with `PUT /content/slots`, with no deployment. A context is one
+entry channel — one of the six channel words `direct`, `paid_social`, `paid_search`, `email`, `organic`,
+`referral` — or `any`, with one or more visit buckets (`1`, `2-3`, `4+`) or `any`; its specificity is the
+number of those two parts that are not `any`, and the most specific context that matches the shopper
+decides. A shopper whose channel or visit bucket is unknown matches no context, not even one that names
+`any`. The next snapshot for a shopper in that context returns the order's modules exactly, position by
+position, in `order`: an order may list fewer modules than the slot's `take`, and a module it does not
+list is hidden in that context — not returned, never offered for a render acknowledgement and never
+counted as an exposure. The order is served exactly and never re-ranked; it is never served on the
+holdout's `default` arm, to a shopper without
+personalization consent, or on a decision on which the slot's exploration picks, and each of those, like
+every shopper in another context, receives the slot's own decision unchanged. A pinned module keeps its
+pinned position and its `pin` authority under the order; a listed module that is not eligible at decision
+time (outside its window, expired, out of stock, no longer in the catalogue, refused by a slot gate, or
+served elsewhere on the page) is passed over and never replaced, so the order is served without it and
+the slot never falls back to its own ranking for that shopper. A position the order set keeps the
+`score`, `strategy` and drivers its own ranking arithmetic computed, and its `explain.note` says that the
+configured order placed it.
+
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data
 authority it was born under is no longer the one in force (for example, you published the next
 revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then still
@@ -342,6 +377,8 @@ exceeds its threshold, the scheduled `reconciliation` on `/v1/{tenant}/monitor` 
 disagreement, `online` above `ledger`, carrying `conflicts`. The credits of the filed records are the
 designed outcome, not a lost credit; `conflicts` does not show that they are the whole difference, and
 it rides the brand's other rows as well (see `reconciliation` above).
+
+A position a configured per-context order set carries `configuredOrder: { context, modules }` on its receipt, exactly as the record carries it, and its `why` says in words that the configured order placed it, for which context and at which place in the order; a pinned position under an order keeps its pin sentence and carries none. A slot that served its configured order is not reported as a short take: the order says how many positions it fills.
 
 Where a pinned slot fell short and still served something, it also wrote records, so the shortfall is on the receipt as well: `explain.shortTake = {take, served, empty, sentence}` rides every record that slot wrote, pinned position or ranked, and `GET /v1/{tenant}/visitors/{visitorId}/receipts` reads its sentence onto `why` exactly as it reads out stage, freshness, fatigue, merchandising and diversity. A refused slot writes no record, so it has no receipt and the counters above are its only home.
 
@@ -702,14 +739,15 @@ Available pin feedback names the strict uncached committed catalog revision and 
 
 The slots current GET also adds `constraintDiagnostics: {schema: 'slot-constraint-diagnostics/v1', advisory: true, status, slotsRevision, catalog: {source, revision}, checkedAt, warningCount, omittedWarningCount, warnings: [{page, slot, contentId, reason, dimension?, value?}]}`: the operator's home for the refusals a decision set's own `constraintDiagnostics` names one page load at a time (below), read for the whole stored document. Each page is decided as serving decides it — the strict uncached committed catalog revision, eligibility at `checkedAt`, the page's pin reservations and its compiled hard controls — so only a slot that ranks contributes (not off-limits, with ranked positions left after its pins, and with no refused pinned prefix), and only a piece that slot could otherwise have served is named (live, inside its window, in stock, and naming the slot in its `slotTypes`). Every refused eligible piece is counted; at most 50 are named, in page order, then slot order, then catalogue order, and `omittedWarningCount` is the rest; an excluded-tag refusal names the published pair that matched. Unlike the pin channel it names pages, slots and piece ids, because those are what a merchandiser acts on. A document that publishes no hard control is `not_required` with zero counts and catalog `not_read`; a legacy GET fallback, an unbound selector or a catalog that cannot be read is `unavailable` with null counts, list, catalog revision and time, never a zero nobody checked. It is advice, never serving authority: the runtime decision stays authoritative, and a later catalog change or the passage of a publish window can change the answer.
 
-Current slot validation/publication accepts absent/1/2/3 markers and emits `governanceVersion: 3`, with optional per-slot
+Current slot validation/publication accepts absent/1/2/3/4 markers and emits `governanceVersion: 3`, or `4` for a
+document marked 4 and for an unmarked document that declares a layout slot or carries per-context orders (below), with optional per-slot
 `offLimits`, exact `excludedPieceIds`, OR `excludedTags` pairs and `allowedTypes` controls ([schema](./03-payload-schemas.md#hard-slot-controls)).
 Off-limits slots return no engine candidates, decisions or records on any arm, including pinned
 slots; their pin and ranking settings remain dormant. Excluded IDs cannot reach scoring, exploration
 or diversity, and an active excluded pin is rejected at publication. No arbitrary replacement is
 chosen. A decision set whose published hard controls refused a piece the slot could otherwise have served carries advisory `constraintDiagnostics: {warningCount, omittedWarningCount, warnings: [{slot, contentId, reason: off_limits | excluded | type_not_allowed | excluded_tag, dimension?, value?}]}`, in the same bounded-sample idiom the catalog and pin channels use: every refused eligible piece is counted, at most50 are named in slot order then catalogue order, `omittedWarningCount` is the difference, and an excluded-tag refusal names the published pair that matched rather than leaving a merchandiser to guess which of up to 1000 pairs applied. A slot that refuses nobody, a slot the composer never ranks and a retained receipt replayed before these controls existed carry no such member at all, so a slot that comes back short says which control emptied it instead of reading as a thin catalog. It is advice, never serving authority, and is never carried on a stored record; the operator reads the same refusals for the whole stored document on the slots current GET (above). Exact rendering types match `piece.type`, not affinity tags. Tag matching is literal for explicit own tags;
 only absent own `contentType` uses the existing safe rendering-type fallback, equally on every arm.
-Rules edits these controls and exact JSON-string/ordered-array/null pins through existing validate/save/readback and History rollback;
+Rules edits these controls and exact JSON-string/ordered-array/null pins through existing validate/save/readback and History rollback, and on a declared layout slot the per-context orders (`layout.orders`, a JSON array; `[]` or null clears) the same way;
 it never changes take automatically. Catalog-dependent tag/type pin conflicts warn at publication and refuse at runtime.
 Missing or unreadable service slot configuration now yields no selections (`sources.slots` is
 `{version:null,revision:0,count:0}`), not compiled slots; the authoring API still offers defaults for
@@ -722,6 +760,39 @@ manifest rows keep page order with zero lift/prior and require no archives. Old 
 documents ignore all formerly unknown hard-control fields; stored version 1 validates ID/off-limits and ignores tag/type fields;
 stored version 2 validates tag/type controls but ignores formerly unknown prefixes; version 3 validates prefixes too.
 Historical bytes are never migrated or rewritten.
+
+Version 4 adds one member, the layout declaration: `layout: true` on one slot of a page (the snapshot's
+"A declared layout slot" above says what it returns and how it is measured). It is refused by name
+(`pages.{page}[i].layout`) in a document marked 1, 2 or 3, and a second declaration on the same page is
+refused naming the page and the slot (`pages.{page}.{slot}`); its `take` keeps the 1–50 bound of every
+slot. Otherwise version 4 reads exactly as version 3, a stored document marked earlier ignores the member,
+and versions above 4 refuse. A page that declares a layout slot writes
+`inputs.replay.layout: "declared-slot-v1"` on every receipt of that page, beside the other markers and independent of them; a
+page that declares none writes exactly the markers it wrote before. A replay of a record without the
+marker decides the page without the declaration; a present marker with another value, or over a page
+revision that declares no layout slot, refuses as `invalid page replay manifest`.
+
+Version 4 also carries the layout slot's per-context `orders`: `[{ context: { channel, visitBuckets }, modules }]`
+(the snapshot's "A configured order per context" above says what a shopper is served). Publication —
+`PUT /content/slots`, a slots document published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any case, the error prefixed with `publicationChanges[i]`, the whole request refused and no member written), and `POST /content/slots/validate` alike — refuses with `422`, naming the order and
+the offending value in `errors[]` and writing no revision, an order that names a module no piece of the
+published catalogue registers for the slot (a piece with that `id` whose `slotTypes` names the slot), a
+module the slot's excluded tags or allowed types refuse, a module the slot excludes by id or another slot
+of the page pins, or one module twice; a context outside the six channel words, `any` and the visit
+buckets (`unknown` is not a context word); two orders for one context; two contexts that match one shopper
+with equal specificity; an order on a slot that is not the page's declared layout slot or that is
+off-limits; an order that does not keep the slot's pinned modules at their positions; and an order of no
+module or of more than `take` modules. A write marked 1, 2 or 3 that carries `orders` is refused naming
+`pages.{page}[i].orders`; an unmarked write that carries them is read under version 4. The catalogue an
+order is checked against is the one published in the same request (the primary document or a `publicationChanges` member of the catalogue kind, in any case of the word) or else the one
+in force; when it cannot be read the write is refused with `503` rather than published unchecked. A later
+catalogue change is not refused: the decision then serves the order without the module it lost. A
+decision on which a configured order was served writes `inputs.replay.orders: "configured-order-v1"`
+beside the other markers, and every other decision writes exactly the markers it wrote before; a replay
+of a record without it decides the page without its orders, and a present marker with another value, or
+over a page revision whose layout slot carries no orders, refuses as `invalid page replay manifest`. The
+record of every position the order set carries `explain.configuredOrder: { context, modules }`, the
+context it was published for and the whole order, compared by value in replay.
 
 `pinnedPieceIds` pins a required ordered prefix (up to 50 distinct exact nonempty IDs, [] neutral),
 followed by ranking up to total take. It is mutually exclusive with scalar `pinnedPieceId`, even with [].
@@ -755,7 +826,7 @@ Configuration PUT/PATCH, import, pull, rollback and item reset require `If-Match
 
 `GET /content/catalog/publication?kind=catalog|slots|learn|reflex|priors&memberScope=` discovers committed revision, historical floor and any pending operation's ID/base/original actor/digest. The same headers optionally inspect a particular operation. After a failed or ambiguous publication, `POST /content/catalog/publication/recover` with its original headers finishes that retained intent, preserving its attribution; another currently granted operator can recover it. It accepts no replacement body and never refetches a feed. Initialization recovery remains library-only. Pending intent has no expiry; other writers conflict until it finishes. `publicationChanges:[{kind,document}]` on a document PUT publishes up to five additional same-tenant members in the same activation; no secondary member becomes visible early. Missing members or inconsistent retained intent fail closed before recovery writes. Repeating an identical ordinary write returns its retained receipt; pull rejects pending/stale bases before fetching, so use status/recover after an uncertain pull.
 
-All configuration administration bypasses the serving cache. One serving operation pins the same committed set for its catalog, slots, learning and Reflex dependencies; statistics pin matching learning/prior authority. Serving snapshots are immutable, keyed by bucket and tenant, and expire within 30 seconds of the read's start; an already in-flight read may finish later. The cache is bounded to 32 bucket/scope entries and 8 MiB including retained member bodies; mutation and recovery invalidate in-flight admissions. A verified cached set can serve until expiry, and failures never refresh it or substitute empty/default configuration. R2's same-key write rate limit can leave reservation/finalization pending and return 503; status/recovery is required, with no rapid-publication or deployed latency guarantee. This coherent local publication protocol does not establish a deployed propagation SLO or customer immediate-effect acceptance. Actual initialization, legacy-writer cutover and live acceptance remain separately authorized.
+All configuration administration bypasses the serving cache. One serving operation pins the same committed set for its catalog, slots, learning and Reflex dependencies; statistics pin matching learning/prior authority. Serving snapshots are immutable, keyed by bucket and tenant, and expire within 30 seconds of the read's start; an already in-flight read may finish later. The cache is bounded to 32 bucket/scope entries and 8 MiB including retained member bodies; mutation and recovery invalidate in-flight admissions. A verified cached set can serve until expiry to a read by the same storage handle, and failures never refresh it or substitute empty/default configuration. A new shopper operation reads behind a storage handle of its own, so it reads and validates the publication head once and refuses with `503` when it cannot read it; a set the head names that this isolate already holds for the same bucket is reused with the member documents already read under it, and a set committed elsewhere is served from that operation on. R2's same-key write rate limit can leave reservation/finalization pending and return 503; status/recovery is required, with no rapid-publication or deployed latency guarantee. This coherent local publication protocol does not establish a deployed propagation SLO or customer immediate-effect acceptance. Actual initialization, legacy-writer cutover and live acceptance remain separately authorized.
 
 Current catalog GET, successful catalog validation, PUT, import/pull, rollback, recovery and human-approved enrichment publication also return `diagnostics` with `schema: 'catalog-registry-diagnostics/v1'`, `advisory: true`, `status`, `catalogRevision` (null for a validation candidate), current `registry: {scope, source, revision, version}` and `slots: {source, revision, version}`. `slots` names the slot-type vocabulary the pieces were compared against: the tenant's own published slots document, else the compiled fallback the engine would decide from, else `unavailable` when that document cannot be read — and then no `unknown_slot_type` warning is raised at all, because an outage must never invent one. A slots outage costs the channel only its slot-type advice and never turns the registry's own answer into one. This diagnoses the exact response/committed catalog against an uncached tenant registry read, not a second catalog read. Missing configuration (including demo scopes), corrupt/oversized data or a read failure yields `status: 'unavailable'`, registry source `unavailable`, null registry revision/version, and null warning counts/list. Optional diagnostics cannot turn an already committed publication into a failure.
 

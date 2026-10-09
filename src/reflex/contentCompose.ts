@@ -59,7 +59,20 @@ export interface ContentSlotSpec {
    * unfilled, the yielded pieces fill them in rank order, marked `relaxed`.
    */
   diversity?: { dimension: string; max: number };
+  /**
+   * P01: a configured module order the caller resolved for THIS decision (the
+   * shopper's context, an arm that personalizes). When the slot's exploration
+   * picks nothing, the slot serves exactly these modules, in this order, after
+   * its own pinned prefix: only those the slot could serve at all (eligible,
+   * admitted by its gates, not served or reserved elsewhere on the page), and
+   * never one it does not list, which stays hidden. Diversity does not apply to
+   * it. When exploration picks, the slot serves its own decision (decision D2).
+   */
+  order?: readonly string[];
 }
+
+/** P01: what a position served under a configured order says on its explain. */
+export const CONFIGURED_ORDER_NOTE = 'configured order position — the merchandiser’s order for this context placed it; the ranking did not';
 
 export interface ContentDecision {
   contentId: string;
@@ -111,6 +124,8 @@ export interface ComposeContentResult {
   candidates: Record<string, SlotCandidate[]>;
   /** Refused configuration, not fabricated delivery decisions or ledger rows. */
   pinDiagnostics?: PinDiagnostic[];
+  /** P01: the slots that served their configured `order` on this decision, in page order. Absent when none did. */
+  ordered?: string[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -222,6 +237,7 @@ export function composeContentDetailed(
     }
   }
   let order = 0;
+  const ordered: string[] = [];
 
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
@@ -279,8 +295,10 @@ export function composeContentDetailed(
     // whose whole ranking was replaced, records exactly what it recorded before.
     let byScore: typeof scored | null = null;
     let promoted: string | null = null;
+    let picked = false;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      picked = Boolean(pick);
       if (pick?.ranking) {
         const order = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order.get(x.p.id) ?? 1e9) - (order.get(y.p.id) ?? 1e9));
@@ -306,7 +324,7 @@ export function composeContentDetailed(
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded: typeof scored = [];
     let pendingSkips: string[] = [];
-    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity']) => {
+    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity'], configured = false) => {
       const drivers: ContentDecision['explain']['drivers'] = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({ dim: s.drivers[i] as string, value: s.drivers[i + 1] as string,
@@ -318,8 +336,28 @@ export function composeContentDetailed(
       out.push({ contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
         slot: slot.slot, order: order++, score: round3(s.score),
         strategy: cold ? 'default' : 'affinity',
-        explain: { drivers: drivers.slice(0, 4), ...(cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
+        explain: { drivers: drivers.slice(0, 4), ...(configured ? { note: CONFIGURED_ORDER_NOTE } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
     };
+    // P01: the configured order, when the caller resolved one and exploration
+    // picked nothing on this decision. Exactly its modules, in its order, up to
+    // the slot's capacity after the pinned prefix; a listed module the slot could
+    // not serve (ineligible now, refused by a gate, served or reserved elsewhere
+    // on the page, or one of this slot's own pins) is passed over, never
+    // replaced, and an unlisted module is never served here.
+    if (slot.order && !picked) {
+      const byId = new Map(scored.map((s) => [s.p.id, s] as const));
+      const capacity = prefix ? remaining : slot.take;
+      let served = 0;
+      for (const id of slot.order) {
+        if (served >= capacity) break;
+        const s = byId.get(id);
+        if (!s || used.has(s.p.id)) continue;
+        serve(s, undefined, true);
+        served += 1;
+      }
+      ordered.push(slot.slot);
+      continue;
+    }
     let taken = 0;
     for (const s of scored) {
       if (taken >= (prefix ? remaining : slot.take)) break;
@@ -338,7 +376,7 @@ export function composeContentDetailed(
       taken += 1;
     }
   }
-  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}) };
+  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}) };
 }
 
 /** The delivery contract alone: one decision per slot position, in page order. */

@@ -1,0 +1,207 @@
+// node --test scripts/demo-kit/lib/config.test.mjs
+// The demo config's validation: the Vantage config passes every section, and each rule refuses the mutation
+// it exists for, naming the field. (Part a's guard that compared the config with what scripts/seed-vantage.mjs
+// last wrote retired with the generator in part b; the anchor file's copies of the registry, the learn
+// summary, the reset and the closed list are now checked on every seed, lib/seed.mjs anchorCopyProblems.)
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { argOf, configArg, isInside, loadConfig, loadValidConfig, REPO_ROOT, resolveInside, validateConfig } from './config.mjs';
+
+const configFile = fileURLToPath(new URL('../configs/vantage.json', import.meta.url));
+const { config } = loadConfig(configFile);
+const errorsOf = (mutate, sections) => { const c = structuredClone(config); mutate(c); return validateConfig(c, { sections }).errors.join('\n'); };
+
+test('the Vantage config is valid in every section, and its sections were read from their own files', () => {
+  assert.deepEqual(validateConfig(config), { ok: true, errors: [] });
+  const loaded = loadConfig(configFile);
+  assert.equal(typeof loaded.config.region, 'object');
+  assert.match(loaded.sources.region, /configs[\\/]vantage[\\/]region\.json$/);
+  assert.match(loaded.sources.imagery, /configs[\\/]vantage[\\/]imagery\.json$/);
+});
+
+test('the common fields: name, slug, tenant, the public directory, and a worker that is never the shared one', () => {
+  assert.match(errorsOf((c) => { c.slug = 'Vantage Demo'; }), /^slug:/m);
+  assert.match(errorsOf((c) => { c.tenant = ''; }), /^tenant:/m);
+  assert.match(errorsOf((c) => { delete c.name; }), /^name:/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'src/vantage'; }), /^publicDir: "public\/<slug>"/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'public/no-such-demo'; }), /publicDir: "public\/no-such-demo" does not exist/);
+  assert.match(errorsOf((c) => { c.worker.name = 'edge-platform'; }), /SHARED demo worker/);
+  assert.match(errorsOf((c) => { c.worker.queue = 'events'; }), /must not be the shared worker's queue/);
+  assert.match(errorsOf((c) => { c.worker.devPort = 80; }), /worker\.devPort/);
+});
+
+test('never a customer stamp: the staging and production workers and their queues are refused, and so is wrangler.toml (R2)', () => {
+  for (const name of ['edge-platform-staging', 'edge-platform-production']) {
+    assert.match(errorsOf((c) => { c.worker.name = name; }), new RegExp(`^worker\\.name: ${name} is the customer (staging|production) stamp, never a demo target`, 'm'), name);
+  }
+  for (const queue of ['events-staging', 'events-production', 'events-staging-dead-letter', 'events-production-dead-letter']) {
+    assert.match(errorsOf((c) => { c.worker.queue = queue; }), /^worker\.queue: must not be the customer (staging|production) stamp's queue/m, queue);
+  }
+  for (const file of ['wrangler.toml', './wrangler.toml', 'scripts/../wrangler.toml', 'WRANGLER.TOML']) {
+    assert.match(errorsOf((c) => { c.worker.config = file; }), /^worker\.config: ".*" is the shared worker's config, which also deploys the customer stamps/m, file);
+  }
+  // The controls: another demo's own worker config passes these rules, and so does the demo's own worker and queue.
+  assert.equal(errorsOf((c) => { c.worker.config = 'wrangler.top-offers.toml'; }), '');
+  assert.equal(errorsOf((c) => { c.worker.name = 'edge-platform-vantage'; c.worker.queue = 'events-vantage'; }), '');
+  // A demo-shaped worker of another name is refused since lane K4 (the design's ruling on H1's question: a demo's
+  // worker is edge-platform-<slug> and its queue events-<slug>, derived by the scaffolder, enforced by the validator).
+  assert.match(errorsOf((c) => { c.worker.name = 'edge-platform-vantage-2'; }), /^worker\.name: "edge-platform-vantage-2" must be "edge-platform-vantage", the worker of this demo's own slug/m);
+  assert.match(errorsOf((c) => { c.worker.queue = 'events-vantage-2'; }), /^worker\.queue: "events-vantage-2" must be "events-vantage", the queue of this demo's own slug/m);
+});
+
+test('the public directory is public/<slug>: a copied config left unedited cannot write into another demo (R2)', () => {
+  assert.match(errorsOf((c) => { c.slug = 'lg'; }), /^publicDir: "public\/vantage" must be "public\/lg", the directory of this demo's own slug/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'public/top-offers'; }), /^publicDir: "public\/top-offers" must be "public\/vantage"/m);
+  assert.match(errorsOf((c) => { c.publicDir = 'public/demo-kit'; }), /^publicDir: "public\/demo-kit" must be "public\/vantage"/m);
+  assert.equal(errorsOf((c) => { c.publicDir = 'public/vantage/'; }), '', 'the same directory with its trailing slash');
+});
+
+test('paths stay inside the repository, and whatever a script writes stays inside the demo\'s public directory', () => {
+  assert.equal(resolveInside(REPO_ROOT, '../outside'), null);
+  assert.equal(resolveInside(REPO_ROOT, 'C:/Windows'), null);
+  assert.equal(resolveInside(REPO_ROOT, '/etc/passwd'), null);
+  assert.ok(isInside(join(REPO_ROOT, 'public', 'vantage', 'beats'), join(REPO_ROOT, 'public', 'vantage')));
+  assert.match(errorsOf((c) => { c.seed.documents.reflex.file = '../reflex.json'; }), /seed\.documents\.reflex\.file: "\.\.\/reflex\.json" must be a path relative to the repository root, inside it/);
+  assert.match(errorsOf((c) => { c.seed.beats.dir = 'public/top-offers/beats'; }), /seed\.beats\.dir: "public\/top-offers\/beats" must lie inside public\/vantage/);
+  assert.match(errorsOf((c) => { c.imagery.dir = 'src'; }), /imagery\.dir: "src" must lie inside public\/vantage/);
+  assert.match(errorsOf((c) => { c.imagery.manifest = 'docs/MANIFEST.json'; }), /imagery\.manifest: "docs\/MANIFEST\.json" must lie inside public\/vantage/);
+  assert.match(errorsOf((c) => { c.check.suites[0].script = 'scripts/no-such-suite.mjs'; }), /does not exist/);
+});
+
+test('the beat lists are closed: publishable ⊆ files, reset ⊆ publishable, documents named by beats of their kind', () => {
+  assert.match(errorsOf((c) => { c.seed.beats.publishable['99-extra'] = 'catalog'; }), /"99-extra" is not in seed\.beats\.files/);
+  assert.match(errorsOf((c) => { c.seed.beats.publishable['open-catalog'] = 'pieces'; }), /kind must be catalog, slots or learn/);
+  assert.match(errorsOf((c) => { c.seed.beats.reset = ['01-arrival']; }), /seed\.beats\.reset: "01-arrival" is not publishable/);
+  assert.match(errorsOf((c) => { c.seed.beats.files.push('open-catalog'); }), /"open-catalog" is listed twice/);
+  assert.match(errorsOf((c) => { c.seed.beats.files.push('16-encore'); }), /public\/vantage\/beats\/16-encore\.json does not exist/);
+  assert.match(errorsOf((c) => { c.seed.beats.files.push('anchor'); }), /"anchor" is the anchor file, not a beat/);
+  assert.match(errorsOf((c) => { c.seed.documents.catalog = { beat: 'open-slots' }; }), /"open-slots" publishes slots, not catalog/);
+  assert.match(errorsOf((c) => { c.seed.documents.slots = 'open-slots'; }), /seed\.documents\.slots: \{ file/);
+  assert.match(errorsOf((c) => { c.seed.beats.count = 0; }), /seed\.beats\.count/);
+  assert.match(errorsOf((c) => { c.seed.beats.anchor = { file: 'anchor.json' }; }), /seed\.beats\.anchor/);
+});
+
+test('vocabularies are exact: no duplicate, no empty value, and a seed-only dimension is not a registry one', () => {
+  assert.match(errorsOf((c) => { c.seed.vocabulary.brand.push('apple'); }), /seed\.vocabulary\.brand: "apple" is listed twice/);
+  assert.match(errorsOf((c) => { c.seed.vocabulary.brand.push(''); }), /is not a value of 1\.\.64 characters/);
+  assert.match(errorsOf((c) => { c.seed.vocabulary.colour = []; }), /seed\.vocabulary\.colour: a list of 1\.\.1000 values/);
+  assert.match(errorsOf((c) => { c.seed.seedOnlyDimensions.push('brand'); }), /"brand" is a registry dimension/);
+  assert.match(errorsOf((c) => { c.region.vocabulary.brand = ['apple', 'apple']; }), /region\.vocabulary\.brand: "apple" is listed twice/);
+});
+
+test('a config never carries a credential: a key that would hold one, or a value shaped like one', () => {
+  const jwt = ['eyJhbGciOiJIUzI1NiJ9', 'eyJzdWIiOiJzZWVkLXZhbnRhZ2UifQ', 'c2lnbmF0dXJlLW5vdC1yZWFs'].join('.');
+  assert.match(errorsOf((c) => { c.seed.token = 'anything-at-all'; }), /seed\.token: a config never carries a credential/);
+  assert.match(errorsOf((c) => { c.worker.jwtSecret = 'x'.repeat(40); }), /worker\.jwtSecret/);
+  assert.match(errorsOf((c) => { c.seed.notes.catalog = `anchored ${jwt}`; }), /seed\.notes\.catalog: carries a JWT/);
+  assert.match(errorsOf((c) => { c.about = `Authorization: Bearer ${'a'.repeat(30)}`; }), /carries a bearer token literal/);
+  assert.match(errorsOf((c) => { c.region.label = `ss1.${'b'.repeat(40)}`; }), /carries a shopper capability literal/);
+  assert.equal(errorsOf((c) => { c.worker.secrets = ['TENANTS', 'JWT_SECRET']; c.tokens = { brand: '#cd040b' }; }), '', 'secret NAMES and design tokens are fine');
+});
+
+test('a credential key is matched by pattern, not an exact list: any value under one is refused, however plain (R2)', () => {
+  // Values that match no token shape, so only the key rule can refuse them.
+  const plain = 'plain-value-of-no-token-shape';
+  const keys = [
+    // R2's example, and every key the exact list held.
+    'apiToken', 'token', 'accessToken', 'operatorToken', 'bearer', 'authorization', 'secret', 'jwt', 'jwtSecret', 'clientSecret',
+    'password', 'passwd', 'apiKey', 'api_key', 'privateKey', 'private_key',
+    // Spellings the exact list missed.
+    'TOKEN', 'refresh_token', 'x-auth-token', 'tokenValue', 'Secrets', 'CLIENT_SECRET', 'dbPassword', 'adminPasswd', 'jwtKey', 'x-jwt',
+    'signingKey', 'SIGNING-KEY', 'sdkKey', 'accessKeys', 'apikey', 'privatekey', 'credentials', 'proxyAuthorization', 'BearerHeader',
+  ];
+  for (const key of keys) {
+    assert.match(errorsOf((c) => { c.worker[key] = plain; }), new RegExp(`^config\\.worker\\.${key.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')}: a config never carries a credential`, 'm'), key);
+    assert.match(errorsOf((c) => { c.seed.beats.extra = { [key]: plain }; }), /^config\.seed\.beats\.extra\..+: a config never carries a credential/m, `${key}, nested`);
+  }
+  // The controls: a bare `key` is a lookup key (the Vantage imagery config holds placeholder.key and a source's chroma key),
+  // a key that only leads with "key" is not a compound, and words that merely contain the letters are not credentials.
+  for (const key of ['key', 'KEY', 'keys', 'keyTol', 'keyword', 'monkey', 'markerKeyName', 'author', 'authority', 'passage']) {
+    assert.equal(errorsOf((c) => { c.worker[key] = plain; }), '', key);
+  }
+  assert.equal(config.imagery.placeholder.key, 'device', 'the Vantage config still holds a bare key, and passes (the first test)');
+});
+
+test('the region section: anchors, model, extras, limits and the label length', () => {
+  const r = (mutate) => errorsOf((c) => mutate(c.region), ['region']);
+  assert.match(r((x) => { x.model.low = 'US-CA'; }), /region\.model\.low: one of the rehearsed regions/);
+  assert.match(r((x) => { x.model.high = x.model.low; }), /two different regions/);
+  assert.match(r((x) => { x.model.kind = 'linear'; }), /"income-tilt" or "fixed"/);
+  assert.match(r((x) => { x.model.tSpan = 0.8; }), /tSpan/);
+  assert.match(r((x) => { x.model.blend.value = 'pagers'; }), /category=pagers is not in the vocabulary/);
+  assert.match(r((x) => { x.model.extras[0].regions = ['Texas']; }), /extras\[0\]\.regions/);
+  assert.match(r((x) => { x.rehearsed['US-TX'].rows[0].touches.brand = 'nokia'; }), /"nokia" is not one of/);
+  assert.match(r((x) => { x.rehearsed['US-TX'].rows[0].units = 401; }), /within the per-row limit/);
+  assert.match(r((x) => { x.model.label = `{{census.label}}: ${'z'.repeat(80)}`; }), /at most 80 characters/);
+  assert.match(r((x) => { x.census = 'migrations/seed/missing.sql'; }), /does not exist/);
+  assert.match(r((x) => { x.text.shareOrder = ['intent']; }), /region\.text\.shareOrder/);
+});
+
+/** A fixed model over Vantage's own vocabulary (lane K5): the national rows, one drawn lean, one ordered lean, one declared skew. */
+const fixedModel = () => ({
+  kind: 'fixed', seed: 'kit-region-lean-v1', label: '{{census.label}}: synthetic sales, a fixed seeded lean (no census)',
+  rows: [{ touches: { category: 'phones', brand: 'apple', ecosystem: 'ios', priceBand: 'premium' }, units: 120 },
+    { touches: { category: 'phones', brand: 'samsung', ecosystem: 'android', priceBand: 'premium' }, units: 100 },
+    { touches: { category: 'phones', brand: 'google', ecosystem: 'android', priceBand: 'core' }, units: 80 }],
+  leans: [{ dimension: 'brand', values: ['apple', 'samsung', 'google'], factor: 1.5 }, { dimension: 'priceBand', values: ['premium', 'core'], shares: [0.6, 0.4], within: { category: 'phones' } }],
+  skews: [{ name: 'android in the south', regions: ['US-TX', 'US-GA'], when: { ecosystem: 'android' }, factor: 1.3 }],
+  extras: [],
+});
+
+test('the region section accepts a fixed model, and refuses an income term in it, a value outside the vocabulary, or a lean that is both kinds', () => {
+  const r = (mutate) => errorsOf((c) => { c.region.model = fixedModel(); mutate(c.region.model, c.region); }, ['region']);
+  assert.equal(r(() => {}), '', 'a fixed model with leans, shares and a skew is valid');
+  assert.match(r((m) => { m.spreadUsd = 25000; }), /a fixed model carries no income term \(spreadUsd\)/);
+  assert.match(r((m) => { m.blend = { dimension: 'category', value: 'phones', key: ['brand'] }; }), /no income term \(blend\)/);
+  assert.match(r((m) => { delete m.seed; }), /region\.model\.seed/);
+  assert.match(r((m) => { m.rows = []; }), /region\.model\.rows: the national mix/);
+  assert.match(r((m) => { m.rows[0].touches.brand = 'nokia'; }), /region\.model\.rows\[0\]\.touches\.brand: "nokia" is not one of/);
+  assert.match(r((m) => { m.leans[0].values = ['apple']; }), /leans\[0\]\.values: two or more distinct values/);
+  assert.match(r((m) => { m.leans[0].shares = [0.5, 0.3, 0.2]; }), /leans\[0\]: exactly one of factor .* or shares/);
+  assert.match(r((m) => { delete m.leans[1].shares; }), /leans\[1\]: exactly one of factor/);
+  assert.match(r((m) => { m.leans[1].shares = [0.8, 0.4]; }), /leans\[1\]\.shares: one share in \(0, 1\] per value, summing to at most 1/);
+  assert.match(r((m) => { m.leans[0].dimension = 'colour'; }), /leans\[0\]\.dimension: a seeded dimension/);
+  assert.match(r((m) => { m.skews[0].regions = ['Texas']; }), /skews\[0\]\.regions/);
+  assert.match(r((m) => { m.skews[0].factor = 0; }), /skews\[0\]\.factor: a number in \(0, 10\]/);
+  assert.match(r((m) => { m.skews[0].when = {}; }), /skews\[0\]\.when/);
+  assert.match(r((m) => { m.kind = 'census-tilt'; }), /region\.model\.kind: "income-tilt" or "fixed"/);
+});
+
+test('the imagery section: every source has a licence, an https page and the sources its kind needs', () => {
+  const m = (mutate) => errorsOf((c) => mutate(c.imagery), ['imagery']);
+  assert.match(m((x) => { x.sources[0].maker = 'nokia'; }), /"nokia" has no licence note/);
+  assert.match(m((x) => { x.sources[0].page = 'http://www.apple.com/'; }), /page: the https page/);
+  assert.match(m((x) => { x.sources[0].kind = 'compose'; }), /a compose is a "back" and a "front"/);
+  assert.match(m((x) => { x.sources[1].id = x.sources[0].id; }), /is listed twice/);
+  assert.match(m((x) => { x.sources[0].src[0].url = 'ftp://x'; }), /an https URL/);
+  assert.match(m((x) => { x.render = { fill: 2 }; }), /imagery\.render\.fill/);
+  assert.match(m((x) => { x.gate = { 'iphone-17': { verdict: 'fine', sha: 'x' } }; }), /imagery\.gate\.iphone-17/);
+  assert.match(m((x) => { delete x.manifestAbout; }), /imagery\.manifestAbout/);
+});
+
+test('a section may live in its own file; a missing one, or one outside the repository, is refused', () => {
+  const root = mkdtempSync(join(tmpdir(), 'demo-kit-config-'));
+  mkdirSync(join(root, 'cfg'));
+  writeFileSync(join(root, 'cfg', 'region.json'), '{"operator":"x"}');
+  writeFileSync(join(root, 'cfg', 'demo.json'), JSON.stringify({ name: 'D', region: 'cfg/region.json' }));
+  assert.deepEqual(loadConfig(join(root, 'cfg', 'demo.json'), { root }).config.region, { operator: 'x' });
+  writeFileSync(join(root, 'cfg', 'bad.json'), JSON.stringify({ name: 'D', imagery: 'cfg/none.json' }));
+  assert.throws(() => loadConfig(join(root, 'cfg', 'bad.json'), { root }), /section "imagery" names cfg\/none\.json/);
+  writeFileSync(join(root, 'cfg', 'escape.json'), JSON.stringify({ name: 'D', imagery: '../x.json' }));
+  assert.throws(() => loadConfig(join(root, 'cfg', 'escape.json'), { root }), /not a file inside the repository/);
+  let exited = null;
+  loadValidConfig(join(root, 'cfg', 'demo.json'), { root, sections: ['region'], exit: (code) => { exited = code; }, log: () => {} });
+  assert.equal(exited, 2, 'an invalid config stops the command line with every problem named');
+});
+
+test('the command lines read --config or the first plain argument, and never take a flag for a value', () => {
+  assert.equal(configArg(['--config', 'a.json']), 'a.json');
+  assert.equal(configArg(['--base', 'http://x', 'b.json'], ['--base']), 'b.json');
+  assert.equal(configArg(['--dry-run']), null);
+  assert.equal(argOf(['--base', '--token'], '--base', 'fallback'), 'fallback');
+  assert.equal(argOf(['--out', 'dir'], '--out'), 'dir');
+});

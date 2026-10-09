@@ -56,6 +56,12 @@ export interface Receipt {
    * lift, so no receipt names terms its own sentences do not.
    */
   lift_terms?: LiftTerms;
+  /**
+   * P01: the configured per-context order that set this position, exactly as
+   * the record carries it — the context it was published for and the whole
+   * order — and absent on every position no configured order set.
+   */
+  configuredOrder?: NonNullable<DecisionRecord['explain']['configuredOrder']>;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -101,6 +107,12 @@ export function contextOf(cell: DecisionRecord['cell']): string {
   return `${cell.channel === 'unknown' ? 'channel unknown' : `from ${cell.channel}`}, ${visit}, ${stage}, ${cell.region ? `in ${cell.region}` : 'region unknown'}, ${cell.affinity ? `leaning ${cell.affinity.replace(':', ' ')}` : 'no leading interest yet'}`;
 }
 
+/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit. */
+function orderContextOf(context: NonNullable<DecisionRecord['explain']['configuredOrder']>['context']): string {
+  const visit = (bucket: string) => (bucket === '1' ? 'first visit' : `visit ${bucket}`);
+  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}`;
+}
+
 /** The record as sentences. Every number on the record has a place here, so nothing is said that the record does not carry. */
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
@@ -119,7 +131,13 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     : 'Legacy served-decision exposure; rendering was not confirmed.');
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
-  else {
+  else if (e.configuredOrder) {
+    // P01: the configured order placed it, so no ranking sentence is claimed for
+    // its position; the numbers the ranking computed stay on the record.
+    const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+    why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
+      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
+  } else {
     if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
     const drivers = (e.drivers || []).filter((d) => !['regional', 'external', 'merchandising', 'stage', 'freshness', 'fatigue', 'completes'].includes(d.dim)).slice(0, 3);
     if (drivers.length) why.push(`Interest matched: ${drivers.map((d) => `${d.dim} ${d.value} (interest ${r3(d.a)} × weight ${r3(d.weight)})`).join(', ')}.`);
@@ -186,6 +204,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(r.journey ? { journey: r.journey } : {}),
     score_base: r3(e.score_base), score_final: r3(e.score_final),
     ...(liftTerms ? { lift_terms: liftTerms } : {}),
+    ...(e.configuredOrder ? { configuredOrder: e.configuredOrder } : {}),
     why,
   };
 }

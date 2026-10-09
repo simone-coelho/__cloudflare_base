@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P02",
+  "workOrderHash": "sha256:45d828a9980ecc10fd6c33a50407aafd81ece4c88b658748f919dd1a9540599e",
+  "artifact": {
+    "revision": "5181b992506e1234f9508d99f1898cc848706c70",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p02-build-2 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P02 built on rem/p02-build-2: e2721d15 merges rem/integration 4969264b into the per-ticket branch rem/tkt/P02 (1316d3a8, specification reviewed PASS at 6477d82c); 6b1ca659 the mechanism (src/content/types.ts, kinds.ts, decide.ts, service.ts, src/learn/replay.ts: governance version 4, one layout slot per page with take 1 to 50, modules registered by identifier, kind and journey stages, capture on rendered-v1 only with the mismatch named host-internally, the declared-slot-v1 replay marker); 5181b992 the kit (docs/kit/01, 02, 03 state the layout contract); contentCompose.ts and engine.bundle.js unchanged, bundle check exact",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/implementer/REPORT.md",
+      "git commits e2721d15, 6b1ca659, 5181b992 on rem/p02-build-2"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P02 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/implementer/logs/acceptance-P02.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P02/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-09T04:47:10.863Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
