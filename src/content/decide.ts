@@ -7,10 +7,10 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
 } from './types';
-import { validateSeedRules } from './kinds';
-import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
+import { contextSpecificity, validateSeedRules } from './kinds';
+import { arrivedFromNetwork, entryChannelOf, type ChannelSignals } from '@/services/visit';
 import { isEligibleAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
@@ -201,6 +201,51 @@ const authorityOf = (strategy: string): Authority =>
  */
 export const LAYOUT_RULES = 'declared-slot-v1' as const;
 
+/**
+ * P01: the page-manifest marker of a decision on which a slot of the page
+ * served its configured per-context order (`inputs.replay.orders`). Written
+ * only on such a decision (C11), so every other decision carries exactly the
+ * markers it carried before; a replay of a record that states none decides the
+ * page without its orders, which is what that decision served.
+ */
+export const ORDER_RULES = 'configured-order-v1' as const;
+
+/** The visit buckets a context can match; `unknown` matches none. */
+const KNOWN_BUCKETS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
+
+/**
+ * P01 decision D1: the configured order a shopper in `cell` is served on this
+ * slot, or null. Only the page's declared layout slot carries orders. A context
+ * matches when its channel is the shopper's or `any` and its visit buckets hold
+ * the shopper's or are `any`; an unknown channel or visit bucket matches no
+ * context, not even one that names `any`. The most specific match wins; a tie at
+ * the top, which publication refuses, decides nothing and leaves the slot its
+ * own decision. Pure, total and cheap: it reads only the slot and the cell the
+ * decision already holds, and nothing in it can throw on a validated document.
+ * P28 reads the same function to leave configured orders exactly as they are.
+ */
+export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>): ConfiguredOrder | null {
+  if (slot.layout !== true || !Array.isArray(slot.orders) || slot.orders.length === 0) return null;
+  const channel = cell.channel, bucket = cell.visit_bucket;
+  if (entryChannelOf(channel) !== channel || !KNOWN_BUCKETS.has(bucket)) return null;
+  let best: ConfiguredOrder | null = null, bestSpecificity = -1, tied = false;
+  for (const order of slot.orders) {
+    const context = order?.context;
+    if (!context || (context.channel !== 'any' && context.channel !== channel)) continue;
+    if (context.visitBuckets !== 'any' && !(Array.isArray(context.visitBuckets) && context.visitBuckets.includes(bucket as '1' | '2-3' | '4+'))) continue;
+    const specificity = contextSpecificity(context);
+    if (specificity > bestSpecificity) { best = order; bestSpecificity = specificity; tied = false; }
+    else if (specificity === bestSpecificity) tied = true;
+  }
+  return best && !tied && Array.isArray(best.modules) ? best : null;
+}
+
+/** The configured order as a record and a receipt carry it: the context as published and the whole order, keys sorted. */
+const configuredOrderRecord = (order: ConfiguredOrder): ConfiguredOrder => ({
+  context: { channel: order.context.channel, visitBuckets: order.context.visitBuckets === 'any' ? 'any' : [...order.context.visitBuckets] },
+  modules: [...order.modules],
+});
+
 export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
   historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance,
   historicalRules?: typeof HISTORICAL_EXPLORATION_RULES): ContentDecisionSet {
@@ -210,7 +255,18 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
   const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
-  const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins);
+  // P01 decision D2: a configured per-context order is personalization by
+  // context, so it is resolved only on an arm that personalizes — never on the
+  // holdout's default arm, which is also the arm of a shopper without
+  // personalization consent and of one whose record could not be read. The
+  // composer then serves it unless the slot's exploration picks on this decision.
+  const configured = new Map<string, ConfiguredOrder>();
+  if (i.arm !== 'default') for (const s of i.slots) {
+    const order = configuredOrderFor(s, i.cell);
+    if (order) configured.set(s.slot, order);
+  }
+  const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins)
+    .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // Keep the site's default diversity/order unchanged as well as its zero scores.
@@ -411,7 +467,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
-  const { decisions, candidates, pinDiagnostics } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  const { decisions, candidates, pinDiagnostics, ordered } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  // P01: the slots whose configured order this decision served.
+  const orderedSlots = new Set(ordered ?? []);
   const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
   // The slots the composer ran a ranking for, by its own conditions: capacity
   // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
@@ -450,7 +508,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     for (const d of decisions) servedIn.set(d.slot, (servedIn.get(d.slot) ?? 0) + 1);
     for (const spec of specs) {
       const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0);
-      if (!pins || spec.offLimits || refusedSlots.has(spec.slot)) continue;
+      // P01: a slot that served its configured order filled the positions the
+      // order sets, by the merchandiser's choice; the order, not the take, says how many.
+      if (!pins || spec.offLimits || refusedSlots.has(spec.slot) || orderedSlots.has(spec.slot)) continue;
       if (i.replayRankingSlots && !i.replayRankingSlots.has(spec.slot)) continue;
       const take = spec.take, served = servedIn.get(spec.slot) ?? 0;
       if (!Number.isSafeInteger(take) || take <= 0 || served >= take) continue;
@@ -526,6 +586,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(historicalContentTypes === HISTORICAL_CONTENT_TYPES ? {} : { contentTypes: 'catalog-tags-v1' as const }),
       ...(historicalGovernance === HISTORICAL_GOVERNANCE ? {} : { governance: historicalGovernance === HISTORICAL_GOVERNANCE_V1 ? 'slot-gates-v1' as const : 'slot-gates-v2' as const }),
       ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
+      ...(orderedSlots.size ? { orders: ORDER_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
@@ -576,6 +637,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(d.explain.diversity ? { diversity: d.explain.diversity } : {}),
         // W20 G2: the slot fell short of its take, on every record it did write.
         ...(shortTakeOf.has(d.slot) ? { shortTake: { ...shortTakeOf.get(d.slot)! } } : {}),
+        // P01: a position the configured order set (a pinned one keeps its pin authority).
+        ...(!pinned && orderedSlots.has(d.slot) && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
       },
       inputs,
     };

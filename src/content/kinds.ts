@@ -6,7 +6,8 @@
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
-import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { compileSlotConstraints, slotPins } from './slotConstraints';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -257,6 +258,150 @@ export const LAYOUT_GOVERNANCE_VERSION = 4;
 
 /** A slot member `layout` that declares something: anything but absent or `false`. */
 const declaresLayout = (s: unknown): boolean => isRecord(s) && s.layout !== undefined && s.layout !== false;
+/** P01: a slot member `orders` that carries something: anything but absent or an empty list. */
+const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undefined && !(Array.isArray(s.orders) && s.orders.length === 0);
+
+// ── P01: per-context orders on the declared layout slot ─────────────────────
+
+/** The visit buckets a context may name, as the cell derives them (`src/content/cell.ts`), or `any`. */
+const VISIT_BUCKET_WORDS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
+/** More than every distinct context the grammar can name (seven channel choices × eight bucket choices). */
+const ORDERS_MAX = 64;
+const hasExactly = (v: Record<string, unknown>, keys: readonly string[]): boolean =>
+  Object.keys(v).length === keys.length && keys.every(key => Object.hasOwn(v, key));
+
+/**
+ * P01 (decision D1): one slot's per-context orders, structurally. Errors are
+ * suffixes of the slot's `orders` address, so a refusal names the order, the
+ * part and the offending value. The same function reads a published candidate
+ * and a RETAINED version-4 document; the rules that relate an order to the rest
+ * of its slot (pins, exclusions, the layout declaration, overlapping contexts)
+ * are authoring rules in `validateSlotCatalog`, never reinterpreted on a read.
+ */
+export function validateOrders(candidate: unknown, take: number): ValidationResult<ConfiguredOrder[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { context, modules } orders'] };
+  const errors: string[] = [];
+  if (candidate.length > ORDERS_MAX) errors.push(`: at most ${ORDERS_MAX} orders`);
+  const orders: ConfiguredOrder[] = [];
+  Array.from(candidate).forEach((raw: unknown, index) => {
+    const at = `[${index}]`;
+    if (!isRecord(raw) || !hasExactly(raw, ['context', 'modules'])) { errors.push(`${at}: an order is { context, modules } and nothing else`); return; }
+    const before = errors.length;
+    let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
+    const context = raw.context;
+    if (!isRecord(context) || !hasExactly(context, ['channel', 'visitBuckets'])) errors.push(`${at}.context: { channel, visitBuckets } and nothing else`);
+    else {
+      const c = context.channel;
+      if (c === 'any' || (typeof c === 'string' && entryChannelOf(c) === c)) channel = c as OrderContext['channel'];
+      else errors.push(`${at}.context.channel: ${quoted(c)} is not one of the six channel words (direct | paid_social | paid_search | email | organic | referral) or any; a shopper whose channel is unknown matches no context`);
+      const b = context.visitBuckets;
+      if (b === 'any') visitBuckets = 'any';
+      else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (1 | 2-3 | 4+), or any`);
+      else {
+        const seen = new Set<string>();
+        Array.from(b).forEach((v: unknown, k) => {
+          if (typeof v !== 'string' || !VISIT_BUCKET_WORDS.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (1 | 2-3 | 4+); a shopper whose visit is unknown matches no context`);
+          else if (seen.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
+          else seen.add(v);
+        });
+        if (errors.length === before) visitBuckets = [...b] as Array<'1' | '2-3' | '4+'>;
+      }
+    }
+    const modules = raw.modules;
+    if (!Array.isArray(modules) || modules.length < 1 || modules.length > take) {
+      errors.push(`${at}.modules: 1 to ${take} module ids (the slot's take); an order may list fewer modules than take, never more`);
+    } else {
+      const seen = new Set<string>();
+      Array.from(modules).forEach((id: unknown, k) => {
+        if (typeof id !== 'string' || id.length < 1 || id.length > 1024) errors.push(`${at}.modules[${k}]: a module id, a string of 1..1024 UTF-16 units`);
+        else if (seen.has(id)) errors.push(`${at}.modules[${k}]: ${quoted(id)} is repeated; an order names each module once`);
+        else seen.add(id);
+      });
+    }
+    if (errors.length === before && channel && visitBuckets) {
+      // Keys in sorted order, as every member a replay compares is built.
+      orders.push({ context: { channel, visitBuckets }, modules: [...(modules as string[])] });
+    }
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: orders };
+}
+
+/** Decision D1's specificity: the number of the context's parts that are not `any`. */
+export const contextSpecificity = (context: OrderContext): number => (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1);
+const bucketsOf = (context: OrderContext): string[] => context.visitBuckets === 'any' ? [...VISIT_BUCKET_WORDS] : [...context.visitBuckets];
+const contextWords = (context: OrderContext): string =>
+  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}`;
+/** A shopper both contexts match, in words, or null when no shopper can match both. */
+function sharedShopper(a: OrderContext, b: OrderContext): string | null {
+  if (a.channel !== 'any' && b.channel !== 'any' && a.channel !== b.channel) return null;
+  const inB = new Set(bucketsOf(b)), bucket = bucketsOf(a).find(v => inB.has(v));
+  if (bucket === undefined) return null;
+  const channel = a.channel !== 'any' ? a.channel : b.channel !== 'any' ? b.channel : 'any channel';
+  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}`;
+}
+
+/**
+ * P01 (O5, decision D1): the authoring rules that relate a slot's orders to the
+ * rest of its slot, applied at publication only. An order is published only on
+ * the page's declared layout slot, never on an off-limits one; it keeps every
+ * pinned module at its position and lists no module the slot excludes by id;
+ * one context carries one order, and two contexts that match one shopper with
+ * equal specificity are refused, so the most specific match always decides.
+ */
+function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy): string[] {
+  const at = `pages.${page}[${index}].orders`, orders = slot.orders ?? [];
+  if (slot.layout !== true) return [`${at}: slot '${slot.slot}' is not the declared layout slot of page '${page}'; per-context orders are set only on the slot that declares layout: true`];
+  if (slot.offLimits) return [`${at}: slot '${slot.slot}' is off-limits and serves no module, so it carries no order`];
+  const errors: string[] = [], pins = slotPins(slot), excluded = new Set(slot.excludedPieceIds ?? []);
+  orders.forEach((order, k) => {
+    order.modules.forEach((id, p) => {
+      if (excluded.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the order could not serve it`);
+    });
+    pins.forEach((pin, p) => {
+      if (order.modules[p] !== pin) errors.push(`${at}[${k}].modules[${p}]: the slot pins ${quoted(pin)} at position ${p + 1}; an order keeps every pinned module at its position`);
+    });
+    for (let j = 0; j < k; j++) {
+      const a = orders[j]!.context, b = order.context;
+      const same = a.channel === b.channel && bucketsOf(a).length === bucketsOf(b).length && bucketsOf(a).every(v => bucketsOf(b).includes(v))
+        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any');
+      if (same) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
+      const shared = sharedShopper(a, b);
+      if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {
+        errors.push(`${at}[${k}].context: ${contextWords(b)} and orders[${j}] (${contextWords(a)}) both match one shopper (${shared}) with equal specificity ${contextSpecificity(b)}; the most specific context must decide, so make one more specific or remove one`);
+      }
+    }
+  });
+  return errors;
+}
+
+/**
+ * P01 (O5, R-P24): the cross-document half of the order refusals, which only the
+ * route that holds both documents can make: every module an order names must be
+ * a piece of the published catalogue that names the slot in its `slotTypes`,
+ * and one the slot's own tag and type gates admit. Pure; the caller supplies the
+ * catalogue it read. A later catalogue change is not refused here: the decision
+ * serves the order without a module that is no longer eligible.
+ */
+export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, catalog: Pick<ContentCatalog, 'pieces'>): string[] {
+  const byId = new Map<string, ContentPiece>();
+  for (const piece of catalog.pieces) if (!byId.has(piece.id)) byId.set(piece.id, piece);
+  const errors: string[] = [];
+  for (const [page, slots] of Object.entries(document.pages)) {
+    slots.forEach((slot, index) => {
+      if (!slot.orders?.length) return;
+      const gate = compileSlotConstraints(slot);
+      slot.orders.forEach((order, k) => order.modules.forEach((id, p) => {
+        const at = `pages.${page}[${index}].orders[${k}].modules[${p}]`, piece = byId.get(id);
+        if (!piece) { errors.push(`${at}: ${quoted(id)} is not a registered module: no piece of the published catalogue has that id`); return; }
+        if (!piece.slotTypes.includes(slot.slot)) { errors.push(`${at}: ${quoted(id)} is in the catalogue but does not name slot '${slot.slot}' in its slotTypes, so the slot can never serve it`); return; }
+        const refusal = gate.refusal(piece);
+        if (refusal) errors.push(`${at}: ${quoted(id)} is refused by slot '${slot.slot}' (${refusal.reason === 'type_not_allowed' ? `its type ${quoted(piece.type)} is not in allowedTypes`
+          : refusal.reason === 'excluded_tag' ? `excludedTags pair ${refusal.dimension ?? ''}=${refusal.value ?? ''}` : refusal.reason}), so the order could not serve it`);
+      }));
+    });
+  }
+  return errors;
+}
 
 /**
  * @param governance The version the document is read under (0 = unmarked legacy).
@@ -391,13 +536,25 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       errors.push(`${at}.layout: a layout declaration needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
     }
   }
+  // P01: the layout slot's per-context orders, a version-4 member like the
+  // declaration itself. An empty list carries nothing and is not kept.
+  let orders: ConfiguredOrder[] | undefined;
+  if (carriesOrders(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateOrders(s.orders, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.orders${error}`);
+      else orders = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.orders: per-context orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}),
+    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}),
   };
 }
 
@@ -413,8 +570,10 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   // its retained revision keeps the declaration). A write marked 1, 2 or 3 that
   // declares a layout is refused by name; a RETAINED document marked earlier
   // than 4 ignores the member, as it ignores every later member.
+  // P01: per-context orders are a version-4 member too, so an unmarked write
+  // carrying them is read under version 4 and refused there if misplaced.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(declaresLayout));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -471,6 +630,11 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
     for (const extra of declared.slice(1)) {
       errors.push(`pages.${page}.${extra.slot}: a page declares at most one layout slot; '${declared[0]!.slot}' is already the layout of page '${page}'`);
     }
+  }
+  // P01: per-context orders, refused where they are authored whenever they
+  // could not be served exactly (a retained document is never reinterpreted).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot)); });
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();

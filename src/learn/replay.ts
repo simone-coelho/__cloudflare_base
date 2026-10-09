@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { decideContent, LAYOUT_RULES } from '@/content/decide';
+import { decideContent, LAYOUT_RULES, ORDER_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -92,6 +92,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.external', served.explain.external, replayed.explain.external);
   eq('explain.drivers', served.explain.drivers, replayed.explain.drivers);
   eq('candidates', served.candidates, replayed.candidates);
+  // P01: the configured order a position was set by, compared by value like every explain member.
+  eq('explain.configuredOrder', served.explain.configuredOrder, replayed.explain.configuredOrder);
   return diff;
 }
 
@@ -169,7 +171,7 @@ function manifestVersionRefusal(value: unknown): string | null {
 }
 
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout').sort().join(',') !== 'candidateLimit,learning,slots,version'
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
@@ -177,6 +179,10 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     // P02: the layout marker is written only for a page that declares a layout
     // slot, so a marker over a page revision that declares none is inconsistent.
     || (own(value, 'layout') && (value.layout !== LAYOUT_RULES || !page.some(slot => slot.layout === true)))
+    // P01: the orders marker is written only on a decision a configured order
+    // served, which only a declared layout slot carrying orders can do.
+    || (own(value, 'orders') && (value.orders !== ORDER_RULES || !own(value, 'layout')
+      || !page.some(slot => slot.layout === true && Array.isArray(slot.orders) && slot.orders.length > 0)))
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -206,13 +212,20 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'pins') ? { pins: value.pins as NonNullable<Manifest['pins']> } : {}),
     ...(own(value, 'contentTypes') ? { contentTypes: 'catalog-tags-v1' as const } : {}),
     ...(own(value, 'governance') ? { governance: value.governance as NonNullable<Manifest['governance']> } : {}),
-    ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}) };
+    ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}),
+    ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}) };
 }
 
 /** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
 const undeclared = (slot: SlotStrategy): SlotStrategy => {
   if (slot.layout === undefined) return slot;
   const { layout: _layout, ...rest } = slot; void _layout;
+  return rest;
+};
+/** P01: a slot as a decision that served no configured order reads it: without its orders. */
+const unordered = (slot: SlotStrategy): SlotStrategy => {
+  if (slot.orders === undefined) return slot;
+  const { orders: _orders, ...rest } = slot; void _orders;
   return rest;
 };
 
@@ -327,7 +340,8 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     identityAnchor: served.identity_anchor, nowMs: served.ts,
     // P02: a record that states no layout marker is replayed as its page was
     // decided — without the declaration — whatever the revision carries.
-    pieces: catalog.pieces, slots: manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared),
+    // P01: and a record that states no orders marker without the page's orders.
+    pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot)),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
     affinity: { dims: inputs.affinity }, regional, cell: served.cell, arm: served.arm,
     versions: { ...served.versions }, configLabel: served.config_label,

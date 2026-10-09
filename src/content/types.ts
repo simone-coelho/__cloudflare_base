@@ -113,7 +113,37 @@ export interface SlotStrategy {
    * an ordinary slot, decided and replayed exactly as before.
    */
   layout?: true;
+  /**
+   * P01: per-context module orders on the page's declared layout slot (version
+   * 4 only). A shopper whose context an order names is served that order's
+   * modules exactly, position by position; a module the order does not list is
+   * hidden in that context and is no exposure. The most specific matching
+   * context wins (decision D1); the order is never served on the holdout's
+   * default arm, without personalization consent, or on a decision the slot's
+   * exploration picks (decision D2) — each of those receives the slot's own
+   * decision. Absent means the slot decides exactly as before.
+   */
+  orders?: ConfiguredOrder[];
 }
+
+/**
+ * P01 decision D1: a context is one entry channel (one of the six channel
+ * words) or `any`, with one or more visit buckets or `any`. A shopper whose
+ * channel or visit bucket is unknown matches no context, not even one that
+ * names `any`. Specificity is the number of parts that are not `any`.
+ */
+export interface OrderContext {
+  channel: 'direct' | 'paid_social' | 'paid_search' | 'email' | 'organic' | 'referral' | 'any';
+  visitBuckets: Array<'1' | '2-3' | '4+'> | 'any';
+}
+
+/**
+ * P01: one per-context order — the context it is published for and the module
+ * ids it serves, in order (1 to the slot's `take`). The same shape is carried
+ * on the decision record (`explain.configuredOrder`) and on the receipt, with
+ * its keys in sorted order, so a replay compares it by value.
+ */
+export interface ConfiguredOrder { context: OrderContext; modules: string[] }
 
 export interface DiversityRule { dimension: string; max: number }
 
@@ -175,7 +205,8 @@ export interface SlotCatalog {
   /**
    * Absent retained documents use legacy parsing, ignoring formerly unknown
    * controls. Version 4 (P02) introduces the layout declaration (`layout` on a
-   * slot) and otherwise reads exactly as version 3.
+   * slot) and the layout slot's per-context `orders` (P01), and otherwise reads
+   * exactly as version 3.
    */
   governanceVersion?: 1 | 2 | 3 | 4;
   pages: Record<string, SlotStrategy[]>;
@@ -412,6 +443,12 @@ export interface DecisionInputs {
      * the declaration existed, independently of the other policies.
      */
     layout?: 'declared-slot-v1';
+    /**
+     * P01: present only on a decision on which a slot of the page served its
+     * configured per-context order; absence replays the page without its
+     * orders, independently of the other policies.
+     */
+    orders?: 'configured-order-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
@@ -517,6 +554,14 @@ export interface DecisionRecord {
      * operator's slot-governance counter is that occurrence's only home.
      */
     shortTake?: { take: number; served: number; empty: number; sentence: string };
+    /**
+     * P01: this position was set by the slot's configured per-context order:
+     * the context the order was published for and the whole order as
+     * published, keys sorted. Present only on the positions the order set (a
+     * pinned position keeps authority `pin` and carries none); the record's own
+     * `position` is the position it was served at.
+     */
+    configuredOrder?: ConfiguredOrder;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

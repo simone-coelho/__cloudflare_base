@@ -25,7 +25,7 @@ import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, SLOTS_KIND } from '@/content/kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, slotOrderCatalogueErrors, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, type PriorsDoc } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
@@ -135,6 +135,39 @@ async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unkn
   catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
   const errors = priorUnitErrors(valid.value as PriorsDoc, (slot) => learn.slots?.[slot]?.objective ?? 'unit');
   return errors.length ? { status: 422, errors } : null;
+}
+
+/**
+ * P01 (O5, R-P24): an order names modules, and only the catalogue says which
+ * modules exist, so the refusal of an order naming a module the catalogue does
+ * not register for its slot — or one the slot's tag and type gates refuse — is
+ * made here, beside the prior check above, where both documents are at hand.
+ * A slot document without orders is never touched: no read is made for it.
+ * The catalogue is the one published with it in the same request when there is
+ * one, otherwise the catalogue in force. Fail closed: a catalogue that cannot
+ * be read refuses the publication rather than publishing an unchecked order;
+ * an absent catalogue registers no module.
+ */
+async function orderRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unknown, catalogCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const valid = SLOTS_KIND.validate(slotsCandidate);
+  if (!valid.ok || !Object.values(valid.value.pages).some(slots => slots.some(slot => slot.orders?.length))) return null;
+  let catalog: ContentCatalog;
+  if (catalogCandidate !== undefined) {
+    const checked = CONTENT_KIND.validate(catalogCandidate);
+    if (!checked.ok) return null;
+    catalog = checked.value;
+  } else {
+    try { catalog = (await readPublication(c.env, CONTENT_KIND, scope))?.value ?? EMPTY_CATALOG; }
+    catch { return { status: 503, errors: ['catalog: the content catalogue is unavailable, so a per-context order cannot be checked against the modules it registers'] }; }
+  }
+  const errors = slotOrderCatalogueErrors(valid.value, catalog);
+  return errors.length ? { status: 422, errors } : null;
+}
+/** The document of one kind a request publishes beside its own, when it carries one. */
+function relatedDocument(related: unknown, kind: string): unknown {
+  if (!Array.isArray(related)) return undefined;
+  const entry = related.find(item => item && typeof item === 'object' && (item as { kind?: unknown }).kind === kind) as { document?: unknown } | undefined;
+  return entry?.document;
 }
 
 function catalogScope(c: Context<Ctx>): string {
@@ -375,6 +408,10 @@ contentRoutes.post('/:kind/validate', async (c) => {
     const unit = await priorUnitRefusals(c, scope, candidate);
     if (unit) return c.json({ valid: false, errors: unit.errors }, unit.status);
   }
+  if (k.kind.name === SLOTS_KIND.name) {
+    const refused = await orderRefusals(c, scope, candidate);
+    if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
+  }
   const result = k.kind.validate(candidate);
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
@@ -410,6 +447,12 @@ contentRoutes.put('/:kind', async (c) => {
     const unit = await priorUnitRefusals(c, scope, candidate);
     if (unit) return c.json({ ok: false, errors: unit.errors }, unit.status);
   }
+  // P01: per-context orders against the catalogue — the one this request
+  // publishes with them, or the one in force.
+  const orders = k.kind.name === SLOTS_KIND.name ? await orderRefusals(c, scope, candidate, relatedDocument(related, 'catalog'))
+    : k.kind.name === CONTENT_KIND.name && relatedDocument(related, 'slots') !== undefined ? await orderRefusals(c, scope, relatedDocument(related, 'slots'), candidate)
+      : null;
+  if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
   // A replacement is self-contained: reject invalid new drafts before any
   // authority read. Original v1 receipt resolution is deliberately read-only
   // and may retain a value that the current write validator no longer admits.

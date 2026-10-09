@@ -1153,6 +1153,7 @@ function compileSlotConstraints(slot, extended = true) {
 }
 
 // src/reflex/contentCompose.ts
+var CONFIGURED_ORDER_NOTE = "configured order position \u2014 the merchandiser\u2019s order for this context placed it; the ranking did not";
 var HISTORICAL_PINS = /* @__PURE__ */ Symbol("historical-pins");
 var HISTORICAL_GOVERNANCE = /* @__PURE__ */ Symbol("historical-slot-governance");
 var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governance-v1");
@@ -1256,6 +1257,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     }
   }
   let order = 0;
+  const ordered = [];
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
     const prefix = prefixes.get(slot);
@@ -1320,8 +1322,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
     let byScore = null;
     let promoted = null;
+    let picked = false;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      picked = Boolean(pick);
       if (pick?.ranking) {
         const order2 = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
@@ -1343,7 +1347,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded = [];
     let pendingSkips = [];
-    const serve = (s, diversity2) => {
+    const serve = (s, diversity2, configured = false) => {
       const drivers = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({
@@ -1364,9 +1368,23 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         order: order++,
         score: round3(s.score),
         strategy: cold ? "default" : "affinity",
-        explain: { drivers: drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
+        explain: { drivers: drivers.slice(0, 4), ...configured ? { note: CONFIGURED_ORDER_NOTE } : cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
       });
     };
+    if (slot.order && !picked) {
+      const byId = new Map(scored.map((s) => [s.p.id, s]));
+      const capacity = prefix ? remaining : slot.take;
+      let served = 0;
+      for (const id of slot.order) {
+        if (served >= capacity) break;
+        const s = byId.get(id);
+        if (!s || used.has(s.p.id)) continue;
+        serve(s, void 0, true);
+        served += 1;
+      }
+      ordered.push(slot.slot);
+      continue;
+    }
     let taken = 0;
     for (const s of scored) {
       if (taken >= (prefix ? remaining : slot.take)) break;
@@ -1390,7 +1408,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       taken += 1;
     }
   }
-  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {} };
+  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {}, ...ordered.length ? { ordered } : {} };
 }
 function composeContent(pieces, affinity, slots) {
   return composeContentDetailed(pieces, affinity, slots).decisions;
