@@ -108,6 +108,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
+| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words |
 | `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -278,8 +279,8 @@ and `removed` `null` — when that revision could not be read.
 ```
 
 Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3 | 4` and emit version 3, or
-version 4 for a document marked 4 and for an unmarked one that declares a layout slot
-([the slot document](#the-slot-document)); any other explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
+version 4 for a document marked 4 and for an unmarked one that declares a layout slot or carries
+per-context orders ([the slot document](#the-slot-document)); any other explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
 default on every arm, without candidates, decisions or records. A dormant pin and all other settings
 are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
 `excludedPieceIds` is an optional JSON array of up to 1000 distinct exact internal catalog IDs,
@@ -304,7 +305,8 @@ stored version 1 validates ID/off-limits and ignores tag/type fields, even malfo
 validates tag/type controls and ignores formerly unknown `pinnedPieceIds`; version 3 validates prefixes too.
 Receipts independently distinguish absent governance (all legacy), `slot-gates-v1`
 (ID/off-limits only), and `slot-gates-v2` (all controls); a page that declares a layout slot adds
-`layout: "declared-slot-v1"` beside them. Other replay policy markers remain independent.
+`layout: "declared-slot-v1"` beside them, and a decision on which the layout slot served its configured
+per-context order adds `orders: "configured-order-v1"`. Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
 to remove both fields; changing form removes the other field. Take is never changed automatically.
@@ -507,6 +509,43 @@ never captured as an exposure, and the decision set names the mismatch as
 host-internal member that no public answer carries. A slot without `layout`, and every document marked
 1, 2 or 3, decides and replays exactly as before; the receipts of a page that declares a layout slot
 carry the page-manifest marker `inputs.replay.layout: "declared-slot-v1"`.
+
+#### Per-context orders
+
+```json
+{ "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 },
+  "excludedPieceIds": ["module.PDP.reviews.1"],
+  "orders": [
+    { "context": { "channel": "paid_social", "visitBuckets": ["1"] },
+      "modules": ["module.PDP.editorial.1", "module.PDP.grid.1", "module.PDP.ugc.1", "module.PDP.reco.1"] },
+    { "context": { "channel": "any", "visitBuckets": ["1"] },
+      "modules": ["module.PDP.ugc.1", "module.PDP.grid.1"] }
+  ] }
+```
+
+`orders` (governance version 4) sets a module order per context on the page's declared layout slot, and
+on no other slot. Each order is exactly `{ context, modules }`. `context` is exactly `{ channel,
+visitBuckets }`: `channel` is one of the six channel words `direct`, `paid_social`, `paid_search`,
+`email`, `organic`, `referral`, or `any`; `visitBuckets` is a non-empty list of distinct visit buckets
+`1`, `2-3`, `4+`, or `any`. A context's specificity is the number of its two parts that are not `any`
+(0 to 2). A shopper matches a context when the shopper's channel is its channel or it names `any`, and
+the shopper's visit bucket is in its list or it names `any`; a shopper whose channel or visit bucket is unknown matches no
+context, not even one that names `any`. Of the contexts a shopper matches, the most specific decides, and
+publication refuses two contexts that match one shopper with equal specificity, so there is never a tie
+to break (in the example, a paid-social shopper on a first visit is served the first order, any other
+shopper on a first visit the second, and every later visit the slot's own decision). `modules` lists 1 to
+`take` distinct module ids, each a piece of the published catalogue that names the slot in its
+`slotTypes`, none excluded from the slot or pinned by another slot of the page, and the slot's pinned
+modules first, each at its pinned position.
+
+The hiding rule: a shopper in an order's context is served exactly its modules, in its order; a module
+the order does not list is not returned in that context, is offered for no render acknowledgement and is
+never counted as an exposure, so an order shorter than `take` fills only the positions it lists. A
+listed module that is not eligible when the decision is made is passed over and never replaced. The
+order is never served on the holdout's `default` arm, to a shopper without personalization consent, or
+on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
+matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
+1, 2 or 3, decides and replays exactly as before.
 
 ## The learn document
 
