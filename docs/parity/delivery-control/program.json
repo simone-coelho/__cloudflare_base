@@ -502,13 +502,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "b435cc2b918a6b2b00f5c97aafdfa3bc71d2aa8b on rem/spec-parity-d (batch S4; P28 2958f851, P32 41214a7f then c309a37e, P16 d7e7a36e then b435cc2b, P09 12c97691, each ticket files byte-identical at b435cc2b; harness src/units/_parity.ts, _parity2.ts, _parity3.ts byte-identical to S1, S2, S3 and _parity4.ts; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh; P28 PASS with src/routes/content.ts added to its allowed paths by the lead on the reviewer finding)",
+        "reviewedRevision": "51c37047c459939e4ffd60ab71e8bf605c240f02 on rem/spec-p28-fix1 (cut from the P28 build merge 8883ad34 over rem/integration b53641e6): src/units/P28/LEDGER.unit.test.ts after fix round 1 (R-P40 the four-module order, R-P41 the blend over a configured order with its M leg and non-opted lock, R-P30 wording; 21 legs: 15 RED on P28 own behaviour, 6 locks; reviewed PASS twice, 396e0135 then 51c37047) beside the S4 gate files at b435cc2b (harness _parity.ts and _parity4.ts byte-identical on rem/tkt/P28 daed66f4)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/logs/re-runs-summary.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/logs/runs-summary.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/specifier/logs/probe-rp41-clauses.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/logs/probes-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/logs/probes2-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/logs/negative-controls.log"
