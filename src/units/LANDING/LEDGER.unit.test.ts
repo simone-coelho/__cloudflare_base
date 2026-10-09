@@ -613,7 +613,7 @@ async function mountApp(host: Host) {
   } catch (error) { refused = `${(error as Error).message}${(error as { code?: string }).code ? ` (${(error as { code?: string }).code})` : ''}`; }
   invalidatePublicationCache();
 
-  /** A shopper with a session grant and her own explicit choice (tracking and personalization on) through the real route. */
+  /** A shopper with a session grant and the shopper's own explicit choice (tracking and personalization on) through the real route. */
   const shopper = async () => {
     const grant = await newAnonymousSession(env, TENANT);
     const call = async (path: string, body: unknown) => {
@@ -625,7 +625,7 @@ async function mountApp(host: Host) {
     };
     const chosen = await call(`/realtime/session/${grant.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
       choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
-    expect(chosen.status, `PRECONDITION (${host}): her explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 200)})`).toBe(200);
+    expect(chosen.status, `PRECONDITION (${host}): the shopper's explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 200)})`).toBe(200);
     /** `POST /v1/:tenant/decisions/snapshot`, the route production serves. */
     const snapshot = async (pageInstance?: string) => {
       const answer = await call(`/v1/${TENANT}/decisions/snapshot`, { page: 'home', brand: TENANT, ...(pageInstance ? { pageInstance } : {}) });
