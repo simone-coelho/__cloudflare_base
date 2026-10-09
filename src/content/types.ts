@@ -171,7 +171,23 @@ export interface SlotStrategy {
    * anchor prefers nothing. Personalization, so never on the holdout's default arm.
    */
   complements?: ComplementsRule;
+  /**
+   * P10 (decisions D1, D2): this slot's own signal floor, overriding the
+   * tenant's (`SlotCatalog.signalFloor`). While the shopper's count of signals
+   * is at most the floor the slot is decided on context alone, so the response
+   * to the (N + 1)th signal is its first personalized one; 0 is off. `never`
+   * keeps the slot context-only for every shopper and is published only on the
+   * page's declared layout slot. Absent means the tenant's floor applies.
+   */
+  signalFloor?: SignalFloor;
 }
+
+/**
+ * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
+ * declared layout slot only). A signal is one action whose own behaviour weight
+ * is above zero (decision D1).
+ */
+export type SignalFloor = number | 'never';
 
 /**
  * P01 decision D1: a context is one entry channel (one of the six channel
@@ -278,6 +294,14 @@ export interface SlotCatalog {
    * exactly as version 3.
    */
   governanceVersion?: 1 | 2 | 3 | 4;
+  /**
+   * P10 (decisions D1, D2): the tenant's signal floor N, a whole number of 0 or
+   * more; absent is 0, which is off and decides exactly as before. A slot's own
+   * `signalFloor` overrides it. Read under every governance version, like the
+   * slot's seed rules: it does not by itself change the version a write is
+   * stamped with.
+   */
+  signalFloor?: number;
   pages: Record<string, SlotStrategy[]>;
 }
 
@@ -555,6 +579,13 @@ export interface DecisionInputs {
      * independently of the other policies.
      */
     blend?: 'layout-blend-v1';
+    /**
+     * P10: present only on a decision on which a slot of the page was decided
+     * on context alone because the shopper was below its signal floor (C11);
+     * the count it was decided with is `signals` beside the manifest. Absence
+     * replays the page with no floor, independently of the other policies.
+     */
+    signalFloor?: 'signal-floor-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
@@ -563,6 +594,12 @@ export interface DecisionInputs {
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
   served?: Record<string, Record<string, number>>;
+  /**
+   * P10: the shopper's count of signals this page was decided with, written
+   * only with the `signalFloor` marker, so the replay knows which slots were
+   * below their floor.
+   */
+  signals?: number;
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
@@ -675,6 +712,13 @@ export interface DecisionRecord {
      * R + (1 − p) × B + p × Q is `score_final`. Absent on every other record.
      */
     blend?: LayoutBlendTerms;
+    /**
+     * P10 (decision D2): this position's slot was decided on context alone
+     * because the shopper was below its signal floor: the floor in force (the
+     * slot's own, else the tenant's) and the shopper's count of signals, keys
+     * sorted. Present on every record of such a slot and on no other.
+     */
+    signalFloor?: { floor: SignalFloor; signals: number };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
