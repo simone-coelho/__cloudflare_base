@@ -61,6 +61,9 @@
 //   ring (src/units/_parity4.ts `learnedLift`); B3 and B4's first leg use a
 //   merchandiser's frozen lift where only the itemisation or the content slot
 //   is under test.
+//   R-P43 (fix round 2): B5 holds the replay of a blended decision, under the
+//   configured order and under catalogue order, and the holdout's default arm
+//   carrying no blend; B2 holds the lower clamp on a merchandiser's frozen lift.
 //
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `blend: { p }` in the learn document's slot dials, `explain.blend` on the
@@ -274,6 +277,21 @@ describe('unit:P28.B2 (freeze items 8 and 34)', () => {
         .toEqual([[M.ugc, 1.25, { R: R[M.ugc], B: 0, Q: 1, p: 0.5 }], [M.editorial, 1, { R: R[M.editorial], B: 0, Q: 0, p: 0.5 }],
           [M.grid, 0.5, { R: R[M.grid], B: 0, Q: 0, p: 0.5 }], [M.reco2, 0.25, { R: R[M.reco2], B: 0, Q: 0, p: 0.5 }]]);
     }, 120_000);
+
+    it(`host (${host}): LOCK — at p 0.5 a merchandiser's frozen lift of 0.2, below the lower clamp, counts as the clamped 0.5: Q −0.5 and the score R − 0.25, no lower (R-P43)`, async () => {
+      // GREEN at the build. CONTROL (the reviewer's, on a scratch copy): the clamp removed from the blend's lift (decide.ts, the
+      // Math.min/Math.max on the frozen or learned lift) gives grid.1 Q −0.8 and the score 0.6, turning this clause RED.
+      const frozenLow = learnDocument({ [LAYOUT]: { reward: 'click', blend: { p: 0.5 }, items: { [M.grid]: { mode: 'freeze', lift: 0.2 } } } });
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: frozenLow });
+      precondition(m, 'P28.B2');
+      const set = await servePage(m, await cold(m), 'pdp', { entry: PAID_SOCIAL_ENTRY });
+      const layout = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      // R + 0.5 Q over catalogue order: reco.1 0.8, grid.1 1 + 0.5 × (0.5 − 1) = 0.75, reco.2 0.6, editorial.1 0.4. Unclamped, grid.1 would score 0.6.
+      expect(layout.map(r => [r.item_id, r.explain.score_final, blendOf(r) ?? 'no explain.blend on the record']),
+        `${host}: P28.B2 — grid.1's frozen 0.2 is clamped to liftMin 0.5: Q −0.5, its score R − 0.25 = 0.75, below reco.1`)
+        .toEqual([[M.reco1, 0.8, { R: CATALOGUE_R[M.reco1], B: 0, Q: 0, p: 0.5 }], [M.grid, 0.75, { R: CATALOGUE_R[M.grid], B: 0, Q: -0.5, p: 0.5 }],
+          [M.reco2, 0.6, { R: CATALOGUE_R[M.reco2], B: 0, Q: 0, p: 0.5 }], [M.editorial, 0.4, { R: CATALOGUE_R[M.editorial], B: 0, Q: 0, p: 0.5 }]]);
+    }, 120_000);
   }
 });
 
@@ -414,5 +432,79 @@ describe('unit:P28.B5 (freeze item 8)', () => {
       expect(replays.length, `${host}: PRECONDITION — the ledger holds the layout decisions`).toBe(4);
       expect(replays, `${host}: P28.B5 — each replays equal`).toEqual(replays.map(([id]) => [id, 200, 'equal']));
     }, 90_000);
+  }
+
+  // R-P43: a blended decision replays exactly. The learn document is B2's (p 0.5 on the layout slot); the ledger is written by the
+  // real producer and consumer (`toLedger`) and each stored layout decision is replayed through the real route (`replayOf`). The
+  // replay re-decides the page from the record and compares it with the record, explain.blend included: `equal` is the proof.
+  const BLENDED = learnDocument({ [LAYOUT]: { reward: 'click', blend: { p: 0.5 } } });
+  const markersOf = (r: DecisionRecord) => [r.inputs?.replay?.blend ?? null, r.inputs?.replay?.orders ?? null];
+  async function replayEach(m: Mounted, records: DecisionRecord[]): Promise<unknown[][]> {
+    await toLedger(m, records);
+    const replays: unknown[][] = [];
+    for (const r of storedDecisions(m, records[0]!.visitor_id).filter(x => x.slot === LAYOUT).sort((a, b) => a.position - b.position)) {
+      const replay = await replayOf(m, r.decision_id);
+      replays.push([r.item_id, replay.status, replay.body.classification ?? replay.body.reason ?? null]);
+    }
+    return replays;
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — a blended decision under the configured order replays equal through the replay route, every layout record carrying the blend and orders markers and its explain.blend (R-P43)`, async () => {
+      // GREEN at the build. CONTROL (the reviewer's, on a scratch copy): the orders marker dropped on a blended order decision
+      // (decide.ts, `orders: ORDER_RULES` in the page manifest) turns the marker clause RED, and with that clause set aside the
+      // replay answers 'item' (the replay clause RED).
+      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ orders: ORDERS }), recentSlot()]), learn: BLENDED }, { recovery: false });
+      const { set, layout } = await underTheOrder(m, 'P28.B5');
+      const R = R_OF(CONFIGURED);
+      expect(layout.map(r => [r.item_id, ...markersOf(r), blendOf(r) ?? 'no explain.blend on the record']),
+        `${host}: P28.B5 — each blended record under the order carries the blend and orders markers and its explain.blend`)
+        .toEqual([[M.ugc, 'layout-blend-v1', 'configured-order-v1', { R: R[M.ugc], B: 0, Q: 1, p: 0.5 }],
+          [M.editorial, 'layout-blend-v1', 'configured-order-v1', { R: R[M.editorial], B: 0, Q: 0, p: 0.5 }],
+          [M.grid, 'layout-blend-v1', 'configured-order-v1', { R: R[M.grid], B: 0, Q: 0, p: 0.5 }],
+          [M.reco2, 'layout-blend-v1', 'configured-order-v1', { R: R[M.reco2], B: 0, Q: 0, p: 0.5 }]]);
+      const replays = await replayEach(m, set.records);
+      expect(replays.length, `${host}: PRECONDITION — the ledger holds the four layout decisions`).toBe(4);
+      expect(replays, `${host}: P28.B5 — each blended decision under the order replays equal`).toEqual(layout.map(r => [r.item_id, 200, 'equal']));
+    }, 120_000);
+
+    it(`host (${host}): LOCK — a blended decision under catalogue order replays equal through the replay route, every layout record carrying the blend marker, no orders marker, and its explain.blend (R-P43)`, async () => {
+      // GREEN at the build. CONTROL (the reviewer's, on a scratch copy): the blend marker dropped turns the marker clause RED; a
+      // replay that does not re-apply the blend answers other than 'equal' (the replay clause RED).
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: BLENDED }, { recovery: false });
+      precondition(m, 'P28.B5');
+      // B2's first leg: ugc.1 20 clicks in 40 exposures against a slot rate of 20 in 240, a lift beyond liftMax 2, so Q = 1.
+      await learnedLift(m, LAYOUT, [{ item: M.ugc, exposures: 40, successes: 20 }, { item: RETIRED, exposures: 200, successes: 0 }], LADDER_CELL);
+      const set = await servePage(m, await cold(m), 'pdp', { entry: PAID_SOCIAL_ENTRY });
+      const layout = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect(layout.map(r => [r.item_id, ...markersOf(r), blendOf(r) ?? 'no explain.blend on the record']),
+        `${host}: P28.B5 — each blended record under catalogue order carries the blend marker, no orders marker, and its explain.blend`)
+        .toEqual([[M.grid, 'layout-blend-v1', null, { R: CATALOGUE_R[M.grid], B: 0, Q: 0, p: 0.5 }],
+          [M.reco1, 'layout-blend-v1', null, { R: CATALOGUE_R[M.reco1], B: 0, Q: 0, p: 0.5 }],
+          [M.ugc, 'layout-blend-v1', null, { R: CATALOGUE_R[M.ugc], B: 0, Q: 1, p: 0.5 }],
+          [M.reco2, 'layout-blend-v1', null, { R: CATALOGUE_R[M.reco2], B: 0, Q: 0, p: 0.5 }]]);
+      const replays = await replayEach(m, set.records);
+      expect(replays.length, `${host}: PRECONDITION — the ledger holds the four layout decisions`).toBe(4);
+      expect(replays, `${host}: P28.B5 — each blended decision under catalogue order replays equal`).toEqual(layout.map(r => [r.item_id, 200, 'equal']));
+    }, 120_000);
+
+    it(`host (${host}): LOCK — on the holdout's default arm the opted-in layout carries no blend: catalogue order, no blend marker, no explain.blend, and every decision replays equal (R-P43)`, async () => {
+      // GREEN at the build. CONTROL (the reviewer's, on a scratch copy): the blend applied on the default arm (decide.ts, the
+      // default-arm guard on the blend source) puts explain.blend and the blend marker on these records (and, with ugc.1 frozen at
+      // 2, moves it into the take), turning the no-blend clause RED.
+      const learn = learnDocument({ [LAYOUT]: { reward: 'click', blend: { p: 0.5 }, items: { [M.ugc]: { mode: 'freeze', lift: 2 } } } },
+        { holdout: { share: 1, salt: 'p28-default-arm', arms: ['default'] } });
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn }, { recovery: false });
+      precondition(m, 'P28.B5');
+      const set = await servePage(m, await cold(m), 'pdp', { entry: PAID_SOCIAL_ENTRY });
+      const layout = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect(layout.map(r => r.arm), `${host}: PRECONDITION — the shopper is on the holdout's default arm`).toEqual(['default', 'default', 'default', 'default']);
+      expect(layout.map(r => [r.item_id, ...markersOf(r), blendOf(r) ?? null]),
+        `${host}: P28.B5 — the default arm serves the catalogue order with no blend marker and no explain.blend on any record`)
+        .toEqual(ELIGIBLE.slice(0, 4).map(id => [id, null, null, null]));
+      const replays = await replayEach(m, set.records);
+      expect(replays.length, `${host}: PRECONDITION — the ledger holds the four layout decisions`).toBe(4);
+      expect(replays, `${host}: P28.B5 — each default-arm decision replays equal`).toEqual(layout.map(r => [r.item_id, 200, 'equal']));
+    }, 120_000);
   }
 });
