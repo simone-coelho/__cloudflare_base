@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-09, evening: amendment 1 (the customer's T6, T7, T8 answer), a second programme; P10 in fix round 1
+
+- **Owner decision (2026-10-09, one question):** "second programme, no pause". The sheet: `docs/BTI-Parity-Amendment-2026-10-09.md` (owner tree; sections 7 and 8 by the active lead) and the freeze sheet's section G (items 55 to 62, all yes); copies under `docs/parity/authority/amendment-1/`.
+- **Second programme** `tapestry-parity-customer-answers` at `docs/parity/customer-answers/program.json` (e8e783bb): P36, P37, P38, P40, P39, STRICT, one ACTIVE, the same gate; `check` reports only its 20 gate-placeholder errors until the S5 specification batch records the gates. Reported as x/5 beside x/25. The first programme is untouched: P07 builds as frozen when P10 closes; only P30 is amended before its build (its context key gains device; R-P15 re-specification then).
+- **S5 specification batch** (P36, P37, P38, P40, P39): lane `/home/simonecoelho/rem/spec-parity-e` (`rem/spec-parity-e` from af671ce7); work orders rendered under `_evidence/parity-step3/S5/workorders/`; evidence `_evidence/parity-step3/S5/`. After the review PASS: record the five gates on the program, cut the per-ticket branches with `_evidence/parity-step3/make-ticket-spec-branch.sh`, then build in order with one ACTIVE per programme, interleaved with the first programme at the lead's discretion.
+- **P10 fix round 1:** the build (rem/p10-build 9018d000, every check green but the F1/F3 cold-layout fixture, a stale P02 witness; R-P45) waits for the specifier's one-line correction on `rem/spec-p10-fix1` (lane spec-p10-fix1 from 175791e5), its review, the gate re-record, then the implementer resumes (merge, acceptance, one gate), the delivery review, the receipt. P07's brief `_evidence/parity-step3/P07/implementer/BRIEF.md` names integration af671ce7; re-point it to the head of the day before dispatch.
+
 ## 2026-10-09, the product branch landed; P02, P01, P28 and P03 closed; P10 active
 
 - **Remediation** (`status`): Local engineering done 26/26 · Final/live accepted 0/26 · no ticket active · `check` PASS. Baseline 52 entries (owner item 31). W19's receipt superseded at the landing artifact edac8264 (ed126922): the twenty-field piece contract. Rulings: `_evidence/step3/AMENDMENTS.md`.
