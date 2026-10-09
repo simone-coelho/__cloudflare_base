@@ -365,8 +365,6 @@ and their dispositions are listed there too.
 which their pages never create. `wrangler dev` snapshots its asset list at startup, so a file newly added under
 `public/` returns 404 until you restart it.
 
-### Deployment
-
 | Worker | Runs | Deploy with |
 |---|---|---|
 | `edge-platform.expedge.workers.dev` | Coach, bank, Bright Hour, Meridian (commit `26e2db1`) | `bash scripts/deploy-legacy-demos.sh --deploy` |
