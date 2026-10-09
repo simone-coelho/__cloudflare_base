@@ -502,15 +502,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "51c37047c459939e4ffd60ab71e8bf605c240f02 on rem/spec-p28-fix1 (cut from the P28 build merge 8883ad34 over rem/integration b53641e6): src/units/P28/LEDGER.unit.test.ts after fix round 1 (R-P40 the four-module order, R-P41 the blend over a configured order with its M leg and non-opted lock, R-P30 wording; 21 legs: 15 RED on P28 own behaviour, 6 locks; reviewed PASS twice, 396e0135 then 51c37047) beside the S4 gate files at b435cc2b (harness _parity.ts and _parity4.ts byte-identical on rem/tkt/P28 daed66f4)",
+        "reviewedRevision": "380fd07bb9ab73bc660c62a3897a9966b35934bd on rem/spec-p28-fix2 (cut from the P28 build head 68de8cc8): src/units/P28/LEDGER.unit.test.ts after fix rounds 1 and 2 (R-P40 the four-module order; R-P41 the blend over a configured order, its M leg and non-opted lock; R-P43 the blended-replay locks under a configured order and catalogue order, the holdout default arm and the lower clamp on a frozen lift; R-P30 wording; 29 legs, each reviewed PASS at 51c37047 and 380fd07b) beside the S4 gate files at b435cc2b (harness byte-identical)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix2/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix2/reviewer-spec/logs/controls/progress.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix2/reviewer-spec/logs/controls/restore.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/logs/re-runs-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/reviewer-spec/logs/runs-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P28/fix1/specifier/logs/probe-rp41-clauses.log",
