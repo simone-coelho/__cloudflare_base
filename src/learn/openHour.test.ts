@@ -12,8 +12,9 @@
 //    reads one aggregate per hour plus the few minutes of raw the queue has
 //    written since.
 //
-// The hour's FINAL fold is the one it has always been: these tests pin its
-// bytes to what it wrote before this lane.
+// The hour's FINAL fold is the merged fold at the landing (rem/landing 524c80ee,
+// its W30 and W33 members included): these tests pin its bytes to what that fold
+// writes, so any change to what a closed hour's fold writes changes them.
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createHash } from 'node:crypto';
@@ -166,16 +167,17 @@ const segmentRows = (r2: FakeR2, hour = 12) => segments(r2, hour).flatMap((k) =>
 
 describe('the final fold of a closed hour', () => {
   /**
-   * Captured from the fold at 272ede8, before this lane touched hourly.ts: the
-   * two hour aggregates, every ring shard after them, and the canonical day
-   * report summed from them. Any change to what a closed hour's fold writes,
-   * or to a day report with no open hour, changes one of these.
+   * Captured from the merged fold at the landing (rem/landing 524c80ee, the
+   * W30 and W33 members included): the two hour aggregates, every ring shard
+   * after them, and the canonical day report summed from them. Any change to
+   * what a closed hour's fold writes, or to a day report with no open hour,
+   * changes one of these.
    */
   const GOLDEN = {
-    hour12: '2bcf1f0fcbf3eed65e04112ea637ba1247f66c1c38c1383214df3c559d96ec2d',
-    hour13: '9ec75462bd2d7395825cf0b753d75a2c99cdcd1685d9a860a82ae110d62aa11a',
-    shards: '10b0906b492ec9860af5f59dfa2aa645be0f5cfcf48f56d9e828d84cf0a46a93',
-    day: '8319005dd2428a4a2ba6ee93ba6beb30ea78b0d406aa669bd9f2b05d262be041',
+    hour12: 'ca6283a413154ad2a92557ff176b42a12d8d3ebaab21cdf3aed763450d70f888',
+    hour13: '3118b7d393bfc6571b056bb454e4a560c8713d94bbb742e1a37e74070c0c44ab',
+    shards: '9928b0ba06196fc7714d7c0c6dcb9c578ba4a9f0677b6a016ac4551095e0a9af',
+    day: '7943164f11fa52ab197df63732d8fe2e328702f1fe1f5e2b2c35d8021d9b3afa',
   };
 
   it('writes the bytes it wrote before the open hour existed: both aggregates, every shard and the day summed from them', async () => {
@@ -556,7 +558,7 @@ describe('lane E6, second build: budgets and cost', () => {
     const idle = await foldOpenHours(r2 as never, TENANT, learn, T12 + 30 * MIN, { start: true, publish: true });
     expect(idle).toMatchObject({ folded: [], unchanged: [], failed: [], removed: 0 });
     expect(r2.gets, 'an idle tenant reads nothing').toEqual([]);
-    expect(idle.calls, 'a listing of its open-hour objects and one of the open hour\'s ledger').toBe(2);
+    expect(idle.calls, 'the note of the day, a listing of its open-hour objects and one of the open hour\'s ledger').toBe(3);
     for (const [rows, batch] of BATCHES) write(r2, rows, batch);
     await foldOpenHours(r2 as never, TENANT, learn, T12 + 30 * MIN, { start: true, publish: true });
     r2.gets = []; r2.puts = [];
@@ -565,7 +567,7 @@ describe('lane E6, second build: budgets and cost', () => {
     expect(quiet.folded).toEqual([]);
     expect(r2.gets, 'nothing new: the hour\'s state, and no shard, segment or ledger object').toEqual([openStateKey(TENANT, DATE, 12)]);
     expect(r2.puts).toEqual([]);
-    expect(quiet.calls, 'four listings — the open-hour objects, the hour\'s ledger, the erasures, the shards — and the state').toBe(5);
+    expect(quiet.calls, 'the note, four listings — the open-hour objects, the hour\'s ledger, the erasures, the shards — and the state').toBe(6);
     r2.gets = [];
     const report = await runDayReport(r2 as never, ids, learn, null, T12 + 36 * MIN);
     expect(report.hours?.open).toEqual([{ hour: 12, status: 'current', through: T12 + 30 * MIN }]);
