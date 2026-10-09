@@ -862,13 +862,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "6477d82c2c8b527844486f19b6610080b1b217bf on rem/spec-parity-a (batch S1; P02 reviewed at this revision; P01, P03 and P10 reviewed at e6d2068d and byte-identical at 6477d82c; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "f15305c207ed6dfb3e646e520e950b2ce590e152 on rem/spec-p10-fix1 (fix round 1, R-P45: COLD_LAYOUT re-derived for a page without a recently-viewed slot, R-P30 wording; specification review PASS; the S1 gate at 6477d82c kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P10/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P10/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P10/fix1/reviewer-spec/logs/graft-P10.summary.txt",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P10/fix1/reviewer-spec/logs/spec-P10-at-f15305c2.summary.txt",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P10/fix1/specifier/logs/probe-cold.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/logs/probes-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/logs/nc10-round2.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/logs/negative-controls.log"
