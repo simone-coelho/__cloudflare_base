@@ -47,8 +47,10 @@
 //   visit) lists editorial.1, ugc.1, grid.1, reco.2: the slot's take, since P01
 //   refuses an order longer than the take (src/content/kinds.ts validateOrders;
 //   docs/kit/03-payload-schemas.md). So M = 4 and R = 1, 0.75, 0.5, 0.25, and
-//   reco.1 is unlisted. At p 0 with no dimension weighted the order is served
-//   exactly (B1); at p above 0 the listed modules are re-ranked by
+//   reco.1 is unlisted. B1's third leg lists the expired lookbook.1 among the
+//   four: P01 passes it over and never replaces it, three positions are
+//   served, and M = 3 (R = 1, 2/3, 1/3). At p 0 with no dimension weighted the
+//   order is served exactly (B1); at p above 0 the listed modules are re-ranked by
 //   R + (1 − p) × B + p × Q and an unlisted module stays hidden (B2; P01 O3,
 //   freeze item 17); a slot that does not opt in serves the order exactly as
 //   P01 built it (B4; R-P7, R-P34).
@@ -92,8 +94,11 @@ const LADDER_CELL = { channel: 'paid_social', visit_bucket: '1' as const, region
 /** R-P40: the configured order for the shopper's context (paid social, first visit) lists four modules, the layout's take, and leaves reco.1 unlisted; R = (4 − i)/4 from it (R-P41). B1, B2 and B4 publish this one order. */
 const CONFIGURED = [M.editorial, M.ugc, M.grid, M.reco2];
 const ORDERS = [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: CONFIGURED }];
-/** ugc.1's ladder as B2's first leg builds it: 20 clicks in 40 exposures against a slot rate of 20 in 240, a lift beyond liftMax 2, so Q = 1. */
-const BEYOND_THE_CLAMP = [{ item: M.ugc, exposures: 40, successes: 20 }, { item: RETIRED, exposures: 200, successes: 0 }];
+/**
+ * ugc.1's ladder as B2's first leg builds it (20 clicks in 40 exposures), and the same ladder for the unlisted reco.1, so a blend that
+ * admitted an unlisted module would serve it: against a slot rate of 40 in 280 each lift is beyond liftMax 2, so Q = 1.
+ */
+const BEYOND_THE_CLAMP = [{ item: M.ugc, exposures: 40, successes: 20 }, { item: M.reco1, exposures: 40, successes: 20 }, { item: RETIRED, exposures: 200, successes: 0 }];
 
 const SLOTS = declaredSlots([layoutSlot(), recentSlot()]);
 const blendOf = (r: { explain?: unknown } | undefined) => ((r?.explain ?? {}) as Record<string, unknown>).blend as Record<string, number> | undefined;
@@ -191,6 +196,27 @@ describe('unit:P28.B1 (freeze items 8 and 34)', () => {
         `${host}: P28.B1 — each record's R is ranked from the configured order, B and Q read 0, p 0`)
         .toEqual(CONFIGURED.map(id => [id, { R: R[id], B: 0, Q: 0, p: 0 }]));
     }, 90_000);
+
+    it(`host (${host}): on an opted-in layout at p 0 with a configured order that lists an ineligible module, the listed modules still eligible are served in order, the ineligible one passed over and never replaced, and R is ranked over them with M = 3 (R-P41)`, async () => {
+      // R-P41 (ii): lookbook.1 is expired, so P01 passes it over and never replaces it (unlisted modules stay hidden): three positions.
+      // M counts the listed modules still eligible, editorial.1, grid.1, reco.2, so R = 1, 2/3, 1/3, compared at three decimals, the
+      // precision the engine writes its explain scores at.
+      const listed = [M.editorial, M.lookbook, M.grid, M.reco2], stillEligible = [M.editorial, M.grid, M.reco2];
+      const orders = [{ context: ORDERS[0]!.context, modules: listed }];
+      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ weights: ZERO_WEIGHTS, seeds: SEED, orders }), recentSlot()]), learn });
+      precondition(m, 'P28.B1');
+      const stored = (await loadSlots(m)).document as { pages: Record<string, Array<Record<string, unknown>>> };
+      expect(stored.pages.pdp?.find(slot => slot.slot === LAYOUT)?.orders, `${host}: PRECONDITION P01 — the published layout slot keeps its per-context order`).toEqual(orders);
+      const s = await everyShopperTerm(m);
+      const { served, records } = await pageRecords(m, s, 'p28-b1-ineligible');
+      shopperPreconditions(host, records[0]);
+      expect(served, `${host}: P28.B1 — at p 0 the listed modules still eligible are served in the configured order, lookbook.1 passed over and not replaced`).toEqual(stillEligible);
+      const R = R_OF(stillEligible);
+      const at3 = (x: unknown) => typeof x === 'number' ? Math.round(x * 1000) / 1000 : x;
+      expect(records.map(r => { const b = blendOf(r); return [r.item_id, b ? { ...b, R: at3(b.R) } : 'no explain.blend on the record']; }),
+        `${host}: P28.B1 — each record's R is ranked over the three listed modules still eligible (M = 3), B and Q read 0, p 0`)
+        .toEqual(stillEligible.map(id => [id, { R: at3(R[id]), B: 0, Q: 0, p: 0 }]));
+    }, 90_000);
   }
 });
 
@@ -237,6 +263,7 @@ describe('unit:P28.B2 (freeze items 8 and 34)', () => {
       const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ orders: ORDERS }), recentSlot()]), learn });
       const { set, layout } = await underTheOrder(m, 'P28.B2');
       // R from the order (M = 4) plus 0.5 Q: ugc.1 0.75 + 0.5 × 1 = 1.25, editorial.1 1, grid.1 0.5, reco.2 0.25. Served exactly, the order would keep editorial.1 first.
+      // The unlisted reco.1 carries the same learned lift: a blend that admitted it (at R 0, 0 + 0.5 × 1 = 0.5) would serve it in reco.2's place.
       expect(layout.map(r => r.item_id), `${host}: P28.B2 — ugc.1 moves above editorial.1, exactly where R + p × Q with R from the configured order puts it`)
         .toEqual([M.ugc, M.editorial, M.grid, M.reco2]);
       expect([set.decisions.some(d => d.contentId === M.reco1), set.records.some(r => r.item_id === M.reco1)],
