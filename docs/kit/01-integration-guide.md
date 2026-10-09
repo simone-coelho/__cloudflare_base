@@ -296,6 +296,33 @@ and season, promotion and margin signals. Your merchandiser's slot document name
 and the weight of each dimension in each slot, and can pin an item to a slot. Both documents are
 versioned: every change has an author and a note, and a rollback is a new revision.
 
+### A page's layout: modules in one declared slot
+
+A page's modules (a category grid, recommendations, a styling story, reviews and the like) are content
+items too: each is registered in the content catalog with its own `id`, its kind as `type` and the
+journey stages it is made for as `journeyStageFit`, and names the layout slot in its `slotTypes`. Your
+merchandiser declares the page's layout as one slot of the slot document, marked `layout: true` in a
+document marked `governanceVersion: 4`, at most one per page. Its `take` is the number of positions K
+(1 to 50), and the registered modules that name the slot are its M candidates, M at least K. Each
+decision returns up to K module ids for that slot, in rank order, with eligibility (lifecycle, publish
+window, stock), the slot's exclusions and page-wide de-duplication applied; with nothing known about the
+shopper yet, they are the first K eligible modules in catalogue order. When fewer than K modules are
+eligible, the slot returns only those, never a filler.
+
+The list the layout slot returns is the layout's sequence: draw the modules in that order, one container
+per position. A module that is not returned is not drawn, and its container stays hidden. Every drawn
+module is acknowledged with `client.emit.rendered(slot, contentId, element, decisionId)` once it has
+actually painted, exactly as section 3 describes for any slot, and a module that failed to paint is not
+acknowledged. This contract is about a decision that answered: when the snapshot fails or misses its
+deadline, the subscriber receives `[]` and your page's own default layout stands, as for every slot.
+
+Measure the layout slot on `rendered-v1`: publish `slots.{slot}.measurementBasis: 'rendered-v1'` for it in
+the learn document, so a module that was drawn and acknowledged is one exposure, however often its
+acknowledgement is retried, and a module that was returned but never drawn, or not returned, is none. A
+layout slot left on `served-v1` is still served, but carries no render offer and is never counted as an
+exposure; the engine's decision set names that mismatch internally (`layoutDiagnostics`), and the
+snapshot answer does not carry it.
+
 ## 8. What to test before the freeze
 
 On a separately authorized staging origin, complete these before M5 with the agreed20–30 real assets. Local DOM/native and synthetic script evidence is not customer browser/SFCC, latency or business acceptance.

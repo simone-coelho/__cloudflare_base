@@ -30,7 +30,7 @@ import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
+import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, SlotCatalog } from './types';
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
@@ -587,6 +587,16 @@ export async function serveContentDecisions(
   lap('decide');
   if (consent.tracking) for (const record of set.records) record.retention = captureRetention(env, r.tenant, record.ts, now);
   for (const record of set.records) record.measurementBasis = configOf(record.slot).measurementBasis ?? 'served-v1';
+  // P02 decision D1: the page's declared layout slot that its learn document
+  // does not measure on rendered-v1, named on the set (keys sorted). Configuration
+  // only — the same answer for every shopper on the page — and present only when
+  // there is something to name.
+  const layoutDiagnostics: LayoutDiagnostic[] = [];
+  for (const slot of activeSlots) {
+    if (slot.layout !== true) continue;
+    const measurementBasis = configOf(slot.slot).measurementBasis ?? 'served-v1';
+    if (measurementBasis !== 'rendered-v1') layoutDiagnostics.push({ measurementBasis, reason: 'measurement_basis', slot: slot.slot });
+  }
   // W21 E1.03 (position 8): every arm-tagged record names the experiment it was
   // decided under, as the decision path answered it. The producer writes it so
   // that nothing downstream has to reconstruct it from a later configuration.
@@ -607,8 +617,15 @@ export async function serveContentDecisions(
   // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).
   const synthetic = syntheticOperation();
   const trustedSynthetic = synthetic?.tenant === r.tenant && synthetic.subject === r.visitorId && synthetic.sessionId === r.sessionId && synthetic.expiresAt > Date.now();
-  const captureRecords = r.offer ? trustedSynthetic ? set.records.filter(record => record.measurementBasis === 'served-v1') : []
-    : set.records.every(record => record.measurementBasis === 'served-v1') ? set.records : [];
+  // P02 decision D1: a declared layout slot is captured only on rendered-v1, by
+  // the render acknowledgement of a module the page drew. On any other basis it
+  // is served — offered for no acknowledgement, below — and never captured at
+  // serve time, because a module returned is not a module drawn. Derived from
+  // the documents already read: no read is added, nothing here can fail.
+  const unmeasuredLayout = new Set(layoutDiagnostics.map(d => d.slot));
+  const capturable = (record: (typeof set.records)[number]) => !unmeasuredLayout.has(record.slot);
+  const captureRecords = r.offer ? trustedSynthetic ? set.records.filter(record => record.measurementBasis === 'served-v1' && capturable(record)) : []
+    : set.records.every(record => record.measurementBasis === 'served-v1') ? set.records.filter(capturable) : [];
   const servedCapture = !r.offer && captureRecords.length > 0;
   const captureSet = { ...set, records: captureRecords };
   const captured = consent.tracking && captureRecords.length > 0
@@ -658,6 +675,7 @@ export async function serveContentDecisions(
   return {
     ...set,
     ...(enrollment ? { experiment: enrollment } : {}),
+    ...(layoutDiagnostics.length ? { layoutDiagnostics } : {}),
     decisions,
     afterResponse,
     write: consent.tracking && servedCapture,
