@@ -41,20 +41,33 @@
 //   that is grid.1, reco.1, reco.2, editorial.1, ugc.1 (reviews.1 excluded,
 //   lookbook.1 expired, recent.1 reserved by the recently-viewed slot's pin,
 //   charms.1 outside its window), so M = 5 and R = 1, 0.8, 0.6, 0.4, 0.2.
+//   Under a configured order (R-P40, R-P41) M is the number of listed modules
+//   still eligible after the C7 removals and i their position among them. The
+//   order this file publishes for the shopper's context (paid social, first
+//   visit) lists editorial.1, ugc.1, grid.1, reco.2: the slot's take, since P01
+//   refuses an order longer than the take (src/content/kinds.ts validateOrders;
+//   docs/kit/03-payload-schemas.md). So M = 4 and R = 1, 0.75, 0.5, 0.25, and
+//   reco.1 is unlisted. At p 0 with no dimension weighted the order is served
+//   exactly (B1); at p above 0 the listed modules are re-ranked by
+//   R + (1 − p) × B + p × Q and an unlisted module stays hidden (B2; P01 O3,
+//   freeze item 17); a slot that does not opt in serves the order exactly as
+//   P01 built it (B4; R-P7, R-P34).
 //   B is the pre-lift behaviour score; Q is the clamped lift minus one, 0 where
 //   no level answers. Every record of an opted-in slot carries
 //   `explain.blend: { R, B, Q, p }`, and every receipt `blend: { R, B, Q, p }`.
 //   Learned lifts are built through the real fan-in and the real crediting
-//   ring (src/units/_parity4.ts `learnedLift`); B3 and B4 use a merchandiser's
-//   frozen lift where only the itemisation or the content slot is under test.
+//   ring (src/units/_parity4.ts `learnedLift`); B3 and B4's first leg use a
+//   merchandiser's frozen lift where only the itemisation or the content slot
+//   is under test.
 //
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `blend: { p }` in the learn document's slot dials, `explain.blend` on the
 // record, `blend` on the receipt. No new export is imported.
 //
 // PRECONDITIONS (R-P6): every host leg needs P02 (a declared layout slot,
-// governance 4); B1's configured-order leg also needs P01 (`orders`). Each
-// fails first with a message labelled PRECONDITION naming the ticket.
+// governance 4); the configured-order legs of B1, B2 and B4 also need P01
+// (`orders`). Each fails first with a message labelled PRECONDITION naming the
+// ticket.
 //
 // HARNESS: src/units/_parity.ts and src/units/_parity4.ts.
 
@@ -76,6 +89,11 @@ const CATALOGUE_R = R_OF(ELIGIBLE);
 /** A module that was served on this page once and is retired from the catalogue: its evidence still counts in the slot's own rate. */
 const RETIRED = 'module.PDP.retired.1';
 const LADDER_CELL = { channel: 'paid_social', visit_bucket: '1' as const, region: null, affinity: null, stage: 'mid' as const };
+/** R-P40: the configured order for the shopper's context (paid social, first visit) lists four modules, the layout's take, and leaves reco.1 unlisted; R = (4 − i)/4 from it (R-P41). B1, B2 and B4 publish this one order. */
+const CONFIGURED = [M.editorial, M.ugc, M.grid, M.reco2];
+const ORDERS = [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: CONFIGURED }];
+/** ugc.1's ladder as B2's first leg builds it: 20 clicks in 40 exposures against a slot rate of 20 in 240, a lift beyond liftMax 2, so Q = 1. */
+const BEYOND_THE_CLAMP = [{ item: M.ugc, exposures: 40, successes: 20 }, { item: RETIRED, exposures: 200, successes: 0 }];
 
 const SLOTS = declaredSlots([layoutSlot(), recentSlot()]);
 const blendOf = (r: { explain?: unknown } | undefined) => ((r?.explain ?? {}) as Record<string, unknown>).blend as Record<string, number> | undefined;
@@ -83,25 +101,45 @@ const precondition = (m: Mounted, ticket: string) => expectPublished(m, `${ticke
 
 async function tabby(m: Mounted, entry: Record<string, string> = PAID_SOCIAL_ENTRY): Promise<Shopper> {
   const s = await shopperOn(m);
-  expect((await s.action(PAGE_VIEW, entry)).status, `${m.host}: her page view is accepted`).toBe(200);
-  for (const view of TABBY_VIEWS) expect((await s.action(view)).status, `${m.host}: her view is accepted`).toBe(200);
+  expect((await s.action(PAGE_VIEW, entry)).status, `${m.host}: the shopper's page view is accepted`).toBe(200);
+  for (const view of TABBY_VIEWS) expect((await s.action(view)).status, `${m.host}: the shopper's view is accepted`).toBe(200);
   return s;
 }
 /** A shopper with no interest at all: every module's behaviour score is 0. */
 async function cold(m: Mounted): Promise<Shopper> {
   const s = await shopperOn(m);
-  expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: her page view is accepted`).toBe(200);
+  expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: the shopper's page view is accepted`).toBe(200);
   return s;
 }
-/** Her page through the route, every layout module acknowledged, and the records the real consumer stored for that page. */
+/** The shopper's page through the route, every layout module acknowledged, and the records the real consumer stored for that page. */
 async function pageRecords(m: Mounted, s: Shopper, label: string) {
   const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(label), entry: PAID_SOCIAL_ENTRY });
-  expect(page.status, `${m.host}: her page is answered: ${JSON.stringify(page.body).slice(0, 300)}`).toBe(200);
+  expect(page.status, `${m.host}: the shopper's page is answered: ${JSON.stringify(page.body).slice(0, 300)}`).toBe(200);
   for (const d of page.decisions.filter(x => x.slot === LAYOUT)) expect((await s.ack(page, d)).status, `${m.host}: ${d.contentId} acknowledged`).toBe(200);
   await m.drainLedger();
   const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT && page.decisions.some(d => d.decisionId === r.decision_id))
     .sort((a, b) => a.position - b.position);
   return { served: servedIn(page, LAYOUT), records, page };
+}
+/**
+ * R-P41's fixture: the configured order published on the layout slot, ugc.1's
+ * learned lift beyond the upper clamp (as B2's first leg builds it), then a cold
+ * shopper's page in the order's context, one layer in. The layout records in
+ * position order.
+ */
+async function underTheOrder(m: Mounted, ticket: string) {
+  precondition(m, ticket);
+  const stored = (await loadSlots(m)).document as { pages: Record<string, Array<Record<string, unknown>>> };
+  expect(stored.pages.pdp?.find(slot => slot.slot === LAYOUT)?.orders, `${m.host}: PRECONDITION P01 — the published layout slot keeps its per-context order`).toEqual(ORDERS);
+  await learnedLift(m, LAYOUT, BEYOND_THE_CLAMP, LADDER_CELL);
+  expect([rounded(await learned(m), 'n')[M.ugc], rounded(await learned(m), 's')[M.ugc]], `${m.host}: PRECONDITION — ugc.1's exposures and clicks are learned`).toEqual([40, 20]);
+  const set = await servePage(m, await cold(m), 'pdp', { entry: PAID_SOCIAL_ENTRY });
+  const layout = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+  const ugc = layout.find(r => r.item_id === M.ugc);
+  expect([layout[0]?.cell.channel, layout[0]?.cell.visit_bucket, ugc?.explain.lift?.lift],
+    `${m.host}: PRECONDITION — the shopper is in the order's context (paid social, first visit) and ugc.1's learned lift at the answering level is the upper clamp, 2`)
+    .toEqual(['paid_social', '1', 2]);
+  return { set, layout };
 }
 
 // ===========================================================================
@@ -120,9 +158,9 @@ describe('unit:P28.B1 (freeze items 8 and 34)', () => {
     await pageRecords(m, s, 'p28-b1-history');
     return s;
   }
-  const preconditionsOfHer = (host: string, r: DecisionRecord | undefined) => {
+  const shopperPreconditions = (host: string, r: DecisionRecord | undefined) => {
     expect([r?.cell.channel, Boolean(r?.cell.stage && r.cell.stage !== 'unknown'), Object.keys(r?.inputs?.affinity ?? {}).length > 0, Boolean(r?.inputs?.regional_share)],
-      `${host}: PRECONDITION — her decision is in the paid-social context with a known stage, her interests and the regional prior's shares`).toEqual(['paid_social', true, true, true]);
+      `${host}: PRECONDITION — the shopper's decision is in the paid-social context with a known stage, their interests and the regional prior's shares`).toEqual(['paid_social', true, true, true]);
   };
 
   for (const host of HOSTS) {
@@ -131,28 +169,27 @@ describe('unit:P28.B1 (freeze items 8 and 34)', () => {
       precondition(m, 'P28.B1');
       const s = await everyShopperTerm(m);
       const { served, records } = await pageRecords(m, s, 'p28-b1');
-      preconditionsOfHer(host, records[0]);
+      shopperPreconditions(host, records[0]);
       expect(served, `${host}: P28.B1 — at p 0 the served order is the catalogue order of the eligible modules`).toEqual(ELIGIBLE.slice(0, 4));
       expect(records.map(r => [r.item_id, blendOf(r) ?? 'no explain.blend on the record']),
         `${host}: P28.B1 — each record itemises R = (M − i)/M, the behaviour term B 0, the performance term Q 0 and p 0`)
         .toEqual(ELIGIBLE.slice(0, 4).map(id => [id, { R: CATALOGUE_R[id], B: 0, Q: 0, p: 0 }]));
     }, 90_000);
 
-    it(`host (${host}): on an opted-in layout at p 0 with a configured order for her context, the served order is the configured order term for term and R is ranked from it`, async () => {
-      const CONFIGURED = [M.editorial, M.ugc, M.grid, M.reco2, M.reco1];
-      const orders = [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: CONFIGURED }];
-      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ weights: ZERO_WEIGHTS, seeds: SEED, orders }), recentSlot()]), learn });
+    it(`host (${host}): on an opted-in layout at p 0 with a configured order for the shopper's context, the served order is the configured order term for term and R is ranked from it`, async () => {
+      // R-P40: the order lists four modules, the take (CONFIGURED), so M = 4 and R = 1, 0.75, 0.5, 0.25.
+      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ weights: ZERO_WEIGHTS, seeds: SEED, orders: ORDERS }), recentSlot()]), learn });
       precondition(m, 'P28.B1');
       const stored = (await loadSlots(m)).document as { pages: Record<string, Array<Record<string, unknown>>> };
-      expect(stored.pages.pdp?.find(slot => slot.slot === LAYOUT)?.orders, `${host}: PRECONDITION P01 — the published layout slot keeps its per-context order`).toEqual(orders);
+      expect(stored.pages.pdp?.find(slot => slot.slot === LAYOUT)?.orders, `${host}: PRECONDITION P01 — the published layout slot keeps its per-context order`).toEqual(ORDERS);
       const s = await everyShopperTerm(m);
       const { served, records } = await pageRecords(m, s, 'p28-b1-configured');
-      preconditionsOfHer(host, records[0]);
-      expect(served, `${host}: P28.B1 — at p 0 the served order is the configured order`).toEqual(CONFIGURED.slice(0, 4));
+      shopperPreconditions(host, records[0]);
+      expect(served, `${host}: P28.B1 — at p 0 the served order is the configured order`).toEqual(CONFIGURED);
       const R = R_OF(CONFIGURED);
       expect(records.map(r => [r.item_id, blendOf(r) ?? 'no explain.blend on the record']),
         `${host}: P28.B1 — each record's R is ranked from the configured order, B and Q read 0, p 0`)
-        .toEqual(CONFIGURED.slice(0, 4).map(id => [id, { R: R[id], B: 0, Q: 0, p: 0 }]));
+        .toEqual(CONFIGURED.map(id => [id, { R: R[id], B: 0, Q: 0, p: 0 }]));
     }, 90_000);
   }
 });
@@ -194,6 +231,21 @@ describe('unit:P28.B2 (freeze items 8 and 34)', () => {
       expect(lift > 1 && lift < 2, `${host}: PRECONDITION — ugc.1's learned lift at the answering level is inside the clamps (${lift})`).toBe(true);
       expect(ugc?.explain.score_final ?? NaN, `${host}: P28.B2 — its served score is R + p × Q = 0.2 + 0.5 × (lift − 1)`).toBeCloseTo(0.2 + 0.5 * (lift - 1), 2);
       expect(blendOf(ugc) ?? 'no explain.blend', `${host}: P28.B2 — and the record says so`).toMatchObject({ R: 0.2, B: 0, p: 0.5 });
+    }, 120_000);
+
+    it(`host (${host}): at p 0.5 on an opted-in layout with a configured order for the shopper's context, the listed modules are re-ranked by R + p × Q with R from the order, ugc.1 (lift beyond the clamp) moving exactly that far, and the unlisted reco.1 stays hidden (freeze item 17; R-P41)`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ orders: ORDERS }), recentSlot()]), learn });
+      const { set, layout } = await underTheOrder(m, 'P28.B2');
+      // R from the order (M = 4) plus 0.5 Q: ugc.1 0.75 + 0.5 × 1 = 1.25, editorial.1 1, grid.1 0.5, reco.2 0.25. Served exactly, the order would keep editorial.1 first.
+      expect(layout.map(r => r.item_id), `${host}: P28.B2 — ugc.1 moves above editorial.1, exactly where R + p × Q with R from the configured order puts it`)
+        .toEqual([M.ugc, M.editorial, M.grid, M.reco2]);
+      expect([set.decisions.some(d => d.contentId === M.reco1), set.records.some(r => r.item_id === M.reco1)],
+        `${host}: P28.B2 — the unlisted reco.1 stays hidden: no decision on the page (so no render offer) and no record`).toEqual([false, false]);
+      const R = R_OF(CONFIGURED);
+      expect(layout.map(r => [r.item_id, r.explain.score_final, blendOf(r) ?? 'no explain.blend on the record']),
+        `${host}: P28.B2 — each record's served score is R + p × Q with R from the configured order, B 0, Q 1 for ugc.1 and 0 for the rest, p 0.5`)
+        .toEqual([[M.ugc, 1.25, { R: R[M.ugc], B: 0, Q: 1, p: 0.5 }], [M.editorial, 1, { R: R[M.editorial], B: 0, Q: 0, p: 0.5 }],
+          [M.grid, 0.5, { R: R[M.grid], B: 0, Q: 0, p: 0.5 }], [M.reco2, 0.25, { R: R[M.reco2], B: 0, Q: 0, p: 0.5 }]]);
     }, 120_000);
   }
 });
@@ -271,6 +323,16 @@ describe('unit:P28.B4 (freeze item 8)', () => {
       const optedRecords = (await servePage(opted, await tabby(opted), 'pdp')).records;
       expect(terms(optedRecords, STORY), `${host}: P28.B4 — the content slot's decisions are unchanged, term for term, when the layout opts in`).toEqual(terms(records, STORY));
     }, 90_000);
+
+    it(`host (${host}): LOCK — the configured order on a layout slot that does not opt in is served exactly, with ugc.1's learned lift beyond the clamp, and no record itemises a blend (R-P41, R-P7)`, async () => {
+      // GREEN before the build: P01 serves the order exactly. CONTROL (the reviewer's, after the build): a blend applied on a slot
+      // without the opt-in turns this leg RED, at any p above 0 by moving ugc.1 above editorial.1 (first clause), at p 0 by
+      // putting explain.blend on the records (second clause).
+      const m = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ orders: ORDERS }), recentSlot()]), learn: learnDocument({ [LAYOUT]: { reward: 'click' } }) });
+      const { layout } = await underTheOrder(m, 'P28.B4');
+      expect(layout.map(r => r.item_id), `${host}: P28.B4 — without the opt-in the configured order is served exactly, as P01 built it`).toEqual(CONFIGURED);
+      expect(layout.map(r => blendOf(r) ?? null), `${host}: P28.B4 — a layout that does not opt in itemises no blend`).toEqual([null, null, null, null]);
+    }, 120_000);
   }
 });
 
