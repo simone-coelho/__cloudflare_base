@@ -1,0 +1,7013 @@
+{
+ "about": "Lane L2 build fixture. Canned answers in the engine's own shapes, captured from lane L1's worker (localhost:9110) on 2026-09-30 in one live walk at 1920x1080, so the pages can be laid out without a worker (?fixtures=1). Labelled on screen as fixture mode; never used against a live worker. Keys are the director's press keys.",
+ "capturedAt": "2026-10-01T00:48:19.986Z",
+ "steps": {
+  "arrive": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-iphone-18-pro-launch",
+    "promo-iphone-duo-preorder",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-galaxy-s26-new-line"
+   ],
+   "pinned": [],
+   "modules": [],
+   "plans": [],
+   "rail": [
+    "iphone-18-pro",
+    "iphone-18-pro-max",
+    "iphone-duo",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-s26"
+   ],
+   "vector": {},
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      1,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      1,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      1,
+      0.2
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "brand",
+      "apple",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      1,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      1,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "brand",
+      "apple",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      1,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      1,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.667,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      1,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.437,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      1,
+      0.387
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.667,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.437,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.5,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      1,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ]
+   }
+  },
+  "region": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-iphone-18-pro-launch",
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-duo-preorder"
+   ],
+   "pinned": [],
+   "modules": [],
+   "plans": [],
+   "rail": [
+    "iphone-18-pro",
+    "iphone-18-pro-max",
+    "iphone-duo",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-s26"
+   ],
+   "vector": {},
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.154
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.452
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "brand",
+      "samsung",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      1,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "brand",
+      "samsung",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.524
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.452
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ]
+   }
+  },
+  "browse": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-iphone-18-pro-launch",
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-duo-preorder"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "protection",
+    "home-bundle",
+    "trade-in",
+    "plan-pairing",
+    "connected-devices"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "iphone-18-pro",
+    "iphone-18-pro-max",
+    "iphone-duo",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-s26"
+   ],
+   "vector": {
+    "brand": {
+     "samsung": 0.504
+    },
+    "category": {
+     "phones": 0.5263
+    },
+    "ecosystem": {
+     "android": 0.5263
+    },
+    "priceBand": {
+     "core": 0.3529,
+     "premium": 0.3571
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.154
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.452
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "brand",
+      "samsung",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      1,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "brand",
+      "samsung",
+      1,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      1,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.524
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "brand",
+      "apple",
+      0.938,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      1,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.6,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.744,
+      0.1
+     ],
+     [
+      "regional",
+      "US-TX",
+      1,
+      0.452
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.263,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.263,
+      0.202
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.263,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.263,
+      0.202
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.017,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.263,
+      0.008
+     ]
+    ],
+    "trade-in": [],
+    "plan-pairing": [],
+    "connected-devices": [],
+    "plan-simple": [],
+    "plan-go": [],
+    "plan-more": []
+   }
+  },
+  "hinge": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-pixel-11-launch",
+    "promo-iphone-18-pro-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "protection",
+    "home-bundle",
+    "trade-in",
+    "plan-pairing",
+    "connected-devices"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.3452,
+     "samsung": 0.4639
+    },
+    "category": {
+     "phones": 0.625
+    },
+    "ecosystem": {
+     "android": 0.625
+    },
+    "priceBand": {
+     "core": 0.5214,
+     "premium": 0.3534
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.146,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.146,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.146,
+      0.199
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.631,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.461,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      0.68,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.518,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.146,
+      0.336
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.631,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.461,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      0.68,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.146,
+      0.39
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.631,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.68,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.32,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.518,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.146,
+      0.281
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.68,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.146,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.146,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.146,
+      0.548
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.201
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.201
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.009,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.007
+     ]
+    ],
+    "trade-in": [],
+    "plan-pairing": [],
+    "connected-devices": [],
+    "plan-simple": [],
+    "plan-go": [],
+    "plan-more": []
+   }
+  },
+  "exit": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-18-pro-launch",
+    "promo-pixel-11-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "protection",
+    "home-bundle",
+    "trade-in",
+    "plan-pairing",
+    "connected-devices"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.1544,
+     "samsung": 0.2306
+    },
+    "category": {
+     "phones": 0.625
+    },
+    "ecosystem": {
+     "android": 0.625
+    },
+    "priceBand": {
+     "core": 0.4949,
+     "premium": 0.3296
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.201
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.391
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.157,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.284
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.201
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.448,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.201
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.009,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.144,
+      0.007
+     ]
+    ],
+    "trade-in": [],
+    "plan-pairing": [],
+    "connected-devices": [],
+    "plan-simple": [],
+    "plan-go": [],
+    "plan-more": []
+   }
+  },
+  "open": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-18-pro-launch",
+    "promo-pixel-11-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "protection",
+    "home-bundle",
+    "trade-in",
+    "plan-pairing",
+    "connected-devices"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.1455,
+     "samsung": 0.454
+    },
+    "category": {
+     "phones": 0.6896
+    },
+    "ecosystem": {
+     "android": 0.6896
+    },
+    "priceBand": {
+     "core": 0.6044,
+     "premium": 0.328
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.201
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.391
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.157,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.284
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.427,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.147,
+      0.197
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.427,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.147,
+      0.197
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.009,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.147,
+      0.007
+     ]
+    ],
+    "trade-in": [],
+    "plan-pairing": [],
+    "connected-devices": [],
+    "plan-simple": [],
+    "plan-go": [],
+    "plan-more": []
+   }
+  },
+  "compare": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-18-pro-launch",
+    "promo-pixel-11-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "protection",
+    "home-bundle",
+    "trade-in",
+    "plan-pairing",
+    "connected-devices"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.1231,
+     "samsung": 0.6362
+    },
+    "category": {
+     "phones": 0.6896
+    },
+    "contentType": {
+     "compare": 0.7216
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "priceBand": {
+     "core": 0.5998,
+     "premium": 0.791
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.201
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.391
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.157,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.284
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.813,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.648,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.103,
+      0.204
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.813,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.103,
+      0.204
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.006,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.103,
+      0.01
+     ]
+    ],
+    "trade-in": [],
+    "plan-pairing": [],
+    "connected-devices": [],
+    "plan-simple": [],
+    "plan-go": [],
+    "plan-more": []
+   }
+  },
+  "perk": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-18-pro-launch",
+    "promo-pixel-11-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "connected-devices",
+    "home-bundle",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-simple",
+    "plan-go"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.1112,
+     "samsung": 0.609
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571
+    },
+    "contentType": {
+     "compare": 0.6978,
+     "module": 0.3466,
+     "plan": 0.3461
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "perk": {
+     "hotspot-travel": 0.3561
+    },
+    "priceBand": {
+     "core": 0.597,
+     "premium": 0.7891
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.201
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.391
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.157,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.284
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.806,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.642,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.081,
+      0.198
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.319,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.328,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.806,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.081,
+      0.198
+     ]
+    ],
+    "connected-devices": [
+     [
+      "contentType",
+      "module",
+      0.319,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.005,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.081,
+      0.012
+     ]
+    ],
+    "trade-in": [],
+    "plan-more": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ]
+    ],
+    "plan-simple": [],
+    "plan-go": []
+   }
+  },
+  "lines": {
+   "hero": [
+    "hero-launch"
+   ],
+   "deals": [
+    "promo-galaxy-s26-new-line",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-iphone-18-pro-launch",
+    "promo-pixel-11-launch"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "home-bundle",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-go",
+    "plan-more",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26",
+    "pixel-11",
+    "pixel-10a",
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0969,
+     "samsung": 0.572
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.6646,
+     "module": 0.5992,
+     "plan": 0.3123
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3561
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3526
+    },
+    "priceBand": {
+     "core": 0.5934,
+     "premium": 0.7865
+    }
+   },
+   "drivers": {
+    "hero-launch": [
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.1
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.201
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.337
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "brand",
+      "samsung",
+      0.266,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.391
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-launch": [
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.443,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.169,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.169,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.55
+     ],
+     [
+      "merchandising",
+      "promotion",
+      1,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "ecosystem",
+      "android",
+      0.632,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.688,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.496,
+      0.1
+     ],
+     [
+      "brand",
+      "google",
+      0.157,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.169,
+      0.284
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.561,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.333,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.334,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.8,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.622,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.33,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.561,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.334,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.8,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.015
+     ]
+    ],
+    "trade-in": [],
+    "plan-go": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.25
+     ]
+    ],
+    "plan-more": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.33,
+      0.35
+     ]
+    ],
+    "plan-simple": []
+   }
+  },
+  "home-family": {
+   "hero": [
+    "hero-family"
+   ],
+   "deals": [
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-galaxy-s26-new-line",
+    "promo-four-lines",
+    "promo-watch-tablet-line"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "home-bundle",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-go",
+    "plan-more",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0907,
+     "samsung": 0.5542
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.6482,
+     "module": 0.5816,
+     "plan": 0.297
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3545
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.351
+    },
+    "priceBand": {
+     "core": 0.5916,
+     "premium": 0.7853
+    }
+   },
+   "drivers": {
+    "hero-family": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.35
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.762,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.547,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.799,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.71,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.066,
+      0.394
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.762,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.547,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      0.71,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.586,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.066,
+      0.333
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-four-lines": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.331,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.334,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-watch-tablet-line": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.331,
+      0.25
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.334,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.561,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.333,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.334,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.8,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.622,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.33,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.561,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.334,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.8,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.065,
+      0.015
+     ]
+    ],
+    "trade-in": [],
+    "plan-go": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.25
+     ]
+    ],
+    "plan-more": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.33,
+      0.35
+     ]
+    ],
+    "plan-simple": []
+   }
+  },
+  "byod": {
+   "hero": [
+    "hero-family"
+   ],
+   "deals": [
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-galaxy-s26-new-line",
+    "promo-four-lines",
+    "promo-watch-tablet-line"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "home-bundle",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.083,
+     "samsung": 0.53
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.6258,
+     "module": 0.5578,
+     "plan": 0.2771
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3522,
+     "byod": 0.5262
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3488
+    },
+    "priceBand": {
+     "core": 0.5893,
+     "premium": 0.7836
+    }
+   },
+   "drivers": {
+    "hero-family": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.35
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.762,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.547,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.799,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.71,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.066,
+      0.394
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-s26-new-line": [
+     [
+      "ecosystem",
+      "android",
+      0.762,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.547,
+      0.2
+     ],
+     [
+      "category",
+      "phones",
+      0.71,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.586,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.066,
+      0.333
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-four-lines": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.331,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.334,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-watch-tablet-line": [
+     [
+      "lines",
+      "family",
+      0.584,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.331,
+      0.25
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.334,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.523,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.33,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.335,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.797,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.587,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.206
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.523,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.335,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.797,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.206
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.016
+     ]
+    ],
+    "trade-in": [],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.493,
+      0.5
+     ]
+    ],
+    "plan-go": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.25
+     ]
+    ],
+    "plan-more": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ]
+    ]
+   }
+  },
+  "home-byod": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-5g-home",
+    "promo-iphone-duo-preorder",
+    "promo-bring-your-phone",
+    "promo-streaming-perk"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "home-bundle",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-simple",
+    "plan-go",
+    "plan-more"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0778,
+     "samsung": 0.5123
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.609,
+     "module": 0.5402,
+     "plan": 0.2631
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3506,
+     "byod": 0.5245
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3471
+    },
+    "priceBand": {
+     "core": 0.5875,
+     "premium": 0.7824
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ],
+    "promo-5g-home": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.4
+     ],
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "priceBand",
+      "premium",
+      0.796,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.709,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.063,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.063,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.556
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-bring-your-phone": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.335,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-streaming-perk": [
+     [
+      "category",
+      "plans",
+      0.335,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.523,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.33,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.335,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.797,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.587,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.206
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.523,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.335,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.797,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.206
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.016
+     ]
+    ],
+    "trade-in": [],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.493,
+      0.5
+     ]
+    ],
+    "plan-go": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.25
+     ]
+    ],
+    "plan-more": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.327,
+      0.35
+     ]
+    ]
+   }
+  },
+  "upgrade": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-5g-home",
+    "promo-iphone-duo-preorder",
+    "promo-bring-your-phone",
+    "promo-streaming-perk"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "trade-in",
+    "home-bundle"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.068,
+     "samsung": 0.4762
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.574,
+     "module": 0.6104,
+     "plan": 0.4617
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3473,
+     "byod": 0.5208,
+     "upgrade": 0.525
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3439
+    },
+    "priceBand": {
+     "core": 0.584,
+     "premium": 0.7799
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ],
+    "promo-5g-home": [
+     [
+      "lines",
+      "family",
+      0.586,
+      0.4
+     ],
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "priceBand",
+      "premium",
+      0.796,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.709,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.063,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "ios",
+      0.063,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.063,
+      0.556
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-bring-your-phone": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.335,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-streaming-perk": [
+     [
+      "category",
+      "plans",
+      0.335,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.328,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.551,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "trade-in": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.017
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ]
+   }
+  },
+  "home-intent": {
+   "hero": [
+    "hero-family"
+   ],
+   "deals": [
+    "promo-galaxy-s26-ultra-upgrade",
+    "promo-pixel-11-launch",
+    "promo-iphone-duo-preorder",
+    "promo-iphone-18-pro-upgrade"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "trade-in",
+    "home-bundle"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0636,
+     "samsung": 0.4581
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.5562,
+     "module": 0.593,
+     "plan": 0.4438
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3457,
+     "byod": 0.519,
+     "upgrade": 0.5232
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3422
+    },
+    "priceBand": {
+     "core": 0.5823,
+     "premium": 0.7787
+    }
+   },
+   "drivers": {
+    "hero-family": [
+     [
+      "lines",
+      "family",
+      0.588,
+      0.35
+     ]
+    ],
+    "promo-galaxy-s26-ultra-upgrade": [
+     [
+      "intent",
+      "upgrade",
+      0.492,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.458,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.792,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.39
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-launch": [
+     [
+      "intent",
+      "upgrade",
+      0.492,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.578,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.288
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-duo-preorder": [
+     [
+      "intent",
+      "upgrade",
+      0.492,
+      0.25
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.792,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.059,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.542
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-iphone-18-pro-upgrade": [
+     [
+      "intent",
+      "upgrade",
+      0.492,
+      0.25
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.792,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "brand",
+      "apple",
+      0.059,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.542
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.328,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.551,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "trade-in": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.017
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ]
+   }
+  },
+  "two-weeks": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-pixel-11-season",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-four-lines",
+    "promo-watch-tablet-line"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "trade-in",
+    "home-bundle"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0605,
+     "samsung": 0.4451
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.5432,
+     "module": 0.5803,
+     "plan": 0.4308
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3445,
+     "byod": 0.5177,
+     "upgrade": 0.5219
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3411
+    },
+    "priceBand": {
+     "core": 0.581,
+     "premium": 0.7778
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.487,
+      0.5
+     ]
+    ],
+    "promo-pixel-11-season": [
+     [
+      "intent",
+      "upgrade",
+      0.491,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.576,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.288
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.446,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.791,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.059,
+      0.39
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-four-lines": [
+     [
+      "lines",
+      "family",
+      0.588,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.324,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-watch-tablet-line": [
+     [
+      "lines",
+      "family",
+      0.588,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.324,
+      0.25
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.328,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.551,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "trade-in": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.017
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ]
+   }
+  },
+  "black-friday": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-black-friday-switch",
+    "promo-pixel-11-season",
+    "promo-galaxy-z-fold8-trade-in",
+    "promo-four-lines"
+   ],
+   "pinned": [],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "trade-in",
+    "home-bundle"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0578,
+     "samsung": 0.4333
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.5313,
+     "module": 0.5686,
+     "plan": 0.4191
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3434,
+     "byod": 0.5165,
+     "upgrade": 0.5207
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.34
+    },
+    "priceBand": {
+     "core": 0.5798,
+     "premium": 0.777
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.486,
+      0.5
+     ]
+    ],
+    "promo-black-friday-switch": [
+     [
+      "intent",
+      "byod",
+      0.486,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-season": [
+     [
+      "intent",
+      "upgrade",
+      0.49,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.575,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.283
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.435,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.383
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-four-lines": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.4
+     ],
+     [
+      "intent",
+      "add-line",
+      0.323,
+      0.25
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.1
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.328,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.551,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "trade-in": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.017
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ]
+   }
+  },
+  "pin": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-pixel-11-season",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "storage-memory",
+    "plan-pairing",
+    "protection",
+    "trade-in",
+    "home-bundle"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0553,
+     "samsung": 0.4218
+    },
+    "category": {
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.5196,
+     "module": 0.557,
+     "plan": 0.4078
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3424,
+     "byod": 0.5154,
+     "upgrade": 0.5195
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3389
+    },
+    "priceBand": {
+     "core": 0.5787,
+     "premium": 0.7762
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-season": [
+     [
+      "intent",
+      "upgrade",
+      0.488,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.574,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.283
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.424,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.383
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.587,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.328,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.336,
+      0.15
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.551,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.486,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.336,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.794,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.2
+     ]
+    ],
+    "trade-in": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.2
+     ]
+    ],
+    "home-bundle": [
+     [
+      "category",
+      "home-internet",
+      0.004,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.017
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.324,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.495,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.491,
+      0.5
+     ]
+    ]
+   }
+  },
+  "covered": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-pixel-11-season",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "home-bundle",
+    "plan-pairing",
+    "protection",
+    "storage-memory",
+    "trade-in"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0471,
+     "samsung": 0.3808
+    },
+    "category": {
+     "home-internet": 0.6897,
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.4769,
+     "module": 0.5145,
+     "plan": 0.3672,
+     "tool": 0.6151
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3385,
+     "byod": 0.5111,
+     "home": 0.6885,
+     "upgrade": 0.5153
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3351
+    },
+    "priceBand": {
+     "core": 0.5745,
+     "premium": 0.7732
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-season": [
+     [
+      "intent",
+      "upgrade",
+      0.488,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.574,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.283
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.424,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.383
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.594,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.49,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.322,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.34,
+      0.15
+     ]
+    ],
+    "home-bundle": [
+     [
+      "intent",
+      "home",
+      0.655,
+      0.2
+     ],
+     [
+      "contentType",
+      "tool",
+      0.586,
+      0.2
+     ],
+     [
+      "category",
+      "home-internet",
+      0.659,
+      0.15
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.049,
+      0
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.319,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.49,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.34,
+      0.15
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.49,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.049,
+      0.204
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.454,
+      0.2
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.049,
+      0.204
+     ]
+    ],
+    "trade-in": [
+     [
+      "contentType",
+      "tool",
+      0.586,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.49,
+      0.2
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.49,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.319,
+      0.35
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.49,
+      0.5
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.486,
+      0.5
+     ]
+    ]
+   }
+  },
+  "uncovered": {
+   "hero": [
+    "hero-switch"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-pixel-11-season",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "plan-pairing",
+    "protection",
+    "storage-memory",
+    "trade-in",
+    "accessories"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.045,
+     "samsung": 0.3696
+    },
+    "category": {
+     "home-internet": 0.6897,
+     "phones": 0.6896,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.465,
+     "module": 0.5026,
+     "plan": 0.3562,
+     "tool": 0.6038
+    },
+    "ecosystem": {
+     "android": 0.7692
+    },
+    "intent": {
+     "add-line": 0.3375,
+     "byod": 0.5099,
+     "home": 0.6875,
+     "upgrade": 0.5141
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.334
+    },
+    "priceBand": {
+     "core": 0.5733,
+     "premium": 0.7723
+    }
+   },
+   "drivers": {
+    "hero-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "intent",
+      "byod",
+      0.485,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-pixel-11-season": [
+     [
+      "intent",
+      "upgrade",
+      0.488,
+      0.25
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "priceBand",
+      "core",
+      0.574,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.283
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "ecosystem",
+      "android",
+      0.763,
+      0.15
+     ],
+     [
+      "brand",
+      "samsung",
+      0.424,
+      0.2
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.79,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.708,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.06,
+      0.383
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.644,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.342,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.34,
+      0.15
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.52
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.343,
+      0.15
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.74
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.32
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.492,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.4
+     ]
+    ],
+    "trade-in": [
+     [
+      "contentType",
+      "tool",
+      0.602,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.26
+     ]
+    ],
+    "accessories": [
+     [
+      "contentType",
+      "deal",
+      0.009,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.04
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.66
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.56
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.515,
+      0.5
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.5
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.36
+     ]
+    ]
+   }
+  },
+  "cart": {
+   "hero": [
+    "hero-continue"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-5g-home",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "plan-pairing",
+    "protection",
+    "storage-memory",
+    "trade-in",
+    "accessories"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0407,
+     "samsung": 0.6802
+    },
+    "category": {
+     "home-internet": 0.6897,
+     "phones": 0.7954,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.4393,
+     "module": 0.4767,
+     "plan": 0.3328,
+     "tool": 0.5787
+    },
+    "ecosystem": {
+     "android": 0.8333
+    },
+    "intent": {
+     "add-line": 0.3351,
+     "byod": 0.5073,
+     "home": 0.6853,
+     "upgrade": 0.5115
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3317
+    },
+    "priceBand": {
+     "core": 0.5708,
+     "premium": 0.8338
+    }
+   },
+   "drivers": {
+    "hero-continue": [
+     [
+      "stage",
+      "fits deciding",
+      1,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "intent",
+      "byod",
+      0.483,
+      0.25
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.842,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-5g-home": [
+     [
+      "lines",
+      "family",
+      0.595,
+      0.4
+     ],
+     [
+      "intent",
+      "home",
+      0.653,
+      0.25
+     ],
+     [
+      "category",
+      "home-internet",
+      0.66,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "brand",
+      "samsung",
+      0.67,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.842,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.396
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.644,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.342,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.34,
+      0.15
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.52
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.343,
+      0.15
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.74
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.32
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.492,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.4
+     ]
+    ],
+    "trade-in": [
+     [
+      "contentType",
+      "tool",
+      0.602,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.26
+     ]
+    ],
+    "accessories": [
+     [
+      "contentType",
+      "deal",
+      0.009,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.04
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.66
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.56
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.515,
+      0.5
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.5
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.36
+     ]
+    ]
+   }
+  },
+  "template": {
+   "hero": [
+    "hero-continue"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-5g-home",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "plan-pairing",
+    "protection",
+    "storage-memory",
+    "trade-in",
+    "accessories"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0389,
+     "samsung": 0.6695
+    },
+    "category": {
+     "home-internet": 0.6897,
+     "phones": 0.7954,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.4274,
+     "module": 0.4646,
+     "plan": 0.3221,
+     "tool": 0.5668
+    },
+    "ecosystem": {
+     "android": 0.8333
+    },
+    "intent": {
+     "add-line": 0.3341,
+     "byod": 0.5061,
+     "home": 0.6842,
+     "upgrade": 0.5103
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3307
+    },
+    "priceBand": {
+     "core": 0.5696,
+     "premium": 0.8331
+    }
+   },
+   "drivers": {
+    "hero-continue": [
+     [
+      "stage",
+      "fits deciding",
+      1,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "intent",
+      "byod",
+      0.482,
+      0.25
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.841,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-5g-home": [
+     [
+      "lines",
+      "family",
+      0.595,
+      0.4
+     ],
+     [
+      "intent",
+      "home",
+      0.651,
+      0.25
+     ],
+     [
+      "category",
+      "home-internet",
+      0.66,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "brand",
+      "samsung",
+      0.659,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.841,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.396
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.644,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.342,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.34,
+      0.15
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.52
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.343,
+      0.15
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.74
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.32
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.492,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.4
+     ]
+    ],
+    "trade-in": [
+     [
+      "contentType",
+      "tool",
+      0.602,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.26
+     ]
+    ],
+    "accessories": [
+     [
+      "contentType",
+      "deal",
+      0.009,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.04
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.66
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.56
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.515,
+      0.5
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.5
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.36
+     ]
+    ]
+   }
+  },
+  "clicks": {
+   "hero": [
+    "hero-continue"
+   ],
+   "deals": [
+    "promo-iphone-duo-preorder",
+    "promo-black-friday-switch",
+    "promo-5g-home",
+    "promo-galaxy-z-fold8-trade-in"
+   ],
+   "pinned": [
+    "promo-iphone-duo-preorder"
+   ],
+   "modules": [
+    "connected-devices",
+    "plan-pairing",
+    "protection",
+    "storage-memory",
+    "trade-in",
+    "accessories"
+   ],
+   "plans": [
+    "plan-more",
+    "plan-max",
+    "plan-simple"
+   ],
+   "rail": [
+    "galaxy-s26-ultra",
+    "galaxy-s26-plus",
+    "galaxy-z-fold8",
+    "galaxy-z-flip8",
+    "galaxy-s26",
+    "pixel-11-pro"
+   ],
+   "vector": {
+    "brand": {
+     "google": 0.0389,
+     "samsung": 0.6695
+    },
+    "category": {
+     "home-internet": 0.6897,
+     "phones": 0.7954,
+     "plans": 0.3571,
+     "watches-tablets": 0.3571
+    },
+    "contentType": {
+     "compare": 0.4274,
+     "module": 0.4646,
+     "plan": 0.3221,
+     "tool": 0.5668
+    },
+    "ecosystem": {
+     "android": 0.8333
+    },
+    "intent": {
+     "add-line": 0.3341,
+     "byod": 0.5061,
+     "home": 0.6842,
+     "upgrade": 0.5103
+    },
+    "lines": {
+     "family": 0.625
+    },
+    "perk": {
+     "hotspot-travel": 0.3307
+    },
+    "priceBand": {
+     "core": 0.5696,
+     "premium": 0.8331
+    }
+   },
+   "drivers": {
+    "hero-continue": [
+     [
+      "stage",
+      "fits deciding",
+      1,
+      0.5
+     ]
+    ],
+    "promo-iphone-duo-preorder": [],
+    "promo-black-friday-switch": [
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "intent",
+      "byod",
+      0.482,
+      0.25
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.841,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.5
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-5g-home": [
+     [
+      "lines",
+      "family",
+      0.595,
+      0.4
+     ],
+     [
+      "intent",
+      "home",
+      0.651,
+      0.25
+     ],
+     [
+      "category",
+      "home-internet",
+      0.66,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "promo-galaxy-z-fold8-trade-in": [
+     [
+      "brand",
+      "samsung",
+      0.659,
+      0.2
+     ],
+     [
+      "ecosystem",
+      "android",
+      0.825,
+      0.15
+     ],
+     [
+      "priceBand",
+      "premium",
+      0.841,
+      0.1
+     ],
+     [
+      "category",
+      "phones",
+      0.805,
+      0.1
+     ],
+     [
+      "regional",
+      "US-NY",
+      0.048,
+      0.396
+     ],
+     [
+      "merchandising",
+      "promotion",
+      0,
+      0.1
+     ]
+    ],
+    "connected-devices": [
+     [
+      "lines",
+      "family",
+      0.644,
+      0.3
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "intent",
+      "add-line",
+      0.342,
+      0.2
+     ],
+     [
+      "category",
+      "watches-tablets",
+      0.34,
+      0.15
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.52
+     ]
+    ],
+    "plan-pairing": [
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "contentType",
+      "module",
+      0.497,
+      0.2
+     ],
+     [
+      "category",
+      "plans",
+      0.343,
+      0.15
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.74
+     ]
+    ],
+    "protection": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.32
+     ]
+    ],
+    "storage-memory": [
+     [
+      "priceBand",
+      "premium",
+      0.784,
+      0.2
+     ],
+     [
+      "contentType",
+      "compare",
+      0.492,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.4
+     ]
+    ],
+    "trade-in": [
+     [
+      "contentType",
+      "tool",
+      0.602,
+      0.2
+     ],
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.2
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.26
+     ]
+    ],
+    "accessories": [
+     [
+      "contentType",
+      "deal",
+      0.009,
+      0.2
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.04
+     ]
+    ],
+    "plan-more": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "hotspot-travel",
+      0.367,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.66
+     ]
+    ],
+    "plan-max": [
+     [
+      "intent",
+      "upgrade",
+      0.519,
+      0.5
+     ],
+     [
+      "perk",
+      "streaming",
+      0.036,
+      0.35
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.56
+     ]
+    ],
+    "plan-simple": [
+     [
+      "intent",
+      "byod",
+      0.515,
+      0.5
+     ],
+     [
+      "intent",
+      "switch",
+      0.006,
+      0.5
+     ],
+     [
+      "regional",
+      "US",
+      0.05,
+      0.36
+     ]
+    ]
+   }
+  }
+ }
+}

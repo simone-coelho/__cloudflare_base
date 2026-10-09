@@ -1,0 +1,13 @@
+{
+ "name": "15-phone-sign-in",
+ "beat": 15,
+ "act": 7,
+ "actName": "One person",
+ "press": "the phone: a stranger, then sign-in (live, a fictional account; the worker mints the signed link)",
+ "kind": "context",
+ "label": "The phone, then sign-in",
+ "who": "shopper",
+ "lane": "P3",
+ "engine": "the phone becomes the laptop’s taste in one request",
+ "sees": "“linked at sign-in · consented · no device matching”"
+}

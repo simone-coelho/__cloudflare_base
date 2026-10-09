@@ -103,3 +103,6 @@ llm-models-keys.md
 
 # Cursor MCP config carries the Optimizely API token. Copy mcp.json.example and fill it in; never commit the real one.
 .cursor/mcp.json
+
+# Local-only merchandiser token for the Top Offers director bar (loopback seed).
+public/top-offers/beats/operator.local.json

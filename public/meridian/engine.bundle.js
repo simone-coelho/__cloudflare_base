@@ -1153,6 +1153,9 @@ function compileSlotConstraints(slot, extended = true) {
 }
 
 // src/reflex/contentCompose.ts
+var CONFIGURED_ORDER_NOTE = "configured order position \u2014 the merchandiser\u2019s order for this context placed it; the ranking did not";
+var BLENDED_NOTE = "layout blend position \u2014 ranked by R + (1 \u2212 p) \xD7 B + p \xD7 Q, the rank base R from the slot\u2019s catalogue order";
+var BLENDED_ORDER_NOTE = "layout blend position \u2014 ranked by R + (1 \u2212 p) \xD7 B + p \xD7 Q, the rank base R from the merchandiser\u2019s configured order for this context";
 var HISTORICAL_PINS = /* @__PURE__ */ Symbol("historical-pins");
 var HISTORICAL_GOVERNANCE = /* @__PURE__ */ Symbol("historical-slot-governance");
 var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governance-v1");
@@ -1256,6 +1259,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     }
   }
   let order = 0;
+  const ordered = [];
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
     const prefix = prefixes.get(slot);
@@ -1295,7 +1299,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) continue;
     const excluded = forbidden.get(slot);
     const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
-    const scored = eligible.map((p) => {
+    const blended = slot.blend === true && adjust !== void 0;
+    const rankBase = (pool) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length]));
+    const catalogueBase = blended ? rankBase(eligible) : null;
+    const scoreOf = (p, R) => {
       const drivers = [];
       let score = 0;
       for (const [dim2, values] of Object.entries(p.tags)) {
@@ -1313,15 +1320,18 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         drivers.push("completes", slot.prefer.label, 1, slot.prefer.bonus);
       }
       if (adjust) {
-        const adjusted = adjust(p, slot.slot, score);
-        if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted;
+        const adjusted = R === void 0 ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R });
+        if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== void 0)) score = adjusted;
       }
       return { p, score, drivers };
-    }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    };
+    const scored = eligible.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
     let byScore = null;
     let promoted = null;
+    let picked = false;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      picked = Boolean(pick);
       if (pick?.ranking) {
         const order2 = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
@@ -1343,7 +1353,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded = [];
     let pendingSkips = [];
-    const serve = (s, diversity2) => {
+    const serve = (s, diversity2, note) => {
       const drivers = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({
@@ -1364,9 +1374,40 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         order: order++,
         score: round3(s.score),
         strategy: cold ? "default" : "affinity",
-        explain: { drivers: drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
+        explain: { drivers: drivers.slice(0, 4), ...note ? { note } : cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
       });
     };
+    if (slot.order && !picked) {
+      const capacity = prefix ? remaining : slot.take;
+      if (blended) {
+        const pool = new Map(eligible.map((p) => [p.id, p]));
+        const listed = [], seen2 = /* @__PURE__ */ new Set();
+        for (const id of slot.order) {
+          const p = pool.get(id);
+          if (p && !used.has(p.id) && !seen2.has(p.id)) {
+            seen2.add(p.id);
+            listed.push(p);
+          }
+        }
+        const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i]));
+        const ranked = listed.map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id) - at.get(y.p.id));
+        candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
+        for (const s of ranked.slice(0, capacity)) serve(s, void 0, BLENDED_ORDER_NOTE);
+      } else {
+        const byId = new Map(scored.map((s) => [s.p.id, s]));
+        let served = 0;
+        for (const id of slot.order) {
+          if (served >= capacity) break;
+          const s = byId.get(id);
+          if (!s || used.has(s.p.id)) continue;
+          serve(s, void 0, CONFIGURED_ORDER_NOTE);
+          served += 1;
+        }
+      }
+      ordered.push(slot.slot);
+      continue;
+    }
+    const takeNote = blended ? BLENDED_NOTE : void 0;
     let taken = 0;
     for (const s of scored) {
       if (taken >= (prefix ? remaining : slot.take)) break;
@@ -1381,16 +1422,16 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       const skipped = pendingSkips;
       pendingSkips = [];
-      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0);
+      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0, takeNote);
       taken += 1;
     }
     for (const s of yielded) {
       if (taken >= (prefix ? remaining : slot.take)) break;
-      serve(s, { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` });
+      serve(s, { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` }, takeNote);
       taken += 1;
     }
   }
-  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {} };
+  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {}, ...ordered.length ? { ordered } : {} };
 }
 function composeContent(pieces, affinity, slots) {
   return composeContentDetailed(pieces, affinity, slots).decisions;

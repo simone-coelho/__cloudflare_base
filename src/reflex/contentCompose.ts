@@ -59,7 +59,40 @@ export interface ContentSlotSpec {
    * unfilled, the yielded pieces fill them in rank order, marked `relaxed`.
    */
   diversity?: { dimension: string; max: number };
+  /**
+   * P01: a configured module order the caller resolved for THIS decision (the
+   * shopper's context, an arm that personalizes). When the slot's exploration
+   * picks nothing, the slot serves exactly these modules, in this order, after
+   * its own pinned prefix: only those the slot could serve at all (eligible,
+   * admitted by its gates, not served or reserved elsewhere on the page), and
+   * never one it does not list, which stays hidden. Diversity does not apply to
+   * it. When exploration picks, the slot serves its own decision (decision D2).
+   * On a slot that also carries `blend` (P28), the order is not served exactly:
+   * it supplies the rank base and its listed modules are ranked by the blend.
+   */
+  order?: readonly string[];
+  /**
+   * P28 (decision D1): the slot opted into the behaviour-and-performance blend.
+   * The composer hands `adjust` each candidate's rank base R = (M − i) / M over
+   * the slot's baseline — the modules it could serve (eligible, admitted by its
+   * gates, not served or reserved elsewhere on the page) in catalogue order, or,
+   * when an `order` is served, the listed modules among them in the order's
+   * sequence, an unlisted module never entering the pool — and ranks by the
+   * score `adjust` returns, whatever its sign. Requires `adjust`; without it the
+   * slot decides exactly as before.
+   */
+  blend?: true;
 }
+
+/**
+ * P01: what a position served under a configured order says on its explain, on
+ * a slot that does not opt into the layout blend (P28).
+ */
+export const CONFIGURED_ORDER_NOTE = 'configured order position — the merchandiser’s order for this context placed it; the ranking did not';
+/** P28: what a position the layout blend ranked over the slot's catalogue order says on its explain. */
+export const BLENDED_NOTE = 'layout blend position — ranked by R + (1 − p) × B + p × Q, the rank base R from the slot’s catalogue order';
+/** P28: what a position the layout blend ranked over the configured order for the shopper's context says on its explain. */
+export const BLENDED_ORDER_NOTE = 'layout blend position — ranked by R + (1 − p) × B + p × Q, the rank base R from the merchandiser’s configured order for this context';
 
 export interface ContentDecision {
   contentId: string;
@@ -111,6 +144,8 @@ export interface ComposeContentResult {
   candidates: Record<string, SlotCandidate[]>;
   /** Refused configuration, not fabricated delivery decisions or ledger rows. */
   pinDiagnostics?: PinDiagnostic[];
+  /** P01: the slots that served their configured `order` on this decision, in page order. Absent when none did. */
+  ordered?: string[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -122,9 +157,11 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
 /**
  * An optional final adjustment per candidate, applied after the tag sum and
  * before ranking. The learning layer uses it to multiply by lift^γ; the base
- * score is handed back so the receipt can show both.
+ * score is handed back so the receipt can show both. On a slot that opted into
+ * the layout blend (`blend`, P28) the composer also hands it the candidate's
+ * rank base `R`, and the returned score is the blend's.
  */
-export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number) => number;
+export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number, rank?: { R: number }) => number;
 
 /**
  * An optional exploration hook, given the slot's ranked candidates after
@@ -222,6 +259,7 @@ export function composeContentDetailed(
     }
   }
   let order = 0;
+  const ordered: string[] = [];
 
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
@@ -250,7 +288,15 @@ export function composeContentDetailed(
     if ((prefix && remaining <= 0) || (rankingSlots && !rankingSlots.has(slot.slot))) continue;
     const excluded = forbidden.get(slot);
     const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p));
-    const scored = eligible.map((p) => {
+    // P28 (decision D1): on a slot that opted into the layout blend, each
+    // candidate's rank base R = (M − i) / M over a baseline of M modules, i
+    // counted from 0 (so the first module's R is 1). The slot's own baseline is
+    // the modules it could serve — after eligibility, its gates and what the page
+    // already served or reserved — in catalogue order (`eligible` keeps it).
+    const blended = slot.blend === true && adjust !== undefined;
+    const rankBase = (pool: readonly ContentPieceLike[]) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length] as const));
+    const catalogueBase = blended ? rankBase(eligible) : null;
+    const scoreOf = (p: ContentPieceLike, R?: number) => {
       // Capture values now: prefer/adjust/explore may mutate the source inputs.
       // Only served candidates need driver objects and their presentation order.
       const drivers: Array<string | number> = [];
@@ -266,9 +312,12 @@ export function composeContentDetailed(
         score += slot.prefer.bonus;
         drivers.push('completes', slot.prefer.label, 1, slot.prefer.bonus);
       }
-      if (adjust) { const adjusted = adjust(p, slot.slot, score); if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted; }
+      // The blend's score is taken whatever its sign: a learned lift below 1 subtracts.
+      if (adjust) { const adjusted = R === undefined ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R }); if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== undefined)) score = adjusted; }
       return { p, score, drivers };
-    }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    };
+    const scored = eligible.map((p) => scoreOf(p, catalogueBase?.get(p.id)))
+      .sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
 
     // W28.C1.01(b) (F23 §4.2): where an exploration moved ONE piece to the front,
     // the support the ledger records is the top candidates BY SCORE — taken
@@ -279,8 +328,10 @@ export function composeContentDetailed(
     // whose whole ranking was replaced, records exactly what it recorded before.
     let byScore: typeof scored | null = null;
     let promoted: string | null = null;
+    let picked = false;
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      picked = Boolean(pick);
       if (pick?.ranking) {
         const order = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order.get(x.p.id) ?? 1e9) - (order.get(y.p.id) ?? 1e9));
@@ -306,7 +357,7 @@ export function composeContentDetailed(
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded: typeof scored = [];
     let pendingSkips: string[] = [];
-    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity']) => {
+    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity'], note?: string) => {
       const drivers: ContentDecision['explain']['drivers'] = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({ dim: s.drivers[i] as string, value: s.drivers[i + 1] as string,
@@ -318,8 +369,47 @@ export function composeContentDetailed(
       out.push({ contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
         slot: slot.slot, order: order++, score: round3(s.score),
         strategy: cold ? 'default' : 'affinity',
-        explain: { drivers: drivers.slice(0, 4), ...(cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
+        explain: { drivers: drivers.slice(0, 4), ...(note ? { note } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
     };
+    // P01: the configured order, when the caller resolved one and exploration
+    // picked nothing on this decision. Exactly its modules, in its order, up to
+    // the slot's capacity after the pinned prefix; a listed module the slot could
+    // not serve (ineligible now, refused by a gate, served or reserved elsewhere
+    // on the page, or one of this slot's own pins) is passed over, never
+    // replaced, and an unlisted module is never served here.
+    if (slot.order && !picked) {
+      const capacity = prefix ? remaining : slot.take;
+      if (blended) {
+        // P28 (R-P41): on a slot that opted into the blend, the order supplies
+        // the rank base — the listed modules the slot could serve, in the
+        // order's sequence (M of them, i from 0; one passed over is no member)
+        // — and the blend ranks exactly those modules. An unlisted module never
+        // enters the pool, so it stays hidden; diversity does not apply.
+        const pool = new Map(eligible.map((p) => [p.id, p] as const));
+        const listed: ContentPieceLike[] = [], seen = new Set<string>();
+        for (const id of slot.order) {
+          const p = pool.get(id);
+          if (p && !used.has(p.id) && !seen.has(p.id)) { seen.add(p.id); listed.push(p); }
+        }
+        const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i] as const));
+        const ranked = listed.map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id)! - at.get(y.p.id)!);
+        candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
+        for (const s of ranked.slice(0, capacity)) serve(s, undefined, BLENDED_ORDER_NOTE);
+      } else {
+        const byId = new Map(scored.map((s) => [s.p.id, s] as const));
+        let served = 0;
+        for (const id of slot.order) {
+          if (served >= capacity) break;
+          const s = byId.get(id);
+          if (!s || used.has(s.p.id)) continue;
+          serve(s, undefined, CONFIGURED_ORDER_NOTE);
+          served += 1;
+        }
+      }
+      ordered.push(slot.slot);
+      continue;
+    }
+    const takeNote = blended ? BLENDED_NOTE : undefined;
     let taken = 0;
     for (const s of scored) {
       if (taken >= (prefix ? remaining : slot.take)) break;
@@ -329,16 +419,16 @@ export function composeContentDetailed(
         for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
       }
       const skipped = pendingSkips; pendingSkips = [];
-      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined);
+      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined, takeNote);
       taken += 1;
     }
     for (const s of yielded) {
       if (taken >= (prefix ? remaining : slot.take)) break;
-      serve(s, { dimension: rule!.dimension, max: rule!.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule!.max} per ${rule!.dimension}: nothing else was eligible` });
+      serve(s, { dimension: rule!.dimension, max: rule!.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule!.max} per ${rule!.dimension}: nothing else was eligible` }, takeNote);
       taken += 1;
     }
   }
-  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}) };
+  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}) };
 }
 
 /** The delivery contract alone: one decision per slot position, in page order. */
