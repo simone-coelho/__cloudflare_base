@@ -25,7 +25,7 @@ import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, slotOrderCatalogueErrors, SLOTS_KIND } from '@/content/kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, type PriorsDoc } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
@@ -180,6 +180,50 @@ async function requestOrderRefusals(c: Context<Ctx>, scope: string, members: rea
   for (const member of members) {
     if (member.kind.name !== SLOTS_KIND.name) continue;
     const refused = await orderRefusals(c, scope, member.document, catalogue);
+    if (!refused) continue;
+    const named = member.at === null ? refused.errors : refused.errors.map(error => `${member.at}: ${error}`);
+    if (refused.status === 503) return { status: 503, errors: named };
+    errors.push(...named);
+  }
+  return errors.length ? { status: 422, errors } : null;
+}
+
+/**
+ * P28 (decision D1, R-P31): a learn document's layout-blend opt-in is published
+ * only on a page's declared layout slot, and only the slots document says which
+ * slot that is, so the refusal is made here, on the pattern of the order check
+ * above: EVERY learn document one request publishes — the primary document or a
+ * related member, its kind resolved as `kindOf` resolves every kind — whose
+ * dials carry a blend is checked against the slots document the same request
+ * publishes (the primary, or a related member of the slots kind in any case of
+ * the word), or else the one in force. A learn document without a blend is never
+ * touched: no read is made for it. A refusal of a related member names it
+ * (`publicationChanges[i]`) and refuses the whole request, so no member of it is
+ * written. Fail closed: a slots document that cannot be read refuses the
+ * publication rather than publishing an unchecked opt-in; an absent one
+ * declares no layout slot.
+ */
+async function blendRefusals(c: Context<Ctx>, scope: string, learnCandidate: unknown, slotsCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const valid = LEARN_KIND.validate(learnCandidate);
+  if (!valid.ok || !Object.values(valid.value.slots ?? {}).some(dials => dials.blend !== undefined)) return null;
+  let slots: SlotCatalog;
+  if (slotsCandidate !== undefined) {
+    const checked = SLOTS_KIND.validate(slotsCandidate);
+    if (!checked.ok) return null;
+    slots = checked.value;
+  } else {
+    try { slots = (await readPublication(c.env, SLOTS_KIND, scope))?.value ?? { pages: {} }; }
+    catch { return { status: 503, errors: ['slots: the slots document is unavailable, so a layout blend cannot be checked against the page\'s declared layout slot'] }; }
+  }
+  const errors = learnBlendLayoutErrors(valid.value, slots);
+  return errors.length ? { status: 422, errors } : null;
+}
+async function requestBlendRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const slotsDocument = members.find(member => member.kind.name === SLOTS_KIND.name)?.document;
+  const errors: string[] = [];
+  for (const member of members) {
+    if (member.kind.name !== LEARN_KIND.name) continue;
+    const refused = await blendRefusals(c, scope, member.document, slotsDocument);
     if (!refused) continue;
     const named = member.at === null ? refused.errors : refused.errors.map(error => `${member.at}: ${error}`);
     if (refused.status === 503) return { status: 503, errors: named };
@@ -430,6 +474,11 @@ contentRoutes.post('/:kind/validate', async (c) => {
     const refused = await orderRefusals(c, scope, candidate);
     if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
   }
+  // P28 (R-P31): a dry run of a learn document says what its write would say about a blend.
+  if (k.kind.name === LEARN_KIND.name) {
+    const refused = await blendRefusals(c, scope, candidate);
+    if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
+  }
   const result = k.kind.validate(candidate);
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
@@ -492,11 +541,18 @@ contentRoutes.put('/:kind', async (c) => {
     // catalogue this request publishes or else the one in force.
     const orders = await requestOrderRefusals(c, scope, members);
     if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
+    // P28 (R-P31): the layout blend of every learn member, against the slots
+    // document this request publishes or else the one in force.
+    const blends = await requestBlendRefusals(c, scope, members);
+    if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
     result = await publishSet(c.env, changes, { ...meta, note });
   } else {
     // P01 (R-P24): a slots document published alone is checked against the catalogue in force.
     const orders = await requestOrderRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
     if (orders) return c.json({ ok: false, errors: orders.errors }, orders.status);
+    // P28 (R-P31): a learn document published alone is checked against the slots document in force.
+    const blends = await requestBlendRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
+    if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
     result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
   return result.ok

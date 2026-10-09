@@ -818,6 +818,38 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
   return validateRetainedLearn(candidate, false);
 }
 
+/**
+ * P28 (decision D1): the layout blend's dial, structurally — `{ p }` and nothing
+ * else, `p` a number from 0 to 1, 0 when absent. Errors are suffixes of the
+ * dial's address (`slots.{slot}.blend`), so a refusal names the blend.
+ */
+function blendDialErrors(candidate: unknown): string[] {
+  if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'p')) return [': an object { p } and nothing else, p a number from 0 to 1 (0 when absent)'];
+  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) return [`.p: ${quoted(candidate.p)} is not a number from 0 to 1`];
+  return [];
+}
+
+/**
+ * P28 (decision D1, R-P31): the cross-document half of the blend's refusals,
+ * which only the route that holds both documents can make: a slot whose learn
+ * dials opt into the blend must be a page's DECLARED layout slot (P02's
+ * `layout: true`) in the slots document, and on no page an ordinary slot of the
+ * same name. Pure; the caller supplies the slots document it read. A later
+ * slots change is not refused here: the decision applies the blend only on a
+ * slot that declares the layout and decides any other slot exactly as before.
+ */
+export function learnBlendLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slots: Pick<SlotCatalog, 'pages'>): string[] {
+  const errors: string[] = [];
+  for (const [slot, dials] of Object.entries(learn.slots ?? {})) {
+    if (dials.blend === undefined) continue;
+    const occurrences = Object.entries(slots.pages).flatMap(([page, list]) => list.filter(s => s.slot === slot).map(s => ({ page, declared: s.layout === true })));
+    const undeclared = occurrences.find(o => !o.declared);
+    if (!occurrences.length) errors.push(`slots.${slot}.blend: slot '${slot}' is on no page of the slots document; the blend is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+    else if (undeclared) errors.push(`slots.${slot}.blend: slot '${slot}' is not the declared layout slot of page '${undeclared.page}'; the blend is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+  }
+  return errors;
+}
+
 function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['learn: must be an object'] };
@@ -936,6 +968,17 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
               dials.items[item] = ctl.mode === 'freeze' ? { mode: 'freeze', lift: ctl.lift as number } : { mode: 'reject' };
             }
           }
+        }
+        // P28 (decision D1): the layout blend's opt-in, kept exactly as authored.
+        // Whether the slot is a page's declared layout slot is a cross-document
+        // rule, made where both documents are at hand (`learnBlendLayoutErrors`,
+        // applied by src/routes/content.ts). A RETAINED document whose blend the
+        // current contract refuses keeps reading with the blend dropped, never
+        // partially applied, so its slot decides exactly as it did before.
+        if (d.blend !== undefined) {
+          const refused = blendDialErrors(d.blend);
+          if (!refused.length) dials.blend = { ...(isRecord(d.blend) && d.blend.p !== undefined ? { p: d.blend.p as number } : {}) };
+          else if (!historical) for (const error of refused) errors.push(`slots.${slot}.blend${error}`);
         }
         slots[slot] = dials;
       }

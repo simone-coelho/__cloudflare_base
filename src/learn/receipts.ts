@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord } from '@/content/types';
+import type { DecisionRecord, LayoutBlendTerms } from '@/content/types';
 import type { Names } from './rows';
 
 export interface Receipt {
@@ -62,6 +62,13 @@ export interface Receipt {
    * order — and absent on every position no configured order set.
    */
   configuredOrder?: NonNullable<DecisionRecord['explain']['configuredOrder']>;
+  /**
+   * P28 (decision D1): the layout blend's terms for this position, exactly as
+   * the record carries them — the rank base R, the behaviour term B, the
+   * performance term Q and p, keys sorted — so that R + (1 − p) × B + p × Q is
+   * `score_final`; absent on every position the blend did not rank.
+   */
+  blend?: LayoutBlendTerms;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -120,28 +127,17 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // W23 X1.02: set exactly where the learned-lift sentence is written, so the
   // terms and the sentence can never describe two different decisions.
   let liftTerms: LiftTerms | undefined;
-  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
-  // exposure unit. The VIEWABLE impression is a different thing and the
-  // learning loop counts none of it today (`learningInputOf` in
-  // `src/ledger/records.ts` states the same fact in code), so the receipt that
-  // reports an admitted render says both — no reader may take "rendered" for
-  // "seen", or for the event the platform learns from.
-  why.push(r.measurementBasis === 'rendered-v1'
-    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
-    : 'Legacy served-decision exposure; rendering was not confirmed.');
-  if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
-  else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
-  else if (e.configuredOrder) {
-    // P01: the configured order placed it, so no ranking sentence is claimed for
-    // its position; the numbers the ranking computed stay on the record.
-    const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
-    why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
-      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
-  } else {
-    if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
+  /**
+   * The sentences of every term before the learned one — the interests matched,
+   * the arrival's context, the region's trend, their model, the journey stage,
+   * freshness, fatigue, merchandising and diversity — read the same way for a
+   * ranked position and for one the layout blend ranked (whose behaviour term B
+   * they make up); only what a position with none of them says differs.
+   */
+  const behaviour = (noSignal: string) => {
     const drivers = (e.drivers || []).filter((d) => !['regional', 'external', 'merchandising', 'stage', 'freshness', 'fatigue', 'completes'].includes(d.dim)).slice(0, 3);
     if (drivers.length) why.push(`Interest matched: ${drivers.map((d) => `${d.dim} ${d.value} (interest ${r3(d.a)} × weight ${r3(d.weight)})`).join(', ')}.`);
-    else if (e.score_base === 0 && !e.freshness && !e.stage) why.push('No interest signal yet for this shopper: the slot served its catalogue order.');
+    else if (e.score_base === 0 && !e.freshness && !e.stage) why.push(noSignal);
     for (const d of (e.drivers || []).filter((d) => d.dim === 'completes')) why.push(`Completes what she committed to: ${d.value} (+${r3(d.weight)}).`);
     // W16 C3: the arrival's own evidence, named rule by rule with the delta it
     // caused. A candidate the rules never named says nothing here rather than
@@ -159,6 +155,54 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (e.fatigue) why.push(`Fatigue: ${e.fatigue.sentence}.`);
     if (e.merchandising) why.push(`Merchandising: ${e.merchandising.sentence}${e.merchandising.sentence.endsWith('.') ? '' : '.'}`);
     if (e.diversity) why.push(`Diversity: ${e.diversity.sentence}.`);
+  };
+  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
+  // exposure unit. The VIEWABLE impression is a different thing and the
+  // learning loop counts none of it today (`learningInputOf` in
+  // `src/ledger/records.ts` states the same fact in code), so the receipt that
+  // reports an admitted render says both — no reader may take "rendered" for
+  // "seen", or for the event the platform learns from.
+  why.push(r.measurementBasis === 'rendered-v1'
+    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
+    : 'Legacy served-decision exposure; rendering was not confirmed.');
+  if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
+  else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
+  else if (e.blend) {
+    // P28 (decision D1, R-P42): the layout blend ranked this position, so the
+    // receipt reads out each of its terms — where the rank base came from, what
+    // the shopper's behaviour contributed, what learned performance contributed —
+    // and the sum, and never claims that the ranking did not place it. Under a
+    // configured order the order supplied R: k of n counts over the whole order.
+    const b = e.blend;
+    if (e.configuredOrder) {
+      const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+      why.push(`Rank base R ${r3(b.R)} from the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered, ranked with them by the layout blend; a module the order does not list is not shown in this context.`);
+    } else why.push(`Rank base R ${r3(b.R)} from the slot's catalogue order of the modules it could serve.`);
+    behaviour('No interest signal yet for this shopper: the behaviour term B is 0.');
+    if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece: the performance term Q is 0.');
+    else if (e.lift) {
+      const l = e.lift;
+      const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
+      why.push(e.control === 'freeze'
+        ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}: clamped and less one, the performance term Q is ${r3(b.Q)}.`
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}: clamped and less one, the performance term Q is ${r3(b.Q)}, not corrected for position or placement.`);
+      liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
+        n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
+        shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
+    } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: the performance term Q is 0.');
+    if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned term held at zero.');
+    why.push(`Layout blend at p ${b.p}: score ${r3(e.score_final)} = R ${r3(b.R)} + (1 − ${b.p}) × B ${r3(b.B)} + ${b.p} × Q ${r3(b.Q)}.`);
+    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+  } else if (e.configuredOrder) {
+    // P01: the configured order placed it, so no ranking sentence is claimed for
+    // its position; the numbers the ranking computed stay on the record. Only on
+    // a slot that does not opt into the layout blend (P28; the branch above).
+    const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+    why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
+      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
+  } else {
+    if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
+    behaviour('No interest signal yet for this shopper: the slot served its catalogue order.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece; it competes on its base score alone.');
     if (e.lift) {
       const l = e.lift;
@@ -205,6 +249,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     score_base: r3(e.score_base), score_final: r3(e.score_final),
     ...(liftTerms ? { lift_terms: liftTerms } : {}),
     ...(e.configuredOrder ? { configuredOrder: e.configuredOrder } : {}),
+    ...(e.blend ? { blend: { B: e.blend.B, Q: e.blend.Q, R: e.blend.R, p: e.blend.p } } : {}),
     why,
   };
 }

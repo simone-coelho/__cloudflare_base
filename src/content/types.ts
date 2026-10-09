@@ -395,7 +395,32 @@ export interface SlotDials {
   items?: Record<string, ItemControl>;
   /** Doc 22 §9: how much this slot trusts their model, w_ext. Absent or 0 means the term is off for the slot. */
   external?: { weight: number };
+  /**
+   * P28 (decision D1): the page's declared layout slot opts into the
+   * behaviour-and-performance blend. Each module of the slot is then scored
+   * R + (1 − p) × B + p × Q instead of base × lift^γ, where R = (M − i) / M is
+   * the module's rank base over the slot's baseline (the configured order for
+   * the shopper's context, else the eligible modules in catalogue order; i
+   * counted from 0, so the first module's R is 1), B its pre-lift behaviour
+   * score and Q its clamped learned lift minus one (0 where no level answers).
+   * `p` is 0 to 1 and 0 when absent; the document keeps the member exactly as
+   * authored. Published only on a slot that is a page's declared layout slot;
+   * on any other slot, and on a slot whose dials carry none, the slot decides
+   * exactly as before.
+   */
+  blend?: LayoutBlendDial;
 }
+
+/** P28: the layout blend's opt-in on a slot's learn dials, `{ p }` with p in 0..1 (absent: 0). */
+export interface LayoutBlendDial { p?: number }
+
+/**
+ * P28 (decision D1): what the layout blend computed for one module, on the
+ * decision record (`explain.blend`) and the receipt (`blend`), keys sorted.
+ * R + (1 − p) × B + p × Q is the served score (each term at three decimals,
+ * `p` as published).
+ */
+export interface LayoutBlendTerms { B: number; Q: number; R: number; p: number }
 
 export interface LearnConfig {
   version?: string;
@@ -524,6 +549,12 @@ export interface DecisionInputs {
      * orders, independently of the other policies.
      */
     orders?: 'configured-order-v1';
+    /**
+     * P28: present only on a decision on which a slot of the page ranked its
+     * modules by the layout blend; absence replays the page without the blend,
+     * independently of the other policies.
+     */
+    blend?: 'layout-blend-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
@@ -600,7 +631,7 @@ export interface DecisionRecord {
     contextual?: { applied: number; drivers: SeedDriver[] };
     /** The learned lift and the dial it was applied through; null when nothing has been learned for this item in this cell. */
     lift: LiftApplied | null;
-    /** score_base × lift^γ. Equal to score_base while γ is 0. */
+    /** score_base × lift^γ. Equal to score_base while γ is 0. On a slot that opted into the layout blend, R + (1 − p) × B + p × Q (`blend`). */
     score_final: number;
     /** Why this placement was an exploration pick, when it was. */
     exploration?: { mode: string; reason: string; bucket: number; sample?: number };
@@ -637,6 +668,13 @@ export interface DecisionRecord {
      * `position` is the position it was served at.
      */
     configuredOrder?: ConfiguredOrder;
+    /**
+     * P28 (decision D1): this position's slot opted into the layout blend and the
+     * blend ranked it: the rank base R, the pre-lift behaviour score B, the
+     * clamped learned lift minus one Q and the published p, keys sorted, so that
+     * R + (1 − p) × B + p × Q is `score_final`. Absent on every other record.
+     */
+    blend?: LayoutBlendTerms;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
