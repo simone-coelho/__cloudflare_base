@@ -534,7 +534,7 @@
     {
       "id": "P03",
       "title": "Module-level impression and engagement events",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
