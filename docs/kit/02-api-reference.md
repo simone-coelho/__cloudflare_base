@@ -224,7 +224,7 @@ Every slot's offered decision for the page, in page order; private records are n
   "versions": { "config": 15, "catalog": 4, "slots": 7, "learn": 19, "lift": 1788540535150, "prior": 6, "policy": 19 },
   "config_label": "reflex-demo-v1+r15",
   "regional": null,
-  "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>", "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
+  "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "slotPosition": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>", "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
   "pinDiagnostics": [ { "slot": "chero", "pinnedPieceId": "cnt_9ab2f10c", "pinIndex": 1, "reason": "missing_or_ineligible" } ],
   "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session", "consent": { "tracking": true, "personalization": true, "personalized": true } },
   "write": false
@@ -246,6 +246,16 @@ is answered without a `renderOffer` and is never captured as an exposure at serv
 platform's own trusted synthetic monitor; the decision set names the mismatch as
 `layoutDiagnostics: [{measurementBasis, reason: "measurement_basis", slot}]`, which is host-internal and
 not a member of this answer.
+
+**The position within the slot, and module events.** Every decision carries `slotPosition`, its position
+within its slot (what its decision record calls `position`, from 0), beside `order`, its page-wide order; a
+page whose slot is not its first numbers the two differently. A module container is marked as any piece is,
+with `data-op-content` naming the module and `data-op-slot` its layout slot, and may declare the interactions
+that count as using it in `data-op-engage` (DOM event types, space separated). Its impression is its render
+acknowledgement, one per module per page instance, carrying `position` and `slotPosition`; a click inside the
+container, and each interaction it declares, is one engagement: a `content_click` carrying `contentId`, `slot`,
+the acknowledged `decisionId`, `slotPosition` and, for a declared interaction, `interaction`,
+credited as the slot's click reward only to a decision whose render was admitted.
 
 **A configured order per context.** A merchandiser can publish, on the page's declared layout slot, a
 module order per context (`orders`, governance version 4; [the layout slot](./03-payload-schemas.md#the-layout-slot)),
@@ -417,7 +427,7 @@ A position the layout blend ranked carries `blend: { B, Q, R, p }` on its receip
 
 Where a pinned slot fell short and still served something, it also wrote records, so the shortfall is on the receipt as well: `explain.shortTake = {take, served, empty, sentence}` rides every record that slot wrote, pinned position or ranked, and `GET /v1/{tenant}/visitors/{visitorId}/receipts` reads its sentence onto `why` exactly as it reads out stage, freshness, fatigue, merchandising and diversity. A refused slot writes no record, so it has no receipt and the counters above are its only home.
 
-With explicit `rendered-v1` slot measurement and approved original retention/recovery, actual rendering sends a signed `content_impression` with original `eventId` and `timestamp`, and data `page, pageInstance, position, contentId, slot, decisionId, renderOffer`. The separate exact response is `render:{version:1,decisionId,eventId,pageInstance,status:'durable',source:'pending'|'recovered'}`. An update/HTTP success alone is not this ACK; pending source admission does not certify every sink. Retry the same original envelope, not a new ID/time. The sealed offer is bounded by original grant/consent/ledger/online expiry and current publication; it is never a persistent profile token. Correlated clicks/dwell follow that exact ACK. See [the rendered integration](./01-integration-guide.md#3-the-ten-lines-that-personalize-a-page).
+With explicit `rendered-v1` slot measurement and approved original retention/recovery, actual rendering sends a signed `content_impression` with original `eventId` and `timestamp`, and data `page, pageInstance, position, contentId, slot, decisionId, renderOffer`, plus `slotPosition` from the SDK. The separate exact response is `render:{version:1,decisionId,eventId,pageInstance,status:'durable',source:'pending'|'recovered'}`. An update/HTTP success alone is not this ACK; pending source admission does not certify every sink. Retry the same original envelope, not a new ID/time. The sealed offer is bounded by original grant/consent/ledger/online expiry and current publication; it is never a persistent profile token. Correlated clicks/dwell follow that exact ACK. Admission holds the acknowledgement to the record's position within its slot: to `slotPosition` when the acknowledgement carries it (its `position` is then the page-wide order, accepted beside it), and to `position` when it does not, exactly as before. See [the rendered integration](./01-integration-guide.md#3-the-ten-lines-that-personalize-a-page).
 
 The ledger producer sends JSON object envelopes with additive `version:1`, retaining complete records in independently readable chunks compatible with the existing consumer. Each body is at most120000 UTF-8 bytes; a batch contains at most100 messages and240000 body bytes, reserving platform headroom. An oversized individual record or serialization failure refuses the whole invocation before queue submission; nothing is trimmed. The internal helper receipt counts records and finalized messages as queue-acknowledged, acceptance-unknown, or not attempted. Failed preflight has `prepared:false`, zero planned messages and all records not attempted. A rejected queue group stops delivery: earlier acknowledgements remain, that group's acceptance is unknown, and the tail is not attempted. Missing queue capability is not attempted. One fixed-code/count-only failure diagnostic is emitted even when callers ignore the receipt; Optional behavioral Analytics points remain held closed until a separate destination policy is supported and admitted; this does not block configured canonical ledger delivery. Queue acceptance is not R2 persistence, client delivery, retry, recovery or completeness assurance. The durable recovery protocol below is distinct from queue acceptance; deployed performance remains separate proof.
 

@@ -323,6 +323,37 @@ layout slot left on `served-v1` is still served, but carries no render offer and
 exposure; the engine's decision set names that mismatch internally (`layoutDiagnostics`), and the
 snapshot answer does not carry it.
 
+### Module impressions and engagements
+
+Mark each module container the way the declarative capture marks any piece, `data-op-content` with the module id
+and `data-op-slot` with the layout slot, on the element that holds the module, and bind the page once with
+`client.emit.declarative()`. A container may also declare the interactions that count as using the module, as
+DOM event types, space separated, in `data-op-engage`:
+
+```html
+<section data-op-slot="pdp-modules" data-op-content="module.PDP.reviews.1" data-op-engage="swipe reviews-open">…</section>
+```
+
+- **The impression.** A marked module container sends one impression per module per page instance, when it is
+  first on screen. That impression is the module's render acknowledgement, the `content_impression` this guide
+  describes in section 3, never a second event: a repeated visibility, a re-subscribe, a redelivered decision
+  set, or your own `rendered()` call over the same container sends no other.
+- **The engagement.** A click anywhere inside the container is one engagement, and so is each interaction the
+  container declares in `data-op-engage`, each time it happens: your own code dispatches the event (bubbling) on
+  the container or inside it, as a carousel dispatches `swipe`. `click` needs no declaration, and an interaction
+  the container does not declare sends nothing. An engagement is a `content_click`, the slot's click reward: it
+  carries the module id as `contentId`, the `slot`, the `decisionId` of the module's render acknowledgement and
+  the position within the slot as `slotPosition`, and for a declared interaction its name as `interaction`. It waits for that acknowledgement, so a module that was never drawn and acknowledged is
+  never engaged and never credited.
+- **The position within the slot.** Every decision the snapshot returns carries `slotPosition`, the module's
+  position within its slot (what its decision record calls `position`), beside its page-wide `order`; the
+  acknowledgement carries both (`position` is the page-wide order), every engagement carries `slotPosition`, and
+  the outcome record of an engagement keeps the module id, the slot, the position within the slot and the
+  decision. The SDK carries `slotPosition` exactly as the decision names it and never computes one: a decision
+  adopted from the server-rendered bootstrap names none, and its acknowledgement is admitted on `position` as
+  before.
+- **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends neither.
+
 ## 8. What to test before the freeze
 
 On a separately authorized staging origin, complete these before M5 with the agreed20–30 real assets. Local DOM/native and synthetic script evidence is not customer browser/SFCC, latency or business acceptance.

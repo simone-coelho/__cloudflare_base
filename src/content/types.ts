@@ -697,7 +697,14 @@ export interface ContentDecisionSet {
   config_label: string;
   /** Null when no trend was published for the tenant, the shopper is in the holdout, or the blend is off. */
   regional: RegionalBlend | null;
-  decisions: Array<ContentDecision & { /** Exact receipt; an offer is not a durable render acknowledgment. */ decisionId?: string; renderOffer?: string }>;
+  decisions: Array<ContentDecision & { /** Exact receipt; an offer is not a durable render acknowledgment. */ decisionId?: string; renderOffer?: string;
+    /**
+     * P03 decision D3: the decision's position within its slot — what its record
+     * calls `position` — beside the page-wide `order`. The serving path
+     * (`serveContentDecisions`) names it on every decision it answers; a set
+     * composed without it (the decision engine's own) carries none.
+     */
+    slotPosition?: number }>;
   records: DecisionRecord[];
   /** Refused pins have no delivery decision or ledger row. */
   pinDiagnostics?: PinDiagnostic[];

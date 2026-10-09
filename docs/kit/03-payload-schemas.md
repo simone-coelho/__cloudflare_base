@@ -18,8 +18,8 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `page_view` | `path` |
 | `product_view`, `add_to_cart`, `wishlist_add` | `productId`, plus the registry's attributes when the brand scores them from the event: `line`, `category`, `subcategory`, `silhouette`, `occasion` (a list), `price_usd` |
 | `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }` |
-| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position`; original event nonce/time are mandatory. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
-| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType` |
+| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position` (the page-wide order) and `slotPosition` (the position within the slot, from 0, which the SDK sends and admission then holds to the record's position; without it `position` is held to it); original event nonce/time are mandatory. On a marked module container it is the module's impression, once per page instance. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
+| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` |
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
 
@@ -154,6 +154,8 @@ One per reward-bearing event, written after the response.
 | `type` | The reward type the event maps to |
 | `event` | The wire event name, so a custom reward keeps its own |
 | `item_id`, `slot` | The content id and slot the event named, when it did |
+| `position` | The position within `slot` the event named as `slotPosition` (a module engagement names its module's), a whole number from 0; absent when the event named none, and on every outcome recorded before it was carried, which reads as not stated, never as position 0 |
+| `decision_id` | The acknowledged decision the event named (`decisionId`), when it did |
 | `value`, `currency` | For a purchase |
 | `margin` | The margin the event carried (`margin`, or the items' margins times quantity summed), for a slot that learns margin; null when none |
 | `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them |
@@ -520,6 +522,14 @@ those, never a filler. The list the layout slot returns is the layout's sequence
 in `order`. A module that is not returned is not drawn, and its container stays hidden. Every drawn
 module is acknowledged by its own `content_impression` render acknowledgement, carrying the module's
 `decisionId` and `renderOffer`, and a module that was not drawn is never acknowledged.
+
+Each module container on the page is marked with `data-op-content` (the module id) and `data-op-slot` (the
+layout slot), and may declare its interactions in `data-op-engage` (DOM event types, space separated). Every
+decision carries `slotPosition`, the module's position within the slot, beside `order`. The module's impression
+is its render acknowledgement, sent once per page instance with `position` and `slotPosition`; each engagement
+(a click inside the container or a declared interaction) is a `content_click` with `contentId`, `slot`, the
+acknowledged `decisionId` and `slotPosition`, credited as the slot's click reward, and its outcome
+record keeps `item_id`, `slot`, `position` (within the slot) and `decision_id`.
 
 Measure the layout slot on `rendered-v1` in the learn document (`slots.{slot}.measurementBasis`): the
 acknowledgement of a drawn module is its one exposure, however often it is retried, and a module returned
