@@ -24,7 +24,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotN
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { decideContent, layoutBlendOf } from './decide';
+import { contextOnlySlots, decideContent, layoutBlendOf } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -229,7 +229,7 @@ interface ShopperRead {
    */
   unreadable?: true;
   /**
-   * P10 (decision D1): her count of signals — every action whose own behaviour
+   * P10 (decision D1): the shopper's count of signals — every action whose own behaviour
    * weight is above zero — read off the same state the affinity is read from,
    * by whichever host holds it: the session host's stored reflex state, or the
    * object's content projection. Read only for a consenting shopper; absent,
@@ -606,8 +606,16 @@ export async function serveContentDecisions(
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
   const snapshots: Record<string, LiftSnapshot | null> = {};
   const configOf = slotLearnConfigOf(learn);
+  // P10 (decisions D1, D2): the tenant's signal floor and the shopper's count of
+  // signals, both already held (the document read above, the state read with
+  // the affinity): no read is added, nothing here can fail or wait. A slot the shopper is
+  // below the floor of is decided on context alone; a floor of 0, the default,
+  // holds nobody below and every slot decides exactly as before.
+  const signalFloor = personalized ? { floor: slotsDoc.signalFloor ?? 0, signals: shopper.signals ?? 0 } : null;
+  const below = contextOnlySlots(activeSlots, signalFloor, arm);
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
-  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
+  // P10: and never for a slot decided below the signal floor, which reads none of the shopper's history.
+  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0 && !below.has(s.slot));
   const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
@@ -659,6 +667,7 @@ export async function serveContentDecisions(
     // and her own memberships for a seed rule's dampen (none without consent).
     ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
+    ...(signalFloor ? { signalFloor } : {}),
   });
 
   lap('decide');
@@ -681,9 +690,11 @@ export async function serveContentDecisions(
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
+  // P10: a record of a slot decided below the signal floor read no stage of the
+  // shopper's, so it claims none.
   if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
-    for (const record of set.records) record.journey = journey;
+    for (const record of set.records) if (!record.explain.signalFloor) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
