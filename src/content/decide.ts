@@ -193,6 +193,14 @@ const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; retur
 const authorityOf = (strategy: string): Authority =>
   strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
 
+/**
+ * P02: the page-manifest marker a page with a declared layout slot is decided
+ * under (`inputs.replay.layout`). Written only when the page declares one, so a
+ * page without a declaration carries exactly the markers it carried before; a
+ * replay of a record that states none decides the page without the declaration.
+ */
+export const LAYOUT_RULES = 'declared-slot-v1' as const;
+
 export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
   historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance,
   historicalRules?: typeof HISTORICAL_EXPLORATION_RULES): ContentDecisionSet {
@@ -517,6 +525,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(historicalPins === HISTORICAL_PINS ? {} : { pins: historicalPins ? 'reserved-eligible-v1' as const : 'prefix-reserved-v2' as const }),
       ...(historicalContentTypes === HISTORICAL_CONTENT_TYPES ? {} : { contentTypes: 'catalog-tags-v1' as const }),
       ...(historicalGovernance === HISTORICAL_GOVERNANCE ? {} : { governance: historicalGovernance === HISTORICAL_GOVERNANCE_V1 ? 'slot-gates-v1' as const : 'slot-gates-v2' as const }),
+      ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];

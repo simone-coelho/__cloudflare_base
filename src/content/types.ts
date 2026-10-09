@@ -100,6 +100,19 @@ export interface SlotStrategy {
    * the slot has no contextual seeding at all.
    */
   seeds?: SeedRule[];
+  /**
+   * P02: this slot is the page's declared LAYOUT — one slot of `take` (K)
+   * positions over the modules (catalogue pieces) that name it in their
+   * `slotTypes`. The decision returns up to K module ids in rank order with
+   * eligibility, exclusions and page-wide de-duplication applied; the returned
+   * list is the layout's sequence, and a module not returned is not drawn. A
+   * declared layout is captured as exposures only when its learn document
+   * measures it on `rendered-v1`; on any other basis it is served without
+   * exposure and the decision set names the mismatch (`layoutDiagnostics`).
+   * Read only under `governanceVersion: 4`, at most one per page; absent means
+   * an ordinary slot, decided and replayed exactly as before.
+   */
+  layout?: true;
 }
 
 export interface DiversityRule { dimension: string; max: number }
@@ -143,6 +156,12 @@ export interface SeedDriver {
 /** Refused seed configuration, never a fabricated influence, in the pattern of `pinDiagnostics`. */
 export interface SeedDiagnostic { slot: string; reason: 'invalid_rule_set' }
 
+/**
+ * P02 decision D1: a declared layout slot measured on a basis other than
+ * `rendered-v1`, so it is served without exposure. Keys in sorted order.
+ */
+export interface LayoutDiagnostic { measurementBasis: MeasurementBasis; reason: 'measurement_basis'; slot: string }
+
 export interface FreshnessRule { weight: number; halfLifeDays: number }
 export interface FatigueRule { weight: number; windowHours: number; cap: number }
 
@@ -153,8 +172,12 @@ export interface StageRule { outOfStage?: number; inStage?: number }
 /** The `slots` document kind: per page, the slots in page order. */
 export interface SlotCatalog {
   version?: string;
-  /** Absent retained documents use legacy parsing, ignoring formerly unknown controls. */
-  governanceVersion?: 1 | 2 | 3;
+  /**
+   * Absent retained documents use legacy parsing, ignoring formerly unknown
+   * controls. Version 4 (P02) introduces the layout declaration (`layout` on a
+   * slot) and otherwise reads exactly as version 3.
+   */
+  governanceVersion?: 1 | 2 | 3 | 4;
   pages: Record<string, SlotStrategy[]>;
 }
 
@@ -383,6 +406,12 @@ export interface DecisionInputs {
     contentTypes?: 'catalog-tags-v1';
     /** Absence retains pre-governance selection independently of the other policies. */
     governance?: 'slot-gates-v1' | 'slot-gates-v2';
+    /**
+     * P02: present only when the page declares a layout slot (`layout: true`
+     * under governance version 4); absence retains the page as decided before
+     * the declaration existed, independently of the other policies.
+     */
+    layout?: 'declared-slot-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
@@ -523,6 +552,15 @@ export interface ContentDecisionSet {
   shortTakes?: Array<{ slot: string; take: number; served: number; empty: number }>;
   /** A slot whose retained seed rule set the current contract refuses: ignored whole, never partially applied. */
   seedDiagnostics?: SeedDiagnostic[];
+  /**
+   * P02 decision D1: the page's declared layout slot whose learn document does
+   * not measure it on `rendered-v1`. It is served, offered for no render
+   * acknowledgement and never captured as an exposure at serve time, and this
+   * member names why. Present only when there is something to name; it reports
+   * configuration, never shopper state, and is host-internal (the snapshot
+   * answer's member list does not carry it).
+   */
+  layoutDiagnostics?: LayoutDiagnostic[];
   /**
    * Advisory: the pieces a slot's published hard controls refused although the
    * slot could otherwise have served them, and the published pair that refused

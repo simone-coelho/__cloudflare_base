@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { decideContent } from '@/content/decide';
+import { decideContent, LAYOUT_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -169,11 +169,14 @@ function manifestVersionRefusal(value: unknown): string | null {
 }
 
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance').sort().join(',') !== 'candidateLimit,learning,slots,version'
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
     || (own(value, 'governance') && value.governance !== 'slot-gates-v1' && value.governance !== 'slot-gates-v2')
+    // P02: the layout marker is written only for a page that declares a layout
+    // slot, so a marker over a page revision that declares none is inconsistent.
+    || (own(value, 'layout') && (value.layout !== LAYOUT_RULES || !page.some(slot => slot.layout === true)))
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -202,8 +205,16 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'exploration') ? { exploration: 'supported-only' as const } : {}),
     ...(own(value, 'pins') ? { pins: value.pins as NonNullable<Manifest['pins']> } : {}),
     ...(own(value, 'contentTypes') ? { contentTypes: 'catalog-tags-v1' as const } : {}),
-    ...(own(value, 'governance') ? { governance: value.governance as NonNullable<Manifest['governance']> } : {}) };
+    ...(own(value, 'governance') ? { governance: value.governance as NonNullable<Manifest['governance']> } : {}),
+    ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}) };
 }
+
+/** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
+const undeclared = (slot: SlotStrategy): SlotStrategy => {
+  if (slot.layout === undefined) return slot;
+  const { layout: _layout, ...rest } = slot; void _layout;
+  return rest;
+};
 
 /** Identity and the numeric structure consumed by lift/exploration, not a new archive schema. */
 function usableSnapshot(value: unknown, served: DecisionRecord, row: Manifest['slots'][number]): value is LiftSnapshot {
@@ -314,7 +325,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     ...(hasNonce ? { requestId: served.request_id } : {}),
     tenant: served.tenant, brand: served.brand, page: served.page, visitorId: served.visitor_id, sessionId: served.session_id,
     identityAnchor: served.identity_anchor, nowMs: served.ts,
-    pieces: catalog.pieces, slots: selected,
+    // P02: a record that states no layout marker is replayed as its page was
+    // decided — without the declaration — whatever the revision carries.
+    pieces: catalog.pieces, slots: manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
     affinity: { dims: inputs.affinity }, regional, cell: served.cell, arm: served.arm,
     versions: { ...served.versions }, configLabel: served.config_label,

@@ -252,7 +252,21 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
   return errors.length ? { ok: false, errors } : { ok: true, value: rules };
 }
 
-function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3): SlotStrategy | null {
+/** P02: the governance version that introduces the layout declaration (`layout` on a slot). */
+export const LAYOUT_GOVERNANCE_VERSION = 4;
+
+/** A slot member `layout` that declares something: anything but absent or `false`. */
+const declaresLayout = (s: unknown): boolean => isRecord(s) && s.layout !== undefined && s.layout !== false;
+
+/**
+ * @param governance The version the document is read under (0 = unmarked legacy).
+ * @param earlyMark For a WRITE only: the version 1, 2 or 3 the candidate is marked
+ *   with, under which a layout declaration is refused by name (P02.A4); null
+ *   otherwise. A retained document marked earlier than 4 ignores the member, as
+ *   it ignores every member introduced after it.
+ */
+function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3 | 4,
+  earlyMark: 1 | 2 | 3 | null = null): SlotStrategy | null {
   const at = `pages.${page}[${i}]`;
   if (!isRecord(s)) { errors.push(`${at}: must be an object`); return null; }
   const slot = s.slot;
@@ -269,7 +283,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
   }
   if (s.pinnedPieceId !== undefined && !isStr(s.pinnedPieceId)) errors.push(`${at}.pinnedPieceId: string when present`);
   let pinnedPieceIds: string[] | undefined;
-  if (governance === 3 && Object.hasOwn(s, 'pinnedPieceIds')) {
+  if (governance >= 3 && Object.hasOwn(s, 'pinnedPieceIds')) {
     const ids = s.pinnedPieceIds;
     if (!Array.isArray(ids) || ids.length > 50 || !Array.from(ids).every(isStr) || new Set(ids).size !== ids.length) errors.push(`${at}.pinnedPieceIds: at most 50 distinct exact nonempty strings`);
     else pinnedPieceIds = [...ids];
@@ -365,13 +379,25 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.seeds${error}`);
     else seeds = checked.value;
   }
+  // P02: the page's declared layout slot. Its K is the slot's own `take`, held
+  // to 1..50 above like every take; one per page is a publication rule
+  // (`validateSlotCatalog`). `false` declares nothing and is not kept.
+  let layout = false;
+  if (declaresLayout(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      if (typeof s.layout !== 'boolean') errors.push(`${at}.layout: boolean when present (true declares this page's layout slot)`);
+      else layout = s.layout;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.layout: a layout declaration needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}),
+    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}),
   };
 }
 
@@ -379,8 +405,18 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['slots: must be an object'] };
   const marked = Object.hasOwn(candidate, 'governanceVersion');
-  if (marked && candidate.governanceVersion !== 1 && candidate.governanceVersion !== 2 && candidate.governanceVersion !== 3) errors.push('governanceVersion: only versions 1, 2 and 3 are supported');
-  const governance = current || candidate.governanceVersion === 3 ? 3 : candidate.governanceVersion === 2 ? 2 : marked ? 1 : 0;
+  const mark = candidate.governanceVersion;
+  if (marked && mark !== 1 && mark !== 2 && mark !== 3 && mark !== LAYOUT_GOVERNANCE_VERSION) errors.push('governanceVersion: only versions 1, 2, 3 and 4 are supported');
+  // P02: version 4 introduces the layout declaration and otherwise reads as 3.
+  // A write is read under the current contract — 3, as before — unless it is
+  // marked 4, or is unmarked and declares a layout (then it is written as 4, so
+  // its retained revision keeps the declaration). A write marked 1, 2 or 3 that
+  // declares a layout is refused by name; a RETAINED document marked earlier
+  // than 4 ignores the member, as it ignores every later member.
+  const declares = current && !marked && isRecord(candidate.pages)
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(declaresLayout));
+  const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
+  const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
   if (!isRecord(candidate.pages)) return { ok: false, errors: [...errors, 'pages: required object of page → slot[]'] };
   const pages: Record<string, SlotStrategy[]> = {};
@@ -389,7 +425,7 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
     if (!Array.isArray(list)) { errors.push(`pages.${page}: must be an array`); continue; }
     const seen = new Set<string>();
     const slots: SlotStrategy[] = [];
-    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance); if (v) slots.push(v); });
+    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance, earlyMark); if (v) slots.push(v); });
     pages[page] = slots;
   }
   if (errors.length) return { ok: false, errors };
@@ -425,6 +461,15 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
       const owner = pageOfSlot.get(slot.slot);
       if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: slot name '${slot.slot}' is already used on page '${owner}'; slot names must be unique across the pages of a brand, because one slot name is one statistics object`);
       else pageOfSlot.set(slot.slot, page);
+    }
+  }
+  // P02: a page's layout is ONE declared slot of K positions; a second
+  // declaration on the same page is a contradiction, refused where it is
+  // authored (a retained document is never reinterpreted here).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    const declared = slots.filter(slot => slot.layout === true);
+    for (const extra of declared.slice(1)) {
+      errors.push(`pages.${page}.${extra.slot}: a page declares at most one layout slot; '${declared[0]!.slot}' is already the layout of page '${page}'`);
     }
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
