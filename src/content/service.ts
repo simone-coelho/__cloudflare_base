@@ -24,7 +24,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotN
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { decideContent } from './decide';
+import { decideContent, layoutBlendOf } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -605,6 +605,10 @@ export async function serveContentDecisions(
   const gammaOf = (slot: string) => learn.slots?.[slot]?.gamma ?? 0;
   const exploreOf = (slot: string) => learn.slots?.[slot]?.exploration ?? null;
   const controlOf = (slot: string, item: string) => learn.slots?.[slot]?.items?.[item] ?? null;
+  // P28 (decision D1): the layout blend a slot's dials opt into, read from the
+  // learn document already held above — no read of its own, so it can neither
+  // fail nor wait — and applied by the decision on the declared layout slot only.
+  const blendOf = (slot: string) => layoutBlendOf(learn, slot);
 
   const set = decideContent({
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
@@ -632,7 +636,7 @@ export async function serveContentDecisions(
     },
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
-    learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf },
+    learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf, blendOf },
     external,
     served,
     // W16 C3: the arrival's context for this page load, for the slots that

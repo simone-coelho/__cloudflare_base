@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { decideContent, LAYOUT_RULES, ORDER_RULES } from '@/content/decide';
+import { BLEND_RULES, decideContent, LAYOUT_RULES, layoutBlendOf, ORDER_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -94,6 +94,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('candidates', served.candidates, replayed.candidates);
   // P01: the configured order a position was set by, compared by value like every explain member.
   eq('explain.configuredOrder', served.explain.configuredOrder, replayed.explain.configuredOrder);
+  // P28: the layout blend's terms, compared by value like every explain member (and built with sorted keys).
+  eq('explain.blend', served.explain.blend, replayed.explain.blend);
   return diff;
 }
 
@@ -170,8 +172,8 @@ function manifestVersionRefusal(value: unknown): string | null {
   return `page replay manifest version ${value.version} is not supported`;
 }
 
-function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders').sort().join(',') !== 'candidateLimit,learning,slots,version'
+function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig): Manifest | null {
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
@@ -183,6 +185,10 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     // served, which only a declared layout slot carrying orders can do.
     || (own(value, 'orders') && (value.orders !== ORDER_RULES || !own(value, 'layout')
       || !page.some(slot => slot.layout === true && Array.isArray(slot.orders) && slot.orders.length > 0)))
+    // P28: the blend marker is written only on a decision the learning layer made
+    // on which a declared layout slot ranked by the blend its learn dials opt into.
+    || (own(value, 'blend') && (value.blend !== BLEND_RULES || !own(value, 'layout') || value.learning !== true
+      || !page.some(slot => slot.layout === true && layoutBlendOf(learn, slot.slot) !== null)))
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -213,7 +219,8 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'contentTypes') ? { contentTypes: 'catalog-tags-v1' as const } : {}),
     ...(own(value, 'governance') ? { governance: value.governance as NonNullable<Manifest['governance']> } : {}),
     ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}),
-    ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}) };
+    ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}),
+    ...(own(value, 'blend') ? { blend: BLEND_RULES } : {}) };
 }
 
 /** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
@@ -283,7 +290,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   if (targetIndex < 0) return fail(served, 'the recorded slot is absent from the page revision');
   const target = page[targetIndex]!;
   const hasManifest = own(inputs, 'replay');
-  const manifest = hasManifest ? manifestOf(inputs.replay, page, served) : null;
+  const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn) : null;
   if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
   // W28.R2 (amendment A20): the exploration rules the record was decided under
   // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
@@ -352,6 +359,10 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       exploreOf: (slot) => learn.slots?.[slot]?.exploration ?? null,
       controlOf: (slot, item) => learn.slots?.[slot]?.items?.[item] ?? null,
       metadataOf: (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', objective: learn.slots?.[slot]?.objective ?? 'unit', measurementBasis: learn.slots?.[slot]?.measurementBasis ?? 'served-v1' }),
+      // P28: a record that states the blend marker is replayed with the blend its
+      // learn revision opts into; one that states none, without it, which is
+      // what that decision did.
+      ...(manifest?.blend === BLEND_RULES ? { blendOf: (slot: string) => layoutBlendOf(learn, slot) } : {}),
     } : null,
     external: inputs.external
       ? { kind: extCfg?.kind ?? 'table', ref: extCfg?.ref ?? '', weightOf: (slot) => learn.slots?.[slot]?.external?.weight ?? 0, status: 'ok', version: inputs.external.version, scores: inputs.external.scores }

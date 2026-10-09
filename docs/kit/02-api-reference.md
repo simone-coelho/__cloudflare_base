@@ -257,7 +257,8 @@ decides. A shopper whose channel or visit bucket is unknown matches no context, 
 `any`. The next snapshot for a shopper in that context returns the order's modules exactly, position by
 position, in `order`: an order may list fewer modules than the slot's `take`, and a module it does not
 list is hidden in that context — not returned, never offered for a render acknowledgement and never
-counted as an exposure. The order is served exactly and never re-ranked; it is never served on the
+counted as an exposure. On a layout slot that does not opt into the layout blend (below) the order is
+served exactly and never re-ranked; it is never served on the
 holdout's `default` arm, to a shopper without
 personalization consent, or on a decision on which the slot's exploration picks, and each of those, like
 every shopper in another context, receives the slot's own decision unchanged. A pinned module keeps its
@@ -267,6 +268,38 @@ served elsewhere on the page) is passed over and never replaced, so the order is
 the slot never falls back to its own ranking for that shopper. A position the order set keeps the
 `score`, `strategy` and drivers its own ranking arithmetic computed, and its `explain.note` says that the
 configured order placed it.
+
+**The layout blend.** A page's declared layout slot can opt into the behaviour-and-performance blend on
+its learn dials, `slots.{slot}.blend: { p }` in the learn document
+([the learn document](./03-payload-schemas.md#the-learn-document)), with `p` from 0 to 1 and 0 when the
+dial names none. Each module the slot could serve is then scored `R + (1 − p) × B + p × Q` instead of
+`base × lift^γ`. `R = (M − i) / M` is the module's rank base over the slot's baseline of `M` modules,
+with `i` counted from 0, so the first module's `R` is 1: the baseline is the configured order for the
+shopper's context where one is served (its listed modules that are still eligible, in the order's
+sequence), else the modules the slot could serve — after eligibility, the slot's exclusions and what the
+page already served or reserved — in catalogue order. `B` is the module's behaviour score before the
+learned term: the interests matched times the slot's weights, with the arrival's seeds, the region's
+trend, the bonus for completing the request's anchor product and the journey-stage, freshness, fatigue
+and merchandising terms wherever the slot sets them. `Q`
+is its learned lift at the finest level with enough evidence — or the lift a merchandiser froze —
+clamped to the learn document's `liftMin` and `liftMax` (0.5 and 2 by default), minus one; it is 0 where
+no level answers, where a merchandiser rejected the lift, and on the holdout's `no_learning` arm. γ is
+not applied on an opted-in slot. At `p` 0 an opted-in slot serves its configured order, else its
+catalogue order, term for term, and every shopper term on its receipt is 0 — a promise that holds only
+when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or
+complements term, because otherwise a module's behaviour score `B` is not 0 and moves it. Above 0, a module with no
+behaviour score is moved by its learned performance, and a lift beyond the clamps moves it no further
+than the clamped lift does. Under a configured order the blend ranks only the order's listed modules: an
+unlisted module stays hidden, and a listed module that is not eligible at decision time is passed over,
+never replaced, and not counted in `M`. The blend is never applied on the holdout's `default` arm, which
+serves the site's own defaults; a pinned module keeps its position and its `pin` authority and is never
+blended; on a decision on which the slot's exploration picks, the slot serves its own blended ranking over
+its catalogue order with that pick, as it does without the blend. Content slots, and layout slots that do
+not opt in, keep `base × lift^γ` exactly as before. A position the blend ranked carries
+`explain.blend: { B, Q, R, p }` on its record (keys sorted, `R`, `B` and `Q` at three decimals) and
+`blend` on its receipt, and its `score` is `R + (1 − p) × B + p × Q`; its `strategy` is `default` where
+neither `B` nor `p × Q` moved it and `affinity` otherwise, its `explain.note` says that the blend ranked
+it, and under a configured order it keeps `explain.configuredOrder` beside the blend.
 
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data
 authority it was born under is no longer the one in force (for example, you published the next
@@ -379,6 +412,8 @@ designed outcome, not a lost credit; `conflicts` does not show that they are the
 it rides the brand's other rows as well (see `reconciliation` above).
 
 A position a configured per-context order set carries `configuredOrder: { context, modules }` on its receipt, exactly as the record carries it, and its `why` says in words that the configured order placed it, for which context and at which place in the order; a pinned position under an order keeps its pin sentence and carries none. A slot that served its configured order is not reported as a short take: the order says how many positions it fills.
+
+A position the layout blend ranked carries `blend: { B, Q, R, p }` on its receipt, exactly as the record carries it, and its `why` reads out each term — where the rank base `R` came from (under a configured order, the module's place among the modules the merchandiser ordered, counted over the whole order, which the receipt's `configuredOrder` still carries), what the shopper's behaviour contributed to `B`, the learned lift behind `Q` — and the sum at `p`; it never says that the ranking did not place the position.
 
 Where a pinned slot fell short and still served something, it also wrote records, so the shortfall is on the receipt as well: `explain.shortTake = {take, served, empty, sentence}` rides every record that slot wrote, pinned position or ranked, and `GET /v1/{tenant}/visitors/{visitorId}/receipts` reads its sentence onto `why` exactly as it reads out stage, freshness, fatigue, merchandising and diversity. A refused slot writes no record, so it has no receipt and the counters above are its only home.
 
@@ -774,7 +809,7 @@ revision that declares no layout slot, refuses as `invalid page replay manifest`
 
 Version 4 also carries the layout slot's per-context `orders`: `[{ context: { channel, visitBuckets }, modules }]`
 (the snapshot's "A configured order per context" above says what a shopper is served). Publication —
-`PUT /content/slots`, a slots document published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any case, the error prefixed with `publicationChanges[i]`, the whole request refused and no member written), and `POST /content/slots/validate` alike — refuses with `422`, naming the order and
+`PUT /content/slots`, a slots document published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any case, a refusal of an order against the catalogue prefixed with `publicationChanges[i]` while a structural refusal of the member names its own path, the whole request refused and no member written), and `POST /content/slots/validate` alike — refuses with `422`, naming the order and
 the offending value in `errors[]` and writing no revision, an order that names a module no piece of the
 published catalogue registers for the slot (a piece with that `id` whose `slotTypes` names the slot), a
 module the slot's excluded tags or allowed types refuse, a module the slot excludes by id or another slot
@@ -793,6 +828,26 @@ of a record without it decides the page without its orders, and a present marker
 over a page revision whose layout slot carries no orders, refuses as `invalid page replay manifest`. The
 record of every position the order set carries `explain.configuredOrder: { context, modules }`, the
 context it was published for and the whole order, compared by value in replay.
+
+The learn document's layout-blend opt-in, `slots.{slot}.blend` (the snapshot's "The layout blend" above
+says what it serves), is `{ p }` and nothing else, `p` a number from 0 to 1. Publication —
+`PUT /content/learn`, a learn document published as a `publicationChanges` member of any
+`PUT /content/{kind}` (its kind matched in any case, the whole request refused and no member written),
+and `POST /content/learn/validate` alike — refuses with `422`, naming the blend in `errors[]` and writing
+no revision, a `p` outside 0 to 1 or any other member (the dial's own path, `slots.{slot}.blend`), and an
+opt-in on a slot that is not a page's declared layout slot in the slots document the same request
+publishes (the primary document or a `publicationChanges` member of the slots kind, in any case of the
+word) or else the one in force (a refusal of a related member prefixed with `publicationChanges[i]`).
+When that slots document cannot be read the write is refused with `503` rather than published unchecked.
+A later slots change is not refused: the decision applies the blend only on a slot that declares the
+layout, and decides any other slot exactly as before. A stored learn document whose blend the current
+contract refuses still reads, with the blend dropped. A decision on which a slot ranked its modules by
+the blend writes `inputs.replay.blend: "layout-blend-v1"` beside the other markers (a blended decision
+under a configured order writes the orders marker too, and replays both), and every other decision
+writes exactly the markers it wrote before; a replay of a record without it decides the page without the
+blend, and a present marker with another value, without the layout marker, on a decision without the
+learning layer, or over a learn revision in which no declared layout slot of the page opts in, refuses
+as `invalid page replay manifest`. The record's `explain.blend` is compared by value in replay.
 
 `pinnedPieceIds` pins a required ordered prefix (up to 50 distinct exact nonempty IDs, [] neutral),
 followed by ranking up to total take. It is mutually exclusive with scalar `pinnedPieceId`, even with [].
@@ -894,7 +949,7 @@ counts per brand and slot name, summing a page-scoped name's page objects.
 | `GET learn/slots?brand=[&q=][&evidence=1]` | Every slot on every page, grouped by page, with what is set on it (dimensions weighted, rules, reward, objective, trust, exploration — the mode the engine runs, and where the learn document keeps a mode it will not run, `configuredMode` with `unsupported: true` naming that retained setting, as `learn/exploring` and the day report's row do, with `configuredExploration` repeating it under its earlier name — autonomy, controls) and how many pieces are eligible now; `q` narrows by slot or page name; `evidence=1` adds what each slot has learned so far, for the first 200 slots, and on every slot its `governance` counters (refused pins and short takes since their horizon, zero reported as zero, `status: "unavailable"` with null counts when the counter store cannot be read, `scope: "tenant"` — one counter document per tenant, covering every brand of it). The picker and the overview of an operator application |
 | `GET learn/exploring?slot=&brand=[&page=][&limit=][&cursor=]` | The pieces under the slot's observation floor, least observed first, one page at a time, with the slot's exploration mode, share and floor: what exploration serves on purpose. `share` is the share a runnable policy reserves; a dial that cannot explore — `off`, whatever share it stores, a retained withdrawn mode (named by `configuredMode` and `unsupported`) or a slot with no exploration block — answers `0`, as the day report's row answers `configured: null` |
 | `GET learn/queue?brand=` | What needs a person, as counts: proposals pending, slots that have learned nothing yet, slots whose trust dial is above zero, pieces frozen or rejected, erasures still to be rewritten. The landing page of an operator application. The answer also carries `autonomy: { mutationAvailable: false, proposalStatusesVerified: false }`: autonomy mutation is withdrawn, so `proposals_pending` is a historical count of stored `proposed` statuses and not work an operator can act on today, and the statuses it excludes are stored records, not verified applications. Operator token |
-| `GET visitors/{visitorId}/receipts[?limit=&cursor=]` | What this shopper was served, newest first, each with the sentences that say why: the interest matched, the region's trend, your model's term, the journey-stage, freshness, fatigue, merchandising and diversity rules, a pinned slot that could not fill its take, the learned lift and whether it was applied, a pin, the holdout arm, an explored pick. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history/projection returns 503, never empty success. Operator token; no-store |
+| `GET visitors/{visitorId}/receipts[?limit=&cursor=]` | What this shopper was served, newest first, each with the sentences that say why: the interest matched, the region's trend, your model's term, the journey-stage, freshness, fatigue, merchandising and diversity rules, a pinned slot that could not fill its take, the learned lift and whether it was applied, the layout blend's rank base, behaviour and performance terms and their sum, a pin, the holdout arm, an explored pick. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history/projection returns 503, never empty success. Operator token; no-store |
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history returns 503. Operator token; no-store |
 | `GET ledger/{decision_id}`, `GET ledger/{outcome_id}?stream=outcome`, and `GET ledger/{record_id}?stream=product-sort` | One record from the ledger by id, no index needed; consumer/source/readback stages are separate; behavior and complete product-sort records use durable owner admission and managed queue/R2 recovery. An outcome is delivered beside the provenance of the decisions it credits, and where the outcome itself carries no block and exactly one credited decision does, `record.experiment` on this answer may be carried from the credited decision’s stored block, so it is not always byte-identical to the stored ledger line. The block is copied as it was stored and never re-derived from today's published salt |
 | `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome\|product-sort][&cursor=]`, or `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The batch objects of one day, or of a window of at most 184 inclusive UTC days, so a warehouse job knows what to fetch with its own storage credentials: the comparison is computed on your side, from the arm-tagged records these objects hold. Each entry names the `date` it belongs to. The object budget holds for the request as a whole, not between days. A window answers the days it read (`days`) and sets `truncated` when it stopped at the object budget, at its listing budget, or mid-day; `cursor` continues a single `date` only. Product-sort objects require the explicit selector; apply erasure cutoffs when loading. The export states no lift |
