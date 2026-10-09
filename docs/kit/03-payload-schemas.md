@@ -98,7 +98,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.score_base` | The score before learning: interests times weights, plus the population prior and your model's term when they applied |
 | `explain.regional` | When the population prior applied: `region`, `level`, `lambda` (its share of the score), `version`, `events`, `contribution` |
 | `explain.lift` | The learned term, defined below, or null when nothing has been learned for this item in this cell |
-| `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0 |
+| `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0. On a layout slot that opts into the layout blend, `R + (1 − p) × B + p × Q` instead (`explain.blend`) |
 | `explain.exploration` | When `explored`: `mode`, `reason`, `bucket`; retained historical Thompson receipts can include `sample` (Thompson is no longer writable or live) |
 | `explain.control` | `reject` or `freeze` when a merchandiser's control applied to the item |
 | `explain.external` | Your model's term: `kind`, `ref`, `version`, `weight`, `score`, `contribution`; or `status: "unavailable"` with `reason` |
@@ -108,7 +108,8 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
-| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words |
+| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` |
+| `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -126,6 +127,22 @@ One per admitted position, available through authenticated operator/ledger readb
 | `level`, `level_words` | Which cell answered, from `everyone` to `channel, visit bucket, region and affinity cell`: the finest level with enough evidence |
 | `γ` (`gamma`) | The trust dial per slot, 0 to 1: how much the lift moves the score |
 | `prior` | `{ p, n }` when an imported prior was in force for the item |
+
+On a layout slot that opts into the layout blend the lift block is kept beside `explain.blend`: its
+`gamma` is the slot's dial, which the blend does not apply, and `applied` is `p × Q`, what the learned
+term added to the score.
+
+### The blend block
+
+The layout blend scores a module of an opted-in layout slot
+`R + (1 − p) × B + p × Q`.
+
+| Symbol | Meaning |
+|---|---|
+| `R` | The rank base `(M − i) / M`: `M` modules in the slot's baseline and `i` this module's place among them, counted from 0, so the first module's `R` is 1. The baseline is the configured order for the shopper's context where one is served — its listed modules still eligible after eligibility, the slot's exclusions and what the page already served or reserved, in the order's sequence — else the modules the slot could serve after the same removals, in catalogue order. Three decimals |
+| `B` | The behaviour score before the learned term: the interests matched times the slot's weights, with the arrival's seeds, the region's trend, the bonus for completing the request's anchor product and the journey-stage, freshness, fatigue and merchandising terms where the slot sets them. 0 for a shopper with no signal, and on a layout that weights no shopper dimension and sets none of those terms. Three decimals |
+| `Q` | The learned lift at the finest level with enough evidence, or the lift a merchandiser froze, clamped to `liftMin` and `liftMax` of the learn document, minus one. 0 where no level answers, where a merchandiser rejected the lift, and on the holdout's `no_learning` arm. Three decimals |
+| `p` | The slot's published `blend.p`, 0 to 1, exactly as published (0 when the dial names none). At 0 the learned term adds nothing; at 1 the behaviour term adds nothing |
 
 ## The outcome record
 
@@ -307,8 +324,9 @@ stored version 1 validates ID/off-limits and ignores tag/type fields, even malfo
 validates tag/type controls and ignores formerly unknown `pinnedPieceIds`; version 3 validates prefixes too.
 Receipts independently distinguish absent governance (all legacy), `slot-gates-v1`
 (ID/off-limits only), and `slot-gates-v2` (all controls); a page that declares a layout slot adds
-`layout: "declared-slot-v1"` beside them, and a decision on which the layout slot served its configured
-per-context order adds `orders: "configured-order-v1"`. Other replay policy markers remain independent.
+`layout: "declared-slot-v1"` beside them, a decision on which the layout slot served its configured
+per-context order adds `orders: "configured-order-v1"`, and a decision on which a slot ranked its modules
+by the layout blend adds `blend: "layout-blend-v1"`. Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
 to remove both fields; changing form removes the other field. Take is never changed automatically.
@@ -543,7 +561,11 @@ modules first, each at its pinned position.
 The hiding rule: a shopper in an order's context is served exactly its modules, in its order; a module
 the order does not list is not returned in that context, is offered for no render acknowledgement and is
 never counted as an exposure, so an order shorter than `take` fills only the positions it lists. A
-listed module that is not eligible when the decision is made is passed over and never replaced. The
+listed module that is not eligible when the decision is made is passed over and never replaced. On a
+slot that opts into the layout blend (`slots.{slot}.blend` in the learn document) the order supplies the
+blend's rank base instead of being served exactly: its listed modules are ranked by
+`R + (1 − p) × B + p × Q`, which at `p` 0 on a layout that weights no shopper dimension serves the order
+itself, and a module it does not list stays hidden. The
 order is never served on the holdout's `default` arm, to a shopper without personalization consent, or
 on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
 matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
@@ -568,6 +590,7 @@ what it changes.
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| off, share, floor }`; new writes reject Thompson, retained settings are inactive | off |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
+| `slots.{slot}.blend` | `{ p }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. Publication refuses a `p` outside 0 to 1, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the member exactly as published | absent (no blend); `p` 0 when the dial names none |
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
 
 ## The priors document

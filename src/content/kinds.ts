@@ -825,7 +825,7 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
  */
 function blendDialErrors(candidate: unknown): string[] {
   if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'p')) return [': an object { p } and nothing else, p a number from 0 to 1 (0 when absent)'];
-  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) return [`.p: ${quoted(candidate.p)} is not a number from 0 to 1`];
+  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) return [`.p: must be a number from 0 to 1, got ${quoted(candidate.p)}`];
   return [];
 }
 
