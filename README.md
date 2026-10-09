@@ -372,7 +372,7 @@ which their pages never create. `wrangler dev` snapshots its asset list at start
 
 Run `npm run check:generated` first: `npm run dev` rebuilds the Meridian and SDK bundles, a deploy does not.
 
-`npm run deploy staging|production` is the guarded **customer-stamp** workflow for Tapestry's environments
+`npm run deploy staging` or `npm run deploy production` is the guarded **customer-stamp** workflow for Tapestry's environments
 ([`docs/deployment/01-deploy.md`](docs/deployment/01-deploy.md)). It is never used for a demo.
 
 ## 🔧 Configuration
