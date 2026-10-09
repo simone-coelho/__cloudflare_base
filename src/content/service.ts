@@ -10,7 +10,7 @@ import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCa
 import { carriedSaltVersion, PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
+import { signalsOf, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -228,6 +228,14 @@ interface ShopperRead {
    * expired session (no answer at all).
    */
   unreadable?: true;
+  /**
+   * P10 (decision D1): her count of signals — every action whose own behaviour
+   * weight is above zero — read off the same state the affinity is read from,
+   * by whichever host holds it: the session host's stored reflex state, or the
+   * object's content projection. Read only for a consenting shopper; absent,
+   * or a value that is not a whole number, is 0. No read of its own.
+   */
+  signals?: number;
 }
 
 /** Her record could not be read out: the answer carries nothing of it (W16 R5). */
@@ -254,7 +262,7 @@ async function readShopper(
       ].join('; ') };
       const res = await stub.fetch('https://shopper-reflex/snapshot?projection=content', { headers });
       if (!res.ok) throw new SessionAccessError();
-      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown };
+      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown; signals?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
       // W16 R5: the object answered that her record cannot be read out. Only a
       // consenting shopper's record is ever read, so only she can be told so; a
@@ -269,7 +277,8 @@ async function readShopper(
       const consent = intersectConsent(storedConsent(body.consent), hints);
       return { affinity: personalizes(consent) ? body.affinity ?? null : null, sessionId: principal.sessionId, isNewSession: null, state: 'do',
         stage: personalizes(consent) ? journeyWordOf(body.journeyStage) : null, consent,
-        visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null };
+        visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null,
+        signals: personalizes(consent) ? signalsOf({ signals: body.signals as number | undefined }) : 0 };
     } catch {
       throw new SessionAccessError();
     }
@@ -301,6 +310,7 @@ async function readShopper(
         : null,
       visit: personalizes(consent) ? sessionData?.metadata : null,
       lastSeen: personalizes(consent) ? sessionData?.metadata.lastSeen : null,
+      signals: personalizes(consent) ? signalsOf(sessionData?.reflex) : 0,
       consent,
     };
   } catch {
