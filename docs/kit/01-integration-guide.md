@@ -342,14 +342,16 @@ DOM event types, space separated, in `data-op-engage`:
   container declares in `data-op-engage`, each time it happens: your own code dispatches the event (bubbling) on
   the container or inside it, as a carousel dispatches `swipe`. `click` needs no declaration, and an interaction
   the container does not declare sends nothing. An engagement is a `content_click`, the slot's click reward: it
-  carries the module id as `contentId`, the `slot`, the `decisionId` of the module's render acknowledgement, the
-  page-wide `position` and the position within the slot as `slotPosition`, and for a declared interaction its
-  name as `interaction`. It waits for that acknowledgement, so a module that was never drawn and acknowledged is
+  carries the module id as `contentId`, the `slot`, the `decisionId` of the module's render acknowledgement and
+  the position within the slot as `slotPosition`, and for a declared interaction its name as `interaction`. It waits for that acknowledgement, so a module that was never drawn and acknowledged is
   never engaged and never credited.
 - **The position within the slot.** Every decision the snapshot returns carries `slotPosition`, the module's
   position within its slot (what its decision record calls `position`), beside its page-wide `order`; the
-  acknowledgement and every engagement carry both, and the outcome record of an engagement keeps the module id,
-  the slot, the position within the slot and the decision.
+  acknowledgement carries both (`position` is the page-wide order), every engagement carries `slotPosition`, and
+  the outcome record of an engagement keeps the module id, the slot, the position within the slot and the
+  decision. The SDK carries `slotPosition` exactly as the decision names it and never computes one: a decision
+  adopted from the server-rendered bootstrap names none, and its acknowledgement is admitted on `position` as
+  before.
 - **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends neither.
 
 ## 8. What to test before the freeze

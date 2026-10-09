@@ -1729,11 +1729,7 @@ function createListen(core, opts = {}) {
   let adopted = false;
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
   const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
-  const slotPositionIn = (set, piece) => {
-    if (Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0) return piece.slotPosition;
-    const rank = set.decisions.filter((d) => d.slot === piece.slot).sort((a, b) => a.order - b.order).findIndex((d) => placement(d) === placement(piece));
-    return rank >= 0 ? rank : void 0;
-  };
+  const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
   const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -1942,7 +1938,7 @@ function createListen(core, opts = {}) {
     const key = placement(piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
-      const slotPosition = slotPositionIn(set, piece);
+      const slotPosition = slotPositionOf(piece);
       const data = {
         contentId,
         slot,
@@ -2022,19 +2018,17 @@ function createListen(core, opts = {}) {
     if (candidates.length !== 1) return null;
     const paint = candidates[0], ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, position: _position, slotPosition: _slotPosition, ...safe } = attrs;
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer;
     void _action;
     void _event;
     void _eventName;
-    void _position;
     void _slotPosition;
     return content.send(type, {
       ...safe,
       contentId,
       slot,
       decisionId: ack.decisionId,
-      position: paint.piece.order,
       ...paint.slotPosition !== void 0 ? { slotPosition: paint.slotPosition } : {}
     });
   }

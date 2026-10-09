@@ -75,16 +75,13 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   const placement = (d: Pick<ContentDecision, 'slot' | 'order' | 'contentId'>) => JSON.stringify([d.slot, d.order, d.contentId]);
   /**
    * P03 decision D3: a placement's position within its slot, what its decision
-   * record calls `position`. The engine names it on every decision it answers
-   * (`slotPosition`); a set that does not carry it (a server-rendered bootstrap,
-   * an earlier engine) yields the placement's rank among the slot's decisions by
-   * page-wide `order`, which is how the engine numbers a slot's records.
+   * record calls `position`, exactly as the engine named it on the decision
+   * (`slotPosition`, a whole number from 0). A decision that does not name it (a
+   * server-rendered bootstrap, an earlier engine) has none, and the SDK never
+   * computes one: its acknowledgement is then admitted on `position`, as before.
    */
-  const slotPositionIn = (set: DecisionSet, piece: ContentDecision): number | undefined => {
-    if (Number.isSafeInteger(piece.slotPosition) && piece.slotPosition! >= 0) return piece.slotPosition;
-    const rank = set.decisions.filter(d => d.slot === piece.slot).sort((a, b) => a.order - b.order).findIndex(d => placement(d) === placement(piece));
-    return rank >= 0 ? rank : undefined;
-  };
+  const slotPositionOf = (piece: ContentDecision): number | undefined =>
+    Number.isSafeInteger(piece.slotPosition) && piece.slotPosition! >= 0 ? piece.slotPosition : undefined;
   const sameAsset = (a: ContentDecision, b: ContentDecision) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set: DecisionSet | null) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -265,7 +262,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       // P03 decision D1: this acknowledgement is the module's one impression on
       // this page instance. Decision D3: it names the page-wide order as
       // `position` and the position within the slot as `slotPosition`.
-      const slotPosition = slotPositionIn(set, piece);
+      const slotPosition = slotPositionOf(piece);
       const data = { contentId, slot, decisionId: piece.decisionId, page: set.page, position: piece.order,
         ...(slotPosition !== undefined ? { slotPosition } : {}), pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer, customerContentId: piece.customerContentId, contentType: piece.type };
@@ -321,12 +318,12 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const paint = candidates[0]!, ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance
       || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, position: _position, slotPosition: _slotPosition, ...safe } = attrs;
-    void _offer; void _action; void _event; void _eventName; void _position; void _slotPosition;
-    // P03 decision D3: an engagement names the placement it engaged as its
-    // acknowledgement did — the receipt, the page-wide order and the position
-    // within the slot — never what the page says about it.
-    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId, position: paint.piece.order,
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
+    void _offer; void _action; void _event; void _eventName; void _slotPosition;
+    // P03 decision D3: an engagement names the position within the slot of the
+    // placement it engaged as its acknowledgement did — never what the page says
+    // about it — beside the receipt of that acknowledgement.
+    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId,
       ...(paint.slotPosition !== undefined ? { slotPosition: paint.slotPosition } : {}) });
   }
 

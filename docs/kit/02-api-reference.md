@@ -254,7 +254,7 @@ with `data-op-content` naming the module and `data-op-slot` its layout slot, and
 that count as using it in `data-op-engage` (DOM event types, space separated). Its impression is its render
 acknowledgement, one per module per page instance, carrying `position` and `slotPosition`; a click inside the
 container, and each interaction it declares, is one engagement: a `content_click` carrying `contentId`, `slot`,
-the acknowledged `decisionId`, `position`, `slotPosition` and, for a declared interaction, `interaction`,
+the acknowledged `decisionId`, `slotPosition` and, for a declared interaction, `interaction`,
 credited as the slot's click reward only to a decision whose render was admitted.
 
 **A configured order per context.** A merchandiser can publish, on the page's declared layout slot, a

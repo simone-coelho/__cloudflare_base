@@ -19,7 +19,7 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `product_view`, `add_to_cart`, `wishlist_add` | `productId`, plus the registry's attributes when the brand scores them from the event: `line`, `category`, `subcategory`, `silhouette`, `occasion` (a list), `price_usd` |
 | `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }` |
 | `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position` (the page-wide order) and `slotPosition` (the position within the slot, from 0, which the SDK sends and admission then holds to the record's position; without it `position` is held to it); original event nonce/time are mandatory. On a marked module container it is the module's impression, once per page instance. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
-| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, the acknowledged placement's `position` (page-wide order) and `slotPosition` (position within the slot). A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` |
+| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` |
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
 
@@ -528,7 +528,7 @@ layout slot), and may declare its interactions in `data-op-engage` (DOM event ty
 decision carries `slotPosition`, the module's position within the slot, beside `order`. The module's impression
 is its render acknowledgement, sent once per page instance with `position` and `slotPosition`; each engagement
 (a click inside the container or a declared interaction) is a `content_click` with `contentId`, `slot`, the
-acknowledged `decisionId`, `position` and `slotPosition`, credited as the slot's click reward, and its outcome
+acknowledged `decisionId` and `slotPosition`, credited as the slot's click reward, and its outcome
 record keeps `item_id`, `slot`, `position` (within the slot) and `decision_id`.
 
 Measure the layout slot on `rendered-v1` in the learn document (`slots.{slot}.measurementBasis`): the
