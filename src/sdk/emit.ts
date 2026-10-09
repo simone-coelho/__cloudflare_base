@@ -37,7 +37,13 @@ export interface Emit {
   contentDwell(contentId: string, slot: string, ms: number, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   videoComplete(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   custom(name: string, data?: Record<string, unknown>): Promise<EngineUpdate | null>;
-  /** Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach function. */
+  /**
+   * Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach
+   * function. A `[data-op-content]` container (a module's, or any piece's) sends
+   * its render acknowledgement once when first shown, a click inside it as an
+   * engagement, and each interaction it declares in `data-op-engage` (DOM event
+   * types, space separated) as an engagement too (P03 decisions D1, D2).
+   */
   declarative(opts?: DeclarativeOptions): () => void;
   /** Wrap a dataLayer's push. Returns a detach function that restores it. */
   dataLayer(opts?: DataLayerOptions): () => void;
@@ -48,6 +54,29 @@ export interface Emit {
    */
   release(): void;
   rendered: Listen['rendered'];
+}
+
+/** One declared interaction: a DOM event type, as a page names it. */
+const ENGAGE_TOKEN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+/** At most this many declared interactions per container are bound. */
+const MAX_DECLARED_INTERACTIONS = 16;
+
+/**
+ * P03 decision D2: the interactions a container declares, `data-op-engage="<DOM
+ * event types, space separated>"`, each named once and in the page's order.
+ * `click` is not among them: a click inside the container is already its
+ * engagement, and one click is one engagement. A token that is not an event type
+ * is skipped, never guessed at; the list is the page's to name and nothing in it
+ * is tenant-, customer- or taxonomy-specific.
+ */
+function declaredInteractions(el: ElementLike): string[] {
+  const out: string[] = [];
+  for (const token of (el.getAttribute('data-op-engage') ?? '').split(/\s+/)) {
+    if (!ENGAGE_TOKEN.test(token) || token === 'click' || out.includes(token)) continue;
+    out.push(token);
+    if (out.length === MAX_DECLARED_INTERACTIONS) break;
+  }
+  return out;
 }
 
 const first = (v: unknown): Record<string, unknown> => (Array.isArray(v) && v[0] && typeof v[0] === 'object' ? (v[0] as Record<string, unknown>) : {});
@@ -231,6 +260,17 @@ export function createEmit(core: Core, listen: Listen): Emit {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track('content_click', attrs);
         }));
+        // P03 decision D2: each interaction the page declares on the container
+        // is one engagement of the piece it shows, credited as the slot's click
+        // reward through the same painted-receipt gate as a click, and naming
+        // the interaction. The declaration is read again when the shopper acts,
+        // so an interaction the container no longer declares sends nothing.
+        for (const interaction of declaredInteractions(el)) {
+          holds.push(core.bindings.addListener(el, interaction, () => {
+            const attrs = permitted() && declaredInteractions(el).includes(interaction) ? shown() : null;
+            if (attrs) void track('content_click', { ...attrs, interaction });
+          }));
+        }
       }
 
       for (const el of dom.querySelectorAll('[data-op-track]')) {

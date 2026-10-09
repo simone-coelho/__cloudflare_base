@@ -729,8 +729,13 @@ export async function serveContentDecisions(
     : Promise.resolve();
   const afterResponse = Promise.all([captured, counted, anchorCounted]).then(() => undefined);
 
-  const decisions = await Promise.all(set.decisions.map(async (decision, index) => {
+  // P03 decision D3: every decision names its position within its slot — what its
+  // record calls `position` — as `slotPosition`, beside the page-wide `order`, so
+  // the page's render acknowledgement and its engagements can carry it. Read off
+  // the record already composed: no read is added and nothing here can fail.
+  const decisions = await Promise.all(set.decisions.map(async (served, index) => {
     const record = set.records[index]!;
+    const decision = { ...served, slotPosition: record.position };
     if (!consent.tracking) return decision;
     if (r.offer) {
       if (!r.offer.pageInstance || record.measurementBasis !== 'rendered-v1' || !r.principal) return decision;

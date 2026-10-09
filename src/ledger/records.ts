@@ -135,6 +135,14 @@ export interface OutcomeRecord {
   event: string;
   item_id: string | null;
   slot: string | null;
+  /**
+   * P03 (decision D3): the position within `slot` of the placement the event
+   * engaged — what the decision record calls `position` — when the event named
+   * it (`data.slotPosition`, a whole number from 0) and named a slot. Absent on
+   * every other outcome, and on every outcome recorded before P03: a reader
+   * takes an absent position as not stated, never as position 0.
+   */
+  position?: number;
   value: number | null;
   currency: string | null;
   /** CW27: the outcome's margin when the feed gives one (`data.margin`, or the items' margins summed); null otherwise. */
@@ -329,6 +337,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
   const reward = rewardOf(action);
   if (!reward) return null;
   const ts = typeof action.timestamp === 'number' && Number.isFinite(action.timestamp) ? action.timestamp : Date.now();
+  const slot = str(d.slot);
   return {
     outcome_id: `${tenant}:${ts36(ts)}:${action.userId}:${reward.event}${hasNonce ? `:n1:${action.eventId}` : ''}`,
     ...(hasDecision ? { decision_id: d.decisionId as string } : {}),
@@ -340,7 +349,12 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     type: reward.type,
     event: reward.event,
     item_id: str(d.contentId) ?? str(d.productId) ?? str(d.product_id) ?? str(d.sku) ?? str(d.orderId),
-    slot: str(d.slot),
+    slot,
+    // P03 (decision D3): an engagement names the module's position within its
+    // slot as `slotPosition`, beside the page-wide `position`; the outcome keeps
+    // the one within the slot, the record's own coordinate, and only a whole
+    // number from 0 on an event that named its slot.
+    ...(slot !== null && Number.isSafeInteger(d.slotPosition) && (d.slotPosition as number) >= 0 ? { position: d.slotPosition as number } : {}),
     value: num(d.value) ?? num(d.price) ?? null,
     currency: str(d.currency),
     margin: marginOf(d),

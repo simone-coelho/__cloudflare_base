@@ -40,7 +40,13 @@ export interface Emit {
     contentDwell(contentId: string, slot: string, ms: number, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
     videoComplete(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
     custom(name: string, data?: Record<string, unknown>): Promise<EngineUpdate | null>;
-    /** Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach function. */
+    /**
+     * Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach
+     * function. A `[data-op-content]` container (a module's, or any piece's) sends
+     * its render acknowledgement once when first shown, a click inside it as an
+     * engagement, and each interaction it declares in `data-op-engage` (DOM event
+     * types, space separated) as an engagement too (P03 decisions D1, D2).
+     */
     declarative(opts?: DeclarativeOptions): () => void;
     /** Wrap a dataLayer's push. Returns a detach function that restores it. */
     dataLayer(opts?: DataLayerOptions): () => void;
