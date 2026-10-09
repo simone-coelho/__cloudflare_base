@@ -117,7 +117,7 @@ dataset = "edge_ops_development_v1"
 binding = "DB"
 database_name = "coach-demo-db"
 database_id = "80fcd6e1-4764-4ba2-bf95-587c3debdc73"
-migrations_dir = "migrations"
+migrations_dir = "migrations/product"
 
 [vars]
 ENVIRONMENT = "development"
@@ -135,6 +135,7 @@ OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5f
 REFLEX_HOST = "session"
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 TREND_ROLLUP_TENANTS = "coach"
+EXTERNAL_MODEL_POLICY = "off"
 
 [assets]
 directory = "public"
