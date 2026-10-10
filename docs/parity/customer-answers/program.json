@@ -176,13 +176,25 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S5 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "d8073bdd51eaef08d961c31c2ab169bc769b491b on rem/spec-parity-e (batch S5 fix round 3; P36 reviewed PASS at this revision after the S5 review at da5aaea4 and fix rounds 1 and 2; LearnStats.ts in the boundary under R-P52; the per-ticket branch cut from this head)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S5 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S5 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-nocoerce.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-cutall.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-standin-aware3.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/logs/ctl-F1-defect.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/logs/ctl-LOCK-words-everywhere.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P36-findings.log"
         ]
       }
     },
