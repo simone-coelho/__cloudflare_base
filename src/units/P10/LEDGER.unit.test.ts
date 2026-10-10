@@ -37,6 +37,14 @@
 //       signals is context-only (here: the catalogue order, though the shopper has
 //       interest), a weight-0 action (a page view) leaves the count where it
 //       is, and the snapshot after the fourth signal is personalized.
+//       Two LOCKS added in fix round 2 (R-P50), green against the build at
+//       e2b98ab7, each with its mutant control: a render acknowledgement
+//       (content_impression, weight 0) is not a signal either (control M2,
+//       src/reflex/core.ts:700, impressions counted); and remaining-work item 1's
+//       "merge it on a link": two browsers linked to one account give the person
+//       the sum of their counts, read on the person's next decision, and a repeat
+//       link adds nothing (control M8, src/reflex/identityMerge.ts:93, the larger
+//       count in place of the sum).
 //   F2  Below the floor a decision's records show the configured order, the pin,
 //       the exclusion and eligibility, the seed's contribution, the regional
 //       prior at λ = 1, freshness, merchandising and a learned lift from level 2
@@ -70,15 +78,22 @@
 // statistics objects, and the regional prior is the published trend snapshot
 // the decision path reads.
 
+import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 
 import { validateSlotCatalog } from '@/content/kinds';
 import type { DecisionRecord } from '@/content/types';
+import { signAssertion } from '@/identity/assertion';
+import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { fanDecisions } from '@/learn/fan';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { ts36 } from '@/ledger/records';
 import { REGION_GENERATION, trendKey } from '@/reflex/regionTrend';
 import { captureRetention } from '@/retention';
+import { identityRoutes } from '@/routes/identity';
+import { tenantMiddleware } from '@/tenancy/middleware';
+import type { TenantId } from '@/tenancy/tenant';
+import type { Env } from '@/types/env';
 
 import {
   declaredSlots, expectPublished, HOSTS, layoutSlot, LAYOUT, learnDocument, M, MODULES, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY,
@@ -165,10 +180,93 @@ describe('unit:P10.F1', () => {
       }
       expect.soft(steps, `${host}: P10.F1 — the decision after each of the shopper's first three signals is context-only (the page view counted for nothing)`)
         .toEqual(['signal 1', 'signal 2', 'signal 3'].map(after => ({ after, story: STORY_CONTEXT_ONLY, layout: COLD_LAYOUT })));
+      // LOCK (fix round 2, R-P50 b): green against the build at e2b98ab7; its control is the M2 mutant
+      // (src/reflex/core.ts:700, impressions counted as signals), which turns this clause RED on both hosts.
+      // A render acknowledgement is not a signal either: D1 counts an action only when its behaviour weight is
+      // above zero, and content_impression weighs 0 in the registry the tenant publishes (src/units/_parity.ts:95, the
+      // default weights, src/reflex/core.ts:264 at e2b98ab7; the work order cites them at :221-244 at b0aef948).
+      // The shopper holds three signals here, exactly the floor, so one counted acknowledgement would personalize
+      // the next decision. The page is painted and each module of the layout acknowledged as the SDK acknowledges
+      // a render (the harness's `ack`, the content_impression unit:P03.E3 sends); the next decision stays context-only.
+      const painted = await page(s);
+      expect(painted.layout.length, `${host}: PRECONDITION — the painted page carries the layout's four modules`).toBe(4);
+      for (const d of painted.snap.decisions.filter(x => x.slot === LAYOUT)) {
+        expect((await s.ack(painted.snap, d)).status, `${host}: the render acknowledgement of ${d.contentId} is accepted`).toBe(200);
+      }
+      const acknowledged = await page(s);
+      expect.soft({ story: acknowledged.story, layout: acknowledged.layout },
+        `${host}: P10.F1 — a render acknowledgement (content_impression, weight 0) is not a signal: after the third signal and the acknowledgements of the four modules painted, the decision is still context-only`)
+        .toEqual({ story: STORY_CONTEXT_ONLY, layout: COLD_LAYOUT });
       expect((await s.action(TABBY_VIEWS[3]!)).status).toBe(200);
       const fourth = await page(s);
       expect(fourth.story[0], `${host}: P10.F1 — the decision after the fourth signal is the first personalized one`).toBe(STORY_PERSONALIZED_FIRST);
       expect(fourth.layout, `${host}: P10.F1 — on the layout slot too`).toEqual(PERSONALIZED_LAYOUT);
+    });
+
+    // LOCK (fix round 2, R-P50 a): green against the build at e2b98ab7; its control is the M8 mutant
+    // (src/reflex/identityMerge.ts:93, the larger of the two counts in place of their sum), which turns this leg RED
+    // on both hosts with the person at 3.
+    // The expected values come from D1 and remaining-work item 1 ("count each action whose behaviour weight is
+    // above zero on the shopper's state ..., merge it on a link"), not from the engine: every product view is a
+    // signal (D1), so browser A counts 2 and browser B counts 3 (the CONTROL, each read on that browser's own next
+    // decision). Linked to one account the two browsers are one person, whose actions are the actions of both,
+    // each counted once: 2 while only A is linked, 2 + 3 = 5 once B is linked to the same account, and still 5
+    // after a repeat link of A, which brings no action the person has not already counted. The count is read where
+    // the decision path reads it, `explain.signalFloor.signals` (F5's member) on the records of the person's next
+    // decision, under a tenant floor of 10, above 5, so that decision is context-only and carries the member. The
+    // link is the route production mounts (`POST /v1/:tenant/identity/link`, src/index.ts:129, behind the tenant
+    // middleware at :87), with the site's signed assertion, as src/units/W16/C6.unit.test.ts:1005 calls it.
+    it(`host (${host}): merge on a link — browser A with two signals and browser B with three, linked to one account, give the person five signals on the next decision, and a repeat link of browser A adds none`, async () => {
+      const m = await mount(host, { pieces: PIECES, slots: declaredSlots([layoutSlot(), storySlot()], { signalFloor: 10 }), learn: learnDocument() });
+      expectPublished(m, 'P10.F1 — the slots document with a tenant signal floor of 10 publishes');
+      const identity = new Hono<{ Bindings: Env }>();
+      identity.use('*', tenantMiddleware());
+      identity.route('/v1', identityRoutes);
+      const ACCOUNT = 'account-p10-link';
+      const link = async (s: Shopper) => {
+        const pending: Promise<unknown>[] = [];
+        const exp = Math.floor(Date.now() / 1000) + 300;
+        const assertion = await signAssertion('parity-identity-material', TENANT as TenantId, s.subject, ACCOUNT, exp);
+        const response = await identity.fetch(new Request(`https://shop.invalid/v1/${TENANT}/identity/link`, { method: 'POST',
+          headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visitorId: s.subject, accountId: ACCOUNT, source: 'login', exp, assertion }) }),
+        m.env, { waitUntil: (p: Promise<unknown>) => { pending.push(p); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+        const body = await response.json().catch(() => ({})) as { shopperId?: string; session?: { capability?: string } };
+        await Promise.allSettled(pending);
+        await m.drain();
+        expect([response.status, typeof body.session?.capability], `${host}: PRECONDITION — the link of ${s.subject} to the account is accepted (${JSON.stringify(body).slice(0, 200)})`)
+          .toEqual([200, 'string']);
+        return { person: body.shopperId, capability: body.session!.capability! };
+      };
+      /** The count on the next decision of whoever holds `capability` (servePage reads only the grant's capability, src/units/_parity.ts:507). */
+      const counted = async (browser: Shopper, capability = browser.grant.capability) => {
+        const records = (await servePage(m, { ...browser, grant: { ...browser.grant, capability } }, 'pdp')).records.filter(r => r.slot === LAYOUT);
+        expect(records.length, `${host}: PRECONDITION — the next decision decides the layout's four positions`).toBe(4);
+        return records.map(r => ((r.explain as Record<string, unknown>).signalFloor as { signals?: unknown } | undefined)?.signals ?? null);
+      };
+      const a = await paidSocial(m), b = await paidSocial(m);
+      for (const view of TABBY_VIEWS.slice(0, 2)) expect((await a.action(view)).status).toBe(200);
+      for (const view of TABBY_VIEWS.slice(0, 3)) expect((await b.action(view)).status).toBe(200);
+      expect([await counted(a), await counted(b)], `${host}: CONTROL — before any link browser A counts two signals and browser B three`)
+        .toEqual([[2, 2, 2, 2], [3, 3, 3, 3]]);
+
+      const first = await link(a);
+      const afterFirst = await counted(a, first.capability);
+      const second = await link(b);
+      const afterSecond = await counted(b, second.capability);
+      const repeat = await link(a);
+      const afterRepeat = await counted(a, repeat.capability);
+      expect([typeof first.person, second.person, repeat.person], `${host}: PRECONDITION — both browsers are linked to one person`).toEqual(['string', first.person, first.person]);
+      expect.soft([
+        { after: 'browser A linked', signals: afterFirst },
+        { after: 'browser B linked to the same account', signals: afterSecond },
+        { after: 'browser A linked again', signals: afterRepeat },
+      ], `${host}: P10.F1 — merge on a link: the person's count is the sum of the actions each browser counted (2, then 2 + 3 = 5), read on the person's next decision, and a repeat link of browser A adds none`)
+        .toEqual([
+          { after: 'browser A linked', signals: [2, 2, 2, 2] },
+          { after: 'browser B linked to the same account', signals: [5, 5, 5, 5] },
+          { after: 'browser A linked again', signals: [5, 5, 5, 5] },
+        ]);
     });
   }
 });
