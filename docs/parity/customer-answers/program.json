@@ -703,13 +703,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S5 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P40 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; it carries src/routes/realtime.sdkContract.test.ts with the R10 correction of R-P48)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S5 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S5 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-P40-accept-types.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-ev4-P40.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/sdkContract-ev4-corrected-tests.log"
         ]
       }
     },
@@ -876,13 +881,18 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S5 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P39 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; the NP2 signal-count legs and the NP5 P10 clause are measured at build)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S5 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S5 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/probe-merge-drops-member.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/p10-P39-count-control.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/ctl-lapse.log"
         ]
       }
     }
