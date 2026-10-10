@@ -110,6 +110,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
 | `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` |
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
+| `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -328,7 +329,9 @@ Receipts independently distinguish absent governance (all legacy), `slot-gates-v
 (ID/off-limits only), and `slot-gates-v2` (all controls); a page that declares a layout slot adds
 `layout: "declared-slot-v1"` beside them, a decision on which the layout slot served its configured
 per-context order adds `orders: "configured-order-v1"`, and a decision on which a slot ranked its modules
-by the layout blend adds `blend: "layout-blend-v1"`. Other replay policy markers remain independent.
+by the layout blend adds `blend: "layout-blend-v1"`, and a decision on which a slot was decided below its
+signal floor adds `signalFloor: "signal-floor-v1"` with the count it was decided with as `inputs.signals`.
+Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
 to remove both fields; changing form removes the other field. Take is never changed automatically.
@@ -580,6 +583,47 @@ order is never served on the holdout's `default` arm, to a shopper without perso
 on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
 matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
 1, 2 or 3, decides and replays exactly as before.
+
+### The signal floor
+
+```json
+{
+  "governanceVersion": 4,
+  "signalFloor": 3,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 }, "signalFloor": "never" },
+    { "slot": "pdp-story", "take": 2, "weights": { "line": 1 }, "signalFloor": 0 }
+  ] }
+}
+```
+
+`signalFloor` on the slot document is the tenant's signal floor N, a whole number of 0 or more; absent
+means 0. A slot's own `signalFloor` overrides it: a whole number of 0 or more, or `never` on the page's
+declared layout slot only. A signal is one action whose behaviour weight is above zero: the action's own
+weight in the tenant's registry (`weights`), so a product view, a wishlist or cart add, a purchase or a
+content click is a signal, and a page view, a render acknowledgement (`content_impression`), a time-only
+re-evaluation and any other action weighted 0 is not; a weight applied elsewhere to what an action touched
+never makes it a signal or stops it being one. The count lives on the shopper's persisted state, written
+only once a signal is recorded, so a shopper with no signals carries exactly the state they carried before
+and a returning shopper's earlier visits count; a browser linked to a person adds its count to the
+person's.
+
+While the shopper's count of signals is at most a slot's floor, the slot is decided on context alone: the
+arrival's seed rules at their published weight, the configured order for the shopper's context, the
+population prior at full weight, the learned lift from ladder levels 0 to 2 only, and the slot's pins,
+exclusions, eligibility, freshness and merchandising; none of the shopper's interests, the journey-stage
+rule, fatigue, ladder levels 3 to 5 or visitor-hashed exploration applies. The response to the (N + 1)th
+signal is the first personalized one. A floor of 0 is off and is the default, so a tenant that publishes
+none decides exactly as before. A `signalFloor` of `never` on the page's declared layout slot keeps the
+layout context-only for every shopper while the page's content slots personalize (in the example, the
+story slot's own floor of 0 personalizes it from the first signal, while any other slot of the page would
+wait for the tenant's 3).
+
+Publication refuses, naming the floor, `never` on any other slot (`pages.{page}[i].signalFloor`), `never`
+as the tenant floor (`signalFloor`), and any floor that is not a whole number of 0 or more. The floor is
+read under every governance version and does not by itself change the version a write is stamped with.
+Every record of a context-only slot carries `explain.signalFloor: { floor, signals }`, keys sorted, and the
+shopper's receipt says that the shopper is below the signal floor, with both numbers.
 
 ## The learn document
 

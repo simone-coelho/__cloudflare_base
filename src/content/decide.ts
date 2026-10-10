@@ -7,14 +7,14 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
 import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, type ChannelSignals } from '@/services/visit';
 import type { PlatformWord } from '@/services/platform';
 import { audienceKey } from '@/reflex/core';
 import { isEligibleAt, type EligibilityContext } from './lifecycle';
-import { DEFAULT_STATS, liftFor, type LiftSnapshot } from '@/learn/stats';
+import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
 import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
@@ -103,6 +103,22 @@ export interface DecideInput {
    * means she holds none.
    */
   audiences?: readonly string[];
+  /**
+   * P10 (decisions D1, D2): the tenant's signal floor — the slots document's
+   * `signalFloor`, 0 when it publishes none — and the shopper's count of
+   * signals, read off the shopper's persisted state. A slot's own `signalFloor`
+   * overrides the tenant's. A slot whose floor holds the shopper below it is
+   * decided on context alone (`contextOnlySlots`). Absent: no floor is in
+   * force and every slot decides exactly as before.
+   */
+  signalFloor?: { floor: number; signals: number } | null;
+  /**
+   * P10: the population prior's shares a context-only slot is scored on at
+   * full weight (λ = 1). Absent, the shares of `regional` are used; the replay
+   * passes the shares the record carries (`inputs.regional_share`), which its
+   * own `regional` may not when the replayed position took nothing from them.
+   */
+  contextPrior?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -276,6 +292,63 @@ export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot:
   return { p, liftMin, liftMax };
 }
 
+/**
+ * P10: the page-manifest marker of a decision on which a slot of the page was
+ * decided on context alone because the shopper was below its signal floor
+ * (`inputs.replay.signalFloor`), with the count it was decided with beside the
+ * manifest (`inputs.signals`). Written only on such a decision (C11), so every
+ * other decision carries exactly the markers it carried before; a replay of a
+ * record that states none decides the page with no floor, which is what that
+ * decision did.
+ */
+export const SIGNAL_FLOOR_RULES = 'signal-floor-v1' as const;
+
+const wholeCount = (v: unknown): number => (typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : 0);
+
+/**
+ * P10 (decisions D1, D2): the slots of a page decided on CONTEXT ALONE for this
+ * shopper, each with the floor in force: the slot's own `signalFloor`, else the
+ * tenant's. A slot is below its floor while the shopper's count of signals is
+ * at most the floor, so the response to the (N + 1)th signal is its first
+ * personalized one; a floor of 0 is off. `never` holds the page's declared
+ * layout slot below for every shopper (on any other slot, which publication
+ * refuses, it reads as no floor of the slot's own). Never on the holdout's
+ * default arm — no personalization runs there to withhold — and never for an
+ * off-limits slot, which serves nothing. Pure and total.
+ */
+export function contextOnlySlots(slots: readonly Pick<SlotStrategy, 'slot' | 'layout' | 'offLimits' | 'signalFloor'>[],
+  signalFloor: DecideInput['signalFloor'], arm: Arm): Map<string, SignalFloor> {
+  const below = new Map<string, SignalFloor>();
+  if (!signalFloor || arm === 'default') return below;
+  const tenant = wholeCount(signalFloor.floor), signals = wholeCount(signalFloor.signals);
+  for (const s of slots) {
+    if (s.offLimits) continue;
+    const own = s.signalFloor === 'never' ? (s.layout === true ? 'never' as const : undefined)
+      : typeof s.signalFloor === 'number' && Number.isSafeInteger(s.signalFloor) && s.signalFloor >= 0 ? s.signalFloor : undefined;
+    const floor = own ?? tenant;
+    if (floor === 'never' || (floor > 0 && signals <= floor)) below.set(s.slot, floor);
+  }
+  return below;
+}
+
+/**
+ * P10 (decision D2): the population prior at full weight, as the regional blend
+ * gives it to a shopper with no evidence of their own (λ = 1: the share, to three
+ * decimals, where it is above zero). Nothing in it reads the individual shopper.
+ */
+function priorAtFullWeight(share: Readonly<Record<string, Readonly<Record<string, number>>>>): AffinityViewLike {
+  const dims: Record<string, Record<string, number>> = {};
+  for (const [dim, values] of Object.entries(share)) {
+    const out: Record<string, number> = {};
+    for (const [value, a] of Object.entries(values)) { const v = Math.round(a * 1000) / 1000; if (v > 0) out[value] = v; }
+    if (Object.keys(out).length) dims[dim] = out;
+  }
+  return { dims };
+}
+
+/** P10 (decision D2): the learned ladder's context levels, 0 to 2 (everyone, channel, channel and visit bucket). */
+const CONTEXT_LADDER_LEVELS = 3;
+
 /** The visit buckets a context can match; `unknown` matches none. */
 const KNOWN_BUCKETS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
 
@@ -327,6 +400,17 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
   const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
+  // P10 (decisions D1, D2): the slots this shopper is below the signal floor of
+  // are decided on context alone — the seed rules, the configured order, the
+  // population prior at full weight, the learned ladder at levels 0 to 2, and
+  // the slot's own pins, exclusions, eligibility, freshness and merchandising —
+  // and on no term that reads the individual shopper: not the shopper's
+  // interests, journey stage, fatigue or own memberships, ladder levels 3 to 5 or
+  // visitor-hashed exploration. Every other slot decides exactly as before.
+  const below = contextOnlySlots(i.slots, i.signalFloor, i.arm);
+  const signalCount = wholeCount(i.signalFloor?.signals);
+  const contextPrior = i.contextPrior ?? i.regional?.share ?? null;
+  const contextView: AffinityViewLike = below.size && contextPrior ? priorAtFullWeight(contextPrior) : NO_SIGNAL;
   // The slots that prefer what completes the anchor product the request names,
   // through the composer's `prefer` hook. The anchor is context the page asserts,
   // never evidence about the shopper and never kept beyond the receipt's driver.
@@ -371,7 +455,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins)
     .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
     .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
-    .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec);
+    .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
+    // P10: a slot below the floor is scored on the context view, never on the shopper's interests.
+    .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // Keep the site's default diversity/order unchanged as well as its zero scores.
@@ -408,7 +494,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // inside it gets the bonus. Personalization, so never on the default arm, and off when the stage is
   // unknown: an unknown stage is recorded as such, never guessed, and a guess would demote by accident.
   const visitorStage: StageWord | null = i.arm !== 'default' && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
-  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
+  // P10: never on a slot decided below the signal floor, whose decision reads no journey stage of the shopper's.
+  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (!below.has(s.slot) && s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
   const hasStage = visitorStage !== null && stageRules.size > 0;
   const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
   // CW30 (BTIE D2): freshness and fatigue. Recent content gets a bonus that halves every `halfLifeDays`
@@ -416,7 +503,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // with the count in the ring up to `cap`. The engine's judgment, so not on the default arm; both
   // itemised as the delta they caused. The served counts travel on the record's inputs for the replay.
   const freshRules = new Map(i.slots.flatMap((s) => (s.freshness && s.freshness.weight > 0 ? [[s.slot, s.freshness] as const] : [])));
-  const fatigueRules = new Map(i.slots.flatMap((s) => (s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
+  // P10: fatigue reads the shopper's own history, so never on a slot decided below the signal floor.
+  const fatigueRules = new Map(i.slots.flatMap((s) => (!below.has(s.slot) && s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
   const hasFresh = i.arm !== 'default' && freshRules.size > 0;
   const hasFatigue = i.arm !== 'default' && fatigueRules.size > 0 && Boolean(i.served);
   const freshOf = new Map<string, { ageDays: number; decay: number; applied: number }>();
@@ -461,7 +549,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     for (const rule of rules) {
       if (!fires(rule)) continue;
       // Each interest her own evidence holds multiplies the rule down; the receipt names every one.
-      const damped = (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
+      // P10: below the signal floor the rule fires at its published weight, the shopper's memberships unread.
+      const damped = below.has(slot) ? [] : (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
       const weight = damped.reduce((w, d) => w * d.factor, rule.weight);
       for (const tag of rule.tags) {
         const w = weights[tag.dimension] ?? 0;
@@ -534,11 +623,21 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // holds the learned term at zero. γ is not applied: the learned term enters
   // through p alone. `explain.lift` still itemises the lift, its `applied` being
   // p × Q, what the lift caused here.
+  // P10 (decision D2): below the signal floor the learned ladder answers from its
+  // context levels only (0 to 2), by its own rule — the finest of them with
+  // enough evidence — and never from the stage, region or interest levels.
+  const contextLadder = (cell: Cell) => new Set(levelKeys(cell).slice(0, CONTEXT_LADDER_LEVELS));
+  const liftAt = (slot: string, item: string) => {
+    const snap = learning?.snapshots[slot];
+    if (!below.has(slot) || !snap) return liftFor(snap, item, i.cell);
+    const keys = contextLadder(i.cell), byKey = snap.items[item];
+    return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell) : null;
+  };
   const blendTerms = new Map<string, LayoutBlendTerms>();
   const blendedSlots = new Set<string>();
   const blended = (p: ContentPieceLike, slot: string, key: string, B: number, R: number, blend: LayoutBlend, control: ItemControl | null): number => {
     const learn = learning!;
-    const look = control?.mode === 'reject' ? null : liftFor(learn.snapshots[slot], p.id, i.cell);
+    const look = control?.mode === 'reject' ? null : liftAt(slot, p.id);
     const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
     const Q = lift === null || i.arm === 'no_learning' ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;
     const gamma = learn.gammaOf(slot), applied = r3(blend.p * Q);
@@ -575,7 +674,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const blend = rank ? blends.get(slot) : undefined;
     if (blend && rank) return blended(p, slot, key, base, rank.R, blend, control);
     if (control?.mode === 'reject') return base;                       // learned lift ignored for this item
-    const look = liftFor(learning.snapshots[slot], p.id, i.cell);
+    const look = liftAt(slot, p.id);
     const gamma = learning.gammaOf(slot);
     if (control?.mode === 'freeze') {                                   // held at the value a person chose
       const metadata = learning.metadataOf?.(slot) ?? learning.snapshots[slot];
@@ -595,6 +694,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // Exploration (doc 22 §7): decided per slot from the ranked candidates, deterministic in its inputs.
   const explored = new Map<string, ExplorePick>();
   const explore = learning?.exploreOf ? (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => {
+    // P10 (decision D2): exploration is hashed on the visitor, so never below the signal floor.
+    if (below.has(slot)) return null;
     const cfg = learning.exploreOf!(slot);
     if (!cfg) return null;
     // W28.M1.01 (F23 §4.3): the merchandiser's item controls belong to the
@@ -678,14 +779,16 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const reg = i.regional; if (!reg || i.arm === 'default') return null;
     const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
     if (!piece || !spec) return null;
+    // P10: below the signal floor the prior is at full weight, the shopper's own evidence not weighing it down.
+    const lambda = below.has(d.slot) ? 1 : reg.lambda;
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
       const w = spec.weights[dim] ?? 0; if (!w) continue;
-      for (const v of values) contribution += reg.lambda * (reg.share[dim]?.[v] ?? 0) * w;
+      for (const v of values) contribution += lambda * (reg.share[dim]?.[v] ?? 0) * w;
     }
     if (contribution <= 0) return null;
     const { share: _share, ...summary } = reg;
-    return { ...summary, contribution: Math.round(contribution * 1000) / 1000 };
+    return { ...summary, lambda, contribution: Math.round(contribution * 1000) / 1000 };
   };
   for (const d of decisions) {
     // The composer keeps a served piece's four strongest drivers, so a `completes`
@@ -738,8 +841,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // nothing to state. A replay of the rules before writes none.
   const rules: { explorationRules?: ExplorationRules } = learning !== null && historicalRules !== HISTORICAL_EXPLORATION_RULES
     ? { explorationRules: EXPLORATION_RULES } : {};
+  // P10: the interest vector the page was scored on. Where every slot that serves
+  // was decided below the signal floor, that is the context view alone; where
+  // any slot personalized, it is the shopper's vector as before, and the context view is
+  // derived again from the recorded prior shares.
+  const contextOnlyPage = below.size > 0 && i.slots.every((slot) => slot.offLimits || below.has(slot.slot));
   const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
-    affinity: plain(affinity.dims) as DecisionInputs['affinity'],
+    affinity: plain((contextOnlyPage ? contextView : affinity).dims) as DecisionInputs['affinity'],
     replay: {
       version: 1, learning: learning !== null, candidateLimit: i.candidateLimit ?? 10,
       ...(historical === HISTORICAL_EXPLORATION ? {} : { exploration: 'supported-only' as const }),
@@ -749,6 +857,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
       ...(orderedSlots.size ? { orders: ORDER_RULES } : {}),
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
+      ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
@@ -758,6 +867,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
+    ...(below.size ? { signals: signalCount } : {}),
     ...rules,
   };
 
@@ -804,6 +914,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(!pinned && orderedSlots.has(d.slot) && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
         // P28: what the layout blend computed, keys sorted (a pinned position was never ranked and carries none).
         ...(!pinned && blendTerms.has(key) ? { blend: blendRecord(blendTerms.get(key)!) } : {}),
+        // P10: the slot was decided on context alone: the floor in force and the shopper's count of signals, keys sorted.
+        ...(below.has(d.slot) ? { signalFloor: { floor: below.get(d.slot)!, signals: signalCount } } : {}),
       },
       inputs,
     };

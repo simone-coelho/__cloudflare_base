@@ -82,6 +82,14 @@ export interface ContentSlotSpec {
    * slot decides exactly as before.
    */
   blend?: true;
+  /**
+   * P10 (decision D2): the interest view THIS slot is scored on, in place of the
+   * page's. The caller sets it on a slot decided below the signal floor, where
+   * it is the context view (the population prior at full weight, or nothing),
+   * so no interest of the shopper's own reaches that slot's score or drivers.
+   * Absent, the slot is scored on the page's view exactly as before.
+   */
+  affinity?: AffinityViewLike;
 }
 
 /**
@@ -296,6 +304,7 @@ export function composeContentDetailed(
     const blended = slot.blend === true && adjust !== undefined;
     const rankBase = (pool: readonly ContentPieceLike[]) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length] as const));
     const catalogueBase = blended ? rankBase(eligible) : null;
+    const view = slot.affinity ?? affinity;
     const scoreOf = (p: ContentPieceLike, R?: number) => {
       // Capture values now: prefer/adjust/explore may mutate the source inputs.
       // Only served candidates need driver objects and their presentation order.
@@ -304,7 +313,7 @@ export function composeContentDetailed(
       for (const [dim, values] of Object.entries(p.tags)) {
         const w = slot.weights[dim] ?? 0; if (!w) continue;
         for (const v of values) {
-          const a = affinity.dims[dim]?.[v] ?? 0; if (a <= 0) continue;
+          const a = view.dims[dim]?.[v] ?? 0; if (a <= 0) continue;
           score += a * w; drivers.push(dim, v, a, w);
         }
       }

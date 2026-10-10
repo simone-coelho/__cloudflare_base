@@ -311,6 +311,30 @@ not opt in, keep `base × lift^γ` exactly as before. A position the blend ranke
 neither `B` nor `p × Q` moved it and `affinity` otherwise, its `explain.note` says that the blend ranked
 it, and under a configured order it keeps `explain.configuredOrder` beside the blend.
 
+**The signal floor.** A tenant can keep a shopper on context-only decisions until the shopper has shown
+enough behaviour of their own: `signalFloor` on the slots document is the tenant's floor N, a whole number
+of 0 or more, and a slot's own `signalFloor` overrides it ([the signal floor](./03-payload-schemas.md#the-signal-floor)).
+A signal is one action whose behaviour weight is above zero, read from the action's own weight in the
+tenant's registry (`weights`): a product view, a wishlist or cart add, a purchase or a content click is a
+signal, and a page view, a render acknowledgement (`content_impression`), a time-only re-evaluation and any
+other action weighted 0 are not. The count is kept on the shopper's persisted state on either shopper host,
+so a returning shopper's earlier visits count, and a browser linked to a person adds its count to the
+person's. While the shopper's count is at most a slot's floor, the slot is decided on context alone: the
+arrival's seed rules at their published weight (never dampened by the shopper's own interests), the
+configured order for the shopper's context, the population prior at full weight (λ 1), the learned lift
+from levels 0 to 2 of the ladder only (everyone, channel, channel and visit bucket), and the slot's pins,
+exclusions, eligibility, freshness and merchandising; none of the shopper's interests, the journey-stage
+rule, fatigue, ladder levels 3 to 5 or visitor-hashed exploration applies, and the slot's records claim no
+journey stage. The response to the (N + 1)th signal is therefore the first personalized one. A floor of 0,
+the default of every tenant that publishes none, holds nobody below it and decides exactly as before, and
+no floor applies on the holdout's `default` arm, which personalizes nothing. A `signalFloor` of `never` on
+the page's declared layout slot keeps that slot context-only for every shopper, so a page's layout can be
+one answer per context while its content slots personalize. On a layout slot that opts into the layout
+blend, a context-only decision's `B` holds the context terms alone (0 where none applies) and its `Q` comes
+from ladder levels 0 to 2. Every record of a context-only slot carries `explain.signalFloor: { floor,
+signals }` (keys sorted), and its receipt says that the shopper is below the signal floor, with the
+shopper's count of signals and the floor in force.
+
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data
 authority it was born under is no longer the one in force (for example, you published the next
 revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then still
@@ -422,6 +446,8 @@ designed outcome, not a lost credit; `conflicts` does not show that they are the
 it rides the brand's other rows as well (see `reconciliation` above).
 
 A position a configured per-context order set carries `configuredOrder: { context, modules }` on its receipt, exactly as the record carries it, and its `why` says in words that the configured order placed it, for which context and at which place in the order; a pinned position under an order keeps its pin sentence and carries none. A slot that served its configured order is not reported as a short take: the order says how many positions it fills.
+
+A position of a slot decided below the signal floor carries `signalFloor: { floor, signals }` on its receipt, exactly as the record carries it, and its `why` says, before any term, that the shopper is below the signal floor, with the shopper's count of signals and the floor in force, and that no term that reads the individual shopper applied.
 
 A position the layout blend ranked carries `blend: { B, Q, R, p }` on its receipt, exactly as the record carries it, and its `why` reads out each term — where the rank base `R` came from (under a configured order, the module's place among the modules the merchandiser ordered, counted over the whole order, which the receipt's `configuredOrder` still carries), what the shopper's behaviour contributed to `B`, the learned lift behind `Q` — and the sum at `p`; it never says that the ranking did not place the position.
 
@@ -858,6 +884,22 @@ writes exactly the markers it wrote before; a replay of a record without it deci
 blend, and a present marker with another value, without the layout marker, on a decision without the
 learning layer, or over a learn revision in which no declared layout slot of the page opts in, refuses
 as `invalid page replay manifest`. The record's `explain.blend` is compared by value in replay.
+
+The slots document's `signalFloor` (the tenant's floor) and a slot's own `signalFloor` (the snapshot's
+"The signal floor" above says what a shopper below it is served) are read under every governance version
+and do not by themselves change the version a write is stamped with: an unmarked write that carries a floor
+and declares no layout slot is stamped 3, and a document marked 4 carries a floor with or without a layout
+slot. Publication — `PUT /content/slots`, a slots document published as a `publicationChanges` member, and
+`POST /content/slots/validate` alike — refuses with `422`, naming the floor in `errors[]` and writing no
+revision, a `signalFloor` of `never` on any slot but the page's declared layout slot
+(`pages.{page}[i].signalFloor`), `never` as the tenant floor (`signalFloor`), and any floor that is not a
+whole number of 0 or more (a fraction, a negative number, a number written as text). A decision on which a
+slot was decided below its signal floor writes `inputs.replay.signalFloor: "signal-floor-v1"` beside the
+other markers and the count it was decided with as `inputs.signals`, and every other decision writes exactly
+what it wrote before; a replay of a record without the marker decides the page with no floor, and a present
+marker with another value, on the holdout's `default` arm, without a whole count, or over a slots revision
+whose floors hold no slot of the page below that count, refuses as `invalid page replay manifest`. The
+record's `explain.signalFloor` is compared by value in replay.
 
 `pinnedPieceIds` pins a required ordered prefix (up to 50 distinct exact nonempty IDs, [] neutral),
 followed by ranking up to total take. It is mutually exclusive with scalar `pinnedPieceId`, even with [].

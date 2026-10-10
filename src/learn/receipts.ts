@@ -69,6 +69,13 @@ export interface Receipt {
    * `score_final`; absent on every position the blend did not rank.
    */
   blend?: LayoutBlendTerms;
+  /**
+   * P10 (decision D2): this position's slot was decided on context alone because
+   * the shopper was below its signal floor — the floor in force and the
+   * shopper's count of signals, exactly as the record carries them; absent on
+   * every position of a slot that personalized.
+   */
+  signalFloor?: NonNullable<DecisionRecord['explain']['signalFloor']>;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -120,6 +127,17 @@ function orderContextOf(context: NonNullable<DecisionRecord['explain']['configur
   return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}`;
 }
 
+/**
+ * P10: the signal floor in words — the shopper's count of signals beside the
+ * floor in force, and what that meant for this decision.
+ */
+function signalFloorSentence(f: NonNullable<DecisionRecord['explain']['signalFloor']>): string {
+  const count = `${f.signals} signal${f.signals === 1 ? '' : 's'}`;
+  return f.floor === 'never'
+    ? `Below the signal floor: this shopper has ${count} and this slot's floor is never, so it is decided on context alone for every shopper; no term that reads the individual shopper applies.`
+    : `Below the signal floor: this shopper has ${count} and the floor in force is ${f.floor}, so this slot was decided on context alone and no term that reads the individual shopper applied; the first personalized decision follows signal ${f.floor + 1}.`;
+}
+
 /** The record as sentences. Every number on the record has a place here, so nothing is said that the record does not carry. */
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
@@ -165,6 +183,9 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   why.push(r.measurementBasis === 'rendered-v1'
     ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
     : 'Legacy served-decision exposure; rendering was not confirmed.');
+  // P10: a slot decided below the signal floor says so before any term, with both
+  // numbers, so no sentence after it is read as a claim about the shopper's own interests.
+  if (e.signalFloor) why.push(signalFloorSentence(e.signalFloor));
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else if (e.blend) {
@@ -178,7 +199,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
       why.push(`Rank base R ${r3(b.R)} from the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered, ranked with them by the layout blend; a module the order does not list is not shown in this context.`);
     } else why.push(`Rank base R ${r3(b.R)} from the slot's catalogue order of the modules it could serve.`);
-    behaviour('No interest signal yet for this shopper: the behaviour term B is 0.');
+    behaviour(e.signalFloor ? 'No context term moved it: the behaviour term B is 0.' : 'No interest signal yet for this shopper: the behaviour term B is 0.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece: the performance term Q is 0.');
     else if (e.lift) {
       const l = e.lift;
@@ -202,7 +223,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
   } else {
     if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
-    behaviour('No interest signal yet for this shopper: the slot served its catalogue order.');
+    behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.' : 'No interest signal yet for this shopper: the slot served its catalogue order.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece; it competes on its base score alone.');
     if (e.lift) {
       const l = e.lift;
@@ -250,6 +271,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(liftTerms ? { lift_terms: liftTerms } : {}),
     ...(e.configuredOrder ? { configuredOrder: e.configuredOrder } : {}),
     ...(e.blend ? { blend: { B: e.blend.B, Q: e.blend.Q, R: e.blend.R, p: e.blend.p } } : {}),
+    ...(e.signalFloor ? { signalFloor: { floor: e.signalFloor.floor, signals: e.signalFloor.signals } } : {}),
     why,
   };
 }

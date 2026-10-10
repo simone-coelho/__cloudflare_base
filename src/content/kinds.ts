@@ -7,12 +7,14 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
 import { platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+/** P10: a signal count or floor — a whole number of 0 or more (a nonnegative safe integer). */
+const isSignalCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 const LIFECYCLE = new Set(['live', 'draft', 'expired']);
 const SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
 
@@ -623,6 +625,15 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       errors.push(`${at}.orders: per-context orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
     }
   }
+  // P10: the slot's own signal floor, read under every governance version like
+  // the seed rules: a whole number of 0 or more, or `never`. That `never` is
+  // published only on the page's declared layout slot is an authoring rule of
+  // `validateSlotCatalog`, never reinterpreted on a read.
+  let signalFloor: SignalFloor | undefined;
+  if (s.signalFloor !== undefined) {
+    if (s.signalFloor === 'never' || isSignalCount(s.signalFloor)) signalFloor = s.signalFloor;
+    else errors.push(`${at}.signalFloor: ${quoted(s.signalFloor)} is not a signal floor; a slot's floor is a whole number of 0 or more, or never on the page's declared layout slot`);
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
@@ -630,6 +641,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
     ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
+    ...(signalFloor !== undefined ? { signalFloor } : {}),
   };
 }
 
@@ -652,6 +664,14 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
+  // P10: the tenant's signal floor, a whole number of 0 or more (absent is 0).
+  // `never` belongs to the declared layout slot alone and is never a tenant floor.
+  const signalFloor = candidate.signalFloor;
+  if (signalFloor !== undefined && !isSignalCount(signalFloor)) {
+    errors.push(signalFloor === 'never'
+      ? 'signalFloor: never is not a tenant floor; it is set only on a page\'s declared layout slot (its own signalFloor), and the tenant floor is a whole number of 0 or more'
+      : `signalFloor: ${quoted(signalFloor)} is not a signal floor; the tenant floor is a whole number of 0 or more (0, the default, is off)`);
+  }
   if (!isRecord(candidate.pages)) return { ok: false, errors: [...errors, 'pages: required object of page → slot[]'] };
   const pages: Record<string, SlotStrategy[]> = {};
   for (const [page, list] of Object.entries(candidate.pages)) {
@@ -663,7 +683,8 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
     pages[page] = slots;
   }
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), ...(governance ? { governanceVersion: governance } : {}), pages } };
+  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), ...(governance ? { governanceVersion: governance } : {}),
+    ...(isSignalCount(signalFloor) ? { signalFloor } : {}), pages } };
 }
 
 /** Publication rejects local contradictions without reinterpreting retained revisions. */
@@ -710,6 +731,15 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
   // could not be served exactly (a retained document is never reinterpreted).
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots)); });
+  }
+  // P10 (F3): `never` keeps a slot context-only for every shopper, which is what
+  // makes a page's layout one answer per context; it is published only on the
+  // page's declared layout slot, so a content slot always keeps a floor its
+  // shoppers can pass.
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => {
+      if (slot.signalFloor === 'never' && slot.layout !== true) errors.push(`pages.${page}[${index}].signalFloor: never is set only on the page's declared layout slot (layout: true); slot '${slot.slot}' is not the declared layout slot of page '${page}', so its floor is a whole number of 0 or more`);
+    });
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();

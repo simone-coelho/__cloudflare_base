@@ -1,4 +1,13 @@
 // src/reflex/core.ts
+function signalsOf(state) {
+  const n = state?.signals;
+  return typeof n === "number" && Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+function withSignals(state, signals) {
+  const { signals: _held, ...rest } = state;
+  void _held;
+  return signals > 0 ? { ...rest, signals: Math.min(signals, Number.MAX_SAFE_INTEGER) } : rest;
+}
 function slugValue(v) {
   return v.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
@@ -194,9 +203,17 @@ function apply(prev, input, now, config) {
     });
   }
   return {
-    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+    // 5. The count rides the state: carried through every apply, one more for a signal.
+    state: withSignals(
+      { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+      signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)
+    ),
     changes: { entered, exited, explain }
   };
+}
+function isSignal(config, action) {
+  const weight = Object.hasOwn(config.weights, action) ? config.weights[action] : void 0;
+  return typeof weight === "number" && Number.isFinite(weight) && weight > 0;
 }
 function tick(state, now, config) {
   return apply(state, { action: "tick", touches: [] }, now, config);
@@ -1302,6 +1319,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const blended = slot.blend === true && adjust !== void 0;
     const rankBase = (pool) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length]));
     const catalogueBase = blended ? rankBase(eligible) : null;
+    const view = slot.affinity ?? affinity;
     const scoreOf = (p, R) => {
       const drivers = [];
       let score = 0;
@@ -1309,7 +1327,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         const w = slot.weights[dim2] ?? 0;
         if (!w) continue;
         for (const v of values) {
-          const a = affinity.dims[dim2]?.[v] ?? 0;
+          const a = view.dims[dim2]?.[v] ?? 0;
           if (a <= 0) continue;
           score += a * w;
           drivers.push(dim2, v, a, w);

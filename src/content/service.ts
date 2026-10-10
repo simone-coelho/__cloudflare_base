@@ -10,7 +10,7 @@ import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCa
 import { carriedSaltVersion, PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
+import { signalsOf, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -24,7 +24,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotN
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { decideContent, layoutBlendOf } from './decide';
+import { contextOnlySlots, decideContent, layoutBlendOf } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -228,6 +228,14 @@ interface ShopperRead {
    * expired session (no answer at all).
    */
   unreadable?: true;
+  /**
+   * P10 (decision D1): the shopper's count of signals — every action whose own behaviour
+   * weight is above zero — read off the same state the affinity is read from,
+   * by whichever host holds it: the session host's stored reflex state, or the
+   * object's content projection. Read only for a consenting shopper; absent,
+   * or a value that is not a whole number, is 0. No read of its own.
+   */
+  signals?: number;
 }
 
 /** Her record could not be read out: the answer carries nothing of it (W16 R5). */
@@ -254,7 +262,7 @@ async function readShopper(
       ].join('; ') };
       const res = await stub.fetch('https://shopper-reflex/snapshot?projection=content', { headers });
       if (!res.ok) throw new SessionAccessError();
-      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown };
+      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown; signals?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
       // W16 R5: the object answered that her record cannot be read out. Only a
       // consenting shopper's record is ever read, so only she can be told so; a
@@ -269,7 +277,8 @@ async function readShopper(
       const consent = intersectConsent(storedConsent(body.consent), hints);
       return { affinity: personalizes(consent) ? body.affinity ?? null : null, sessionId: principal.sessionId, isNewSession: null, state: 'do',
         stage: personalizes(consent) ? journeyWordOf(body.journeyStage) : null, consent,
-        visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null };
+        visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null,
+        signals: personalizes(consent) ? signalsOf({ signals: body.signals as number | undefined }) : 0 };
     } catch {
       throw new SessionAccessError();
     }
@@ -301,6 +310,7 @@ async function readShopper(
         : null,
       visit: personalizes(consent) ? sessionData?.metadata : null,
       lastSeen: personalizes(consent) ? sessionData?.metadata.lastSeen : null,
+      signals: personalizes(consent) ? signalsOf(sessionData?.reflex) : 0,
       consent,
     };
   } catch {
@@ -596,8 +606,16 @@ export async function serveContentDecisions(
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
   const snapshots: Record<string, LiftSnapshot | null> = {};
   const configOf = slotLearnConfigOf(learn);
+  // P10 (decisions D1, D2): the tenant's signal floor and the shopper's count of
+  // signals, both already held (the document read above, the state read with
+  // the affinity): no read is added, nothing here can fail or wait. A slot the shopper is
+  // below the floor of is decided on context alone; a floor of 0, the default,
+  // holds nobody below and every slot decides exactly as before.
+  const signalFloor = personalized ? { floor: slotsDoc.signalFloor ?? 0, signals: shopper.signals ?? 0 } : null;
+  const below = contextOnlySlots(activeSlots, signalFloor, arm);
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
-  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0);
+  // P10: and never for a slot decided below the signal floor, which reads none of the shopper's history.
+  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0 && !below.has(s.slot));
   const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
@@ -649,6 +667,7 @@ export async function serveContentDecisions(
     // and her own memberships for a seed rule's dampen (none without consent).
     ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
+    ...(signalFloor ? { signalFloor } : {}),
   });
 
   lap('decide');
@@ -671,9 +690,11 @@ export async function serveContentDecisions(
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
+  // P10: a record of a slot decided below the signal floor read no stage of the
+  // shopper's, so it claims none.
   if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
-    for (const record of set.records) record.journey = journey;
+    for (const record of set.records) if (!record.explain.signalFloor) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
