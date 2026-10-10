@@ -353,8 +353,10 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   // P07: the context prior is already in the recorded interest vector; the record's
   // itemisation and the shares it carries let the replay itemise it again. A
   // record that carries no shares was decided without it and replays as before.
-  const contextBlend = served.explain.contextPrior && inputs.context_share
-    ? (({ contribution: _c, ...summary }) => ({ ...summary, share: inputs.context_share! }))(served.explain.contextPrior)
+  const recordedContext = served.explain.contextPrior;
+  const contextBlend = recordedContext && inputs.context_share
+    ? { channel: recordedContext.channel, events: recordedContext.events, lambda: recordedContext.lambda, level: recordedContext.level,
+      version: recordedContext.version, visitBucket: recordedContext.visitBucket, share: inputs.context_share }
     : null;
   const extCfg = learn.external ?? null;
   let set: ReturnType<typeof decideContent>;
