@@ -10,7 +10,8 @@ import type {
   Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
 import { contextSpecificity, validateSeedRules } from './kinds';
-import { arrivedFromNetwork, entryChannelOf, type ChannelSignals } from '@/services/visit';
+import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals } from '@/services/visit';
+import { TODAY_TERMS, type ContextTerms } from './cell';
 import type { PlatformWord } from '@/services/platform';
 import { audienceKey } from '@/reflex/core';
 import { isEligibleAt, type EligibilityContext } from './lifecycle';
@@ -103,6 +104,19 @@ export interface DecideInput {
    * means she holds none.
    */
   audiences?: readonly string[];
+  /**
+   * P36 (R-P46, R-P51, R-P52): the tenant's context terms from its published
+   * vocabulary — the channel ids and the source platforms and landing-page
+   * types a seed rule may name, and the ladder depth the learned lift is read
+   * to. Absent: today's six words and the full ladder, exactly as before.
+   */
+  contextTerms?: ContextTerms;
+  /**
+   * P36: the source platform and the landing-page type recorded on the
+   * shopper's visit, for seed rules that read them. Observed context, like
+   * `entry`: a fired seed is recorded on the receipt as a driver.
+   */
+  visitContext?: { sourcePlatform?: string; landingPageType?: string } | null;
   /**
    * P10 (decisions D1, D2): the tenant's signal floor — the slots document's
    * `signalFloor`, 0 when it publishes none — and the shopper's count of
@@ -349,8 +363,14 @@ function priorAtFullWeight(share: Readonly<Record<string, Readonly<Record<string
 /** P10 (decision D2): the learned ladder's context levels, 0 to 2 (everyone, channel, channel and visit bucket). */
 const CONTEXT_LADDER_LEVELS = 3;
 
-/** The visit buckets a context can match; `unknown` matches none. */
-const KNOWN_BUCKETS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
+/**
+ * The visit buckets a context can match; `unknown` matches none. P36 (R-P46):
+ * a cell carries a channel and a bucket only from the tenant's own terms (cellFor
+ * records anything else as unknown), and an order names only them (refused at
+ * publication otherwise), so here a channel is any channel id and a bucket any
+ * bucket name — never `unknown`, which matches no context, not even `any`.
+ */
+const KNOWN_BUCKET = /^(?:[1-9][0-9]{0,4}|[1-9][0-9]{0,4}-[1-9][0-9]{0,4}|[1-9][0-9]{0,4}\+)$/;
 
 /**
  * P01 decision D1: the configured order a shopper in `cell` is served on this
@@ -369,12 +389,12 @@ const KNOWN_BUCKETS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
 export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>): ConfiguredOrder | null {
   if (slot.layout !== true || !Array.isArray(slot.orders) || slot.orders.length === 0) return null;
   const channel = cell.channel, bucket = cell.visit_bucket;
-  if (entryChannelOf(channel) !== channel || !KNOWN_BUCKETS.has(bucket)) return null;
+  if ((entryChannelOf(channel) !== channel && !isContextId(channel)) || typeof bucket !== 'string' || !KNOWN_BUCKET.test(bucket)) return null;
   let best: ConfiguredOrder | null = null, bestSpecificity = -1, tied = false;
   for (const order of slot.orders) {
     const context = order?.context;
     if (!context || (context.channel !== 'any' && context.channel !== channel)) continue;
-    if (context.visitBuckets !== 'any' && !(Array.isArray(context.visitBuckets) && context.visitBuckets.includes(bucket as '1' | '2-3' | '4+'))) continue;
+    if (context.visitBuckets !== 'any' && !(Array.isArray(context.visitBuckets) && context.visitBuckets.includes(bucket))) continue;
     const specificity = contextSpecificity(context);
     if (specificity > bestSpecificity) { best = order; bestSpecificity = specificity; tied = false; }
     else if (specificity === bestSpecificity) tied = true;
@@ -525,7 +545,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const seedDiagnostics: SeedDiagnostic[] = [];
   if (i.arm !== 'default') for (const s of i.slots) {
     if (s.seeds === undefined) continue;
-    const checked = validateSeedRules(s.seeds, s.weights);
+    const checked = validateSeedRules(s.seeds, s.weights, i.contextTerms ?? TODAY_TERMS);
     if (!checked.ok) { seedDiagnostics.push({ slot: s.slot, reason: 'invalid_rule_set' }); continue; }
     // An empty rule set is the same as none: nothing to seed and nothing to claim.
     if (checked.value.length) seedRules.set(s.slot, checked.value);
@@ -536,7 +556,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     rule.signal === 'entry_channel' ? i.cell.channel === rule.value
       : rule.signal === 'campaign_term' ? arrivalTerm !== '' && arrivalTerm === term(rule.value)
         : rule.signal === 'platform' ? i.platform != null && i.platform === rule.value
-          : arrivedFromNetwork(i.entry, rule.value);
+          // P36: the visit's recorded context attributes.
+          : rule.signal === 'source_platform' ? i.visitContext?.sourcePlatform === rule.value
+            : rule.signal === 'landing_page_type' ? i.visitContext?.landingPageType === rule.value
+              : arrivedFromNetwork(i.entry, rule.value);
   // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
   const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
@@ -626,10 +649,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // P10 (decision D2): below the signal floor the learned ladder answers from its
   // context levels only (0 to 2), by its own rule — the finest of them with
   // enough evidence — and never from the stage, region or interest levels.
-  const contextLadder = (cell: Cell) => new Set(levelKeys(cell).slice(0, CONTEXT_LADDER_LEVELS));
+  // P36 (R-P46): a published ladder depth stops the lookup there, never reading
+  // a finer level; below the floor the context levels bound it as well.
+  const ladderDepth = i.contextTerms?.depth ?? 5;
+  const contextLadder = (cell: Cell) => new Set(levelKeys(cell).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1)));
   const liftAt = (slot: string, item: string) => {
     const snap = learning?.snapshots[slot];
-    if (!below.has(slot) || !snap) return liftFor(snap, item, i.cell);
+    if (!below.has(slot) || !snap) return liftFor(snap, item, i.cell, ladderDepth);
     const keys = contextLadder(i.cell), byKey = snap.items[item];
     return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell) : null;
   };
