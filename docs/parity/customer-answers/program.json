@@ -151,6 +151,7 @@
         "src/content/service.ts",
         "src/content/decide.ts",
         "src/routes/content.ts",
+        "src/durable-objects/LearnStats.ts",
         "src/durable-objects/ShopperReflex.ts",
         "src/services/RealtimeSegmentEngine.ts",
         "src/services/SessionManager.ts",
@@ -514,13 +515,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S5 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "51f050e36f253fca2643198786ab317fb853684d on rem/spec-parity-e (batch S5 fix round 2; P38 reviewed PASS at this revision after the S5 review at da5aaea4 and fix round 1 at e06c860c; the per-ticket branch is cut from the final batch head so the shared harness src/units/_parity5.ts is final)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S5 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S5 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P38-findings.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/nc-P38-VA4-lock-import.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/P38-probe-behind.log"
         ]
       }
     },
