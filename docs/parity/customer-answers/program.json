@@ -347,13 +347,16 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S5 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "da5aaea4dfa6be74a018e1c89d968ac926e6d26f on rem/spec-parity-e (batch S5; P37 reviewed PASS at this revision; the per-ticket branch is cut from the batch head after the S5 fix round so the shared harness src/units/_parity5.ts is final, with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S5 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S5 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P37-findings.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/probe-DV2-session40.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/nc-P37-DV5-lock-cell.log"
         ]
       }
     },
