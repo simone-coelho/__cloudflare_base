@@ -896,7 +896,7 @@
     {
       "id": "P07",
       "title": "Channel and visit number before the first click",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
