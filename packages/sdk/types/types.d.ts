@@ -176,7 +176,15 @@ export interface ContentDecision {
     customerContentId: string;
     type: string;
     slot: string;
+    /** The page-wide order the decision is drawn at. */
     order: number;
+    /**
+     * The decision's position within its slot (P03 decision D3): what its record
+     * calls `position`. The engine names it on every decision it answers; the SDK
+     * carries it on the render acknowledgement and on every engagement of the
+     * placement, beside the page-wide `order` as `position`.
+     */
+    slotPosition?: number;
     score: number;
     strategy: 'affinity' | 'default' | 'tenant-pinned';
     explain: {

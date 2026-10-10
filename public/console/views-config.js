@@ -500,7 +500,7 @@
               delete st.pinnedPieceId; delete st.pinnedPieceIds;
               if (Array.isArray(value)) st.pinnedPieceIds = value;
               else if (value !== null) st.pinnedPieceId = value;
-            } else if (nullDeletes && value === null) delete st[field]; else st[field] = value;
+            } else if (nullDeletes && (value === null || (field === 'orders' && Array.isArray(value) && value.length === 0))) delete st[field]; else st[field] = value;
           } catch { editor.error = syntax; }
           let fields = rules.exclusionEditors.get(st);
           if (!fields) { fields = new Map(); rules.exclusionEditors.set(st, fields); }
@@ -525,6 +525,18 @@
         h('div', { class: 'help' }, 'Any exact {"dimension":"…","value":"…"} match excludes a piece. Up to 1000 distinct pairs; both strings 1–1024 UTF-16 units. [] clears. No vocabulary, trimming or case conversion. Explicit own tags match literally; only absent contentType uses the safe rendering-type fallback on every arm.'),
         h('div', { class: 'name' }, named('allowedTypes', 'Allowed rendering types (JSON array or null)')), typeEditor,
         h('div', { class: 'help' }, 'Matches piece.type exactly, not tags.contentType. Use 1–1000 distinct strings of 1–1024 UTF-16 units; [] is invalid, null removes the limit. Saved controls apply when the serving worker reads that revision; caches may still hold an earlier revision.')));
+
+      // P01: the per-context order editor, on the page's declared layout slot
+      // only. It edits the slot's `orders` in the same JSON idiom as the hard
+      // controls above; the platform validates the draft and the save is the
+      // same slots publication as every other change on this screen.
+      if (st.layout === true) {
+        const orderEditor = jsonEditor('orders', 'layout.orders', [], 'Orders must be a valid JSON array of {"context":{"channel":…,"visitBuckets":…},"modules":[…]} objects. Use [] to clear; malformed text cannot be saved.', true);
+        host.append(card('Module order per context',
+          'This is the page’s layout slot. For a shopper in a context named here the slot serves exactly the listed modules, in this order; a module the order does not list is hidden in that context and is not counted as an exposure. Every other shopper keeps the slot’s own decision.',
+          h('div', { class: 'name' }, named('orders', 'Per-context orders (JSON array)')), orderEditor,
+          h('div', { class: 'help' }, 'Each order is {"context": {"channel": one of direct, paid_social, paid_search, email, organic, referral or "any", "visitBuckets": a list of "1", "2-3", "4+" or "any"}, "modules": [module ids, 1 up to the slot’s take]}. The most specific matching context wins; two contexts that match one shopper with equal specificity cannot be saved. A shopper whose channel or visit is unknown matches no context. An order keeps every pinned module at its position and lists no excluded module. The order is never served on the holdout’s default arm, without personalization consent, or when the slot’s exploration picks; those shoppers keep the slot’s own decision. [] clears.')));
+      }
 
       const unregistered = Object.keys(st.weights).filter(key => !rules.dimensions.includes(key));
       host.append(card('How much each interest counts in this slot',

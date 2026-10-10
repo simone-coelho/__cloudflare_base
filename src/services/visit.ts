@@ -378,6 +378,38 @@ export function arrivedFromNetwork(entry: ChannelSignals | null | undefined, net
 }
 
 /**
+ * Google's auto-tagged click: the `gclid` Google Ads appends to the landing URL
+ * when auto-tagging is on, in place of any UTM tag. It is a CLASSIFICATION
+ * input and deliberately not a member of `ChannelSignals`: the entry contract
+ * (`validEntry`, W16 C2) still refuses any key it does not list, so no request
+ * carries it yet. Widening that contract is the remediation track's ruling; the
+ * classifier reads it already, so the ruling is one line at the boundary.
+ */
+export interface AutoTagSignals {
+  /** The Google click id, as the landing URL carried it. Only its presence is read; the value is never kept. */
+  gclid?: string | null;
+}
+/** A click id is an opaque token of about a hundred characters; anything empty or unbounded is not one. */
+const GCLID_LIMIT = 512;
+function autoTagged(signals: AutoTagSignals): boolean {
+  const id = signals.gclid;
+  return typeof id === 'string' && id.trim() !== '' && id.length <= GCLID_LIMIT;
+}
+
+/**
+ * The source an arrival names: its declared `utm_source`; for an auto-tagged
+ * click that declares none, the referrer's host when it is a search engine,
+ * which is where Google's own click came from; otherwise null, never a guess.
+ */
+export function entrySourceOf(signals: ChannelSignals & AutoTagSignals): string | null {
+  const source = norm(signals.utmSource);
+  if (source !== '') return source;
+  if (!autoTagged(signals)) return null;
+  const host = hostOf(norm(signals.referrer));
+  return matches(host, SEARCH_HOSTS) ? host : null;
+}
+
+/**
  * Classify the visit's entry into one of doc 22's six channels.
  *
  * Precedence is deliberate: a UTM tag is a DECLARATION by whoever built the link,
@@ -391,9 +423,16 @@ export function arrivedFromNetwork(entry: ChannelSignals | null | undefined, net
  * "organic social" bucket to put it in. Classing it organic would silently pool
  * untagged social alongside search, which are not comparable populations.
  */
-export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
+export function classifyEntryChannel(signals: ChannelSignals & AutoTagSignals): EntryChannel {
   const medium = norm(signals.utmMedium);
   const source = norm(signals.utmSource);
+
+  // An auto-tagged Google click that declares no source is a paid search click:
+  // Google Ads wrote the click id, and without a declared source nothing else
+  // names the network. Read before the referrer, which on such a click is the
+  // search engine and would otherwise read as organic. A declared `utm_source`
+  // is still the link builder's declaration and is judged by the rules below.
+  if (source === '' && autoTagged(signals)) return 'paid_search';
 
   if (medium !== '') {
     // Meta's default campaign builder commonly emits utm_medium=cpc, and a bare

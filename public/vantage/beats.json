@@ -1,0 +1,475 @@
+{
+  "about": "Vantage's director script: the 22 presses of its fifteen beats, as data the demo kit's director runs (public/demo-kit/director.js). Not a published beat document: those are beats/*.json, which scripts/seed-vantage.mjs re-anchors and rewrites and the worker applies by name. Strings are templates over the facts vantage.js computes (facts()); run lists are the kit's verbs; call is the one escape hatch into vantage.js.",
+  "total": 15,
+  "acts": {
+    "1": "The arrival",
+    "2": "The visitor earns it",
+    "3": "The phone page follows intent",
+    "4": "The merchandiser’s day",
+    "5": "Order and metric"
+  },
+  "places": {
+    "home": [
+      { "click": ".mast a[data-ctl=\"home\"]" }
+    ],
+    "phone": [
+      { "when": "{{view.home}}", "click": "rail-{{id}}", "in": "rail", "if": "present",
+        "else": [
+          { "unless": "{{view.phones}}", "do": [ { "click": "nav-phones", "in": "mainnav" }, { "wait": 300 } ] },
+          { "click": "open-{{id}}", "in": "phoneGrid" }
+        ] }
+    ],
+    "phoneBack": [
+      { "when": "{{canBack}}", "open": "back", "else": [ { "open": "phone", "id": "{{id}}" } ] }
+    ]
+  },
+  "beats": [
+    {
+      "key": "arrive", "no": "1", "act": 1, "who": "shopper", "arrives": true,
+      "label": "A stranger arrives from the ad",
+      "declare": [
+        "<b>Taps</b> a paid-social ad and lands on the homepage ({{arrival.entry}})",
+        "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}Her region comes <b>from the request</b>: the edge locates her, and nothing is asserted{{/region.override}}"
+      ],
+      "acts": [ { "type": "page_view" } ],
+      "will": [
+        "The hero and the four answer <b>the ad and her region</b>: the campaign lifts its promotion, her region’s own sales lean the rest",
+        "The Arrival panel names {{#region.override}}the override’s region, labelled as asserted{{/region.override}}{{^region.override}}the region <b>the edge located, from the request</b>{{/region.override}}, the grain, the census figure and the regional lean, each labelled",
+        "Her own meters are empty: nothing about <b>her</b> is known yet"
+      ],
+      "line": "A stranger taps a paid-social ad. The first paint answers <b>the ad and where she is</b>: {{#region.override}}her region is a rehearsal override, labelled{{/region.override}}{{^region.override}}her region comes from the request{{/region.override}}, the campaign lifts its promotion and the carrier’s own regional sales lean the rest. Aggregate, never the individual; we curate, never price.",
+      "run": [
+        { "publish": "reset" },
+        { "call": "arrive" },
+        { "focus": { "panel": "arrival" } },
+        { "open": "home", "land": true, "args": { "quiet": true, "focus": "hero" } }
+      ]
+    },
+    {
+      "key": "region", "no": "2", "act": 1, "who": "merch",
+      "label": "The same visitor, another region",
+      "declare": [
+        "<b>Asserts</b> region = {{region.contrast}}{{#region.contrastName}} ({{region.contrastName}}){{/region.contrastName}} on the request: asserted, not observed; nothing about her changes"
+      ],
+      "acts": [],
+      "will": [
+        "A <b>different opening four</b>: only the region changed",
+        "The Arrival panel shows the asserted region’s grain, census figure and lean, labelled <b>asserted, not observed</b>",
+        "Her meters do not move: a region is context, never evidence about her"
+      ],
+      "line": "Same visitor, same ad. Only the region changes, to <b>{{region.contrastName || region.contrast}}</b>, asserted, not observed, and the page opens differently: the prior is that region’s own sales. The census figure explains the lean and is never scored.",
+      "run": [
+        { "assert": { "region": "{{region.contrast}}" }, "note": ["asserted", "region = {{region.contrast}}", "asserted, not observed · context on the request · never evidence about her"] },
+        { "focus": { "panel": "arrival" } },
+        { "ask": "home" },
+        { "focus": "#dealsModule" }
+      ]
+    },
+    {
+      "key": "browse", "no": "3", "act": 2, "who": "shopper",
+      "label": "She browses Samsung",
+      "declare": [
+        { "when": "{{region.away}}", "text": "<b>Back</b> in {{region.ownName}}, her own region ({{#region.override}}the rehearsal override, labelled{{/region.override}}{{^region.override}}from the request, nothing asserted{{/region.override}})" },
+        "<b>Opens</b> Phones",
+        { "each": "{{browse.touches}}", "text": "{{#page}}<b>Opens</b> the {{name}} page{{/page}}{{^page}}<b>Quick look</b> on the {{name}}{{/page}}" }
+      ],
+      "acts": [
+        { "type": "page_view" },
+        { "each": "{{browse.touches}}", "acts": [
+          { "when": "{{returnsToGrid}}", "type": "page_view" },
+          { "type": "product_view", "attrs": "{{attrs}}" }
+        ] }
+      ],
+      "will": [
+        "<b>brand samsung</b> crosses the entry threshold on three touches; ecosystem and price band accumulate over the regional prior",
+        "The homepage is not asked while she browses, so the four do not move yet"
+      ],
+      "line": "Back in her own region, she browses <b>Samsung</b>: the Galaxy S26 card, its page, then the S26 Ultra. Each is a real event, and <b>brand samsung</b> crosses the entry threshold on her own meters. The four are not asked again until she goes home.",
+      "run": [
+        { "assert": { "region": "own" } },
+        { "unless": "{{view.phones}}", "do": [ { "click": "nav-phones", "in": "mainnav" }, { "wait": 300 } ] },
+        { "each": "{{browse.touches}}", "do": [
+          { "when": "{{page}}",
+            "do": [
+              { "click": "sheet-open-{{id}}", "in": "sheetBody", "if": "present", "else": [
+                { "unless": "{{view.phones}}", "do": [ { "click": "nav-phones", "in": "mainnav" }, { "wait": 300 } ] },
+                { "click": "open-{{id}}", "in": "phoneGrid" }
+              ] },
+              { "wait": 900 }
+            ],
+            "else": [
+              { "when": "{{sheet.open}}", "do": [ { "click": "sheet-done", "in": "sheetBody" }, { "wait": 250 } ] },
+              { "unless": "{{view.phones}}", "do": [ { "click": "phones-crumb", "in": "pdpCrumbs" }, { "wait": 300 } ] },
+              { "click": "quick-{{id}}", "in": "phoneGrid" },
+              { "wait": 800 }
+            ] }
+        ] },
+        { "when": "{{sheet.open}}", "click": "sheet-done", "in": "sheetBody" }
+      ]
+    },
+    {
+      "key": "hinge", "no": "4", "act": 2, "who": "shopper",
+      "label": "The hinge: the {{hinge.name || 'Pixel'}}, then home",
+      "declare": [ "<b>Opens</b> the {{hinge.name || 'Pixel'}} page", "<b>Returns</b> to the homepage" ],
+      "acts": [ { "type": "product_view", "attrs": "{{hinge.pageAttrs}}" }, { "type": "page_view" } ],
+      "will": [
+        "Her <b>Android</b> interest now spans two makers; <b>brand samsung</b> is past the entry threshold",
+        "Android promotions overtake the lifted launch promotion; the receipts say what carried each one"
+      ],
+      "line": "The hinge. The ad said iPhone; she has been looking at Android. She opens a Pixel and comes back, and the four follow <b>her</b>. <b>Why these</b> shows what carried each one.",
+      "after": {
+        "when": "{{deals.superseded}}",
+        "line": "The hinge. The ad said iPhone; she has been looking at Android. The four follow <b>her</b>, and the receipt says why: <b>campaign context superseded by observed behaviour</b>."
+      },
+      "run": [
+        { "open": "phone", "id": "{{hinge.id}}" },
+        { "wait": 900 },
+        { "open": "home" },
+        { "focus": { "panel": "why" } }
+      ]
+    },
+    {
+      "key": "exit", "no": "5", "act": 2, "who": "engine", "engineNote": true,
+      "label": "She stops touching it",
+      "declare": [ "<b>Nothing.</b> Nobody touches the page for a minute; then the page asks again" ],
+      "acts": [],
+      "will": [
+        "Brand memory is {{exit.room}} in this room: <b>brand samsung</b> decays below the <b>{{exit.thetaOut}} exit threshold</b> on the meter",
+        "The Galaxy receipts lose their Samsung driver; the <b>Phones for you</b> rail re-sorts on the same answer",
+        "The four can keep their order: ranking is continuous, and <b>ecosystem android</b> still carries them"
+      ],
+      "line": "Everyone shows joining an audience. Watch her <b>leave</b> one. Nobody touches the page for a minute; the page asks again, and <b>the engine’s answer</b> withdraws the Samsung claim while her Android lean holds.",
+      "run": [
+        { "unless": "{{view.home}}", "open": "home" },
+        { "call": "readMetersBefore" },
+        { "wait": { "seconds": "{{exit.seconds}}", "timer": {
+          "into": "#dealsDeltas", "focus": "#dealsModule",
+          "head": "Nobody touches the page",
+          "text": "The page asks again after a minute; the engine’s answer, not the page’s.",
+          "status": "the page asks again in {{left}} s" } } },
+        { "call": "askAgainAfterTheMinute" }
+      ]
+    },
+    {
+      "key": "open", "no": "6", "act": 3, "who": "shopper",
+      "label": "She opens the {{focus.name}}",
+      "declare": [ "<b>Opens</b> the {{focus.name}} page" ],
+      "acts": [ { "type": "product_view", "attrs": "{{focus.pageAttrs}}" } ],
+      "will": [
+        "Six modules below the buy box, in the order <b>her browsing already earns</b>; Why these explains each one",
+        "<b>Compare → Fresh visitor</b> shows the template order beside hers",
+        "<b>One decision on every surface</b>: the trade-in module explains the offer the homepage led with; the buy box is marked <b>off limits</b>"
+      ],
+      "line": "The phone page. The buy box is <b>off limits</b>: never decided, never personalised. Below it, six modules in the order her browsing already earns, and the trade-in module carries <b>the same offer the homepage chose</b>, explained, not decided again.",
+      "run": [ { "open": "phone", "id": "{{focus.id}}" } ]
+    },
+    {
+      "key": "compare", "no": "7", "act": 3, "who": "shopper",
+      "label": "She steps storage and compares the camera",
+      "declare": [ "<b>Selects</b> {{storageStep.label}} in the buy box", "<b>Compares</b> storage, then the camera" ],
+      "acts": [
+        { "type": "custom", "action": "select", "attrs": { "productId": "{{focus.id}}", "storage": "{{storageStep.storage}}", "price_usd": "{{storageStep.price}}" } },
+        { "type": "custom", "action": "compare", "attrs": { "productId": "{{focus.id}}", "storage": "{{storageStep.storage}}", "price_usd": "{{storageStep.price}}", "contentType": "compare" } },
+        { "type": "custom", "action": "compare", "attrs": { "productId": "{{focus.id}}", "brand": "{{focus.brand}}", "os": "{{focus.ecosystem}}", "ecosystem": "{{focus.ecosystem}}", "price_usd": "{{storageStep.price}}", "contentType": "compare" } }
+      ],
+      "will": [
+        "<b>Price band</b> and <b>contentType compare</b> rise; a storage step that crosses $900 moves the band",
+        "<b>Storage &amp; memory</b> rises, leading with {{storageStep.label}} at its real monthly delta"
+      ],
+      "line": "She steps to <b>{{storageStep.label}}</b> and compares the camera. The monthly figure rises by the real delta, <b>+{{storageStep.delta}}</b>, and the page states the maths. <b>Storage &amp; memory</b> rises.",
+      "run": [
+        { "select": "storage-{{storageStep.storage}}", "in": "bbStorage", "if": "present" },
+        { "wait": 500 },
+        { "click": "storage-compare", "in": "modules" },
+        { "wait": 700 },
+        { "click": "cmp-camera", "in": "sheetBody" },
+        { "wait": 700 },
+        { "click": "sheet-done", "in": "sheetBody" }
+      ]
+    },
+    {
+      "key": "perk", "no": "8", "act": 3, "who": "shopper",
+      "label": "She opens the hotspot & travel starter",
+      "declare": [ "<b>Opens</b> the hotspot &amp; travel starter on {{plans.more}}, in Pair with a plan" ],
+      "acts": [ { "type": "page_view", "attrs": { "page": "perk", "category": "plans", "perk": "hotspot-travel" } } ],
+      "will": [
+        "<b>perk hotspot-travel</b> and <b>category plans</b> move",
+        "<b>Pair with a plan</b> rises; {{plans.more}} leads on the hotspot &amp; travel starter",
+        "Capture it, then Compare with the streaming shopper: {{plans.max}} leads with the streaming bundle"
+      ],
+      "line": "She opens the <b>hotspot &amp; travel</b> starter. Pair with a plan rises and <b>{{plans.more}}</b> leads. Capture it, and the Compare tool shows the streaming shopper beside her.",
+      "run": [
+        { "click": "#modules [data-perk=\"hotspot-travel\"][data-plan=\"more\"]", "if": "present", "else": [
+          { "click": "#modules [data-perk=\"hotspot-travel\"]", "missing": "no plan card on this page offers the hotspot & travel starter" }
+        ] },
+        { "wait": 800 },
+        { "click": "sheet-done", "in": "sheetBody" }
+      ]
+    },
+    {
+      "key": "lines", "no": "9a", "act": 3, "who": "shopper",
+      "label": "Four lines, then the kids’ watch",
+      "declare": [ "<b>Sets</b> the line selector to four lines", "<b>Opens</b> the kids’ smartwatch", "<b>Goes back</b> to the phone page" ],
+      "acts": [
+        { "type": "custom", "action": "select", "attrs": { "lines": "family", "count": 4 } },
+        { "type": "page_view", "attrs": "{{events.kidsWatch}}" }
+      ],
+      "will": [
+        "<b>lines family</b> moves on the selector, then with <b>intent add-line</b> and <b>category watches-tablets</b> on the watch page",
+        "Watch, tablet and more lines rises with the four-line per-line price; a household total appears",
+        "The family starter ({{plans.go}}) leads in Pair with a plan"
+      ],
+      "line": "She sets the lines to <b>four</b> and looks at a kids’ watch. The connected-devices module rises with the four-line price, a household total appears, and the family starter leads.",
+      "run": [
+        { "select": "lines-4", "in": "modules" },
+        { "wait": 500 },
+        { "click": "kids-watch", "in": "modules", "if": "present", "else": [
+          { "click": "nav-add-a-line", "in": "mainnav" },
+          { "wait": 500 },
+          { "click": "kids-watch", "in": "pageBody" }
+        ] },
+        { "wait": 800 },
+        { "click": "back-phone", "in": "pageCrumbs" },
+        { "focus": "#modulesModule" }
+      ]
+    },
+    {
+      "key": "home-family", "no": "9b", "act": 3, "who": "shopper",
+      "label": "Home: the family hero and the four-line offer",
+      "declare": [ "<b>Returns</b> to the homepage" ],
+      "acts": [ { "type": "page_view" } ],
+      "will": [ "The <b>family hero</b> leads the page", "The <b>four-line promotion enters the four</b>: what she did on the phone page reaches the homepage" ],
+      "line": "Back on the homepage the hero and the four follow what she did on the phone page: the <b>family hero</b>, and the <b>four-line promotion</b> enters. One profile, every surface.",
+      "run": [ { "click": "home-crumb", "in": "pdpCrumbs" }, { "focus": "#heroModule" } ]
+    },
+    {
+      "key": "byod", "no": "10a", "act": 3, "who": "shopper",
+      "label": "She will bring her own phone",
+      "declare": [
+        "{{#focus.canBack}}<b>Goes back</b> to the {{focus.name}} page (the browser’s Back){{/focus.canBack}}{{^focus.canBack}}<b>Opens</b> the {{focus.name}} again{{/focus.canBack}}",
+        "<b>Answers</b> “bring your own” in the buy box"
+      ],
+      "acts": [
+        { "unless": "{{focus.canBack}}", "type": "product_view", "attrs": "{{focus.pageAttrs}}" },
+        { "type": "custom", "action": "select", "attrs": { "intent": "byod" } }
+      ],
+      "will": [
+        "<b>ctx.intent = byod</b> is asserted on every decision, labelled, as her account would",
+        "Offers that need another answer <b>fail closed</b>",
+        "<b>Simple</b> leads Pair with a plan for the switcher; the public prices do not change"
+      ],
+      "line": "She says she will <b>bring her own phone</b>. The answer is asserted on the request, as her account would, and it routes the propositions: <b>Simple</b> leads for the switcher. Same public prices.",
+      "run": [
+        { "open": "phoneBack", "id": "{{focus.id}}", "canBack": "{{focus.canBack}}" },
+        { "wait": 400 },
+        { "select": "intent-byod", "in": "bbIntent" },
+        { "focus": ["#modules [data-module=\"plan-pairing\"]", "#modules"] }
+      ]
+    },
+    {
+      "key": "home-byod", "no": "10b", "act": 3, "who": "shopper",
+      "label": "Home: the switcher’s homepage",
+      "declare": [ "<b>Returns</b> to the homepage" ],
+      "acts": [ { "type": "page_view" } ],
+      "will": [
+        "The <b>switch hero</b> leads",
+        "<b>Bring your phone</b> enters the four on her declared answer; the offers that need a new line fail closed, and the ungated pre-order can still rank above it"
+      ],
+      "line": "On the homepage her answer routes the offers too: the <b>switch hero</b>, and <b>bring your own phone</b> enters the four. The offers that need a new line fail closed.",
+      "run": [ { "click": "home-crumb", "in": "pdpCrumbs" }, { "focus": "#heroModule" } ]
+    },
+    {
+      "key": "upgrade", "no": "10c", "act": 3, "who": "shopper",
+      "label": "Then she is upgrading",
+      "declare": [
+        "{{#focus.canBack}}<b>Goes back</b> to the {{focus.name}} page (the browser’s Back){{/focus.canBack}}{{^focus.canBack}}<b>Opens</b> the {{focus.name}} again{{/focus.canBack}}",
+        "<b>Answers</b> “upgrade”",
+        "<b>Chooses</b> the plan that leads"
+      ],
+      "acts": [
+        { "unless": "{{focus.canBack}}", "type": "product_view", "attrs": "{{focus.pageAttrs}}" },
+        { "type": "custom", "action": "select", "attrs": { "intent": "upgrade" } },
+        { "type": "custom", "action": "select", "attrs": { "plan": "more" } }
+      ],
+      "will": [
+        "Her answer flips from “bring your own” to <b>upgrade</b>: <b>ctx.intent = upgrade</b> is asserted on every decision, labelled",
+        "<b>{{plans.more}}</b> leads Pair with a plan for the trade-in shopper",
+        "Her plan choice is kept for the continue hero: her selections, nothing inferred",
+        "Watch protection; it rises when the premium band is strong"
+      ],
+      "line": "She is <b>upgrading</b> instead: her answer flips from bring-your-own to upgrade, asserted on the request. <b>{{plans.more}}</b> leads Pair with a plan for the trade-in shopper. She picks the plan that leads; it is her selection, and the page keeps it. Watch protection; it rises when the premium band is strong.",
+      "run": [
+        { "open": "phoneBack", "id": "{{focus.id}}", "canBack": "{{focus.canBack}}" },
+        { "wait": 400 },
+        { "select": "intent-upgrade", "in": "bbIntent" },
+        { "wait": 500 },
+        { "click": "#modules .plan [data-act=\"choose-plan\"]", "if": "present" }
+      ]
+    },
+    {
+      "key": "home-intent", "no": "10d", "act": 3, "who": "shopper",
+      "label": "Home: the upgrade offer leads",
+      "declare": [ "<b>Returns</b> to the homepage" ],
+      "acts": [ { "type": "page_view" } ],
+      "will": [
+        "The <b>new-line offers leave</b>: their rule needs a new line",
+        "The <b>upgrade offer leads</b>, with its terms: what it requires and what ends the credit"
+      ],
+      "line": "On the homepage the new-line offers are gone, because their rule needs a new line, and the <b>upgrade offer leads</b> with its terms: what it requires, and what ends the credit.",
+      "after": {
+        "when": "{{deals.leadUpgradeOnly}}",
+        "line": "On the homepage the new-line offers are gone, because their rule needs a new line, and the <b>upgrade offer leads</b>: <b>{{deals.leadTitle}}</b>, with its terms: what it requires, and what ends the credit."
+      },
+      "run": [ { "click": "home-crumb", "in": "pdpCrumbs" }, { "focus": "#dealsModule" } ]
+    },
+    {
+      "key": "two-weeks", "no": "11", "act": 4, "who": "merch",
+      "label": "Merchandiser: two weeks pass",
+      "target": "{{ids.closesAtBeat11 || ids.launch}}",
+      "declare": [
+        { "when": "{{intent.changed}}", "text": "<b>Asserts</b> her answer back to “{{intent.defaultWord}}” for the merchandiser’s day" },
+        "<b>The CMS clock</b> moves two weeks on"
+      ],
+      "acts": [],
+      "will": [
+        "A launch promotion’s window closes: it <b>leaves its container</b> and stops being a candidate",
+        "Its successor takes the container; nothing was switched off and no test ended"
+      ],
+      "line": "Two weeks pass. A launch promotion’s window closes and the next promotion takes the container. <b>No test ended, no winner was declared, nobody configured anything.</b>",
+      "run": [
+        { "when": "{{intent.changed}}", "assert": { "intent": "{{intent.default}}" }, "note": ["asserted", "ctx.intent = {{intent.default}}", "the merchandiser’s day, seen as a new line"] },
+        { "publish": "catalog", "name": "{{beatNames.twoWeeks}}", "reason": "two weeks pass", "note": ["published", "Two weeks pass", "a launch window closes"] },
+        { "ask": "home" },
+        { "focus": "#dealsModule" }
+      ]
+    },
+    {
+      "key": "black-friday", "no": "12", "act": 4, "who": "merch",
+      "label": "Merchandiser: Black Friday arrives",
+      "target": "{{ids.blackFriday}}",
+      "declare": [ "<b>Publishes</b> the Black Friday switcher offer, live from this minute" ],
+      "acts": [],
+      "will": [ "A promotion <b>nobody has ever clicked</b> reaches the module on its metadata alone", "It reaches the shopper whose behaviour says switch" ],
+      "line": "Black Friday: the <b>switcher offer, no trade-in</b>, live this minute. Nobody has clicked it, so it is placed on its metadata alone.",
+      "run": [
+        { "publish": "catalog", "name": "{{beatNames.blackFriday}}", "fixtureStep": "black-friday", "reason": "Black Friday arrives", "note": ["published", "Black Friday arrives", "a new piece, no history"] },
+        { "ask": "home" },
+        { "focus": "#dealsModule" }
+      ]
+    },
+    {
+      "key": "pin", "no": "13", "act": 4, "who": "merch",
+      "label": "Merchandiser: pin the iPhone Duo pre-order",
+      "target": "{{ids.duo}}",
+      "declare": [ "<b>Pins</b> the iPhone Duo pre-order (16 October) for everyone" ],
+      "acts": [],
+      "will": [ "The pre-order takes <b>container one</b> for everyone (a pin is a required prefix); its receipt reads <b>ranking skipped</b>", "The other three are still ranked for her" ],
+      "line": "Launch week for the foldable: the <b>iPhone Duo pre-order is pinned to container one</b> for everyone. Ranking never ran for it; the other three are still hers.",
+      "run": [
+        { "publish": "slots", "name": "{{beatNames.pinDuo}}", "reason": "iPhone Duo pre-order pinned", "note": ["tuned", "iPhone Duo pinned", "container one for everyone · ranking skipped"] },
+        { "ask": "home" },
+        { "focus": "#dealsModule" }
+      ]
+    },
+    {
+      "key": "covered", "no": "14a", "act": 4, "who": "shopper",
+      "label": "5G Home where it is available",
+      "target": "{{ids.homeBundle}}",
+      "declare": [
+        "{{#home.own}}In {{home.name}}, her own region, where 5G Home is available: {{#region.override}}the rehearsal override (?region=), as before{{/region.override}}{{^region.override}}from the request, nothing asserted{{/region.override}}{{/home.own}}{{^home.own}}<b>Asserts</b> region = {{home.key}}{{#home.keyName}} ({{home.keyName}}){{/home.keyName}}, where 5G Home is available: asserted, not observed, because {{home.notWhy}}{{/home.own}}",
+        { "unless": "{{focus.here}}", "text": "{{#focus.canBack}}<b>Goes back</b> to the {{focus.name}} page (the browser’s Back){{/focus.canBack}}{{^focus.canBack}}<b>Opens</b> the {{focus.name}}{{/focus.canBack}}" },
+        "<b>Opens</b> Home Internet and <b>checks an address</b>",
+        "<b>Goes back</b> to the phone page"
+      ],
+      "acts": [
+        { "unless": "{{focus.reached}}", "type": "product_view", "attrs": "{{focus.pageAttrs}}" },
+        { "type": "page_view", "attrs": "{{events.homeInternet}}" },
+        { "type": "custom", "action": "start_order", "attrs": { "category": "home-internet", "intent": "home", "contentType": "tool" } }
+      ],
+      "will": [
+        "<b>intent home</b> and <b>category home-internet</b> move: the address check is a start order, the heaviest touch here",
+        "<b>Add home internet</b> carries a rule (only where 5G Home is available): eligible here, it rises on her address check"
+      ],
+      "line": "{{#home.own}}In {{home.name}}, her own region,{{/home.own}}{{^home.own}}{{home.notWhyCap}}, so the page asserts <b>{{home.name}}</b>, where it is, labelled asserted, not observed; there{{/home.own}} she checks an address for 5G Home. The home-internet module carries a rule, <b>only where 5G Home is available</b>: here it is eligible, and her address check moves it up the page. A condition the request does not carry fails closed.",
+      "run": [
+        { "when": "{{home.own}}", "assert": { "region": "own" }, "else": [
+          { "unless": "{{home.asserted}}", "assert": { "region": "{{home.key}}" }, "note": ["asserted", "region = {{home.key}}", "asserted, not observed · 5G Home is available there · {{home.notWhy}}"] }
+        ] },
+        { "unless": "{{focus.here}}", "do": [ { "open": "phoneBack", "id": "{{focus.id}}", "canBack": "{{focus.canBack}}" }, { "wait": 400 } ] },
+        { "click": "nav-home-internet", "in": "mainnav" },
+        { "wait": 600 },
+        { "click": "page-address-check", "in": "pageBody" },
+        { "wait": 600 },
+        { "click": "back-phone", "in": "pageCrumbs" },
+        { "focus": "#modulesModule" }
+      ]
+    },
+    {
+      "key": "uncovered", "no": "14b", "act": 4, "who": "merch",
+      "label": "The same shopper where it is not",
+      "target": "{{ids.homeBundle}}",
+      "declare": [ "<b>Asserts</b> region = {{regions.uncovered}}{{#regions.uncoveredName}} ({{regions.uncoveredName}}){{/regions.uncoveredName}}; nothing about her changes" ],
+      "acts": [],
+      "will": [ "<b>Add home internet</b> leaves the six: still published, still in its window, simply not eligible here" ],
+      "line": "The same shopper in {{regions.uncoveredName || regions.uncovered}}. Nothing about her changed; the module is gone because its rule does not hold here. A rule on the piece, not a preference.",
+      "run": [
+        { "assert": { "region": "{{regions.uncovered}}" }, "note": ["asserted", "region = {{regions.uncovered}}", "asserted, not observed · not covered by 5G Home"] },
+        { "when": "{{view.phone}}",
+          "do": [ { "ask": "phone" }, { "focus": "#modulesModule" } ],
+          "else": [ { "ask": "home" }, { "focus": "#dealsModule" } ] }
+      ]
+    },
+    {
+      "key": "cart", "no": "15a", "act": 5, "who": "shopper",
+      "label": "She adds it to her cart and comes back",
+      "declare": [
+        { "when": "{{region.away}}", "text": "<b>Back</b> in {{region.ownName}}, her own region" },
+        "<b>Adds</b> the {{focus.name}} to her cart",
+        "<b>Returns</b> to the homepage"
+      ],
+      "acts": [ { "type": "add_to_cart", "attrs": "{{cart.attrs}}" }, { "type": "page_view" } ],
+      "will": [
+        "Her first cart add makes her <b>deciding</b>, so the <b>continue hero</b> is in stage",
+        "The hero is now <b>her own priced configuration</b> with one next step: her selections, nothing inferred"
+      ],
+      "line": "She adds the phone to her cart and comes back. The hero is now <b>her priced configuration</b>, with one next step. Their homepage stayed static after the same journey.",
+      "run": [
+        { "assert": { "region": "own" } },
+        { "unless": "{{focus.here}}", "do": [ { "open": "phone", "id": "{{focus.id}}" }, { "wait": 400 } ] },
+        { "click": "#buyBox [data-ctl=\"add-to-cart\"]" },
+        { "wait": 400 },
+        { "click": "home-crumb", "in": "pdpCrumbs" },
+        { "focus": "#heroModule" }
+      ]
+    },
+    {
+      "key": "template", "no": "15b", "act": 5, "who": "merch",
+      "label": "Tomorrow’s template puts deals first",
+      "declare": [ "<b>Tomorrow’s homepage template</b> moves the deals module to position one" ],
+      "acts": [],
+      "will": [ "The module renders <b>first</b>", "<b>The same four, in the same order</b>: a slot is addressed by name, not position" ],
+      "line": "Tomorrow’s template moves the deals module to <b>position one</b>, and the four do not change. <code>{{slots.deals}}</code> is <code>{{slots.deals}}</code> wherever their template puts it, and its evidence follows the name.",
+      "run": [
+        { "template": "home", "slots": "{{templates.tomorrow}}", "label": "tomorrow’s", "note": ["published", "Tomorrow’s template", "their CMS moves the deals module to position one"] },
+        { "ask": "home" },
+        { "focus": "#dealsModule" }
+      ]
+    },
+    {
+      "key": "clicks", "no": "15c", "act": 5, "who": "shopper",
+      "label": "The clicks, and the day report",
+      "declare": [ "<b>Clicks</b> two of the four, as a shopper would" ],
+      "acts": [],
+      "will": [ "Each click is credited to the promotion that held the container", "The report: attribution per promotion and per module, <b>not incrementality</b>" ],
+      "line": "Two clicks, each credited to what held the container. <b>Learned</b> shows attribution per promotion and per module: module engagement, attach, plan mix. Never a lift number; lift is theirs to read against a holdout.",
+      "run": [
+        { "click": "deal-1", "in": "deals", "if": "present" },
+        { "wait": 300 },
+        { "click": "deal-2", "in": "deals", "if": "present" },
+        { "wait": 300 },
+        { "focus": { "panel": "report" } },
+        { "ask": "report", "build": true }
+      ]
+    }
+  ]
+}

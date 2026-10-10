@@ -59,7 +59,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   const slotSubs = new Map<string, Set<SlotCallback>>();
   const setSubs = new Set<SetCallback>();
   type Paint = { piece: ContentDecision; page: string; pageInstance: string; generation: number; envelope: ActionEnvelope;
-    ack?: RenderAcknowledgment; pending?: Promise<RenderAcknowledgment | null>; attempts: number; observed?: boolean };
+    ack?: RenderAcknowledgment; pending?: Promise<RenderAcknowledgment | null>; attempts: number; observed?: boolean;
+    /** P03 decision D3: the placement's position within its slot, carried by its acknowledgement and every engagement of it. */
+    slotPosition?: number };
   const painted = new Map<string, Paint>();
   const observers = new Set<() => void>();
   let current: DecisionSet | null = null;
@@ -71,6 +73,15 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     ? rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined, typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null)
     : outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data));
   const placement = (d: Pick<ContentDecision, 'slot' | 'order' | 'contentId'>) => JSON.stringify([d.slot, d.order, d.contentId]);
+  /**
+   * P03 decision D3: a placement's position within its slot, what its decision
+   * record calls `position`, exactly as the engine named it on the decision
+   * (`slotPosition`, a whole number from 0). A decision that does not name it (a
+   * server-rendered bootstrap, an earlier engine) has none, and the SDK never
+   * computes one: its acknowledgement is then admitted on `position`, as before.
+   */
+  const slotPositionOf = (piece: ContentDecision): number | undefined =>
+    Number.isSafeInteger(piece.slotPosition) && piece.slotPosition! >= 0 ? piece.slotPosition : undefined;
   const sameAsset = (a: ContentDecision, b: ContentDecision) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set: DecisionSet | null) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -248,9 +259,15 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const key = placement(piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
-      const data = { contentId, slot, decisionId: piece.decisionId, page: set.page, position: piece.order, pageInstance: set.pageInstance,
+      // P03 decision D1: this acknowledgement is the module's one impression on
+      // this page instance. Decision D3: it names the page-wide order as
+      // `position` and the position within the slot as `slotPosition`.
+      const slotPosition = slotPositionOf(piece);
+      const data = { contentId, slot, decisionId: piece.decisionId, page: set.page, position: piece.order,
+        ...(slotPosition !== undefined ? { slotPosition } : {}), pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer, customerContentId: piece.customerContentId, contentType: piece.type };
-      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope('content_impression', data), attempts: 0 };
+      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope('content_impression', data), attempts: 0,
+        ...(slotPosition !== undefined ? { slotPosition } : {}) };
       painted.set(key, paint);
     }
     const selectedPaint = paint;
@@ -301,9 +318,13 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const paint = candidates[0]!, ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance
       || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, ...safe } = attrs;
-    void _offer; void _action; void _event; void _eventName;
-    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId });
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
+    void _offer; void _action; void _event; void _eventName; void _slotPosition;
+    // P03 decision D3: an engagement names the position within the slot of the
+    // placement it engaged as its acknowledgement did — never what the page says
+    // about it — beside the receipt of that acknowledgement.
+    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId,
+      ...(paint.slotPosition !== undefined ? { slotPosition: paint.slotPosition } : {}) });
   }
 
   async function adopt(value: unknown, o: HydrateOptions): Promise<boolean> {

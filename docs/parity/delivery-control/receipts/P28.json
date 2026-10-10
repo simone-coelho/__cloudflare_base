@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P28",
+  "workOrderHash": "sha256:13a1e3028d621f1b3f530f41072058bad903f99a348b1c451a4c41b6afa7eddd",
+  "artifact": {
+    "revision": "380fd07bb9ab73bc660c62a3897a9966b35934bd",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p28-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P28 built on rem/p28-build: 8883ad34 merges rem/integration b53641e6 (P02, P01 and the landing of the product branch) into the per-ticket branch rem/tkt/P28 (daed66f4, specification reviewed PASS at b435cc2b); the first build stopped at its RED baseline on a stale fixture (a five-module order on the take-4 slot, refused by P01's receipted contract; ruling R-P40) and fix round 1 corrected the specification on rem/spec-p28-fix1 (396e0135, 51c37047: the four-module order with R from it, the blend over a configured order at p above 0 with the unlisted module hidden and the M leg over the eligible listed modules, the non-opted lock, the R-P30 wording; reviewed PASS; gate re-recorded at 51c37047); 829c1353 the mechanism (src/content/decide.ts, src/reflex/contentCompose.ts, src/content/kinds.ts, src/content/types.ts, src/content/service.ts, src/learn/receipts.ts, src/learn/replay.ts, src/routes/content.ts, public/meridian/engine.bundle.js regenerated: blend { p } on the declared layout slot's learn dials, p 0 to 1 and 0 by default, refused off the layout slot on every learn member a request publishes; score = R + (1 − p) × B + p × Q with R from the configured order else catalogue order over the eligible listed modules, i from 0, Q the clamped lift minus one; explain.blend { R, B, Q, p } with sorted keys on records and blend on receipts; the layout-blend-v1 replay marker written only when a slot blended; content slots and non-opted layout slots unchanged); 68de8cc8 the kit (docs/kit/02, 03: the blend, its default, the conditional p 0 promise; the P01 kit-02 prefix phrase corrected) and one refusal-message line in kinds.ts; src/learn/stats.ts unchanged; acceptance 21/21 on both hosts at 68de8cc8; gate GATE_OK on its second run after a load timeout outside the baseline on a file P28 does not touch; delivery review PASS at 68de8cc8 on every unit; fix round 2 (ruling R-P43, specification only, rem/spec-p28-fix2 380fd07b fast-forwarded into the lane) added eight lock legs holding the blended-replay clause of remaining-work item 3 (replay under a configured order and under catalogue order, the holdout default arm, the lower clamp on a frozen lift), 29/29 on both hosts at the artifact 380fd07b with the acceptance and the gate re-run there and verified by the reviewer.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P28/implementer/REPORT.md",
+      "git commits on rem/p28-build up to 380fd07b"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P28 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P28/reviewer/logs/final-acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P28/implementer/logs/acceptance-P28-final.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P28/implementer/logs/gate-3.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P28/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-09T18:04:40.438Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

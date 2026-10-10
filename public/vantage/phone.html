@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- The site key. Not a secret: it names the SITE, the way an SDK key does. -->
+<meta name="edge-sdk-key" content="demo-site" />
+<link rel="icon" href="data:," />
+<title>Vantage | Shop phones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<!-- The demo kit (public/demo-kit/): the token sheet, whose documented defaults are Vantage's palette, and the
+     chrome drawn from it (the machine, the director bar, the before/now rows, the sheets, predict-then-prove). -->
+<link rel="stylesheet" href="/demo-kit/tokens.css" />
+<link rel="stylesheet" href="/demo-kit/kit.css" />
+<link rel="stylesheet" href="/vantage/vantage.css" />
+<!-- The demo kit's Before / Now compare: its tokens are drawn from the token sheet in kit.css. -->
+<link rel="stylesheet" href="/demo-kit/compare.css" />
+</head>
+<!-- index.html and phone.html carry the same shell. phone.html only boots
+     straight into the phone view (data-entry="phone"). Change both together. -->
+<body data-entry="phone">
+<a class="skip" href="#stage">Skip to the page</a>
+
+<!-- The director's hand. It glides to a real control and runs that control's
+     own handler: never a shortcut around it. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div class="fixture-flag" id="fixtureFlag" hidden>Fixture mode: canned answers for layout work, not the engine</div>
+
+<div class="shell">
+<!-- ═══════════════════════════════ THE SITE ═══════════════════════════════ -->
+<div class="site" id="site">
+  <header class="site-header">
+    <div class="utility static">
+      <div class="utility-in">
+        <span class="u-left"><b>Personal</b><span>Business</span><span class="nper">not personalised</span></span>
+        <span class="u-right"><span>Stores</span><span>Coverage map</span><span>Support</span><span>Español</span><span class="u-sign">Sign in</span></span>
+      </div>
+    </div>
+    <div class="mast">
+      <div class="mast-in">
+        <a class="wordmark" href="/vantage/" data-nav="home" data-ctl="home">
+          <span class="wm" id="wordmark">Vantage</span><span class="wm-tag" id="tagline">See further.</span>
+        </a>
+        <nav class="mainnav" id="mainnav" aria-label="Shop">
+          <button type="button" data-nav="phones" data-ctl="nav-phones">Phones</button>
+          <button type="button" data-nav="plans" data-ctl="nav-plans">Plans</button>
+          <button type="button" data-nav="deals" data-ctl="nav-deals">Deals</button>
+          <button type="button" data-nav="home-internet" data-ctl="nav-home-internet">Home Internet</button>
+          <button type="button" data-nav="add-a-line" data-ctl="nav-add-a-line">Add a line</button>
+          <span class="nper">not personalised</span>
+        </nav>
+        <div class="mast-tools">
+          <span class="tool" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></span>
+          <span class="tool cart" aria-label="Cart"><svg viewBox="0 0 24 24"><path d="M3 4h2.2l2.3 11h10.9l2.1-8H7"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg><b id="cartCount" hidden>0</b></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+
+    <!-- ── The homepage, in the order the carrier's own homepage uses ─────── -->
+    <section class="view view--home" id="viewHome">
+      <div class="ribbon static" data-mod="ribbon" style="order:1">
+        <span class="nper">not personalised</span>
+        <p><b>iPhone 18 Pro is here.</b> iPhone Duo pre-orders open October 16. <a data-nav="phones" data-ctl="ribbon-phones">Shop phones</a></p>
+      </div>
+
+      <nav class="quick static" data-mod="quick" style="order:2" aria-label="Quick links">
+        <button type="button" data-nav="switch" data-ctl="ql-switch">Switch</button>
+        <button type="button" data-nav="plans" data-ctl="ql-simple">Simple</button>
+        <button type="button" data-nav="home-internet" data-ctl="ql-home-internet">Home Internet</button>
+        <button type="button" data-nav="mobile-home" data-ctl="ql-mobile-home">Mobile + Home</button>
+        <button type="button" data-nav="byod" data-ctl="ql-byod">Bring your phone</button>
+        <button type="button" data-nav="deals" data-ctl="ql-deals">Phone deals</button>
+        <span class="nper">not personalised</span>
+      </nav>
+
+      <!-- Slot hero, take 1. The page renders whichever hero piece comes back. -->
+      <section class="hero decided" id="heroModule" style="order:3" data-slot="hero" aria-live="polite">
+        <div class="hero-card" id="hero">
+          <div class="hero-copy"><p class="hero-k">Vantage</p><h1 class="hero-h">See further.</h1>
+            <p class="hero-sub">Loading today&rsquo;s page&hellip;</p></div>
+          <div class="hero-art"></div>
+        </div>
+      </section>
+
+      <section class="yourway static" data-mod="yourway" style="order:4">
+        <header class="block-head"><h2>Your phone, your way</h2><span class="nper">not personalised</span></header>
+        <div class="yourway-grid">
+          <button type="button" class="yw" data-nav="byod" data-ctl="yw-byod"><b>Bring your phone</b><span>Keep the phone you love and switch in about 15 minutes.</span></button>
+          <button type="button" class="yw" data-nav="phones" data-ctl="yw-buy"><b>Buy a new phone</b><span>The newest iPhone, Galaxy, Pixel and Motorola, at 0% APR.</span></button>
+          <button type="button" class="yw" data-nav="plans" data-ctl="yw-upgrade"><b>Upgrade your phone</b><span>Every phone with its trade-in value on each plan, at 0% APR.</span></button>
+        </div>
+      </section>
+
+      <!-- Slot deals, take 4: where the carrier's homepage puts its promotion blocks. -->
+      <section class="module decided" id="dealsModule" style="order:5" data-slot="deals" aria-labelledby="dealsHeading">
+        <header class="module-head">
+          <div>
+            <p class="module-where" id="dealsWhere">Module <b>5</b> of 8 &middot; slot <b>deals</b> &middot; decided per visitor</p>
+            <h2 id="dealsHeading">Deals for you</h2>
+          </div>
+          <a class="head-link" data-nav="deals" data-ctl="deals-all">See all deals</a>
+        </header>
+
+        <!-- Before and after, on every press. -->
+        <section class="changes" id="dealsChanges" aria-live="polite">
+          <div class="changes-before">
+            <span class="changes-cap">What was on screen before this press</span>
+            <div class="ghosts" id="dealsGhosts" role="button" tabindex="0"><span class="ghost-empty">The visitor had not seen the module yet.</span></div>
+          </div>
+          <div class="changes-what">
+            <span class="changes-cap">What changed</span>
+            <ul class="deltas" id="dealsDeltas"><li class="delta-none">Press a beat to begin.</li></ul>
+          </div>
+        </section>
+
+        <section class="beforerow" id="dealsBeforeRow" hidden>
+          <p class="rowlabel">What was on screen before this press</p>
+          <div class="four four--before" id="dealsBeforeFour"></div>
+        </section>
+        <p class="rowlabel rowlabel--now" id="dealsNowLabel" hidden>What is on screen now</p>
+
+        <div class="four" id="deals" aria-live="polite" aria-busy="true">
+          <article class="deal deal--loading"><div class="frame"></div><div class="dbody"><h3 class="dtitle">Today&rsquo;s deals</h3><p class="dsub">Loading the module&hellip;</p></div></article>
+          <article class="deal deal--loading"><div class="frame"></div><div class="dbody"><h3 class="dtitle">Today&rsquo;s deals</h3><p class="dsub">Loading the module&hellip;</p></div></article>
+          <article class="deal deal--loading"><div class="frame"></div><div class="dbody"><h3 class="dtitle">Today&rsquo;s deals</h3><p class="dsub">Loading the module&hellip;</p></div></article>
+          <article class="deal deal--loading"><div class="frame"></div><div class="dbody"><h3 class="dtitle">Today&rsquo;s deals</h3><p class="dsub">Loading the module&hellip;</p></div></article>
+        </div>
+        <p class="engine-down" id="dealsDown" hidden></p>
+      </section>
+
+      <!-- Slot phones-rail, via POST /sort over the grid. -->
+      <section class="module decided" id="railModule" style="order:6" data-slot="phones-rail" aria-labelledby="railHeading">
+        <header class="module-head">
+          <div>
+            <p class="module-where">Slot <b>phones-rail</b> &middot; <code>POST /sort</code> over the site&rsquo;s own grid</p>
+            <h2 id="railHeading">Phones for you</h2>
+          </div>
+          <div class="rail-tools">
+            <span class="rail-chip" id="railChip">the site&rsquo;s own order</span>
+            <div class="seg" role="group" aria-label="Order the rail">
+              <button type="button" id="railForYou" data-ctl="rail-foryou" aria-pressed="true">For you</button>
+              <button type="button" id="railSite" data-ctl="rail-site" aria-pressed="false">Site order</button>
+            </div>
+          </div>
+        </header>
+        <ul class="deltas rail-deltas" id="railDeltas" hidden></ul>
+        <div class="rail" id="rail"></div>
+        <p class="fine">Prices are the catalog&rsquo;s own and identical for everyone. Only the order is decided, and at an affinity weight of zero it is the site&rsquo;s order exactly.</p>
+      </section>
+
+      <section class="homeband static" data-mod="home-internet" style="order:7">
+        <div class="homeband-copy">
+          <span class="nper">not personalised</span>
+          <h2>Add home internet</h2>
+          <p id="homebandCopy">Vantage 5G Home for <b>$35/mo</b> with any mobile plan, or <b>Mobile + Home</b> for $75 with taxes and fees included, where 5G Home is available.</p>
+          <button type="button" class="btn btn--white" data-nav="home-internet" data-ctl="band-home-internet">Check availability</button>
+        </div>
+        <div class="homeband-art" aria-hidden="true"><img src="/vantage/img/promos/promo-5g-home.jpg" alt="" loading="lazy" data-ph=""></div>
+      </section>
+
+      <section class="loyalty static" data-mod="loyalty" style="order:8">
+        <span class="nper">not personalised</span>
+        <div><h2>Vantage Rewards</h2><p id="loyaltyCopy">Members pay no activation or upgrade fee: $40 waived when you join.</p></div>
+        <button type="button" class="btn btn--line" data-nav="plans" data-ctl="band-rewards">Join free</button>
+      </section>
+
+      <section class="pool" style="order:9" aria-labelledby="poolHeading">
+        <div class="pool-head">
+          <h2 id="poolHeading"><span id="poolCount">&mdash;</span> promotions live in the pool</h2>
+          <p class="pool-sub">Every promotion the CMS has published, where each one is in its window, and which container it holds. The pool is the merchandiser&rsquo;s; the four are the engine&rsquo;s.</p>
+        </div>
+        <div class="poolgrid" id="pool"></div>
+      </section>
+    </section>
+
+    <!-- ── The phones grid: the site's own order, never re-ranked here ───── -->
+    <section class="view" id="viewPhones" hidden>
+      <nav class="crumbs" id="phonesCrumbs"><a data-nav="home" data-ctl="crumb-home">Home</a><span>/</span><span>Phones</span></nav>
+      <header class="view-head">
+        <div><h1 class="view-title">Smartphones</h1><p class="view-sub" id="phonesSub">The site&rsquo;s own order.</p></div>
+        <span class="nper">not personalised</span>
+      </header>
+      <div class="chips" id="brandChips"></div>
+      <div class="grid" id="phoneGrid"></div>
+    </section>
+
+    <!-- ── The phone page ──────────────────────────────────────────────── -->
+    <section class="view view--phone" id="viewPhone" hidden>
+      <nav class="crumbs" id="pdpCrumbs"></nav>
+      <header class="pdp-title">
+        <h1 id="pdpTitle">Phone</h1>
+        <p class="pdp-rating" id="pdpRating"></p>
+      </header>
+
+      <!-- THE BUY BOX. Off limits: never decided, never personalised. -->
+      <section class="buybox" id="buyBox" aria-label="Buy box">
+        <p class="offlimits"><b>Off limits</b> the buy box is never decided and never personalised</p>
+        <div class="bb-grid">
+          <div class="bb-gallery">
+            <div class="bb-image" id="bbImage"></div>
+            <div class="bb-dots" id="bbDots"></div>
+          </div>
+          <div class="bb-config">
+            <p class="bb-fee" id="bbFee"></p>
+            <div class="bb-field"><p class="bb-label">Color: <b id="bbColorName"></b></p><div class="swatches" id="bbColors"></div></div>
+            <div class="bb-field"><p class="bb-label">Storage</p><div class="pills" id="bbStorage"></div><p class="bb-maths" id="bbMaths"></p></div>
+            <div class="bb-field bb-ship"><p id="bbShip"></p><span class="pickup" id="bbPickup" hidden></span></div>
+            <div class="bb-field"><p class="bb-label">Tell us about yourself <span class="asserted">asserted, as your account would</span></p>
+              <div class="seg seg--wide" id="bbIntent" role="group" aria-label="New line, add a line, upgrade or bring your own"></div>
+              <p class="bb-note" id="bbIntentNote"></p></div>
+            <div class="bb-field"><p class="bb-label">Payment</p><div class="pills pills--term" id="bbTerm"></div>
+              <div class="bb-price" id="bbPrice"></div></div>
+            <p class="bb-trade" id="bbTrade"></p>
+            <div class="bb-actions">
+              <button type="button" class="btn btn--dark btn--big" id="bbAdd" data-act="add-to-cart" data-ctl="add-to-cart">Add to cart</button>
+              <a class="bb-link" data-jump="pdpCompare" data-ctl="jump-compare">Compare devices</a>
+            </div>
+            <p class="bb-legal" id="bbLegal"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slot pdp-modules: the order the engine returns IS the sequence. -->
+      <section class="modules-wrap decided" id="modulesModule" data-slot="pdp-modules">
+        <header class="modules-head">
+          <p class="module-where" id="modulesWhere">Below the buy box &middot; slot <b>pdp-modules</b> &middot; the order the engine returned</p>
+        </header>
+        <section class="changes changes--pdp" id="pdpChanges" aria-live="polite">
+          <div class="changes-before">
+            <span class="changes-cap">What was on screen before this press</span>
+            <ol class="ordlist" id="pdpBefore"><li class="ghost-empty">She had not opened this page yet.</li></ol>
+          </div>
+          <div class="changes-what">
+            <span class="changes-cap">What changed</span>
+            <ul class="deltas" id="pdpDeltas"><li class="delta-none">Open a phone to begin.</li></ul>
+          </div>
+        </section>
+        <div class="modules" id="modules" aria-live="polite"></div>
+        <p class="engine-down" id="modulesDown" hidden></p>
+      </section>
+
+      <section class="pdp-static" id="pdpCompare" data-mod="compare">
+        <header class="block-head"><h2>Compare devices</h2><span class="nper">not personalised</span></header>
+        <div class="cmp-table" id="pdpCompareTable"></div>
+      </section>
+      <section class="pdp-static" data-mod="specs">
+        <header class="block-head"><h2>Specs, reviews and FAQs</h2><span class="nper">not personalised</span></header>
+        <div class="acc" id="pdpSpecs"></div>
+      </section>
+      <section class="pdp-static pdp-email" data-mod="email">
+        <span class="nper">not personalised</span>
+        <p><b>Stay connected to our products and deals.</b> Enter an email address to hear first.</p>
+        <span class="fake-input" aria-hidden="true">Email address</span>
+      </section>
+
+      <!-- The sticky price bar. Off limits, like the buy box it summarises. -->
+      <div class="stickybar" id="stickyBar">
+        <span class="sb-off">off limits</span>
+        <span class="sb-what" id="sbWhat"></span>
+        <span class="sb-price" id="sbPrice"></span>
+        <button type="button" class="btn btn--red" id="sbNext" data-act="sticky-next" data-ctl="sticky-next">Next</button>
+      </div>
+    </section>
+
+    <!-- ── Plans, deals, home internet, switch, bring your phone, add a line,
+         kids' watch: the site's own content pages. Landing on one IS the event. -->
+    <section class="view" id="viewPage" hidden>
+      <nav class="crumbs" id="pageCrumbs"></nav>
+      <div id="pageBody"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer static">
+    <div class="foot-in">
+      <span class="nper">not personalised</span>
+      <div class="foot-cols">
+        <div><b>Shop</b><span>Phones</span><span>Plans</span><span>Deals</span><span>Home Internet</span></div>
+        <div><b>Support</b><span>Contact us</span><span>Coverage map</span><span>Stores</span></div>
+        <div><b>Vantage</b><span>About</span><span>Careers</span><span>Accessibility</span><a href="/vantage/how-it-works">How it works</a></div>
+      </div>
+      <p class="foot-legal" id="footLegal">Vantage is a fictional carrier built for a demonstration. Devices, their names and their prices are real as listed publicly on 30 September 2026; plans, promotions and regional sales are representative. We never vary price, discount, financing or credit by where someone lives. The only geography rule is availability: an offer for a service appears only where that service exists.</p>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════ THE ENGINE ═════════════════════════════ -->
+<aside class="machine" id="machine" aria-label="The engine">
+  <header class="m-head">
+    <p class="m-k">The engine</p>
+    <div class="m-who">
+      <span class="who" id="whoChip">No visitor yet</span>
+      <span class="arm" id="armChip" hidden></span>
+    </div>
+    <div class="m-ctx" id="ctxChips"></div>
+  </header>
+
+  <section class="signalcard">
+    <h2>What has been signalled</h2>
+    <p class="m-note">Read from the visitor&rsquo;s own profile, the moment each signal is sent. The hollow mark is the region&rsquo;s lean.</p>
+    <div class="vectors" id="vectors"><p class="m-empty">No dimension has evidence yet.</p></div>
+    <p class="m-note m-prior" id="priorLine"></p>
+  </section>
+
+  <div class="mtabs" role="tablist">
+    <button type="button" role="tab" id="tab-arrival" aria-controls="panel-arrival" aria-selected="true">Arrival</button>
+    <button type="button" role="tab" id="tab-session" aria-controls="panel-session" aria-selected="false">Session</button>
+    <button type="button" role="tab" id="tab-why" aria-controls="panel-why" aria-selected="false">Why these</button>
+    <button type="button" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false">Learned</button>
+    <button type="button" role="tab" id="tab-next" aria-controls="panel-next" aria-selected="false">Roadmap</button>
+  </div>
+  <div class="mpanels">
+    <section class="mpanel" id="panel-arrival" role="tabpanel" aria-labelledby="tab-arrival">
+      <div id="coldStart"><p class="m-empty">The arrival is read when a visitor lands.</p></div>
+    </section>
+    <section class="mpanel" id="panel-session" role="tabpanel" aria-labelledby="tab-session" hidden>
+      <ol class="journey" id="journey"><li class="journey-empty">Nobody has arrived yet.</li></ol>
+    </section>
+    <section class="mpanel" id="panel-why" role="tabpanel" aria-labelledby="tab-why" hidden>
+      <div id="whyBody"><p class="m-empty">Press a beat to begin.</p></div>
+    </section>
+    <section class="mpanel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <div id="reportBody"><p class="m-empty">Press <b>Build today&rsquo;s report</b> to read what the modules have learned. It is built from the ledger, not from anything this page holds.</p></div>
+      <button type="button" class="m-btn" id="buildReport" data-ctl="build-report">Build today&rsquo;s report</button>
+    </section>
+    <section class="mpanel" id="panel-next" role="tabpanel" aria-labelledby="tab-next" hidden>
+      <ul class="dials" id="roadmap"></ul>
+    </section>
+  </div>
+
+  <div class="m-tools">
+    <button type="button" class="m-tool" id="captureBtn" data-ctl="capture">Capture</button>
+    <button type="button" class="m-tool" id="compareBtn" data-ctl="compare" title="Before: none yet. Act, then Compare.">Compare</button>
+    <span class="m-tool-note" id="captureNote">Capture this page, then compare it with another moment or another shopper.</span>
+  </div>
+</aside>
+</div>
+
+<!-- ── Sheets: quick look, perk details, compare storage and camera ────── -->
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <button type="button" class="sheet-x" id="sheetClose" data-ctl="sheet-close" aria-label="Close">&times;</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- ── Predict, then prove ──────────────────────────────────────────────── -->
+<div class="pd-back" id="pdBack" hidden role="dialog" aria-modal="true" aria-labelledby="pdKicker">
+  <div class="pd-box">
+    <div class="pd-head">
+      <span class="pd-k" id="pdKicker">Predict, then prove</span>
+      <span class="pd-mode" id="pdMode">before the next act</span>
+    </div>
+    <div class="pd-grid">
+      <section class="pd-card pd-done"><h3 class="pd-h">What the visitor has done</h3><div class="pd-body"><ol id="pdDone"></ol></div></section>
+      <section class="pd-card pd-watch">
+        <h3 class="pd-h">What we are watching for</h3>
+        <div class="pd-body"><ol id="pdAct"></ol></div>
+        <div class="pd-arith"><p class="pd-arith-k" id="pdArithK">The arithmetic &middot; score before &rarr; after &middot; entry threshold</p><div id="pdArith"></div></div>
+      </section>
+      <section class="pd-card pd-will">
+        <h3 class="pd-h">What will change if they do it</h3>
+        <div class="pd-body"><ul id="pdWill"></ul><p class="pd-arith-k" style="margin:12px 0 7px" id="pdNowK">On screen right now</p><div id="pdNow"></div></div>
+      </section>
+    </div>
+    <section class="pd-why" id="pdWhyWrap" hidden>
+      <p class="pd-why-head" id="pdWhyHead">Why: every decision the last press made</p>
+      <div class="pd-why-grid">
+        <div class="pd-why-table"><table><thead><tr><th>What</th><th>Why, in numbers</th><th>Against</th><th>Authority</th></tr></thead><tbody id="pdWhy"></tbody></table></div>
+        <div class="pd-map"><div class="pd-map-cols">
+          <div><p class="pd-map-k">Before</p><div id="pdMapNow"></div></div>
+          <div class="pd-arrow">&rarr;</div>
+          <div><p class="pd-map-k">After</p><div id="pdMapAfter"></div></div>
+        </div></div>
+      </div>
+    </section>
+    <div class="pd-foot">
+      <p class="pd-note" id="pdNote">Computed from the visitor&rsquo;s real profile on the published constants. Nothing has happened yet.</p>
+      <button type="button" class="pd-go" id="pdGo">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Compare: the demo kit's overlay (public/demo-kit/compare.js) is injected
+     into <body> on first use: Seam, Side by side, and What changed. ─────── -->
+
+<button type="button" class="pd-pill" id="pdPill">Explain &mdash; predict &amp; prove</button>
+
+<div class="director" role="group" aria-label="Director">
+  <div class="director-in">
+    <div class="beatline">
+      <span class="beatno" id="beatNo">Ready</span>
+      <p class="engineline" id="engineLine">A stranger taps a paid-social ad for a phone. Press <b>Next</b> and she lands on the homepage.</p>
+      <div class="beatnav">
+        <button type="button" class="nextbeat" id="nextBeat">Next &rarr;<span id="nextLabel">1 &middot; A stranger arrives from the ad</span></button>
+        <button type="button" class="director-handle" id="explainBtn" title="Press E anywhere">Explain</button>
+        <button type="button" class="director-handle" id="directorHandle" aria-expanded="false" aria-controls="directorMore">All beats</button>
+      </div>
+    </div>
+    <div class="director-more" id="directorMore">
+      <div class="presses" id="presses"></div>
+      <div class="dtools">
+        <div class="assert" id="assertRegion"></div>
+        <div class="assert" id="assertIntent"></div>
+        <div class="assert" id="compareTools"></div>
+      </div>
+      <div class="director-foot">
+        <span class="status" id="status">idle</span>
+        <span class="legend"><i class="legend-dot legend-dot--shopper"></i>the visitor
+          <i class="legend-dot legend-dot--merch"></i>the merchandiser
+          <i class="legend-dot legend-dot--engine"></i>the engine, on its own</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- The page calls the engine routes directly, as Top Offers does, so every
+     call can be driven and asserted headlessly. The SDK wraps these same routes
+     and is what a customer integrates; the data-op-* attributes on the controls
+     show where its declarative capture would bind. vantage.js is a module: it
+     builds the page on the demo kit (public/demo-kit/kit.js). -->
+<script type="module" src="/vantage/vantage.js"></script>
+</body>
+</html>

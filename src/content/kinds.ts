@@ -6,11 +6,15 @@
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
-import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { platformWordOf } from '@/services/platform';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { compileSlotConstraints, slotPins } from './slotConstraints';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+/** P10: a signal count or floor — a whole number of 0 or more (a nonnegative safe integer). */
+const isSignalCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 const LIFECYCLE = new Set(['live', 'draft', 'expired']);
 const SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
 
@@ -31,8 +35,8 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
-  'tags', 'slotTypes', 'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
-  'featuredProductIds', 'inStock']);
+  'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
+  'featuredProductIds', 'complements', 'inStock']);
 
 /**
  * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
@@ -120,6 +124,43 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
     }
   }
+  // Garrett's targeting rule. Bounded on every axis, because it is authored by a
+  // feed and it decides whether a piece may be served at all.
+  let eligibleWhen: { regions?: string[]; context?: Record<string, string[]> } | undefined;
+  if (p.eligibleWhen !== undefined) {
+    if (!isRecord(p.eligibleWhen)) errors.push(`${at}.eligibleWhen: object with regions and/or context`);
+    else {
+      const extra = Object.keys(p.eligibleWhen).filter((k) => !['regions', 'context'].includes(k));
+      if (extra.length) errors.push(`${at}.eligibleWhen: unknown member(s) ${extra.join(', ')}; expected regions and/or context`);
+      const rule: { regions?: string[]; context?: Record<string, string[]> } = {};
+      if (p.eligibleWhen.regions !== undefined) {
+        const raw = p.eligibleWhen.regions;
+        if (!Array.isArray(raw) || !raw.length || raw.length > 64
+          || !raw.every((v) => isStr(v) && /^[A-Za-z]{2}(-[A-Za-z0-9]{1,3})?$/.test(v))) {
+          errors.push(`${at}.eligibleWhen.regions: 1..64 region keys such as US or US-WA`);
+        } else rule.regions = raw.map((v) => v.trim().toUpperCase());
+      }
+      if (p.eligibleWhen.context !== undefined) {
+        const raw = p.eligibleWhen.context;
+        if (!isRecord(raw) || !Object.keys(raw).length || Object.keys(raw).length > 8) {
+          errors.push(`${at}.eligibleWhen.context: object of 1..8 signal names → accepted values`);
+        } else {
+          const ctx: Record<string, string[]> = {};
+          for (const [name, values] of Object.entries(raw)) {
+            if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) { errors.push(`${at}.eligibleWhen.context.${name}: signal name must be 1..32 letters, digits or underscore`); continue; }
+            if (!Array.isArray(values) || !values.length || values.length > 32
+              || !values.every((v) => isStr(v) && v.trim() && v.length <= 64)) {
+              errors.push(`${at}.eligibleWhen.context.${name}: 1..32 non-empty values of at most 64 characters`); continue;
+            }
+            ctx[name] = values.map((v) => v.trim());
+          }
+          if (Object.keys(ctx).length) rule.context = ctx;
+        }
+      }
+      if (!rule.regions && !rule.context) errors.push(`${at}.eligibleWhen: name at least one of regions or context`);
+      else eligibleWhen = rule;
+    }
+  }
   let merchandising: Record<string, number> | undefined;
   if (p.merchandising !== undefined) {
     if (!isRecord(p.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → number 0..1`);
@@ -151,6 +192,12 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     if (!Array.isArray(p.featuredProductIds) || !p.featuredProductIds.every(isStr)) errors.push(`${at}.featuredProductIds: array of product id strings`);
     else featuredProductIds = [...new Set((p.featuredProductIds as string[]).map((x) => x.trim()).filter(Boolean))];
   }
+  // The products the piece completes, validated exactly as the products it features are.
+  let complements: string[] | undefined;
+  if (p.complements !== undefined) {
+    if (!Array.isArray(p.complements) || !p.complements.every(isStr)) errors.push(`${at}.complements: array of product id strings`);
+    else complements = [...new Set((p.complements as string[]).map((x) => x.trim()).filter(Boolean))];
+  }
   if (p.inStock !== undefined && typeof p.inStock !== 'boolean') errors.push(`${at}.inStock: boolean when present`);
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
@@ -159,6 +206,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(journeyStageFit ? { journeyStageFit } : {}),
     ...(isStr(p.freshnessDate) ? { freshnessDate: p.freshnessDate } : {}),
     ...(featuredProductIds && featuredProductIds.length ? { featuredProductIds } : {}),
+    ...(complements && complements.length ? { complements } : {}),
     ...(typeof p.inStock === 'boolean' ? { inStock: p.inStock } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
@@ -167,6 +215,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(isStr(p.renderUrl) ? { renderUrl: p.renderUrl } : {}),
     ...(isStr(p.excerpt) ? { excerpt: p.excerpt } : {}),
     ...(window && (window.from || window.to) ? { window } : {}),
+    ...(eligibleWhen ? { eligibleWhen } : {}),
   };
 }
 
@@ -201,10 +250,10 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
-/** W16 C3: the three arrival signals a seed rule may read. */
-const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network']);
+/** W16 C3: the arrival signals a seed rule may read; `platform` is the request's own OS family. */
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform']);
 /** Bounded like every other authored list in this document. */
-const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50;
+const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50, SEED_DAMPEN_MAX = 4;
 
 /**
  * W16 C3 / R30: one slot's contextual seed rule set, against the dimensions that
@@ -225,13 +274,31 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
     const before = errors.length;
     const signal = raw.signal, value = raw.value, weight = raw.weight;
-    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network`);
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform`);
     if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
     // A signal value outside its own vocabulary names a context that cannot
     // occur, so it could only ever be dead configuration or a typo for a live one.
     else if (signal === 'entry_channel' && entryChannelOf(value) !== value) errors.push(`${at}.value: entry_channel names one of the six channel words, exactly`);
     else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
+    else if (signal === 'platform' && platformWordOf(value) !== value) errors.push(`${at}.value: platform names an OS family, ios | android, exactly`);
     if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
+    // The dampen reads the SHOPPER's own memberships, not the piece, so its
+    // dimensions need not be ones this slot weights.
+    let dampen: SeedRule['dampen'];
+    if (raw.dampen !== undefined) {
+      const list = raw.dampen, held = new Set<string>();
+      if (!Array.isArray(list) || list.length < 1 || list.length > SEED_DAMPEN_MAX) errors.push(`${at}.dampen: 1..${SEED_DAMPEN_MAX} of { dimension, value, factor 0..1 }`);
+      else {
+        dampen = [];
+        for (const d of list as unknown[]) {
+          if (!isRecord(d) || !isStr(d.dimension) || !isStr(d.value) || !isNum(d.factor) || d.factor < 0 || d.factor > 1) { errors.push(`${at}.dampen: each is { dimension, value, factor 0..1 }`); continue; }
+          const pair = `${d.dimension}\u0000${d.value}`;
+          if (held.has(pair)) { errors.push(`${at}.dampen: duplicate interest`); continue; }
+          held.add(pair);
+          dampen.push({ dimension: d.dimension, value: d.value, factor: d.factor });
+        }
+      }
+    }
     const tags: SeedRule['tags'] = [];
     if (!Array.isArray(raw.tags) || raw.tags.length < 1 || raw.tags.length > SEED_TAGS_MAX) errors.push(`${at}.tags: 1..${SEED_TAGS_MAX} canonical tags`);
     else {
@@ -247,12 +314,174 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
         tags.push({ dimension: tag.dimension, value: tag.value });
       }
     }
-    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number });
+    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number, ...(dampen ? { dampen } : {}) });
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: rules };
 }
 
-function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3): SlotStrategy | null {
+/** P02: the governance version that introduces the layout declaration (`layout` on a slot). */
+export const LAYOUT_GOVERNANCE_VERSION = 4;
+
+/** A slot member `layout` that declares something: anything but absent or `false`. */
+const declaresLayout = (s: unknown): boolean => isRecord(s) && s.layout !== undefined && s.layout !== false;
+/** P01: a slot member `orders` that carries something: anything but absent or an empty list. */
+const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undefined && !(Array.isArray(s.orders) && s.orders.length === 0);
+
+// ── P01: per-context orders on the declared layout slot ─────────────────────
+
+/** The visit buckets a context may name, as the cell derives them (`src/content/cell.ts`), or `any`. */
+const VISIT_BUCKET_WORDS: ReadonlySet<string> = new Set(['1', '2-3', '4+']);
+/** More than every distinct context the grammar can name (seven channel choices × eight bucket choices). */
+const ORDERS_MAX = 64;
+const hasExactly = (v: Record<string, unknown>, keys: readonly string[]): boolean =>
+  Object.keys(v).length === keys.length && keys.every(key => Object.hasOwn(v, key));
+
+/**
+ * P01 (decision D1): one slot's per-context orders, structurally. Errors are
+ * suffixes of the slot's `orders` address, so a refusal names the order, the
+ * part and the offending value. The same function reads a published candidate
+ * and a RETAINED version-4 document; the rules that relate an order to the rest
+ * of its slot (pins, exclusions, the layout declaration, overlapping contexts)
+ * are authoring rules in `validateSlotCatalog`, never reinterpreted on a read.
+ */
+export function validateOrders(candidate: unknown, take: number): ValidationResult<ConfiguredOrder[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { context, modules } orders'] };
+  const errors: string[] = [];
+  if (candidate.length > ORDERS_MAX) errors.push(`: at most ${ORDERS_MAX} orders`);
+  const orders: ConfiguredOrder[] = [];
+  Array.from(candidate).forEach((raw: unknown, index) => {
+    const at = `[${index}]`;
+    if (!isRecord(raw) || !hasExactly(raw, ['context', 'modules'])) { errors.push(`${at}: an order is { context, modules } and nothing else`); return; }
+    const before = errors.length;
+    let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
+    const context = raw.context;
+    if (!isRecord(context) || !hasExactly(context, ['channel', 'visitBuckets'])) errors.push(`${at}.context: { channel, visitBuckets } and nothing else`);
+    else {
+      const c = context.channel;
+      if (c === 'any' || (typeof c === 'string' && entryChannelOf(c) === c)) channel = c as OrderContext['channel'];
+      else errors.push(`${at}.context.channel: ${quoted(c)} is not one of the six channel words (direct | paid_social | paid_search | email | organic | referral) or any; a shopper whose channel is unknown matches no context`);
+      const b = context.visitBuckets;
+      if (b === 'any') visitBuckets = 'any';
+      else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (1 | 2-3 | 4+), or any`);
+      else {
+        const seen = new Set<string>();
+        Array.from(b).forEach((v: unknown, k) => {
+          if (typeof v !== 'string' || !VISIT_BUCKET_WORDS.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (1 | 2-3 | 4+); a shopper whose visit is unknown matches no context`);
+          else if (seen.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
+          else seen.add(v);
+        });
+        if (errors.length === before) visitBuckets = [...b] as Array<'1' | '2-3' | '4+'>;
+      }
+    }
+    const modules = raw.modules;
+    if (!Array.isArray(modules) || modules.length < 1 || modules.length > take) {
+      errors.push(`${at}.modules: 1 to ${take} module ids (the slot's take); an order may list fewer modules than take, never more`);
+    } else {
+      const seen = new Set<string>();
+      Array.from(modules).forEach((id: unknown, k) => {
+        if (typeof id !== 'string' || id.length < 1 || id.length > 1024) errors.push(`${at}.modules[${k}]: a module id, a string of 1..1024 UTF-16 units`);
+        else if (seen.has(id)) errors.push(`${at}.modules[${k}]: ${quoted(id)} is repeated; an order names each module once`);
+        else seen.add(id);
+      });
+    }
+    if (errors.length === before && channel && visitBuckets) {
+      // Keys in sorted order, as every member a replay compares is built.
+      orders.push({ context: { channel, visitBuckets }, modules: [...(modules as string[])] });
+    }
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: orders };
+}
+
+/** Decision D1's specificity: the number of the context's parts that are not `any`. */
+export const contextSpecificity = (context: OrderContext): number => (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1);
+const bucketsOf = (context: OrderContext): string[] => context.visitBuckets === 'any' ? [...VISIT_BUCKET_WORDS] : [...context.visitBuckets];
+const contextWords = (context: OrderContext): string =>
+  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}`;
+/** A shopper both contexts match, in words, or null when no shopper can match both. */
+function sharedShopper(a: OrderContext, b: OrderContext): string | null {
+  if (a.channel !== 'any' && b.channel !== 'any' && a.channel !== b.channel) return null;
+  const inB = new Set(bucketsOf(b)), bucket = bucketsOf(a).find(v => inB.has(v));
+  if (bucket === undefined) return null;
+  const channel = a.channel !== 'any' ? a.channel : b.channel !== 'any' ? b.channel : 'any channel';
+  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}`;
+}
+
+/**
+ * P01 (O5, decision D1): the authoring rules that relate a slot's orders to the
+ * rest of its slot, applied at publication only. An order is published only on
+ * the page's declared layout slot, never on an off-limits one; it keeps every
+ * pinned module at its position and lists no module the slot excludes by id,
+ * nor one another slot of the page pins (a pin reserves its module page-wide);
+ * one context carries one order, and two contexts that match one shopper with
+ * equal specificity are refused, so the most specific match always decides.
+ */
+function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, pageSlots: readonly SlotStrategy[]): string[] {
+  const at = `pages.${page}[${index}].orders`, orders = slot.orders ?? [];
+  if (slot.layout !== true) return [`${at}: slot '${slot.slot}' is not the declared layout slot of page '${page}'; per-context orders are set only on the slot that declares layout: true`];
+  if (slot.offLimits) return [`${at}: slot '${slot.slot}' is off-limits and serves no module, so it carries no order`];
+  const errors: string[] = [], pins = slotPins(slot), excluded = new Set(slot.excludedPieceIds ?? []);
+  const pinnedElsewhere = new Map<string, string>();
+  for (const other of pageSlots) if (other !== slot && !other.offLimits) for (const id of slotPins(other)) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
+  orders.forEach((order, k) => {
+    order.modules.forEach((id, p) => {
+      if (excluded.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the order could not serve it`);
+      else if (pinnedElsewhere.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is pinned by slot '${pinnedElsewhere.get(id)}' of page '${page}', which reserves it page-wide, so this order could not serve it`);
+    });
+    pins.forEach((pin, p) => {
+      if (order.modules[p] !== pin) errors.push(`${at}[${k}].modules[${p}]: the slot pins ${quoted(pin)} at position ${p + 1}; an order keeps every pinned module at its position`);
+    });
+    for (let j = 0; j < k; j++) {
+      const a = orders[j]!.context, b = order.context;
+      const same = a.channel === b.channel && bucketsOf(a).length === bucketsOf(b).length && bucketsOf(a).every(v => bucketsOf(b).includes(v))
+        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any');
+      if (same) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
+      const shared = sharedShopper(a, b);
+      if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {
+        errors.push(`${at}[${k}].context: ${contextWords(b)} and orders[${j}] (${contextWords(a)}) both match one shopper (${shared}) with equal specificity ${contextSpecificity(b)}; the most specific context must decide, so make one more specific or remove one`);
+      }
+    }
+  });
+  return errors;
+}
+
+/**
+ * P01 (O5, R-P24): the cross-document half of the order refusals, which only the
+ * route that holds both documents can make: every module an order names must be
+ * a piece of the published catalogue that names the slot in its `slotTypes`,
+ * and one the slot's own tag and type gates admit. Pure; the caller supplies the
+ * catalogue it read. A later catalogue change is not refused here: the decision
+ * serves the order without a module that is no longer eligible.
+ */
+export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, catalog: Pick<ContentCatalog, 'pieces'>): string[] {
+  const byId = new Map<string, ContentPiece>();
+  for (const piece of catalog.pieces) if (!byId.has(piece.id)) byId.set(piece.id, piece);
+  const errors: string[] = [];
+  for (const [page, slots] of Object.entries(document.pages)) {
+    slots.forEach((slot, index) => {
+      if (!slot.orders?.length) return;
+      const gate = compileSlotConstraints(slot);
+      slot.orders.forEach((order, k) => order.modules.forEach((id, p) => {
+        const at = `pages.${page}[${index}].orders[${k}].modules[${p}]`, piece = byId.get(id);
+        if (!piece) { errors.push(`${at}: ${quoted(id)} is not a registered module: no piece of the published catalogue has that id`); return; }
+        if (!piece.slotTypes.includes(slot.slot)) { errors.push(`${at}: ${quoted(id)} is in the catalogue but does not name slot '${slot.slot}' in its slotTypes, so the slot can never serve it`); return; }
+        const refusal = gate.refusal(piece);
+        if (refusal) errors.push(`${at}: ${quoted(id)} is refused by slot '${slot.slot}' (${refusal.reason === 'type_not_allowed' ? `its type ${quoted(piece.type)} is not in allowedTypes`
+          : refusal.reason === 'excluded_tag' ? `excludedTags pair ${refusal.dimension ?? ''}=${refusal.value ?? ''}` : refusal.reason}), so the order could not serve it`);
+      }));
+    });
+  }
+  return errors;
+}
+
+/**
+ * @param governance The version the document is read under (0 = unmarked legacy).
+ * @param earlyMark For a WRITE only: the version 1, 2 or 3 the candidate is marked
+ *   with, under which a layout declaration is refused by name (P02.A4); null
+ *   otherwise. A retained document marked earlier than 4 ignores the member, as
+ *   it ignores every member introduced after it.
+ */
+function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3 | 4,
+  earlyMark: 1 | 2 | 3 | null = null): SlotStrategy | null {
   const at = `pages.${page}[${i}]`;
   if (!isRecord(s)) { errors.push(`${at}: must be an object`); return null; }
   const slot = s.slot;
@@ -269,7 +498,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
   }
   if (s.pinnedPieceId !== undefined && !isStr(s.pinnedPieceId)) errors.push(`${at}.pinnedPieceId: string when present`);
   let pinnedPieceIds: string[] | undefined;
-  if (governance === 3 && Object.hasOwn(s, 'pinnedPieceIds')) {
+  if (governance >= 3 && Object.hasOwn(s, 'pinnedPieceIds')) {
     const ids = s.pinnedPieceIds;
     if (!Array.isArray(ids) || ids.length > 50 || !Array.from(ids).every(isStr) || new Set(ids).size !== ids.length) errors.push(`${at}.pinnedPieceIds: at most 50 distinct exact nonempty strings`);
     else pinnedPieceIds = [...ids];
@@ -349,6 +578,13 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.windowHours) || f.windowHours <= 0 || !isNum(f.cap) || !Number.isInteger(f.cap) || f.cap < 1) errors.push(`${at}.fatigue: { weight 0..1, windowHours > 0, cap integer ≥ 1 }`);
     else fatigue = { weight: f.weight, windowHours: f.windowHours, cap: f.cap };
   }
+  // The composer's `prefer` hook, published: prefer what completes the request's anchor product.
+  let complements: ComplementsRule | undefined;
+  if (s.complements !== undefined) {
+    const c = s.complements;
+    if (!isRecord(c) || !isNum(c.weight) || c.weight < 0 || c.weight > 1) errors.push(`${at}.complements: { weight 0..1 }`);
+    else complements = { weight: c.weight };
+  }
   let diversity: DiversityRule | undefined;
   if (s.diversity !== undefined) {
     const d = s.diversity;
@@ -365,13 +601,47 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.seeds${error}`);
     else seeds = checked.value;
   }
+  // P02: the page's declared layout slot. Its K is the slot's own `take`, held
+  // to 1..50 above like every take; one per page is a publication rule
+  // (`validateSlotCatalog`). `false` declares nothing and is not kept.
+  let layout = false;
+  if (declaresLayout(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      if (typeof s.layout !== 'boolean') errors.push(`${at}.layout: boolean when present (true declares this page's layout slot)`);
+      else layout = s.layout;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.layout: a layout declaration needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
+  // P01: the layout slot's per-context orders, a version-4 member like the
+  // declaration itself. An empty list carries nothing and is not kept.
+  let orders: ConfiguredOrder[] | undefined;
+  if (carriesOrders(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateOrders(s.orders, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.orders${error}`);
+      else orders = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.orders: per-context orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
+  // P10: the slot's own signal floor, read under every governance version like
+  // the seed rules: a whole number of 0 or more, or `never`. That `never` is
+  // published only on the page's declared layout slot is an authoring rule of
+  // `validateSlotCatalog`, never reinterpreted on a read.
+  let signalFloor: SignalFloor | undefined;
+  if (s.signalFloor !== undefined) {
+    if (s.signalFloor === 'never' || isSignalCount(s.signalFloor)) signalFloor = s.signalFloor;
+    else errors.push(`${at}.signalFloor: ${quoted(s.signalFloor)} is not a signal floor; a slot's floor is a whole number of 0 or more, or never on the page's declared layout slot`);
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}),
+    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
+    ...(signalFloor !== undefined ? { signalFloor } : {}),
   };
 }
 
@@ -379,9 +649,29 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['slots: must be an object'] };
   const marked = Object.hasOwn(candidate, 'governanceVersion');
-  if (marked && candidate.governanceVersion !== 1 && candidate.governanceVersion !== 2 && candidate.governanceVersion !== 3) errors.push('governanceVersion: only versions 1, 2 and 3 are supported');
-  const governance = current || candidate.governanceVersion === 3 ? 3 : candidate.governanceVersion === 2 ? 2 : marked ? 1 : 0;
+  const mark = candidate.governanceVersion;
+  if (marked && mark !== 1 && mark !== 2 && mark !== 3 && mark !== LAYOUT_GOVERNANCE_VERSION) errors.push('governanceVersion: only versions 1, 2, 3 and 4 are supported');
+  // P02: version 4 introduces the layout declaration and otherwise reads as 3.
+  // A write is read under the current contract — 3, as before — unless it is
+  // marked 4, or is unmarked and declares a layout (then it is written as 4, so
+  // its retained revision keeps the declaration). A write marked 1, 2 or 3 that
+  // declares a layout is refused by name; a RETAINED document marked earlier
+  // than 4 ignores the member, as it ignores every later member.
+  // P01: per-context orders are a version-4 member too, so an unmarked write
+  // carrying them is read under version 4 and refused there if misplaced.
+  const declares = current && !marked && isRecord(candidate.pages)
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s)));
+  const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
+  const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
+  // P10: the tenant's signal floor, a whole number of 0 or more (absent is 0).
+  // `never` belongs to the declared layout slot alone and is never a tenant floor.
+  const signalFloor = candidate.signalFloor;
+  if (signalFloor !== undefined && !isSignalCount(signalFloor)) {
+    errors.push(signalFloor === 'never'
+      ? 'signalFloor: never is not a tenant floor; it is set only on a page\'s declared layout slot (its own signalFloor), and the tenant floor is a whole number of 0 or more'
+      : `signalFloor: ${quoted(signalFloor)} is not a signal floor; the tenant floor is a whole number of 0 or more (0, the default, is off)`);
+  }
   if (!isRecord(candidate.pages)) return { ok: false, errors: [...errors, 'pages: required object of page → slot[]'] };
   const pages: Record<string, SlotStrategy[]> = {};
   for (const [page, list] of Object.entries(candidate.pages)) {
@@ -389,11 +679,12 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
     if (!Array.isArray(list)) { errors.push(`pages.${page}: must be an array`); continue; }
     const seen = new Set<string>();
     const slots: SlotStrategy[] = [];
-    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance); if (v) slots.push(v); });
+    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance, earlyMark); if (v) slots.push(v); });
     pages[page] = slots;
   }
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), ...(governance ? { governanceVersion: governance } : {}), pages } };
+  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), ...(governance ? { governanceVersion: governance } : {}),
+    ...(isSignalCount(signalFloor) ? { signalFloor } : {}), pages } };
 }
 
 /** Publication rejects local contradictions without reinterpreting retained revisions. */
@@ -426,6 +717,29 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
       if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: slot name '${slot.slot}' is already used on page '${owner}'; slot names must be unique across the pages of a brand, because one slot name is one statistics object`);
       else pageOfSlot.set(slot.slot, page);
     }
+  }
+  // P02: a page's layout is ONE declared slot of K positions; a second
+  // declaration on the same page is a contradiction, refused where it is
+  // authored (a retained document is never reinterpreted here).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    const declared = slots.filter(slot => slot.layout === true);
+    for (const extra of declared.slice(1)) {
+      errors.push(`pages.${page}.${extra.slot}: a page declares at most one layout slot; '${declared[0]!.slot}' is already the layout of page '${page}'`);
+    }
+  }
+  // P01: per-context orders, refused where they are authored whenever they
+  // could not be served exactly (a retained document is never reinterpreted).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots)); });
+  }
+  // P10 (F3): `never` keeps a slot context-only for every shopper, which is what
+  // makes a page's layout one answer per context; it is published only on the
+  // page's declared layout slot, so a content slot always keeps a floor its
+  // shoppers can pass.
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => {
+      if (slot.signalFloor === 'never' && slot.layout !== true) errors.push(`pages.${page}[${index}].signalFloor: never is set only on the page's declared layout slot (layout: true); slot '${slot.slot}' is not the declared layout slot of page '${page}', so its floor is a whole number of 0 or more`);
+    });
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();
@@ -513,8 +827,57 @@ export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
 
 const ARMS = new Set(['default', 'no_learning']);
 
+/**
+ * `regional.dimensions` names registry dimensions, so it is held to what a
+ * registry can define (src/reflex/configStore.ts): at most its 32 dimensions,
+ * each an exact, distinct, non-empty key that is not a reserved object key. An
+ * empty list is refused: `enabled: false` is how the prior is switched off.
+ * This document is validated without the registry in hand; a well-formed name
+ * the tenant's registry does not define matches nothing at decision time,
+ * because a region only ever holds the dimensions its events carried.
+ */
+const REGIONAL_DIMENSIONS_MAX = 32;
+const RESERVED_DIMENSION_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+function regionalDimensionsOf(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length < 1 || v.length > REGIONAL_DIMENSIONS_MAX) return null;
+  if (!v.every((d) => isStr(d) && d.trim() === d && !RESERVED_DIMENSION_KEYS.has(d)) || new Set(v).size !== v.length) return null;
+  return [...v] as string[];
+}
+
 export function validateLearnConfig(candidate: unknown): ValidationResult<LearnConfig> {
   return validateRetainedLearn(candidate, false);
+}
+
+/**
+ * P28 (decision D1): the layout blend's dial, structurally — `{ p }` and nothing
+ * else, `p` a number from 0 to 1, 0 when absent. Errors are suffixes of the
+ * dial's address (`slots.{slot}.blend`), so a refusal names the blend.
+ */
+function blendDialErrors(candidate: unknown): string[] {
+  if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'p')) return [': an object { p } and nothing else, p a number from 0 to 1 (0 when absent)'];
+  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) return [`.p: must be a number from 0 to 1, got ${quoted(candidate.p)}`];
+  return [];
+}
+
+/**
+ * P28 (decision D1, R-P31): the cross-document half of the blend's refusals,
+ * which only the route that holds both documents can make: a slot whose learn
+ * dials opt into the blend must be a page's DECLARED layout slot (P02's
+ * `layout: true`) in the slots document, and on no page an ordinary slot of the
+ * same name. Pure; the caller supplies the slots document it read. A later
+ * slots change is not refused here: the decision applies the blend only on a
+ * slot that declares the layout and decides any other slot exactly as before.
+ */
+export function learnBlendLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slots: Pick<SlotCatalog, 'pages'>): string[] {
+  const errors: string[] = [];
+  for (const [slot, dials] of Object.entries(learn.slots ?? {})) {
+    if (dials.blend === undefined) continue;
+    const occurrences = Object.entries(slots.pages).flatMap(([page, list]) => list.filter(s => s.slot === slot).map(s => ({ page, declared: s.layout === true })));
+    const undeclared = occurrences.find(o => !o.declared);
+    if (!occurrences.length) errors.push(`slots.${slot}.blend: slot '${slot}' is on no page of the slots document; the blend is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+    else if (undeclared) errors.push(`slots.${slot}.blend: slot '${slot}' is not the declared layout slot of page '${undeclared.page}'; the blend is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+  }
+  return errors;
 }
 
 function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
@@ -536,7 +899,10 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (typeof g.enabled !== 'boolean') errors.push('regional.enabled: boolean');
       if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) errors.push('regional.kBlend: number in (0, 100]');
       if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) errors.push('regional.minEvents: positive integer');
-      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents };
+      // Absent means every dimension the region carries, so a document without it reads exactly as before.
+      const dimensions = g.dimensions === undefined ? undefined : regionalDimensionsOf(g.dimensions);
+      if (dimensions === null) errors.push(`regional.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
+      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents, ...(dimensions ? { dimensions } : {}) };
     }
   }
   const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
@@ -632,6 +998,17 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
               dials.items[item] = ctl.mode === 'freeze' ? { mode: 'freeze', lift: ctl.lift as number } : { mode: 'reject' };
             }
           }
+        }
+        // P28 (decision D1): the layout blend's opt-in, kept exactly as authored.
+        // Whether the slot is a page's declared layout slot is a cross-document
+        // rule, made where both documents are at hand (`learnBlendLayoutErrors`,
+        // applied by src/routes/content.ts). A RETAINED document whose blend the
+        // current contract refuses keeps reading with the blend dropped, never
+        // partially applied, so its slot decides exactly as it did before.
+        if (d.blend !== undefined) {
+          const refused = blendDialErrors(d.blend);
+          if (!refused.length) dials.blend = { ...(isRecord(d.blend) && d.blend.p !== undefined ? { p: d.blend.p as number } : {}) };
+          else if (!historical) for (const error of refused) errors.push(`slots.${slot}.blend${error}`);
         }
         slots[slot] = dials;
       }

@@ -86,6 +86,7 @@ import {
   placeEvent,
   nextCrossing,
   snapshot as reflexSnapshot,
+  signalsOf,
   tick as tickReflex,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
@@ -774,6 +775,10 @@ export class ShopperReflex {
             journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
               entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
+            // P10: the shopper's count of signals, read off the state this object already
+            // holds (no read of its own), for the slots that publish a signal
+            // floor. Present only when there is one; absent reads as 0.
+            ...(signalsOf(this.affinity?.reflex) > 0 ? { signals: signalsOf(this.affinity?.reflex) } : {}),
           });
         }
         if (url.searchParams.get('projection') === 'sort') {
