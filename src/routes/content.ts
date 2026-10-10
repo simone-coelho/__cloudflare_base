@@ -28,7 +28,7 @@ import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, Publicatio
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog } from '@/content/kinds';
 import { contextTermsOf } from '@/content/cell';
 import { REFLEX_KIND } from '@/reflex/configStore';
-import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors, type PriorsDoc } from '@/learn/priors';
+import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';

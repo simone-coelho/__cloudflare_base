@@ -10,7 +10,11 @@ import type { ServerBootstrap } from './server';
 
 export interface HydrateOptions {
   page: string;
-  /** The entry channel, if the page knows it; recorded on the decision's cell. */
+  /**
+   * The entry channel, if the page knows it; recorded on the decision's cell
+   * when it is one of the tenant's published channel ids (today's six words for
+   * a tenant without a context vocabulary). Any other word is ignored.
+   */
   channel?: string;
 }
 
