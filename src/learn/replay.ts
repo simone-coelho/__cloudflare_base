@@ -98,6 +98,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.blend', served.explain.blend, replayed.explain.blend);
   // P10: the signal floor a context-only position was decided under and the count, by value (keys sorted).
   eq('explain.signalFloor', served.explain.signalFloor, replayed.explain.signalFloor);
+  // P07: the context prior's itemisation, by value (keys sorted); absent on both for a record decided without it.
+  eq('explain.contextPrior', served.explain.contextPrior, replayed.explain.contextPrior);
   return diff;
 }
 
@@ -348,6 +350,12 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const regional = served.explain.regional && inputs.regional_share
     ? (({ contribution: _c, ...summary }) => ({ ...summary, share: inputs.regional_share! }))(served.explain.regional)
     : null;
+  // P07: the context prior is already in the recorded interest vector; the record's
+  // itemisation and the shares it carries let the replay itemise it again. A
+  // record that carries no shares was decided without it and replays as before.
+  const contextBlend = served.explain.contextPrior && inputs.context_share
+    ? (({ contribution: _c, ...summary }) => ({ ...summary, share: inputs.context_share! }))(served.explain.contextPrior)
+    : null;
   const extCfg = learn.external ?? null;
   let set: ReturnType<typeof decideContent>;
   requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
@@ -360,7 +368,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     // P01: and a record that states no orders marker without the page's orders.
     pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot)),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
-    affinity: { dims: inputs.affinity }, regional, cell: served.cell, arm: served.arm,
+    affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), cell: served.cell, arm: served.arm,
     versions: { ...served.versions }, configLabel: served.config_label,
     candidateLimit: manifest?.candidateLimit ?? Math.max(10, served.candidates.length),
     learning: learning ? {
@@ -385,7 +393,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     // context-only slots scored on the prior shares it recorded; one that
     // states none, with no floor, which is what that decision did.
     ...(manifest?.signalFloor === SIGNAL_FLOOR_RULES
-      ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null } : {}),
+      ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null,
+        // P07: and the context prior's recorded shares beside the region's, when it applied.
+        contextBlendShare: inputs.context_share ?? null } : {}),
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,

@@ -384,6 +384,17 @@ export interface RegionalConfig {
   dimensions?: string[];
 }
 
+/**
+ * P07 (decision D1, freeze items 22 and 37): the context prior, in the regional
+ * prior's grammar — its own block and K. The population's interests per entry
+ * channel and visit bucket (`1`, `2-3`, `4+`), blended into the shopper's view
+ * with λ = kBlend / (kBlend + Σ personal affinity). A decision reads the shares
+ * of the shopper's channel and visit bucket when that pair has at least
+ * `minEvents` events, else the shares of the channel alone over every visit
+ * bucket, never everyone's. Off when the block is absent.
+ */
+export type ContextPriorConfig = RegionalConfig;
+
 /** Doc 22 §4: the learning policy's four axes and the per-reward windows. */
 export interface LearnPolicyConfig {
   scope: 'session' | 'visitor';
@@ -450,6 +461,8 @@ export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
   regional?: RegionalConfig;
+  /** P07: the context prior per entry channel and visit bucket, beside the regional prior; absent is off. */
+  contextPrior?: ContextPriorConfig;
   policy?: LearnPolicyConfig;
   stats?: LearnStatsConfig;
   /** slot → dials. A slot absent here runs at γ = 0 on the click reward. */
@@ -489,6 +502,22 @@ export interface LiftApplied {
 export interface RegionalBlend {
   region: string;
   level: 'region' | 'country' | 'global';
+  lambda: number;
+  version: number;
+  events: number;
+}
+
+/**
+ * P07: what the context prior contributed, in the regional blend's form: the
+ * shopper's entry channel and visit bucket, the level whose shares were read
+ * (`channel_visit` for the pair, `channel` for the channel alone when the pair
+ * had fewer events than the block's minimum), the weight λ, and the published
+ * snapshot's version and event count.
+ */
+export interface ContextPriorBlend {
+  channel: string;
+  visitBucket: Cell['visit_bucket'];
+  level: 'channel_visit' | 'channel';
   lambda: number;
   version: number;
   events: number;
@@ -591,6 +620,12 @@ export interface DecisionInputs {
     slots: Array<{ slot: string; lift: number; prior: number }>;
   };
   regional_share?: Record<string, Record<string, number>>;
+  /**
+   * P07: the context prior's shares the decision used (the form of
+   * `regional_share`, keys sorted), written only when the prior applied, so a
+   * replay itemises it exactly; a record without it was decided without it.
+   */
+  context_share?: Record<string, Record<string, number>>;
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
   served?: Record<string, Record<string, number>>;
@@ -657,6 +692,12 @@ export interface DecisionRecord {
     score_base: number;
     /** The population prior's share of the base score, when one applied. */
     regional?: RegionalBlend & { contribution: number };
+    /**
+     * P07: the context prior's share of the base score, when it contributed:
+     * `{ channel, contribution, events, lambda, level, version, visitBucket }`,
+     * keys sorted, compared by value in replay.
+     */
+    contextPrior?: ContextPriorBlend & { contribution: number };
     /**
      * W16 C3/C7: what the arrival's context contributed to this candidate, when
      * the slot has a seed rule set. `applied` is measured where it lands — in the

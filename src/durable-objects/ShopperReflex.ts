@@ -1345,8 +1345,14 @@ export class ShopperReflex {
       // Registered with the object's own waitUntil so the call survives the reply.
       const keepAlive = retainOwnerWork;
       if (principal && !(principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+        // P07: and into the population of the visit's arrival context — the
+        // entry channel and visit bucket of the visit this event belongs to,
+        // derived exactly as the pipeline stores it below. An unknown channel
+        // counts nothing there (R-P9).
+        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry);
         keepAlive(fanInRegionTrend(this.env, {
           tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
+          context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
         }));
       }
     }
