@@ -76,6 +76,22 @@
 //   C6  docs/kit/02 and 03 each document the block, its fallback and the
 //       receipt line.
 //
+// LOCKS ADDED IN FIX ROUND 1 (R-P53), green against the build at 2b119290,
+// each with its mutant control measured on a scratch copy:
+//   C2  the minimum: a pair snapshot with events above 0 and below minEvents
+//       gives way to the channel alone (level 'channel', the "every visit"
+//       receipt, the channel's shares), and a pair with exactly minEvents
+//       answers (level 'channel_visit', the visit in words); controls MP (the
+//       pair used whenever its snapshot exists) and the off-by-one (the pair
+//       used only above the minimum), src/reflex/regionTrend.ts:302.
+//   C3  the rollup: context scopes stay out of the regional country and global
+//       rollups, which count the leaf regions alone; control MR (a context
+//       pair falling through to the regional leaf test: the `continue` at
+//       src/reflex/regionTrend.ts:413 removed).
+//   C4  the enablement: a block published with `enabled: false` decides term
+//       for term as the block absent; control ME (`enabled` ignored where the
+//       block is read), src/content/service.ts:598.
+//
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `contextPrior` in the learn document, `explain.contextPrior` and
 // `inputs.context_share` on the record. No new export is imported.
@@ -239,6 +255,80 @@ describe('unit:P07.C2', () => {
       expect([/paid social/i.test(sentence), /first visit|visit 2-3/i.test(sentence)],
         `${host}: P07.C2 — her receipt names the population prior of her channel, and no visit it did not use (sentence: ${JSON.stringify(sentence)})`).toEqual([true, false]);
     }, 60_000);
+
+    // LOCK (fix round 1, R-P53 b): green against the build at 2b119290. Its controls, measured on a scratch copy:
+    // MP (src/reflex/regionTrend.ts:302, the pair used whenever its snapshot exists) turns the first clause RED on
+    // both hosts; the off-by-one (the same line, the pair used only above the minimum) turns the boundary clause RED.
+    // The expected values come from the work order, D1, freeze item 37 and the regional prior's form, not from the
+    // engine. C2's observable reads the channel alone "when the pair has fewer events than the block's minimum, as
+    // the regional prior falls back from region to country"; the regional form takes a level that has AT LEAST
+    // minEvents events (src/reflex/regionTrend.ts:207 at abc7413a, `snap.events >= minEvents`), so a pair with exactly
+    // the minimum answers itself; item 37 makes the fallback the channel alone over every visit bucket, never
+    // everyone; R-P53 b names the "every visit" receipt. The fixture, under the C2 document (K 4, minimum 4): three
+    // first-time email visitors each view the Willow (the email pair of the first visit: 3 events, above 0 and below
+    // 4), and a returning email visitor's second visit views the Rogue (the email pair of visits 2-3: 1 event), so the
+    // channel alone holds both lines (4 events, the roll-up's sum of its visit buckets) and the first-visit pair the
+    // Willow only. A first-time email visitor (no signal, so λ = 4 / (4 + 0) = 1) then reads the channel: level
+    // 'channel', 4 events, line shares holding the Rogue beside the Willow (the Willow the leader at 1; the Rogue's one
+    // event against the Willow's three gives about 1/3: the roll-up sums the raw counts and re-normalises to the leader,
+    // src/reflex/regionTrend.ts:123-145 at abc7413a, and the 31 minutes between them decay by about 2% under
+    // REGION_TAU_MS of 24 hours, :28), and the receipt's "every visit" sentence, claiming no visit. One more first-time
+    // email visitor viewing the Willow brings
+    // the pair to exactly 4 events: the next first-time email visitor reads the pair, level 'channel_visit', 4 events,
+    // line shares { Willow: 1 }, and the receipt says "email, first visit".
+    it(`host (${host}): the minimum, a lock — a channel-and-visit pair with fewer events than the block's minimum gives way to the channel alone with the "every visit" receipt, and a pair with exactly the minimum answers itself`, async () => {
+      const learn = learnDocument({}, { regional: REGIONAL_ON, contextPrior: { enabled: true, kBlend: 4, minEvents: 4 } });
+      const m = await mount(host, { pieces: PIECES, slots: SLOTS, learn });
+      expectPublished(m, 'P07.C2 — the learn document with a context prior of K 4 and minimum 4 publishes');
+      const trend = bindTrend(m);
+      const firstTimeWillow = async () => {
+        const s = await shopperOn(m);
+        expect((await s.action(VIEW_WILLOW, EMAIL_ENTRY)).status, `${host}: PRECONDITION — a first-time email visitor's view is accepted`).toBe(200);
+      };
+      for (let i = 0; i < 3; i++) await firstTimeWillow();
+      const returning = await firstVisit(m, EMAIL_ENTRY);
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + 31 * 60_000, shouldAdvanceTime: true });
+      expect((await returning.action(VIEW_ROGUE, EMAIL_ENTRY)).status, `${host}: PRECONDITION — the returning email visitor's second-visit view is accepted`).toBe(200);
+      await publishTrends(m, trend);
+      await publishRegionalEverywhere(m);
+      // The pair's snapshot exists below the minimum (the reviewer's weakness: the fallback had been exercised only with no
+      // pair snapshot at all); read from the key the build publishes, `ctx:<channel>:<visit bucket>` (implementer's report, 6).
+      const pairEvents = () => (JSON.parse(m.cache.data.get(trendKey(TENANT, 'ctx:email:1')) ?? 'null') as { events?: number } | null)?.events ?? null;
+      expect(pairEvents(), `${host}: PRECONDITION — the email first-visit pair's snapshot is published with 3 events, above 0 and below the minimum of 4`).toBe(3);
+      /** A first-time email visitor's page through the route: the Willow recommendations' record and its receipt sentence. */
+      const reader = async (label: string) => {
+        const visitor = await firstVisit(m, EMAIL_ENTRY);
+        const record = (await pageAndLedger(m, visitor, label)).records.find(r => r.item_id === M.reco1);
+        expect([record?.cell.channel ?? null, record?.cell.visit_bucket ?? null],
+          `${host}: PRECONDITION — the reader is a first-time email visitor whose layout holds the Willow recommendations`).toEqual(['email', '1']);
+        const receipt = (await receiptsOf(m, visitor.subject)).find(r => r.slot === LAYOUT && r.item === M.reco1);
+        return { context: contextOf(record), line: sharesOf(record)?.line, sentence: sentenceOf(receipt) };
+      };
+
+      const below = await reader('p07-c2-below-minimum');
+      expect.soft(below.context ?? 'no explain.contextPrior on the record',
+        `${host}: P07.C2 — the pair has 3 events, above 0 and below the minimum of 4: the channel alone answers, over every visit bucket (4 events)`)
+        .toMatchObject({ channel: 'email', visitBucket: '1', level: 'channel', events: 4, lambda: 1 });
+      const line = below.line ?? {};
+      expect.soft({ values: Object.keys(line).sort(), leader: line.Willow ?? null, rogueAboutOneThird: Math.abs((line.Rogue ?? 0) - 1 / 3) < 0.05 },
+        `${host}: P07.C2 — the channel's own shares: the returning visitor's Rogue beside the first visitors' Willow (the pair alone holds the Willow only): ${JSON.stringify(below.line ?? null)}`)
+        .toEqual({ values: ['Rogue', 'Willow'], leader: 1, rogueAboutOneThird: true });
+      expect.soft([/population prior, email, every visit/i.test(below.sentence), /first visit|visit 2-3|visit 1\b/i.test(below.sentence)],
+        `${host}: P07.C2 — the receipt reads the channel and every visit, claiming no visit (sentence: ${JSON.stringify(below.sentence)})`).toEqual([true, false]);
+
+      await firstTimeWillow();
+      await publishTrends(m, trend);
+      await publishRegionalEverywhere(m);
+      expect(pairEvents(), `${host}: PRECONDITION — the email first-visit pair's snapshot is published with exactly the minimum, 4 events`).toBe(4);
+      const at = await reader('p07-c2-at-minimum');
+      expect.soft(at.context ?? 'no explain.contextPrior on the record',
+        `${host}: P07.C2 — the boundary: the pair with exactly the minimum (4 events) answers itself`)
+        .toMatchObject({ channel: 'email', visitBucket: '1', level: 'channel_visit', events: 4, lambda: 1 });
+      expect.soft(at.line ?? 'no inputs.context_share on the record',
+        `${host}: P07.C2 — the boundary: the pair's own shares, the first-time email visitors having viewed the Willow alone`).toEqual({ Willow: 1 });
+      expect.soft(/population prior, email, first visit/i.test(at.sentence),
+        `${host}: P07.C2 — the boundary: the receipt names the channel and the visit in words (sentence: ${JSON.stringify(at.sentence)})`).toBe(true);
+    }, 60_000);
   }
 });
 
@@ -278,6 +368,51 @@ describe('unit:P07.C3', () => {
       expect((shares.email?.line?.Brooklyn ?? 0) > 0, `${host}: P07.C3 — the tracking-only shopper's view reaches the context shares exactly when it reaches her region's trend (regional: ${JSON.stringify(regionalNY?.line ?? null)})`)
         .toBe((regionalNY?.line?.Brooklyn ?? 0) > 0);
     }, 60_000);
+
+    // LOCK (fix round 1, R-P53 c): green against the build at 2b119290. Its control, measured on a scratch copy: MR
+    // (the `continue` at src/reflex/regionTrend.ts:413 removed, so a context pair falls through to the regional leaf
+    // test, which takes the '-' of the '2-3' bucket for a region) turns this leg RED on both hosts.
+    // The expected values come from freeze item 37 and the regional prior's roll-up, not from the engine: the roll-up
+    // sums every published leaf region into its country and into everyone (src/reflex/regionTrend.ts:258, :271, :278,
+    // :280 at abc7413a); the context prior "falls back from channel and visit bucket to the channel alone, never to
+    // everyone, so the regional prior's shares are not double-counted" (item 37), so no context population is ever a
+    // region. The fixture: three geolocated product views from paid social, two on a first visit (New York, California)
+    // and one on a returning visitor's second visit (New York), so two leaf regions (New York 2 events, California 1,
+    // one event per scored view, src/reflex/regionTrend.ts:106 at abc7413a, summed by the roll-up at :139) and two
+    // context scopes (paid social on the first visit, 2 events; on visits 2-3, 1 event; the build names them
+    // `ctx:<channel>:<visit bucket>`, the implementer's report section 6). After the
+    // operator's roll-up the country and everyone count the leaf regions alone, 2 + 1 = 3 (the 2-3 scope counted there
+    // would make everyone 4), and the published regional levels are exactly the two regions, their country and
+    // everyone: no `ctx:` scope appears under a region, the country or everyone.
+    it(`host (${host}): the rollup, a lock — context scopes in two visit buckets stay out of the regional country and global rollups, which count the leaf regions alone`, async () => {
+      const m = await mount(host, { pieces: PIECES, slots: SLOTS, learn: learnDocument({}, { contextPrior: { enabled: true, kBlend: 1, minEvents: 1 } }) });
+      expectPublished(m, 'P07.C3 — the learn document with the context prior’s block publishes');
+      const trend = bindTrend(m);
+      const CALIFORNIA = { country: 'US', regionCode: 'CA' };
+      for (const [cf, view] of [[NEW_YORK, VIEW_TABBY_QUILTED], [CALIFORNIA, VIEW_WILLOW]] as const) {
+        const visitor = await shopperOn(m);
+        expect((await actionAt(m, visitor, view, cf, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — a geolocated first-visit view is answered`).toBe(200);
+      }
+      const returning = await shopperOn(m);
+      expect((await actionAt(m, returning, PAGE_VIEW, NEW_YORK, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the returning visitor's first visit is answered`).toBe(200);
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + 31 * 60_000, shouldAdvanceTime: true });
+      expect((await actionAt(m, returning, VIEW_ROGUE, NEW_YORK, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the second-visit view is answered`).toBe(200);
+      await publishTrends(m, trend);
+
+      const prefix = trendKey(TENANT, '');
+      const published = [...m.cache.data].filter(([key]) => key.startsWith(prefix))
+        .map(([key, value]) => ({ scope: key.slice(prefix.length), ...(JSON.parse(value) as { level?: string; events?: number }) }));
+      const eventsOf = (scope: string) => published.find(p => p.scope === scope)?.events ?? null;
+      expect({ 'US-NY': eventsOf('US-NY'), 'US-CA': eventsOf('US-CA'), 'ctx:paid_social:1': eventsOf('ctx:paid_social:1'), 'ctx:paid_social:2-3': eventsOf('ctx:paid_social:2-3') },
+        `${host}: PRECONDITION — the fan-in fed two leaf regions and two context scopes, one event per scored view`)
+        .toEqual({ 'US-NY': 2, 'US-CA': 1, 'ctx:paid_social:1': 2, 'ctx:paid_social:2-3': 1 });
+      expect.soft({ country: eventsOf('US'), everyone: eventsOf('*') },
+        `${host}: P07.C3 — the country and everyone count the leaf regions alone (New York 2 + California 1 = 3), never a context scope`)
+        .toEqual({ country: 3, everyone: 3 });
+      expect.soft(published.filter(p => ['region', 'country', 'global'].includes(p.level ?? '')).map(p => `${p.level}:${p.scope}`).sort(),
+        `${host}: P07.C3 — the regional levels hold exactly the two regions, their country and everyone: no ctx: scope under a region, the country or everyone`)
+        .toEqual(['country:US', 'global:*', 'region:US-CA', 'region:US-NY']);
+    }, 60_000);
   }
 });
 
@@ -305,6 +440,65 @@ describe('unit:P07.C4', () => {
       const withBlock = await decide(true, learnDocument({}, { contextPrior: CONTEXT_PRIOR }));
       expect(withBlock.served[0], `${host}: CONTROL — the same population with the block published does shape her first decision`).toBe(M.reco2);
     }, 60_000);
+
+    // LOCK (fix round 1, R-P53 a): green against the build at 2b119290. Its control, measured on a scratch copy: ME
+    // (src/content/service.ts:598, the block read without its `enabled`) turns this leg RED on both hosts.
+    // The expected values come from the work order, D1 and the regional prior's form, not from the engine:
+    // remaining-work item 2 gives the block "its enablement"; D1 gives the context prior the regional prior's form,
+    // whose block applies only when `enabled` is true (src/content/service.ts:564-567 at abc7413a); so a block published
+    // with `enabled: false` is the block absent, and C4's "a learn document without the block decides exactly as
+    // before" holds for it term for term. With the regional prior on (published on the Brooklyn line, which no module
+    // carries) the layout is the one with no prior, the first four eligible modules in catalogue order (COLD); the
+    // answer's terms on every slot are those of the block absent; no record carries explain.contextPrior or
+    // inputs.context_share; the stored layout records' term for term (the regional snapshot's publication time
+    // aside) and their page manifest exactly today's eight markers, the key set src/units/P02/LEDGER.unit.test.ts:361
+    // and src/content/consent.test.ts:629 (W27.02) pin; and the regional prior shapes the story slot as today
+    // (story.brooklyn, λ 1 for a first-time visitor, unit:P07.C1's control). The CONTROL publishes the same block
+    // with `enabled: true` over the same population: the prior applies and the paid-social module leads.
+    it(`host (${host}): the enablement, a lock — a block published with enabled false decides term for term as the block absent, the same population notwithstanding`, async () => {
+      const MANIFEST = ['candidateLimit', 'contentTypes', 'exploration', 'governance', 'learning', 'pins', 'slots', 'version'];
+      const recordTerms = (r: DecisionRecord) => {
+        const explain = JSON.parse(JSON.stringify(r.explain ?? {})) as Record<string, unknown>;
+        if (explain.regional) explain.regional = { ...(explain.regional as Record<string, unknown>), version: 'the time the snapshot was published' };
+        return { item: r.item_id, position: r.position, arm: r.arm, authority: r.authority, cell: r.cell, explain, inputs: Object.keys(r.inputs ?? {}).sort() };
+      };
+      const decide = async (label: string, learn: unknown) => {
+        const m = await mount(host, { pieces: PIECES, slots: SLOTS, learn });
+        expectPublished(m, `P07.C4 — the learn document (${label}) publishes`);
+        const trend = bindTrend(m);
+        await population(m);
+        await publishTrends(m, trend);
+        await publishRegionalEverywhere(m);
+        const visitor = await firstVisit(m, PAID_SOCIAL_ENTRY);
+        const { served, records, page } = await pageAndLedger(m, visitor, `p07-c4-${label}`);
+        expect(records.length, `${host}: PRECONDITION — the ledger holds the four layout decisions (${label})`).toBe(4);
+        const set = await servePage(m, visitor, 'pdp');
+        const story = set.records.find(r => r.slot === STORY);
+        return {
+          served,
+          terms: page.decisions.map(({ decisionId: _d, renderOffer: _r, ...rest }) => { void _d; void _r; return rest; }),
+          records: [...records].sort((a, b) => a.position - b.position).map(recordTerms),
+          members: [...records, ...set.records].filter(r => contextOf(r) || sharesOf(r)).map(r => `${r.slot}:${r.item_id}`),
+          manifests: records.map(r => Object.keys(r.inputs?.replay ?? {}).sort()),
+          regional: [story?.item_id ?? null, story?.explain.regional?.lambda ?? null],
+          prior: contextOf(records.find(r => r.item_id === M.reco2))?.level ?? null,
+        };
+      };
+      const absent = await decide('absent', learnDocument({}, { regional: REGIONAL_ON }));
+      const disabled = await decide('disabled', learnDocument({}, { regional: REGIONAL_ON, contextPrior: { ...CONTEXT_PRIOR, enabled: false } }));
+      expect.soft(disabled.served, `${host}: P07.C4 — enabled false: the layout of the block absent, the first four eligible modules in catalogue order`).toEqual(COLD);
+      expect.soft(disabled.terms, `${host}: P07.C4 — enabled false: term for term the answer of the block absent, on every slot`).toEqual(absent.terms);
+      expect.soft(disabled.records, `${host}: P07.C4 — enabled false: the stored layout records term for term those of the block absent`).toEqual(absent.records);
+      expect.soft({ absent: absent.members, disabled: disabled.members },
+        `${host}: P07.C4 — enabled false, as absent: no record carries explain.contextPrior or inputs.context_share`).toEqual({ absent: [], disabled: [] });
+      expect.soft({ absent: absent.manifests, disabled: disabled.manifests },
+        `${host}: P07.C4 — enabled false, as absent: the page manifest carries exactly today's eight markers`).toEqual({ absent: [MANIFEST, MANIFEST, MANIFEST, MANIFEST], disabled: [MANIFEST, MANIFEST, MANIFEST, MANIFEST] });
+      expect.soft({ absent: absent.regional, disabled: disabled.regional },
+        `${host}: P07.C4 — enabled false, as absent: the regional prior shapes the story slot as today`).toEqual({ absent: ['story.brooklyn', 1], disabled: ['story.brooklyn', 1] });
+      const enabled = await decide('enabled', learnDocument({}, { regional: REGIONAL_ON, contextPrior: CONTEXT_PRIOR }));
+      expect([enabled.served[0], enabled.prior], `${host}: CONTROL — the same block with enabled true over the same population applies the prior, and the paid-social module leads`)
+        .toEqual([M.reco2, 'channel_visit']);
+    }, 120_000);
 
     it(`host (${host}): with the block published, a shopper on the holdout's default arm and a shopper without personalization consent get no context prior`, async () => {
       const holdout = learnDocument({}, { holdout: { share: 1, salt: 'p07-holdout', arms: ['default'] }, contextPrior: CONTEXT_PRIOR });
