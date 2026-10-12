@@ -13,7 +13,7 @@ import { retentionBirth, externalRetentionBirths, requireRetention, mergeRetenti
 import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
-  entryChannelOf, isContextId, liveVisit, mergeVisits, RECENCY_BUCKETS, validEntry, visitContextMembers,
+  entryChannelOf, isContextId, liveVisit, mergeVisits, RECENCY_BUCKETS, validEntry, visitArrival, visitContextMembers,
   type ChannelSignals, type RecencyBucket, type VisitInputs,
 } from '@/services/visit';
 import { DEVICE_CLASSES, type DeviceClass } from '@/services/platform';
@@ -328,7 +328,10 @@ export class SessionManager {
       // otherwise close the gap it is being measured against, and every event
       // would look like a new visit.
       const priorLastSeen = existingSession?.metadata.lastSeen;
-      const visit = observedLive ? liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs) : {
+      // P37: beside it, the visit's device and recency (`visitArrival`): written by
+      // the event that opens the visit and carried for the visit, each only when there is one.
+      const visit = observedLive ? { ...liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs),
+        ...visitArrival(existingSession?.metadata, priorLastSeen, now, inputs?.device) } : {
         visitCount: existingSession?.metadata.visitCount, lastVisitAt: existingSession?.metadata.lastVisitAt,
         entryChannel: existingSession?.metadata.entryChannel, ...visitContextMembers(existingSession?.metadata),
       };

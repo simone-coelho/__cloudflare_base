@@ -362,7 +362,11 @@ export interface VisitInputs {
   vocabulary?: PublishedVocabulary | null;
   /** The event's own `data.pageType`: the landing-page type when it names one of the vocabulary's ids. */
   pageType?: unknown;
-  /** P37: the device class the event's own request reported (`deviceOf`); absent or null: no device. */
+  /**
+   * P37: the device class the event's own request reported (`deviceOf`); absent
+   * or null: no device. Read by `visitArrival` where the visit is stored, never
+   * by `liveVisit`, whose classification it does not touch.
+   */
   device?: DeviceClass | null;
 }
 
@@ -386,14 +390,6 @@ export function liveVisit(previous: VisitContext | null | undefined, lastSeen: n
   const landingPageType = carried?.landingPageType ?? (published ? landingPageTypeOf(inputs?.pageType, published.vocabulary) : undefined);
   if (sourcePlatform !== undefined) out.sourcePlatform = sourcePlatform;
   if (landingPageType !== undefined) out.landingPageType = landingPageType;
-  // P37: the visit's device and recency, written by the event that opens it —
-  // the device its own request reported, the recency from the stored last
-  // visit's start — and carried unchanged for the rest of the visit; each only
-  // when there is one (a request reporting no device, a first visit).
-  const device = opening ? deviceClassOf(inputs?.device) ?? undefined : carried?.device;
-  const recency = opening ? recencyOf(prior?.lastVisitAt, now) : carried?.recency;
-  if (device !== undefined) out.device = device;
-  if (recency !== undefined) out.recency = recency;
   if (needsMark(out)) {
     const mark = published?.revision ?? carried?.vocabularyRevision;
     if (vocabularyMark(mark)) out.vocabularyRevision = mark;
@@ -418,19 +414,24 @@ export function projectVisit(previous: VisitContext | null | undefined, lastSeen
 }
 
 /**
- * P37: the arrival context a read answers beside the visit (`GET /realtime/reflex`
- * `arrival`): the device and the recency the visit in progress recorded; for a
- * visit that would open now, the recency the stored last visit gives it (the
- * device is the opening request's own, so none is claimed before it). Each
- * member only when there is one; a shopper with no stored visit answers {}.
+ * P37: a visit's arrival context, its device and its recency, each only when
+ * there is one. For a visit in progress, what the event that opened it
+ * recorded, unchanged. For a visit that opens now, the device `device` names
+ * (the opening request's own: `deviceOf`) and the recency of the whole days
+ * since the stored last visit's start, none on a first visit. The one rule
+ * serves the event that stores the visit (beside `liveVisit`, on both hosts),
+ * the decision that reads its recency at first paint and the read that answers
+ * it (`GET /realtime/reflex` `arrival`), which passes no device, so it claims
+ * none for a visit that has not opened. Pure; no read.
  */
-export interface ProjectedArrival { device?: DeviceClass; recency?: RecencyBucket }
-export function projectArrival(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number): ProjectedArrival {
+export interface VisitArrival { device?: DeviceClass; recency?: RecencyBucket }
+export function visitArrival(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, device?: unknown): VisitArrival {
   const prior = previous && validVisitContext(previous) ? previous : undefined;
-  if (!prior) return {};
-  if (!isNewVisit(lastSeen, now)) return { ...(prior.device !== undefined ? { device: prior.device } : {}), ...(prior.recency !== undefined ? { recency: prior.recency } : {}) };
-  const recency = recencyOf(prior.lastVisitAt, now);
-  return recency !== undefined ? { recency } : {};
+  if (prior && !isNewVisit(lastSeen, now)) {
+    return { ...(prior.device !== undefined ? { device: prior.device } : {}), ...(prior.recency !== undefined ? { recency: prior.recency } : {}) };
+  }
+  const opened = deviceClassOf(device), recency = recencyOf(prior?.lastVisitAt, now);
+  return { ...(opened ? { device: opened } : {}), ...(recency !== undefined ? { recency } : {}) };
 }
 
 /** P36: a visit's context attributes and the revision that classified them, only those it records; P37: and its device and recency. */

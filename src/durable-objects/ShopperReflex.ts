@@ -50,7 +50,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
-import { liveVisit, mergeVisits, projectArrival, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
+import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitArrival, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
 import { deviceClassOf } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
@@ -1337,8 +1337,7 @@ export class ShopperReflex {
     let contextInputs: Promise<VisitInputs> | undefined;
     const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
       const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof eventData.pageType === 'string';
-      // P37: the device the event's own request reported, for the visit it opens; no read.
-      return { vocabulary: arrives ? await tenantContextVocabulary(this.env, tenant) : null, pageType: eventData.pageType, device: event.device ?? null };
+      return { vocabulary: arrives ? await tenantContextVocabulary(this.env, tenant) : null, pageType: eventData.pageType };
     })());
 
     // 2. The pure core (§4): decay-then-accumulate + hysteresis evaluation.
@@ -1506,6 +1505,10 @@ export class ShopperReflex {
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
       ...nextVisit,
+      // P37: the visit's device and recency, written by the event that opens it
+      // (the device its own request reported, the recency from the stored last
+      // visit) and carried for the visit; each only when there is one.
+      ...visitArrival(pipe, this.affinity?.lastSeen, now, event.device),
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
@@ -1962,7 +1965,7 @@ export class ShopperReflex {
       visit: usable ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
       // P37: the visit's arrival context beside it, null exactly where `visit`
       // is — the answer the session host gives (src/routes/realtime.ts).
-      arrival: usable ? projectArrival(this.pipeline, this.affinity?.lastSeen, now) : null,
+      arrival: usable ? visitArrival(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
       // W35 A1: nothing else — the identical shape the session host answers
       // (docs/api/01-rest-endpoints.md, GET /realtime/reflex). The session is
@@ -3957,6 +3960,8 @@ export class ShopperReflex {
         // P36: the visit's context attributes as the pipeline holds them now, so
         // a projection never keeps an earlier visit's (absent ones are not written).
         sourcePlatform: pipe.sourcePlatform, landingPageType: pipe.landingPageType, vocabularyRevision: pipe.vocabularyRevision,
+        // P37: and the visit's device and recency, the same way.
+        device: pipe.device, recency: pipe.recency,
         engagementScore: calculateEngagementScore(pipe.attributes), journeyStage: pipe.journeyStage,
         lastSegmentUpdate: original?.metadata.lastSegmentUpdate ?? affinity.lastSeen },
       preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization,

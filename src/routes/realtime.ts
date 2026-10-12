@@ -17,7 +17,7 @@ import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
-import { projectArrival, projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
+import { projectVisit, validEntry, visitArrival, type ChannelSignals } from '@/services/visit';
 import { deviceOf } from '@/services/platform';
 import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, persistedStageOf, readTimeStageChange } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
@@ -583,7 +583,7 @@ realtimeRoutes.get('/reflex', async (c) => {
       // P37: the visit's arrival context beside it — the device and the recency
       // the visit recorded, each only when there is one — always present and null
       // exactly where `visit` is, identically on the object host.
-      arrival: personalizes(consent) ? projectArrival(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
+      arrival: personalizes(consent) ? visitArrival(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
       consent,
     });
   } catch (error) {

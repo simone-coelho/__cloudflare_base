@@ -16,7 +16,7 @@ import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
   journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
-import { channelIn, projectArrival, projectVisit, validEntry, validVisitContext, type ChannelSignals, type PublishedVocabulary, type VisitContext } from '@/services/visit';
+import { channelIn, projectVisit, validEntry, validVisitContext, visitArrival, type ChannelSignals, type PublishedVocabulary, type VisitContext } from '@/services/visit';
 import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
@@ -536,7 +536,7 @@ export async function serveContentDecisions(
   // what is already held (the request, the shopper read above): no read of their
   // own, so they can neither fail nor wait. Under the arrival's tracking gate.
   const device = consent.tracking ? deviceClassOf(r.device) : null;
-  const recency = consent.tracking ? projectArrival(shopper.visit, shopper.lastSeen, now).recency ?? null : null;
+  const recency = consent.tracking ? visitArrival(shopper.visit, shopper.lastSeen, now).recency ?? null : null;
   const cell = cellFor({
     cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
     // A caller cannot relabel an already-established visit. The explicit
