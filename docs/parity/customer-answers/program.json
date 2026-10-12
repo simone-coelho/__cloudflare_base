@@ -214,7 +214,7 @@
     {
       "id": "P37",
       "title": "Device and recency as first-paint context",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
