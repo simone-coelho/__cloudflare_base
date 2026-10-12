@@ -333,6 +333,36 @@ layout slot left on `served-v1` is still served, but carries no render offer and
 exposure; the engine's decision set names that mismatch internally (`layoutDiagnostics`), and the
 snapshot answer does not carry it.
 
+### Modules with nothing to show, and eligibility rules
+
+Only your page knows when a module has nothing to show for this page view (a recently-viewed rail on a
+first visit, a reviews block for a product without reviews), so the page says so when it asks for the
+page's decisions:
+
+```js
+void client.listen.refresh({ page: 'pdp', nothingToShow: ['module.PDP.reviews.1'] });
+```
+
+The SDK sends the ids on the decision request as one JSON-encoded string field, `nothingToShow`, and sends
+nothing when the list is empty. A module named in `nothingToShow` is withheld before ranking, so it is not
+returned, not recorded and never counted as an exposure, and the slot fills its positions from the
+remaining ranked modules. The report can only withhold, never add: an id naming a module that is not
+eligible, excluded by the slot or not registered changes nothing.
+
+A module may also carry its own eligibility rule in the catalogue, `eligibleWhen`, by region (a region key
+such as `US-NY`, or a country such as `US`, which admits every region inside it), entry channel
+(`entry_channel`, among the six channel words), visit bucket (`visit_bucket`: `1`, `2-3` or `4+`) and
+journey stage (`journey_stage`: `exploring`, `considering` or `deciding`), and every condition it names
+must hold ([schema](./03-payload-schemas.md#the-content-piece)). The engine evaluates the rule on its own
+reading of the decision (the region the edge reports, the visit's entry channel, its visit bucket and the
+shopper's journey stage), never on a value your page sends. The rule fails closed: an unknown value
+satisfies no rule, so a module whose rule names a region is withheld while the shopper's region is
+unknown, and a module without a rule is unaffected. Publication refuses a rule that names any other
+signal, or a value outside its signal's words, naming the rule and the word. On the layout slot, a module
+withheld from a position the layout would otherwise have filled is named in the layout reason with its
+cause, `nothing_to_show` or `eligibility_rule`; a pinned module that is withheld refuses its pin, as an
+expired one does.
+
 ### Module impressions and engagements
 
 Mark each module container the way the declarative capture marks any piece, `data-op-content` with the module id
