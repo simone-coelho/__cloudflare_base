@@ -129,6 +129,32 @@ export interface ReflexState {
   audiences: string[];
   /** ReflexConfig.version this state was last evaluated under. */
   configVersion: string;
+  /**
+   * P10 (decision D1): the shopper's count of SIGNALS — every action applied to
+   * this state whose own behaviour weight (`ReflexConfig.weights`) is above
+   * zero. An impression, a tick, a page view and any other action weighted 0
+   * count for nothing. Written only once a signal has been recorded, so the
+   * state of a shopper with no signals carries exactly the members it carried
+   * before; absent reads as 0 (`signalsOf`). Never decayed: a returning
+   * shopper's earlier visits count.
+   */
+  signals?: number;
+}
+
+/**
+ * P10: the count of signals a state holds, as a whole number. Absent, or a value
+ * that is not a nonnegative safe integer, is 0: a count the engine cannot trust
+ * is no evidence of signals.
+ */
+export function signalsOf(state: Pick<ReflexState, 'signals'> | null | undefined): number {
+  const n = state?.signals;
+  return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+
+/** P10: the state with its count member, written only when there is a signal to count. */
+export function withSignals<T extends ReflexState>(state: T, signals: number): T {
+  const { signals: _held, ...rest } = state; void _held;
+  return (signals > 0 ? { ...rest, signals: Math.min(signals, Number.MAX_SAFE_INTEGER) } : rest) as T;
 }
 
 /** A single (dimension, value) hit extracted from a product interaction. */
@@ -561,6 +587,11 @@ export function touchesForEvent(
  *    moves shoppers out (the request path evaluates lazily; the DO adds
  *    exact-time alarms in P2 using nextCrossing()).
  * 4. Emit an ExplainRecord per transition (the glass box).
+ * 5. P10 (decision D1): count the action as a SIGNAL when its own behaviour
+ *    weight is above zero (`isSignal`), whatever touches it carried; a
+ *    weight-0 action (an impression, a tick, a page view) keeps the count
+ *    where it is. Both shopper hosts apply every action through this one step,
+ *    so the count is the same on either.
  *
  * The previous state object is never mutated.
  */
@@ -651,9 +682,22 @@ export function apply(
   }
 
   return {
-    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+    // 5. The count rides the state: carried through every apply, one more for a signal.
+    state: withSignals<ReflexState>({ v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+      signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)),
     changes: { entered, exited, explain },
   };
+}
+
+/**
+ * P10 (decision D1, R-P33): whether one action is a SIGNAL — its OWN behaviour
+ * weight in the registry in force is above zero. Only the action's own weight
+ * is read, never a weight applied elsewhere to what it touched, so nothing can
+ * make a weight-0 action a signal or a weighted one none.
+ */
+export function isSignal(config: Pick<ReflexConfig, 'weights'>, action: string): boolean {
+  const weight = Object.hasOwn(config.weights, action) ? config.weights[action] : undefined;
+  return typeof weight === 'number' && Number.isFinite(weight) && weight > 0;
 }
 
 /** Time-only re-evaluation (no accumulation) — what a DO alarm runs in P2. */

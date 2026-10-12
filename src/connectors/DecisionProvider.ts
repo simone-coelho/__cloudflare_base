@@ -370,7 +370,8 @@ export class LiveDecisionProvider implements DecisionProvider {
   private readonly fallback = new MockDecisionProvider();
   /**
    * Memoized per provider instance (getConnectors builds one per request), so the
-   * five flags in decideAll share a SINGLE no-store datafile fetch + client build.
+   * five flags in decideAll share a SINGLE no-store datafile fetch + client build;
+   * across requests the service remembers it (lane E4, FRESH_DATAFILE_MS).
    */
   private ctx: Promise<{ client: any; datafile: any; revision: string | null } | null> | null = null;
 
@@ -382,6 +383,10 @@ export class LiveDecisionProvider implements DecisionProvider {
   }
 
   private getCtx(): Promise<{ client: any; datafile: any; revision: string | null } | null> {
+    // Lane E4: a tenant with no Feature Experimentation key has no datafile to fetch. It degrades at
+    // once, with nothing read, fetched or logged: that absence is its configuration, not a failure.
+    // (createFreshClient itself remembers a datafile per isolate: OptimizelyService `remembered`.)
+    if (!this.ctx && typeof this.opti.hasFxKey === 'function' && !this.opti.hasFxKey()) this.ctx = Promise.resolve(null);
     if (!this.ctx) {
       this.ctx = this.opti
         .createFreshClient()

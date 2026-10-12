@@ -1,0 +1,743 @@
+{
+ "about": "Vantage is a fictional carrier; the phones are real, by their current US model names and prices. This file is catalog CONTENT: the engine never decides a price, a monthly figure or a trade-in value, and the page never ranks. The 'Phones for you' rail is ordered by POST /sort over this list in this order, and an affinity weight of zero reproduces this order exactly.",
+ "asOf": "2026-09-30",
+ "priceRule": "The carrier full retail price listed on verizon.com/smartphones (seen 2026-09-30) where the phone appears there; otherwise the maker's US list price, written the way a carrier lists it (.99). Storage steps only where a source gives them.",
+ "sources": {
+  "carrier-grid": "https://www.verizon.com/smartphones/ (seen 2026-09-30; grid page 1, default SKU)",
+  "carrier-pdp": "https://www.verizon.com/smartphones/apple-iphone-18-pro/ (seen 2026-09-30; storage steps +$5.55, +$16.66, +$33.33 a month over 36 months)",
+  "apple-18pro": "https://www.apple.com/newsroom/2026/09/apple-debuts-iphone-18-pro-and-iphone-18-pro-max/ (iPhone 18 Pro from $1,199, Pro Max from $1,299; no base iPhone 18 this autumn)",
+  "apple-duo": "https://www.apple.com/newsroom/2026/09/apple-unveils-iphone-duo/ and https://www.macrumors.com/2026/09/09/iphone-duo-pricing-pre-orders-release-date/ (from $1,999, 512 GB $2,199, 1 TB $2,599, 2 TB $3,199; pre-order 2026-10-16, on sale 2026-10-23)",
+  "samsung-s26": "https://www.samsung.com/us/smartphones/galaxy-s26/buy/ and https://www.sammobile.com/news/samsung-galaxy-s26-ultra-price/ (S26 $899.99 / $1,099.99; S26+ $1,099.99 / $1,299.99; S26 Ultra $1,299.99 / $1,499.99 / $1,799.99)",
+  "samsung-flip8": "https://www.cnbc.com/2026/07/22/samsung-galaxy-z-fold8-ultra-z-fold8-z-flip8-launch.html and https://www.sammobile.com/news/samsung-galaxy-z-flip-8-everything-to-know/ (Z Flip8 from $1,199.99, 512 GB $1,399.99; on sale 2026-08-05)",
+  "google-p11": "https://blog.google/products-and-platforms/devices/pixel/google-pixel-11-pro-xl/ (Pixel 11 $899 / $1,019; Pixel 11 Pro $1,099 / $1,219 / $1,449; on sale 2026-08-20)",
+  "realism": "docs/verizon/lanes/L3.md, realism table (verizon.com and the makers’ buy pages, seen 2026-09-30)"
+ },
+ "financing": {
+  "months": 36,
+  "apr": 0,
+  "rounding": "monthly = retail / 36, truncated to the cent, as carriers display it"
+ },
+ "tradeInNote": "tradeInUpTo is the new-line and tradeInUpgradeUpTo the upgrade maximum trade-in credit shown on verizon.com on 2026-09-30 (null where none was shown); paid as bill credits over 36 months. Content for the buy box, never decided.",
+ "imageNote": "Device images are lane L3’s: /vantage/img/devices/<id>.png is transparent (use it on the light cards; a .webp of the same name is 4–8× lighter, and a .jpg is on white). Provenance is in /vantage/img/MANIFEST.json. A missing file paints /vantage/img/placeholder-device.svg, never a broken tag.",
+ "priceBands": {
+  "source": "price_usd",
+  "cuts": [
+   400,
+   900
+  ],
+  "labels": [
+   "entry",
+   "core",
+   "premium"
+  ],
+  "note": "The registry's own derived dimension (reflex document, priceBand), on full retail. The page never bands anything: the engine derives the band from price_usd on every event and every /sort candidate. A storage step that crosses $900 moves the band."
+ },
+ "rail": {
+  "slot": "phones-rail",
+  "take": 6,
+  "endpoint": "POST /sort",
+  "candidateFields": [
+   "id",
+   "brand",
+   "ecosystem",
+   "price_usd"
+  ],
+  "weights": {
+   "affinity": 1,
+   "dims": {
+    "brand": 1,
+    "ecosystem": 0.6,
+    "priceBand": 0.8
+   }
+  },
+  "note": "The slots document kind carries no sort dials, so these travel on the request. Send candidates in this file's order; affinity 0 returns exactly this order. /sort answers only once the visitor has a captured event."
+ },
+ "phones": [
+  {
+   "id": "iphone-18-pro",
+   "name": "iPhone 18 Pro",
+   "maker": "Apple",
+   "brand": "apple",
+   "ecosystem": "ios",
+   "onSale": "2026-09-18",
+   "price_usd": 1199.99,
+   "monthly36": 33.33,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1199.99,
+     "monthly36": 33.33,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1399.99,
+     "monthly36": 38.88,
+     "deltaMonthly": 5.55
+    },
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 1799.99,
+     "monthly36": 49.99,
+     "deltaMonthly": 16.66
+    },
+    {
+     "storage": "2tb",
+     "label": "2 TB",
+     "price_usd": 2399.99,
+     "monthly36": 66.66,
+     "deltaMonthly": 33.33
+    }
+   ],
+   "tradeInUpTo": 1200,
+   "image": "/vantage/img/devices/iphone-18-pro.png",
+   "source": [
+    "carrier-grid",
+    "carrier-pdp",
+    "apple-18pro",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": 1020,
+   "colors": [
+    "Burgundy",
+    "Black",
+    "Silver",
+    "Glacier"
+   ],
+   "defaultColor": "Burgundy"
+  },
+  {
+   "id": "iphone-18-pro-max",
+   "name": "iPhone 18 Pro Max",
+   "maker": "Apple",
+   "brand": "apple",
+   "ecosystem": "ios",
+   "onSale": "2026-09-18",
+   "price_usd": 1299.99,
+   "monthly36": 36.11,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1299.99,
+     "monthly36": 36.11,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1499.99,
+     "monthly36": 41.66,
+     "deltaMonthly": 5.55
+    },
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 1899.99,
+     "monthly36": 52.77,
+     "deltaMonthly": 16.66
+    },
+    {
+     "storage": "2tb",
+     "label": "2 TB",
+     "price_usd": 2499.99,
+     "monthly36": 69.44,
+     "deltaMonthly": 33.33
+    }
+   ],
+   "tradeInUpTo": 1200,
+   "image": "/vantage/img/devices/iphone-18-pro-max.png",
+   "source": [
+    "carrier-grid",
+    "apple-18pro",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": 1020,
+   "colors": [
+    "Glacier",
+    "Burgundy",
+    "Black",
+    "Silver"
+   ],
+   "defaultColor": "Glacier"
+  },
+  {
+   "id": "iphone-duo",
+   "name": "iPhone Duo",
+   "maker": "Apple",
+   "brand": "apple",
+   "ecosystem": "ios",
+   "onSale": "2026-10-23",
+   "preorderFrom": "2026-10-16",
+   "price_usd": 1999.99,
+   "monthly36": 55.55,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1999.99,
+     "monthly36": 55.55,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 2199.99,
+     "monthly36": 61.11,
+     "deltaMonthly": 5.56
+    },
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 2599.99,
+     "monthly36": 72.22,
+     "deltaMonthly": 16.67
+    },
+    {
+     "storage": "2tb",
+     "label": "2 TB",
+     "price_usd": 3199.99,
+     "monthly36": 88.88,
+     "deltaMonthly": 33.33
+    }
+   ],
+   "tradeInUpTo": 1200,
+   "image": "/vantage/img/devices/iphone-duo.png",
+   "source": [
+    "apple-duo",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": 1020,
+   "colors": [
+    "Night Sky",
+    "Star White"
+   ],
+   "defaultColor": "Night Sky"
+  },
+  {
+   "id": "galaxy-s26-ultra",
+   "name": "Galaxy S26 Ultra",
+   "maker": "Samsung",
+   "brand": "samsung",
+   "ecosystem": "android",
+   "onSale": "2026-03-11",
+   "price_usd": 1299.99,
+   "monthly36": 36.11,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1299.99,
+     "monthly36": 36.11,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1499.99,
+     "monthly36": 41.66,
+     "deltaMonthly": 5.55
+    }
+   ],
+   "tradeInUpTo": 1100,
+   "image": "/vantage/img/devices/galaxy-s26-ultra.png",
+   "source": [
+    "samsung-s26",
+    "realism"
+   ],
+   "makerOnlyStorage": [
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 1799.99,
+     "where": "Samsung, unlocked only; verizon.com does not sell 1 TB"
+    }
+   ],
+   "tradeInUpgradeUpTo": 900,
+   "colors": [
+    "Black",
+    "Sky Blue",
+    "White",
+    "Cobalt Violet"
+   ],
+   "defaultColor": "Black"
+  },
+  {
+   "id": "galaxy-s26-plus",
+   "name": "Galaxy S26+",
+   "maker": "Samsung",
+   "brand": "samsung",
+   "ecosystem": "android",
+   "onSale": "2026-03-11",
+   "price_usd": 1099.99,
+   "monthly36": 30.55,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1099.99,
+     "monthly36": 30.55,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1299.99,
+     "monthly36": 36.11,
+     "deltaMonthly": 5.56
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/galaxy-s26-plus.png",
+   "source": [
+    "samsung-s26",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "Cobalt Violet",
+    "White",
+    "Black",
+    "Sky Blue"
+   ],
+   "defaultColor": "Cobalt Violet"
+  },
+  {
+   "id": "galaxy-s26",
+   "name": "Galaxy S26",
+   "maker": "Samsung",
+   "brand": "samsung",
+   "ecosystem": "android",
+   "onSale": "2026-03-11",
+   "price_usd": 899.99,
+   "monthly36": 24.99,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 899.99,
+     "monthly36": 24.99,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1099.99,
+     "monthly36": 30.55,
+     "deltaMonthly": 5.56
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/galaxy-s26.png",
+   "source": [
+    "samsung-s26",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "White",
+    "Cobalt Violet",
+    "Sky Blue",
+    "Black"
+   ],
+   "defaultColor": "White"
+  },
+  {
+   "id": "galaxy-z-fold8",
+   "name": "Galaxy Z Fold8",
+   "maker": "Samsung",
+   "brand": "samsung",
+   "ecosystem": "android",
+   "onSale": "2026-08-07",
+   "price_usd": 1899.99,
+   "monthly36": 52.77,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1899.99,
+     "monthly36": 52.77,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 2099.99,
+     "monthly36": 58.33,
+     "deltaMonthly": 5.56
+    }
+   ],
+   "tradeInUpTo": 1100,
+   "image": "/vantage/img/devices/galaxy-z-fold8.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": 900,
+   "colors": [
+    "Graphite",
+    "Lavender",
+    "Cream"
+   ],
+   "defaultColor": "Graphite"
+  },
+  {
+   "id": "galaxy-z-flip8",
+   "name": "Galaxy Z Flip8",
+   "maker": "Samsung",
+   "brand": "samsung",
+   "ecosystem": "android",
+   "onSale": "2026-08-05",
+   "price_usd": 1199.99,
+   "monthly36": 33.33,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1199.99,
+     "monthly36": 33.33,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1399.99,
+     "monthly36": 38.88,
+     "deltaMonthly": 5.55
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/galaxy-z-flip8.png",
+   "source": [
+    "samsung-flip8",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "Pink",
+    "Mint",
+    "Graphite",
+    "Cream"
+   ],
+   "defaultColor": "Pink",
+   "availability": "Not sold on verizon.com: its grid tile says Verizon Authorized Retail stores only. Samsung’s list price."
+  },
+  {
+   "id": "pixel-11-pro",
+   "name": "Pixel 11 Pro",
+   "maker": "Google",
+   "brand": "google",
+   "ecosystem": "android",
+   "onSale": "2026-08-20",
+   "price_usd": 1099.99,
+   "monthly36": 30.55,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1099.99,
+     "monthly36": 30.55,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1219.99,
+     "monthly36": 33.88,
+     "deltaMonthly": 3.33
+    }
+   ],
+   "tradeInUpTo": 1100,
+   "image": "/vantage/img/devices/pixel-11-pro.png",
+   "source": [
+    "google-p11",
+    "realism"
+   ],
+   "makerOnlyStorage": [
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 1449.99,
+     "where": "Google Store only"
+    }
+   ],
+   "tradeInUpgradeUpTo": 900,
+   "colors": [
+    "Fog",
+    "Canyon",
+    "Obsidian",
+    "Olive"
+   ],
+   "defaultColor": "Fog"
+  },
+  {
+   "id": "pixel-11",
+   "name": "Pixel 11",
+   "maker": "Google",
+   "brand": "google",
+   "ecosystem": "android",
+   "onSale": "2026-08-20",
+   "price_usd": 899.99,
+   "monthly36": 24.99,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 899.99,
+     "monthly36": 24.99,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1019.99,
+     "monthly36": 28.33,
+     "deltaMonthly": 3.34
+    }
+   ],
+   "tradeInUpTo": 900,
+   "image": "/vantage/img/devices/pixel-11.png",
+   "source": [
+    "google-p11",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "Frost",
+    "Pistachio",
+    "Obsidian",
+    "Hibiscus"
+   ],
+   "defaultColor": "Frost"
+  },
+  {
+   "id": "iphone-air",
+   "name": "iPhone Air",
+   "maker": "Apple",
+   "brand": "apple",
+   "ecosystem": "ios",
+   "onSale": "2025-09-19",
+   "price_usd": 1099.99,
+   "monthly36": 30.55,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 1099.99,
+     "monthly36": 30.55,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1299.99,
+     "monthly36": 36.11,
+     "deltaMonthly": 5.56
+    },
+    {
+     "storage": "1tb",
+     "label": "1 TB",
+     "price_usd": 1699.99,
+     "monthly36": 47.22,
+     "deltaMonthly": 16.67
+    }
+   ],
+   "tradeInUpTo": 1100,
+   "image": "/vantage/img/devices/iphone-air.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": 1020,
+   "colors": [
+    "Sky Blue",
+    "Light Gold",
+    "Space Black",
+    "Cloud White"
+   ],
+   "defaultColor": "Sky Blue"
+  },
+  {
+   "id": "iphone-17",
+   "name": "iPhone 17",
+   "maker": "Apple",
+   "brand": "apple",
+   "ecosystem": "ios",
+   "onSale": "2025-09-19",
+   "price_usd": 929.99,
+   "monthly36": 25.83,
+   "storage": "256gb",
+   "storageOptions": [
+    {
+     "storage": "256gb",
+     "label": "256 GB",
+     "price_usd": 929.99,
+     "monthly36": 25.83,
+     "deltaMonthly": 0
+    },
+    {
+     "storage": "512gb",
+     "label": "512 GB",
+     "price_usd": 1129.99,
+     "monthly36": 31.38,
+     "deltaMonthly": 5.55
+    }
+   ],
+   "tradeInUpTo": 930,
+   "image": "/vantage/img/devices/iphone-17.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "Sage",
+    "Lavender",
+    "White",
+    "Black",
+    "Mist Blue"
+   ],
+   "defaultColor": "Sage"
+  },
+  {
+   "id": "razr-2026",
+   "name": "razr 2026",
+   "maker": "Motorola",
+   "brand": "motorola",
+   "ecosystem": "android",
+   "onSale": "2026-05-21",
+   "price_usd": 799.99,
+   "monthly36": 22.22,
+   "storage": "128gb",
+   "storageOptions": [
+    {
+     "storage": "128gb",
+     "label": "128 GB",
+     "price_usd": 799.99,
+     "monthly36": 22.22,
+     "deltaMonthly": 0
+    }
+   ],
+   "tradeInUpTo": 800,
+   "image": "/vantage/img/devices/razr-2026.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "PANTONE Sporting Green",
+    "Hematite",
+    "Violet Ice"
+   ],
+   "defaultColor": "PANTONE Sporting Green"
+  },
+  {
+   "id": "edge-2026",
+   "name": "edge 2026",
+   "maker": "Motorola",
+   "brand": "motorola",
+   "ecosystem": "android",
+   "onSale": "2026-06-11",
+   "price_usd": 529.99,
+   "monthly36": 14.72,
+   "storage": "128gb",
+   "storageOptions": [
+    {
+     "storage": "128gb",
+     "label": "128 GB",
+     "price_usd": 529.99,
+     "monthly36": 14.72,
+     "deltaMonthly": 0
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/edge-2026.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "PANTONE Martini Olive"
+   ],
+   "defaultColor": "PANTONE Martini Olive"
+  },
+  {
+   "id": "pixel-10a",
+   "name": "Pixel 10a",
+   "maker": "Google",
+   "brand": "google",
+   "ecosystem": "android",
+   "price_usd": 499.99,
+   "monthly36": 13.88,
+   "storage": "128gb",
+   "storageOptions": [
+    {
+     "storage": "128gb",
+     "label": "128 GB",
+     "price_usd": 499.99,
+     "monthly36": 13.88,
+     "deltaMonthly": 0
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/pixel-10a.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "Lavender",
+    "Obsidian"
+   ],
+   "defaultColor": "Lavender"
+  },
+  {
+   "id": "moto-g-2026",
+   "name": "moto g 2026",
+   "maker": "Motorola",
+   "brand": "motorola",
+   "ecosystem": "android",
+   "price_usd": 279.99,
+   "monthly36": 7.77,
+   "storage": "128gb",
+   "storageOptions": [
+    {
+     "storage": "128gb",
+     "label": "128 GB",
+     "price_usd": 279.99,
+     "monthly36": 7.77,
+     "deltaMonthly": 0
+    }
+   ],
+   "tradeInUpTo": null,
+   "image": "/vantage/img/devices/moto-g-2026.png",
+   "source": [
+    "carrier-grid",
+    "realism"
+   ],
+   "tradeInUpgradeUpTo": null,
+   "colors": [
+    "PANTONE Slipstream"
+   ],
+   "defaultColor": "PANTONE Slipstream"
+  }
+ ],
+ "storageNote": "storageOptions are the configurations a carrier sells; makerOnlyStorage lists tiers only the maker sells, for honesty on the compare row."
+}

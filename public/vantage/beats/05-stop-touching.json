@@ -1,0 +1,32 @@
+{
+ "name": "05-stop-touching",
+ "beat": 5,
+ "act": 2,
+ "actName": "The visitor earns it",
+ "press": "Stop touching it: a visible minute, then the page asks again",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "waitSeconds": 60,
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  },
+  "on": "when the on-screen minute ends"
+ },
+ "meters": "GET /realtime/reflex before the minute and after it",
+ "engine": "REFLEX_HOST=session: the engine decays every interest at read (R·e^(−Δt/τ)), so the re-asked snapshot and meters are the engine’s own answer and the page decides nothing. Brand samsung (τ 60 s, room memory) falls below θout 0.45 about 40 s after her last Samsung touch; ecosystem android (14 days) holds. The object host’s alarm push over /realtime/ws stays behind ?exit=1, an upgrade once the ledger stall is fixed (docs/verizon/lanes/L1.md, finding 9).",
+ "sees": "The Samsung-specific claim withdraws while the Android lean holds, and the diff row names both (measured in New York: brand samsung under 0.45 about 38 s after her third Samsung touch; re-asked 45 s after the hinge press it reads 0.35 on her meters and 0.36 as the Samsung offers’ driver, both under θout; ecosystem android 0.69 throughout). The four keep their order, the Galaxy S26 offer first on her Android lean; what withdraws is the Samsung driver behind it."
+}
