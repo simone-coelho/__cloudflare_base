@@ -474,9 +474,9 @@ on the catalogue piece, admits it by region (`regions`: region keys such as `US-
 `US`, which admits every region inside it), entry channel (`context.entry_channel`, among the six channel
 words), visit bucket (`context.visit_bucket`: `1`, `2-3` or `4+`) and journey stage
 (`context.journey_stage`: `exploring`, `considering` or `deciding`), every condition it names having to
-hold. The engine evaluates the rule on the decision's cell as it derived it (the region the edge reports,
-under the shopper's tracking consent, the visit's established entry channel, its visit bucket and the
-shopper's journey stage), never on a value the page sends, so an arrival a later request asserts cannot
+hold. The engine evaluates the rule on the decision's cell as it derived it (the region the edge reports and
+the visit's established entry channel, under the shopper's tracking consent, and the visit bucket and the
+shopper's journey stage, for a shopper the engine personalizes), never on a value the page sends, so an arrival a later request asserts cannot
 relabel the visit and a `ctx.` signal on the query string gates no module. The rule fails closed: an
 unknown value satisfies no rule, so a module whose rule names a channel, a region, a bucket or a stage
 the cell holds as unknown is withheld, and a module without a rule is unaffected. A module withheld by its
