@@ -601,9 +601,11 @@ export class RealtimeSegmentEngine {
         if (this.principal && !(this.principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
           // P07: and into the population of the visit's arrival context — the
           // entry channel and visit bucket of the visit this event belongs to,
-          // derived exactly as the stored visit is (SessionManager). An unknown
-          // channel counts nothing there (R-P9).
-          const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry);
+          // derived exactly as the stored visit is (SessionManager), under the
+          // tenant's published vocabulary from the one read the stored visit
+          // uses (visitInputs, R-P55). An unknown channel counts nothing there
+          // (R-P9), and neither does a channel outside the six words.
+          const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry, await visitInputs());
           (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
             tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
             w: reflexConfig.weights[action] ?? 0,

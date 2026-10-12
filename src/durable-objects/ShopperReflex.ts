@@ -50,7 +50,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
-import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, visitContextMembers, type VisitContext } from '@/services/visit';
+import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
@@ -1319,6 +1319,18 @@ export class ShopperReflex {
     applyEventToAttributes(attributes, event, surfaceCatalog);
     const engagementScore = calculateEngagementScore(attributes);
 
+    // P36: the tenant's published context vocabulary classifies the arrival and
+    // names the visit's source platform and landing-page type. Read at most once
+    // per event, and only for an event that carries an arrival or a page type;
+    // the population fan-in and the visit this object stores share that one read,
+    // so both read the arrival one way (R-P55). It cannot fail the event: an
+    // unreadable or absent vocabulary classifies by today's six-word tables.
+    let contextInputs: Promise<VisitInputs> | undefined;
+    const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+      const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof eventData.pageType === 'string';
+      return { vocabulary: arrives ? await tenantContextVocabulary(this.env, tenant) : null, pageType: eventData.pageType };
+    })());
+
     // 2. The pure core (§4): decay-then-accumulate + hysteresis evaluation.
     let reflex: ReflexResult | null = null;
     if (reflexOn) {
@@ -1352,9 +1364,10 @@ export class ShopperReflex {
       if (principal && !(principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
         // P07: and into the population of the visit's arrival context — the
         // entry channel and visit bucket of the visit this event belongs to,
-        // derived exactly as the pipeline stores it below. An unknown channel
-        // counts nothing there (R-P9).
-        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry);
+        // derived exactly as the pipeline stores it below, under the tenant's
+        // published vocabulary (R-P55). An unknown channel counts nothing there
+        // (R-P9), and neither does a channel outside the six words.
+        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
         keepAlive(fanInRegionTrend(this.env, {
           tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
           context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
@@ -1469,12 +1482,9 @@ export class ShopperReflex {
       lastSeen: now,
       configVersion: cfg.version,
     };
-    // P36: the tenant's published context vocabulary classifies the arrival and
-    // names the visit's source platform and landing-page type. Read only for an
-    // event that carries an arrival or a page type; it cannot fail the event (an
-    // unreadable or absent vocabulary classifies by today's six-word tables).
-    const contextVocabulary = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof eventData.pageType === 'string'
-      ? await tenantContextVocabulary(this.env, tenant) : null;
+    // P36: the visit under the tenant's published context vocabulary, from the
+    // one read the fan-in above shares (visitInputs).
+    const nextVisit = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
     const nextPipeline: PipelineRecord = {
       profileEnrichment: pipe.profileEnrichment,
       attributes,
@@ -1485,7 +1495,7 @@ export class ShopperReflex {
       visitorId: pipe.visitorId,
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
-      ...liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, { vocabulary: contextVocabulary, pageType: eventData.pageType }),
+      ...nextVisit,
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
