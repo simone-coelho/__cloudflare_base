@@ -25,7 +25,7 @@ import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUn
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { contextOnlySlots, decideContent, layoutBlendOf } from './decide';
-import { blendAffinity, lambdaFor, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
+import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
@@ -582,6 +582,28 @@ export async function serveContentDecisions(
         ...(assertedPrior ? { asserted: true as const } : {}) };
     }
   }
+  // P07 (decision D1, freeze items 22 and 37): the context prior, in the
+  // regional prior's form with its own block and K: the population of the
+  // shopper's entry channel and visit bucket — the cell's own coordinates —
+  // read from KV through the same isolate cache, the pair's shares when the
+  // pair has at least `minEvents` events, else the channel's alone, never
+  // everyone's. Off when the block is absent or disabled, on the holdout's
+  // default arm (also the arm of a shopper without personalization consent and
+  // of an unreadable record), and for an unknown channel. Blended beside the
+  // regional prior into the same COPY of the affinity view, neither erasing
+  // the other (`blendPriors`). A read that fails is no prior: the shopper is
+  // served exactly what the document without the block serves.
+  const contextCfg = learn.contextPrior;
+  let contextBlend: NonNullable<Parameters<typeof decideContent>[0]['contextBlend']> | null = null;
+  if (contextCfg?.enabled && arm !== 'default') {
+    const read = await readContextTrend(env, scope, cell.channel, cell.visit_bucket, contextCfg.minEvents, now).catch(() => null);
+    if (read) {
+      const lambda = lambdaFor(shopper.affinity?.dims, contextCfg.kBlend);
+      const share = sharesWithin(read.snapshot.share, contextCfg.dimensions);
+      affinity = { dims: blendPriors(shopper.affinity?.dims, [...(regional ? [{ share: regional.share, lambda: regional.lambda }] : []), { share, lambda }]) };
+      contextBlend = { channel: read.channel, visitBucket: cell.visit_bucket, level: read.level, lambda, version: read.snapshot.version, events: read.snapshot.events, share };
+    }
+  }
 
   lap('trend');
   // What the state hung on: the DO host keys it on the durable visitor id, the
@@ -631,7 +653,7 @@ export async function serveContentDecisions(
   const set = decideContent({
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.browsingSessionId || r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,
-    pieces: catalog.pieces, slots, affinity, regional, cell, arm,
+    pieces: catalog.pieces, slots, affinity, regional, ...(contextBlend ? { contextBlend } : {}), cell, arm,
     // Garrett's targeting rule needs two things: where she is, and whatever
     // condition the caller says holds right now.
     //
