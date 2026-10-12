@@ -390,11 +390,13 @@ export async function tenantCatalogVocabulary(
   let cacheable = true;
   // P38 (DI-9): on an attribute the approved vocabulary governs, the authority
   // is the vocabulary's ids, never the catalogue's own tags, so sparse content
-  // refuses no value the vocabulary lists and admits none it does not. Null for
-  // a tenant with no approval in effect, which is read exactly as before.
-  const governed = await tenantVocabularyInEffect(env, tenant);
+  // refuses no value the vocabulary lists and admits none it does not. Read from
+  // the set the catalogue read just pinned (no storage call when the set carries
+  // no approval); null for a tenant with no approval in effect, read exactly as before.
+  let governed: VocabularyTable | null = null;
   try {
     const revision = await readPublication(env, CONTENT_KIND, tenant, true);
+    governed = await tenantVocabularyInEffect(env, tenant);
     const catalog = revision?.value;
     if (catalog) {
       document = catalog;

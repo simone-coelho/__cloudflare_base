@@ -590,10 +590,10 @@ export async function assertPublicationBase<T>(env: Env, kind: DocumentKind<T>, 
 export interface PublicationChange<T = unknown> { kind: DocumentKind<T>; scope: string; request: unknown; candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown> }
 /** Several related documents are one intent and become visible in one CAS. */
 export async function publishSet(env: Env, changes: PublicationChange[], meta: WriteMeta): Promise<WriteResult<unknown>> {
-  if (!changes.length || changes.length > MEMBERS) throw new PublicationError('Invalid publication members', 422, 'invalid_document');
   // P38: only a write whose first member is optional may name revision 0, and
   // it then creates that member; every other write is checked exactly as before.
-  const preconditions = publicationPreconditions(meta, false, OPTIONAL_MEMBERS.has(changes[0].kind.name));
+  const preconditions = publicationPreconditions(meta, false, changes.length > 0 && OPTIONAL_MEMBERS.has(changes[0]!.kind.name));
+  if (!changes.length || changes.length > MEMBERS) throw new PublicationError('Invalid publication members', 422, 'invalid_document');
   const first = changes[0], scope = publicationScope(first.kind, first.scope), storage = storageOf(env), seen = new Set<string>();
   for (const change of changes) {
     const key = member(change.kind, change.scope); if (publicationScope(change.kind, change.scope) !== scope || seen.has(key)) throw conflict(); seen.add(key);

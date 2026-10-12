@@ -626,8 +626,10 @@ contentRoutes.post('/:kind/validate', async (c) => {
   // P38 (VA2): the dry run says what the write would: the catalogue under the vocabulary in effect now.
   let checked: unknown = candidate;
   if (k.kind.name === CONTENT_KIND.name) {
-    try { checked = await governedOver(c.env, scope, (await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope)).set, candidate); }
-    catch (error) { if (error instanceof VocabularyRefusal) return c.json({ valid: false, errors: error.errors }, 422); throw error; }
+    const { revision: approval } = await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope);
+    const governed = approval ? governedCatalogue(candidate, vocabularyTableOf(approval.value)) : null;
+    if (governed && !governed.ok) return c.json({ valid: false, errors: governed.errors }, 422);
+    if (governed?.ok) checked = governed.value;
   }
   const result = k.kind.validate(checked);
   return result.ok ? c.json({ valid: true, document: result.value,

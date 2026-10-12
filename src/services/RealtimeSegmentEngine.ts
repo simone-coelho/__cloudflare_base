@@ -532,8 +532,10 @@ export class RealtimeSegmentEngine {
       // report, by the rule and the table the shopper's own object uses
       // (ShopperReflex.ingest); the event is otherwise processed as before. No
       // approval in effect (or one the authority cannot answer): nothing here
-      // changes, and no storage is read for it.
-      const governed = reflexOn ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
+      // changes. Read only for an event with something to place, as the catalogue
+      // vocabulary below is (or a held product).
+      const governed = reflexOn && (contentEvent || heldProduct !== undefined || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+        ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
       const governing = governed ? governedEventData(eventData, reflexConfig, governed) : null;
       const placing = governing ? governing.data : eventData;
       if (governed && governing?.rejected.length && (contentEvent || (!heldProduct && reflexConfig.eventAttributes === 'event-when-unknown'))) {

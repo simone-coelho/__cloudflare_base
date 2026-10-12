@@ -1276,8 +1276,10 @@ export class ShopperReflex {
     // synonym to its id, an id to itself — and a value that maps to nothing is
     // removed, builds no interest and is counted in the tenant's rejection report,
     // the event otherwise processed as before. No approval in effect (or one the
-    // authority cannot answer): nothing here changes, and no storage is read for it.
-    const governed = reflexOn ? await tenantVocabularyInEffect(this.env, tenant) : null;
+    // authority cannot answer): nothing here changes. Read only for an event with
+    // something to place, as the catalogue vocabulary below is (or a held product).
+    const governed = reflexOn && (contentEvent || heldProduct !== undefined || needsCatalogVocabulary(eventData, heldProduct, cfg))
+      ? await tenantVocabularyInEffect(this.env, tenant) : null;
     const governing = governed ? governedEventData(eventData, cfg, governed) : null;
     const placing = governing ? governing.data : eventData;
     if (governed && governing?.rejected.length && (contentEvent || (!product && cfg.eventAttributes === 'event-when-unknown'))) {
