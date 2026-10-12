@@ -92,6 +92,21 @@
 //     product_dwell event carries a value the published catalogue admits (the
 //     fixture corrected, no expected value changed).
 //
+// THE LEAD'S RULING AFTER THE P40 DELIVERY REVIEW (2026-10-12), binding on the fix:
+//   · R-P58 (P40 fix round 1; the review measured c1481f0a), the buffered
+//     door. A non-duplicate buffered purchase that names an order is remembered in
+//     the shopper's existing state whenever that delivery writes the shopper's
+//     state at all, whether or not it applies interest. The kit's own purchase
+//     payload (`orderId`, `value`, `currency`, `items[]`,
+//     docs/kit/03-payload-schemas.md:20) places no registry value, so its buffered
+//     delivery applies no interest, and yet the same order delivered afterwards,
+//     live or buffered, answers `duplicate_order` with one outcome. The memory is
+//     inside the shopper's reflex state: its key set gains `orders` at the first
+//     purchase naming an order and nothing else. The buffered delivery of a
+//     shopper who refused personalization is a named limit, not tested here
+//     (realtime.sdkContract.test.ts:2721-2726, W22.07 "gates both hosts", pins
+//     that it writes nothing).
+//
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error): the
 // event types `content_viewable`, `video_view`, `product_dwell`; `emit.videoView`;
 // the declarative option `dwellMinMsBySlot`; the answer member
@@ -110,14 +125,17 @@
 import { JSDOM } from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
+import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { createCore } from '@/sdk/core';
 import { createEmit } from '@/sdk/emit';
 import { createListen } from '@/sdk/listen';
 import { offeredSet, testHost } from '@/sdk/testHost';
 import type { DomLike, ElementLike } from '@/sdk/types';
+import { shopperObjectName } from '@/tenancy/objects';
+import type { TenantId } from '@/tenancy/tenant';
 
 import {
-  HOSTS, LAYOUT, learned, M, mount, pageInstanceOf, readTree, REFLEX_DOCUMENT, rounded, storedOutcomes, TENANT,
+  HOSTS, LAYOUT, learned, M, mount, pageInstanceOf, readTree, REFLEX_DOCUMENT, rounded, storedOutcomes, TENANT, type Answer, type Host, type Mounted,
 } from '../_parity';
 import { HERO, HOME, homeLearn, visitorOn, type Visitor } from '../_parity5';
 
@@ -348,6 +366,83 @@ describe('unit:P40.EV3', () => {
 // unit:P40.EV4 — a purchase is unique per order id
 // ===========================================================================
 
+// R-P58, the buffered door. A buffered delivery is the SDK's own (`processing: 'buffered'`, the original event's
+// `eventId` and time, the browsing session it belongs to: realtime.sdkContract.test.ts W22.07, :2629-2630), sent
+// through the mounted app as the shopper. The buffered door never creates a profile, so the shopper's live product
+// view comes first.
+
+/** The kit's own purchase payload (docs/kit/03-payload-schemas.md:20): `orderId`, `value`, `currency`, `items[]`; no registry value. */
+const kitPurchase = (orderId: string): Record<string, unknown> =>
+  ({ orderId, value: 120, currency: 'USD', items: [{ productId: 'SKU-HARBOR-1', quantity: 1, price: 120 }] });
+
+/** A buffered delivery of an original event through `POST /realtime/action`, as the shopper's SDK sends it. */
+async function deliverBuffered(m: Mounted, v: Visitor, event: Record<string, unknown>): Promise<Answer> {
+  const response = await m.fetch(new Request('https://shop.invalid/realtime/action', {
+    method: 'POST',
+    headers: { ...v.headers, 'X-Tenant': TENANT, [SHOPPER_HEADER]: v.grant.capability, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'sdk', userId: v.grant.subject, sessionId: v.grant.sessionId, processing: 'buffered', ...event }),
+  }));
+  const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  await m.drain();
+  return answer;
+}
+
+/**
+ * The members of every reflex state the shopper holds, by where it is kept: the records of the shopper's own object
+ * and of the session store (the session host keeps both). The key set, never the values.
+ */
+function reflexKeySets(m: Mounted, v: Visitor): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [key, value] of m.shoppers.get(shopperObjectName(TENANT as TenantId, v.subject))?.data ?? []) {
+    const reflex = (value as { reflex?: unknown } | null)?.reflex;
+    if (reflex && typeof reflex === 'object') out[`object:${key}`] = Object.keys(reflex).sort();
+  }
+  for (const [key, raw] of (m.env.SESSIONS as unknown as { data: Map<string, string> }).data) {
+    let reflex: unknown;
+    try { reflex = (JSON.parse(raw) as { reflex?: unknown } | null)?.reflex; } catch { continue; }
+    if (reflex && typeof reflex === 'object') out[`sessions:${key.split(v.grant.sessionId).join('<session>')}`] = Object.keys(reflex).sort();
+  }
+  return out;
+}
+
+/** Interest per dimension and value to three decimals: decay over the seconds of a test moves the fourth only. */
+const roundedDims = (dims: Record<string, Record<string, number>>) => Object.fromEntries(Object.entries(dims)
+  .map(([dim, values]) => [dim, Object.fromEntries(Object.entries(values).map(([value, a]) => [value, Math.round(a * 1000) / 1000]))]));
+
+/** One shopper on one host: a live product view, then the purchase delivered buffered, then the same order arriving live as another event. */
+async function bufferedThenLive(host: Host, purchase: Record<string, unknown>) {
+  const m = await mount(host, docs({ measurementBasis: 'served-v1', reward: 'purchase' }));
+  expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+  const v = await visitorOn(m);
+  const view = await v.action({ type: 'product_view', data: { productId: 'SKU-HARBOR-1', line: 'Harbor' } });
+  expect(view.status, `${host}: PRECONDITION — the shopper's live product view is accepted (the profile exists)`).toBe(200);
+  await m.drainLedger();
+  const held = async () => ({ keys: reflexKeySets(m, v), interest: roundedDims(await interest(v)) });
+  const before = await held();
+  expect(Object.keys(before.keys).length > 0 && Object.values(before.keys).every(keys => !keys.includes('orders')),
+    `${host}: PRECONDITION — the shopper holds reflex state that remembers no order yet (${JSON.stringify(before.keys)})`).toBe(true);
+  const eventId = crypto.randomUUID();
+  const buffered = await deliverBuffered(m, v, { type: 'purchase', eventId, timestamp: Date.now() - 60_000, browsingSessionId: 'p40-earlier-tab', data: purchase });
+  await m.drainLedger();
+  const afterBuffered = await held();
+  const live = await v.action({ type: 'purchase', data: purchase });
+  await m.drainLedger();
+  const afterLive = await held();
+  const outcomes = storedOutcomes(m, v.subject).filter(o => o.event === 'purchase').map(o => o.event_id);
+  return { host, before, eventId, buffered, afterBuffered, live, afterLive, outcomes };
+}
+
+/** EV4 under R-P58, one representation for the leg and its control. */
+function expectOneOrder(r: Awaited<ReturnType<typeof bufferedThenLive>>, label: string) {
+  expect.soft([r.live.status, r.live.body.dropped], `${r.host}: ${label} — the same order arriving live afterwards is reported as a duplicate (${JSON.stringify(r.live.body).slice(0, 160)})`)
+    .toEqual([200, 'duplicate_order']);
+  expect.soft(r.outcomes, `${r.host}: ${label} — exactly one purchase outcome is recorded for the shopper, the buffered delivery's`).toEqual([r.eventId]);
+  expect.soft(r.afterLive.interest, `${r.host}: ${label} — interest is built once at most: the duplicate builds none`).toEqual(r.afterBuffered.interest);
+  const gained = Object.fromEntries(Object.entries(r.before.keys).map(([where, keys]) => [where, [...keys, 'orders'].sort()]));
+  expect.soft(r.afterBuffered.keys, `${r.host}: ${label} — the buffered purchase remembers its order inside the shopper's existing reflex state: the key set gains orders and nothing else`)
+    .toEqual(gained);
+}
+
 describe('unit:P40.EV4', () => {
   for (const host of HOSTS) {
     it(`host (${host}): a second purchase naming the same order id is recorded once, crediting once and building interest once, and the duplicate is reported`, async () => {
@@ -370,6 +465,25 @@ describe('unit:P40.EV4', () => {
       await m.drainLedger();
       expect.soft({ outcomes: storedOutcomes(m, v.subject).filter(o => o.event === 'purchase').length, credit: rounded(await learned(m), 's'), line: (await interest(v)).line?.Harbor },
         `${host}: P40.EV4 — and recorded once, credited once, building interest once`).toEqual(once);
+    }, 120_000);
+  }
+
+  // R-P58: the buffered door. The leg (RED at c1481f0a) and its control (green before and after).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P58 — a buffered purchase in the kit's own payload (orderId, value, currency, items; no registry value) applies no interest yet remembers its order in the shopper's reflex state, so the same order arriving live as another event is reported as a duplicate, with one purchase outcome and interest built once at most`, async () => {
+      const r = await bufferedThenLive(host, kitPurchase('ORD-2026-0002'));
+      expect([r.buffered.status, r.buffered.body.dropped ?? 'not dropped', r.buffered.body.interestApplied],
+        `${host}: PRECONDITION — the buffered purchase is accepted, is no duplicate, and applies no interest (its payload places no registry value): ${JSON.stringify(r.buffered.body).slice(0, 200)}`)
+        .toEqual([200, 'not dropped', false]);
+      expectOneOrder(r, 'P40.EV4 (R-P58)');
+    }, 120_000);
+
+    it(`host (${host}): CONTROL (R-P58) — the same sequence with a buffered purchase that applies interest (the same payload with a placed value, line Harbor) is deduplicated, with one purchase outcome, interest built once and the order in the shopper's reflex state`, async () => {
+      const r = await bufferedThenLive(host, { ...kitPurchase('ORD-2026-0003'), line: 'Harbor' });
+      expect([r.buffered.status, r.buffered.body.dropped ?? 'not dropped', r.buffered.body.interestApplied],
+        `${host}: PRECONDITION — the buffered purchase is accepted, is no duplicate, and applies interest (line Harbor is placed): ${JSON.stringify(r.buffered.body).slice(0, 200)}`)
+        .toEqual([200, 'not dropped', true]);
+      expectOneOrder(r, 'P40.EV4 CONTROL');
     }, 120_000);
   }
 });
