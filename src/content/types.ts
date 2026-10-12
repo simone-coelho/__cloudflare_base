@@ -248,6 +248,47 @@ export interface PositionPin { pieceId: string; position: number }
 export interface ModuleRule { position: number; rule: 'pinned' | 'off_limits' }
 
 /**
+ * P29 (decision D1): why the served order of a declared layout slot is
+ * unchanged against its baseline, as the ticket writes the vocabulary, in the
+ * ticket's own order; where several hold, the first is the cause. Later
+ * tickets may add causes, so a reader treats an unknown word as a cause it
+ * cannot name, never as an error.
+ */
+export type LayoutReasonCause = 'pinned' | 'off_limits' | 'holdout_or_consent' | 'below_signal_floor' | 'blend_or_trust_zero'
+  | 'no_level_reached_nmin' | 'zero_base' | 'catalogue_order_ties' | 'nothing_else_eligible';
+
+/**
+ * P29: the engine term that moved a module of a changed layout — the shopper's
+ * own interests (`affinity`), the arrival's seed rules, the regional or the
+ * context prior, the learned lift, the layout blend's learned term, exploration,
+ * and the other itemised terms of the score — named on each move.
+ */
+export type LayoutMoveTerm = 'affinity' | 'seed' | 'regional_prior' | 'context_prior' | 'completes' | 'external' | 'stage' | 'freshness'
+  | 'fatigue' | 'merchandising' | 'lift' | 'blend' | 'exploration' | 'diversity';
+
+/**
+ * P29: one module of a changed layout served at a position other than its
+ * baseline position, positions counted from 1 within the slot (`from` null for a
+ * module the baseline does not hold), and the term that moved it. Keys sorted.
+ */
+export interface LayoutMove { from: number | null; module: string; term: LayoutMoveTerm; to: number }
+
+/**
+ * P29 (decision D1): the layout reason of a declared layout slot, on the decision
+ * set, on every record of the slot (`explain.layoutReason`) and on every receipt
+ * (`layoutReason`): the served order compared with the baseline — the
+ * merchandiser's fixed positions (pins, off-limits modules) where their rules
+ * put them, and on every other position the configured order for the
+ * shopper's context, else the slot's eligible modules in catalogue order —
+ * either unchanged with exactly one cause (`no_level_reached_nmin` with the n
+ * the ladder has and the nMin it needs), or changed with the term that moved
+ * each moved module. Keys sorted, as every explain member a replay compares.
+ */
+export type LayoutReason =
+  | { cause: LayoutReasonCause; n?: number; nMin?: number; slot: string; status: 'unchanged' }
+  | { moves: LayoutMove[]; slot: string; status: 'changed' };
+
+/**
  * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
  * declared layout slot only). A signal is one action whose own behaviour weight
  * is above zero (decision D1).
@@ -722,6 +763,14 @@ export interface DecisionInputs {
    * replay itemises it exactly; a record without it was decided without it.
    */
   context_share?: Record<string, Record<string, number>>;
+  /**
+   * P29: the weight λ each population prior blended into the page carried
+   * (`context`, `regional`, keys sorted), written only on a page whose declared
+   * layout slot ranked above the signal floor while a prior applied, so the
+   * layout reason's itemisation of what a prior moved replays exactly from any
+   * record of the page. A record without it was decided without a prior there.
+   */
+  prior_lambda?: { context?: number; regional?: number };
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
   served?: Record<string, Record<string, number>>;
@@ -863,6 +912,15 @@ export interface DecisionRecord {
      * a record; compared by value in replay.
      */
     moduleRule?: ModuleRule;
+    /**
+     * P29 (decision D1): the layout reason of the page's declared layout slot,
+     * the same value on every record of that slot and on the decision set:
+     * unchanged against the baseline with one cause, or changed with the term
+     * that moved each moved module. Present only on the records of a declared
+     * layout slot decided under it, keys sorted, and compared by value in
+     * replay; a retained record without it replays as before.
+     */
+    layoutReason?: LayoutReason;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
@@ -921,6 +979,23 @@ export interface ContentDecisionSet {
    * serving authority and never carried on a stored record.
    */
   constraintDiagnostics?: ConstraintDiagnostics;
+  /**
+   * P29 (decision D1): the layout reason of the page's declared layout slot —
+   * the same value every record of the slot carries as `explain.layoutReason`.
+   * Absent on a page without a declared layout slot, and on one whose layout
+   * slot a refused pin left serving nothing (P04's whole-slot refusal writes no
+   * record, so it has no reason). Host-internal: the snapshot answer's member
+   * list does not carry it; the shopper's receipts do.
+   */
+  layoutReason?: LayoutReason;
+  /**
+   * P29 (decision D2): the record of each off-limits declared layout slot of the
+   * page, naming the off-limits cause. Never among `records`, so it never
+   * reaches the shopper's decision ring: it carries no exposure, no receipt
+   * reads it and no outcome is credited to it. The decision path writes it to
+   * the ledger, and so to the export, under the shopper's tracking consent.
+   */
+  offLimitsRecords?: DecisionRecord[];
 }
 
 /**
