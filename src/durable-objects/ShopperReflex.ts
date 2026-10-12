@@ -50,7 +50,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
-import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, type VisitContext } from '@/services/visit';
+import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitArrival, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
+import { deviceClassOf } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
@@ -70,7 +71,7 @@ import { isShopperId, isSalted } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
 import { canonicalErasureDiscoverySchema, canonicalErasureSchema, captureCanonicalErasure, erasureEffectOwners, executeOwnerErasure, ownerErasureEffectSchema, historicalErasureCapsuleSchema, erasureRawDigest } from '@/identity/erase';
 import { DEFAULT_TENANT, isValidTenantId, tenantKey, type TenantId, type KVLike } from '@/tenancy/tenant';
-import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
+import { ACTION_EVENT_TYPE_SET, isEventNonce } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
@@ -88,13 +89,18 @@ import {
   snapshot as reflexSnapshot,
   signalsOf,
   tick as tickReflex,
+  isDuplicateOrder,
+  neverWeighed,
+  weightOf,
+  withOrder,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexConfig,
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { orderKeyOf } from '@/ledger/records';
+import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, readTimeStageChange, storedJourneyStage, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
@@ -774,7 +780,15 @@ export class ShopperReflex {
             // same derivation the SDK hydrate answers with.
             journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
-              entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
+              entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen,
+              // P36: the visit's context attributes and the vocabulary revision
+              // that classified them, only when the visit records them.
+              ...(this.pipeline.sourcePlatform !== undefined ? { sourcePlatform: this.pipeline.sourcePlatform } : {}),
+              ...(this.pipeline.landingPageType !== undefined ? { landingPageType: this.pipeline.landingPageType } : {}),
+              ...(this.pipeline.vocabularyRevision !== undefined ? { vocabularyRevision: this.pipeline.vocabularyRevision } : {}),
+              // P37: the visit's device and recency, only when the visit records them.
+              ...(deviceClassOf(this.pipeline.device) ? { device: this.pipeline.device } : {}),
+              ...(recencyBucketOf(this.pipeline.recency) ? { recency: this.pipeline.recency } : {}) } : null,
             // P10: the shopper's count of signals, read off the state this object already
             // holds (no read of its own), for the slots that publish a signal
             // floor. Present only when there is one; absent reads as 0.
@@ -1055,6 +1069,11 @@ export class ShopperReflex {
       country: typeof body.geo.country === 'string' ? body.geo.country : null,
       regionCode: typeof body.geo.regionCode === 'string' ? body.geo.regionCode : null,
     };
+    // P37: and the device class the route read from the request's own headers,
+    // transient like geo: the visit the event opens records it. Socket frames
+    // carry none, so a socket event reports no device.
+    const device = principal ? deviceClassOf(body.device) : null;
+    if (device) event.device = device;
     const outcome = await this.serialize(async () => {
       try {
         if (principal) { assertSessionTarget(principal, event.userId, body.sessionId); await this.assertOwned(principal, request); }
@@ -1067,7 +1086,9 @@ export class ShopperReflex {
             || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();
         }
       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }
-      return this.ingest(event, principal).catch(ingestFailure);
+      // P40 (R-P48): the event identity the route admitted, so the reducer can
+      // tell the same purchase delivered again from a second purchase.
+      return this.ingest(event, principal, principal && isEventNonce(body.eventId) ? body.eventId : undefined).catch(ingestFailure);
     });
     return json(outcome.body, outcome.status);
   }
@@ -1150,14 +1171,46 @@ export class ShopperReflex {
       requireConsentPurpose(consent, 'tracking');
       pinProfileRetention(this.env, affinity, tenant);
       if (!await bufferedEventAllowed(this.env, tenant, principal.subject, event.timestamp)) return answer(false, 'erased');
+      // P40 (R-P48): a buffered purchase of an order this state recorded under
+      // another event is the same order again, dropped as the live door drops it.
+      const order = await orderKeyOf(event);
+      if (isDuplicateOrder(affinity.reflex, order, event.eventId)) return answer(false, 'duplicate_order');
       if (!consent.personalization) return answer(false);
       requireConsentPurpose(consent, 'personalization');
-      const interest = await bufferedInterest(this.env, tenant, event, { ...pipeline, reflex: affinity.reflex,
+      // P38 (VA3, decision D2): a buffered delivery is placed by its own door
+      // (bufferedInterest), so its governed values are mapped before it is handed
+      // over, by the rule and the table the live door uses, and what maps to
+      // nothing is counted in the tenant's rejection report. No approval in
+      // effect: the delivery is handed over exactly as sent.
+      const governed = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' ? await tenantVocabularyInEffect(this.env, tenant) : null;
+      let delivered = event;
+      if (governed) {
+        const surface = resolveSurface({ surface: pipeline.surface }), data = (event.data ?? {}) as Record<string, unknown>;
+        const cfg = await resolveTenantReflexConfig(this.env, tenant, surface), governing = governedEventData(data, cfg, governed);
+        const pid = data.productId ?? data.product_id ?? data.sku;
+        const held = pid ? (await resolveTenantCatalog(tenant, surface))?.getProduct(String(pid)) : undefined;
+        if (governing.rejected.length && (isContentAction(actionOf(event)) || (!held && cfg.eventAttributes === 'event-when-unknown'))) {
+          retainOwnerWork(recordVocabularyRejections(this.env, tenant, governed.revision, governing.rejected, now));
+        }
+        delivered = { ...event, data: governing.data };
+      }
+      // P40 (decision D1): a buffered viewable impression builds nothing either,
+      // whatever the registry weighs it (answered as a weight-0 delivery is).
+      if (neverWeighed(actionOf(event))) return answer(false);
+      const interest = await bufferedInterest(this.env, tenant, delivered, { ...pipeline, reflex: affinity.reflex,
         attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes }, odpSeed: affinity.odpSeed, odpContext: affinity.odpContext,
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
-      if (!interest.applied) return answer(false, undefined, interest.signals);
-      const nextAffinity = { ...affinity, reflex: carryOdpRestoration(interest.reflex!, affinity.reflex), configVersion: interest.reflex!.configVersion };
+      if (!interest.applied) {
+        // P40 (R-P58): a purchase that applies no interest (it places no value)
+        // still uses its order: the order is remembered in the state this object
+        // already holds, and nothing else changes (no lifetime, no owner, no alarm).
+        const remembered = withOrder(affinity.reflex, order, event.eventId);
+        if (remembered !== affinity.reflex) await this.persistAudienceState({ ...affinity, reflex: remembered }, pipeline, this.audienceOwner, false);
+        return answer(false, undefined, interest.signals);
+      }
+      const nextAffinity = { ...affinity, reflex: withOrder(carryOdpRestoration(interest.reflex!, affinity.reflex), order, event.eventId, interest.config!),
+        configVersion: interest.reflex!.configVersion };
       const nextPipeline = { ...pipeline, segments: interest.segments };
       // Do not write/bless audienceOwner or extend the retained lifetime.
       await this.persistAudienceState(nextAffinity, nextPipeline, this.audienceOwner, false);
@@ -1173,7 +1226,7 @@ export class ShopperReflex {
 
   // ── THE reducer: one handler behind both doors ──────────────────────────────
 
-  private async ingest(event: ActionEvent, principal?: SessionCapability): Promise<IngestOutcome> {
+  private async ingest(event: ActionEvent, principal?: SessionCapability, eventId?: string): Promise<IngestOutcome> {
     // The ENGINE clock is authoritative — a forged/skewed client clock cannot
     // inflate affinity (doc 16 §4). Everything downstream uses this stamp.
     const now = Date.now();
@@ -1204,6 +1257,20 @@ export class ShopperReflex {
     let tenant: TenantId;
     try { tenant = principal ? this.audienceTenant(principal) : DEFAULT_TENANT; }
     catch { return { status: 401, body: { success: false, error: 'Shopper session unavailable' }, update: null }; }
+    // P40 (R-P48): a purchase is unique per order for the shopper. A second
+    // purchase naming an order this object's state recorded under another event
+    // is answered here as a duplicate — after the rate limit and the consent
+    // gate, before any counter, visit, taste, region count, provider forward,
+    // outcome or stored write — and changes nothing, as the session host answers
+    // it (RealtimeSegmentEngine.processAction). The recording event delivered
+    // again is not a second purchase, and a purchase naming no order is never one.
+    const order = await orderKeyOf(event);
+    if (isDuplicateOrder(this.affinity?.reflex, order, eventId)) return {
+      status: 200,
+      body: { success: true, message: 'Action ignored: duplicate order', dropped: 'duplicate_order',
+        sessionId: principal?.sessionId ?? this.pipeline?.sessionId ?? null, cookiesUpdated: false, consent },
+      update: null,
+    };
     const owner = principal ? { tenant, subject: principal.subject, sessionId: principal.sessionId } : undefined;
     const retention = this.affinity ? pinProfileRetention(this.env, this.affinity, tenant)
       : pinRetention(this.env, retentionBirth(this.env, tenant, 'profile', now, now), tenant, 'profile');
@@ -1240,17 +1307,35 @@ export class ShopperReflex {
     const heldProduct = product as unknown as Record<string, unknown> | undefined;
     const contentEvent = isContentAction(actionOf(event));
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
-    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg))
+    // P38 (VA3, decision D2, DI-9): with an approved vocabulary in effect, the
+    // event's governed values are mapped before any door below places them — a
+    // synonym to its id, an id to itself — and a value that maps to nothing is
+    // removed, builds no interest and is counted in the tenant's rejection report,
+    // the event otherwise processed as before. No approval in effect (or one the
+    // authority cannot answer): nothing here changes. Read only for an event with
+    // something to place, as the catalogue vocabulary below is (or a held product).
+    const governed = reflexOn && (contentEvent || heldProduct !== undefined || needsCatalogVocabulary(eventData, heldProduct, cfg))
+      ? await tenantVocabularyInEffect(this.env, tenant) : null;
+    const governing = governed ? governedEventData(eventData, cfg, governed) : null;
+    const placing = governing ? governing.data : eventData;
+    if (governed && governing?.rejected.length && (contentEvent || (!product && cfg.eventAttributes === 'event-when-unknown'))) {
+      const counted = recordVocabularyRejections(this.env, tenant, governed.revision, governing.rejected, now);
+      if (principal) retainOwnerWork(counted); else void counted;
+    }
+    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, cfg))
       ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null)
       : EMPTY_VOCABULARY;
-    const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
-    let signals: RecognitionSignals = placed.signals;
+    const placed = placeEvent(placing, heldProduct, cfg, vocabulary);
+    const governedPlacement = governed ? governedTouches(placed.touches, governed, cfg) : null;
+    let signals: RecognitionSignals = governedPlacement ? { ...placed.signals, recognized: governedPlacement.length > 0 } : placed.signals;
     // CW24: where the scope scores event-carried attributes, an unknown id with
     // registry attributes on it is a customer's product, not an abuse attempt —
     // but a value on a dimension the tenant's own catalogue names, that the
     // catalogue does not name, stays unknown and builds nothing (HANDOFF §12),
     // so an event whose every value is refused reaches the drop below.
-    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown' ? placed.touches : [];
+    // P38: on a governed attribute the vocabulary decides instead (DI-9), so an
+    // event whose value maps is placed under the id and never dropped here.
+    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown' ? (governedPlacement ?? placed.touches) : [];
     if (pid != null && !product && eventTouches.length === 0) {
       this.dropped.unknownProduct++;
       return {
@@ -1272,8 +1357,10 @@ export class ShopperReflex {
     }
 
     // Resolve before changing the audience owner or any aliased pipeline state.
-    const contentEventTouches = reflexOn && contentEvent
-      ? await resolvedContentTouches(this.env, tenant, eventData, cfg, vocabulary) : null;
+    const resolvedTouches = reflexOn && contentEvent
+      ? await resolvedContentTouches(this.env, tenant, placing, cfg, vocabulary) : null;
+    // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
+    const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, cfg) : resolvedTouches;
     // A content event is placed by the tenant's content catalogue against the
     // same vocabulary, so its diagnostic answers from the touches that read
     // produced — the same "at least one value built taste" rule (R64).
@@ -1314,11 +1401,25 @@ export class ShopperReflex {
     applyEventToAttributes(attributes, event, surfaceCatalog);
     const engagementScore = calculateEngagementScore(attributes);
 
+    // P36: the tenant's published context vocabulary classifies the arrival and
+    // names the visit's source platform and landing-page type. Read at most once
+    // per event, and only for an event that carries an arrival or a page type;
+    // the population fan-in and the visit this object stores share that one read,
+    // so both read the arrival one way (R-P55). It cannot fail the event: an
+    // unreadable or absent vocabulary classifies by today's six-word tables.
+    let contextInputs: Promise<VisitInputs> | undefined;
+    const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+      const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof eventData.pageType === 'string';
+      return { vocabulary: arrives ? await tenantContextVocabulary(this.env, tenant) : null, pageType: eventData.pageType };
+    })());
+
     // 2. The pure core (§4): decay-then-accumulate + hysteresis evaluation.
     let reflex: ReflexResult | null = null;
     if (reflexOn) {
       const action = actionOf(event);
-      const touches = contentEventTouches ?? (product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches);
+      // P38 (DI-9): a held product's attributes on a governed attribute answer to the same table.
+      const productTouches = product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : null;
+      const touches = contentEventTouches ?? (productTouches ? (governed ? governedTouches(productTouches, governed, cfg) : productTouches) : eventTouches);
       // W41: once per sign-in, a recognized shopper's interests are restored
       // from her tenant's ODP profile at her first event after it, merged into
       // what she holds and BEFORE the event is applied — the one shared rule
@@ -1345,8 +1446,15 @@ export class ShopperReflex {
       // Registered with the object's own waitUntil so the call survives the reply.
       const keepAlive = retainOwnerWork;
       if (principal && !(principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+        // P07: and into the population of the visit's arrival context — the
+        // entry channel and visit bucket of the visit this event belongs to,
+        // derived exactly as the pipeline stores it below, under the tenant's
+        // published vocabulary (R-P55). An unknown channel counts nothing there
+        // (R-P9), and neither does a channel outside the six words.
+        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
         keepAlive(fanInRegionTrend(this.env, {
-          tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
+          tenant: principal.tenant, geo: event.geo, now, touches, w: weightOf(cfg, action),
+          context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
         }));
       }
     }
@@ -1450,7 +1558,8 @@ export class ShopperReflex {
     const nextAffinity: AffinityRecord = {
       retention, externalRetention,
       shopperId: aff.shopperId,
-      reflex: reflex ? reflex.state : aff.reflex,
+      // P40 (R-P48): with the order a purchase names recorded beside its event.
+      reflex: withOrder(reflex ? reflex.state : aff.reflex, order, eventId, cfg),
       odpContext: odp.odpContext,
       odpSeed,
       odpSeedAt,
@@ -1458,6 +1567,9 @@ export class ShopperReflex {
       lastSeen: now,
       configVersion: cfg.version,
     };
+    // P36: the visit under the tenant's published context vocabulary, from the
+    // one read the fan-in above shares (visitInputs).
+    const nextVisit = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
     const nextPipeline: PipelineRecord = {
       profileEnrichment: pipe.profileEnrichment,
       attributes,
@@ -1468,7 +1580,11 @@ export class ShopperReflex {
       visitorId: pipe.visitorId,
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
-      ...liveVisit(pipe, this.affinity?.lastSeen, now, event.entry),
+      ...nextVisit,
+      // P37: the visit's device and recency, written by the event that opens it
+      // (the device its own request reported, the recency from the stored last
+      // visit) and carried for the visit; each only when there is one.
+      ...visitArrival(pipe, this.affinity?.lastSeen, now, event.device),
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
@@ -1923,6 +2039,9 @@ export class ShopperReflex {
         ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
       visit: usable ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
+      // P37: the visit's arrival context beside it, null exactly where `visit`
+      // is — the answer the session host gives (src/routes/realtime.ts).
+      arrival: usable ? visitArrival(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
       // W35 A1: nothing else — the identical shape the session host answers
       // (docs/api/01-rest-endpoints.md, GET /realtime/reflex). The session is
@@ -3252,6 +3371,8 @@ export class ShopperReflex {
             pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
               sessionId: sid, visitorId: context.subject, firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount,
               visitCount: session.metadata.visitCount, lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
+              // P36: the visit's context attributes travel with its channel, only when recorded.
+              ...visitContextMembers(session.metadata),
               surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
               // W16 R1: the adopted record keeps the visit journey the session carries.
               ...(session.journey === undefined ? {} : { journey: session.journey }) };
@@ -3714,6 +3835,8 @@ export class ShopperReflex {
             journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
             lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
+            // P36: the visit's context attributes travel with its channel, only when recorded.
+            ...visitContextMembers(session.metadata),
             surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
             // W16 R1: the adopted record keeps the visit journey the session carries.
             ...(session.journey === undefined ? {} : { journey: session.journey }) };
@@ -3910,6 +4033,11 @@ export class ShopperReflex {
       ...(isShopperId(context.subject) ? { identity: original?.identity ?? { shopperId: context.subject, linkedAt: pipe.firstSeen } } : {}),
       metadata: { ...original?.metadata, firstSeen: pipe.firstSeen, lastSeen: affinity.lastSeen, sessionCount: pipe.sessionCount,
         visitCount: pipe.visitCount, lastVisitAt: pipe.lastVisitAt, entryChannel: pipe.entryChannel,
+        // P36: the visit's context attributes as the pipeline holds them now, so
+        // a projection never keeps an earlier visit's (absent ones are not written).
+        sourcePlatform: pipe.sourcePlatform, landingPageType: pipe.landingPageType, vocabularyRevision: pipe.vocabularyRevision,
+        // P37: and the visit's device and recency, the same way.
+        device: pipe.device, recency: pipe.recency,
         engagementScore: calculateEngagementScore(pipe.attributes), journeyStage: pipe.journeyStage,
         lastSegmentUpdate: original?.metadata.lastSegmentUpdate ?? affinity.lastSeen },
       preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization,

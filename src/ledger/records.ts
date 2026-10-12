@@ -117,6 +117,25 @@ export function validDecisionMeasurement(value: Pick<DecisionRecord, 'measuremen
     && Object.keys(r).sort().join(',') === 'at,eventId,pageInstance,version';
 }
 
+/**
+ * P29 (decision D2): the item an off-limits declared layout slot's record names.
+ * The slot served nothing, so the record names no module; it exists so the
+ * ledger and the export say the slot was decided and why (its
+ * `explain.layoutReason`, cause `off_limits`). It is never written to the
+ * shopper's decision ring, so no exposure, receipt or credit can read it; it is
+ * written `served-v1` only for a layout slot measured on `rendered-v1`, so every
+ * offline fold sets it aside as a row recorded under another basis than its
+ * slot's.
+ */
+export const OFF_LIMITS_ITEM = '(off-limits)';
+
+/** P29 (decision D2): is this the record of an off-limits declared layout slot, which serves and credits nothing? */
+export function isOffLimitsLayoutRecord(record: Pick<DecisionRecord, 'item_id' | 'candidates' | 'explain'>): boolean {
+  const reason = record.explain?.layoutReason;
+  return record.item_id === OFF_LIMITS_ITEM && Array.isArray(record.candidates) && record.candidates.length === 0
+    && reason?.status === 'unchanged' && reason.cause === 'off_limits';
+}
+
 /** Doc 22 §3.2. One per reward-bearing event. */
 export interface OutcomeRecord {
   retention?: import('@/retention').CaptureRetention;
@@ -286,6 +305,24 @@ export function learningInputOf(action: RewardActionLike): LearningInput {
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(Number(v)) ? Number(v) : null);
+
+/**
+ * P40 (R-P48): the key a purchase's order is remembered by on the shopper's own
+ * state, or null. A purchase — any event whose reward is a purchase, by the rule
+ * `outcomeFromAction` itself consults — names its order in `data.orderId`, a
+ * non-empty string once trimmed or a finite number; the key is the SHA-256 hex
+ * digest of that order id, so what a shopper's state keeps is bounded and is not
+ * the order id. Any other event, and a purchase that names no order, has none: a
+ * purchase without an order id is never deduplicated.
+ */
+export async function orderKeyOf(action: Pick<ActionLike, 'type' | 'data'>): Promise<string | null> {
+  if (rewardOf(action)?.type !== 'purchase') return null;
+  const raw = action.data?.orderId;
+  const order = typeof raw === 'number' && Number.isFinite(raw) ? String(raw) : str(raw);
+  if (order === null) return null;
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(order)));
+  return [...digest].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
 
 /** The margin the feed gave, if any: `data.margin`, else the items' margins (× quantity) summed. */
 function marginOf(d: Record<string, unknown>): number | null {

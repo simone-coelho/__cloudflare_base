@@ -4,7 +4,8 @@
   // src/services/visit.ts
   var VISIT_GAP_MS = 30 * 60 * 1e3;
   var ENTRY_QUERY_LIMIT = 4096;
-  var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+  var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+  var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
   var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
   function parsed(value) {
     try {
@@ -91,19 +92,22 @@
     }
   }
   function entrySignals(host) {
-    let utmMedium = "", utmSource = "", utmTerm = "";
+    let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
     try {
       const usp = new URLSearchParams(host.location?.search ?? "");
       utmMedium = usp.get("utm_medium") ?? "";
       utmSource = usp.get("utm_source") ?? "";
       utmTerm = usp.get("utm_term") ?? "";
       if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+      utmCampaign = usp.get("utm_campaign") ?? "";
+      if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
     } catch {
     }
     return {
       utmMedium,
       utmSource,
       ...utmTerm ? { utmTerm } : {},
+      ...utmCampaign ? { utmCampaign } : {},
       referrer: host.referrer ?? "",
       siteHost: host.location?.hostname ?? ""
     };
@@ -124,7 +128,10 @@
     content_impression: { type: "content_impression" },
     content_click: { type: "content_click" },
     content_dwell: { type: "content_dwell" },
-    video_complete: { type: "video_complete" }
+    video_complete: { type: "video_complete" },
+    content_viewable: { type: "content_viewable" },
+    video_view: { type: "video_view" },
+    product_dwell: { type: "product_dwell" }
   };
   function toWire(type, data) {
     const m = WIRE[type] ?? WIRE.custom;
@@ -149,7 +156,10 @@
     "content_impression",
     "content_click",
     "content_dwell",
-    "video_complete"
+    "video_complete",
+    "content_viewable",
+    "video_view",
+    "product_dwell"
   ];
   var ACTION_EVENT_TYPE_SET = new Set(ACTION_EVENT_TYPES);
   var isEventNonce = (value) => typeof value === "string" && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
@@ -189,7 +199,11 @@
     };
   }
   function contentInteraction(type, data) {
-    return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete"].includes(name));
+    return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete", "content_viewable", "video_view"].includes(name));
+  }
+  function dwellMinFor(slot, fallback, bySlot) {
+    const ms = bySlot?.[slot];
+    return typeof ms === "number" && ms >= 0 ? ms : fallback;
   }
   var CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   function createPageBindings() {
@@ -1510,13 +1524,13 @@
         void 0,
         typeof data.decisionId === "string" ? data.decisionId : void 0
       ).then(() => null);
-      if (["content_click", "content_dwell", "video_complete"].includes(type)) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
+      if (content) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
       return core.send(type, data);
     };
     const withItem = (type) => (productId, attrs = {}) => core.send(type, () => ({ productId, ...attrs }));
     const withContent = (type) => (contentId, slot, attrs = {}) => track(type, () => ({ contentId, slot, ...attrs }));
     const scans = /* @__PURE__ */ new Map();
-    function scan(dom, dwellMinMs) {
+    function scan(dom, dwellMinMs, bySlot) {
       const holds = [];
       const seen = /* @__PURE__ */ new Set();
       let detached = false, installed = false, binding = 0;
@@ -1547,10 +1561,17 @@
             };
           };
           let shownAt = null;
+          let viewing = null;
+          const report = (inView) => listen.visible(String(viewing.slot), String(viewing.contentId), inView, viewing.decisionId);
+          const unview = () => {
+            if (viewing) report(false);
+            viewing = null;
+          };
           const off = core.bindings.addObserver(dom, el, (visible) => {
             const attrs = shown();
             if (!permitted() || !attrs) {
               shownAt = null;
+              unview();
               return;
             }
             if (visible) {
@@ -1560,18 +1581,23 @@
                 seen.add(key);
                 void track("content_impression", attrs);
               }
+              if (!viewing) {
+                viewing = attrs;
+                report(true);
+              }
               return;
             }
+            unview();
             if (shownAt === null) return;
             const ms = host.now() - shownAt;
             shownAt = null;
-            if (ms >= dwellMinMs) void track("content_dwell", { ...attrs, ms });
+            if (ms >= dwellMinFor(String(attrs.slot), dwellMinMs, bySlot)) void track("content_dwell", { ...attrs, ms });
           });
           if (!permitted()) {
             off?.();
             return;
           }
-          if (off) holds.push(off);
+          if (off) holds.push(off, unview);
           holds.push(core.bindings.addListener(el, "click", () => {
             const attrs = permitted() ? shown() : null;
             if (attrs) void track("content_click", attrs);
@@ -1620,7 +1646,7 @@
       const dom = opts.dom ?? host.dom;
       if (!dom) return () => {
       };
-      const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3);
+      const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3, opts.dwellMinMsBySlot);
       scans.set(dom, attachment);
       attachment.refs++;
       let released = false;
@@ -1707,6 +1733,7 @@
       contentClick: withContent("content_click"),
       contentDwell: (contentId, slot, ms, attrs = {}) => track("content_dwell", () => ({ contentId, slot, ms, ...attrs })),
       videoComplete: withContent("video_complete"),
+      videoView: withContent("video_view"),
       custom: (name, data = {}) => track("custom", () => ({ event: name, ...data })),
       declarative,
       dataLayer,
@@ -1722,6 +1749,7 @@
     const slotSubs = /* @__PURE__ */ new Map();
     const setSubs = /* @__PURE__ */ new Set();
     const painted = /* @__PURE__ */ new Map();
+    const views = /* @__PURE__ */ new Set();
     const observers = /* @__PURE__ */ new Set();
     let current = null;
     let absence = null;
@@ -1730,6 +1758,7 @@
     let adopted = false;
     const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
     const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
+    const pick = (set, slot, contentId, decisionId) => set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
     const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
     const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
     const permitted = (set) => {
@@ -1739,8 +1768,44 @@
     };
     let intent = 0, delivery = 0;
     function resetCapture() {
+      for (const paint of painted.values()) host.clearTimeout(paint.viewTimer);
       painted.clear();
+      views.clear();
       for (const stop of [...observers]) stop();
+    }
+    function view(key, shown) {
+      const paint = painted.get(key);
+      if (!shown) {
+        views.delete(key);
+        if (paint) {
+          host.clearTimeout(paint.viewTimer);
+          paint.viewTimer = void 0;
+        }
+        return;
+      }
+      views.add(key);
+      if (!paint?.ack || paint.viewed || paint.viewTimer !== void 0) return;
+      const since = host.now();
+      const wait = (ms) => {
+        paint.viewTimer = host.setTimeout(() => {
+          paint.viewTimer = void 0;
+          const left = since + 1e3 - host.now();
+          if (!views.has(key) || painted.get(key) !== paint || paint.viewed) return;
+          if (left > 0) {
+            if (left < 1e3) wait(left);
+            return;
+          }
+          paint.viewed = true;
+          const { renderOffer: _offer, ...data } = paint.envelope.data;
+          void _offer;
+          void content.send("content_viewable", data);
+        }, ms);
+      };
+      wait(1e3);
+    }
+    function visible(slot, contentId, shown, decisionId) {
+      const matches = pick(admittedCurrent(), slot, contentId, decisionId);
+      if (matches.length === 1) view(placement(matches[0]), shown);
     }
     const offConsent = core.onConsentChange(() => {
       if (!core.trackingAllowed) resetCapture();
@@ -1932,7 +1997,7 @@
     }
     async function rendered(slot, contentId, el, decisionId) {
       if (destroyed || core.config.listenOnly || !core.trackingAllowed) return null;
-      const set = admittedCurrent(), matches = set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
+      const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
       if (!set?.pageInstance || matches.length !== 1) return null;
       const piece = matches[0];
       if (!piece.renderOffer || !piece.decisionId) return null;
@@ -1970,7 +2035,10 @@
         paint.attempts++;
         paint.pending = core.sendRender(paint.envelope).then((ack2) => {
           if (!active()) return null;
-          if (ack2) selectedPaint.ack = ack2;
+          if (ack2) {
+            selectedPaint.ack = ack2;
+            if (views.has(key)) view(key, true);
+          }
           return ack2;
         }).finally(() => {
           selectedPaint.pending = void 0;
@@ -1989,23 +2057,25 @@
           if (stopped) return;
           stopped = true;
           shownAt = null;
+          view(key, false);
           off();
           observers.delete(stop);
         };
         observers.add(stop);
-        const release = core.bindings.addObserver(host.dom, el, (visible) => {
+        const release = core.bindings.addObserver(host.dom, el, (visible2) => {
           if (stopped || !active()) {
             stop();
             return;
           }
-          if (visible) {
+          view(key, visible2);
+          if (visible2) {
             if (shownAt === null) shownAt = host.now();
             return;
           }
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void outcome("content_dwell", contentId, slot, { ...data, ms });
+          if (ms >= dwellMinFor(slot, dwellMinMs, opts.dwellMinMsBySlot)) void outcome("content_dwell", contentId, slot, { ...data, ms });
           stop();
         });
         if (release) off = release;
@@ -2014,7 +2084,7 @@
       return ack;
     }
     async function outcome(type, contentId, slot, attrs = {}) {
-      if (type === "content_impression") return null;
+      if (type === "content_impression" || type === "content_viewable") return null;
       const candidates = [...painted.values()].filter((p) => p.piece.slot === slot && p.piece.contentId === contentId && (attrs.decisionId === void 0 || attrs.decisionId === p.piece.decisionId));
       if (candidates.length !== 1) return null;
       const paint = candidates[0], ack = paint.ack ?? await paint.pending;
@@ -2073,7 +2143,7 @@
       return true;
     }
     const offSent = core.on("sent", (event) => {
-      if (!["content_impression", "content_dwell"].includes(event.type) && selected) void refresh();
+      if (!["content_impression", "content_dwell", "content_viewable"].includes(event.type) && selected) void refresh();
     });
     const offSocket = core.on("socket", (status) => {
       if (status === "connected" && selected) void refresh();
@@ -2097,7 +2167,7 @@
       current = null;
       absence = null;
     }
-    return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, destroy };
+    return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
   }
 
   // src/sdk/identify.ts
