@@ -1028,13 +1028,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "21bb132e27256c511409b2f5e6afa4eb3e6cdf2c on rem/spec-parity-b (batch S2; P07 committed at 64f71082, P31 at cb871893, P06 at 21bb132e, each ticket files byte-identical at 21bb132e; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity2.ts; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "30c296238fc0d6c484de7cd4d3f9af9679d42631 on rem/spec-p07-fix1 (fix round 1, R-P53: the enablement, minimum and rollup locks with controls ME, MP, the off-by-one and MR, over the build head 2b119290; specification review PASS; the S2 gate at 21bb132e kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-ME.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-MP.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-OBA.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-MR.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-g4-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-ctx-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-r4-summary.log",
