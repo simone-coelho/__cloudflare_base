@@ -127,8 +127,16 @@ function inputCollection(kind: string, candidate: unknown): void {
  * checked against the unit its slot learns in, and the import is refused rather
  * than published unchecked. An absent learning document is not an unreadable
  * one — the compiled default learns in units, and the import proceeds.
+ *
+ * P36 fix round 1 (R-P54): the learning document is the one the same request
+ * publishes when it carries one (`learnCandidate`: the primary document or a
+ * `publicationChanges` member of the learn kind, `requestLearnDocument`), so a
+ * prior is read under the grammar and the objectives the tenant reads it under
+ * once the request is published; otherwise the one in force. A learn member its
+ * own validator refuses is left to that validator, which refuses the whole
+ * request, so nothing is written either way.
  */
-async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unknown, learnCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
   const valid = PRIORS_KIND.validate(candidate);
   // P36: a document that declares the grammar it was exported under is checked
   // against the tenant's grammar in force, so it is read whether or not the
@@ -137,9 +145,15 @@ async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unkn
   const declares = candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate)
     && (candidate as Record<string, unknown>).cellGrammar !== undefined;
   if (!valid.ok && !declares) return null;
-  let learn;
-  try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
-  catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
+  let learn: LearnConfig;
+  if (learnCandidate !== undefined) {
+    const checked = LEARN_KIND.validate(learnCandidate);
+    if (!checked.ok) return null;
+    learn = checked.value;
+  } else {
+    try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+    catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
+  }
   // P36 (R-P46, W25): the cell grammar follows the tenant's published context
   // vocabulary — today's grammar for a tenant without the settings — and a file
   // exported under another one is refused by name, with the re-export named.
@@ -147,6 +161,24 @@ async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unkn
   if (!tenant.ok) return { status: 422, errors: tenant.errors };
   const errors = priorUnitErrors(tenant.value, (slot) => learn.slots?.[slot]?.objective ?? 'unit');
   return errors.length ? { status: 422, errors } : null;
+}
+
+/**
+ * P36 fix round 1 (R-P54): the learn document one PUT publishes — the primary
+ * document, or else the first `publicationChanges` member whose kind `kindOf`
+ * resolves to the learn kind (`learn`, `Learn`, `LEARN` are one kind) — or
+ * undefined when the request publishes none, so the learn document in force
+ * applies. A malformed member is skipped here; the member loop refuses it.
+ */
+function requestLearnDocument(primary: DocumentKind<unknown>, candidate: unknown, related: unknown): unknown {
+  if (primary.name === LEARN_KIND.name) return candidate;
+  if (!Array.isArray(related)) return undefined;
+  for (const entry of related as unknown[]) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { kind, document } = entry as { kind?: unknown; document?: unknown };
+    if (typeof kind === 'string' && kindOf(kind)?.kind.name === LEARN_KIND.name) return document;
+  }
+  return undefined;
 }
 
 /**
@@ -566,8 +598,12 @@ contentRoutes.put('/:kind', async (c) => {
     note = noteOf(n);
   }
   inputCollection(k.kind.name, candidate);
+  // P36 fix round 1 (R-P54): every priors document this request publishes, the
+  // primary or a related member, is read under the learn document it publishes,
+  // or else the one in force.
+  const learnDocument = requestLearnDocument(k.kind, candidate, related);
   if (k.kind.name === PRIORS_KIND.name) {
-    const unit = await priorUnitRefusals(c, scope, candidate);
+    const unit = await priorUnitRefusals(c, scope, candidate, learnDocument);
     if (unit) return c.json({ ok: false, errors: unit.errors }, unit.status);
   }
   // P36 (R-P46): a slots document published alone names only the tenant's own
@@ -594,6 +630,13 @@ contentRoutes.put('/:kind', async (c) => {
       const target = entry.kind === 'reflex' ? { kind: REFLEX_KIND } : kindOf(entry.kind);
       if (!target) throw new PublicationError('Unsupported related document kind', 422, 'invalid_document');
       inputCollection(target.kind.name, entry.document);
+      // P36 fix round 1 (R-P54): a priors member is read at the door the primary
+      // is read at, before the store's own validator (which holds no tenant), and
+      // a refusal names the member and refuses the whole request.
+      if (target.kind.name === PRIORS_KIND.name) {
+        const unit = await priorUnitRefusals(c, scope, entry.document, learnDocument);
+        if (unit) return c.json({ ok: false, errors: unit.errors.map(error => `publicationChanges[${index}]: ${error}`) }, unit.status);
+      }
       const valid = target.kind.validate(entry.document);
       if (!valid.ok) return c.json({ ok: false, errors: valid.errors }, 422);
       changes.push({ kind: target.kind, scope: entry.kind === 'reflex' && scope === 'brighthour' ? 'tenant:brighthour' : scope,
