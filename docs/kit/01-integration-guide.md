@@ -233,6 +233,47 @@ carry only the new identity.
 
 **Listen-only.** `listenOnly:true` disables rendered admission and declarative capture. Explicit commerce/page/data-layer events remain available; the current SDK does not bypass the missing render ACK for content outcomes.
 
+**Thresholds and event conventions.** Each threshold below is either the platform's or one your page sets, and
+each event travels exactly as written here.
+
+- **The viewable impression, `content_viewable`.** The SDK measures it and your page never sends it. Once a
+  piece's render acknowledgement is held, a container reported at least half in view for one second without
+  interruption sends one `content_viewable` per piece per page instance, carrying `contentId`, `slot`,
+  `slotPosition`, `decisionId`, `page`, `pageInstance` and `position` (the page-wide order). The second is
+  continuous: leaving view, a detach, `destroy()`, a consent refusal or a new identity generation cancels it, and
+  with the declarative capture the next time in view starts a new second; a container in view for less than a second
+  at a time, or never half in view, sends none. A piece acknowledged through `rendered(slot, contentId, element)` is
+  measured only while the SDK observes that element, until it first leaves view: a second time in view sends none
+  there, so mark module containers for the declarative capture. It weighs 0 whatever your registry says, builds no interest and counts no exposure, so
+  what a slot learns from is unchanged. A renderer that measures visibility itself reports it with
+  `client.listen.visible(slot, contentId, inView, decisionId)`; `client.emit.track('content_viewable')` sends nothing.
+- **The video view, `video_view`.** Call `client.emit.videoView(contentId, slot)` when your player has played
+  three seconds of the painted piece, beside `client.emit.videoComplete(contentId, slot)` at its end. It waits for
+  the piece's render acknowledgement, as a click does, and builds interest in the piece's format as your catalogue
+  names it (`tags.contentType`), at the weight your registry publishes for it (`weights.video_view`, 1 in the shipped
+  registry); a registry that names no `video_view` weight weighs it 0, as it weighs every action it does not name.
+- **A dwell minimum per slot, `dwellMinMsBySlot`.** A dwell is sent when a piece leaves view after its minimum on
+  screen, one second by default (`dwellMinMs`). `client.emit.declarative({ dwellMinMsBySlot: { 'pdp-editorial': 30000 } })`
+  holds a named slot to its own minimum (here 30 seconds on editorial) while every other slot keeps one second;
+  `createClient(config, host, { dwellMinMsBySlot })` does the same for `rendered()` with an element.
+- **The product dwell, `product_dwell`.** Once per product view, when the shopper has stayed on the product page
+  past 20 seconds, send `client.emit.track('product_dwell', { productId: 'SKU-123', dwellMs: 21000 })`. Its `dwellMs`
+  feeds the visit's dwell counter your journey thresholds read (`category_dwell_ms`); it is captured at weight 0.
+- **A purchase is unique per `orderId`.** A second purchase naming an `orderId` this shopper's purchase already named is answered `200` with `dropped: "duplicate_order"` and writes no outcome, no credit and no interest.
+  The same event sent again (the same `eventId`) is not a second purchase, and a purchase without an `orderId` is
+  never deduplicated.
+- **Search, `search`.** Send `client.emit.custom('search', { category: 'Handbags', line: 'Tabby' })` with what your
+  search resolved the query to, in your registry's source fields: the resolved values only, never the query text.
+- **Filters, `filter_applied`.** Send `client.emit.custom('filter_applied', { dimension: 'category', value: 'Handbags', category: 'Handbags' })`:
+  the facet's dimension and value, with the value also in the registry's own source field. The sale filter and the sale page both send `filter_applied` with `dimension: 'priceStatus'`, `value: 'sale'` and `priceStatus: 'sale'`, raising `priceStatus` sale.
+- **Removing from the bag, `remove_from_cart`.** Send `client.emit.custom('remove_from_cart', { productId: 'SKU-123' })`;
+  it is captured at weight 0 until the negative-signal release (P39) gives it a meaning.
+- **Their registry values.** The shipped registry weighs `video_view` 1 and `content_viewable` 0, and names no
+  weight for `search`, `filter_applied`, `remove_from_cart` or `product_dwell`, so each of those is captured at
+  weight 0 until your registry publishes one (`weights.search`, `weights.filter_applied`). An event's own values,
+  such as a search's resolved `category` or the sale filter's `priceStatus`, build interest only where your
+  registry names that source field as a dimension and scores event attributes (`eventAttributes: "event-when-unknown"`).
+
 ## 5. Sign-in and sign-out
 
 The visitor id is anonymous until your page says who the person is.
@@ -362,7 +403,16 @@ DOM event types, space separated, in `data-op-engage`:
   decision. The SDK carries `slotPosition` exactly as the decision names it and never computes one: a decision
   adopted from the server-rendered bootstrap names none, and its acknowledgement is admitted on `position` as
   before.
-- **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends neither.
+- **The viewable impression.** Once its impression is acknowledged, a module container at least half in view for
+  one second without interruption sends one `content_viewable` per page instance (section 4, thresholds), carrying
+  the module id, the slot, `slotPosition` and the decision of its acknowledgement; less than a second at a time
+  sends none. It weighs 0, builds no interest and is never an exposure: the slot's exposures are its
+  acknowledgements, as above.
+- **Declared interactions of the module that owns them.** A size guide or a reviews panel opened inside a module is
+  that module's engagement: declare `data-op-engage="sizeguide:open reviews:open"` on its container and dispatch the
+  event, bubbling, from inside it when the shopper opens one (`new Event('sizeguide:open', { bubbles: true })`, or
+  `reviews:open`). Each is one `content_click` naming `interaction: "sizeguide:open"` or `"reviews:open"`.
+- **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends none of them.
 
 ## 8. What to test before the freeze
 

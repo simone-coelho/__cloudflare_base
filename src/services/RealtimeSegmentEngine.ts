@@ -54,10 +54,15 @@ import {
   placeEvent,
   snapshot as reflexSnapshot,
   tick as tickReflex,
+  isDuplicateOrder,
+  neverWeighed,
+  weightOf,
+  withOrder,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
+import { orderKeyOf } from '@/ledger/records';
 import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import {
   DEFAULT_GENERATOR_CONFIG,
@@ -95,7 +100,11 @@ export interface ActionEvent {
     | 'content_impression'
     | 'content_click'
     | 'content_dwell'
-    | 'video_complete';
+    | 'video_complete'
+    // P40: the viewable impression, the video view and the product dwell
+    | 'content_viewable'
+    | 'video_view'
+    | 'product_dwell';
   userId: string;
   anonymousId?: string;
   data: Record<string, any>;
@@ -492,6 +501,15 @@ export class RealtimeSegmentEngine {
       if (!consent.tracking) return answer(null);
       requireConsentPurpose(consent, 'tracking');
       if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+      // P40 (R-P48): a purchase is unique per order for the shopper. A second
+      // purchase naming an order this shopper's state recorded under another
+      // event is dropped here, by the rule and at the point the shopper's own
+      // object drops it (ShopperReflex.ingest): after admission, inside the
+      // owner, before any counter, visit, taste, region count, provider forward,
+      // outcome or stored write. The recording event delivered again is not a
+      // second purchase, and a purchase naming no order is never one.
+      const order = await orderKeyOf(event);
+      if (isDuplicateOrder(sessionData.reflex, order, event.eventId)) return { ...answer(null), dropped: 'duplicate_order' };
       // With tracking ON every step below is a behavioral effect, and each one is
       // governed by THIS tenant's configured runtime. Resolve that authority first
       // so an absent, invalid or unreadable configuration publication refuses
@@ -639,16 +657,19 @@ export class RealtimeSegmentEngine {
           const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry, await visitInputs());
           (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
             tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
-            w: reflexConfig.weights[action] ?? 0,
+            w: weightOf(reflexConfig, action),
             context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
           }));
         }
       }
 
+      // P40 (R-P48): the state this event leaves, with the order a purchase names
+      // recorded beside its event id (written only when a purchase names one).
+      const reflexState = withOrder(reflex ? reflex.state : sessionData.reflex, order, event.eventId, reflexConfig);
       if (!personalizes(consent)) {
         sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData, attributes: newAttributes, surface, journey: newJourney,
-          reflex: reflex ? reflex.state : sessionData.reflex,
+          reflex: reflexState,
           metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
         }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
@@ -737,7 +758,7 @@ export class RealtimeSegmentEngine {
           attributes: newAttributes,
           surface,
           journey: newJourney,
-          reflex: reflex ? reflex.state : sessionData.reflex,
+          reflex: reflexState,
           odpContext: odp.odpContext,
           odpSeed,
           odpSeedAt,
@@ -758,7 +779,7 @@ export class RealtimeSegmentEngine {
         attributes: newAttributes,
         surface,
         journey: newJourney,
-        reflex: reflex ? reflex.state : sessionData.reflex,
+        reflex: reflexState,
         odpContext: odp.odpContext,
         odpSeed,
         odpSeedAt,
@@ -1095,6 +1116,11 @@ export class RealtimeSegmentEngine {
     if (!consent.tracking) return answer(current, false, 'tracking_refused');
     requireConsentPurpose(consent, 'tracking');
     if (!await bufferedEventAllowed(this.env, this.tenant, event.userId, event.timestamp)) return answer(current, false, 'erased');
+    // P40 (R-P48): a buffered purchase of an order this shopper's state recorded
+    // under another event is the same order again, dropped as the live door drops
+    // it (processAction); its own event delivered again is not.
+    const order = await orderKeyOf(event);
+    if (isDuplicateOrder(current.reflex, order, event.eventId)) return answer(current, false, 'duplicate_order');
     if (!consent.personalization) return answer(current);
     requireConsentPurpose(consent, 'personalization');
     // P38 (VA3, decision D2): a buffered delivery is placed by its own door
@@ -1115,14 +1141,28 @@ export class RealtimeSegmentEngine {
       }
       delivered = { ...event, data: governing.data };
     }
+    // P40 (decision D1): a buffered viewable impression builds nothing either,
+    // whatever the registry weighs it (answered as a weight-0 delivery is).
+    if (neverWeighed(actionOf(event))) return answer(current);
     const interest = await bufferedInterest(this.env, this.tenant, delivered,
       { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes },
         // W16 C5.09 (R85(b)): a buffered delivery is never an interaction of the
         // visit it arrives in, so it qualifies against the stage already stored.
         journeyStage: current.metadata.journeyStage },
       this.connectors.segments, now);
-    if (!interest.applied) return answer(current, false, undefined, interest.signals);
-    const reflex = interest.reflex && carryOdpRestoration(interest.reflex, current.reflex);
+    if (!interest.applied) {
+      // P40 (R-P58): a purchase that applies no interest (it places no value)
+      // still uses its order: the order is remembered in the session's own
+      // reflex state, as the shopper's object remembers it, and nothing else
+      // changes. Only a session holding no reflex state reads the configuration
+      // its empty state is built under.
+      const remembered = order === null ? current.reflex : withOrder(current.reflex, order, event.eventId,
+        current.reflex?.v === 1 ? undefined : await resolveTenantReflexConfig(this.env, this.tenant, resolveSurface({ surface: current.surface })));
+      if (remembered === current.reflex) return answer(current, false, undefined, interest.signals);
+      await this.sessionManager.writeBufferedSession(current, { preferences, reflex: remembered });
+      return answer({ ...current, reflex: remembered }, false, undefined, interest.signals);
+    }
+    const reflex = interest.reflex && withOrder(carryOdpRestoration(interest.reflex, current.reflex), order, event.eventId, interest.config!);
     await this.sessionManager.writeBufferedSession(current, { preferences, reflex, segments: interest.segments });
     return answer({ ...current, reflex, segments: interest.segments }, true, undefined, interest.signals);
   }

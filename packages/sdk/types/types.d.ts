@@ -135,8 +135,13 @@ export interface ResponseLike {
     json(): Promise<unknown>;
     body?: ReadableStream<Uint8Array> | null;
 }
-/** What the SDK lets an integrator say happened. */
-export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'email_open' | 'form_submit' | 'button_click' | 'custom';
+/**
+ * What the SDK lets an integrator say happened. P40: `content_viewable` is the
+ * viewable impression the SDK itself measures (never the page's to send),
+ * `video_view` the video watched for three seconds, `product_dwell` a product
+ * page held past its dwell threshold (`productId`, `dwellMs`).
+ */
+export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'content_viewable' | 'video_view' | 'product_dwell' | 'email_open' | 'form_submit' | 'button_click' | 'custom';
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load
  * carries one within its bound: a keyword is a seeding signal, never evidence of
