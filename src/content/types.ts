@@ -180,7 +180,38 @@ export interface SlotStrategy {
    * page's declared layout slot. Absent means the tenant's floor applies.
    */
   signalFloor?: SignalFloor;
+  /**
+   * P04: modules pinned at a position of the page's declared layout slot
+   * (version 4 only), each at a position counted from 1 to the slot's `take`,
+   * after any prefix pins. A pinned module is reserved page-wide before any slot
+   * ranks and is served at exactly its position on every arm, never scored or
+   * explored, while the other positions are ranked around it. A pinned module
+   * that is missing, ineligible or excluded refuses the whole slot (decision
+   * D1), as a refused prefix pin does. Absent means the slot decides exactly as
+   * before.
+   */
+  positionPins?: PositionPin[];
+  /**
+   * P04: modules marked off-limits on the page's declared layout slot (version
+   * 4 only). An off-limits module holds its BASELINE position — its place in
+   * the configured order for the shopper's context where one matches (P01), else
+   * among the modules the slot could serve in catalogue order — on every arm,
+   * and no term and no exploration moves it, while the others are ranked around
+   * it; one whose baseline position lies beyond the take is not served. Absent
+   * means the slot decides exactly as before.
+   */
+  offLimitsPieceIds?: string[];
 }
+
+/** P04: one module pinned at a position of a slot, counted from 1. */
+export interface PositionPin { pieceId: string; position: number }
+
+/**
+ * P04: the rule that placed a module and the position it set, counted from 1:
+ * `pinned` at its pinned position, `off_limits` at its baseline position. Keys
+ * sorted, as every explain member a replay compares.
+ */
+export interface ModuleRule { position: number; rule: 'pinned' | 'off_limits' }
 
 /**
  * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
@@ -615,6 +646,13 @@ export interface DecisionInputs {
      * replays the page with no floor, independently of the other policies.
      */
     signalFloor?: 'signal-floor-v1';
+    /**
+     * P04: present only on a decision on which a position pin or an
+     * off-limits mark of the page's layout slot decided something (C11);
+     * absence replays the page without its position pins and off-limits marks,
+     * independently of the other policies.
+     */
+    moduleRules?: 'module-rules-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
@@ -760,6 +798,13 @@ export interface DecisionRecord {
      * sorted. Present on every record of such a slot and on no other.
      */
     signalFloor?: { floor: SignalFloor; signals: number };
+    /**
+     * P04: a position pin or an off-limits mark placed this module: the rule and
+     * the position it set, counted from 1 (`pinned` at its pinned position,
+     * `off_limits` at its baseline position), keys sorted. Present only on such
+     * a record; compared by value in replay.
+     */
+    moduleRule?: ModuleRule;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

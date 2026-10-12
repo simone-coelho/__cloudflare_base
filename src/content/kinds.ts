@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
 import { platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -326,6 +326,9 @@ export const LAYOUT_GOVERNANCE_VERSION = 4;
 const declaresLayout = (s: unknown): boolean => isRecord(s) && s.layout !== undefined && s.layout !== false;
 /** P01: a slot member `orders` that carries something: anything but absent or an empty list. */
 const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undefined && !(Array.isArray(s.orders) && s.orders.length === 0);
+/** P04: a slot member `positionPins` or `offLimitsPieceIds` that carries something: anything but absent or an empty list. */
+const carriesList = (s: unknown, key: 'positionPins' | 'offLimitsPieceIds'): boolean => isRecord(s) && s[key] !== undefined && !(Array.isArray(s[key]) && s[key].length === 0);
+const carriesModuleRules = (s: unknown): boolean => carriesList(s, 'positionPins') || carriesList(s, 'offLimitsPieceIds');
 
 // ── P01: per-context orders on the declared layout slot ─────────────────────
 
@@ -406,6 +409,90 @@ function sharedShopper(a: OrderContext, b: OrderContext): string | null {
   return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}`;
 }
 
+// ── P04: position pins and off-limits marks on the declared layout slot ─────
+
+/** At most this many position pins on one slot: no more than the largest take. */
+const POSITION_PINS_MAX = 50;
+/** At most this many off-limits marks on one slot, the bound `excludedPieceIds` keeps. */
+const OFF_LIMITS_MAX = 1000;
+const moduleId = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= 1024;
+
+/**
+ * P04: one slot's position pins, structurally. Errors are suffixes of the
+ * slot's `positionPins` address and name the module, so a refusal says which
+ * pin and where. Each pin is exactly `{ pieceId, position }`, `position` a whole
+ * number from 1 to the slot's `take`; one position holds one module and a module
+ * is pinned once. The rules that relate the pins to the rest of the slot and the
+ * page (prefix pins, exclusions, off-limits marks, orders, other slots' pins, the
+ * layout declaration) are authoring rules in `validateSlotCatalog`.
+ */
+export function validatePositionPins(candidate: unknown, take: number): ValidationResult<PositionPin[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { pieceId, position } pins'] };
+  const errors: string[] = [];
+  if (candidate.length > POSITION_PINS_MAX) errors.push(`: at most ${POSITION_PINS_MAX} position pins`);
+  const pins: PositionPin[] = [], atPosition = new Map<number, number>(), ofModule = new Map<string, number>();
+  Array.from(candidate).forEach((raw: unknown, k) => {
+    if (!isRecord(raw) || !hasExactly(raw, ['pieceId', 'position'])) { errors.push(`[${k}]: a position pin is { pieceId, position } and nothing else`); return; }
+    const id = raw.pieceId, position = raw.position;
+    if (!moduleId(id)) { errors.push(`[${k}].pieceId: a module id, a string of 1..1024 UTF-16 units`); return; }
+    if (typeof position !== 'number' || !Number.isInteger(position) || position < 1 || position > take) {
+      errors.push(`[${k}].position: ${quoted(position)} pins ${quoted(id)} outside the slot's positions 1 to ${take} (its take); a position is counted from 1`); return;
+    }
+    const other = atPosition.get(position), twice = ofModule.get(id);
+    if (twice !== undefined) { errors.push(`[${k}]: ${quoted(id)} is pinned twice (positionPins[${twice}] already pins it at position ${pins[twice]!.position}); a module holds one position`); return; }
+    if (other !== undefined) { errors.push(`[${k}]: ${quoted(id)} is pinned at position ${position}, where positionPins[${other}] already pins ${quoted(pins[other]!.pieceId)}; one position holds one module`); return; }
+    atPosition.set(position, pins.length); ofModule.set(id, pins.length);
+    // Keys in sorted order, as every member a replay reads is built.
+    pins.push({ pieceId: id, position });
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: pins };
+}
+
+/** P04: one slot's off-limits marks, structurally: distinct module ids. */
+export function validateOffLimitsPieceIds(candidate: unknown): ValidationResult<string[]> {
+  if (!Array.isArray(candidate) || candidate.length > OFF_LIMITS_MAX) return { ok: false, errors: [`: at most ${OFF_LIMITS_MAX} distinct module ids, each a string of 1..1024 UTF-16 units`] };
+  const errors: string[] = [], seen = new Set<string>();
+  Array.from(candidate).forEach((id: unknown, k) => {
+    if (!moduleId(id)) errors.push(`[${k}]: a module id, a string of 1..1024 UTF-16 units`);
+    else if (seen.has(id)) errors.push(`[${k}]: ${quoted(id)} is listed twice; a module is marked off-limits once`);
+    else seen.add(id);
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: [...seen] };
+}
+
+/**
+ * P04: the authoring rules that relate a slot's position pins and off-limits
+ * marks to the rest of its slot, applied at publication only. Both are set only
+ * on the page's declared layout slot; a slot pinned whole by `pinnedPieceId` is
+ * never ranked and carries no position pin; a position pin lies after the
+ * prefix pins and pins no module the prefix pins or the slot excludes by id; a
+ * module is never both pinned and off-limits. Pins of other slots of the page
+ * and the slot's orders are checked where those are (`validateSlotCatalog`,
+ * `orderAuthoringErrors`).
+ */
+function moduleRuleAuthoringErrors(page: string, index: number, slot: SlotStrategy): string[] {
+  const at = `pages.${page}[${index}]`, pins = slot.positionPins ?? [], marks = slot.offLimitsPieceIds ?? [];
+  if (!pins.length && !marks.length) return [];
+  const errors: string[] = [];
+  if (slot.layout !== true) {
+    if (pins.length) errors.push(`${at}.positionPins: slot '${slot.slot}' is not the declared layout slot of page '${page}'; modules are pinned at a position only on the slot that declares layout: true`);
+    if (marks.length) errors.push(`${at}.offLimitsPieceIds: slot '${slot.slot}' is not the declared layout slot of page '${page}'; modules are marked off-limits only on the slot that declares layout: true`);
+    return errors;
+  }
+  const prefix = slot.pinnedPieceIds ?? [];
+  if (pins.length && slot.pinnedPieceId) errors.push(`${at}.positionPins: slot '${slot.slot}' serves one pinned piece (pinnedPieceId) and is never ranked, so it carries no position pins`);
+  pins.forEach((pin, k) => {
+    if (pin.position <= prefix.length) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is pinned at position ${pin.position}, where the prefix pin ${quoted(prefix[pin.position - 1])} already sits (pinnedPieceIds); one position holds one module`);
+    if (prefix.includes(pin.pieceId)) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is pinned twice: pinnedPieceIds already pins it; a module holds one position`);
+    if (!slot.offLimits && slot.excludedPieceIds?.includes(pin.pieceId)) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the pin could never serve it`);
+  });
+  const positioned = new Set(pins.map((pin) => pin.pieceId)), pinned = new Set([...prefix, ...(slot.pinnedPieceId ? [slot.pinnedPieceId] : [])]);
+  marks.forEach((id, k) => {
+    if (positioned.has(id) || pinned.has(id)) errors.push(`${at}.offLimitsPieceIds[${k}]: ${quoted(id)} is both pinned (${positioned.has(id) ? 'positionPins' : 'pinnedPieceIds'}) and off-limits; a module is held at its pinned position or at its baseline position, never both`);
+  });
+  return errors;
+}
+
 /**
  * P01 (O5, decision D1): the authoring rules that relate a slot's orders to the
  * rest of its slot, applied at publication only. An order is published only on
@@ -421,7 +508,10 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
   if (slot.offLimits) return [`${at}: slot '${slot.slot}' is off-limits and serves no module, so it carries no order`];
   const errors: string[] = [], pins = slotPins(slot), excluded = new Set(slot.excludedPieceIds ?? []);
   const pinnedElsewhere = new Map<string, string>();
-  for (const other of pageSlots) if (other !== slot && !other.offLimits) for (const id of slotPins(other)) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
+  for (const other of pageSlots) if (other !== slot && !other.offLimits) {
+    // P04: a module another slot pins at a position is reserved page-wide too.
+    for (const id of [...slotPins(other), ...(other.positionPins ?? []).map((pin) => pin.pieceId)]) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
+  }
   orders.forEach((order, k) => {
     order.modules.forEach((id, p) => {
       if (excluded.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the order could not serve it`);
@@ -430,6 +520,10 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
     pins.forEach((pin, p) => {
       if (order.modules[p] !== pin) errors.push(`${at}[${k}].modules[${p}]: the slot pins ${quoted(pin)} at position ${p + 1}; an order keeps every pinned module at its position`);
     });
+    // P04: and every module pinned at a position, at that position.
+    for (const pin of slot.positionPins ?? []) {
+      if (order.modules[pin.position - 1] !== pin.pieceId) errors.push(`${at}[${k}].modules[${pin.position - 1}]: the slot pins ${quoted(pin.pieceId)} at position ${pin.position} (positionPins); an order keeps every pinned module at its position`);
+    }
     for (let j = 0; j < k; j++) {
       const a = orders[j]!.context, b = order.context;
       const same = a.channel === b.channel && bucketsOf(a).length === bucketsOf(b).length && bucketsOf(a).every(v => bucketsOf(b).includes(v))
@@ -625,6 +719,30 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       errors.push(`${at}.orders: per-context orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
     }
   }
+  // P04: the layout slot's position pins and off-limits marks, version-4
+  // members like the declaration itself. An empty list carries nothing and is
+  // not kept; how they relate to the rest of the slot and the page are
+  // authoring rules of `validateSlotCatalog`, never reinterpreted on a read.
+  let positionPins: PositionPin[] | undefined;
+  if (carriesList(s, 'positionPins')) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validatePositionPins(s.positionPins, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.positionPins${error}`);
+      else positionPins = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.positionPins: modules pinned at a position need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
+  let offLimitsPieceIds: string[] | undefined;
+  if (carriesList(s, 'offLimitsPieceIds')) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateOffLimitsPieceIds(s.offLimitsPieceIds);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.offLimitsPieceIds${error}`);
+      else offLimitsPieceIds = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.offLimitsPieceIds: off-limits modules need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   // P10: the slot's own signal floor, read under every governance version like
   // the seed rules: a whole number of 0 or more, or `never`. That `never` is
   // published only on the page's declared layout slot is an authoring rule of
@@ -642,6 +760,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
     ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
     ...(signalFloor !== undefined ? { signalFloor } : {}),
+    ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
   };
 }
 
@@ -659,8 +778,9 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   // than 4 ignores the member, as it ignores every later member.
   // P01: per-context orders are a version-4 member too, so an unmarked write
   // carrying them is read under version 4 and refused there if misplaced.
+  // P04: as are position pins and off-limits marks.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s)));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -732,6 +852,12 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots)); });
   }
+  // P04: position pins and off-limits marks, refused where they are authored
+  // whenever they could not be served as published (a retained document is
+  // never reinterpreted).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => errors.push(...moduleRuleAuthoringErrors(page, index, slot)));
+  }
   // P10 (F3): `never` keeps a slot context-only for every shopper, which is what
   // makes a page's layout one answer per context; it is published only on the
   // page's declared layout slot, so a content slot always keeps a floor its
@@ -752,6 +878,12 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
         const owner = owners.get(id);
         if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: pinnedPieceId duplicates pin in ${owner}`);
         else owners.set(id, slot.slot);
+      }
+      // P04: a module pinned at a position is reserved page-wide, as a prefix pin is.
+      for (const pin of slot.positionPins ?? []) {
+        const owner = owners.get(pin.pieceId);
+        if (owner === undefined) owners.set(pin.pieceId, slot.slot);
+        else if (owner !== slot.slot) errors.push(`pages.${page}.${slot.slot}: positionPins pins ${quoted(pin.pieceId)}, which ${owner} already pins; a pin reserves its module page-wide`);
       }
     }
   }
