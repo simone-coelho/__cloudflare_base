@@ -4,7 +4,8 @@
   // src/services/visit.ts
   var VISIT_GAP_MS = 30 * 60 * 1e3;
   var ENTRY_QUERY_LIMIT = 4096;
-  var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+  var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+  var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
   var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
   function parsed(value) {
     try {
@@ -91,19 +92,22 @@
     }
   }
   function entrySignals(host) {
-    let utmMedium = "", utmSource = "", utmTerm = "";
+    let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
     try {
       const usp = new URLSearchParams(host.location?.search ?? "");
       utmMedium = usp.get("utm_medium") ?? "";
       utmSource = usp.get("utm_source") ?? "";
       utmTerm = usp.get("utm_term") ?? "";
       if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+      utmCampaign = usp.get("utm_campaign") ?? "";
+      if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
     } catch {
     }
     return {
       utmMedium,
       utmSource,
       ...utmTerm ? { utmTerm } : {},
+      ...utmCampaign ? { utmCampaign } : {},
       referrer: host.referrer ?? "",
       siteHost: host.location?.hostname ?? ""
     };

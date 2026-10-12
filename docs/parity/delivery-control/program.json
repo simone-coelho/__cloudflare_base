@@ -896,7 +896,7 @@
     {
       "id": "P07",
       "title": "Channel and visit number before the first click",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1028,13 +1028,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "21bb132e27256c511409b2f5e6afa4eb3e6cdf2c on rem/spec-parity-b (batch S2; P07 committed at 64f71082, P31 at cb871893, P06 at 21bb132e, each ticket files byte-identical at 21bb132e; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity2.ts; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "30c296238fc0d6c484de7cd4d3f9af9679d42631 on rem/spec-p07-fix1 (fix round 1, R-P53: the enablement, minimum and rollup locks with controls ME, MP, the off-by-one and MR, over the build head 2b119290; specification review PASS; the S2 gate at 21bb132e kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-ME.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-MP.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-OBA.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer-spec/logs/control-MR.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-g4-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-ctx-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-r4-summary.log",
@@ -1053,7 +1059,7 @@
     {
       "id": "P04",
       "title": "Pins and off-limits for single modules",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1198,7 +1204,7 @@
     {
       "id": "P29",
       "title": "A layout reason: why the order did or did not change",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1333,14 +1339,25 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "8ecb223b70f35433a632c8195b5ad877f8ff6917 on rem/spec-parity-b (batch S2 fix round; P04 29e3b017, P29 e81e31be, P05 8a519216, wording pass 8ecb223b, each ticket files byte-identical at 8ecb223b; P05 carries src/units/W28/B1.unit.test.ts under R-P22; harness src/units/_parity.ts and _parity2.ts byte-identical to 21bb132e; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "5ab683662b1ccef4ae184821cf02ccc1e1e4801c on rem/spec-p29-fix1 (fix round 1, R-P56 and R-P56 amended: the R1 lift-term leg with the mixed world and its control, the R5 kit lock, over the build head eb644ad1; specification review FAIL at 7bdecd80 on F1 then PASS at 5ab68366; the S2 fix-round gate at 8ecb223b kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/round2/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/specifier/round2/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2-fix/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2-fix/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/c4e-ref.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/mut-M4.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/mut-MC.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/mut-MSTAMP.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/round2/logs/green-P29.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/round2/logs/mstamp-head.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/round2/logs/mstamp-ref.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2-fix/reviewer-spec/logs/summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2-fix/reviewer-spec/logs/summary2.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2-fix/specifier/logs/controls-a-summary.log",

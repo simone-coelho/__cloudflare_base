@@ -5,10 +5,11 @@
 // authority: missing initialization or corrupt publication fails closed.
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
-import { platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
+import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
+import { TODAY_TERMS, type ContextTerms } from './cell';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -250,8 +251,37 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
-/** W16 C3: the arrival signals a seed rule may read; `platform` is the request's own OS family. */
-const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform']);
+/**
+ * W16 C3: the arrival signals a seed rule may read; `platform` is the request's
+ * own OS family. P36: `source_platform` and `landing_page_type` are the visit's
+ * context attributes, named by the tenant's published vocabulary. P37: `device`
+ * is the request's own device class and `recency` the visit's recency bucket,
+ * each named from a fixed vocabulary that no tenant setting changes.
+ */
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform', 'source_platform', 'landing_page_type', 'device', 'recency']);
+
+/**
+ * P36 (R-P46): the vocabulary a slots document is checked against. A tenant's
+ * terms (`contextTermsOf`; today's terms for a tenant without the settings) at
+ * every door that holds the tenant — authoring and the decision — or, where no
+ * tenant is in hand (the publication store's own write and read of a document
+ * the authoring door already checked), the grammar alone: any id for a channel,
+ * a source platform or a landing-page type, any bucket name for a bucket.
+ */
+export type SlotTerms = ContextTerms | 'grammar';
+/** A bucket's name: a whole number, a range `a-b`, or an open `N+`. */
+const BUCKET_NAME = /^(?:[1-9][0-9]{0,4}|[1-9][0-9]{0,4}-[1-9][0-9]{0,4}|[1-9][0-9]{0,4}\+)$/;
+const SIX_WORDS = 'one of the six channel words (direct | paid_social | paid_search | email | organic | referral)';
+/** Whether a channel word is in the terms: today's six words exactly, a tenant's ids, or any id. */
+const channelInTerms = (word: unknown, terms: SlotTerms): boolean => terms === 'grammar' ? isContextId(word)
+  : typeof word === 'string' && (terms.published ? terms.channels.has(word) : entryChannelOf(word) === word);
+const channelWords = (terms: SlotTerms): string => terms === 'grammar' ? `a channel id (${CONTEXT_ID_WORDS})`
+  : terms.published ? `one of this tenant's channel ids (${[...terms.channels].join(' | ')})` : SIX_WORDS;
+const bucketInTerms = (name: unknown, terms: SlotTerms): boolean => typeof name === 'string' && (terms === 'grammar' ? BUCKET_NAME.test(name) : terms.buckets.includes(name));
+const bucketWords = (terms: SlotTerms): string => terms === 'grammar' ? 'a whole number, a range such as 2-3 or an open bucket such as 4+' : terms.buckets.join(' | ');
+/** The source platforms or landing-page types a seed may name, in words. */
+const idsWords = (ids: ReadonlySet<string>, what: string): string => ids.size ? `one of this tenant's ${what} ids (${[...ids].join(' | ')})`
+  : `one of the tenant's published ${what} ids; this tenant publishes none (contextVocabulary)`;
 /** Bounded like every other authored list in this document. */
 const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50, SEED_DAMPEN_MAX = 4;
 
@@ -264,7 +294,7 @@ const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50, SEED_DAMPEN_MAX = 4;
  * decision time: a rule set the current contract refuses is ignored whole rather
  * than partially applied, because half a rule set is a ranking nobody authored.
  */
-export function validateSeedRules(candidate: unknown, weights: Readonly<Record<string, number>>): ValidationResult<SeedRule[]> {
+export function validateSeedRules(candidate: unknown, weights: Readonly<Record<string, number>>, terms: SlotTerms = TODAY_TERMS): ValidationResult<SeedRule[]> {
   if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of seed rules'] };
   const errors: string[] = [];
   if (candidate.length > SEED_RULES_MAX) errors.push(`: at most ${SEED_RULES_MAX} rules`);
@@ -274,13 +304,23 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
     const before = errors.length;
     const signal = raw.signal, value = raw.value, weight = raw.weight;
-    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform`);
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform | source_platform | landing_page_type | device | recency`);
     if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
     // A signal value outside its own vocabulary names a context that cannot
     // occur, so it could only ever be dead configuration or a typo for a live one.
-    else if (signal === 'entry_channel' && entryChannelOf(value) !== value) errors.push(`${at}.value: entry_channel names one of the six channel words, exactly`);
+    // P36 (R-P46): the channel words are the tenant's own when it publishes them.
+    else if (signal === 'entry_channel' && !channelInTerms(value, terms)) errors.push(terms !== 'grammar' && !terms.published
+      ? `${at}.value: entry_channel names one of the six channel words, exactly` : `${at}.value: entry_channel names ${channelWords(terms)}, exactly`);
+    else if (signal === 'source_platform' && !(terms === 'grammar' ? isContextId(value) : terms.sourcePlatforms.has(value))) {
+      errors.push(`${at}.value: source_platform names ${terms === 'grammar' ? `an id (${CONTEXT_ID_WORDS})` : idsWords(terms.sourcePlatforms, 'source platform')}, exactly`);
+    }
+    else if (signal === 'landing_page_type' && !(terms === 'grammar' ? isContextId(value) : terms.landingPageTypes.has(value))) {
+      errors.push(`${at}.value: landing_page_type names ${terms === 'grammar' ? `an id (${CONTEXT_ID_WORDS})` : idsWords(terms.landingPageTypes, 'landing-page type')}, exactly`);
+    }
     else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
     else if (signal === 'platform' && platformWordOf(value) !== value) errors.push(`${at}.value: platform names an OS family, ios | android, exactly`);
+    else if (signal === 'device' && deviceClassOf(value) !== value) errors.push(`${at}.value: device names a device class, ${DEVICE_CLASSES.join(' | ')}, exactly (a tablet counts as desktop)`);
+    else if (signal === 'recency' && recencyBucketOf(value) !== value) errors.push(`${at}.value: recency names a recency bucket, ${RECENCY_BUCKETS.join(' | ')}, exactly`);
     if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
     // The dampen reads the SHOPPER's own memberships, not the piece, so its
     // dimensions need not be ones this slot weights.
@@ -326,6 +366,9 @@ export const LAYOUT_GOVERNANCE_VERSION = 4;
 const declaresLayout = (s: unknown): boolean => isRecord(s) && s.layout !== undefined && s.layout !== false;
 /** P01: a slot member `orders` that carries something: anything but absent or an empty list. */
 const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undefined && !(Array.isArray(s.orders) && s.orders.length === 0);
+/** P04: a slot member `positionPins` or `offLimitsPieceIds` that carries something: anything but absent or an empty list. */
+const carriesList = (s: unknown, key: 'positionPins' | 'offLimitsPieceIds'): boolean => isRecord(s) && s[key] !== undefined && !(Array.isArray(s[key]) && s[key].length === 0);
+const carriesModuleRules = (s: unknown): boolean => carriesList(s, 'positionPins') || carriesList(s, 'offLimitsPieceIds');
 
 // ── P01: per-context orders on the declared layout slot ─────────────────────
 
@@ -344,7 +387,7 @@ const hasExactly = (v: Record<string, unknown>, keys: readonly string[]): boolea
  * of its slot (pins, exclusions, the layout declaration, overlapping contexts)
  * are authoring rules in `validateSlotCatalog`, never reinterpreted on a read.
  */
-export function validateOrders(candidate: unknown, take: number): ValidationResult<ConfiguredOrder[]> {
+export function validateOrders(candidate: unknown, take: number, terms: SlotTerms = TODAY_TERMS): ValidationResult<ConfiguredOrder[]> {
   if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { context, modules } orders'] };
   const errors: string[] = [];
   if (candidate.length > ORDERS_MAX) errors.push(`: at most ${ORDERS_MAX} orders`);
@@ -354,23 +397,32 @@ export function validateOrders(candidate: unknown, take: number): ValidationResu
     if (!isRecord(raw) || !hasExactly(raw, ['context', 'modules'])) { errors.push(`${at}: an order is { context, modules } and nothing else`); return; }
     const before = errors.length;
     let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
+    let device: OrderContext['device'];
     const context = raw.context;
-    if (!isRecord(context) || !hasExactly(context, ['channel', 'visitBuckets'])) errors.push(`${at}.context: { channel, visitBuckets } and nothing else`);
-    else {
+    // P37: a context may also name a device, beside or instead of (with `any`) a channel and a visit bucket.
+    if (!isRecord(context) || !(hasExactly(context, ['channel', 'visitBuckets']) || hasExactly(context, ['channel', 'device', 'visitBuckets']))) {
+      errors.push(`${at}.context: { channel, visitBuckets } and optionally device, and nothing else`);
+    } else {
+      if (Object.hasOwn(context, 'device')) {
+        const d = deviceClassOf(context.device);
+        if (d) device = d;
+        else errors.push(`${at}.context.device: ${quoted(context.device)} is not a device class (${DEVICE_CLASSES.join(' | ')}; a tablet counts as desktop); omit it to match every device`);
+      }
       const c = context.channel;
-      if (c === 'any' || (typeof c === 'string' && entryChannelOf(c) === c)) channel = c as OrderContext['channel'];
-      else errors.push(`${at}.context.channel: ${quoted(c)} is not one of the six channel words (direct | paid_social | paid_search | email | organic | referral) or any; a shopper whose channel is unknown matches no context`);
+      // P36 (R-P46): the tenant's channel ids and the names of its published cut.
+      if (c === 'any' || channelInTerms(c, terms)) channel = c as OrderContext['channel'];
+      else errors.push(`${at}.context.channel: ${quoted(c)} is not ${channelWords(terms)} or any; a shopper whose channel is unknown matches no context`);
       const b = context.visitBuckets;
       if (b === 'any') visitBuckets = 'any';
-      else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (1 | 2-3 | 4+), or any`);
+      else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (${bucketWords(terms)}), or any`);
       else {
         const seen = new Set<string>();
         Array.from(b).forEach((v: unknown, k) => {
-          if (typeof v !== 'string' || !VISIT_BUCKET_WORDS.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (1 | 2-3 | 4+); a shopper whose visit is unknown matches no context`);
-          else if (seen.has(v)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
-          else seen.add(v);
+          if (!bucketInTerms(v, terms)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (${bucketWords(terms)}); a shopper whose visit is unknown matches no context`);
+          else if (seen.has(v as string)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
+          else seen.add(v as string);
         });
-        if (errors.length === before) visitBuckets = [...b] as Array<'1' | '2-3' | '4+'>;
+        if (errors.length === before) visitBuckets = [...b] as string[];
       }
     }
     const modules = raw.modules;
@@ -385,25 +437,115 @@ export function validateOrders(candidate: unknown, take: number): ValidationResu
       });
     }
     if (errors.length === before && channel && visitBuckets) {
-      // Keys in sorted order, as every member a replay compares is built.
-      orders.push({ context: { channel, visitBuckets }, modules: [...(modules as string[])] });
+      // Keys in sorted order, as every member a replay compares is built; a device only when named.
+      orders.push({ context: { channel, ...(device ? { device } : {}), visitBuckets }, modules: [...(modules as string[])] });
     }
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: orders };
 }
 
-/** Decision D1's specificity: the number of the context's parts that are not `any`. */
-export const contextSpecificity = (context: OrderContext): number => (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1);
-const bucketsOf = (context: OrderContext): string[] => context.visitBuckets === 'any' ? [...VISIT_BUCKET_WORDS] : [...context.visitBuckets];
+/** Decision D1's specificity: the number of the context's parts that are not `any`; P37: a named device is one more. */
+export const contextSpecificity = (context: OrderContext): number =>
+  (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1) + (context.device === undefined ? 0 : 1);
+/** The buckets a context matches: `any` is every bucket of the tenant's cut (today's buckets where no tenant is in hand). */
+const bucketsOf = (context: OrderContext, terms: SlotTerms = TODAY_TERMS): string[] =>
+  context.visitBuckets === 'any' ? [...(terms === 'grammar' ? VISIT_BUCKET_WORDS : terms.buckets)] : [...context.visitBuckets];
 const contextWords = (context: OrderContext): string =>
-  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}`;
+  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}${context.device === undefined ? '' : `, device ${quoted(context.device)}`}`;
 /** A shopper both contexts match, in words, or null when no shopper can match both. */
-function sharedShopper(a: OrderContext, b: OrderContext): string | null {
+function sharedShopper(a: OrderContext, b: OrderContext, terms: SlotTerms = TODAY_TERMS): string | null {
   if (a.channel !== 'any' && b.channel !== 'any' && a.channel !== b.channel) return null;
-  const inB = new Set(bucketsOf(b)), bucket = bucketsOf(a).find(v => inB.has(v));
+  // P37: two contexts naming different devices never match one shopper.
+  if (a.device !== undefined && b.device !== undefined && a.device !== b.device) return null;
+  const inB = new Set(bucketsOf(b, terms)), bucket = bucketsOf(a, terms).find(v => inB.has(v));
   if (bucket === undefined) return null;
   const channel = a.channel !== 'any' ? a.channel : b.channel !== 'any' ? b.channel : 'any channel';
-  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}`;
+  const device = a.device ?? b.device;
+  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}${device === undefined ? '' : `, on a ${device} device`}`;
+}
+
+// ── P04: position pins and off-limits marks on the declared layout slot ─────
+
+/** At most this many position pins on one slot: no more than the largest take. */
+const POSITION_PINS_MAX = 50;
+/** At most this many off-limits marks on one slot, the bound `excludedPieceIds` keeps. */
+const OFF_LIMITS_MAX = 1000;
+const moduleId = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= 1024;
+
+/**
+ * P04: one slot's position pins, structurally. Errors are suffixes of the
+ * slot's `positionPins` address and name the module, so a refusal says which
+ * pin and where. Each pin is exactly `{ pieceId, position }`, `position` a whole
+ * number from 1 to the slot's `take`; one position holds one module and a module
+ * is pinned once. The rules that relate the pins to the rest of the slot and the
+ * page (prefix pins, exclusions, off-limits marks, orders, other slots' pins, the
+ * layout declaration) are authoring rules in `validateSlotCatalog`.
+ */
+export function validatePositionPins(candidate: unknown, take: number): ValidationResult<PositionPin[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { pieceId, position } pins'] };
+  const errors: string[] = [];
+  if (candidate.length > POSITION_PINS_MAX) errors.push(`: at most ${POSITION_PINS_MAX} position pins`);
+  const pins: PositionPin[] = [], atPosition = new Map<number, number>(), ofModule = new Map<string, number>();
+  Array.from(candidate).forEach((raw: unknown, k) => {
+    if (!isRecord(raw) || !hasExactly(raw, ['pieceId', 'position'])) { errors.push(`[${k}]: a position pin is { pieceId, position } and nothing else`); return; }
+    const id = raw.pieceId, position = raw.position;
+    if (!moduleId(id)) { errors.push(`[${k}].pieceId: a module id, a string of 1..1024 UTF-16 units`); return; }
+    if (typeof position !== 'number' || !Number.isInteger(position) || position < 1 || position > take) {
+      errors.push(`[${k}].position: ${quoted(position)} pins ${quoted(id)} outside the slot's positions 1 to ${take} (its take); a position is counted from 1`); return;
+    }
+    const other = atPosition.get(position), twice = ofModule.get(id);
+    if (twice !== undefined) { errors.push(`[${k}]: ${quoted(id)} is pinned twice (positionPins[${twice}] already pins it at position ${pins[twice]!.position}); a module holds one position`); return; }
+    if (other !== undefined) { errors.push(`[${k}]: ${quoted(id)} is pinned at position ${position}, where positionPins[${other}] already pins ${quoted(pins[other]!.pieceId)}; one position holds one module`); return; }
+    atPosition.set(position, pins.length); ofModule.set(id, pins.length);
+    // Keys in sorted order, as every member a replay reads is built.
+    pins.push({ pieceId: id, position });
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: pins };
+}
+
+/** P04: one slot's off-limits marks, structurally: distinct module ids. */
+export function validateOffLimitsPieceIds(candidate: unknown): ValidationResult<string[]> {
+  if (!Array.isArray(candidate) || candidate.length > OFF_LIMITS_MAX) return { ok: false, errors: [`: at most ${OFF_LIMITS_MAX} distinct module ids, each a string of 1..1024 UTF-16 units`] };
+  const errors: string[] = [], seen = new Set<string>();
+  Array.from(candidate).forEach((id: unknown, k) => {
+    if (!moduleId(id)) errors.push(`[${k}]: a module id, a string of 1..1024 UTF-16 units`);
+    else if (seen.has(id)) errors.push(`[${k}]: ${quoted(id)} is listed twice; a module is marked off-limits once`);
+    else seen.add(id);
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: [...seen] };
+}
+
+/**
+ * P04: the authoring rules that relate a slot's position pins and off-limits
+ * marks to the rest of its slot, applied at publication only. Both are set only
+ * on the page's declared layout slot; a slot pinned whole by `pinnedPieceId` is
+ * never ranked and carries no position pin; a position pin lies after the
+ * prefix pins and pins no module the prefix pins or the slot excludes by id; a
+ * module is never both pinned and off-limits. Pins of other slots of the page
+ * and the slot's orders are checked where those are (`validateSlotCatalog`,
+ * `orderAuthoringErrors`).
+ */
+function moduleRuleAuthoringErrors(page: string, index: number, slot: SlotStrategy): string[] {
+  const at = `pages.${page}[${index}]`, pins = slot.positionPins ?? [], marks = slot.offLimitsPieceIds ?? [];
+  if (!pins.length && !marks.length) return [];
+  const errors: string[] = [];
+  if (slot.layout !== true) {
+    if (pins.length) errors.push(`${at}.positionPins: slot '${slot.slot}' is not the declared layout slot of page '${page}'; modules are pinned at a position only on the slot that declares layout: true`);
+    if (marks.length) errors.push(`${at}.offLimitsPieceIds: slot '${slot.slot}' is not the declared layout slot of page '${page}'; modules are marked off-limits only on the slot that declares layout: true`);
+    return errors;
+  }
+  const prefix = slot.pinnedPieceIds ?? [];
+  if (pins.length && slot.pinnedPieceId) errors.push(`${at}.positionPins: slot '${slot.slot}' serves one pinned piece (pinnedPieceId) and is never ranked, so it carries no position pins`);
+  pins.forEach((pin, k) => {
+    if (pin.position <= prefix.length) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is pinned at position ${pin.position}, where the prefix pin ${quoted(prefix[pin.position - 1])} already sits (pinnedPieceIds); one position holds one module`);
+    if (prefix.includes(pin.pieceId)) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is pinned twice: pinnedPieceIds already pins it; a module holds one position`);
+    if (!slot.offLimits && slot.excludedPieceIds?.includes(pin.pieceId)) errors.push(`${at}.positionPins[${k}]: ${quoted(pin.pieceId)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the pin could never serve it`);
+  });
+  const positioned = new Set(pins.map((pin) => pin.pieceId)), pinned = new Set([...prefix, ...(slot.pinnedPieceId ? [slot.pinnedPieceId] : [])]);
+  marks.forEach((id, k) => {
+    if (positioned.has(id) || pinned.has(id)) errors.push(`${at}.offLimitsPieceIds[${k}]: ${quoted(id)} is both pinned (${positioned.has(id) ? 'positionPins' : 'pinnedPieceIds'}) and off-limits; a module is held at its pinned position or at its baseline position, never both`);
+  });
+  return errors;
 }
 
 /**
@@ -415,13 +557,16 @@ function sharedShopper(a: OrderContext, b: OrderContext): string | null {
  * one context carries one order, and two contexts that match one shopper with
  * equal specificity are refused, so the most specific match always decides.
  */
-function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, pageSlots: readonly SlotStrategy[]): string[] {
+function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, pageSlots: readonly SlotStrategy[], terms: SlotTerms = TODAY_TERMS): string[] {
   const at = `pages.${page}[${index}].orders`, orders = slot.orders ?? [];
   if (slot.layout !== true) return [`${at}: slot '${slot.slot}' is not the declared layout slot of page '${page}'; per-context orders are set only on the slot that declares layout: true`];
   if (slot.offLimits) return [`${at}: slot '${slot.slot}' is off-limits and serves no module, so it carries no order`];
   const errors: string[] = [], pins = slotPins(slot), excluded = new Set(slot.excludedPieceIds ?? []);
   const pinnedElsewhere = new Map<string, string>();
-  for (const other of pageSlots) if (other !== slot && !other.offLimits) for (const id of slotPins(other)) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
+  for (const other of pageSlots) if (other !== slot && !other.offLimits) {
+    // P04: a module another slot pins at a position is reserved page-wide too.
+    for (const id of [...slotPins(other), ...(other.positionPins ?? []).map((pin) => pin.pieceId)]) if (!pinnedElsewhere.has(id)) pinnedElsewhere.set(id, other.slot);
+  }
   orders.forEach((order, k) => {
     order.modules.forEach((id, p) => {
       if (excluded.has(id)) errors.push(`${at}[${k}].modules[${p}]: ${quoted(id)} is excluded from slot '${slot.slot}' (excludedPieceIds), so the order could not serve it`);
@@ -430,12 +575,16 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
     pins.forEach((pin, p) => {
       if (order.modules[p] !== pin) errors.push(`${at}[${k}].modules[${p}]: the slot pins ${quoted(pin)} at position ${p + 1}; an order keeps every pinned module at its position`);
     });
+    // P04: and every module pinned at a position, at that position.
+    for (const pin of slot.positionPins ?? []) {
+      if (order.modules[pin.position - 1] !== pin.pieceId) errors.push(`${at}[${k}].modules[${pin.position - 1}]: the slot pins ${quoted(pin.pieceId)} at position ${pin.position} (positionPins); an order keeps every pinned module at its position`);
+    }
     for (let j = 0; j < k; j++) {
       const a = orders[j]!.context, b = order.context;
-      const same = a.channel === b.channel && bucketsOf(a).length === bucketsOf(b).length && bucketsOf(a).every(v => bucketsOf(b).includes(v))
-        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any');
+      const same = a.channel === b.channel && bucketsOf(a, terms).length === bucketsOf(b, terms).length && bucketsOf(a, terms).every(v => bucketsOf(b, terms).includes(v))
+        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any') && a.device === b.device;
       if (same) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
-      const shared = sharedShopper(a, b);
+      const shared = sharedShopper(a, b, terms);
       if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {
         errors.push(`${at}[${k}].context: ${contextWords(b)} and orders[${j}] (${contextWords(a)}) both match one shopper (${shared}) with equal specificity ${contextSpecificity(b)}; the most specific context must decide, so make one more specific or remove one`);
       }
@@ -481,7 +630,7 @@ export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, c
  *   it ignores every member introduced after it.
  */
 function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3 | 4,
-  earlyMark: 1 | 2 | 3 | null = null): SlotStrategy | null {
+  earlyMark: 1 | 2 | 3 | null = null, terms: SlotTerms = TODAY_TERMS): SlotStrategy | null {
   const at = `pages.${page}[${i}]`;
   if (!isRecord(s)) { errors.push(`${at}: must be an object`); return null; }
   const slot = s.slot;
@@ -597,7 +746,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
   // the rules are scored against the weights that stand beside them.
   let seeds: SeedRule[] | undefined;
   if (s.seeds !== undefined) {
-    const checked = validateSeedRules(s.seeds, weights);
+    const checked = validateSeedRules(s.seeds, weights, terms);
     if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.seeds${error}`);
     else seeds = checked.value;
   }
@@ -618,11 +767,35 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
   let orders: ConfiguredOrder[] | undefined;
   if (carriesOrders(s)) {
     if (governance >= LAYOUT_GOVERNANCE_VERSION) {
-      const checked = validateOrders(s.orders, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50);
+      const checked = validateOrders(s.orders, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50, terms);
       if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.orders${error}`);
       else orders = checked.value;
     } else if (earlyMark !== null) {
       errors.push(`${at}.orders: per-context orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
+  // P04: the layout slot's position pins and off-limits marks, version-4
+  // members like the declaration itself. An empty list carries nothing and is
+  // not kept; how they relate to the rest of the slot and the page are
+  // authoring rules of `validateSlotCatalog`, never reinterpreted on a read.
+  let positionPins: PositionPin[] | undefined;
+  if (carriesList(s, 'positionPins')) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validatePositionPins(s.positionPins, isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50 ? take : 50);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.positionPins${error}`);
+      else positionPins = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.positionPins: modules pinned at a position need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
+  let offLimitsPieceIds: string[] | undefined;
+  if (carriesList(s, 'offLimitsPieceIds')) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateOffLimitsPieceIds(s.offLimitsPieceIds);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.offLimitsPieceIds${error}`);
+      else offLimitsPieceIds = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.offLimitsPieceIds: off-limits modules need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
     }
   }
   // P10: the slot's own signal floor, read under every governance version like
@@ -642,10 +815,11 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
     ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
     ...(signalFloor !== undefined ? { signalFloor } : {}),
+    ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
   };
 }
 
-function parseSlotCatalog(candidate: unknown, current = false): ValidationResult<SlotCatalog> {
+function parseSlotCatalog(candidate: unknown, current = false, terms: SlotTerms = TODAY_TERMS): ValidationResult<SlotCatalog> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['slots: must be an object'] };
   const marked = Object.hasOwn(candidate, 'governanceVersion');
@@ -659,8 +833,9 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
   // than 4 ignores the member, as it ignores every later member.
   // P01: per-context orders are a version-4 member too, so an unmarked write
   // carrying them is read under version 4 and refused there if misplaced.
+  // P04: as are position pins and off-limits marks.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s)));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -679,7 +854,7 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
     if (!Array.isArray(list)) { errors.push(`pages.${page}: must be an array`); continue; }
     const seen = new Set<string>();
     const slots: SlotStrategy[] = [];
-    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance, earlyMark); if (v) slots.push(v); });
+    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance, earlyMark, terms); if (v) slots.push(v); });
     pages[page] = slots;
   }
   if (errors.length) return { ok: false, errors };
@@ -687,9 +862,14 @@ function parseSlotCatalog(candidate: unknown, current = false): ValidationResult
     ...(isSignalCount(signalFloor) ? { signalFloor } : {}), pages } };
 }
 
-/** Publication rejects local contradictions without reinterpreting retained revisions. */
-export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {
-  const checked = parseSlotCatalog(candidate, true);
+/**
+ * Publication rejects local contradictions without reinterpreting retained revisions.
+ * One argument: today's terms, the six channel words and 1, 2-3, 4+ (a tenant
+ * without the settings). P36 (R-P46): the authoring door passes the tenant's
+ * terms, and the publication store, which holds no tenant, the grammar alone.
+ */
+export function validateSlotCatalog(candidate: unknown, terms: SlotTerms = TODAY_TERMS): ValidationResult<SlotCatalog> {
+  const checked = parseSlotCatalog(candidate, true, terms);
   if (!checked.ok) return checked;
   const errors: string[] = [];
   /**
@@ -730,7 +910,13 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
   // P01: per-context orders, refused where they are authored whenever they
   // could not be served exactly (a retained document is never reinterpreted).
   for (const [page, slots] of Object.entries(checked.value.pages)) {
-    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots)); });
+    slots.forEach((slot, index) => { if (slot.orders) errors.push(...orderAuthoringErrors(page, index, slot, slots, terms)); });
+  }
+  // P04: position pins and off-limits marks, refused where they are authored
+  // whenever they could not be served as published (a retained document is
+  // never reinterpreted).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => errors.push(...moduleRuleAuthoringErrors(page, index, slot)));
   }
   // P10 (F3): `never` keeps a slot context-only for every shopper, which is what
   // makes a page's layout one answer per context; it is published only on the
@@ -752,6 +938,12 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
         const owner = owners.get(id);
         if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: pinnedPieceId duplicates pin in ${owner}`);
         else owners.set(id, slot.slot);
+      }
+      // P04: a module pinned at a position is reserved page-wide, as a prefix pin is.
+      for (const pin of slot.positionPins ?? []) {
+        const owner = owners.get(pin.pieceId);
+        if (owner === undefined) owners.set(pin.pieceId, slot.slot);
+        else if (owner !== slot.slot) errors.push(`pages.${page}.${slot.slot}: positionPins pins ${quoted(pin.pieceId)}, which ${owner} already pins; a pin reserves its module page-wide`);
       }
     }
   }
@@ -814,11 +1006,27 @@ export const DEFAULT_SLOTS: SlotCatalog = {
   },
 };
 
+/**
+ * P36 (R-P46): whether a slots document names anything a tenant's context
+ * vocabulary decides — a seed rule on the channel, the source platform or the
+ * landing-page type, or a per-context order — so the authoring door reads the
+ * tenant's learn document only for such a document.
+ */
+export function slotsNameContext(candidate: unknown): boolean {
+  if (!isRecord(candidate) || !isRecord(candidate.pages)) return false;
+  return Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => isRecord(s)
+    && (carriesOrders(s) || (Array.isArray(s.seeds) && s.seeds.some(r => isRecord(r) && ['entry_channel', 'source_platform', 'landing_page_type'].includes(String(r.signal)))))));
+}
+
 export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
   name: 'slots',
   publication: 'r2',
-  validate: validateSlotCatalog,
-  validateStored: (candidate) => parseSlotCatalog(candidate),
+  // P36: the store holds no tenant, so it reads a channel, a bucket, a source
+  // platform or a landing-page type by its grammar alone; the authoring door
+  // (src/routes/content.ts) checks each against the tenant's own vocabulary
+  // first, and the decision reads every rule against it again.
+  validate: (candidate) => validateSlotCatalog(candidate, 'grammar'),
+  validateStored: (candidate) => parseSlotCatalog(candidate, false, 'grammar'),
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'slots', r) }),
   versionOf: (v) => v.version ?? '',
 };
@@ -880,6 +1088,105 @@ export function learnBlendLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slots:
   return errors;
 }
 
+// ── P36: the context vocabulary (the learn document's `contextVocabulary`) ──
+
+/** The value a refusal names, printed in full up to a bound, so a long id is still named. */
+function shown(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value) ?? typeof value;
+  return `'${[...text.slice(0, 160)].map((ch) => { const code = ch.codePointAt(0)!; return code < 0x20 || (code >= 0x7f && code <= 0x9f) ? ' ' : ch; }).join('')}'${text.length > 160 ? '\u2026' : ''}`;
+}
+const CONTEXT_ID_WORDS = 'lower case letters, digits and underscores, starting with a letter, at most 64 characters, and neither unknown nor any';
+/** A registrable domain as the network tables write one: lower case labels joined by dots. */
+const DOMAIN = /^(?=.{3,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+/** The ladder's key letters in today's order (R-P51: the only order a vocabulary may name). */
+const LADDER_ORDER: readonly string[] = ['c', 'v', 's', 'r', 'a'];
+const VOCABULARY_MEMBERS = new Set(['channels', 'rules', 'sourcePlatforms', 'landingPageTypes', 'visitBuckets', 'ladder']);
+const RULE_MEMBERS = new Set(['channel', 'utmMedium', 'utmSource', 'utmCampaign', 'referrer', 'untagged']);
+const VOCABULARY_LIST_MAX = 64, VOCABULARY_RULES_MAX = 200, VOCABULARY_VALUES_MAX = 64, VOCABULARY_BUCKETS_MAX = 16, VOCABULARY_BOUND_MAX = 10_000;
+
+/** One list of `{ id, name }` values (with `extra` members), each id in the grammar and listed once. */
+function vocabularyIds(raw: unknown, at: string, errors: string[], extra?: (v: Record<string, unknown>, at: string) => void): string[] {
+  const ids: string[] = [];
+  if (!Array.isArray(raw) || raw.length > VOCABULARY_LIST_MAX) { errors.push(`${at}: a list of at most ${VOCABULARY_LIST_MAX} { id, name } values`); return ids; }
+  Array.from(raw).forEach((v: unknown, i) => {
+    const here = `${at}[${i}]`;
+    if (!isRecord(v)) { errors.push(`${here}: an object { id, name }`); return; }
+    const keys = extra ? ['id', 'name', 'networks'] : ['id', 'name'];
+    for (const key of Object.keys(v)) if (!keys.includes(key)) errors.push(`${here}.${key}: not a member of this value (${keys.join(', ')})`);
+    if (!isContextId(v.id)) errors.push(`${here}.id: ${shown(v.id)} is not an id: ${CONTEXT_ID_WORDS}`);
+    else if (ids.includes(v.id)) errors.push(`${here}.id: ${shown(v.id)} is listed twice`);
+    else ids.push(v.id);
+    if (!isStr(v.name) || v.name.length > 128) errors.push(`${here}.name: a name of 1..128 characters`);
+    extra?.(v, here);
+  });
+  return ids;
+}
+/** A rule's list condition: 1..64 non-empty strings of at most 256 characters. */
+function vocabularyTokens(raw: unknown, at: string, errors: string[]): void {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > VOCABULARY_VALUES_MAX || !Array.from(raw).every((v) => isStr(v) && v.trim() !== '' && v.length <= 256)) {
+    errors.push(`${at}: a list of 1..${VOCABULARY_VALUES_MAX} non-empty values of at most 256 characters, got ${shown(raw)}`);
+  }
+}
+/** A list of registrable domains, as a network is named. */
+function vocabularyDomains(raw: unknown, at: string, errors: string[]): void {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > VOCABULARY_VALUES_MAX) { errors.push(`${at}: a list of 1..${VOCABULARY_VALUES_MAX} registrable domains`); return; }
+  Array.from(raw).forEach((v: unknown, i) => { if (typeof v !== 'string' || !DOMAIN.test(v)) errors.push(`${at}[${i}]: ${shown(v)} is not a registrable domain in lower case (for example example.com)`); });
+}
+
+/**
+ * P36 (decision D1, R-P46, R-P51, R-P52): the context vocabulary, refused whole
+ * on any error, each error naming `contextVocabulary`, the member and the
+ * offending value. `visitBuckets` and `ladder` are optional (today's cut and
+ * today's order at depth 5 when omitted); the ladder's order is today's
+ * c, v, s, r, a and nothing else, its depth 1 to the order's length; the cut's
+ * bounds are whole numbers strictly ascending from 1. The value is kept exactly
+ * as authored.
+ */
+export function validateContextVocabulary(raw: unknown): ValidationResult<ContextVocabulary> {
+  const at = 'contextVocabulary', errors: string[] = [];
+  if (!isRecord(raw)) return { ok: false, errors: [`${at}: an object of channels, rules, sourcePlatforms, landingPageTypes, and optionally visitBuckets and ladder`] };
+  for (const key of Object.keys(raw)) if (!VOCABULARY_MEMBERS.has(key)) errors.push(`${at}.${key}: not a member of the context vocabulary (${[...VOCABULARY_MEMBERS].join(', ')})`);
+  const channels = vocabularyIds(raw.channels, `${at}.channels`, errors);
+  if (Array.isArray(raw.channels) && raw.channels.length === 0) errors.push(`${at}.channels: at least one channel value`);
+  if (!Array.isArray(raw.rules) || raw.rules.length > VOCABULARY_RULES_MAX) errors.push(`${at}.rules: a list of at most ${VOCABULARY_RULES_MAX} classification rules`);
+  else Array.from(raw.rules).forEach((rule: unknown, i) => {
+    const here = `${at}.rules[${i}]`;
+    if (!isRecord(rule)) { errors.push(`${here}: an object { channel, and at least one of utmMedium, utmSource, utmCampaign, referrer, untagged }`); return; }
+    for (const key of Object.keys(rule)) if (!RULE_MEMBERS.has(key)) errors.push(`${here}.${key}: not a member of a rule (${[...RULE_MEMBERS].join(', ')})`);
+    if (typeof rule.channel !== 'string' || !channels.includes(rule.channel)) errors.push(`${here}.channel: ${shown(rule.channel)} is not one of the vocabulary's channel ids`);
+    if (!['utmMedium', 'utmSource', 'utmCampaign', 'referrer', 'untagged'].some((key) => rule[key] !== undefined)) errors.push(`${here}: names at least one condition (utmMedium, utmSource, utmCampaign, referrer or untagged)`);
+    for (const key of ['utmMedium', 'utmSource', 'utmCampaign'] as const) if (rule[key] !== undefined) vocabularyTokens(rule[key], `${here}.${key}`, errors);
+    if (rule.referrer !== undefined && rule.referrer !== 'none' && rule.referrer !== 'external') vocabularyDomains(rule.referrer, `${here}.referrer`, errors);
+    if (rule.untagged !== undefined && rule.untagged !== true) errors.push(`${here}.untagged: true when present (no utm_medium, utm_source or utm_campaign declared)`);
+  });
+  vocabularyIds(raw.sourcePlatforms, `${at}.sourcePlatforms`, errors, (v, here) => vocabularyDomains(v.networks, `${here}.networks`, errors));
+  vocabularyIds(raw.landingPageTypes, `${at}.landingPageTypes`, errors);
+  if (raw.visitBuckets !== undefined) {
+    const cut = raw.visitBuckets;
+    const whole = Array.isArray(cut) && cut.length >= 1 && cut.length <= VOCABULARY_BUCKETS_MAX
+      && Array.from(cut).every((b: unknown) => typeof b === 'number' && Number.isSafeInteger(b) && b >= 1 && b <= VOCABULARY_BOUND_MAX);
+    if (!whole || (cut as number[])[0] !== 1 || (cut as number[]).some((b, i, all) => i > 0 && b <= all[i - 1]!)) {
+      errors.push(`${at}.visitBuckets: ${shown(cut)} is not a cut; the lower bounds of the visit buckets are 1..${VOCABULARY_BUCKETS_MAX} whole numbers strictly ascending from 1 (today's cut is [1, 2, 4]: buckets 1, 2-3 and 4+)`);
+    }
+  }
+  if (raw.ladder !== undefined) {
+    const ladder = raw.ladder;
+    if (!isRecord(ladder) || !hasExactly(ladder, ['order', 'depth'])) errors.push(`${at}.ladder: { order, depth } and nothing else`);
+    else {
+      const order = ladder.order;
+      if (!Array.isArray(order) || order.length !== LADDER_ORDER.length || !Array.from(order).every((k: unknown, i) => k === LADDER_ORDER[i])) {
+        errors.push(`${at}.ladder.order: ${shown(order)} is not the ladder's order; the order is c, v, s, r, a (channel, visit bucket, stage, region, affinity), and only its depth is set here`);
+      }
+      const depth = ladder.depth;
+      if (typeof depth !== 'number' || !Number.isSafeInteger(depth) || depth < 1 || depth > LADDER_ORDER.length) {
+        errors.push(`${at}.ladder.depth: ${shown(depth)} is not a depth; the levels consulted below everyone are a whole number from 1 to ${LADDER_ORDER.length}`);
+      }
+    }
+  }
+  if (errors.length) return { ok: false, errors };
+  return { ok: true, value: structuredClone(raw) as unknown as ContextVocabulary };
+}
+
 function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['learn: must be an object'] };
@@ -904,6 +1211,27 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (dimensions === null) errors.push(`regional.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
       if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents, ...(dimensions ? { dimensions } : {}) };
     }
+  }
+  // P07 (decision D1, freeze item 22): the context prior's own block, in the
+  // regional block's grammar — `enabled`, its own K (`kBlend`), `minEvents` and
+  // optional `dimensions`. Absent is off, so a document without it decides
+  // exactly as before. A new write that gets it wrong is refused, naming the
+  // member; a RETAINED document whose block the current contract refuses keeps
+  // reading with the block dropped, never partially applied.
+  let contextPrior: LearnConfig['contextPrior'];
+  if (candidate.contextPrior !== undefined) {
+    const g = candidate.contextPrior;
+    const refused: string[] = [];
+    if (!isRecord(g)) refused.push('contextPrior: object when present');
+    else {
+      if (typeof g.enabled !== 'boolean') refused.push('contextPrior.enabled: boolean');
+      if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) refused.push('contextPrior.kBlend: number in (0, 100]');
+      if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) refused.push('contextPrior.minEvents: positive integer');
+      const dimensions = g.dimensions === undefined ? undefined : regionalDimensionsOf(g.dimensions);
+      if (dimensions === null) refused.push(`contextPrior.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
+      if (!refused.length) contextPrior = { enabled: g.enabled as boolean, kBlend: g.kBlend as number, minEvents: g.minEvents as number, ...(dimensions ? { dimensions } : {}) };
+    }
+    if (!historical) errors.push(...refused);
   }
   const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
   let policy: LearnConfig['policy'];
@@ -950,6 +1278,16 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (g.fallback !== undefined && g.fallback !== 'omit') errors.push('external.fallback: omit');
       if (!errors.some((e) => e.startsWith('external'))) external = { kind: g.kind as 'service' | 'table' | 'workers_ai', ref: g.ref.trim(), timeoutMs: timeoutMs as number, fallback: 'omit' };
     }
+  }
+  // P36: the tenant's context vocabulary. A new document is refused whole on
+  // any error, naming the member and the offending value; a RETAINED document
+  // whose vocabulary the current contract refuses keeps reading with the member
+  // dropped (today's six words, cut and ladder), never partially applied.
+  let contextVocabulary: LearnConfig['contextVocabulary'];
+  if (candidate.contextVocabulary !== undefined) {
+    const checked = validateContextVocabulary(candidate.contextVocabulary);
+    if (checked.ok) contextVocabulary = checked.value;
+    else if (!historical) errors.push(...checked.errors);
   }
   let slots: LearnConfig['slots'];
   if (candidate.slots !== undefined) {
@@ -1021,10 +1359,12 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(isStr(candidate.version) ? { version: candidate.version } : {}),
       holdout: { share: h.share as number, salt: (h.salt as string | undefined) ?? '', arms: [...(arms as LearnConfig['holdout']['arms'])] },
       ...(regional ? { regional } : {}),
+      ...(contextPrior ? { contextPrior } : {}),
       ...(policy ? { policy } : {}),
       ...(stats ? { stats } : {}),
       ...(external ? { external } : {}),
       ...(slots ? { slots } : {}),
+      ...(contextVocabulary ? { contextVocabulary } : {}),
     },
   };
 }
