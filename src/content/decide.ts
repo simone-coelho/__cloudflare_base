@@ -11,9 +11,9 @@ import type {
 } from './types';
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
-import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals } from '@/services/visit';
+import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
 import { TODAY_TERMS, type ContextTerms } from './cell';
-import type { PlatformWord } from '@/services/platform';
+import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey } from '@/reflex/core';
 import { isEligibleAt, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
@@ -101,6 +101,22 @@ export interface DecideInput {
    * recorded on the receipt as a driver; nothing finer is read or kept.
    */
   platform?: PlatformWord | null;
+  /**
+   * P37: the device class the request itself reports (`mobile` or `desktop`;
+   * src/services/platform.ts), for seed rules that read `device` and for a
+   * configured order whose context names a device. Observed context, like
+   * `platform`: a fired seed (its signal and value) is recorded on the receipt as
+   * a driver, and an order placed for it carries the context as published.
+   * Absent: no device, so no device rule fires and no device context matches.
+   */
+  device?: DeviceClass | null;
+  /**
+   * P37: the recency bucket of the shopper's visit, from the stored last visit
+   * (the visit in progress records it; a visit about to open derives it), for
+   * seed rules that read `recency`. Absent: a first visit or none known, so no
+   * recency rule fires.
+   */
+  recency?: RecencyBucket | null;
   /**
    * The shopper's OWN current audience memberships, for a seed rule's
    * `dampen`. Never the regional prior and never asserted context. Absent
@@ -490,7 +506,9 @@ const KNOWN_BUCKET = /^(?:[1-9][0-9]{0,4}|[1-9][0-9]{0,4}-[1-9][0-9]{0,4}|[1-9][
  * slot, or null. Only the page's declared layout slot carries orders. A context
  * matches when its channel is the shopper's or `any` and its visit buckets hold
  * the shopper's or are `any`; an unknown channel or visit bucket matches no
- * context, not even one that names `any`. The most specific match wins; a tie at
+ * context, not even one that names `any`. P37: a context that names a device
+ * matches only a request reporting that device, and one that names none matches
+ * every device, so a receipted order keeps its meaning. The most specific match wins; a tie at
  * the top, which publication refuses, decides nothing and leaves the slot its
  * own decision. Pure, total and cheap: it reads only the slot and the cell the
  * decision already holds, and nothing in it can throw on a validated document.
@@ -499,7 +517,7 @@ const KNOWN_BUCKET = /^(?:[1-9][0-9]{0,4}|[1-9][0-9]{0,4}-[1-9][0-9]{0,4}|[1-9][
  * order supplies the blend's rank base and its listed modules are ranked by
  * the blend, an unlisted module staying hidden.
  */
-export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>): ConfiguredOrder | null {
+export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>, device?: DeviceClass | null): ConfiguredOrder | null {
   if (slot.layout !== true || !Array.isArray(slot.orders) || slot.orders.length === 0) return null;
   const channel = cell.channel, bucket = cell.visit_bucket;
   if ((entryChannelOf(channel) !== channel && !isContextId(channel)) || typeof bucket !== 'string' || !KNOWN_BUCKET.test(bucket)) return null;
@@ -508,6 +526,7 @@ export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>
     const context = order?.context;
     if (!context || (context.channel !== 'any' && context.channel !== channel)) continue;
     if (context.visitBuckets !== 'any' && !(Array.isArray(context.visitBuckets) && context.visitBuckets.includes(bucket))) continue;
+    if (context.device !== undefined && context.device !== device) continue;
     const specificity = contextSpecificity(context);
     if (specificity > bestSpecificity) { best = order; bestSpecificity = specificity; tied = false; }
     else if (specificity === bestSpecificity) tied = true;
@@ -518,9 +537,10 @@ export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>
 /** P28: the blend's terms as a record and a receipt carry them: R, B and Q at three decimals, p as published, keys sorted. */
 const blendRecord = (terms: LayoutBlendTerms): LayoutBlendTerms => ({ B: r3(terms.B), Q: r3(terms.Q), R: r3(terms.R), p: terms.p });
 
-/** The configured order as a record and a receipt carry it: the context as published and the whole order, keys sorted. */
+/** The configured order as a record and a receipt carry it: the context as published (P37: its device only when named) and the whole order, keys sorted. */
 const configuredOrderRecord = (order: ConfiguredOrder): ConfiguredOrder => ({
-  context: { channel: order.context.channel, visitBuckets: order.context.visitBuckets === 'any' ? 'any' : [...order.context.visitBuckets] },
+  context: { channel: order.context.channel, ...(order.context.device !== undefined ? { device: order.context.device } : {}),
+    visitBuckets: order.context.visitBuckets === 'any' ? 'any' : [...order.context.visitBuckets] },
   modules: [...order.modules],
 });
 
@@ -568,7 +588,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // composer then serves it unless the slot's exploration picks on this decision.
   const configured = new Map<string, ConfiguredOrder>();
   if (i.arm !== 'default') for (const s of i.slots) {
-    const order = configuredOrderFor(s, i.cell);
+    const order = configuredOrderFor(s, i.cell, i.device);
     if (order) configured.set(s.slot, order);
   }
   // P28 (decision D1): the page's declared layout slot whose learn dials opt
@@ -676,7 +696,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
           // P36: the visit's recorded context attributes.
           : rule.signal === 'source_platform' ? i.visitContext?.sourcePlatform === rule.value
             : rule.signal === 'landing_page_type' ? i.visitContext?.landingPageType === rule.value
-              : arrivedFromNetwork(i.entry, rule.value);
+              // P37: the request's own device class and the visit's recency bucket.
+              : rule.signal === 'device' ? i.device != null && i.device === rule.value
+                : rule.signal === 'recency' ? i.recency != null && i.recency === rule.value
+                  : arrivedFromNetwork(i.entry, rule.value);
   // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
   const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));

@@ -9,6 +9,7 @@ import type { SlotConstraintReason } from './slotConstraints';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
 import type { ContextVocabulary } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -270,9 +271,14 @@ export type SignalFloor = number | 'never';
  * P36 (R-P46): on a tenant that publishes a context vocabulary the channel is
  * one of its channel ids and the buckets are the names of its published cut;
  * a tenant without the settings keeps the six words and 1, 2-3, 4+.
+ * P37: a context may also name a device class (`mobile` or `desktop`, a tablet
+ * counting as desktop), one more part of its specificity; a context that names
+ * none matches every device, and a shopper whose request reports no device
+ * matches no context that names one.
  */
 export interface OrderContext {
   channel: string;
+  device?: DeviceClass;
   visitBuckets: string[] | 'any';
 }
 
@@ -291,9 +297,13 @@ export interface ComplementsRule { weight: number }
 /**
  * The arrival signals a seed rule may read. Each is context, never learned
  * evidence. `platform` is the OS family the request itself reports (`ios` or
- * `android`, nothing finer; src/services/platform.ts).
+ * `android`, nothing finer; src/services/platform.ts). P37: `device` is the
+ * device class the request itself reports (`mobile` or `desktop`), and
+ * `recency` the recency bucket of the shopper's visit from the stored last visit
+ * (`same_day`, `within_7_days`, `8_to_30_days` or `30_and_more`; a first visit
+ * has none and fires no recency rule).
  */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform' | 'source_platform' | 'landing_page_type';
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform' | 'source_platform' | 'landing_page_type' | 'device' | 'recency';
 
 /**
  * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
@@ -319,7 +329,8 @@ export interface SeedRule {
    * known network's registrable domain for `referrer_network`, `ios` or
    * `android` for `platform`, and one of the tenant's source platform ids or
    * landing-page type ids for `source_platform` and `landing_page_type` (P36,
-   * read off the shopper's visit).
+   * read off the shopper's visit); P37: `mobile` or `desktop` for `device`, and
+   * one of the four bucket ids for `recency`.
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */

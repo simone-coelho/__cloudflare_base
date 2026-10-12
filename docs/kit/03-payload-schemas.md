@@ -109,7 +109,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
-| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` An off-limits module held at its place in the order (P04) carries it too, beside `explain.moduleRule` |
+| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }` (with `device` in the context when the order names one, `{ channel, device, visitBuckets }`), the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` An off-limits module held at its place in the order (P04) carries it too, beside `explain.moduleRule` |
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
@@ -398,6 +398,14 @@ an `entry_channel` rule names one of the tenant's channel ids exactly (for examp
 `paid_search_brand`), and any other word, one of today's six included, is refused naming `entry_channel`; a
 tenant without the settings keeps the six words exactly. Two more signals read the shopper's visit: `source_platform` names one of the tenant's source platform ids and `landing_page_type` one of its landing-page type ids, and a rule fires for a shopper whose visit records that value, at `weight × the slot's weight`, itemised on `explain.contextual` and the receipt's "Arrival context" sentence as every seed rule is. A tenant without the settings publishes neither and a rule naming either is refused.
 
+Two signals need no setting at all ([device and recency](#device-and-recency)): `device` and `recency` are seed-signal keys
+on every tenant. A `device` rule names `mobile` or `desktop` and fires for a snapshot request that reports that
+device class (the client hint `Sec-CH-UA-Mobile`, else the user agent; a tablet counts as desktop); a request
+reporting no device fires none. A `recency` rule names one of `same_day`, `within_7_days`, `8_to_30_days` or `30_and_more`
+and fires for a shopper whose visit is in that bucket; a first visit has no recency and fires no recency rule.
+Either fires at `weight × the slot's weight`, itemised on `explain.contextual` and on the receipt's "Arrival
+context" sentence, the recency in words ("recency within 7 days"); any other value refuses the write naming the rule.
+
 ### Content format affinity
 
 `type` remains the rendering kind. For a known `contentId`, both event hosts learn the held tenant
@@ -572,7 +580,11 @@ on no other slot. Each order is exactly `{ context, modules }`. `context` is exa
 visitBuckets }`: `channel` is one of the six channel words `direct`, `paid_social`, `paid_search`,
 `email`, `organic`, `referral`, or `any`; `visitBuckets` is a non-empty list of distinct visit buckets
 `1`, `2-3`, `4+`, or `any`. A context's specificity is the number of its two parts that are not `any`
-(0 to 2). A shopper matches a context when the shopper's channel is its channel or it names `any`, and
+(0 to 2). A context may also name a device class, `{ channel, device, visitBuckets }` with `device` `mobile` or
+`desktop` (a tablet counts as desktop), beside or, with `any`, instead of the channel and the visit buckets: a named
+device is one more part of its specificity (so 0 to 3), a context naming a device matches only a shopper whose
+snapshot request reports that device, and a context naming none matches every device, so an order published
+without one keeps its meaning and its replay marker ([device and recency](#device-and-recency)). A shopper matches a context when the shopper's channel is its channel or it names `any`, and
 the shopper's visit bucket is in its list or it names `any`; a shopper whose channel or visit bucket is unknown matches no
 context, not even one that names `any`. Of the contexts a shopper matches, the most specific decides, and
 publication refuses two contexts that match one shopper with equal specificity, so there is never a tie
@@ -1076,6 +1088,26 @@ no other part of the difference is explained by it. A row without `conflicts` na
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
+
+## Device and recency
+
+Two parts of a shopper's arrival are first-paint context on both shopper hosts, read with no setting:
+
+| Member | Values | Read from |
+|---|---|---|
+| `device` | `mobile`, `desktop` | The request's client hint `Sec-CH-UA-Mobile` when present (`?1` mobile, `?0` desktop), else its user agent: a phone (an iPhone, an Android user agent carrying `Mobile`) is mobile, a tablet (an iPad, an Android user agent without `Mobile`) counts as desktop, and so does every other browser. A request carrying neither the hint nor a browser's user agent has no device, never a guess; the user agent itself is never kept |
+| `recency` | `same_day`, `within_7_days`, `8_to_30_days`, `30_and_more` | The whole days from the start of the shopper's stored last visit to the moment the visit opens: under 1, 1 to 7, 8 to fewer than 30, 30 or more. A first visit has no recency. A shopper record on the session host expires 30 days after its last write, so a return after 30 days or more there is a first visit |
+
+The event that opens a visit records both on the visit, each only when there is one, inside the shopper's
+existing record (`metadata.device` and `metadata.recency` on the session host, `device` and `recency` on the
+shopper object's pipeline record), and keeps them for the visit; no other event and no read changes them.
+`GET /realtime/reflex` answers them as `arrival: { device?, recency? }` beside `visit`: the device and the
+recency the visit records, a member only when there is one, `{}` when there is neither, and for a visit that would
+open now the recency its stored last visit gives it. `arrival` is null exactly where `visit` is, and `visit` keeps
+its shape. As seed-signal keys `device` and `recency` are read by a decision from the snapshot request's own device
+and the visit's recency ([contextual seed rules](#contextual-seed-rules)); as a term of a per-context order's
+context, `device` sits beside `channel` and `visitBuckets` ([per-context orders](#per-context-orders)). The decision
+cell, its grammar and the learning ladder do not change: neither is a learning-cell level.
 
 ## The interest hydrate's restoration provenance
 

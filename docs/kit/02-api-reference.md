@@ -264,7 +264,10 @@ entry channel — one of the six channel words `direct`, `paid_social`, `paid_se
 `referral` — or `any`, with one or more visit buckets (`1`, `2-3`, `4+`) or `any`; its specificity is the
 number of those two parts that are not `any`, and the most specific context that matches the shopper
 decides. A shopper whose channel or visit bucket is unknown matches no context, not even one that names
-`any`. The next snapshot for a shopper in that context returns the order's modules exactly, position by
+`any`. A context may also name a device class, `device` `mobile` or `desktop` (a tablet counts as desktop),
+beside or, with `any`, instead of the channel and the visit buckets: a named device is one more part of its
+specificity, a context naming no device matches every device, and a shopper whose request reports no
+device matches no context that names one ([device and recency](#device-and-recency-device-recency)). The next snapshot for a shopper in that context returns the order's modules exactly, position by
 position, in `order`: an order may list fewer modules than the slot's `take`, and a module it does not
 list is hidden in that context — not returned, never offered for a render acknowledgement and never
 counted as an exposure. On a layout slot that does not opt into the layout blend (below) the order is
@@ -967,7 +970,7 @@ the offending value in `errors[]` and writing no revision, an order that names a
 published catalogue registers for the slot (a piece with that `id` whose `slotTypes` names the slot), a
 module the slot's excluded tags or allowed types refuse, a module the slot excludes by id or another slot
 of the page pins, or one module twice; a context outside the six channel words, `any` and the visit
-buckets (`unknown` is not a context word); two orders for one context; two contexts that match one shopper
+buckets (`unknown` is not a context word), or naming a `device` other than `mobile` or `desktop`; two orders for one context; two contexts that match one shopper
 with equal specificity; an order on a slot that is not the page's declared layout slot or that is
 off-limits; an order that does not keep the slot's pinned modules at their positions; and an order of no
 module or of more than `take` modules. A write marked 1, 2 or 3 that carries `orders` is refused naming
@@ -1155,6 +1158,49 @@ buckets `1`, `2-3`, `4+` and the full ladder, exactly. A vocabulary with nine ch
 - What is stored: a tenant without the settings stores no new member; a visit classified under a vocabulary
   stores the channel id, the source platform and the landing-page type it records, with the learn revision that
   classified it, inside the shopper's existing record.
+
+### Device and recency (`device`, `recency`)
+
+Two more parts of a shopper's arrival are read on both shopper hosts as first-paint context, with no setting
+to publish and nothing to deploy:
+
+- The device class: `mobile` or `desktop`, read at the edge from the request's client hint `Sec-CH-UA-Mobile`
+  when present (`?1` mobile, `?0` desktop), else from its user agent. A phone is mobile (an iPhone, or an
+  Android user agent carrying the `Mobile` token); a tablet counts as desktop (an iPad, an Android user agent
+  without `Mobile`), and so does every other browser. A request carrying neither the hint nor a browser's user
+  agent (a server-side caller, a script) has no device, never a guess. Only the class is kept, never the user agent.
+- The recency bucket: the whole days from the start of the shopper's stored last visit to the moment the visit
+  opens, one of `same_day`, `within_7_days`, `8_to_30_days` or `30_and_more` — same day under one full day,
+  within 7 days from 1 to 7 full days, 8 to 30 days from 8 to fewer than 30 full days, 30 and more from 30 full days.
+  A first visit has no recency: there is no stored last visit to measure it from. On the session host a shopper's
+  record expires 30 days after its last write, so a return after 30 days or more opens a first visit there.
+- What is recorded: the event that opens a visit (`POST /realtime/action`) records on the visit the device its
+  own request reports and the visit's recency bucket, each only when there is one, inside the shopper's existing
+  record, and both are kept for that visit: a later event of the same visit changes neither, and a read writes nothing.
+- The hydrate: `GET /realtime/reflex` answers `arrival: { device?, recency? }` beside `visit`, the device and the
+  recency the visit records (each member only when there is one, `{}` when there is neither; for a visit that
+  would open now, the recency its stored last visit gives it and no device yet). `arrival` is null exactly where
+  `visit` is, on both hosts, and `visit` itself is unchanged.
+- Seed-signal keys: `device` (`mobile` or `desktop`) and `recency` (one of the four bucket ids) are seed signals a
+  slot's seed rule may name; any other value refuses the write naming the rule. A decision reads the device from
+  the snapshot request itself and the recency from the shopper's visit, so both apply at first paint; a rule fires
+  at `weight × the slot's weight` like every seed rule, itemised on `explain.contextual` and on the receipt's
+  "Arrival context" sentence with the device named and the recency in words ("recency within 7 days").
+- The device term of a per-context order: an order's context may name `device` beside `channel` and `visitBuckets`
+  (`{ channel, device, visitBuckets }`), or instead of them with `any`; a named device is one more part of the
+  context's specificity, the most specific match wins and two contexts that match one shopper with equal
+  specificity are refused at publication, as before. A context naming no device matches every device, so an order
+  published without one keeps its meaning and writes `inputs.replay.orders: "configured-order-v1"` as before. The
+  record's and the receipt's `configuredOrder.context` carry the device as published, and the receipt's sentence
+  names it ("any channel, any visit, on mobile").
+- What does not change: the learning cell keeps its five keys, its grammar (`ladder-cell` version 2) and its six
+  ladder keys, and the context prior's populations stay keyed on the entry channel and the visit bucket, so a
+  priors file exported before imports as it did; device and recency are first-paint context, never learning-cell
+  levels. A tenant that publishes no device context and no device or recency rule decides exactly as before,
+  replay included; device and recency live on the visit inside the shopper's existing record, never under a
+  storage key of their own, and a visit with neither stores exactly what it stored before. A replay
+  passes no device and no recency to the decision, so a decision that a device or recency rule, or a device
+  context, moved does not replay equal: the replay gap request-context seeds already have.
 
 ## 5. Learning and transparency
 
