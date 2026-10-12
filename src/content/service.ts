@@ -34,6 +34,7 @@ import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, SlotCatalog } from './types';
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
+import { enqueueDecisions } from '@/ledger/enqueue';
 import { createRenderOffer } from './renderOffer';
 import { syntheticOperation } from '@/ops/synthetic';
 
@@ -695,6 +696,15 @@ export async function serveContentDecisions(
   lap('decide');
   if (consent.tracking) for (const record of set.records) record.retention = captureRetention(env, r.tenant, record.ts, now);
   for (const record of set.records) record.measurementBasis = configOf(record.slot).measurementBasis ?? 'served-v1';
+  // P29 (decision D2): the record of each off-limits declared layout slot — kept
+  // apart from `records`, so it never reaches the shopper's decision ring — is
+  // stamped like every record and recorded `served-v1`: it measures nothing,
+  // and every offline fold sets a served row of a rendered-v1 slot aside.
+  const offLimitsRecords = set.offLimitsRecords ?? [];
+  for (const record of offLimitsRecords) {
+    if (consent.tracking) record.retention = captureRetention(env, r.tenant, record.ts, now);
+    record.measurementBasis = 'served-v1';
+  }
   // P02 decision D1: the page's declared layout slot that its learn document
   // does not measure on rendered-v1, named on the set (keys sorted). Configuration
   // only — the same answer for every shopper on the page — and present only when
@@ -708,7 +718,7 @@ export async function serveContentDecisions(
   // W21 E1.03 (position 8): every arm-tagged record names the experiment it was
   // decided under, as the decision path answered it. The producer writes it so
   // that nothing downstream has to reconstruct it from a later configuration.
-  if (enrollment) for (const record of set.records) record.experiment = enrollment;
+  if (enrollment) for (const record of [...set.records, ...offLimitsRecords]) record.experiment = enrollment;
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
@@ -716,7 +726,7 @@ export async function serveContentDecisions(
   // shopper's, so it claims none.
   if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
-    for (const record of set.records) if (!record.explain.signalFloor) record.journey = journey;
+    for (const record of [...set.records, ...offLimitsRecords]) if (!record.explain.signalFloor) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
@@ -770,7 +780,23 @@ export async function serveContentDecisions(
   const anchorCounted = anchor?.unavailable && consent.tracking && !synthetic && !r.selfCheck
     ? recordAnchorUnavailable(env, scope, now)
     : Promise.resolve();
-  const afterResponse = Promise.all([captured, counted, anchorCounted]).then(() => undefined);
+  // P29 (decision D2): the off-limits layout slot's record goes to the ledger,
+  // and so to the export, after the answer, on the path every decision record
+  // takes there — the durable owner admission where it is enabled, the
+  // producer's queue otherwise — and never to the shopper's decision ring: the
+  // learning fan-out passes such a record over (`fanDecisions`), so it carries
+  // no exposure and no receipt reads it. Under the same three conditions the
+  // counters use, and only for a layout slot measured on rendered-v1 (P02
+  // decision D1), so every offline fold sets this served-v1 row aside as one
+  // recorded under another basis than its slot's. Its failure is swallowed:
+  // it loses this record and changes nothing served.
+  const offLimitsLedger = offLimitsRecords.filter(record => configOf(record.slot).measurementBasis === 'rendered-v1');
+  const offLimitsWritten = consent.tracking && !synthetic && !r.selfCheck && offLimitsLedger.length > 0
+    ? (env.LEDGER_RECOVERY_ENABLED === 'true'
+      ? recoverDecisions(env, { ...set, records: offLimitsLedger }, slotLearnConfigOf(learn))
+      : enqueueDecisions(env, offLimitsLedger)).then(() => undefined, () => undefined)
+    : Promise.resolve();
+  const afterResponse = Promise.all([captured, counted, anchorCounted, offLimitsWritten]).then(() => undefined);
 
   // P03 decision D3: every decision names its position within its slot — what its
   // record calls `position` — as `slotPosition`, beside the page-wide `order`, so
