@@ -1339,9 +1339,11 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "5ab683662b1ccef4ae184821cf02ccc1e1e4801c on rem/spec-p29-fix1 (fix round 1, R-P56 and R-P56 amended: the R1 lift-term leg with the mixed world and its control, the R5 kit lock, over the build head eb644ad1; specification review FAIL at 7bdecd80 on F1 then PASS at 5ab68366; the S2 fix-round gate at 8ecb223b kept below)",
+        "reviewedRevision": "a62648550edbaec6757374f53fada2b9cbb90aa1 on rem/spec-p29-fix2 (fix round 2, R-P57: the R1 diversity world per host over the fix-1 build head 7ca140da; specification review PASS; the fix-1 gate at 5ab68366 and the S2 fix-round gate at 8ecb223b kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/round2/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/specifier/round2/REPORT.md",
@@ -1351,6 +1353,12 @@
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/logs/after.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/logs/malt-P29.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/logs/mcont-P29.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/logs/mrule-P29.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer-spec/logs/stamprule-P29.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/specifier/logs/green-scratch.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/c4e-ref.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/mut-M4.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer-spec/logs/mut-MC.log",
