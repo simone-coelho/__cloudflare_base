@@ -72,6 +72,15 @@
 //       editorial.1 4 → 1 `lift`; reco.2 3 → 2, grid.1 1 → 3 (passed by
 //       editorial.1 on the lift and by reco.2 on interest) and reco.1 2 → 4
 //       `affinity`. Two terms differ here, so a slot-wide `lift` stamp fails.
+//       R-P57 (fix round 2): a module the exploration or diversity rule placed
+//       or displaced is compared like any other; the rule's term names a move
+//       only when the rule placed or displaced the moved module itself, else it
+//       is the fallback when no term separates. The diversity world (the
+//       verification's probe X1): q.1 and q.2 on one line, q.3 and q.4 on two
+//       others, q.2 frozen at 2, γ 1, the Tabby shopper, at most one module per
+//       line, take 3, served q.2, q.3, q.4: q.2 2 → 1 `lift` (it passed q.1 by
+//       its lift); q.3 3 → 2 and q.4 4 → 3 `diversity` (they moved because the
+//       rule displaced q.1, and no term separates them from it).
 //   R2  Each cause from its own scenario, on both hosts.
 //   R3  A shopper with no interest at all reads "No interest signal yet for this
 //       shopper"; a shopper whose only interest is on a dimension the layout
@@ -235,6 +244,33 @@ describe('unit:P29.R1', () => {
       const receipts = await acknowledgedReceipts(m, s, 'p29-r1-lift-mixed');
       expect(receipts.length, `${host}: PRECONDITION (mixed world) — a receipt for every acknowledged layout position`).toBe(4);
       expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P56 amended, mixed world) — and every receipt, read through the route`)
+        .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+    }, 60_000);
+
+    // R-P57: q.2, frozen at 2, passes q.1 by its lift; the rule (at most one module per line) then displaces q.1, the other
+    // module on q.2's line, so q.3 and q.4 take the places q.1 left. q.1 is compared like any other module: q.2 is separated
+    // from it by its lift, q.3 and q.4 by no term, so their term is the rule's.
+    it(`host (${host}): R-P57 — in a diversity slot a module moved by its lift past a module the rule displaced names lift, and the modules that took the displaced module's place name diversity: the whole moves list, keys sorted, on the decision set, every record and every receipt (rendered-v1, read through the route with render acknowledgements)`, async () => {
+      const Q = ['Tabby', 'Tabby', 'Willow', 'Rogue'].map((line, k) => ({ id: `module.PDP.q.${k + 1}`, customerContentId: `TAP-PDP-Q-${k + 1}`, type: 'editorial',
+        title: `Q ${k + 1}`, tags: { line: [line] }, slotTypes: [LAYOUT], journeyStageFit: ['considering'], lifecycle: { status: 'live' } }));
+      const [, q2, q3, q4] = Q.map(p => p.id) as [string, string, string, string];
+      const m = await mount(host, { pieces: Q, slots: slots({ take: 3, diversity: { dimension: 'line', max: 1 } }), learn: renderedLearn({ items: { [q2]: { mode: 'freeze', lift: 2 } } }) });
+      expectPublished(m, 'P29.R1 (R-P57, diversity world) — the declared layout slot with its diversity rule and the frozen lift publish');
+      const s = await shopper(m);
+      const set = await servePage(m, s, 'pdp');
+      const records = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect(records.map(r => r.item_id), `${host}: PRECONDITION (diversity world) — q.2's lift serves it first, the rule lets one module of its line in so q.1 yields, and q.3 and q.4 fill the take of 3`)
+        .toEqual([q2, q3, q4]);
+      const reason = reasonOfSet(set);
+      expect.soft(byPlace(reason), `${host}: P29.R1 (R-P57, diversity world) — q.2 moved from 2 to 1 by its lift of 2 past q.1, which the rule displaced, named lift; q.3 (3 → 2) and q.4 (4 → 3) moved because the rule displaced q.1 and no term separates them from it, each named diversity`)
+        .toEqual(keyed({ moves: [
+          { from: 2, module: q2, term: 'lift', to: 1 }, { from: 3, module: q3, term: 'diversity', to: 2 }, { from: 4, module: q4, term: 'diversity', to: 3 }],
+        slot: LAYOUT, status: 'changed' }));
+      expect.soft(records.map(r => [r.item_id, keyed(reasonOf(r) ?? null)]), `${host}: P29.R1 (R-P57, diversity world) — every record of the layout carries the set's reason, keys sorted`)
+        .toEqual(records.map(r => [r.item_id, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+      const receipts = await acknowledgedReceipts(m, s, 'p29-r1-diversity');
+      expect(receipts.length, `${host}: PRECONDITION (diversity world) — a receipt for every acknowledged layout position of the take of 3`).toBe(3);
+      expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P57, diversity world) — and every receipt, read through the route`)
         .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
     }, 60_000);
 
