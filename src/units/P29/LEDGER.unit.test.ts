@@ -63,6 +63,15 @@
 //       left out), on the set, every record and every receipt. The control:
 //       every module frozen at the same lift is unchanged, its one cause
 //       `catalogue_order_ties` (D1's order; R2's tie scenario).
+//       R-P56 amended (spec round 2): the term is the one by which the module
+//       differs most from the modules it passed or that passed it taken
+//       together, the per-term differences aggregated over them, an exact tie
+//       going to the first term of the engine's fixed order. The mixed world
+//       (the delivery review's probe C4e): MODULES, the Tabby shopper, γ 1,
+//       editorial.1 frozen at 2, served editorial.1, reco.2, grid.1, reco.1:
+//       editorial.1 4 → 1 `lift`; reco.2 3 → 2, grid.1 1 → 3 (passed by
+//       editorial.1 on the lift and by reco.2 on interest) and reco.1 2 → 4
+//       `affinity`. Two terms differ here, so a slot-wide `lift` stamp fails.
 //   R2  Each cause from its own scenario, on both hosts.
 //   R3  A shopper with no interest at all reads "No interest signal yet for this
 //       shopper"; a shopper whose only interest is on a dimension the layout
@@ -204,6 +213,29 @@ describe('unit:P29.R1', () => {
         expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P56, ${world.name}) — and every receipt, read through the route`)
           .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
       }
+    }, 60_000);
+
+    // R-P56 amended: two terms differ in this world, the lift (editorial.1's alone) and the shopper's interests, so each move
+    // names its own term; grid.1, passed by editorial.1 on the lift and by reco.2 on interest, takes the aggregate's term.
+    it(`host (${host}): R-P56 amended — the mixed world: editorial.1 frozen at a lift of 2 among modules the shopper's Tabby interests also order names lift, and every module the interests moved names affinity: the whole moves list, keys sorted, on the decision set, every record and every receipt (rendered-v1, read through the route with render acknowledgements)`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: slots(), learn: renderedLearn({ items: { [M.editorial]: { mode: 'freeze', lift: 2 } } }) });
+      expectPublished(m, 'P29.R1 (R-P56 amended, mixed world) — the declared layout slot and the frozen lift publish');
+      const s = await shopper(m);
+      const set = await servePage(m, s, 'pdp');
+      const records = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect(records.map(r => r.item_id), `${host}: PRECONDITION (mixed world) — the frozen lift at γ 1 serves editorial.1 first and the shopper's interests order the rest`)
+        .toEqual([M.editorial, M.reco2, M.grid, M.reco1]);
+      const reason = reasonOfSet(set);
+      expect.soft(byPlace(reason), `${host}: P29.R1 (R-P56 amended, mixed world) — editorial.1 moved from 4 to 1 by its lift of 2, named lift; reco.2 (3 → 2), grid.1 (1 → 3, passed by editorial.1 on the lift and by reco.2 on interest, the interests taken together) and reco.1 (2 → 4) moved by the shopper's interests, each named affinity`)
+        .toEqual(keyed({ moves: [
+          { from: 4, module: M.editorial, term: 'lift', to: 1 }, { from: 3, module: M.reco2, term: 'affinity', to: 2 },
+          { from: 1, module: M.grid, term: 'affinity', to: 3 }, { from: 2, module: M.reco1, term: 'affinity', to: 4 }], slot: LAYOUT, status: 'changed' }));
+      expect.soft(records.map(r => [r.item_id, keyed(reasonOf(r) ?? null)]), `${host}: P29.R1 (R-P56 amended, mixed world) — every record of the layout carries the set's reason, keys sorted`)
+        .toEqual(records.map(r => [r.item_id, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+      const receipts = await acknowledgedReceipts(m, s, 'p29-r1-lift-mixed');
+      expect(receipts.length, `${host}: PRECONDITION (mixed world) — a receipt for every acknowledged layout position`).toBe(4);
+      expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P56 amended, mixed world) — and every receipt, read through the route`)
+        .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
     }, 60_000);
 
     it(`host (${host}): R-P56 control — the same four modules with every lift answered equal (each frozen at 2) are unchanged against the baseline with one cause, catalogue_order_ties, on the decision set, every record and every receipt`, async () => {
